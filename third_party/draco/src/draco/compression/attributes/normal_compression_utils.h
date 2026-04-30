@@ -61,7 +61,7 @@ class OctahedronToolBox {
       return false;
     }
     quantization_bits_ = q;
-    max_quantized_value_ = (1 << quantization_bits_) - 1;
+    max_quantized_value_ = (1u << quantization_bits_) - 1;
     max_value_ = max_quantized_value_ - 1;
     dequantization_scale_ = 2.f / max_value_;
     center_value_ = max_value_ / 2;
@@ -208,7 +208,9 @@ class OctahedronToolBox {
     DRACO_DCHECK_LE(t, center_value_);
     DRACO_DCHECK_GE(s, -center_value_);
     DRACO_DCHECK_GE(t, -center_value_);
-    return std::abs(s) + std::abs(t) <= center_value_;
+    const uint32_t st =
+        static_cast<uint32_t>(std::abs(s)) + static_cast<uint32_t>(std::abs(t));
+    return st <= center_value_;
   }
 
   void InvertDiamond(int32_t *s, int32_t *t) const {
@@ -230,19 +232,29 @@ class OctahedronToolBox {
       sign_t = (*t > 0) ? 1 : -1;
     }
 
-    const int32_t corner_point_s = sign_s * center_value_;
-    const int32_t corner_point_t = sign_t * center_value_;
-    *s = 2 * *s - corner_point_s;
-    *t = 2 * *t - corner_point_t;
+    // Perform the addition and subtraction using unsigned integers to avoid
+    // signed integer overflows for bad data. Note that the result will be
+    // unchanged for non-overflowing cases.
+    const uint32_t corner_point_s = sign_s * center_value_;
+    const uint32_t corner_point_t = sign_t * center_value_;
+    uint32_t us = *s;
+    uint32_t ut = *t;
+    us = us + us - corner_point_s;
+    ut = ut + ut - corner_point_t;
     if (sign_s * sign_t >= 0) {
-      int32_t temp = *s;
-      *s = -*t;
-      *t = -temp;
+      uint32_t temp = us;
+      us = -ut;
+      ut = -temp;
     } else {
-      std::swap(*s, *t);
+      std::swap(us, ut);
     }
-    *s = (*s + corner_point_s) / 2;
-    *t = (*t + corner_point_t) / 2;
+    us = us + corner_point_s;
+    ut = ut + corner_point_t;
+
+    *s = us;
+    *t = ut;
+    *s /= 2;
+    *t /= 2;
   }
 
   void InvertDirection(int32_t *s, int32_t *t) const {
@@ -318,7 +330,7 @@ class OctahedronToolBox {
 
     // Remaining coordinate can be computed by projecting the (y, z) values onto
     // the surface of the octahedron.
-    const float x = 1.f - abs(y) - abs(z);
+    const float x = 1.f - std::abs(y) - std::abs(z);
 
     // |x| is essentially a signed distance from the diagonal edges of the
     // diamond shown on the figure above. It is positive for all points in the

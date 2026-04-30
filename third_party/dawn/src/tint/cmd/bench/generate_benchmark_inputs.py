@@ -104,9 +104,9 @@ def generate_wgsl(args):
             subprocess.run(tint_args, check=True)
 
             # Rewrite the file without CRLF line endings.
-            with open(tmp_wgsl_path, 'r') as file:
+            with open(wgsl_path, 'r') as file:
                 wgsl = file.read()
-            with open(tmp_wgsl_path, 'w', newline='\n') as file:
+            with open(wgsl_path, 'w', newline='\n') as file:
                 file.write(wgsl)
 
             # Check if the generated content is different to the current file.

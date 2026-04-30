@@ -698,6 +698,33 @@ public class View {
     }
 
     /**
+     * Sets the grid size for grid-based world origin snapping.
+     *
+     * @param size The size of the grid cell in world units. If set to 0 or negative,
+     *             the grid size is automatically calculated based on the camera frustum.
+     */
+    public void setGridSize(double size) {
+        nSetGridSize(getNativeObject(), size);
+    }
+
+    /**
+     * Returns the grid size used for grid-based world origin snapping.
+     * @return The grid size in world units. A value of 0 or negative means automatic calculation is enabled.
+     */
+    public double getGridSize() {
+        return nGetGridSize(getNativeObject());
+    }
+
+    /**
+     * Returns the effective grid size used for grid-based world origin snapping.
+     * If grid size was set to 0 or negative, this returns the automatically calculated size.
+     * @return The effective grid size in world units.
+     */
+    public double getEffectiveGridSize() {
+        return nGetEffectiveGridSize(getNativeObject());
+    }
+
+    /**
      * Returns the dynamic resolution options associated with this view.
      * @return value set by {@link #setDynamicResolutionOptions}.
      */
@@ -1370,6 +1397,9 @@ public class View {
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
     private static native void nSetDynamicResolutionOptions(long nativeView, boolean enabled, boolean homogeneousScaling, float minScale, float maxScale, float sharpness, int quality);
+    private static native void nSetGridSize(long nativeView, double size);
+    private static native double nGetGridSize(long nativeView);
+    private static native double nGetEffectiveGridSize(long nativeView);
     private static native void nGetLastDynamicResolutionScale(long nativeView, float[] out);
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
@@ -2115,9 +2145,10 @@ public class View {
         public int msaaSamples = 1;
         /**
          * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
-         * precision is rarely needed, but it does reduces light leaks as well as "fading"
+         * precision is rarely needed, but it does reduce light leaks as well as "fading"
          * of the shadows in some situations. Setting highPrecision to true for a single
          * shadow map will double the memory usage of all shadow maps.
+         * This may not be supported on all mobile devices.
          */
         public boolean highPrecision = false;
         /**

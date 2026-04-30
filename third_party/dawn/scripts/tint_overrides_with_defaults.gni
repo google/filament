@@ -37,12 +37,6 @@ if (!defined(tint_standalone)) {
   }
 }
 
-if (!defined(tint_has_build)) {
-  tint_has_build = true
-}
-
-tint_has_fuzzers = tint_has_build
-
 declare_args() {
   # Is protobuf support present
   if (!defined(tint_has_protobuf)) {
@@ -81,8 +75,21 @@ declare_args() {
     tint_lpm_dir = "//third_party/libprotobuf-mutator"
   }
 
+  # Path to mesa checkout
+  if (!defined(tint_mesa_dir)) {
+    tint_mesa_dir = "//third_party/mesa"
+  }
+
   if (!defined(tint_build_cmds)) {
     tint_build_cmds = tint_standalone
+  }
+
+  if (!defined(tint_enable_ir_dumping)) {
+    tint_enable_ir_dumping = tint_standalone
+  }
+
+  if (!defined(tint_enable_ir_validation_asserts)) {
+    tint_enable_ir_validation_asserts = tint_standalone
   }
 
   # Build the SPIR-V input reader
@@ -125,6 +132,11 @@ declare_args() {
     tint_build_glsl_validator = true
   }
 
+  # Build the NULL output writer
+  if (!defined(tint_build_null_writer)) {
+    tint_build_null_writer = true
+  }
+
   # Build IR binary format support
   if (!defined(tint_build_ir_binary)) {
     tint_build_ir_binary = tint_has_protobuf
@@ -145,9 +157,16 @@ declare_args() {
     tint_build_benchmarks = true
   }
 
-  # Enable Tint IR validation for backend codegen.
-  if (!defined(tint_enable_ir_validation)) {
-    tint_enable_ir_validation = is_debug
+  # Enable building Mesa as part of Tint fuzzers
+  if (!defined(tint_build_mesa)) {
+    tint_build_mesa = false
+  }
+}
+
+declare_args() {
+  # Enable Vulkan support in Tint fuzzers
+  if (!defined(tint_build_fuzzer_vulkan_support)) {
+    tint_build_fuzzer_vulkan_support = tint_build_mesa
   }
 }
 

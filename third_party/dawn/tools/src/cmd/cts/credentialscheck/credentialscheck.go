@@ -30,11 +30,9 @@ package credentialscheck
 import (
 	"context"
 	"flag"
-	"fmt"
 
 	commonAuth "dawn.googlesource.com/dawn/tools/src/auth"
 	"dawn.googlesource.com/dawn/tools/src/cmd/cts/common"
-	"dawn.googlesource.com/dawn/tools/src/gerrit"
 	"dawn.googlesource.com/dawn/tools/src/gitiles"
 	"go.chromium.org/luci/auth/client/authcli"
 	"google.golang.org/api/sheets/v4"
@@ -65,7 +63,10 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 }
 
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
-	auth, err := c.flags.auth.Options()
+	// TODO(crbug.com/349798588): Re-enable this check once we figure out why
+	// the check reports that some users do not have permission to upload to
+	// Gerrit when they can upload without issue.
+	/*auth, err := c.flags.auth.Options()
 	if err != nil {
 		return fmt.Errorf("failed to obtain authentication options: %w", err)
 	}
@@ -73,7 +74,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	gerritConfig, err := gerrit.New(ctx, auth, cfg.Gerrit.Host)
 	if err != nil {
 		return err
-	}
+	}*/
 
 	gitilesConfig, err := gitiles.New(ctx, cfg.Git.Dawn.Host, cfg.Git.Dawn.Project)
 	if err != nil {
@@ -81,7 +82,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	}
 
 	inputs := common.CredCheckInputs{
-		GerritConfig:  gerritConfig,
+		GerritConfig:  nil,
 		GitilesConfig: gitilesConfig,
 		Querier:       cfg.Querier,
 	}

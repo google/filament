@@ -71,12 +71,12 @@ template <typename T>
     requires std::integral<T>
 bool RangesOverlap(T x0, T x1, T y0, T y1) {
     DAWN_ASSERT(x0 <= x1 && y0 <= y1);
-        // Two ranges DON'T have overlap if and only if:
-        // 1. [x0, x1] [y0, y1], or
-        // 2. [y0, y1] [x0, x1]
-        // which is (x1 < y0 || y1 < x0)
-        // The inverse of which ends in the following statement.
-        return x0 <= y1 && y0 <= x1;
+    // Two ranges DON'T have overlap if and only if:
+    // 1. [x0, x1] [y0, y1], or
+    // 2. [y0, y1] [x0, x1]
+    // which is (x1 < y0 || y1 < x0)
+    // The inverse of which ends in the following statement.
+    return x0 <= y1 && y0 <= x1;
 }
 
 }  // namespace dawn

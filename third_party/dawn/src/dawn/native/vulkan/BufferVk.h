@@ -28,19 +28,30 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_BUFFERVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_BUFFERVK_H_
 
-#include "dawn/native/Buffer.h"
-#include "partition_alloc/pointers/raw_ptr.h"
-
 #include "absl/container/flat_hash_set.h"
 #include "dawn/common/SerialQueue.h"
 #include "dawn/common/vulkan_platform.h"
+#include "dawn/native/Buffer.h"
 #include "dawn/native/ResourceMemoryAllocation.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::vulkan {
 
 struct CommandRecordingContext;
 class Device;
 struct VulkanFunctions;
+
+// Holds the parameters for a buffer related pipeline memory barrier. Must be
+// submitted via CommandRecordingContext.
+struct BufferBarrier {
+    bool IsEmpty() const;
+    void Merge(const BufferBarrier& other);
+
+    VkAccessFlags srcAccessMask = 0;
+    VkAccessFlags dstAccessMask = 0;
+    VkPipelineStageFlags srcStages = 0;
+    VkPipelineStageFlags dstStages = 0;
+};
 
 class Buffer final : public BufferBase {
   public:
@@ -55,9 +66,13 @@ class Buffer final : public BufferBase {
     void TransitionUsageNow(CommandRecordingContext* recordingContext,
                             wgpu::BufferUsage usage,
                             wgpu::ShaderStage shaderStage = wgpu::ShaderStage::None);
-    void TrackUsageAndGetResourceBarrier(CommandRecordingContext* recordingContext,
-                                         wgpu::BufferUsage usage,
-                                         wgpu::ShaderStage shaderStage);
+
+    // Tracks that buffer had `usage` from `shaderStage`. Returns a barrier to be inserted if
+    // necessary based on previous usage. For map usage this returns a GPU->HOST barrier if
+    // necessary but doesn't track the map usage. As a result this will never produce HOST->GPU
+    // barriers.
+    BufferBarrier TrackUsageAndGetResourceBarrier(wgpu::BufferUsage usage,
+                                                  wgpu::ShaderStage shaderStage);
 
     // All the Ensure methods return true if the buffer was initialized to zero.
     bool EnsureDataInitialized(CommandRecordingContext* recordingContext);
@@ -86,9 +101,17 @@ class Buffer final : public BufferBase {
                      uint64_t offset = 0,
                      uint64_t size = 0);
 
+    // Maps buffer memory to perform some operation, eg. initialization or upload. The memory will
+    // be mapped/invalidated if necessary, `op` function will run and then memory will
+    // unmapped/flushed if necessary. The op function receives a span of exactly the requested
+    // size.
+    template <typename F>
+    MaybeError MapMemoryAndPerformOperation(uint64_t requestedOffset, size_t requestedSize, F&& op);
+
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
-    void UnmapImpl() override;
-    void DestroyImpl() override;
+    MaybeError FinalizeMapImpl(BufferState newState) override;
+    void UnmapImpl(BufferState oldState, BufferState newState) override;
+    void DestroyImpl(DestroyReason reason) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
     void* GetMappedPointerImpl() override;
@@ -111,9 +134,8 @@ class Buffer final : public BufferBase {
     wgpu::BufferUsage mReadUsage = wgpu::BufferUsage::None;
     wgpu::ShaderStage mReadShaderStages = wgpu::ShaderStage::None;
 
-    bool mHostVisible : 1;
-    bool mHostCoherent : 1;
-    bool mHasWriteTransitioned : 1;
+    bool mHostVisible : 1 = false;
+    bool mHostCoherent : 1 = false;
 };
 
 }  // namespace dawn::native::vulkan

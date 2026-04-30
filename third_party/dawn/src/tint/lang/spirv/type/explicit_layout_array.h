@@ -43,19 +43,23 @@ class ExplicitLayoutArray : public Castable<ExplicitLayoutArray, core::type::Arr
     /// Constructor
     /// @param element the array element type
     /// @param count the number of elements in the array.
-    /// @param align the byte alignment of the array
     /// @param size the byte size of the array.
     /// @param stride the number of bytes from the start of one element of the array to the start of
     /// the next element
     ExplicitLayoutArray(Type const* element,
                         const core::type::ArrayCount* count,
-                        uint32_t align,
                         uint32_t size,
                         uint32_t stride);
 
     /// @param other the other node to compare against
     /// @returns true if the this type is equal to @p other
     bool Equals(const UniqueNode& other) const override;
+
+    /// @returns true if the stride is implicit
+    bool IsStrideImplicit() const { return ImplicitStride() == stride_; }
+
+    /// @returns the stride
+    uint32_t Stride() const { return stride_; }
 
     /// @returns the name for this type that closely resembles how it would be
     /// declared in WGSL.
@@ -64,6 +68,10 @@ class ExplicitLayoutArray : public Castable<ExplicitLayoutArray, core::type::Arr
     /// @param ctx the clone context
     /// @returns a clone of this type
     ExplicitLayoutArray* Clone(core::type::CloneContext& ctx) const override;
+
+  private:
+    // The explicit stride
+    uint32_t stride_;
 };
 
 }  // namespace tint::spirv::type

@@ -19,6 +19,8 @@ enable_language(CXX) # Tests use C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
+
 
 # Make sure tests uses the dynamic runtime instead
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -68,6 +70,8 @@ endif()
 
 option(ENABLE_LIVE_VERIFICATION_TESTS "Enable tests which expect to run on live drivers. Meant for manual verification only" OFF)
 
+set(TEST_EXECUTION_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/executing_tests")
+
 include(GoogleTest)
 add_subdirectory(framework)
 
@@ -94,7 +98,11 @@ add_executable(
         loader_testing_main.cpp
         loader_fuzz_tests.cpp
 )
-target_link_libraries(test_fuzzing PUBLIC testing_dependencies vulkan)
+target_link_libraries(test_fuzzing PUBLIC testing_dependencies)
+# testing_dependencies already links to vulkan when linking statically
+if (NOT APPLE_STATIC_LOADER)
+    target_link_libraries(test_fuzzing PUBLIC vulkan)
+endif()
 target_include_directories(test_fuzzing PUBLIC ${CMAKE_SOURCE_DIR}/loader ${CMAKE_SOURCE_DIR}/loader/generated)
 
 # Threading tests live in separate executabe just for threading tests as it'll need support
@@ -131,9 +139,11 @@ endif()
 if(NOT CMAKE_CROSSCOMPILING)
     gtest_discover_tests(test_regression PROPERTIES DISCOVERY_TIMEOUT 100)
     gtest_discover_tests(test_fuzzing PROPERTIES DISCOVERY_TIMEOUT 100)
+    gtest_discover_tests(test_threading PROPERTIES DISCOVERY_TIMEOUT 100)
 else()
     gtest_add_tests(TARGET test_regression)
     gtest_add_tests(TARGET test_fuzzing)
+    gtest_add_tests(TARGET test_threading)
 endif()
 
 # When APPLE_STATIC_LOADER is ON installation is disabled

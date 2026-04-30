@@ -113,7 +113,7 @@ function FindLanguage()
     fi
 
     # If it doesn't start with spv., assume it's GLSL.
-    if [[ ! "$test" == spv.* && ! "$test" == remap.* ]]; then
+    if [[ ! "$test" == spv.* ]]; then
         echo glsl
         return
     fi

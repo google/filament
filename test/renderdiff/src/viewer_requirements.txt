@@ -7,7 +7,7 @@ idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.2
-requests==2.32.5
+requests==2.33.0
 urllib3==2.6.3
 waitress==3.0.2
 Werkzeug==3.1.6

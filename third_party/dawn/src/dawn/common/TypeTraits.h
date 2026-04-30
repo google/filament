@@ -29,6 +29,7 @@
 #define SRC_DAWN_COMMON_TYPETRAITS_H_
 
 #include <type_traits>
+#include <utility>
 
 namespace dawn {
 

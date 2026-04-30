@@ -40,7 +40,12 @@ class Module;
 namespace tint::core::ir::transform {
 
 /// The capabilities that the transform can support.
-const Capabilities kConversionPolyfillCapabilities{Capability::kAllowDuplicateBindings};
+const Capabilities kConversionPolyfillCapabilities{
+    Capability::kAllowDuplicateBindings,
+    Capability::kAllowNonCoreTypes,
+    Capability::kAllow8BitIntegers,
+    Capability::kAllow16BitIntegers,
+};
 
 /// The set of polyfills that should be applied.
 struct ConversionPolyfillConfig {

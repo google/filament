@@ -29,7 +29,6 @@
 #define SRC_DAWN_NATIVE_D3D12_SAMPLERD3D12_H_
 
 #include "dawn/native/Sampler.h"
-
 #include "dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {

@@ -693,7 +693,7 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @return      true is this light is a type of directional light
      */
-    inline bool isDirectional(Instance i) const noexcept {
+    bool isDirectional(Instance const i) const noexcept {
         Type const type = getType(i);
         return type == Type::DIRECTIONAL || type == Type::SUN;
     }
@@ -704,7 +704,7 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @return      true is this light is a type of point light
      */
-    inline bool isPointLight(Instance i) const noexcept {
+    bool isPointLight(Instance const i) const noexcept {
         return getType(i) == Type::POINT;
     }
 
@@ -714,7 +714,7 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @return      true is this light is a type of spot light
      */
-    inline bool isSpotLight(Instance i) const noexcept {
+    bool isSpotLight(Instance const i) const noexcept {
         Type const type = getType(i);
         return type == Type::SPOT || type == Type::FOCUSED_SPOT;
     }
@@ -811,7 +811,7 @@ public:
      *
      * @see Builder.intensity(float watts, float efficiency)
      */
-    void setIntensity(Instance i, float watts, float efficiency) noexcept {
+    void setIntensity(Instance const i, float const watts, float const efficiency) noexcept {
         setIntensity(i, watts * 683.0f * efficiency);
     }
 

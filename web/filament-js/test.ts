@@ -16,7 +16,7 @@
 
 /*
  * This file exists only to test the buildability of our TypeScript annotations, To run the test,
- * invoke Filament's easy build script with "./build.sh -up webgl release", or do:
+ * invoke Filament's easy build script with "./build.sh -up wasm release", or do:
  *
  * npx tsc --noEmit \
  *     ../../third_party/gl-matrix/gl-matrix.d.ts \

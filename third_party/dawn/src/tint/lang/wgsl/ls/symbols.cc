@@ -25,13 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/ast/const.h"
-#include "src/tint/lang/wgsl/ls/server.h"
-
 #include "src/tint/lang/wgsl/ast/alias.h"
+#include "src/tint/lang/wgsl/ast/const.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/struct.h"
+#include "src/tint/lang/wgsl/ls/server.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 #include "src/tint/utils/rtti/switch.h"
 

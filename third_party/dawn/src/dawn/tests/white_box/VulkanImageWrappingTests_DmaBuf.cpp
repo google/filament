@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
+
 #include <fcntl.h>
 #include <gbm.h>
 #include <gtest/gtest.h>
@@ -36,7 +38,6 @@
 #include <vector>
 
 #include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::vulkan {
@@ -109,9 +110,7 @@ class VulkanImageWrappingTestBackendDmaBuf : public VulkanImageWrappingTestBacke
         // test them.
         return mGbmDevice != nullptr &&
                (mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::ExternalMemoryFD) &&
-                mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::ImageDrmFormatModifier)) &&
-               (!params.useDedicatedAllocation ||
-                mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::DedicatedAllocation));
+                mDeviceVk->GetDeviceInfo().HasExt(DeviceExt::ImageDrmFormatModifier));
     }
 
     std::unique_ptr<ExternalTexture> CreateTexture(uint32_t width,

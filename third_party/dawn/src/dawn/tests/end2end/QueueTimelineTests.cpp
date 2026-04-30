@@ -61,6 +61,9 @@ class QueueTimelineTests : public DawnTest {
 // when queue.OnSubmittedWorkDone is called after mMapReadBuffer.MapAsync. The callback order should
 // happen in the order the functions are called.
 TEST_P(QueueTimelineTests, MapRead_OnWorkDone) {
+    // TODO(crbug.com/454668181): Flakily fails on Mac w/ Metal.
+    DAWN_SUPPRESS_TEST_IF(IsMetal());
+
     MockMapAsyncCallback mockMapAsyncCb;
     MockQueueWorkDoneCallback mockQueueWorkDoneCb;
 

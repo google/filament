@@ -47,27 +47,27 @@ ObjectHandle ObjectStore::ReserveHandle() {
     return handle;
 }
 
-void ObjectStore::Insert(ObjectBase* obj) {
-    ObjectId id = obj->GetWireId();
+void ObjectStore::Insert(ObjectBase* obj, const ClientBase* forClient) {
+    ObjectHandle handle = obj->GetWireHandle(forClient);
 
-    if (id >= mObjects.size()) {
-        DAWN_ASSERT(id == mObjects.size());
+    if (handle.id >= mObjects.size()) {
+        DAWN_ASSERT(handle.id == mObjects.size());
         mObjects.emplace_back(obj);
     } else {
         // The generation should never overflow. We don't recycle ObjectIds that would
         // overflow their next generation.
-        DAWN_ASSERT(obj->GetWireGeneration() != 0);
-        DAWN_ASSERT(mObjects[id] == nullptr);
-        mObjects[id] = obj;
+        DAWN_ASSERT(handle.generation != 0);
+        DAWN_ASSERT(mObjects[handle.id] == nullptr);
+        mObjects[handle.id] = obj;
     }
 }
 
-void ObjectStore::Remove(ObjectBase* obj) {
+void ObjectStore::Remove(ObjectBase* obj, const ClientBase* forClient) {
     // The wire reuses ID for objects to keep them in a packed array starting from 0.
     // To avoid issues with asynchronous server->client communication referring to an ID that's
     // already reused, each handle also has a generation that's increment by one on each reuse.
     // Avoid overflows by only reusing the ID if the increment of the generation won't overflow.
-    const ObjectHandle& currentHandle = obj->GetWireHandle();
+    const ObjectHandle& currentHandle = obj->GetWireHandle(forClient);
     if (currentHandle.generation != std::numeric_limits<ObjectGeneration>::max()) [[likely]] {
         mFreeHandles.push_back({currentHandle.id, currentHandle.generation + 1});
     }

@@ -28,7 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_BINARY_DECODE_H_
 #define SRC_TINT_LANG_CORE_IR_BINARY_DECODE_H_
 
-#include "src/tint/utils/containers/slice.h"
+#include <span>
+
 #include "src/tint/utils/result.h"
 
 // Forward declarations
@@ -42,7 +43,7 @@ class Module;
 namespace tint::core::ir::binary {
 
 /// @returns the decoded Module from the serialized protobuf.
-Result<Module> Decode(Slice<const std::byte> encoded);
+Result<Module> Decode(std::span<const std::byte> encoded);
 
 /// @returns the decoded Module from the protobuf.
 Result<Module> Decode(const pb::Module& module);

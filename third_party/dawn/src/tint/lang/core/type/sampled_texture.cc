@@ -27,9 +27,9 @@
 
 #include "src/tint/lang/core/type/sampled_texture.h"
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
-#include "src/tint/utils/diagnostic/diagnostic.h"
 #include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/math/hash.h"
 #include "src/tint/utils/text/string_stream.h"
@@ -38,8 +38,12 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::type::SampledTexture);
 
 namespace tint::core::type {
 
-SampledTexture::SampledTexture(TextureDimension dim, const type::Type* type)
-    : Base(Hash(TypeCode::Of<SampledTexture>().bits, dim, type), dim), type_(type) {
+SampledTexture::SampledTexture(TextureDimension dim,
+                               const type::Type* type,
+                               TextureFilterable filterable)
+    : Base(Hash(TypeCode::Of<SampledTexture>().bits, dim, type, filterable), dim),
+      type_(type),
+      filterable_(filterable) {
     TINT_ASSERT(type_);
 }
 
@@ -47,20 +51,24 @@ SampledTexture::~SampledTexture() = default;
 
 bool SampledTexture::Equals(const UniqueNode& other) const {
     if (auto* o = other.As<SampledTexture>()) {
-        return o->Dim() == Dim() && o->type_ == type_;
+        return o->Dim() == Dim() && o->type_ == type_ && o->filterable_ == filterable_;
     }
     return false;
 }
 
 std::string SampledTexture::FriendlyName() const {
     StringStream out;
-    out << "texture_" << Dim() << "<" << type_->FriendlyName() << ">";
+    out << "texture_" << Dim() << "<" << type_->FriendlyName();
+    if (filterable_ != TextureFilterable::kUndefined) {
+        out << ", " << filterable_;
+    }
+    out << ">";
     return out.str();
 }
 
 SampledTexture* SampledTexture::Clone(CloneContext& ctx) const {
     auto* ty = type_->Clone(ctx);
-    return ctx.dst.mgr->Get<SampledTexture>(Dim(), ty);
+    return ctx.dst.mgr->Get<SampledTexture>(Dim(), ty, filterable_);
 }
 
 }  // namespace tint::core::type

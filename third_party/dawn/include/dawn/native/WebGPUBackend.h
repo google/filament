@@ -28,8 +28,22 @@
 #ifndef INCLUDE_DAWN_NATIVE_WEBGPUBACKEND_H_
 #define INCLUDE_DAWN_NATIVE_WEBGPUBACKEND_H_
 
+#include <ostream>
+
 #include "dawn/native/DawnNative.h"
 
-namespace dawn::native::webgpu {}  // namespace dawn::native::webgpu
+namespace dawn::native::webgpu {
+
+using CaptureStream = std::ostream;
+
+// Starts a capture on the given device.
+DAWN_NATIVE_EXPORT void StartCapture(WGPUDevice device,
+                                     CaptureStream& commandStream,
+                                     CaptureStream& contentStream);
+
+// Ends a capture on the given device.
+DAWN_NATIVE_EXPORT void EndCapture(WGPUDevice device);
+
+}  // namespace dawn::native::webgpu
 
 #endif  // INCLUDE_DAWN_NATIVE_WEBGPUBACKEND_H_

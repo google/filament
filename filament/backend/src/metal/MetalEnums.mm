@@ -98,14 +98,12 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
 
     // Packed 16 bit formats are only available on Apple GPUs.
     if (context->highestSupportedGpuFamily.apple >= 1) {
-        if (@available(macOS 11.0, *)) {
             switch (format) {
                 case TextureFormat::RGB565: return MTLPixelFormatB5G6R5Unorm;
                 case TextureFormat::RGB5_A1: return MTLPixelFormatA1BGR5Unorm;
                 case TextureFormat::RGBA4: return MTLPixelFormatABGR4Unorm;
                 default: break;
             }
-        }
     }
 
     if (@available(iOS 13.0, *)) {
@@ -115,18 +113,16 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
 #if TARGET_OS_OSX
     if (context->highestSupportedGpuFamily.mac >= 1 &&
             context->device.depth24Stencil8PixelFormatSupported) {
-        if (@available(macOS 11.0, *)) {
             if (format == TextureFormat::DEPTH24_STENCIL8) {
                 return MTLPixelFormatDepth24Unorm_Stencil8;
             }
-        }
     }
 #endif
 
     // Only iOS 13.0 and Apple Silicon support the ASTC HDR profile. Older OS versions fallback to
     // LDR. The HDR profile is a superset of the LDR profile.
     if (context->highestSupportedGpuFamily.apple >= 2) {
-        if (@available(iOS 13, macOS 11.0, *)) {
+        if (@available(iOS 13, *)) {
             switch (format) {
                 case TextureFormat::RGBA_ASTC_4x4: return MTLPixelFormatASTC_4x4_HDR;
                 case TextureFormat::RGBA_ASTC_5x4: return MTLPixelFormatASTC_5x4_HDR;
@@ -144,7 +140,7 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
                 case TextureFormat::RGBA_ASTC_12x12: return MTLPixelFormatASTC_12x12_HDR;
                 default: break;
             }
-        } else if (@available(macOS 11.0, *)) {
+        } else {
             switch (format) {
                 case TextureFormat::RGBA_ASTC_4x4: return MTLPixelFormatASTC_4x4_LDR;
                 case TextureFormat::RGBA_ASTC_5x4: return MTLPixelFormatASTC_5x4_LDR;
@@ -167,7 +163,6 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
 
     // EAC / ETC2 formats are only available on Apple GPUs.
     if (context->highestSupportedGpuFamily.apple >= 1) {
-        if (@available(macOS 11.0, *)) {
             switch (format) {
                 case TextureFormat::EAC_R11: return MTLPixelFormatEAC_R11Unorm;
                 case TextureFormat::EAC_R11_SIGNED: return MTLPixelFormatEAC_R11Snorm;
@@ -181,7 +176,6 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
                 case TextureFormat::ETC2_EAC_SRGBA8: return MTLPixelFormatEAC_RGBA8_sRGB;
                 default: break;
             }
-        }
     }
 
     // DXT (BC) formats are only available on macOS desktop.

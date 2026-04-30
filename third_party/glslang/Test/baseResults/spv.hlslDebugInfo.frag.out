@@ -12,7 +12,7 @@ spv.hlslDebugInfo.vert
 // OpModuleProcessed shift-sampler-binding 2
 // OpModuleProcessed shift-texture-binding 4
 // OpModuleProcessed shift-image-binding 1
-// OpModuleProcessed shift-UBO-binding 6
+// OpModuleProcessed shift-ubo-binding 6
 // OpModuleProcessed shift-ssbo-binding 3
 // OpModuleProcessed shift-uav-binding 5
 // OpModuleProcessed no-storage-format

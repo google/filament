@@ -22,18 +22,24 @@
 #include <filament/Viewport.h>
 #include <backend/PixelBufferDescriptor.h>
 
+#include <exception>
+
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include "common/JniUtils.h"
 
 using namespace filament;
 using namespace backend;
+using namespace filament::android;
 
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *env, jclass, jlong nativeRenderer,
         jlong vsyncSteadyClockTimeNano) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->skipFrame(uint64_t(vsyncSteadyClockTimeNano));
+    wrapJni(env, [=]() {
+        renderer->skipFrame(uint64_t(vsyncSteadyClockTimeNano));
+    });
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -43,37 +49,45 @@ Java_com_google_android_filament_Renderer_nShouldRenderFrame(JNIEnv *, jclass, j
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *env, jclass, jlong nativeRenderer,
         jlong nativeSwapChain, jlong frameTimeNanos) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     SwapChain *swapChain = (SwapChain *) nativeSwapChain;
-    return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
+    return wrapJniBackend<jboolean>(env, [=]() {
+        return (jboolean) renderer->beginFrame(swapChain, uint64_t(frameTimeNanos));
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nEndFrame(JNIEnv *, jclass, jlong nativeRenderer) {
+Java_com_google_android_filament_Renderer_nEndFrame(JNIEnv *env, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->endFrame();
+    wrapJniBackend(env, [=]() {
+        renderer->endFrame();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nRender(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nRender(JNIEnv *env, jclass, jlong nativeRenderer,
         jlong nativeView) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     View *view = (View *) nativeView;
-    renderer->render(view);
+    wrapJniBackend(env, [=]() {
+        renderer->render(view);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nRenderStandaloneView(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nRenderStandaloneView(JNIEnv *env, jclass, jlong nativeRenderer,
         jlong nativeView) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     View *view = (View *) nativeView;
-    renderer->renderStandaloneView(view);
+    wrapJni(env, [=]() {
+        renderer->renderStandaloneView(view);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv *, jclass, jlong nativeRenderer,
+Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv *env, jclass, jlong nativeRenderer,
         jlong nativeDstSwapChain,
         jint dstLeft, jint dstBottom, jint dstWidth, jint dstHeight,
         jint srcLeft, jint srcBottom, jint srcWidth, jint srcHeight,
@@ -82,7 +96,9 @@ Java_com_google_android_filament_Renderer_nCopyFrame(JNIEnv *, jclass, jlong nat
     SwapChain *dstSwapChain = (SwapChain *) nativeDstSwapChain;
     const filament::Viewport dstViewport {dstLeft, dstBottom, (uint32_t) dstWidth, (uint32_t) dstHeight};
     const filament::Viewport srcViewport {srcLeft, srcBottom, (uint32_t) srcWidth, (uint32_t) srcHeight};
-    renderer->copyFrame(dstSwapChain, dstViewport, srcViewport, (uint32_t) flags);
+    wrapJni(env, [=]() {
+        renderer->copyFrame(dstSwapChain, dstViewport, srcViewport, (uint32_t) flags);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -114,10 +130,11 @@ Java_com_google_android_filament_Renderer_nReadPixels(JNIEnv *env, jclass,
             (uint32_t) stride,
             callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    renderer->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
-            std::move(desc));
-
-    return 0;
+    return wrapJni<jint>(env, [&]() {
+        renderer->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
+                std::move(desc));
+        return 0;
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -150,23 +167,28 @@ Java_com_google_android_filament_Renderer_nReadPixelsEx(JNIEnv *env, jclass,
             (uint32_t) stride,
             callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    renderer->readPixels(renderTarget,
-            uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
-            std::move(desc));
-
-    return 0;
+    return wrapJni<jint>(env, [&]() {
+        renderer->readPixels(renderTarget,
+                uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
+                std::move(desc));
+        return 0;
+    });
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
-Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
+Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv *env, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    return renderer->getUserTime();
+    return wrapJni<jdouble>(env, [=]() {
+        return renderer->getUserTime();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
+Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv *env, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->resetUserTime();
+    wrapJni(env, [=]() {
+        renderer->resetUserTime();
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -186,20 +208,24 @@ Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *env, jclass ,
         jlong nativeRenderer, jfloat r, jfloat g, jfloat b, jfloat a,
         jboolean clear, jboolean discard) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setClearOptions({ .clearColor = {r, g, b, a},
-                                .clear = (bool) clear,
-                                .discard = (bool) discard});
+    wrapJni(env, [=]() {
+        renderer->setClearOptions({ .clearColor = {r, g, b, a},
+                                    .clear = (bool) clear,
+                                    .discard = (bool) discard});
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *env, jclass ,
     jlong nativeRenderer, jlong monotonicClockNanos) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    renderer->setPresentationTime(monotonicClockNanos);
+    wrapJni(env, [=]() {
+        renderer->setPresentationTime(monotonicClockNanos);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL

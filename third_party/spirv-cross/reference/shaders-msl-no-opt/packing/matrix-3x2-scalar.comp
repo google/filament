@@ -73,8 +73,8 @@ void copy_columns(device SSBOCol& _29, device SSBORow& _41)
 static inline __attribute__((always_inline))
 void copy_elements(device SSBOCol& _29, device SSBORow& _41)
 {
-    ((device float*)&_29.col_major0[0])[1u] = _41.row_major0[1u][0];
-    _41.row_major0[1u][0] = ((device float*)&_29.col_major0[0])[1u];
+    ((device float*)&_29.col_major0[0])[1u] = ((device float*)&_41.row_major0[1u])[0];
+    ((device float*)&_41.row_major0[1u])[0] = ((device float*)&_29.col_major0[0])[1u];
 }
 
 kernel void main0(device SSBOCol& _29 [[buffer(0)]], device SSBORow& _41 [[buffer(1)]])

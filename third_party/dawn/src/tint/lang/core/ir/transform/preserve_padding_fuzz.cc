@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/transform/preserve_padding.h"
-
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/lang/core/ir/transform/preserve_padding.h"
 #include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {

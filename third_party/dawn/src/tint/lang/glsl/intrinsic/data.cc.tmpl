@@ -16,6 +16,8 @@ See:
 
 {{- $I := LoadIntrinsics "src/tint/lang/glsl/glsl.def" -}}
 
+// clang-format off
+
 #include <limits>
 #include <string>
 
@@ -32,3 +34,5 @@ using namespace tint::core::intrinsic;  // NOLINT(build/namespaces)
   "Name"       "Dialect::kData" -}}
 
 }  // namespace tint::glsl::intrinsic
+
+// clang-format on

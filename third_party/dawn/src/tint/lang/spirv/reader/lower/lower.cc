@@ -42,28 +42,20 @@
 namespace tint::spirv::reader {
 
 Result<SuccessType> Lower(core::ir::Module& mod) {
-#define RUN_TRANSFORM(name, ...)         \
-    do {                                 \
-        auto result = name(__VA_ARGS__); \
-        if (result != Success) {         \
-            return result;               \
-        }                                \
-    } while (false)
-
-    RUN_TRANSFORM(core::ir::transform::DeadCodeElimination, mod);
-    RUN_TRANSFORM(lower::VectorElementPointer, mod);
-    RUN_TRANSFORM(lower::ShaderIO, mod);
-    RUN_TRANSFORM(lower::Builtins, mod);
+    TINT_CHECK_RESULT(core::ir::transform::DeadCodeElimination(mod));
+    TINT_CHECK_RESULT(lower::VectorElementPointer(mod));
+    TINT_CHECK_RESULT(lower::ShaderIO(mod));
+    TINT_CHECK_RESULT(lower::Builtins(mod));
 
     // TransposeRowMajor must come before DecomposeStridedMatrix as we need to convert the matrices
     // first.
-    RUN_TRANSFORM(lower::TransposeRowMajor, mod);
+    TINT_CHECK_RESULT(lower::TransposeRowMajor(mod));
     // DecomposeStridedMatrix must come before DecomposeStridedArray, as it introduces strided
     // arrays that need to be replaced.
-    RUN_TRANSFORM(lower::DecomposeStridedMatrix, mod);
-    RUN_TRANSFORM(lower::DecomposeStridedArray, mod);
-    RUN_TRANSFORM(lower::Atomics, mod);
-    RUN_TRANSFORM(lower::Texture, mod);
+    TINT_CHECK_RESULT(lower::DecomposeStridedMatrix(mod));
+    TINT_CHECK_RESULT(lower::DecomposeStridedArray(mod));
+    TINT_CHECK_RESULT(lower::Atomics(mod));
+    TINT_CHECK_RESULT(lower::Texture(mod));
 
     // Remove the terminator args at this point. There are no logical short-circuiting operators in
     // SPIR-V that we will lose track of, all the terminators are for hoisted values. We don't do
@@ -71,18 +63,14 @@ Result<SuccessType> Lower(core::ir::Module& mod) {
     // and `||` operators based on the terminators. Moving the logical detection to a separate
     // transform is also complicated because of the way it currently detects multi element `&&` and
     // `||` statements.
-    RUN_TRANSFORM(core::ir::transform::RemoveTerminatorArgs, mod);
+    TINT_CHECK_RESULT(core::ir::transform::RemoveTerminatorArgs(mod));
 
-    auto res =
-        core::ir::ValidateAndDumpIfNeeded(mod, "spirv.Lower",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowOverrides,
-                                          },
-                                          "after");
-    if (res != Success) {
-        return res.Failure();
-    }
+    core::ir::AssertValid(mod,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllowMultipleEntryPoints,
+                              core::ir::Capability::kAllowOverrides,
+                          },
+                          "after spirv.Lower");
 
     return Success;
 }

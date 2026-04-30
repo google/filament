@@ -2,16 +2,22 @@
 
 #include <iostream>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/registration.h"
+#include "benchmark/state.h"
 
+namespace {
 // Tests that the user specified verbosity level can be get.
-static void BM_Verbosity(benchmark::State& state) {
+void BM_Verbosity(benchmark::State& state) {
   for (auto _ : state) {
   }
 }
 BENCHMARK(BM_Verbosity);
+}  // end namespace
 
 int main(int argc, char** argv) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+
   const int32_t flagv = 42;
 
   // Verify that argv specify --v=42.

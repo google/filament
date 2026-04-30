@@ -114,9 +114,7 @@ void logMTLCommandBufferError(MTLCommandBufferError error) {
     MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorOutOfMemory)
     MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorInvalidResource)
 
-    if (@available(macOS 11.0, *)) {
-        MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorMemoryless)
-    }
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorMemoryless)
 
     if (@available(iOS 15.0, macOS 12.0, *)) {
         MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorStackOverflow)
@@ -143,12 +141,10 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
         context->latestCompletedCommandBufferId = thisCommandBufferId;
 
         auto errorCode = (MTLCommandBufferError)buffer.error.code;
-        if (@available(macOS 11.0, *)) {
-            if (errorCode == MTLCommandBufferErrorMemoryless) {
-                LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with private "
-                                "storage mode.";
-                context->memorylessLimitsReached = true;
-            }
+        if (errorCode == MTLCommandBufferErrorMemoryless) {
+            LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with private "
+                            "storage mode.";
+            context->memorylessLimitsReached = true;
         }
 
         if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {

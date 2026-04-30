@@ -142,6 +142,7 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
   const auto consumer = nullptr;
   const auto context = BuildModule(env, consumer, shader, kFuzzAssembleOption);
   spvtools::ValidatorOptions validator_options;
+  validator_options.SetRelaxLogicalPointer(true);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(

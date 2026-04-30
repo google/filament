@@ -1017,16 +1017,10 @@ int main(int argc, char** argv) {
 #endif
                 const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
                 bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;
-                // TODO: enable after stencil buffer supported is added for Vulkan.
-                const bool overdrawDisabled = engine->getBackend() == backend::Backend::VULKAN;
-                ImGui::BeginDisabled(overdrawDisabled);
-                ImGui::Checkbox(!overdrawDisabled ? "Visualize overdraw"
-                                                  : "Visualize overdraw (disabled for Vulkan)",
-                        &visualizeOverdraw);
-                ImGui::EndDisabled();
+                ImGui::Checkbox("Visualize overdraw", &visualizeOverdraw);
                 view->setVisibleLayers(overdrawVisibilityBit,
                         (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
-                view->setStencilBufferEnabled(visualizeOverdraw);
+                app.viewer->getSettings().view.stencilBufferEnabled = visualizeOverdraw;
             }
 
             if (ImGui::BeginPopupModal("MessageBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {

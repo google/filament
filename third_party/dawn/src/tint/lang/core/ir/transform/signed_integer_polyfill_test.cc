@@ -46,7 +46,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Negation_F32) {
     auto* func = b.Function("foo", ty.f32());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
-        auto* result = b.Negation<f32>(value);
+        auto* result = b.Negation(value);
         b.Return(func, result);
     });
 
@@ -72,7 +72,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Negation_I32_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
-        auto* result = b.Negation<i32>(value);
+        auto* result = b.Negation(value);
         b.Return(func, result);
     });
 
@@ -89,10 +89,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Negation_I32_Scalar) {
     auto* expect = R"(
 %foo = func(%value:i32):i32 {
   $B1: {
-    %3:u32 = bitcast %value
+    %3:u32 = bitcast<u32> %value
     %4:u32 = complement %3
     %5:u32 = add %4, 1u
-    %6:i32 = bitcast %5
+    %6:i32 = bitcast<i32> %5
     ret %6
   }
 }
@@ -108,7 +108,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_Negation_I32_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
-        auto* result = b.Negation<i32>(value);
+        auto* result = b.Negation(value);
         b.Return(func, result);
     });
 
@@ -131,10 +131,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_Negation_I32_Scalar) {
 
 TEST_F(IR_SignedIntegerPolyfillTest, Negation_I32_Vector) {
     auto* value = b.FunctionParam<vec4<i32>>("value");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
-        auto* result = b.Negation<vec4<i32>>(value);
+        auto* result = b.Negation(value);
         b.Return(func, result);
     });
 
@@ -151,10 +151,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Negation_I32_Vector) {
     auto* expect = R"(
 %foo = func(%value:vec4<i32>):vec4<i32> {
   $B1: {
-    %3:vec4<u32> = bitcast %value
+    %3:vec4<u32> = bitcast<vec4<u32>> %value
     %4:vec4<u32> = complement %3
     %5:vec4<u32> = add %4, vec4<u32>(1u)
-    %6:vec4<i32> = bitcast %5
+    %6:vec4<i32> = bitcast<vec4<i32>> %5
     ret %6
   }
 }
@@ -168,10 +168,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Negation_I32_Vector) {
 
 TEST_F(IR_SignedIntegerPolyfillTest, Disabled_Negation_I32_Vector) {
     auto* value = b.FunctionParam<vec4<i32>>("value");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
-        auto* result = b.Negation<vec4<i32>>(value);
+        auto* result = b.Negation(value);
         b.Return(func, result);
     });
 
@@ -198,7 +198,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<i32>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -215,10 +215,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_Scalar) {
     auto* expect = R"(
 %foo = func(%lhs:i32, %rhs:i32):i32 {
   $B1: {
-    %4:u32 = bitcast %lhs
-    %5:u32 = bitcast %rhs
+    %4:u32 = bitcast<u32> %lhs
+    %5:u32 = bitcast<u32> %rhs
     %6:u32 = add %4, %5
-    %7:i32 = bitcast %6
+    %7:i32 = bitcast<i32> %6
     ret %7
   }
 }
@@ -236,7 +236,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<i32>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -263,7 +263,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntMul_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Multiply<i32>(lhs, rhs);
+        auto* result = b.Multiply(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -280,10 +280,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntMul_Scalar) {
     auto* expect = R"(
 %foo = func(%lhs:i32, %rhs:i32):i32 {
   $B1: {
-    %4:u32 = bitcast %lhs
-    %5:u32 = bitcast %rhs
+    %4:u32 = bitcast<u32> %lhs
+    %5:u32 = bitcast<u32> %rhs
     %6:u32 = mul %4, %5
-    %7:i32 = bitcast %6
+    %7:i32 = bitcast<i32> %6
     ret %7
   }
 }
@@ -301,7 +301,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntMul_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Multiply<i32>(lhs, rhs);
+        auto* result = b.Multiply(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -328,7 +328,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntSub_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Subtract<i32>(lhs, rhs);
+        auto* result = b.Subtract(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -345,10 +345,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntSub_Scalar) {
     auto* expect = R"(
 %foo = func(%lhs:i32, %rhs:i32):i32 {
   $B1: {
-    %4:u32 = bitcast %lhs
-    %5:u32 = bitcast %rhs
+    %4:u32 = bitcast<u32> %lhs
+    %5:u32 = bitcast<u32> %rhs
     %6:u32 = sub %4, %5
-    %7:i32 = bitcast %6
+    %7:i32 = bitcast<i32> %6
     ret %7
   }
 }
@@ -366,7 +366,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntSub_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Subtract<i32>(lhs, rhs);
+        auto* result = b.Subtract(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -390,10 +390,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntSub_Scalar) {
 TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_Vector) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<vec4<i32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -410,10 +410,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_Vector) {
     auto* expect = R"(
 %foo = func(%lhs:vec4<i32>, %rhs:vec4<i32>):vec4<i32> {
   $B1: {
-    %4:vec4<u32> = bitcast %lhs
-    %5:vec4<u32> = bitcast %rhs
+    %4:vec4<u32> = bitcast<vec4<u32>> %lhs
+    %5:vec4<u32> = bitcast<vec4<u32>> %rhs
     %6:vec4<u32> = add %4, %5
-    %7:vec4<i32> = bitcast %6
+    %7:vec4<i32> = bitcast<vec4<i32>> %6
     ret %7
   }
 }
@@ -428,10 +428,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_Vector) {
 TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_Vector) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<vec4<i32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -455,10 +455,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_Vector) {
 TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_ScalarVector) {
     auto* lhs = b.FunctionParam<i32>("lhs");
     auto* rhs = b.FunctionParam<vec4<i32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -475,10 +475,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_ScalarVector) {
     auto* expect = R"(
 %foo = func(%lhs:i32, %rhs:vec4<i32>):vec4<i32> {
   $B1: {
-    %4:u32 = bitcast %lhs
-    %5:vec4<u32> = bitcast %rhs
+    %4:u32 = bitcast<u32> %lhs
+    %5:vec4<u32> = bitcast<vec4<u32>> %rhs
     %6:vec4<u32> = add %4, %5
-    %7:vec4<i32> = bitcast %6
+    %7:vec4<i32> = bitcast<vec4<i32>> %6
     ret %7
   }
 }
@@ -493,10 +493,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_ScalarVector) {
 TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_ScalarVector) {
     auto* lhs = b.FunctionParam<i32>("lhs");
     auto* rhs = b.FunctionParam<vec4<i32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -520,10 +520,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_ScalarVector) {
 TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_VectorScalar) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<i32>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -540,10 +540,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_VectorScalar) {
     auto* expect = R"(
 %foo = func(%lhs:vec4<i32>, %rhs:i32):vec4<i32> {
   $B1: {
-    %4:vec4<u32> = bitcast %lhs
-    %5:u32 = bitcast %rhs
+    %4:vec4<u32> = bitcast<vec4<u32>> %lhs
+    %5:u32 = bitcast<u32> %rhs
     %6:vec4<u32> = add %4, %5
-    %7:vec4<i32> = bitcast %6
+    %7:vec4<i32> = bitcast<vec4<i32>> %6
     ret %7
   }
 }
@@ -558,10 +558,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntAdd_VectorScalar) {
 TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntAdd_VectorScalar) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<i32>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.Add<vec4<i32>>(lhs, rhs);
+        auto* result = b.Add(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -588,7 +588,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntShift_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.ShiftLeft<i32>(lhs, rhs);
+        auto* result = b.ShiftLeft(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -605,9 +605,9 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntShift_Scalar) {
     auto* expect = R"(
 %foo = func(%lhs:i32, %rhs:u32):i32 {
   $B1: {
-    %4:u32 = bitcast %lhs
+    %4:u32 = bitcast<u32> %lhs
     %5:u32 = shl %4, %rhs
-    %6:i32 = bitcast %5
+    %6:i32 = bitcast<i32> %5
     ret %6
   }
 }
@@ -624,7 +624,7 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntShift_Scalar) {
     auto* func = b.Function("foo", ty.i32());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.ShiftLeft<i32>(lhs, rhs);
+        auto* result = b.ShiftLeft(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -647,10 +647,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntShift_Scalar) {
 TEST_F(IR_SignedIntegerPolyfillTest, IntShift_Vector) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<vec4<u32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.ShiftLeft<vec4<i32>>(lhs, rhs);
+        auto* result = b.ShiftLeft(lhs, rhs);
         b.Return(func, result);
     });
 
@@ -667,9 +667,9 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntShift_Vector) {
     auto* expect = R"(
 %foo = func(%lhs:vec4<i32>, %rhs:vec4<u32>):vec4<i32> {
   $B1: {
-    %4:vec4<u32> = bitcast %lhs
+    %4:vec4<u32> = bitcast<vec4<u32>> %lhs
     %5:vec4<u32> = shl %4, %rhs
-    %6:vec4<i32> = bitcast %5
+    %6:vec4<i32> = bitcast<vec4<i32>> %5
     ret %6
   }
 }
@@ -684,10 +684,10 @@ TEST_F(IR_SignedIntegerPolyfillTest, IntShift_Vector) {
 TEST_F(IR_SignedIntegerPolyfillTest, Disabled_IntShift_Vector) {
     auto* lhs = b.FunctionParam<vec4<i32>>("lhs");
     auto* rhs = b.FunctionParam<vec4<u32>>("rhs");
-    auto* func = b.Function("foo", ty.vec4<i32>());
+    auto* func = b.Function("foo", ty.vec4i());
     func->SetParams({lhs, rhs});
     b.Append(func->Block(), [&] {
-        auto* result = b.ShiftLeft<vec4<i32>>(lhs, rhs);
+        auto* result = b.ShiftLeft(lhs, rhs);
         b.Return(func, result);
     });
 

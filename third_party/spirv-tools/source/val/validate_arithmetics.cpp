@@ -36,7 +36,8 @@ spv_result_t ArithmeticsPass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpFDiv:
     case spv::Op::OpFRem:
     case spv::Op::OpFMod:
-    case spv::Op::OpFNegate: {
+    case spv::Op::OpFNegate:
+    case spv::Op::OpFmaKHR: {
       bool supportsCoopMat =
           (opcode != spv::Op::OpFMul && opcode != spv::Op::OpFRem &&
            opcode != spv::Op::OpFMod);

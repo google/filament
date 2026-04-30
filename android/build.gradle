@@ -145,7 +145,6 @@ buildscript {
     ext.cppFlags = [
         "-std=c++17",
         "-fno-stack-protector",
-        "-fno-exceptions",
         "-fno-unwind-tables",
         "-fno-asynchronous-unwind-tables",
         "-fno-rtti",

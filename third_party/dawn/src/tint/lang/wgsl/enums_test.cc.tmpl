@@ -13,6 +13,8 @@ See:
 {{- $extensions_enum := ($I.Sem.Enum "extension") -}}
 {{- $language_feature_enum := ($I.Sem.Enum "language_feature") -}}
 
+// clang-format off
+
 #include <string>
 
 #include "gtest/gtest.h"
@@ -41,3 +43,5 @@ namespace diagnostic_severity_tests {
 
 }  // namespace
 }  // namespace tint::wgsl
+
+// clang-format on

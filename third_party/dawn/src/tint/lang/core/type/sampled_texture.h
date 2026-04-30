@@ -30,6 +30,7 @@
 
 #include <string>
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 
@@ -41,7 +42,10 @@ class SampledTexture final : public Castable<SampledTexture, Texture> {
     /// Constructor
     /// @param dim the dimensionality of the texture
     /// @param type the data type of the sampled texture
-    SampledTexture(TextureDimension dim, const type::Type* type);
+    /// @param filterable the texture filterability
+    SampledTexture(TextureDimension dim,
+                   const type::Type* type,
+                   TextureFilterable filterable = TextureFilterable::kUndefined);
 
     /// Destructor
     ~SampledTexture() override;
@@ -53,6 +57,9 @@ class SampledTexture final : public Castable<SampledTexture, Texture> {
     /// @returns the subtype of the sampled texture
     const type::Type* Type() const { return type_; }
 
+    /// @returns the filterability
+    TextureFilterable Filterable() const { return filterable_; }
+
     /// @returns the name for this type that closely resembles how it would be
     /// declared in WGSL.
     std::string FriendlyName() const override;
@@ -63,6 +70,7 @@ class SampledTexture final : public Castable<SampledTexture, Texture> {
 
   private:
     const type::Type* type_;
+    TextureFilterable filterable_;
 };
 
 }  // namespace tint::core::type

@@ -1,0 +1,35 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 2
+#endif
+const int A = SPIRV_CROSS_CONSTANT_ID_0;
+const uint _20 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+const uint _25 = gl_WorkGroupSize.x;
+const uint _26 = (_20 * _25);
+const uint _30 = (uint(A) + 0u);
+const uint _31 = gl_WorkGroupSize.x;
+const uint _32 = (_30 * _31);
+
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    int I;
+    float V;
+} _48;
+
+float D[_32];
+
+void main()
+{
+    for (int i = 0; uint(i) < _26; i++)
+    {
+        D[i] = 1.0 + float(i);
+    }
+    _48.V = D[_48.I] + D[_48.I ^ 1];
+}
+

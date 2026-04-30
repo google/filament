@@ -44,7 +44,7 @@
 
 // Set of platforms with a common set of functionality which is queried throughout the program
 #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || defined(__QNX__) || defined(__FreeBSD__) || \
-    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__)
+    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) || defined(__CYGWIN__)
 #define COMMON_UNIX_PLATFORMS 1
 #else
 #define COMMON_UNIX_PLATFORMS 0
@@ -129,6 +129,10 @@
 // Support added in v1.3.295 loader
 #define VK_IMPLICIT_LAYER_PATH_ENV_VAR "VK_IMPLICIT_LAYER_PATH"
 #define VK_ADDITIONAL_IMPLICIT_LAYER_PATH_ENV_VAR "VK_ADD_IMPLICIT_LAYER_PATH"
+
+#define VK_DEVICE_ID_FILTER_ENV_VAR "VK_LOADER_DEVICE_ID_FILTER"
+#define VK_VENDOR_ID_FILTER_ENV_VAR "VK_LOADER_VENDOR_ID_FILTER"
+#define VK_DRIVER_ID_FILTER_ENV_VAR "VK_LOADER_DRIVER_ID_FILTER"
 
 // Override layer information
 #define VK_OVERRIDE_LAYER_NAME "VK_LAYER_LUNARG_override"
@@ -298,7 +302,7 @@ static inline char *loader_platform_dirname(char *path) { return dirname(path); 
 
 // loader_platform_executable_path finds application path + name.
 // Path cannot be longer than 1024, returns NULL if it is greater than that.
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__CYGWIN__)
 static inline char *loader_platform_executable_path(char *buffer, size_t size) {
     ssize_t count = readlink("/proc/self/exe", buffer, size);
     if (count == -1) return NULL;
@@ -437,7 +441,12 @@ static inline const char *loader_platform_get_proc_address_error(const char *nam
 }
 
 // Thread mutex:
-static inline void loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_init(pMutex, NULL); }
+static inline void loader_platform_thread_create_mutex(loader_platform_thread_mutex *pMutex) {
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(pMutex, &attr);
+}
 static inline void loader_platform_thread_lock_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_lock(pMutex); }
 static inline void loader_platform_thread_unlock_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_unlock(pMutex); }
 static inline void loader_platform_thread_delete_mutex(loader_platform_thread_mutex *pMutex) { pthread_mutex_destroy(pMutex); }

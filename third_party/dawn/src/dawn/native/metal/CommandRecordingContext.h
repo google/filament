@@ -27,12 +27,12 @@
 #ifndef SRC_DAWN_NATIVE_METAL_COMMANDRECORDINGCONTEXT_H_
 #define SRC_DAWN_NATIVE_METAL_COMMANDRECORDINGCONTEXT_H_
 
+#import <Metal/Metal.h>
+
 #include "dawn/common/NSRef.h"
 #include "dawn/common/NonMovable.h"
 #include "dawn/native/Error.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-
-#import <Metal/Metal.h>
 
 namespace dawn::native::metal {
 

@@ -29,9 +29,8 @@
 
 #include <vector>
 
-#include "src/tint/utils/containers/reverse.h"
-
 #include "gtest/gtest.h"
+#include "src/tint/utils/containers/reverse.h"
 
 namespace tint {
 namespace {

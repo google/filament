@@ -42,8 +42,11 @@ namespace tint::spirv::writer {
 
 // The capabilities that might be needed due to raising.
 const core::ir::Capabilities kPrinterCapabilities{
+    core::ir::Capability::kAllowDuplicateBindings,
     core::ir::Capability::kAllowAnyInputAttachmentIndexType,
     core::ir::Capability::kAllowNonCoreTypes,
+    core::ir::Capability::kAllow8BitIntegers,
+    core::ir::Capability::kLoosenValidationForShaderIO,
 };
 
 /// @returns the generated SPIR-V instructions on success, or failure

@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_KEEP_BINDING_ARRAY_AS_POINTER_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_KEEP_BINDING_ARRAY_AS_POINTER_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -36,6 +37,12 @@ class Module;
 }
 
 namespace tint::spirv::writer::raise {
+
+// The capabilities that the transform can support.
+const core::ir::Capabilities kKeepBindingArrayAsPointerCapabilities{
+    core::ir::Capability::kAllowDuplicateBindings,
+    core::ir::Capability::kAllowNonCoreTypes,
+};
 
 /// KeepBindingArrayAsPointer is a transform that ensures that binding_arrays are never stored by
 /// value but only used via a pointer to them. This is used to produce SPIR-V that's more similar to

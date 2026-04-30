@@ -17,9 +17,15 @@ BACKEND_TEST_TARGET=''
 
 # Set environment variables to use Mesa drivers.
 os_name=$(uname -s)
+arch_name=$(uname -m)
 if [[ "$os_name" == "Linux" ]]; then
-    export LD_LIBRARY_PATH="${PROJECT_ROOT_DIR}/mesa/out/lib/x86_64-linux-gnu"
-    export VK_ICD_FILENAMES="${PROJECT_ROOT_DIR}/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json"
+    if [[ "$arch_name" == "aarch64" ]]; then
+        export LD_LIBRARY_PATH="${PROJECT_ROOT_DIR}/mesa/out/lib/aarch64-linux-gnu"
+        export VK_ICD_FILENAMES="${PROJECT_ROOT_DIR}/mesa/out/share/vulkan/icd.d/lvp_icd.aarch64.json"
+    else
+        export LD_LIBRARY_PATH="${PROJECT_ROOT_DIR}/mesa/out/lib/x86_64-linux-gnu"
+        export VK_ICD_FILENAMES="${PROJECT_ROOT_DIR}/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json"
+    fi
     BACKEND_TEST_TARGET=backend_test_linux
 elif [[ "$os_name" == "Darwin" ]]; then
     export DYLD_LIBRARY_PATH="${PROJECT_ROOT_DIR}/mesa/out/lib"

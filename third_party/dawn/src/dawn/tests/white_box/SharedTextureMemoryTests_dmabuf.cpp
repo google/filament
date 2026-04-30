@@ -37,8 +37,8 @@
 
 // This must be included instead of vulkan.h so that we can wrap it with vulkan_platform.h.
 #include "dawn/common/vulkan_platform.h"
-
 #include "dawn/tests/white_box/SharedTextureMemoryTests.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn {
 namespace {
@@ -216,7 +216,8 @@ class Backend : public SharedTextureMemoryTestVulkanBackend {
     }
 
     int mRenderNodeFd = -1;
-    gbm_device* mGbmDevice = nullptr;
+    // TODO(crbug.com/485825675): Investigate why this pointer is dangling.
+    raw_ptr<gbm_device, DanglingUntriaged> mGbmDevice = nullptr;
 };
 
 DAWN_INSTANTIATE_PREFIXED_TEST_P(

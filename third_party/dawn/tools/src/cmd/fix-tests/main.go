@@ -32,7 +32,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,11 +39,12 @@ import (
 	"strconv"
 	"strings"
 
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/substr"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(oswrapper.GetRealOSWrapper()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -67,7 +67,9 @@ Usage:
 	os.Exit(1)
 }
 
-func run() error {
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
+func run(osWrapper oswrapper.OSWrapper) error {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
@@ -78,14 +80,14 @@ func run() error {
 	wd := filepath.Dir(exe) // The directory holding the test exe
 
 	// Create a temporary directory to hold the 'test-results.json' file
-	tmpDir, err := ioutil.TempDir("", "fix-tests")
+	tmpDir, err := osWrapper.MkdirTemp("", "fix-tests")
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(tmpDir, 0666); err != nil {
+	if err := osWrapper.MkdirAll(tmpDir, 0666); err != nil {
 		return fmt.Errorf("Failed to create temporary directory: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer osWrapper.RemoveAll(tmpDir)
 
 	// Full path to the 'test-results.json' in the temporary directory
 	testResultsPath := filepath.Join(tmpDir, "test-results.json")
@@ -104,7 +106,7 @@ func run() error {
 	}
 
 	// Read the 'test-results.json' file
-	testResultsFile, err := os.Open(testResultsPath)
+	testResultsFile, err := osWrapper.Open(testResultsPath)
 	if err != nil {
 		return err
 	}
@@ -127,7 +129,7 @@ func run() error {
 				}
 				seen[test] = true
 
-				if err := processFailure(test, wd, failure.Failure); err != nil {
+				if err := processFailure(test, wd, failure.Failure, osWrapper); err != nil {
 					fmt.Println(fmt.Errorf("%v: %w", test, err))
 					numFailed++
 				} else {
@@ -174,58 +176,59 @@ func Size(mr MatchRange) int {
 	return mr.end - mr.start
 }
 
-// Look for 'search_str' in the 'doc_string' and return the longest matching substring of 'search_str' as start/end indices
-func longestSubstringMatch(search_str string, doc_string string) MatchRange {
+// longestSubstringMatch finds the longest matching substring of searchStr in docString and
+// returns the start/end indices
+func longestSubstringMatch(searchStr string, docString string) MatchRange {
 	// Brute force algorithm is n*m for string sizes n and m
-	best_idx_start := 0
-	best_idx_end := 0 // exclusive
+	bestIdxStart := 0
+	bestIdxEnd := 0 // exclusive
 	// Scan the document with the search string from the highest offset to the lowest. This will be out of bound for search string but that is because we are looking of a substring.
-	for doc_offset := -len(search_str); doc_offset < len(doc_string)+len(search_str); doc_offset++ {
-		curr_idx_start := 0
-		curr_idx_end := 0 // exclusive
-		for search_idx := 0; search_idx < len(search_str); search_idx++ {
-			doc_offset := search_idx + doc_offset
-			is_match := false
+	for docOffset := -len(searchStr); docOffset < len(docString)+len(searchStr); docOffset++ {
+		currIdxStart := 0
+		currIdxEnd := 0 // exclusive
+		for searchIdx := 0; searchIdx < len(searchStr); searchIdx++ {
+			docOffset := searchIdx + docOffset
+			isMatch := false
 
 			// basic range checking for the doc
-			if doc_offset >= 0 && doc_offset < len(doc_string) {
-				if search_str[search_idx] == doc_string[doc_offset] {
-					is_match = true
+			if docOffset >= 0 && docOffset < len(docString) {
+				if searchStr[searchIdx] == docString[docOffset] {
+					isMatch = true
 				}
 			}
 
-			if is_match {
-				if curr_idx_end == 0 {
+			if isMatch {
+				if currIdxEnd == 0 {
 					// first time matching
-					curr_idx_start = search_idx
-					curr_idx_end = curr_idx_start + 1 // exclusive
+					currIdxStart = searchIdx
+					currIdxEnd = currIdxStart + 1 // exclusive
 				} else {
 					// continue current matching.
-					curr_idx_end++
+					currIdxEnd++
 				}
 			}
 
 			// check if our match is the best
-			best_size := best_idx_end - best_idx_start
-			curr_size := curr_idx_end - curr_idx_start
+			bestSize := bestIdxEnd - bestIdxStart
+			currSize := currIdxEnd - currIdxStart
 
-			if best_size < curr_size {
-				best_idx_start = curr_idx_start
-				best_idx_end = curr_idx_end
+			if bestSize < currSize {
+				bestIdxStart = currIdxStart
+				bestIdxEnd = currIdxEnd
 			}
 
-			if !is_match {
+			if !isMatch {
 				// reset
-				curr_idx_start = 0
-				curr_idx_end = 0
+				currIdxStart = 0
+				currIdxEnd = 0
 			}
 		}
 	}
 
-	return MatchRange{best_idx_start, best_idx_end}
+	return MatchRange{bestIdxStart, bestIdxEnd}
 }
 
-func processFailure(test, wd, failure string) error {
+func processFailure(test, wd, failure string, osWrapper oswrapper.OSWrapper) error {
 	// Start by un-escaping newlines in the failure message
 	failure = strings.ReplaceAll(failure, "\\n", "\n")
 	// Matched regex strings will also need to be un-escaped, but do this after
@@ -257,63 +260,63 @@ func processFailure(test, wd, failure string) error {
 		fix = func(testSource string) (string, error) {
 			// This code is written so it can insert changes as fixes for expects that only match a substring.
 			// An example of where this is required is the "glsl/writer/builtin_test.cc" due to the programmatic header (GlslHeader())
-			// We don't know if a or b is the expected. We also dont know if it should be escaped for R"(...)" strings
-			a_esc, b_esc := escape(a), escape(b)
+			// We don't know if a or b is the expected. We also don't know if it should be escaped for R"(...)" strings
+			aEsc, bEsc := escape(a), escape(b)
 
 			// Find the longest match. We have (unfortunately) 4 options.
-			mr_a := longestSubstringMatch(a, testSource)
-			mr_b := longestSubstringMatch(b, testSource)
-			mr_a_esc := longestSubstringMatch(a_esc, testSource)
-			mr_b_esc := longestSubstringMatch(b_esc, testSource)
+			mrA := longestSubstringMatch(a, testSource)
+			mrB := longestSubstringMatch(b, testSource)
+			mrAEsc := longestSubstringMatch(aEsc, testSource)
+			mrBEsc := longestSubstringMatch(bEsc, testSource)
 
 			// Perfect matches are prioritized for the cases where there may be more than matchable string in test function.
 			// This is common in tint where there is both the 'src' and 'expect' strings of non-failing transform test.
-			var a_perfect = len(a) == Size(mr_a)
-			var b_perfect = len(b) == Size(mr_b)
-			var a_esc_perfect = len(a_esc) == Size(mr_a_esc)
-			var b_esc_perfect = len(b_esc) == Size(mr_b_esc)
-			var has_perfect = a_perfect || b_perfect || a_esc_perfect || b_esc_perfect
+			var aPerfect = len(a) == Size(mrA)
+			var bPerfect = len(b) == Size(mrB)
+			var aEscPerfect = len(aEsc) == Size(mrAEsc)
+			var bEscPerfect = len(bEsc) == Size(mrBEsc)
+			var hasPerfect = aPerfect || bPerfect || aEscPerfect || bEscPerfect
 
-			use_largest := func(mr MatchRange) bool {
-				return Size(mr) >= Size(mr_a) && Size(mr) >= Size(mr_b) &&
-					Size(mr) >= Size(mr_a_esc) && Size(mr) >= Size(mr_b_esc) && !has_perfect
+			useLargest := func(mr MatchRange) bool {
+				return Size(mr) >= Size(mrA) && Size(mr) >= Size(mrB) &&
+					Size(mr) >= Size(mrAEsc) && Size(mr) >= Size(mrBEsc) && !hasPerfect
 			}
 
 			// assumed mr_b_esc is best match
-			expected_str := b_esc
-			replace_str := a_esc
-			mr_largest := mr_b_esc
+			expectedStr := bEsc
+			replaceStr := aEsc
+			mrLargest := mrBEsc
 
-			if use_largest(mr_a) || a_perfect {
-				expected_str = a
-				replace_str = b
-				mr_largest = mr_a
-			} else if use_largest(mr_b) || b_perfect {
-				expected_str = b
-				replace_str = a
-				mr_largest = mr_b
-			} else if use_largest(mr_a_esc) || a_esc_perfect {
-				expected_str = a_esc
-				replace_str = b_esc
-				mr_largest = mr_a_esc
+			if useLargest(mrA) || aPerfect {
+				expectedStr = a
+				replaceStr = b
+				mrLargest = mrA
+			} else if useLargest(mrB) || bPerfect {
+				expectedStr = b
+				replaceStr = a
+				mrLargest = mrB
+			} else if useLargest(mrAEsc) || aEscPerfect {
+				expectedStr = aEsc
+				replaceStr = bEsc
+				mrLargest = mrAEsc
 			}
 
 			// trim away the number of unmatched characters from the end of expected to the end of the replacement.
-			replace_str_end := len(replace_str) - (len(expected_str) - mr_largest.end)
-			if replace_str_end >= mr_largest.start && replace_str_end <= len(replace_str) {
-				replace_str = replace_str[mr_largest.start:replace_str_end]
-				expected_str = expected_str[mr_largest.start:mr_largest.end]
+			replaceStrEnd := len(replaceStr) - (len(expectedStr) - mrLargest.end)
+			if replaceStrEnd >= mrLargest.start && replaceStrEnd <= len(replaceStr) {
+				replaceStr = replaceStr[mrLargest.start:replaceStrEnd]
+				expectedStr = expectedStr[mrLargest.start:mrLargest.end]
 			} else {
-				// It is not safe to attempt a replace if the replacement string would have negative (nonsense) size.
-				expected_str = ""
+				// It is not safe to attempt a replacement if the replacement string would have negative (nonsense) size.
+				expectedStr = ""
 			}
 
 			// Do not try to replace on empty strings.
-			if len(expected_str) <= 0 {
+			if len(expectedStr) <= 0 {
 				return "", fmt.Errorf("could not fix 'EXPECT_EQ' pattern in '%v'\n\nA: '%v'\n\nB: '%v'", file, a, b)
 			}
 
-			testSource = strings.ReplaceAll(testSource, expected_str, replace_str)
+			testSource = strings.ReplaceAll(testSource, expectedStr, replaceStr)
 			return testSource, nil
 		}
 	} else if parts := reExpectHasSubstr.FindStringSubmatch(failure); len(parts) == 5 {
@@ -346,7 +349,7 @@ func processFailure(test, wd, failure string) error {
 	}
 
 	// Parse the source file, split into tests
-	sourceFile, err := parseSourceFile(sourcePath)
+	sourceFile, err := parseSourceFile(sourcePath, osWrapper)
 	if err != nil {
 		return fmt.Errorf("Couldn't parse tests from file '%v': %w", file, err)
 	}
@@ -368,13 +371,13 @@ func processFailure(test, wd, failure string) error {
 	sourceFile.parts[testIdx] = testSource
 
 	// Write out the source file
-	return writeSourceFile(sourcePath, sourceFile)
+	return writeSourceFile(sourcePath, sourceFile, osWrapper)
 }
 
 // parseSourceFile() reads the file at path, splitting the content into chunks
 // for each TEST.
-func parseSourceFile(path string) (sourceFile, error) {
-	fileBytes, err := ioutil.ReadFile(path)
+func parseSourceFile(path string, fsReader oswrapper.FilesystemReader) (sourceFile, error) {
+	fileBytes, err := fsReader.ReadFile(path)
 	if err != nil {
 		return sourceFile{}, err
 	}
@@ -401,9 +404,9 @@ func parseSourceFile(path string) (sourceFile, error) {
 
 // writeSourceFile() joins the chunks of the file, and writes the content out to
 // path.
-func writeSourceFile(path string, file sourceFile) error {
+func writeSourceFile(path string, file sourceFile, fsWriter oswrapper.FilesystemWriter) error {
 	body := strings.Join(file.parts, "")
-	return ioutil.WriteFile(path, []byte(body), 0666)
+	return fsWriter.WriteFile(path, []byte(body), 0666)
 }
 
 type sourceFile struct {

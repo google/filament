@@ -30,7 +30,7 @@ struct inputData
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
 
-kernel void main0(device inputData& _12 [[buffer(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+kernel void main0(const device inputData& _12 [[buffer(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {
     bool _31 = _12.inputDataArray[gl_LocalInvocationID.x] > 0.0;
 }

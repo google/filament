@@ -81,6 +81,8 @@ in table [standardProperties].
 **roughness**           | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
 **metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
 **reflectance**         | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
+**specularFactor**      | Scales the amount of specular reflection for non-metallic surfaces
+**specularColorFactor** | Color of the specular reflection for non-metallic surfaces
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **clearCoat**           | Strength of the clear coat layer
 **clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
@@ -110,6 +112,8 @@ The type and range of each property is described in table [standardPropertiesTyp
 **metallic**            | float    |  [0..1]                  | Should be 0 or 1
 **roughness**           | float    |  [0..1]                  |
 **reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
+**specularFactor**      | float    |  [0..1]                  | Optional, defaults to 1.0
+**specularColorFactor** | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
 **sheenColor**          | float3   |  [0..1]                  | Linear RGB
 **sheenRoughness**      | float    |  [0..1]                  |
 **clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
@@ -303,6 +307,20 @@ it easy to define from a texture.
 
 See section [Index of refraction] for more information about the `ior` property and refractive
 indices.
+
+### Specular factor
+
+The `specularFactor` property scales the amount of specular reflection for non-metallic surfaces.
+This property is often used to implement the `KHR_materials_specular` glTF extension. This value
+scales the Fresnel reflectance at normal incidence (F0), which is also computed from the
+`reflectance` property. It also sets the Fresnel reflectance at grazing angles (F90).
+
+### Specular color factor
+
+The `specularColorFactor` property defines the color of the specular reflection for non-metallic
+surfaces. This property is often used to implement the `KHR_materials_specular` glTF extension. This
+value scales the Fresnel reflectance at normal incidence (F0), which is also computed from the
+`reflectance` property.
 
 ### Sheen color
 

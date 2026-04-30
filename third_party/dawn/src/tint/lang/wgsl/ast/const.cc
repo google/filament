@@ -30,20 +30,18 @@
 #include <utility>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::Const);
 
 namespace tint::ast {
 
-Const::Const(GenerationID pid,
-             NodeID nid,
+Const::Const(NodeID nid,
              const Source& src,
              const Identifier* n,
              Type ty,
              const Expression* init,
              VectorRef<const Attribute*> attrs)
-    : Base(pid, nid, src, n, ty, init, std::move(attrs)) {
+    : Base(nid, src, n, ty, init, std::move(attrs)) {
     TINT_ASSERT(init != nullptr);
 }
 
@@ -51,15 +49,6 @@ Const::~Const() = default;
 
 const char* Const::Kind() const {
     return "const";
-}
-
-const Const* Const::Clone(CloneContext& ctx) const {
-    auto src = ctx.Clone(source);
-    auto n = ctx.Clone(name);
-    auto ty = ctx.Clone(type);
-    auto* init = ctx.Clone(initializer);
-    auto attrs = ctx.Clone(attributes);
-    return ctx.dst->create<Const>(src, n, ty, init, std::move(attrs));
 }
 
 }  // namespace tint::ast

@@ -4,7 +4,7 @@ spv.WorkgroupMemoryExplicitLayout.scalar.comp
 // Id's are bound by 29
 
                               Capability Shader
-                              Capability CapabilityWorkgroupMemoryExplicitLayoutKHR
+                              Capability WorkgroupMemoryExplicitLayoutKHR
                               Extension  "SPV_KHR_workgroup_memory_explicit_layout"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

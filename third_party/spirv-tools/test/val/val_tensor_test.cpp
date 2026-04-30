@@ -41,6 +41,8 @@ std::string GenerateModule(const std::string& body) {
                      OpDecorate %tensor_var Binding 0
                      OpDecorate %tensor_var_float_unranked DescriptorSet 0
                      OpDecorate %tensor_var_float_unranked Binding 1
+                     OpDecorate %tensor_var_spec_rank DescriptorSet 0
+                     OpDecorate %tensor_var_spec_rank Binding 2
              %void = OpTypeVoid
              %uint = OpTypeInt 32 0
             %float = OpTypeFloat 32

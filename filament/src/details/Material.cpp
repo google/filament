@@ -235,8 +235,10 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
     return mDefinition.perViewDescriptorSetLayoutPcf;
 }
 
-void FMaterial::compile(CompilerPriorityQueue const priority, UserVariantFilterMask variantSpec,
-        CallbackHandler* handler, Invocable<void(Material*)>&& callback) noexcept {
+void FMaterial::compile(CompilerPriorityQueue const priority,
+        UserVariantFilterMask variantSpec,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
     FMaterialInstance* mi = getDefaultInstance();
     if (callback) {
         mi->compile(priority, variantSpec, handler,
@@ -245,6 +247,50 @@ void FMaterial::compile(CompilerPriorityQueue const priority, UserVariantFilterM
                 });
     } else {
         mi->compile(priority, variantSpec, handler, {});
+    }
+}
+
+void FMaterial::compile(CompilerPriorityQueue const priority,
+        FixedCapacityVector<Variant> const& variants,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+    FMaterialInstance* mi = getDefaultInstance();
+
+    ShaderModel const shaderModel = mEngine.getShaderModel();
+    bool const isStereoSupported = driver.isStereoSupported();
+    bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
+
+    if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
+        for (auto const variant : variants) {
+            if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                mi->prepareProgram(driver, variant, priority);
+            }
+        }
+    }
+
+    compileAllPrograms(priority, handler, std::move(callback));
+}
+
+void FMaterial::compileAllPrograms(CompilerPriorityQueue const priority,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
+    DriverApi& driver = mEngine.getDriverApi();
+
+    if (callback) {
+        struct Callback {
+            Invocable<void(Material*)> f;
+            Material* m;
+            static void func(void* user) {
+                auto* const c = static_cast<Callback*>(user);
+                c->f(c->m);
+                delete c;
+            }
+        };
+        auto* const user = new(std::nothrow) Callback{ std::move(callback), const_cast<FMaterial*>(this) };
+        driver.compilePrograms(priority, handler, &Callback::func, user);
+    } else {
+        driver.compilePrograms(priority, nullptr, nullptr, nullptr);
     }
 }
 

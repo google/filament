@@ -1,0 +1,10 @@
+#version 450
+#extension GL_EXT_descriptor_heap: require
+
+layout(descriptor_heap, descriptor_stride = 3) uniform U { uint  inputData; }  ubo[];
+layout(descriptor_heap)  buffer O { uint outputData; } ssbo[];
+
+void main()
+{
+    ssbo[8].outputData = ubo[9].inputData;
+}

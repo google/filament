@@ -43,11 +43,6 @@
 #include "src/tint/utils/text/string_stream.h"
 #include "src/tint/utils/text/styled_text.h"
 
-// Forward declarations
-namespace tint::diag {
-class List;
-}  // namespace tint::diag
-
 namespace tint::core::intrinsic {
 
 /// Overload describes a fully matched builtin function overload
@@ -60,12 +55,14 @@ struct Overload {
         const core::type::Type* const type;
         /// Parameter usage
         core::ParameterUsage const usage = core::ParameterUsage::kNone;
+        /// True if the parameter is required to be const.
+        const bool is_const;
 
         /// Equality operator
         /// @param other the parameter to compare against
         /// @returns true if this parameter and @p other are the same
         bool operator==(const Parameter& other) const {
-            return type == other.type && usage == other.usage;
+            return type == other.type && usage == other.usage && is_const == other.is_const;
         }
 
         /// Inequality operator

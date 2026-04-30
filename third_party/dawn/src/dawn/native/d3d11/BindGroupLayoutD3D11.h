@@ -39,15 +39,17 @@ class Device;
 
 class BindGroupLayout final : public BindGroupLayoutInternalBase {
   public:
-    static ResultOrError<Ref<BindGroupLayout>> Create(Device* device,
-                                                      const BindGroupLayoutDescriptor* descriptor);
+    static ResultOrError<Ref<BindGroupLayout>> Create(
+        Device* device,
+        const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
 
-    Ref<BindGroup> AllocateBindGroup(Device* device, const BindGroupDescriptor* descriptor);
+    Ref<BindGroup> AllocateBindGroup(Device* device,
+                                     const UnpackedPtr<BindGroupDescriptor>& descriptor);
     void DeallocateBindGroup(BindGroup* bindGroup);
     void ReduceMemoryUsage() override;
 
   private:
-    BindGroupLayout(Device* device, const BindGroupLayoutDescriptor* descriptor);
+    BindGroupLayout(Device* device, const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
     ~BindGroupLayout() override = default;
 
     MutexProtected<SlabAllocator<BindGroup>> mBindGroupAllocator;

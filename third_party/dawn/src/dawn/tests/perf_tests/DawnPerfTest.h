@@ -136,7 +136,13 @@ class DawnPerfTestWithParams : public DawnTestWithParams<Params>, public DawnPer
     DawnPerfTestWithParams(unsigned int iterationsPerStep, unsigned int maxStepsInFlight)
         : DawnTestWithParams<Params>(),
           DawnPerfTestBase(this, iterationsPerStep, maxStepsInFlight) {}
-    void SetUp() override {
+    ~DawnPerfTestWithParams() override = default;
+
+    // Since this function might fail but has no way to signal that it failed
+    // so it should not be called directly or overridden. Unforutnately there is
+    // no way to enforce that without a huge refactor. Marking it as `final`
+    // at least means derived classes can't incorrectly override it.
+    void SetUp() final {
         DawnTestWithParams<Params>::SetUp();
 
         DAWN_TEST_UNSUPPORTED_IF(this->IsCPU());
@@ -144,8 +150,11 @@ class DawnPerfTestWithParams : public DawnTestWithParams<Params>, public DawnPer
         if (mSupportsTimestampQuery) {
             InitializeGPUTimer();
         }
+
+        SetUpPerfTest();
     }
-    ~DawnPerfTestWithParams() override = default;
+
+    virtual void SetUpPerfTest() {}
 
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         std::vector<wgpu::FeatureName> requiredFeatures = {wgpu::FeatureName::TimestampQuery};

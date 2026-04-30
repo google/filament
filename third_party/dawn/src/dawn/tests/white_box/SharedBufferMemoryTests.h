@@ -29,6 +29,7 @@
 #define SRC_DAWN_TESTS_WHITE_BOX_SHAREDBUFFERMEMORYTESTS_H_
 
 #include <gtest/gtest.h>
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -64,6 +65,7 @@ class SharedBufferMemoryTests : public DawnTestWithParams<SharedBufferMemoryTest
   public:
     void SetUp() override;
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override;
+    bool SupportsBackend();
 };
 }  // namespace dawn
 

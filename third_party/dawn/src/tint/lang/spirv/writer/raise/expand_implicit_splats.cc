@@ -58,7 +58,7 @@ struct State {
                 // replicate the argument N times.
                 auto* vec = construct->Result()->Type()->As<core::type::Vector>();
                 if ((vec != nullptr) &&  //
-                    construct->Args().Length() == 1 &&
+                    construct->Args().size() == 1 &&
                     construct->Args()[0]->Type()->Is<core::type::Scalar>()) {
                     for (uint32_t i = 1; i < vec->Width(); i++) {
                         construct->AppendArg(construct->Args()[0]);
@@ -135,11 +135,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ExpandImplicitSplats(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.ExpandImplicitSplats",
-                                          kExpandImplicitSplatsCapabilities);
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir, kExpandImplicitSplatsCapabilities, "before spirv.ExpandImplicitSplats");
 
     State{ir}.Process();
 

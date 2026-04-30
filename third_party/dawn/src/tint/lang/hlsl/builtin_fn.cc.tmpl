@@ -12,6 +12,9 @@ See:
 */ -}}
 
 {{- $I := LoadIntrinsics "src/tint/lang/hlsl/hlsl.def" -}}
+
+// clang-format off
+
 #include "src/tint/lang/hlsl/builtin_fn.h"
 
 namespace tint::hlsl {
@@ -50,6 +53,10 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kStore2F16:
         case BuiltinFn::kStore3F16:
         case BuiltinFn::kStore4F16:
+        case BuiltinFn::kStoreU16:
+        case BuiltinFn::kStore2U16:
+        case BuiltinFn::kStore3U16:
+        case BuiltinFn::kStore4U16:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kLoad:
@@ -60,6 +67,10 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kLoad2F16:
         case BuiltinFn::kLoad3F16:
         case BuiltinFn::kLoad4F16:
+        case BuiltinFn::kLoadU16:
+        case BuiltinFn::kLoad2U16:
+        case BuiltinFn::kLoad3U16:
+        case BuiltinFn::kLoad4U16:
         case BuiltinFn::kGatherCmp:
         case BuiltinFn::kGather:
         case BuiltinFn::kGatherAlpha:
@@ -77,6 +88,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kAsint:
         case BuiltinFn::kAsuint:
         case BuiltinFn::kAsfloat:
+        case BuiltinFn::kAsuint16:
+        case BuiltinFn::kAsfloat16:
         case BuiltinFn::kDot4AddI8Packed:
         case BuiltinFn::kDot4AddU8Packed:
         case BuiltinFn::kF32Tof16:
@@ -101,3 +114,5 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
 }
 
 }  // namespace tint::hlsl
+
+// clang-format on

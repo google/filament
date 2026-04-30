@@ -179,6 +179,45 @@ OpMemoryModel Logical GLSL450
   EXPECT_TRUE(capabilities.contains(spv::Capability::Matrix));
 }
 
+TEST_F(FeatureManagerTest, HasConditionalExtension) {
+  const std::string text = R"(
+         OpCapability Linkage
+         OpCapability Shader
+         OpCapability SpecConditionalINTEL
+         OpExtension "SPV_INTEL_function_variants"
+         OpConditionalExtensionINTEL %1 "SPV_KHR_variable_pointers"
+         OpMemoryModel Logical GLSL450
+ %bool = OpTypeBool
+    %1 = OpSpecConstantTrue %bool
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text);
+  ASSERT_NE(context, nullptr);
+
+  EXPECT_TRUE(context->get_feature_mgr()->HasExtension(
+      Extension::kSPV_KHR_variable_pointers));
+}
+
+TEST_F(FeatureManagerTest, HasConditionalCapability) {
+  const std::string text = R"(
+         OpCapability Linkage
+         OpCapability Shader
+         OpCapability SpecConditionalINTEL
+         OpConditionalCapabilityINTEL %1 Int8
+         OpExtension "SPV_INTEL_function_variants"
+         OpMemoryModel Logical GLSL450
+ %bool = OpTypeBool
+    %1 = OpSpecConstantTrue %bool
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text);
+  ASSERT_NE(context, nullptr);
+
+  EXPECT_TRUE(context->get_feature_mgr()->HasCapability(spv::Capability::Int8));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

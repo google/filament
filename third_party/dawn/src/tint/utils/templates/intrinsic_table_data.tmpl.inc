@@ -45,8 +45,6 @@ using TemplateNumberMatcher = tint::core::intrinsic::TemplateNumberMatcher<N>;
 template<size_t N>
 using TemplateTypeMatcher = tint::core::intrinsic::TemplateTypeMatcher<N>;
 
-// clang-format off
-
 {{  with $I.Sem -}}
 {{    range .Types -}}
 {{      template "Type" . }}
@@ -83,6 +81,9 @@ constexpr ParameterInfo kParameters[] = {
 {{-   if $p.Usage }}k{{PascalCase $p.Usage}}
 {{-   else        }}kNone
 {{-   end }},
+    /* is_const */
+{{-   if $p.IsConst }} true
+{{-   else          }} false{{end}},
     /* matcher_indices */
 {{-   if ge $p.MatcherIndicesOffset 0 }} MatcherIndicesIndex({{$p.MatcherIndicesOffset}})
 {{-   else                            }} MatcherIndicesIndex(/* invalid */)
@@ -237,19 +238,17 @@ constexpr IntrinsicInfo kConstructorsAndConverters[] = {
 };
 {{- end }}
 
-// clang-format on
-
 }  // anonymous namespace
 
 const core::intrinsic::TableData {{$.Name}}{
-  /* templates */ {{if .Templates}}kTemplates{{else}}Empty{{end}},
-  /* type_matcher_indices */ {{if .MatcherIndices}}kMatcherIndices{{else}}Empty{{end}},
-  /* type_matchers */ {{if .TMatchers}}kTypeMatchers{{else}}Empty{{end}},
-  /* number_matchers */ {{if .NMatchers}}kNumberMatchers{{else}}Empty{{end}},
-  /* parameters */ {{if .Parameters}}kParameters{{else}}Empty{{end}},
+  /* templates */ {{if .Templates}}kTemplates{{else}}{}{{end}},
+  /* type_matcher_indices */ {{if .MatcherIndices}}kMatcherIndices{{else}}{}{{end}},
+  /* type_matchers */ {{if .TMatchers}}kTypeMatchers{{else}}{}{{end}},
+  /* number_matchers */ {{if .NMatchers}}kNumberMatchers{{else}}{}{{end}},
+  /* parameters */ {{if .Parameters}}kParameters{{else}}{}{{end}},
   /* overloads */ kOverloads,
-  /* const_eval_functions */ {{if .ConstEvalFunctions}}kConstEvalFunctions{{else}}Empty{{end}},
-  /* ctor_conv */ {{if .ConstructorsAndConverters}}kConstructorsAndConverters{{else}}Empty{{end}},
+  /* const_eval_functions */ {{if .ConstEvalFunctions}}kConstEvalFunctions{{else}}{}{{end}},
+  /* ctor_conv */ {{if .ConstructorsAndConverters}}kConstructorsAndConverters{{else}}{}{{end}},
   /* builtins */ kBuiltins,
 {{- range $op := List "+" "-" "*" "/" "%" "^" "&" "|" "&&" "||" "==" "!=" "<" ">" "<=" ">=" "<<" ">>"}}
 {{-   $N := Eval "OperatorName" $op }}

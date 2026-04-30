@@ -8,7 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/reporter.h"
+#include "benchmark/sysinfo.h"
 #include "commandlineflags.h"
 
 namespace benchmark {
@@ -17,9 +19,9 @@ namespace internal {
 // Information kept per benchmark we may want to run
 class BenchmarkInstance {
  public:
-  BenchmarkInstance(Benchmark* benchmark, int family_index,
-                    int per_family_instance_index,
-                    const std::vector<int64_t>& args, int threads);
+  BenchmarkInstance(benchmark::Benchmark* benchmark, int family_idx,
+                    int per_family_instance_idx,
+                    const std::vector<int64_t>& args, int thread_count);
 
   const BenchmarkName& name() const { return name_; }
   int family_index() const { return family_index_; }
@@ -41,6 +43,9 @@ class BenchmarkInstance {
   int threads() const { return threads_; }
   void Setup() const;
   void Teardown() const;
+  const auto& GetUserThreadRunnerFactory() const {
+    return benchmark_.threadrunner_;
+  }
 
   State Run(IterationCount iters, int thread_id, internal::ThreadTimer* timer,
             internal::ThreadManager* manager,
@@ -49,7 +54,7 @@ class BenchmarkInstance {
 
  private:
   BenchmarkName name_;
-  Benchmark& benchmark_;
+  benchmark::Benchmark& benchmark_;
   const int family_index_;
   const int per_family_instance_index_;
   AggregationReportMode aggregation_report_mode_;
@@ -68,9 +73,8 @@ class BenchmarkInstance {
   IterationCount iterations_;
   int threads_;  // Number of concurrent threads to us
 
-  typedef void (*callback_function)(const benchmark::State&);
-  callback_function setup_ = nullptr;
-  callback_function teardown_ = nullptr;
+  callback_function setup_;
+  callback_function teardown_;
 };
 
 bool FindBenchmarksInternal(const std::string& re,

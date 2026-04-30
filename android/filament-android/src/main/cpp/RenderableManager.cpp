@@ -18,6 +18,7 @@
 
 #include <filament/RenderableManager.h>
 #include <filament/MaterialInstance.h>
+#include <common/JniUtils.h>
 
 #include <utils/Entity.h>
 
@@ -25,6 +26,7 @@
 
 using namespace filament;
 using namespace utils;
+using namespace filament::android;
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_RenderableManager_nHasComponent(JNIEnv*, jclass,
@@ -63,11 +65,13 @@ Java_com_google_android_filament_RenderableManager_nDestroyBuilder(JNIEnv*, jcla
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_RenderableManager_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine, jint entity) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return jboolean(builder->build(*engine, (Entity &) entity) == RenderableManager::Builder::Success);
+    return wrapJni<jboolean>(env, [=]() {
+        return jboolean(builder->build(*engine, (Entity &) entity) == RenderableManager::Builder::Success);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -276,11 +280,13 @@ Java_com_google_android_filament_RenderableManager_nBuilderInstances(JNIEnv*, jc
 // ------------------------------------------------------------------------------------------------
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetSkinningBuffer(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nSetSkinningBuffer(JNIEnv* env, jclass,
         jlong nativeRenderableManager, jint i, jlong nativeSkinningBuffer, jint count, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     SkinningBuffer *sb = (SkinningBuffer *) nativeSkinningBuffer;
-    rm->setSkinningBuffer(i, sb, count, offset);
+    wrapJni(env, [=]() {
+        rm->setSkinningBuffer(i, sb, count, offset);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -295,9 +301,12 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsMatrices(JNIEnv* e
         // BufferOverflowException
         return -1;
     }
-    rm->setBones((RenderableManager::Instance)i,
-            static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    jint result = 0;
+    wrapJni(env, [=]() {
+        rm->setBones((RenderableManager::Instance)i,
+                static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
+    });
+    return result;
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -312,9 +321,12 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsQuaternions(JNIEnv
         // BufferOverflowException
         return -1;
     }
-    rm->setBones((RenderableManager::Instance)i,
-            static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
-    return 0;
+    jint result = 0;
+    wrapJni(env, [=]() {
+        rm->setBones((RenderableManager::Instance)i,
+                static_cast<RenderableManager::Bone const *>(data), (size_t)boneCount, (size_t)offset);
+    });
+    return result;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -323,17 +335,21 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     jfloat* vec = env->GetFloatArrayElements(weights, NULL);
     jsize count = env->GetArrayLength(weights);
-    rm->setMorphWeights((RenderableManager::Instance)instance, vec, count, offset);
+    wrapJni(env, [=]() {
+        rm->setMorphWeights((RenderableManager::Instance)instance, vec, count, offset);
+    });
     env->ReleaseFloatArrayElements(weights, vec, JNI_ABORT);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferOffsetAt(JNIEnv*,
+Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferOffsetAt(JNIEnv* env,
         jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
         jlong, jint offset) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->setMorphTargetBufferOffsetAt((RenderableManager::Instance) i, (uint8_t) level,
-            (size_t) primitiveIndex, (size_t) offset);
+    wrapJni(env, [=]() {
+        rm->setMorphTargetBufferOffsetAt((RenderableManager::Instance) i, (uint8_t) level,
+                (size_t) primitiveIndex, (size_t) offset);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -344,12 +360,14 @@ Java_com_google_android_filament_RenderableManager_nGetMorphTargetCount(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetAxisAlignedBoundingBox(JNIEnv*,
+Java_com_google_android_filament_RenderableManager_nSetAxisAlignedBoundingBox(JNIEnv* env,
         jclass, jlong nativeRenderableManager, jint i, jfloat cx, jfloat cy, jfloat cz,
         jfloat ex, jfloat ey, jfloat ez) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->setAxisAlignedBoundingBox((RenderableManager::Instance) i, {{cx, cy, cz},
-                                                                    {ex, ey, ez}});
+    wrapJni(env, [=]() {
+        rm->setAxisAlignedBoundingBox((RenderableManager::Instance) i, {{cx, cy, cz},
+                                                                        {ex, ey, ez}});
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -486,19 +504,23 @@ Java_com_google_android_filament_RenderableManager_nGetInstanceCount(JNIEnv*, jc
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv* env, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex, jlong nativeMaterialInstance) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     const MaterialInstance *materialInstance = (const MaterialInstance *) nativeMaterialInstance;
-    rm->setMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
-            materialInstance);
+    wrapJni(env, [=]() {
+        rm->setMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
+                materialInstance);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nClearMaterialInstanceAt(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nClearMaterialInstanceAt(JNIEnv* env, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    rm->clearMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+    wrapJni(env, [=]() {
+        rm->clearMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+    });
 }
 
 extern "C" JNIEXPORT jlong JNICALL

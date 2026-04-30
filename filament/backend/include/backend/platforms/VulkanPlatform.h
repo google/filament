@@ -31,7 +31,6 @@
 #include <cstring>
 #include <cstddef>
 #include <functional>
-#include <string>
 #include <tuple>
 #include <unordered_set>
 
@@ -69,7 +68,7 @@ public:
 
     struct ExtensionHashFn {
         std::size_t operator()(utils::CString const& s) const noexcept {
-            return std::hash<std::string>{}(s.data());
+            return std::hash<utils::CString>{}(s.data());
         }
     };
     // Note: utils::CString::operator== has an edge case that breaks for the extension set.
@@ -177,6 +176,12 @@ public:
          * presentation. Default is true.
          */
         bool transitionSwapChainImageLayoutForPresent = true;
+
+        /**
+         * The number of frames before an unused framebuffer is evicted from the cache.
+         * Default is 3.
+         */
+        uint32_t timeBeforeEvictionFbo = 3;
     };
 
     /**

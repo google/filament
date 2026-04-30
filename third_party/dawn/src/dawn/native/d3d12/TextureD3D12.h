@@ -31,9 +31,8 @@
 #include <optional>
 #include <vector>
 
-#include "dawn/native/Error.h"
-
 #include "dawn/native/DawnNative.h"
+#include "dawn/native/Error.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/PassResourceUsage.h"
 #include "dawn/native/Texture.h"
@@ -86,9 +85,9 @@ class Texture final : public TextureBase {
 
     MaybeError SynchronizeTextureBeforeUse(CommandRecordingContext* commandContext);
 
-    void NotifySwapChainPresentToPIX();
+    void NotifySwapChainPresent();
 
-    void SetIsSwapchainTexture(bool isSwapChainTexture);
+    void SetIsExternalSwapchainTexture(bool isSwapChainTexture);
 
     void TrackUsageAndGetResourceBarrierForPass(CommandRecordingContext* commandContext,
                                                 std::vector<D3D12_RESOURCE_BARRIER>* barrier,
@@ -127,7 +126,9 @@ class Texture final : public TextureBase {
 
     // Dawn API
     void SetLabelImpl() override;
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
+    MaybeError PinImpl(wgpu::TextureUsage usage) override;
+    void UnpinImpl() override;
 
     MaybeError ClearTexture(CommandRecordingContext* commandContext,
                             const SubresourceRange& range,
@@ -164,7 +165,7 @@ class Texture final : public TextureBase {
     // SharedTextureMemory.
     std::vector<FenceAndSignalValue> mWaitFences;
 
-    bool mSwapChainTexture = false;
+    bool mIsExternalSwapChainTexture = false;
 
     SubresourceStorage<StateAndDecay> mSubresourceStateAndDecay;
 };

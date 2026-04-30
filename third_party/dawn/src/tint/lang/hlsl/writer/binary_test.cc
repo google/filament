@@ -50,7 +50,7 @@ using HlslWriterBinaryU32Test = HlslWriterTestWithParam<BinaryData>;
 TEST_P(HlslWriterBinaryU32Test, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -59,10 +59,11 @@ TEST_P(HlslWriterBinaryU32Test, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   uint val = )" + std::string(params.result) +
@@ -81,7 +82,7 @@ INSTANTIATE_TEST_SUITE_P(HlslWriterTest,
                                          BinaryData{"(left ^ right)", core::BinaryOp::kXor}));
 
 TEST_F(HlslWriterTest, BinaryU32Div) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -90,14 +91,15 @@ TEST_F(HlslWriterTest, BinaryU32Div) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 uint tint_div_u32(uint lhs, uint rhs) {
   return (lhs / (((rhs == 0u)) ? (1u) : (rhs)));
 }
 
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   uint val = tint_div_u32(left, right);
@@ -107,7 +109,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryU32Mod) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -116,7 +118,8 @@ TEST_F(HlslWriterTest, BinaryU32Mod) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 uint tint_mod_u32(uint lhs, uint rhs) {
   uint v = (((rhs == 0u)) ? (1u) : (rhs));
@@ -124,7 +127,7 @@ uint tint_mod_u32(uint lhs, uint rhs) {
 }
 
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   uint val = tint_mod_u32(left, right);
@@ -134,7 +137,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryU32ShiftLeft) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -143,10 +146,11 @@ TEST_F(HlslWriterTest, BinaryU32ShiftLeft) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   uint val = (left << (right & 31u));
@@ -156,7 +160,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryU32ShiftRight) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -165,10 +169,11 @@ TEST_F(HlslWriterTest, BinaryU32ShiftRight) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   uint val = (left >> (right & 31u));
@@ -181,7 +186,7 @@ using HlslWriterBinaryBoolTest = HlslWriterTestWithParam<BinaryData>;
 TEST_P(HlslWriterBinaryBoolTest, Emit) {
     auto params = GetParam();
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* l = b.Let("left", b.Constant(1_u));
         auto* r = b.Let("right", b.Constant(2_u));
@@ -190,10 +195,11 @@ TEST_P(HlslWriterBinaryBoolTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   uint left = 1u;
   uint right = 2u;
   bool val = )" + std::string(params.result) +
@@ -213,7 +219,7 @@ INSTANTIATE_TEST_SUITE_P(
                     BinaryData{"(left >= right)", core::BinaryOp::kGreaterThanEqual}));
 
 TEST_F(HlslWriterTest, BinaryF32Mod) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* left = b.Var("left", ty.ptr<core::AddressSpace::kFunction, f32>());
         auto* right = b.Var("right", ty.ptr<core::AddressSpace::kFunction, f32>());
@@ -226,10 +232,11 @@ TEST_F(HlslWriterTest, BinaryF32Mod) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float left = 0.0f;
   float right = 0.0f;
   float v = left;
@@ -242,7 +249,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryF16Mod) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* left = b.Var("left", ty.ptr<core::AddressSpace::kFunction, f16>());
         auto* right = b.Var("right", ty.ptr<core::AddressSpace::kFunction, f16>());
@@ -255,10 +262,11 @@ TEST_F(HlslWriterTest, BinaryF16Mod) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float16_t left = float16_t(0.0h);
   float16_t right = float16_t(0.0h);
   float16_t v = left;
@@ -271,23 +279,24 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryF32ModVec3) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
-        auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.vec3<f32>()));
-        auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.vec3<f32>()));
+        auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.vec3f()));
+        auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.vec3f()));
 
         auto* l = b.Load(left);
         auto* r = b.Load(right);
-        auto* expr1 = b.Binary(core::BinaryOp::kModulo, ty.vec3<f32>(), l, r);
+        auto* expr1 = b.Binary(core::BinaryOp::kModulo, ty.vec3f(), l, r);
 
         b.Let("val", expr1);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float3 left = (0.0f).xxx;
   float3 right = (0.0f).xxx;
   float3 v = left;
@@ -300,23 +309,24 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryF16ModVec3) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
-        auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.vec3<f16>()));
-        auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.vec3<f16>()));
+        auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.vec3h()));
+        auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.vec3h()));
 
         auto* l = b.Load(left);
         auto* r = b.Load(right);
-        auto* expr1 = b.Binary(core::BinaryOp::kModulo, ty.vec3<f16>(), l, r);
+        auto* expr1 = b.Binary(core::BinaryOp::kModulo, ty.vec3h(), l, r);
 
         b.Let("val", expr1);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   vector<float16_t, 3> left = (float16_t(0.0h)).xxx;
   vector<float16_t, 3> right = (float16_t(0.0h)).xxx;
   vector<float16_t, 3> v = left;
@@ -329,7 +339,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryBoolAnd) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.bool_()));
         auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.bool_()));
@@ -342,10 +352,11 @@ TEST_F(HlslWriterTest, BinaryBoolAnd) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   bool left = false;
   bool right = false;
   bool val = (left & right);
@@ -355,7 +366,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryBoolOr) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* left = b.Var("left", ty.ptr(core::AddressSpace::kFunction, ty.bool_()));
         auto* right = b.Var("right", ty.ptr(core::AddressSpace::kFunction, ty.bool_()));
@@ -368,10 +379,11 @@ TEST_F(HlslWriterTest, BinaryBoolOr) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   bool left = false;
   bool right = false;
   bool val = (left | right);
@@ -381,20 +393,21 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryMulMatVec) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* x = b.Var("x", b.Zero<mat4x4<f32>>());
         auto* y = b.Var("y", b.Zero<vec4<f32>>());
         auto* l = b.Load(x);
         auto* r = b.Load(y);
-        b.Var("c", b.Multiply(ty.vec4<f32>(), l, r));
+        b.Var("c", b.Multiply(l, r));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float4x4 x = float4x4((0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx);
   float4 y = (0.0f).xxxx;
   float4 c = mul(y, x);
@@ -404,20 +417,21 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryMulVecMat) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* x = b.Var("x", b.Zero<mat4x4<f32>>());
         auto* y = b.Var("y", b.Zero<vec4<f32>>());
         auto* l = b.Load(x);
         auto* r = b.Load(y);
-        b.Var("c", b.Multiply(ty.vec4<f32>(), r, l));
+        b.Var("c", b.Multiply(r, l));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float4x4 x = float4x4((0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx);
   float4 y = (0.0f).xxxx;
   float4 c = mul(x, y);
@@ -427,20 +441,21 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryMulVec4Mat3x4) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* x = b.Var("x", b.Zero<vec4<f32>>());
         auto* y = b.Var("y", b.Zero<mat3x4<f32>>());
         auto* l = b.Load(x);
         auto* r = b.Load(y);
-        b.Var("c", b.Multiply(ty.vec3<f32>(), l, r));
+        b.Var("c", b.Multiply(l, r));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float4 x = (0.0f).xxxx;
   float3x4 y = float3x4((0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx);
   float3 c = mul(y, x);
@@ -450,20 +465,21 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryMulMat3x2Vec3) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* x = b.Var("x", b.Zero<mat3x2<f32>>());
         auto* y = b.Var("y", b.Zero<vec3<f32>>());
         auto* l = b.Load(x);
         auto* r = b.Load(y);
-        b.Var("c", b.Multiply(ty.vec2<f32>(), l, r));
+        b.Var("c", b.Multiply(l, r));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float3x2 x = float3x2((0.0f).xx, (0.0f).xx, (0.0f).xx);
   float3 y = (0.0f).xxx;
   float2 c = mul(y, x);
@@ -473,20 +489,21 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BinaryMulMatMat) {
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* x = b.Var("x", b.Zero<mat4x4<f32>>());
         auto* y = b.Var("y", b.Zero<mat4x4<f32>>());
         auto* l = b.Load(x);
         auto* r = b.Load(y);
-        b.Var("c", b.Multiply(ty.mat4x4<f32>(), l, r));
+        b.Var("c", b.Multiply(l, r));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void foo() {
+void main() {
   float4x4 x = float4x4((0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx);
   float4x4 y = float4x4((0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx, (0.0f).xxxx);
   float4x4 c = mul(y, x);

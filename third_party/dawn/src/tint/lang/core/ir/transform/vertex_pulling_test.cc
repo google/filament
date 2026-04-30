@@ -60,10 +60,10 @@ class MslWriter_VertexPullingTest : public core::ir::transform::TransformTest {
 };
 
 TEST_F(MslWriter_VertexPullingTest, NoModify_NoInputs) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Zero<vec4<f32>>());
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -84,13 +84,13 @@ TEST_F(MslWriter_VertexPullingTest, NoModify_NoInputs) {
 }
 
 TEST_F(MslWriter_VertexPullingTest, OneAttribute_Param) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", ty.f32());
     param->SetLocation(0);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(param, 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(param, 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -112,7 +112,7 @@ $B1: {  # root
   $B2: {
     %4:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %5:u32 = load %4
-    %6:f32 = bitcast %5
+    %6:f32 = bitcast<f32> %5
     %7:vec4<f32> = construct %6, 0.0f, 0.0f, 1.0f
     ret %7
   }
@@ -133,12 +133,12 @@ TEST_F(MslWriter_VertexPullingTest, OneAttribute_Struct) {
                                                  {mod.symbols.New("loc0"), ty.f32(), Location(0)},
                                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(b.Access<f32>(param, 0_u), 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(b.Access<f32>(param, 0_u), 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -169,7 +169,7 @@ $B1: {  # root
   $B2: {
     %4:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %5:u32 = load %4
-    %6:f32 = bitcast %5
+    %6:f32 = bitcast<f32> %5
     %7:Inputs = construct %6
     %8:f32 = access %7, 0u
     %9:vec4<f32> = construct %8, 0.0f, 0.0f, 1.0f
@@ -187,13 +187,13 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, OneAttribute_NonDefaultArrayStride) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", ty.f32());
     param->SetLocation(0);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(param, 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(param, 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -216,7 +216,7 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 4u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:vec4<f32> = construct %7, 0.0f, 0.0f, 1.0f
     ret %8
   }
@@ -232,13 +232,13 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, OneAttribute_NonDefaultArrayStrideAndOffset) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", ty.f32());
     param->SetLocation(0);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(param, 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(param, 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -262,7 +262,7 @@ $B1: {  # root
     %5:u32 = add %tint_vertex_buffer_0_base, 2u
     %6:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %5
     %7:u32 = load %6
-    %8:f32 = bitcast %7
+    %8:f32 = bitcast<f32> %7
     %9:vec4<f32> = construct %8, 0.0f, 0.0f, 1.0f
     ret %9
   }
@@ -278,13 +278,13 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, InstanceStepMode) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", ty.f32());
     param->SetLocation(0);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(param, 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(param, 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -306,7 +306,7 @@ $B1: {  # root
   $B2: {
     %4:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_instance_index
     %5:u32 = load %4
-    %6:f32 = bitcast %5
+    %6:f32 = bitcast<f32> %5
     %7:vec4<f32> = construct %6, 0.0f, 0.0f, 1.0f
     ret %7
   }
@@ -322,13 +322,13 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, InstanceStepMode_WithArrayStride) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", ty.f32());
     param->SetLocation(0);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct<vec4<f32>>(param, 0_f, 0_f, 1_f));
+        b.Return(ep, b.Construct<vec4f>(param, 0_f, 0_f, 1_f));
     });
 
     auto* src = R"(
@@ -351,7 +351,7 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_instance_index, 4u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:vec4<f32> = construct %7, 0.0f, 0.0f, 1.0f
     ret %8
   }
@@ -367,7 +367,7 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_SameBuffer_Params) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* input_0 = b.FunctionParam("input_0", ty.f32());
     auto* input_1 = b.FunctionParam("input_1", ty.u32());
     auto* input_2 = b.FunctionParam("input_2", ty.i32());
@@ -379,7 +379,7 @@ TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_SameBuffer_Params) {
     b.Append(ep->Block(), [&] {  //
         auto* f1 = b.Convert<f32>(input_1);
         auto* f2 = b.Convert<f32>(input_2);
-        b.Return(ep, b.Construct<vec4<f32>>(input_0, f1, f2, 1_f));
+        b.Return(ep, b.Construct<vec4f>(input_0, f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -404,14 +404,14 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 4u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:u32 = add %tint_vertex_buffer_0_base, 1u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %8
     %10:u32 = load %9
     %11:u32 = add %tint_vertex_buffer_0_base, 2u
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %11
     %13:u32 = load %12
-    %14:i32 = bitcast %13
+    %14:i32 = bitcast<i32> %13
     %15:f32 = convert %10
     %16:f32 = convert %14
     %17:vec4<f32> = construct %7, %15, %16, 1.0f
@@ -442,14 +442,14 @@ TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_SameBuffer_Struct) {
                                                  {mod.symbols.New("loc2"), ty.i32(), Location(2)},
                                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         auto* f1 = b.Convert<f32>(b.Access<u32>(param, 1_u));
         auto* f2 = b.Convert<f32>(b.Access<i32>(param, 2_u));
-        b.Return(ep, b.Construct<vec4<f32>>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
+        b.Return(ep, b.Construct<vec4f>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -489,14 +489,14 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 4u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:u32 = add %tint_vertex_buffer_0_base, 1u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %8
     %10:u32 = load %9
     %11:u32 = add %tint_vertex_buffer_0_base, 2u
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %11
     %13:u32 = load %12
-    %14:i32 = bitcast %13
+    %14:i32 = bitcast<i32> %13
     %15:Inputs = construct %7, %10, %14
     %16:u32 = access %15, 1u
     %17:f32 = convert %16
@@ -524,7 +524,7 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_DifferentBuffers) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* input_0 = b.FunctionParam("input_0", ty.f32());
     auto* input_1 = b.FunctionParam("input_1", ty.u32());
     auto* input_2 = b.FunctionParam("input_2", ty.i32());
@@ -536,7 +536,7 @@ TEST_F(MslWriter_VertexPullingTest, MultipleAttributes_DifferentBuffers) {
     b.Append(ep->Block(), [&] {  //
         auto* f1 = b.Convert<f32>(input_1);
         auto* f2 = b.Convert<f32>(input_2);
-        b.Return(ep, b.Construct<vec4<f32>>(input_0, f1, f2, 1_f));
+        b.Return(ep, b.Construct<vec4f>(input_0, f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -564,13 +564,13 @@ $B1: {  # root
     %tint_vertex_buffer_2_base:u32 = mul %tint_vertex_index, 4u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %10:u32 = load %9
-    %11:f32 = bitcast %10
+    %11:f32 = bitcast<f32> %10
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_1, %tint_vertex_buffer_1_base
     %13:u32 = load %12
     %14:u32 = add %tint_vertex_buffer_2_base, 2u
     %15:ptr<storage, u32, read> = access %tint_vertex_buffer_2, %14
     %16:u32 = load %15
-    %17:i32 = bitcast %16
+    %17:i32 = bitcast<i32> %16
     %18:f32 = convert %13
     %19:f32 = convert %17
     %20:vec4<f32> = construct %11, %18, %19, 1.0f
@@ -611,7 +611,7 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_Params) {
                                                  {mod.symbols.New("loc2"), ty.i32(), Location(2)},
                                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     auto* vertex_index = b.FunctionParam("vertex_index", ty.u32());
     auto* instance_index = b.FunctionParam("instance_index", ty.u32());
@@ -622,8 +622,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_Params) {
     b.Append(ep->Block(), [&] {  //
         auto* f1 = b.Convert<f32>(b.Access<u32>(param, 1_u));
         auto* f2 = b.Convert<f32>(b.Access<i32>(param, 2_u));
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -668,13 +668,13 @@ $B1: {  # root
     %tint_vertex_buffer_2_base:u32 = mul %tint_vertex_index, 4u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %10:u32 = load %9
-    %11:f32 = bitcast %10
+    %11:f32 = bitcast<f32> %10
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_1, %tint_vertex_buffer_1_base
     %13:u32 = load %12
     %14:u32 = add %tint_vertex_buffer_2_base, 2u
     %15:ptr<storage, u32, read> = access %tint_vertex_buffer_2, %14
     %16:u32 = load %15
-    %17:i32 = bitcast %16
+    %17:i32 = bitcast<i32> %16
     %18:Inputs = construct %11, %13, %17
     %19:u32 = access %18, 1u
     %20:f32 = convert %19
@@ -716,7 +716,7 @@ $B1: {  # root
 // Test user-declared indices being used with multiple buffers, without strides and offsets.
 // See crbug.com/390568194.
 TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_Params_MultipleBuffers) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* vertex_index = b.FunctionParam("vertex_index", ty.u32());
     auto* instance_index = b.FunctionParam("instance_index", ty.u32());
     auto* loc0 = b.FunctionParam("loc0", ty.f32());
@@ -732,8 +732,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_Params_Multi
     ep->SetParams({vertex_index, instance_index, loc0, loc1, loc2, loc3});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(loc0, loc1, loc2, loc3));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(loc0, loc1, loc2, loc3));
     });
 
     auto* src = R"(
@@ -760,16 +760,16 @@ $B1: {  # root
   $B2: {
     %8:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %9:u32 = load %8
-    %10:f32 = bitcast %9
+    %10:f32 = bitcast<f32> %9
     %11:ptr<storage, u32, read> = access %tint_vertex_buffer_1, %tint_instance_index
     %12:u32 = load %11
-    %13:f32 = bitcast %12
+    %13:f32 = bitcast<f32> %12
     %14:ptr<storage, u32, read> = access %tint_vertex_buffer_2, %tint_vertex_index
     %15:u32 = load %14
-    %16:f32 = bitcast %15
+    %16:f32 = bitcast<f32> %15
     %17:ptr<storage, u32, read> = access %tint_vertex_buffer_3, %tint_instance_index
     %18:u32 = load %17
-    %19:f32 = bitcast %18
+    %19:f32 = bitcast<f32> %18
     %20:u32 = add %tint_vertex_index, %tint_instance_index
     %idx_add:u32 = let %20
     %22:vec4<f32> = construct %10, %13, %16, %19
@@ -808,7 +808,7 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, ExistingVertexIndex_NotUsedByBuffer) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* vertex_index = b.FunctionParam("vertex_index", ty.u32());
     auto* instance_index = b.FunctionParam("instance_index", ty.u32());
     auto* loc0 = b.FunctionParam("loc0", ty.f32());
@@ -818,8 +818,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexIndex_NotUsedByBuffer) {
     ep->SetParams({vertex_index, instance_index, loc0});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(loc0));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(loc0));
     });
 
     auto* src = R"(
@@ -843,7 +843,7 @@ $B1: {  # root
   $B2: {
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_instance_index
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:u32 = add %vertex_index, %tint_instance_index
     %idx_add:u32 = let %8
     %10:vec4<f32> = construct %7
@@ -867,7 +867,7 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, ExistingInstanceIndex_NotUsedByBuffer) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* vertex_index = b.FunctionParam("vertex_index", ty.u32());
     auto* instance_index = b.FunctionParam("instance_index", ty.u32());
     auto* loc0 = b.FunctionParam("loc0", ty.f32());
@@ -877,8 +877,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingInstanceIndex_NotUsedByBuffer) {
     ep->SetParams({vertex_index, instance_index, loc0});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(loc0));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(loc0));
     });
 
     auto* src = R"(
@@ -902,7 +902,7 @@ $B1: {  # root
   $B2: {
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %6:u32 = load %5
-    %7:f32 = bitcast %6
+    %7:f32 = bitcast<f32> %6
     %8:u32 = add %tint_vertex_index, %instance_index
     %idx_add:u32 = let %8
     %10:vec4<f32> = construct %7
@@ -935,7 +935,7 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_SameStruct) 
                                  {mod.symbols.New("instance_index"), ty.u32(), InstanceIndex()},
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->SetParams({param});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
@@ -944,8 +944,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_SameStruct) 
         auto* f2 = b.Convert<f32>(b.Access<i32>(param, 2_u));
         auto* vertex_index = b.Access<u32>(param, 3_u);
         auto* instance_index = b.Access<u32>(param, 4_u);
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -996,13 +996,13 @@ $B1: {  # root
     %tint_vertex_buffer_2_base:u32 = mul %tint_vertex_index, 4u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %10:u32 = load %9
-    %11:f32 = bitcast %10
+    %11:f32 = bitcast<f32> %10
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_1, %tint_vertex_buffer_1_base
     %13:u32 = load %12
     %14:u32 = add %tint_vertex_buffer_2_base, 2u
     %15:ptr<storage, u32, read> = access %tint_vertex_buffer_2, %14
     %16:u32 = load %15
-    %17:i32 = bitcast %16
+    %17:i32 = bitcast<i32> %16
     %18:Inputs = construct %11, %13, %17, %tint_vertex_index, %tint_instance_index
     %19:u32 = access %18, 1u
     %20:f32 = convert %19
@@ -1056,7 +1056,7 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_DifferentStr
                                      {mod.symbols.New("instance_index"), ty.u32(), InstanceIndex()},
                                  });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     auto* indices = b.FunctionParam("indices", indices_ty);
     ep->SetParams({param, indices});
@@ -1066,8 +1066,8 @@ TEST_F(MslWriter_VertexPullingTest, ExistingVertexAndIndexAttribute_DifferentStr
         auto* f2 = b.Convert<f32>(b.Access<i32>(param, 2_u));
         auto* vertex_index = b.Access<u32>(indices, 0_u);
         auto* instance_index = b.Access<u32>(indices, 1_u);
-        b.Let("idx_add", b.Add<u32>(vertex_index, instance_index));
-        b.Return(ep, b.Construct<vec4<f32>>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
+        b.Let("idx_add", b.Add(vertex_index, instance_index));
+        b.Return(ep, b.Construct<vec4f>(b.Access<f32>(param, 0_u), f1, f2, 1_f));
     });
 
     auto* src = R"(
@@ -1124,13 +1124,13 @@ $B1: {  # root
     %tint_vertex_buffer_2_base:u32 = mul %tint_vertex_index, 4u
     %9:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_index
     %10:u32 = load %9
-    %11:f32 = bitcast %10
+    %11:f32 = bitcast<f32> %10
     %12:ptr<storage, u32, read> = access %tint_vertex_buffer_1, %tint_vertex_buffer_1_base
     %13:u32 = load %12
     %14:u32 = add %tint_vertex_buffer_2_base, 2u
     %15:ptr<storage, u32, read> = access %tint_vertex_buffer_2, %14
     %16:u32 = load %15
-    %17:i32 = bitcast %16
+    %17:i32 = bitcast<i32> %16
     %18:Inputs = construct %11, %13, %17
     %19:Indices = construct %tint_vertex_index, %tint_instance_index
     %20:u32 = access %18, 1u
@@ -1173,59 +1173,58 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, Formats_F32) {
-    auto* inputs =
-        ty.Struct(mod.symbols.New("Inputs"),
-                  {
-                      {mod.symbols.New("unorm8"), ty.f32(), Location(0)},                  //
-                      {mod.symbols.New("unorm8x2"), ty.vec2<f32>(), Location(1)},          //
-                      {mod.symbols.New("unorm8x4"), ty.vec4<f32>(), Location(2)},          //
-                      {mod.symbols.New("snorm8"), ty.f32(), Location(3)},                  //
-                      {mod.symbols.New("snorm8x2"), ty.vec2<f32>(), Location(4)},          //
-                      {mod.symbols.New("snorm8x4"), ty.vec4<f32>(), Location(5)},          //
-                      {mod.symbols.New("unorm16"), ty.f32(), Location(6)},                 //
-                      {mod.symbols.New("unorm16x2"), ty.vec2<f32>(), Location(7)},         //
-                      {mod.symbols.New("unorm16x4"), ty.vec4<f32>(), Location(8)},         //
-                      {mod.symbols.New("snorm16"), ty.f32(), Location(9)},                 //
-                      {mod.symbols.New("snorm16x2"), ty.vec2<f32>(), Location(10)},        //
-                      {mod.symbols.New("snorm16x4"), ty.vec4<f32>(), Location(11)},        //
-                      {mod.symbols.New("float16"), ty.f32(), Location(12)},                //
-                      {mod.symbols.New("float16x2"), ty.vec2<f32>(), Location(13)},        //
-                      {mod.symbols.New("float16x4"), ty.vec4<f32>(), Location(14)},        //
-                      {mod.symbols.New("float32"), ty.f32(), Location(15)},                //
-                      {mod.symbols.New("float32x2"), ty.vec2<f32>(), Location(16)},        //
-                      {mod.symbols.New("float32x3"), ty.vec3<f32>(), Location(17)},        //
-                      {mod.symbols.New("float32x4"), ty.vec4<f32>(), Location(18)},        //
-                      {mod.symbols.New("unorm10_10_10_2"), ty.vec4<f32>(), Location(19)},  //
-                      {mod.symbols.New("unorm8x4_bgra"), ty.vec4<f32>(), Location(20)},    //
-                  });
+    auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
+                             {
+                                 {mod.symbols.New("unorm8"), ty.f32(), Location(0)},              //
+                                 {mod.symbols.New("unorm8x2"), ty.vec2f(), Location(1)},          //
+                                 {mod.symbols.New("unorm8x4"), ty.vec4f(), Location(2)},          //
+                                 {mod.symbols.New("snorm8"), ty.f32(), Location(3)},              //
+                                 {mod.symbols.New("snorm8x2"), ty.vec2f(), Location(4)},          //
+                                 {mod.symbols.New("snorm8x4"), ty.vec4f(), Location(5)},          //
+                                 {mod.symbols.New("unorm16"), ty.f32(), Location(6)},             //
+                                 {mod.symbols.New("unorm16x2"), ty.vec2f(), Location(7)},         //
+                                 {mod.symbols.New("unorm16x4"), ty.vec4f(), Location(8)},         //
+                                 {mod.symbols.New("snorm16"), ty.f32(), Location(9)},             //
+                                 {mod.symbols.New("snorm16x2"), ty.vec2f(), Location(10)},        //
+                                 {mod.symbols.New("snorm16x4"), ty.vec4f(), Location(11)},        //
+                                 {mod.symbols.New("float16"), ty.f32(), Location(12)},            //
+                                 {mod.symbols.New("float16x2"), ty.vec2f(), Location(13)},        //
+                                 {mod.symbols.New("float16x4"), ty.vec4f(), Location(14)},        //
+                                 {mod.symbols.New("float32"), ty.f32(), Location(15)},            //
+                                 {mod.symbols.New("float32x2"), ty.vec2f(), Location(16)},        //
+                                 {mod.symbols.New("float32x3"), ty.vec3f(), Location(17)},        //
+                                 {mod.symbols.New("float32x4"), ty.vec4f(), Location(18)},        //
+                                 {mod.symbols.New("unorm10_10_10_2"), ty.vec4f(), Location(19)},  //
+                                 {mod.symbols.New("unorm8x4_bgra"), ty.vec4f(), Location(20)},    //
+                             });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.f32(), param, 0_u), "unorm8");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 1_u), "unorm8x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 2_u), "unorm8x4");
+        mod.SetName(b.Access(ty.vec2f(), param, 1_u), "unorm8x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 2_u), "unorm8x4");
         mod.SetName(b.Access(ty.f32(), param, 3_u), "snorm8");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 4_u), "snorm8x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 5_u), "snorm8x4");
+        mod.SetName(b.Access(ty.vec2f(), param, 4_u), "snorm8x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 5_u), "snorm8x4");
         mod.SetName(b.Access(ty.f32(), param, 6_u), "unorm16");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 7_u), "unorm16x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 8_u), "unorm16x4");
+        mod.SetName(b.Access(ty.vec2f(), param, 7_u), "unorm16x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 8_u), "unorm16x4");
         mod.SetName(b.Access(ty.f32(), param, 9_u), "snorm16");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 10_u), "snorm16x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 11_u), "snorm16x4");
+        mod.SetName(b.Access(ty.vec2f(), param, 10_u), "snorm16x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 11_u), "snorm16x4");
         mod.SetName(b.Access(ty.f32(), param, 12_u), "float16");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 13_u), "float16x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 14_u), "float16x4");
+        mod.SetName(b.Access(ty.vec2f(), param, 13_u), "float16x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 14_u), "float16x4");
         mod.SetName(b.Access(ty.f32(), param, 15_u), "float32");
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 16_u), "float32x2");
-        mod.SetName(b.Access(ty.vec3<f32>(), param, 17_u), "float32x3");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 18_u), "float32x4");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 19_u), "unorm10_10_10_2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 20_u), "unorm8x4_bgra");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2f(), param, 16_u), "float32x2");
+        mod.SetName(b.Access(ty.vec3f(), param, 17_u), "float32x3");
+        mod.SetName(b.Access(ty.vec4f(), param, 18_u), "float32x4");
+        mod.SetName(b.Access(ty.vec4f(), param, 19_u), "unorm10_10_10_2");
+        mod.SetName(b.Access(ty.vec4f(), param, 20_u), "unorm8x4_bgra");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -1398,45 +1397,45 @@ $B1: {  # root
     %86:u32 = add %tint_vertex_buffer_0_base, 18u
     %87:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %86
     %88:u32 = load %87
-    %89:f32 = bitcast %88
+    %89:f32 = bitcast<f32> %88
     %90:u32 = add %tint_vertex_buffer_0_base, 20u
     %91:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %90
     %92:u32 = load %91
-    %93:f32 = bitcast %92
+    %93:f32 = bitcast<f32> %92
     %94:u32 = add %tint_vertex_buffer_0_base, 21u
     %95:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %94
     %96:u32 = load %95
-    %97:f32 = bitcast %96
+    %97:f32 = bitcast<f32> %96
     %98:vec2<f32> = construct %93, %97
     %99:u32 = add %tint_vertex_buffer_0_base, 24u
     %100:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %99
     %101:u32 = load %100
-    %102:f32 = bitcast %101
+    %102:f32 = bitcast<f32> %101
     %103:u32 = add %tint_vertex_buffer_0_base, 25u
     %104:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %103
     %105:u32 = load %104
-    %106:f32 = bitcast %105
+    %106:f32 = bitcast<f32> %105
     %107:u32 = add %tint_vertex_buffer_0_base, 26u
     %108:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %107
     %109:u32 = load %108
-    %110:f32 = bitcast %109
+    %110:f32 = bitcast<f32> %109
     %111:vec3<f32> = construct %102, %106, %110
     %112:u32 = add %tint_vertex_buffer_0_base, 28u
     %113:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %112
     %114:u32 = load %113
-    %115:f32 = bitcast %114
+    %115:f32 = bitcast<f32> %114
     %116:u32 = add %tint_vertex_buffer_0_base, 29u
     %117:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %116
     %118:u32 = load %117
-    %119:f32 = bitcast %118
+    %119:f32 = bitcast<f32> %118
     %120:u32 = add %tint_vertex_buffer_0_base, 30u
     %121:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %120
     %122:u32 = load %121
-    %123:f32 = bitcast %122
+    %123:f32 = bitcast<f32> %122
     %124:u32 = add %tint_vertex_buffer_0_base, 31u
     %125:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %124
     %126:u32 = load %125
-    %127:f32 = bitcast %126
+    %127:f32 = bitcast<f32> %126
     %128:vec4<f32> = construct %115, %119, %123, %127
     %129:u32 = add %tint_vertex_buffer_0_base, 32u
     %130:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %129
@@ -1511,59 +1510,58 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, Formats_F16) {
-    auto* inputs =
-        ty.Struct(mod.symbols.New("Inputs"),
-                  {
-                      {mod.symbols.New("unorm8"), ty.f16(), Location(0)},                  //
-                      {mod.symbols.New("unorm8x2"), ty.vec2<f16>(), Location(1)},          //
-                      {mod.symbols.New("unorm8x4"), ty.vec4<f16>(), Location(2)},          //
-                      {mod.symbols.New("snorm8"), ty.f16(), Location(3)},                  //
-                      {mod.symbols.New("snorm8x2"), ty.vec2<f16>(), Location(4)},          //
-                      {mod.symbols.New("snorm8x4"), ty.vec4<f16>(), Location(5)},          //
-                      {mod.symbols.New("unorm16"), ty.f16(), Location(6)},                 //
-                      {mod.symbols.New("unorm16x2"), ty.vec2<f16>(), Location(7)},         //
-                      {mod.symbols.New("unorm16x4"), ty.vec4<f16>(), Location(8)},         //
-                      {mod.symbols.New("snorm16"), ty.f16(), Location(9)},                 //
-                      {mod.symbols.New("snorm16x2"), ty.vec2<f16>(), Location(10)},        //
-                      {mod.symbols.New("snorm16x4"), ty.vec4<f16>(), Location(11)},        //
-                      {mod.symbols.New("float16"), ty.f16(), Location(12)},                //
-                      {mod.symbols.New("float16x2"), ty.vec2<f16>(), Location(13)},        //
-                      {mod.symbols.New("float16x4"), ty.vec4<f16>(), Location(14)},        //
-                      {mod.symbols.New("float32"), ty.f16(), Location(15)},                //
-                      {mod.symbols.New("float32x2"), ty.vec2<f16>(), Location(16)},        //
-                      {mod.symbols.New("float32x3"), ty.vec3<f16>(), Location(17)},        //
-                      {mod.symbols.New("float32x4"), ty.vec4<f16>(), Location(18)},        //
-                      {mod.symbols.New("unorm10_10_10_2"), ty.vec4<f16>(), Location(19)},  //
-                      {mod.symbols.New("unorm8x4_bgra"), ty.vec4<f16>(), Location(20)},    //
-                  });
+    auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
+                             {
+                                 {mod.symbols.New("unorm8"), ty.f16(), Location(0)},              //
+                                 {mod.symbols.New("unorm8x2"), ty.vec2h(), Location(1)},          //
+                                 {mod.symbols.New("unorm8x4"), ty.vec4h(), Location(2)},          //
+                                 {mod.symbols.New("snorm8"), ty.f16(), Location(3)},              //
+                                 {mod.symbols.New("snorm8x2"), ty.vec2h(), Location(4)},          //
+                                 {mod.symbols.New("snorm8x4"), ty.vec4h(), Location(5)},          //
+                                 {mod.symbols.New("unorm16"), ty.f16(), Location(6)},             //
+                                 {mod.symbols.New("unorm16x2"), ty.vec2h(), Location(7)},         //
+                                 {mod.symbols.New("unorm16x4"), ty.vec4h(), Location(8)},         //
+                                 {mod.symbols.New("snorm16"), ty.f16(), Location(9)},             //
+                                 {mod.symbols.New("snorm16x2"), ty.vec2h(), Location(10)},        //
+                                 {mod.symbols.New("snorm16x4"), ty.vec4h(), Location(11)},        //
+                                 {mod.symbols.New("float16"), ty.f16(), Location(12)},            //
+                                 {mod.symbols.New("float16x2"), ty.vec2h(), Location(13)},        //
+                                 {mod.symbols.New("float16x4"), ty.vec4h(), Location(14)},        //
+                                 {mod.symbols.New("float32"), ty.f16(), Location(15)},            //
+                                 {mod.symbols.New("float32x2"), ty.vec2h(), Location(16)},        //
+                                 {mod.symbols.New("float32x3"), ty.vec3h(), Location(17)},        //
+                                 {mod.symbols.New("float32x4"), ty.vec4h(), Location(18)},        //
+                                 {mod.symbols.New("unorm10_10_10_2"), ty.vec4h(), Location(19)},  //
+                                 {mod.symbols.New("unorm8x4_bgra"), ty.vec4h(), Location(20)},    //
+                             });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.f16(), param, 0_u), "unorm8");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 1_u), "unorm8x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 2_u), "unorm8x4");
+        mod.SetName(b.Access(ty.vec2h(), param, 1_u), "unorm8x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 2_u), "unorm8x4");
         mod.SetName(b.Access(ty.f16(), param, 3_u), "snorm8");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 4_u), "snorm8x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 5_u), "snorm8x4");
+        mod.SetName(b.Access(ty.vec2h(), param, 4_u), "snorm8x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 5_u), "snorm8x4");
         mod.SetName(b.Access(ty.f16(), param, 6_u), "unorm16");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 7_u), "unorm16x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 8_u), "unorm16x4");
+        mod.SetName(b.Access(ty.vec2h(), param, 7_u), "unorm16x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 8_u), "unorm16x4");
         mod.SetName(b.Access(ty.f16(), param, 9_u), "snorm16");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 10_u), "snorm16x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 11_u), "snorm16x4");
+        mod.SetName(b.Access(ty.vec2h(), param, 10_u), "snorm16x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 11_u), "snorm16x4");
         mod.SetName(b.Access(ty.f16(), param, 12_u), "float16");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 13_u), "float16x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 14_u), "float16x4");
+        mod.SetName(b.Access(ty.vec2h(), param, 13_u), "float16x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 14_u), "float16x4");
         mod.SetName(b.Access(ty.f16(), param, 15_u), "float32");
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 16_u), "float32x2");
-        mod.SetName(b.Access(ty.vec3<f16>(), param, 17_u), "float32x3");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 18_u), "float32x4");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 19_u), "unorm10_10_10_2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 20_u), "unorm8x4_bgra");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2h(), param, 16_u), "float32x2");
+        mod.SetName(b.Access(ty.vec3h(), param, 17_u), "float32x3");
+        mod.SetName(b.Access(ty.vec4h(), param, 18_u), "float32x4");
+        mod.SetName(b.Access(ty.vec4h(), param, 19_u), "unorm10_10_10_2");
+        mod.SetName(b.Access(ty.vec4h(), param, 20_u), "unorm8x4_bgra");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -1730,66 +1728,66 @@ $B1: {  # root
     %80:u32 = add %tint_vertex_buffer_0_base, 14u
     %81:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %80
     %82:u32 = load %81
-    %83:vec2<f16> = bitcast %82
+    %83:vec2<f16> = bitcast<vec2<f16>> %82
     %84:f16 = access %83, 0u
     %85:u32 = add %tint_vertex_buffer_0_base, 15u
     %86:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %85
     %87:u32 = load %86
-    %88:vec2<f16> = bitcast %87
+    %88:vec2<f16> = bitcast<vec2<f16>> %87
     %89:u32 = add %tint_vertex_buffer_0_base, 16u
     %90:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %89
     %91:u32 = load %90
     %92:u32 = add %tint_vertex_buffer_0_base, 17u
     %93:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %92
     %94:u32 = load %93
-    %95:vec2<f16> = bitcast %91
-    %96:vec2<f16> = bitcast %94
+    %95:vec2<f16> = bitcast<vec2<f16>> %91
+    %96:vec2<f16> = bitcast<vec2<f16>> %94
     %97:vec4<f16> = construct %95, %96
     %98:u32 = add %tint_vertex_buffer_0_base, 18u
     %99:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %98
     %100:u32 = load %99
-    %101:f32 = bitcast %100
+    %101:f32 = bitcast<f32> %100
     %102:f16 = convert %101
     %103:u32 = add %tint_vertex_buffer_0_base, 20u
     %104:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %103
     %105:u32 = load %104
-    %106:f32 = bitcast %105
+    %106:f32 = bitcast<f32> %105
     %107:u32 = add %tint_vertex_buffer_0_base, 21u
     %108:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %107
     %109:u32 = load %108
-    %110:f32 = bitcast %109
+    %110:f32 = bitcast<f32> %109
     %111:vec2<f32> = construct %106, %110
     %112:vec2<f16> = convert %111
     %113:u32 = add %tint_vertex_buffer_0_base, 24u
     %114:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %113
     %115:u32 = load %114
-    %116:f32 = bitcast %115
+    %116:f32 = bitcast<f32> %115
     %117:u32 = add %tint_vertex_buffer_0_base, 25u
     %118:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %117
     %119:u32 = load %118
-    %120:f32 = bitcast %119
+    %120:f32 = bitcast<f32> %119
     %121:u32 = add %tint_vertex_buffer_0_base, 26u
     %122:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %121
     %123:u32 = load %122
-    %124:f32 = bitcast %123
+    %124:f32 = bitcast<f32> %123
     %125:vec3<f32> = construct %116, %120, %124
     %126:vec3<f16> = convert %125
     %127:u32 = add %tint_vertex_buffer_0_base, 28u
     %128:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %127
     %129:u32 = load %128
-    %130:f32 = bitcast %129
+    %130:f32 = bitcast<f32> %129
     %131:u32 = add %tint_vertex_buffer_0_base, 29u
     %132:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %131
     %133:u32 = load %132
-    %134:f32 = bitcast %133
+    %134:f32 = bitcast<f32> %133
     %135:u32 = add %tint_vertex_buffer_0_base, 30u
     %136:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %135
     %137:u32 = load %136
-    %138:f32 = bitcast %137
+    %138:f32 = bitcast<f32> %137
     %139:u32 = add %tint_vertex_buffer_0_base, 31u
     %140:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %139
     %141:u32 = load %140
-    %142:f32 = bitcast %141
+    %142:f32 = bitcast<f32> %141
     %143:vec4<f32> = construct %130, %134, %138, %142
     %144:vec4<f16> = convert %143
     %145:u32 = add %tint_vertex_buffer_0_base, 32u
@@ -1869,34 +1867,34 @@ $B1: {  # root
 TEST_F(MslWriter_VertexPullingTest, Formats_SInt) {
     auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
                              {
-                                 {mod.symbols.New("sint8"), ty.i32(), Location(0)},           //
-                                 {mod.symbols.New("sint8x2"), ty.vec2<i32>(), Location(1)},   //
-                                 {mod.symbols.New("sint8x4"), ty.vec4<i32>(), Location(2)},   //
-                                 {mod.symbols.New("sint16"), ty.i32(), Location(3)},          //
-                                 {mod.symbols.New("sint16x2"), ty.vec2<i32>(), Location(4)},  //
-                                 {mod.symbols.New("sint16x4"), ty.vec4<i32>(), Location(5)},  //
-                                 {mod.symbols.New("sint32"), ty.i32(), Location(6)},          //
-                                 {mod.symbols.New("sint32x2"), ty.vec2<i32>(), Location(7)},  //
-                                 {mod.symbols.New("sint32x3"), ty.vec3<i32>(), Location(8)},  //
-                                 {mod.symbols.New("sint32x4"), ty.vec4<i32>(), Location(9)},  //
+                                 {mod.symbols.New("sint8"), ty.i32(), Location(0)},       //
+                                 {mod.symbols.New("sint8x2"), ty.vec2i(), Location(1)},   //
+                                 {mod.symbols.New("sint8x4"), ty.vec4i(), Location(2)},   //
+                                 {mod.symbols.New("sint16"), ty.i32(), Location(3)},      //
+                                 {mod.symbols.New("sint16x2"), ty.vec2i(), Location(4)},  //
+                                 {mod.symbols.New("sint16x4"), ty.vec4i(), Location(5)},  //
+                                 {mod.symbols.New("sint32"), ty.i32(), Location(6)},      //
+                                 {mod.symbols.New("sint32x2"), ty.vec2i(), Location(7)},  //
+                                 {mod.symbols.New("sint32x3"), ty.vec3i(), Location(8)},  //
+                                 {mod.symbols.New("sint32x4"), ty.vec4i(), Location(9)},  //
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.i32(), param, 0_u), "sint8");
-        mod.SetName(b.Access(ty.vec2<i32>(), param, 1_u), "sint8x2");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 2_u), "sint8x4");
+        mod.SetName(b.Access(ty.vec2i(), param, 1_u), "sint8x2");
+        mod.SetName(b.Access(ty.vec4i(), param, 2_u), "sint8x4");
         mod.SetName(b.Access(ty.i32(), param, 3_u), "sint16");
-        mod.SetName(b.Access(ty.vec2<i32>(), param, 4_u), "sint16x2");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 5_u), "sint16x4");
+        mod.SetName(b.Access(ty.vec2i(), param, 4_u), "sint16x2");
+        mod.SetName(b.Access(ty.vec4i(), param, 5_u), "sint16x4");
         mod.SetName(b.Access(ty.i32(), param, 6_u), "sint32");
-        mod.SetName(b.Access(ty.vec2<i32>(), param, 7_u), "sint32x2");
-        mod.SetName(b.Access(ty.vec3<i32>(), param, 8_u), "sint32x3");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 9_u), "sint32x4");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2i(), param, 7_u), "sint32x2");
+        mod.SetName(b.Access(ty.vec3i(), param, 8_u), "sint32x3");
+        mod.SetName(b.Access(ty.vec4i(), param, 9_u), "sint32x4");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -1954,47 +1952,47 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 64u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:i32 = bitcast %6
+    %7:i32 = bitcast<i32> %6
     %8:i32 = shl %7, 24u
     %9:i32 = shr %8, 24u
     %10:u32 = add %tint_vertex_buffer_0_base, 1u
     %11:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %10
     %12:u32 = load %11
-    %13:i32 = bitcast %12
+    %13:i32 = bitcast<i32> %12
     %14:vec2<i32> = construct %13
     %15:vec2<i32> = shl %14, vec2<u32>(24u, 16u)
     %16:vec2<i32> = shr %15, vec2<u32>(24u)
     %17:u32 = add %tint_vertex_buffer_0_base, 2u
     %18:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %17
     %19:u32 = load %18
-    %20:i32 = bitcast %19
+    %20:i32 = bitcast<i32> %19
     %21:vec4<i32> = construct %20
     %22:vec4<i32> = shl %21, vec4<u32>(24u, 16u, 8u, 0u)
     %23:vec4<i32> = shr %22, vec4<u32>(24u)
     %24:u32 = add %tint_vertex_buffer_0_base, 3u
     %25:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %24
     %26:u32 = load %25
-    %27:i32 = bitcast %26
+    %27:i32 = bitcast<i32> %26
     %28:i32 = shl %27, 16u
     %29:i32 = shr %28, 16u
     %30:u32 = add %tint_vertex_buffer_0_base, 4u
     %31:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %30
     %32:u32 = load %31
-    %33:i32 = bitcast %32
+    %33:i32 = bitcast<i32> %32
     %34:vec2<i32> = construct %33
     %35:vec2<i32> = shl %34, vec2<u32>(16u, 0u)
     %36:vec2<i32> = shr %35, vec2<u32>(16u)
     %37:u32 = add %tint_vertex_buffer_0_base, 6u
     %38:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %37
     %39:u32 = load %38
-    %40:i32 = bitcast %39
+    %40:i32 = bitcast<i32> %39
     %41:vec2<i32> = construct %40
     %42:vec2<i32> = shl %41, vec2<u32>(16u, 0u)
     %43:vec2<i32> = shr %42, vec2<u32>(16u)
     %44:u32 = add %tint_vertex_buffer_0_base, 7u
     %45:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %44
     %46:u32 = load %45
-    %47:i32 = bitcast %46
+    %47:i32 = bitcast<i32> %46
     %48:vec2<i32> = construct %47
     %49:vec2<i32> = shl %48, vec2<u32>(16u, 0u)
     %50:vec2<i32> = shr %49, vec2<u32>(16u)
@@ -2002,45 +2000,45 @@ $B1: {  # root
     %52:u32 = add %tint_vertex_buffer_0_base, 7u
     %53:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %52
     %54:u32 = load %53
-    %55:i32 = bitcast %54
+    %55:i32 = bitcast<i32> %54
     %56:u32 = add %tint_vertex_buffer_0_base, 8u
     %57:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %56
     %58:u32 = load %57
-    %59:i32 = bitcast %58
+    %59:i32 = bitcast<i32> %58
     %60:u32 = add %tint_vertex_buffer_0_base, 9u
     %61:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %60
     %62:u32 = load %61
-    %63:i32 = bitcast %62
+    %63:i32 = bitcast<i32> %62
     %64:vec2<i32> = construct %59, %63
     %65:u32 = add %tint_vertex_buffer_0_base, 12u
     %66:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %65
     %67:u32 = load %66
-    %68:i32 = bitcast %67
+    %68:i32 = bitcast<i32> %67
     %69:u32 = add %tint_vertex_buffer_0_base, 13u
     %70:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %69
     %71:u32 = load %70
-    %72:i32 = bitcast %71
+    %72:i32 = bitcast<i32> %71
     %73:u32 = add %tint_vertex_buffer_0_base, 14u
     %74:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %73
     %75:u32 = load %74
-    %76:i32 = bitcast %75
+    %76:i32 = bitcast<i32> %75
     %77:vec3<i32> = construct %68, %72, %76
     %78:u32 = add %tint_vertex_buffer_0_base, 16u
     %79:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %78
     %80:u32 = load %79
-    %81:i32 = bitcast %80
+    %81:i32 = bitcast<i32> %80
     %82:u32 = add %tint_vertex_buffer_0_base, 17u
     %83:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %82
     %84:u32 = load %83
-    %85:i32 = bitcast %84
+    %85:i32 = bitcast<i32> %84
     %86:u32 = add %tint_vertex_buffer_0_base, 18u
     %87:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %86
     %88:u32 = load %87
-    %89:i32 = bitcast %88
+    %89:i32 = bitcast<i32> %88
     %90:u32 = add %tint_vertex_buffer_0_base, 19u
     %91:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %90
     %92:u32 = load %91
-    %93:i32 = bitcast %92
+    %93:i32 = bitcast<i32> %92
     %94:vec4<i32> = construct %81, %85, %89, %93
     %95:Inputs = construct %9, %16, %23, %29, %36, %51, %55, %64, %77, %94
     %sint8:i32 = access %95, 0u
@@ -2082,34 +2080,34 @@ $B1: {  # root
 TEST_F(MslWriter_VertexPullingTest, Formats_UInt) {
     auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
                              {
-                                 {mod.symbols.New("uint8"), ty.u32(), Location(0)},           //
-                                 {mod.symbols.New("uint8x2"), ty.vec2<u32>(), Location(1)},   //
-                                 {mod.symbols.New("uint8x4"), ty.vec4<u32>(), Location(2)},   //
-                                 {mod.symbols.New("uint16"), ty.u32(), Location(3)},          //
-                                 {mod.symbols.New("uint16x2"), ty.vec2<u32>(), Location(4)},  //
-                                 {mod.symbols.New("uint16x4"), ty.vec4<u32>(), Location(5)},  //
-                                 {mod.symbols.New("uint32"), ty.u32(), Location(6)},          //
-                                 {mod.symbols.New("uint32x2"), ty.vec2<u32>(), Location(7)},  //
-                                 {mod.symbols.New("uint32x3"), ty.vec3<u32>(), Location(8)},  //
-                                 {mod.symbols.New("uint32x4"), ty.vec4<u32>(), Location(9)},  //
+                                 {mod.symbols.New("uint8"), ty.u32(), Location(0)},       //
+                                 {mod.symbols.New("uint8x2"), ty.vec2u(), Location(1)},   //
+                                 {mod.symbols.New("uint8x4"), ty.vec4u(), Location(2)},   //
+                                 {mod.symbols.New("uint16"), ty.u32(), Location(3)},      //
+                                 {mod.symbols.New("uint16x2"), ty.vec2u(), Location(4)},  //
+                                 {mod.symbols.New("uint16x4"), ty.vec4u(), Location(5)},  //
+                                 {mod.symbols.New("uint32"), ty.u32(), Location(6)},      //
+                                 {mod.symbols.New("uint32x2"), ty.vec2u(), Location(7)},  //
+                                 {mod.symbols.New("uint32x3"), ty.vec3u(), Location(8)},  //
+                                 {mod.symbols.New("uint32x4"), ty.vec4u(), Location(9)},  //
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.u32(), param, 0_u), "uint8");
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 1_u), "uint8x2");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 2_u), "uint8x4");
+        mod.SetName(b.Access(ty.vec2u(), param, 1_u), "uint8x2");
+        mod.SetName(b.Access(ty.vec4u(), param, 2_u), "uint8x4");
         mod.SetName(b.Access(ty.u32(), param, 3_u), "uint16");
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 4_u), "uint16x2");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 5_u), "uint16x4");
+        mod.SetName(b.Access(ty.vec2u(), param, 4_u), "uint16x2");
+        mod.SetName(b.Access(ty.vec4u(), param, 5_u), "uint16x4");
         mod.SetName(b.Access(ty.u32(), param, 6_u), "uint32");
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 7_u), "uint32x2");
-        mod.SetName(b.Access(ty.vec3<u32>(), param, 8_u), "uint32x3");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 9_u), "uint32x4");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2u(), param, 7_u), "uint32x2");
+        mod.SetName(b.Access(ty.vec3u(), param, 8_u), "uint32x3");
+        mod.SetName(b.Access(ty.vec4u(), param, 9_u), "uint32x4");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2276,20 +2274,20 @@ $B1: {  # root
 TEST_F(MslWriter_VertexPullingTest, ShaderTypeTooFewComponents) {
     auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
                              {
-                                 {mod.symbols.New("uint32"), ty.u32(), Location(0)},          //
-                                 {mod.symbols.New("uint32x2"), ty.vec2<u32>(), Location(1)},  //
-                                 {mod.symbols.New("uint32x3"), ty.vec3<u32>(), Location(2)},  //
+                                 {mod.symbols.New("uint32"), ty.u32(), Location(0)},      //
+                                 {mod.symbols.New("uint32x2"), ty.vec2u(), Location(1)},  //
+                                 {mod.symbols.New("uint32x3"), ty.vec3u(), Location(2)},  //
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.u32(), param, 0_u), "uint32x2");
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 1_u), "uint32x4");
-        mod.SetName(b.Access(ty.vec3<u32>(), param, 2_u), "uint32x4");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2u(), param, 1_u), "uint32x4");
+        mod.SetName(b.Access(ty.vec3u(), param, 2_u), "uint32x4");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2383,29 +2381,28 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, ShaderTypeTooManyComponents_U32) {
-    auto* inputs =
-        ty.Struct(mod.symbols.New("Inputs"),
-                  {
-                      {mod.symbols.New("vec2u_from_u32"), ty.vec2<u32>(), Location(0)},   //
-                      {mod.symbols.New("vec3u_from_u32"), ty.vec3<u32>(), Location(1)},   //
-                      {mod.symbols.New("vec4u_from_u32"), ty.vec4<u32>(), Location(2)},   //
-                      {mod.symbols.New("vec3u_from_vec2"), ty.vec3<u32>(), Location(3)},  //
-                      {mod.symbols.New("vec4u_from_vec2"), ty.vec4<u32>(), Location(4)},  //
-                      {mod.symbols.New("vec4u_from_vec3"), ty.vec4<u32>(), Location(5)},  //
-                  });
+    auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
+                             {
+                                 {mod.symbols.New("vec2u_from_u32"), ty.vec2u(), Location(0)},   //
+                                 {mod.symbols.New("vec3u_from_u32"), ty.vec3u(), Location(1)},   //
+                                 {mod.symbols.New("vec4u_from_u32"), ty.vec4u(), Location(2)},   //
+                                 {mod.symbols.New("vec3u_from_vec2"), ty.vec3u(), Location(3)},  //
+                                 {mod.symbols.New("vec4u_from_vec2"), ty.vec4u(), Location(4)},  //
+                                 {mod.symbols.New("vec4u_from_vec3"), ty.vec4u(), Location(5)},  //
+                             });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 0_u), "vec2u_from_u32");
-        mod.SetName(b.Access(ty.vec3<u32>(), param, 1_u), "vec3u_from_u32");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 2_u), "vec4u_from_u32");
-        mod.SetName(b.Access(ty.vec3<u32>(), param, 3_u), "vec3u_from_vec2");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 4_u), "vec4u_from_vec2");
-        mod.SetName(b.Access(ty.vec4<u32>(), param, 5_u), "vec4u_from_vec3");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2u(), param, 0_u), "vec2u_from_u32");
+        mod.SetName(b.Access(ty.vec3u(), param, 1_u), "vec3u_from_u32");
+        mod.SetName(b.Access(ty.vec4u(), param, 2_u), "vec4u_from_u32");
+        mod.SetName(b.Access(ty.vec3u(), param, 3_u), "vec3u_from_vec2");
+        mod.SetName(b.Access(ty.vec4u(), param, 4_u), "vec4u_from_vec2");
+        mod.SetName(b.Access(ty.vec4u(), param, 5_u), "vec4u_from_vec3");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2517,29 +2514,28 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, ShaderTypeTooManyComponents_I32) {
-    auto* inputs =
-        ty.Struct(mod.symbols.New("Inputs"),
-                  {
-                      {mod.symbols.New("vec2i_from_i32"), ty.vec2<i32>(), Location(0)},   //
-                      {mod.symbols.New("vec3i_from_i32"), ty.vec3<i32>(), Location(1)},   //
-                      {mod.symbols.New("vec4i_from_i32"), ty.vec4<i32>(), Location(2)},   //
-                      {mod.symbols.New("vec3i_from_vec2"), ty.vec3<i32>(), Location(3)},  //
-                      {mod.symbols.New("vec4i_from_vec2"), ty.vec4<i32>(), Location(4)},  //
-                      {mod.symbols.New("vec4i_from_vec3"), ty.vec4<i32>(), Location(5)},  //
-                  });
+    auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
+                             {
+                                 {mod.symbols.New("vec2i_from_i32"), ty.vec2i(), Location(0)},   //
+                                 {mod.symbols.New("vec3i_from_i32"), ty.vec3i(), Location(1)},   //
+                                 {mod.symbols.New("vec4i_from_i32"), ty.vec4i(), Location(2)},   //
+                                 {mod.symbols.New("vec3i_from_vec2"), ty.vec3i(), Location(3)},  //
+                                 {mod.symbols.New("vec4i_from_vec2"), ty.vec4i(), Location(4)},  //
+                                 {mod.symbols.New("vec4i_from_vec3"), ty.vec4i(), Location(5)},  //
+                             });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        mod.SetName(b.Access(ty.vec2<i32>(), param, 0_u), "vec2i_from_i32");
-        mod.SetName(b.Access(ty.vec3<i32>(), param, 1_u), "vec3i_from_i32");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 2_u), "vec4i_from_i32");
-        mod.SetName(b.Access(ty.vec3<i32>(), param, 3_u), "vec3i_from_vec2");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 4_u), "vec4i_from_vec2");
-        mod.SetName(b.Access(ty.vec4<i32>(), param, 5_u), "vec4i_from_vec3");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2i(), param, 0_u), "vec2i_from_i32");
+        mod.SetName(b.Access(ty.vec3i(), param, 1_u), "vec3i_from_i32");
+        mod.SetName(b.Access(ty.vec4i(), param, 2_u), "vec4i_from_i32");
+        mod.SetName(b.Access(ty.vec3i(), param, 3_u), "vec3i_from_vec2");
+        mod.SetName(b.Access(ty.vec4i(), param, 4_u), "vec4i_from_vec2");
+        mod.SetName(b.Access(ty.vec4i(), param, 5_u), "vec4i_from_vec3");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2585,50 +2581,50 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 64u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:i32 = bitcast %6
+    %7:i32 = bitcast<i32> %6
     %8:vec2<i32> = construct %7, 0i
     %9:u32 = add %tint_vertex_buffer_0_base, 4u
     %10:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %9
     %11:u32 = load %10
-    %12:i32 = bitcast %11
+    %12:i32 = bitcast<i32> %11
     %13:vec3<i32> = construct %12, 0i, 0i
     %14:u32 = add %tint_vertex_buffer_0_base, 8u
     %15:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %14
     %16:u32 = load %15
-    %17:i32 = bitcast %16
+    %17:i32 = bitcast<i32> %16
     %18:vec4<i32> = construct %17, 0i, 0i, 1i
     %19:u32 = add %tint_vertex_buffer_0_base, 12u
     %20:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %19
     %21:u32 = load %20
-    %22:i32 = bitcast %21
+    %22:i32 = bitcast<i32> %21
     %23:u32 = add %tint_vertex_buffer_0_base, 13u
     %24:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %23
     %25:u32 = load %24
-    %26:i32 = bitcast %25
+    %26:i32 = bitcast<i32> %25
     %27:vec2<i32> = construct %22, %26
     %28:vec3<i32> = construct %27, 0i
     %29:u32 = add %tint_vertex_buffer_0_base, 16u
     %30:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %29
     %31:u32 = load %30
-    %32:i32 = bitcast %31
+    %32:i32 = bitcast<i32> %31
     %33:u32 = add %tint_vertex_buffer_0_base, 17u
     %34:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %33
     %35:u32 = load %34
-    %36:i32 = bitcast %35
+    %36:i32 = bitcast<i32> %35
     %37:vec2<i32> = construct %32, %36
     %38:vec4<i32> = construct %37, 0i, 1i
     %39:u32 = add %tint_vertex_buffer_0_base, 20u
     %40:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %39
     %41:u32 = load %40
-    %42:i32 = bitcast %41
+    %42:i32 = bitcast<i32> %41
     %43:u32 = add %tint_vertex_buffer_0_base, 21u
     %44:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %43
     %45:u32 = load %44
-    %46:i32 = bitcast %45
+    %46:i32 = bitcast<i32> %45
     %47:u32 = add %tint_vertex_buffer_0_base, 22u
     %48:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %47
     %49:u32 = load %48
-    %50:i32 = bitcast %49
+    %50:i32 = bitcast<i32> %49
     %51:vec3<i32> = construct %42, %46, %50
     %52:vec4<i32> = construct %51, 1i
     %53:Inputs = construct %8, %13, %18, %28, %38, %52
@@ -2664,26 +2660,26 @@ TEST_F(MslWriter_VertexPullingTest, ShaderTypeTooManyComponents_F32) {
     auto* inputs =
         ty.Struct(mod.symbols.New("Inputs"),
                   {
-                      {mod.symbols.New("vec2f_from_f16"), ty.vec2<f32>(), Location(0)},           //
-                      {mod.symbols.New("vec3f_from_f32"), ty.vec3<f32>(), Location(1)},           //
-                      {mod.symbols.New("vec4f_from_unorm"), ty.vec4<f32>(), Location(2)},         //
-                      {mod.symbols.New("vec3f_from_snormx2"), ty.vec3<f32>(), Location(3)},       //
-                      {mod.symbols.New("vec4f_from_f32x2"), ty.vec4<f32>(), Location(4)},         //
-                      {mod.symbols.New("vec4f_from_unorm_packed"), ty.vec4<f32>(), Location(5)},  //
+                      {mod.symbols.New("vec2f_from_f16"), ty.vec2f(), Location(0)},           //
+                      {mod.symbols.New("vec3f_from_f32"), ty.vec3f(), Location(1)},           //
+                      {mod.symbols.New("vec4f_from_unorm"), ty.vec4f(), Location(2)},         //
+                      {mod.symbols.New("vec3f_from_snormx2"), ty.vec3f(), Location(3)},       //
+                      {mod.symbols.New("vec4f_from_f32x2"), ty.vec4f(), Location(4)},         //
+                      {mod.symbols.New("vec4f_from_unorm_packed"), ty.vec4f(), Location(5)},  //
                   });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        mod.SetName(b.Access(ty.vec2<f32>(), param, 0_u), "vec2f_from_f16");
-        mod.SetName(b.Access(ty.vec3<f32>(), param, 1_u), "vec3f_from_f32");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 2_u), "vec4f_from_unorm");
-        mod.SetName(b.Access(ty.vec3<f32>(), param, 3_u), "vec3f_from_snormx2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 4_u), "vec4f_from_f32x2");
-        mod.SetName(b.Access(ty.vec4<f32>(), param, 5_u), "vec4f_from_unorm_packed");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2f(), param, 0_u), "vec2f_from_f16");
+        mod.SetName(b.Access(ty.vec3f(), param, 1_u), "vec3f_from_f32");
+        mod.SetName(b.Access(ty.vec4f(), param, 2_u), "vec4f_from_unorm");
+        mod.SetName(b.Access(ty.vec3f(), param, 3_u), "vec3f_from_snormx2");
+        mod.SetName(b.Access(ty.vec4f(), param, 4_u), "vec4f_from_f32x2");
+        mod.SetName(b.Access(ty.vec4f(), param, 5_u), "vec4f_from_unorm_packed");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2735,7 +2731,7 @@ $B1: {  # root
     %10:u32 = add %tint_vertex_buffer_0_base, 4u
     %11:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %10
     %12:u32 = load %11
-    %13:f32 = bitcast %12
+    %13:f32 = bitcast<f32> %12
     %14:vec3<f32> = construct %13, 0.0f, 0.0f
     %15:u32 = add %tint_vertex_buffer_0_base, 8u
     %16:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %15
@@ -2751,11 +2747,11 @@ $B1: {  # root
     %26:u32 = add %tint_vertex_buffer_0_base, 16u
     %27:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %26
     %28:u32 = load %27
-    %29:f32 = bitcast %28
+    %29:f32 = bitcast<f32> %28
     %30:u32 = add %tint_vertex_buffer_0_base, 17u
     %31:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %30
     %32:u32 = load %31
-    %33:f32 = bitcast %32
+    %33:f32 = bitcast<f32> %32
     %34:vec2<f32> = construct %29, %33
     %35:vec4<f32> = construct %34, 0.0f, 1.0f
     %36:u32 = add %tint_vertex_buffer_0_base, 20u
@@ -2799,28 +2795,28 @@ TEST_F(MslWriter_VertexPullingTest, ShaderTypeTooManyComponents_F16) {
     auto* inputs =
         ty.Struct(mod.symbols.New("Inputs"),
                   {
-                      {mod.symbols.New("vec2h_from_f16"), ty.vec2<f16>(), Location(0)},           //
-                      {mod.symbols.New("vec3h_from_f32"), ty.vec3<f16>(), Location(1)},           //
-                      {mod.symbols.New("vec4h_from_unorm"), ty.vec4<f16>(), Location(2)},         //
-                      {mod.symbols.New("vec3h_from_snormx2"), ty.vec3<f16>(), Location(3)},       //
-                      {mod.symbols.New("vec4h_from_f16x2"), ty.vec4<f16>(), Location(4)},         //
-                      {mod.symbols.New("vec4h_from_f32x2"), ty.vec4<f16>(), Location(5)},         //
-                      {mod.symbols.New("vec4h_from_unorm_packed"), ty.vec4<f16>(), Location(6)},  //
+                      {mod.symbols.New("vec2h_from_f16"), ty.vec2h(), Location(0)},           //
+                      {mod.symbols.New("vec3h_from_f32"), ty.vec3h(), Location(1)},           //
+                      {mod.symbols.New("vec4h_from_unorm"), ty.vec4h(), Location(2)},         //
+                      {mod.symbols.New("vec3h_from_snormx2"), ty.vec3h(), Location(3)},       //
+                      {mod.symbols.New("vec4h_from_f16x2"), ty.vec4h(), Location(4)},         //
+                      {mod.symbols.New("vec4h_from_f32x2"), ty.vec4h(), Location(5)},         //
+                      {mod.symbols.New("vec4h_from_unorm_packed"), ty.vec4h(), Location(6)},  //
                   });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        mod.SetName(b.Access(ty.vec2<f16>(), param, 0_u), "vec2h_from_f16");
-        mod.SetName(b.Access(ty.vec3<f16>(), param, 1_u), "vec3h_from_f32");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 2_u), "vec4h_from_unorm");
-        mod.SetName(b.Access(ty.vec3<f16>(), param, 3_u), "vec3h_from_snormx2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 4_u), "vec4h_from_f16x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 5_u), "vec4h_from_f32x2");
-        mod.SetName(b.Access(ty.vec4<f16>(), param, 6_u), "vec4h_from_unorm_packed");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2h(), param, 0_u), "vec2h_from_f16");
+        mod.SetName(b.Access(ty.vec3h(), param, 1_u), "vec3h_from_f32");
+        mod.SetName(b.Access(ty.vec4h(), param, 2_u), "vec4h_from_unorm");
+        mod.SetName(b.Access(ty.vec3h(), param, 3_u), "vec3h_from_snormx2");
+        mod.SetName(b.Access(ty.vec4h(), param, 4_u), "vec4h_from_f16x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 5_u), "vec4h_from_f32x2");
+        mod.SetName(b.Access(ty.vec4h(), param, 6_u), "vec4h_from_unorm_packed");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -2869,13 +2865,13 @@ $B1: {  # root
     %tint_vertex_buffer_0_base:u32 = mul %tint_vertex_index, 64u
     %5:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %tint_vertex_buffer_0_base
     %6:u32 = load %5
-    %7:vec2<f16> = bitcast %6
+    %7:vec2<f16> = bitcast<vec2<f16>> %6
     %8:f16 = access %7, 0u
     %9:vec2<f16> = construct %8, 0.0h
     %10:u32 = add %tint_vertex_buffer_0_base, 4u
     %11:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %10
     %12:u32 = load %11
-    %13:f32 = bitcast %12
+    %13:f32 = bitcast<f32> %12
     %14:f16 = convert %13
     %15:vec3<f16> = construct %14, 0.0h, 0.0h
     %16:u32 = add %tint_vertex_buffer_0_base, 8u
@@ -2894,16 +2890,16 @@ $B1: {  # root
     %29:u32 = add %tint_vertex_buffer_0_base, 16u
     %30:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %29
     %31:u32 = load %30
-    %32:vec2<f16> = bitcast %31
+    %32:vec2<f16> = bitcast<vec2<f16>> %31
     %33:vec4<f16> = construct %32, 0.0h, 1.0h
     %34:u32 = add %tint_vertex_buffer_0_base, 20u
     %35:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %34
     %36:u32 = load %35
-    %37:f32 = bitcast %36
+    %37:f32 = bitcast<f32> %36
     %38:u32 = add %tint_vertex_buffer_0_base, 21u
     %39:ptr<storage, u32, read> = access %tint_vertex_buffer_0, %38
     %40:u32 = load %39
-    %41:f32 = bitcast %40
+    %41:f32 = bitcast<f32> %40
     %42:vec2<f32> = construct %37, %41
     %43:vec2<f16> = convert %42
     %44:vec4<f16> = construct %43, 0.0h, 1.0h
@@ -2955,7 +2951,7 @@ TEST_F(MslWriter_VertexPullingTest, Unaligned_Uint8) {
                                  {mod.symbols.New("uint8_offset3"), ty.u32(), Location(2)},  //
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
@@ -2963,7 +2959,7 @@ TEST_F(MslWriter_VertexPullingTest, Unaligned_Uint8) {
         mod.SetName(b.Access(ty.u32(), param, 0_u), "uint8_offset1");
         mod.SetName(b.Access(ty.u32(), param, 1_u), "uint8_offset2");
         mod.SetName(b.Access(ty.u32(), param, 2_u), "uint8_offset3");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -3034,19 +3030,18 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_VertexPullingTest, Unaligned_Uint8x2) {
-    auto* inputs =
-        ty.Struct(mod.symbols.New("Inputs"),
-                  {
-                      {mod.symbols.New("uint8x2_offset2"), ty.vec2<u32>(), Location(0)},  //
-                  });
+    auto* inputs = ty.Struct(mod.symbols.New("Inputs"),
+                             {
+                                 {mod.symbols.New("uint8x2_offset2"), ty.vec2u(), Location(0)},  //
+                             });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
-        mod.SetName(b.Access(ty.vec2<u32>(), param, 0_u), "uint8x2_offset2");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        mod.SetName(b.Access(ty.vec2u(), param, 0_u), "uint8x2_offset2");
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(
@@ -3106,13 +3101,13 @@ TEST_F(MslWriter_VertexPullingTest, Unaligned_Uint16) {
                                  {mod.symbols.New("uint16_offset2"), ty.u32(), Location(0)},  //
                              });
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     auto* param = b.FunctionParam("input", inputs);
     ep->AppendParam(param);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(ep->Block(), [&] {  //
         mod.SetName(b.Access(ty.u32(), param, 0_u), "uint16_offset2");
-        b.Return(ep, b.Zero<vec4<f32>>());
+        b.Return(ep, b.Zero<vec4f>());
     });
 
     auto* src = R"(

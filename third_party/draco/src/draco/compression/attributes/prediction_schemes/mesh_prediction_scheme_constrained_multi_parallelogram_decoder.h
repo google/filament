@@ -22,6 +22,7 @@
 #include "draco/compression/attributes/prediction_schemes/mesh_prediction_scheme_decoder.h"
 #include "draco/compression/attributes/prediction_schemes/mesh_prediction_scheme_parallelogram_shared.h"
 #include "draco/compression/bit_coders/rans_bit_decoder.h"
+#include "draco/core/math_utils.h"
 #include "draco/core/varint_decoding.h"
 #include "draco/draco_features.h"
 
@@ -161,7 +162,8 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramDecoder<
         if (!is_crease) {
           ++num_used_parallelograms;
           for (int j = 0; j < num_components; ++j) {
-            multi_pred_vals[j] += pred_vals[i][j];
+            multi_pred_vals[j] =
+                AddAsUnsigned(multi_pred_vals[j], pred_vals[i][j]);
           }
         }
       }
@@ -208,6 +210,9 @@ bool MeshPredictionSchemeConstrainedMultiParallelogramDecoder<
   for (int i = 0; i < kMaxNumParallelograms; ++i) {
     uint32_t num_flags;
     if (!DecodeVarint<uint32_t>(&num_flags, buffer)) {
+      return false;
+    }
+    if (num_flags > this->mesh_data().corner_table()->num_corners()) {
       return false;
     }
     if (num_flags > 0) {

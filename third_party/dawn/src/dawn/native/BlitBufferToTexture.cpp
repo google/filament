@@ -33,6 +33,7 @@
 #include <utility>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/CommandBuffer.h"
 #include "dawn/native/CommandEncoder.h"
@@ -47,131 +48,138 @@ namespace dawn::native {
 
 namespace {
 
-constexpr std::string_view kShaderCommonSrc = R"(
-@vertex fn vert_fullscreen_quad(
-  @builtin(vertex_index) vertex_index : u32
-) -> @builtin(position) vec4f {
-  const pos = array(
-      vec2f(-1.0, -1.0),
-      vec2f( 3.0, -1.0),
-      vec2f(-1.0,  3.0));
-  return vec4f(pos[vertex_index], 0.0, 1.0);
-}
+constexpr std::string_view kShaderCommonSrc = DAWN_MULTILINE(
+    @vertex fn vert_fullscreen_quad(
+    @builtin(vertex_index) vertex_index : u32
+    ) -> @builtin(position) vec4f {
+    const pos = array(
+        vec2f(-1.0, -1.0),
+        vec2f( 3.0, -1.0),
+        vec2f(-1.0,  3.0));
+    return vec4f(pos[vertex_index], 0.0, 1.0);
+    }
 
-struct Params {
-  srcOffset : u32,
-  bytesPerRow : u32,
-  dstOrigin : vec2u
-};
+    struct Params {
+    srcOffset : u32,
+    bytesPerRow : u32,
+    dstOrigin : vec2u
+    };
 
-@group(0) @binding(0) var<storage, read> src_buf : array<u32>;
-@group(0) @binding(1) var<uniform> params : Params;
+    @group(0) @binding(0) var<storage, read> src_buf : array<u32>;
+    @group(0) @binding(1) var<uniform> params : Params;
 
-fn loadU8AsU32(byteOffset: u32) -> u32 {
-    let uintOffset = byteOffset >> 2;
-    let uintModOffset = byteOffset & 3;
-    let bitShift = uintModOffset * 8;
-    return (src_buf[uintOffset] >> bitShift) & 0xff;
-}
+    fn loadU8AsU32(byteOffset: u32) -> u32 {
+        let uintOffset = byteOffset >> 2;
+        let uintModOffset = byteOffset & 3;
+        let bitShift = uintModOffset * 8;
+        return (src_buf[uintOffset] >> bitShift) & 0xff;
+    }
 
-fn loadU16AsU32(byteOffset: u32) -> u32 {
-    let firstHalf = loadU8AsU32(byteOffset);
-    let secondHalf = loadU8AsU32(byteOffset + 1);
-    return firstHalf | (secondHalf << 8);
-}
+    fn loadU16AsU32(byteOffset: u32) -> u32 {
+        let firstHalf = loadU8AsU32(byteOffset);
+        let secondHalf = loadU8AsU32(byteOffset + 1);
+        return firstHalf | (secondHalf << 8);
+    }
 
-// byteOffset is expected to be aligned to 4.
-fn loadU32(byteOffset: u32) -> u32 {
-    let uintOffset = byteOffset >> 2;
-    return src_buf[uintOffset];
-}
+    // byteOffset is expected to be aligned to 4.
+    fn loadU32(byteOffset: u32) -> u32 {
+        let uintOffset = byteOffset >> 2;
+        return src_buf[uintOffset];
+    }
 
-// byteOffset is expected to be aligned to 4.
-fn loadTwoU32s(byteOffset: u32) -> vec2u {
-    return vec2u(loadU32(byteOffset), loadU32(byteOffset + 4));
-}
+    // byteOffset is expected to be aligned to 4.
+    fn loadTwoU32s(byteOffset: u32) -> vec2u {
+        return vec2u(loadU32(byteOffset), loadU32(byteOffset + 4));
+    }
 
-@fragment fn blit_buffer_to_texture(
-    @builtin(position) screen_position : vec4f
-) -> @location(0) vec4f {
-    let iposition = vec2u(screen_position.xy) - params.dstOrigin;
+    @fragment fn blit_buffer_to_texture(
+        @builtin(position) screen_position : vec4f
+    ) -> @location(0) vec4f {
+        let iposition = vec2u(screen_position.xy) - params.dstOrigin;
 
-    let srcOffset = params.srcOffset + iposition.x * kPixelSize + iposition.y * params.bytesPerRow;
+        let srcOffset = params.srcOffset + iposition.x * kPixelSize + iposition.y * params.bytesPerRow;
 
-    return unpackData(srcOffset);
-}
-)";
+        return unpackData(srcOffset);
+    }
+);
 
-constexpr std::string_view kUnpackR8Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return unpack4x8unorm(loadU8AsU32(byteOffset));
-}
-)";
+constexpr std::string_view kUnpackR8Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return unpack4x8unorm(loadU8AsU32(byteOffset));
+    }
+);
 
-constexpr std::string_view kUnpackRG8Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return unpack4x8unorm(loadU16AsU32(byteOffset));
-}
-)";
+constexpr std::string_view kUnpackRG8Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return unpack4x8unorm(loadU16AsU32(byteOffset));
+    }
+);
 
-constexpr std::string_view kUnpackRGBA8Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return unpack4x8unorm(loadU32(byteOffset));
-}
-)";
+constexpr std::string_view kUnpackRGBA8Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return unpack4x8unorm(loadU32(byteOffset));
+    }
+);
 
-constexpr std::string_view kUnpackBGRA8Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return unpack4x8unorm(loadU32(byteOffset)).bgra;
-}
-)";
+constexpr std::string_view kUnpackBGRA8Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return unpack4x8unorm(loadU32(byteOffset)).bgra;
+    }
+);
 
-constexpr std::string_view kUnpackRGB10A2Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    let data = loadU32(byteOffset);
-    let r = f32((data & 0x3ff)) / 1023.0;
-    let g = f32(((data >> 10) & 0x3ff)) / 1023.0;
-    let b = f32(((data >> 20) & 0x3ff)) / 1023.0;
-    let a = f32(((data >> 30) & 0x3)) / 3.0;
-    return vec4f(r, g, b, a);
-}
-)";
+constexpr std::string_view kUnpackRGB10A2Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        let data = loadU32(byteOffset);
+        let r = f32((data & 0x3ff)) / 1023.0;
+        let g = f32(((data >> 10) & 0x3ff)) / 1023.0;
+        let b = f32(((data >> 20) & 0x3ff)) / 1023.0;
+        let a = f32(((data >> 30) & 0x3)) / 3.0;
+        return vec4f(r, g, b, a);
+    }
+);
 
-constexpr std::string_view kUnpackR16Float = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return vec4f(unpack2x16float(loadU16AsU32(byteOffset)), 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackR16Float = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return vec4f(unpack2x16float(loadU16AsU32(byteOffset)), 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackR16Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return vec4f(f32(loadU16AsU32(byteOffset)) / f32(0xffff), 0.0, 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackR16Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return vec4f(f32(loadU16AsU32(byteOffset)) / f32(0xffff), 0.0, 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackRG16Float = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return vec4f(unpack2x16float(loadU32(byteOffset)), 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackRG16Float = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return vec4f(unpack2x16float(loadU32(byteOffset)), 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackRG16Unorm = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    let word = loadU32(byteOffset);
-    let x = f32(word & 0xffff);
-    let y = f32(word >> 16);
-    return vec4f(vec2f(x, y) / f32(0xffff), 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackRG16Unorm = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        let word = loadU32(byteOffset);
+        let x = f32(word & 0xffff);
+        let y = f32(word >> 16);
+        return vec4f(vec2f(x, y) / f32(0xffff), 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackRGBA16Float = R"(
+constexpr std::string_view kUnpackRGBA16Float = DAWN_MULTILINE(
 fn unpackData(byteOffset: u32) -> vec4f {
     let data = loadTwoU32s(byteOffset);
     return vec4f(unpack2x16float(data.x), unpack2x16float(data.y));
 }
-)";
+);
 
-constexpr std::string_view kUnpackRGBA16Unorm = R"(
+constexpr std::string_view kUnpackRGBA16Unorm = DAWN_MULTILINE(
 fn unpackData(byteOffset: u32) -> vec4f {
     let words = loadTwoU32s(byteOffset);
     let x = f32(words[0] & 0xffff);
@@ -180,27 +188,28 @@ fn unpackData(byteOffset: u32) -> vec4f {
     let w = f32(words[1] >> 16);
     return vec4f(x, y, z, w) / f32(0xffff);
 }
-)";
+);
 
-constexpr std::string_view kUnpackR32Float = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return vec4f(bitcast<f32>(loadU32(byteOffset)), 0.0, 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackR32Float = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        //
+        return vec4f(bitcast<f32>(loadU32(byteOffset)), 0.0, 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackRG32Float = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    let color = bitcast<vec2f>(loadTwoU32s(byteOffset));
-    return vec4f(color, 0.0, 1.0);
-}
-)";
+constexpr std::string_view kUnpackRG32Float = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        let color = bitcast<vec2f>(loadTwoU32s(byteOffset));
+        return vec4f(color, 0.0, 1.0);
+    }
+);
 
-constexpr std::string_view kUnpackRGBA32Float = R"(
-fn unpackData(byteOffset: u32) -> vec4f {
-    return vec4f(bitcast<vec2f>(loadTwoU32s(byteOffset)),
-                 bitcast<vec2f>(loadTwoU32s(byteOffset + 8)));
-}
-)";
+constexpr std::string_view kUnpackRGBA32Float = DAWN_MULTILINE(
+    fn unpackData(byteOffset: u32) -> vec4f {
+        return vec4f(bitcast<vec2f>(loadTwoU32s(byteOffset)),
+                    bitcast<vec2f>(loadTwoU32s(byteOffset + 8)));
+    }
+);
 
 std::string GenerateShaderSource(wgpu::TextureFormat format) {
     int pixelSize = 0;
@@ -266,7 +275,7 @@ std::string GenerateShaderSource(wgpu::TextureFormat format) {
             DAWN_UNREACHABLE();
     }
 
-    ss << "const kPixelSize = " << pixelSize << ";\n";
+    ss << "const kPixelSize = " << pixelSize << ";";
     ss << kShaderCommonSrc;
 
     return ss.str();
@@ -361,7 +370,7 @@ bool IsFormatSupportedByBufferToTextureBlit(wgpu::TextureFormat format) {
 
 bool IsBufferToTextureBlitSupported(BufferBase* buffer,
                                     const TextureCopy& dst,
-                                    const Extent3D& copyExtent) {
+                                    const TexelExtent3D& copyExtent) {
     if (!(buffer->GetInternalUsage() &
           (kReadOnlyStorageBuffer | kInternalStorageBuffer | wgpu::BufferUsage::Storage))) {
         return false;
@@ -382,7 +391,7 @@ bool IsBufferToTextureBlitSupported(BufferBase* buffer,
     }
 
     // Must have non-zero copy size.
-    return copyExtent.width * copyExtent.height * copyExtent.depthOrArrayLayers > 0;
+    return copyExtent.width * copyExtent.height * copyExtent.depthOrArrayLayers > TexelCount{0};
 }
 
 MaybeError BlitBufferToTexture(DeviceBase* device,
@@ -390,7 +399,7 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
                                BufferBase* buffer,
                                const TexelCopyBufferLayout& src,
                                const TextureCopy& dst,
-                               const Extent3D& copyExtent) {
+                               const TexelExtent3D& copyExtent) {
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
 
     // This function assumes bytesPerRow is multiples of 4. Normally it's required that
@@ -402,7 +411,7 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
     DAWN_ASSERT(buffer->GetInternalUsage() &
                 (kReadOnlyStorageBuffer | kInternalStorageBuffer | wgpu::BufferUsage::Storage));
 
-    DAWN_ASSERT(copyExtent.width > 0 && copyExtent.height > 0 && copyExtent.depthOrArrayLayers > 0);
+    DAWN_ASSERT(!copyExtent.IsEmpty());
 
     // Allow internal usages since we need to use the destination
     // as a render attachment.
@@ -428,29 +437,30 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
             break;
         case wgpu::TextureDimension::e3D:
             viewDimension = wgpu::TextureViewDimension::e3D;
-            baseDepth = dst.origin.z;
+            baseDepth = static_cast<uint32_t>(dst.origin.z);
             depthStep = 1;
             break;
         default:
             viewDimension = wgpu::TextureViewDimension::e2D;
-            baseArray = dst.origin.z;
+            baseArray = static_cast<uint32_t>(dst.origin.z);
             arrayStep = 1;
             break;
     }
 
-    for (uint32_t z = 0; z < copyExtent.depthOrArrayLayers; ++z) {
+    for (TexelCount z{0}; z < copyExtent.depthOrArrayLayers; ++z) {
         Ref<TextureViewBase> dstView;
         {
             TextureViewDescriptor viewDesc = {};
             viewDesc.dimension = viewDimension;
-            viewDesc.baseArrayLayer = baseArray + arrayStep * z;
+            viewDesc.baseArrayLayer = baseArray + arrayStep * static_cast<uint32_t>(z);
             viewDesc.arrayLayerCount = 1;
             viewDesc.baseMipLevel = dst.mipLevel;
             viewDesc.mipLevelCount = 1;
             DAWN_TRY_ASSIGN(dstView, dst.texture->CreateView(&viewDesc));
         }
 
-        const uint64_t srcOffset = src.offset + z * src.rowsPerImage * src.bytesPerRow;
+        const uint64_t srcOffset =
+            src.offset + static_cast<uint32_t>(z) * src.rowsPerImage * src.bytesPerRow;
         const uint64_t srcBufferBindingOffset = AlignDown(srcOffset, ssboAlignment);
         const uint32_t shaderReadOffset = static_cast<uint32_t>(srcOffset & (ssboAlignment - 1));
         Ref<BufferBase> paramsBuffer;
@@ -461,8 +471,8 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
             uint32_t params[4];
             params[0] = shaderReadOffset;
             params[1] = src.bytesPerRow;
-            params[2] = dst.origin.x;
-            params[3] = dst.origin.y;
+            params[2] = static_cast<uint32_t>(dst.origin.x);
+            params[3] = static_cast<uint32_t>(dst.origin.y);
             commandEncoder->APIWriteBuffer(paramsBuffer.Get(), 0,
                                            reinterpret_cast<const uint8_t*>(&params[0]),
                                            sizeof(params));
@@ -479,7 +489,7 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
         RenderPassColorAttachment colorAttachment;
         colorAttachment.view = dstView.Get();
         if (depthStep) {
-            colorAttachment.depthSlice = baseDepth + depthStep * z;
+            colorAttachment.depthSlice = baseDepth + depthStep * static_cast<uint32_t>(z);
         }
         colorAttachment.loadOp = wgpu::LoadOp::Load;
         colorAttachment.storeOp = wgpu::StoreOp::Store;
@@ -491,7 +501,10 @@ MaybeError BlitBufferToTexture(DeviceBase* device,
         Ref<RenderPassEncoder> pass = commandEncoder->BeginRenderPass(&rpDesc);
         // Bind the resources.
         pass->APISetBindGroup(0, bindGroup.Get());
-        pass->APISetViewport(dst.origin.x, dst.origin.y, copyExtent.width, copyExtent.height, 0.f,
+        pass->APISetViewport(static_cast<float>(static_cast<uint32_t>(dst.origin.x)),
+                             static_cast<float>(static_cast<uint32_t>(dst.origin.y)),
+                             static_cast<float>(static_cast<uint32_t>(copyExtent.width)),
+                             static_cast<float>(static_cast<uint32_t>(copyExtent.height)), 0.f,
                              1.f);
 
         // Draw to perform the blit.

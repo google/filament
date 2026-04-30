@@ -771,11 +771,17 @@ const std::unordered_map<const char*, int, str_hash, str_eq> KeywordMap {
 
     {"tensorARM",TENSORARM},
 
+    {"hitObjectEXT",HITOBJECTEXT},
+    {"hitObjectAttributeEXT",HITOBJECTATTREXT},
+
     {"__function",FUNCTION},
     {"tensorLayoutNV",TENSORLAYOUTNV},
     {"tensorViewNV",TENSORVIEWNV},
 
     {"coopvecNV",COOPVECNV},
+    {"vector",VECTOR},
+    {"resourceheap",RESOURCEHEAP},
+    {"samplerheap",SAMPLERHEAP},
 };
 const std::unordered_set<const char*, str_hash, str_eq> ReservedSet {
     "common",
@@ -836,12 +842,22 @@ int TScanContext::tokenize(TPpContext* pp, TParserToken& token)
         loc = ppToken.loc;
         parserToken->sType.lex.loc = loc;
         switch (token) {
-        case ';':  afterType = false; afterBuffer = false; return SEMICOLON;
-        case ',':  afterType = false;   return COMMA;
+        case ';':  afterType = false; afterBuffer = false; inDeclaratorList = false; afterDeclarator = false; angleBracketDepth = 0; squareBracketDepth = 0; parenDepth = 0; return SEMICOLON;
+        case ',':
+            // If we just processed a declarator (identifier after a type), this comma
+            // indicates that we're in a declarator list. Note that 'afterDeclarator' is
+            // only set when we are not inside a template parameter list, array expression,
+            // or function parameter list.
+            if (afterDeclarator) {
+                inDeclaratorList = true;
+            }
+            afterType = false;
+            afterDeclarator = false;
+            return COMMA;
         case ':':                       return COLON;
-        case '=':  afterType = false;   return EQUAL;
-        case '(':  afterType = false;   return LEFT_PAREN;
-        case ')':  afterType = false;   return RIGHT_PAREN;
+        case '=':  afterType = false; inDeclaratorList = false; afterDeclarator = false; return EQUAL;
+        case '(':  afterType = false; inDeclaratorList = false; afterDeclarator = false; parenDepth++; return LEFT_PAREN;
+        case ')':  afterType = false; inDeclaratorList = false; afterDeclarator = false; if (parenDepth > 0) parenDepth--; return RIGHT_PAREN;
         case '.':  field = true;        return DOT;
         case '!':                       return BANG;
         case '-':                       return DASH;
@@ -850,16 +866,16 @@ int TScanContext::tokenize(TPpContext* pp, TParserToken& token)
         case '*':                       return STAR;
         case '/':                       return SLASH;
         case '%':                       return PERCENT;
-        case '<':                       return LEFT_ANGLE;
-        case '>':                       return RIGHT_ANGLE;
+        case '<':                       angleBracketDepth++; return LEFT_ANGLE;
+        case '>':                       if (angleBracketDepth > 0) angleBracketDepth--; return RIGHT_ANGLE;
         case '|':                       return VERTICAL_BAR;
         case '^':                       return CARET;
         case '&':                       return AMPERSAND;
         case '?':                       return QUESTION;
-        case '[':                       return LEFT_BRACKET;
-        case ']':                       return RIGHT_BRACKET;
-        case '{':  afterStruct = false; afterBuffer = false; return LEFT_BRACE;
-        case '}':                       return RIGHT_BRACE;
+        case '[':                       squareBracketDepth++; return LEFT_BRACKET;
+        case ']':                       if (squareBracketDepth > 0) squareBracketDepth--; return RIGHT_BRACKET;
+        case '{':  afterStruct = false; afterBuffer = false; inDeclaratorList = false; afterDeclarator = false; angleBracketDepth = 0; squareBracketDepth = 0; parenDepth = 0; return LEFT_BRACE;
+        case '}':  inDeclaratorList = false; afterDeclarator = false; angleBracketDepth = 0; squareBracketDepth = 0; parenDepth = 0; return RIGHT_BRACE;
         case '\\':
             parseContext.error(loc, "illegal use of escape character", "\\", "");
             break;
@@ -1340,13 +1356,14 @@ int TScanContext::tokenizeIdentifier()
     case U64VEC2:
     case U64VEC3:
     case U64VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_int64) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int64))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int64)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case INT8_T:
@@ -1357,13 +1374,14 @@ int TScanContext::tokenizeIdentifier()
     case U8VEC2:
     case U8VEC3:
     case U8VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_8bit_storage) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int8))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int8)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case INT16_T:
@@ -1374,14 +1392,15 @@ int TScanContext::tokenizeIdentifier()
     case U16VEC2:
     case U16VEC3:
     case U16VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_int16) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_16bit_storage) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int16))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int16)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
     case INT32_T:
     case UINT32_T:
@@ -1391,23 +1410,25 @@ int TScanContext::tokenizeIdentifier()
     case U32VEC2:
     case U32VEC3:
     case U32VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int32))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_int32)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
     case FLOAT32_T:
     case F32VEC2:
     case F32VEC3:
     case F32VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float32))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float32)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
     case F32MAT2:
     case F32MAT3:
@@ -1421,25 +1442,27 @@ int TScanContext::tokenizeIdentifier()
     case F32MAT4X2:
     case F32MAT4X3:
     case F32MAT4X4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float32))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float32)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case FLOAT64_T:
     case F64VEC2:
     case F64VEC3:
     case F64VEC4:
-    afterType = true;
-    if (parseContext.symbolTable.atBuiltInLevel() ||
-        parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
-        (parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) && 
-         parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64)) ||
-        parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float64))
-        return keyword;
-    return identifierOrType();
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
+            (parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) && 
+             parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_fp64)) ||
+             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float64)) {
+            afterType = true;
+            return keyword;
+        }
+        return identifierOrType();
     case F64MAT2:
     case F64MAT3:
     case F64MAT4:
@@ -1452,26 +1475,27 @@ int TScanContext::tokenizeIdentifier()
     case F64MAT4X2:
     case F64MAT4X3:
     case F64MAT4X4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float64))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float64)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case FLOAT16_T:
     case F16VEC2:
     case F16VEC3:
     case F16VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_16bit_storage) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_NV_gpu_shader5) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float16))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float16)) {
+            afterType = true;
             return keyword;
-
+        }
         return identifierOrType();
 
     case F16MAT2:
@@ -1486,12 +1510,13 @@ int TScanContext::tokenizeIdentifier()
     case F16MAT4X2:
     case F16MAT4X3:
     case F16MAT4X4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
-            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float16))
+            parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float16)) {
+            afterType = true;
             return keyword;
+        }
 
         return identifierOrType();
 
@@ -1499,10 +1524,11 @@ int TScanContext::tokenizeIdentifier()
     case BF16VEC2:
     case BF16VEC3:
     case BF16VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_EXT_bfloat16))
+            parseContext.extensionTurnedOn(E_GL_EXT_bfloat16)) {
+            afterType = true;
             return keyword;
+        }
 
         return identifierOrType();
 
@@ -1510,10 +1536,11 @@ int TScanContext::tokenizeIdentifier()
     case FE5M2VEC2:
     case FE5M2VEC3:
     case FE5M2VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_EXT_float_e5m2))
+            parseContext.extensionTurnedOn(E_GL_EXT_float_e5m2)) {
+            afterType = true;
             return keyword;
+        }
 
         return identifierOrType();
 
@@ -1521,10 +1548,11 @@ int TScanContext::tokenizeIdentifier()
     case FE4M3VEC2:
     case FE4M3VEC3:
     case FE4M3VEC4:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_EXT_float_e4m3))
+            parseContext.extensionTurnedOn(E_GL_EXT_float_e4m3)) {
+            afterType = true;
             return keyword;
+        }
 
         return identifierOrType();
 
@@ -1793,10 +1821,11 @@ int TScanContext::tokenizeIdentifier()
 
     case F16SUBPASSINPUT:
     case F16SUBPASSINPUTMS:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float_fetch))
+            parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float_fetch)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case EXPLICITINTERPAMD:
@@ -1845,38 +1874,51 @@ int TScanContext::tokenizeIdentifier()
         return identifierOrType();
 
     case FCOOPMATNV:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_NV_cooperative_matrix))
+            parseContext.extensionTurnedOn(E_GL_NV_cooperative_matrix)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case UCOOPMATNV:
     case ICOOPMATNV:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_NV_integer_cooperative_matrix))
+            parseContext.extensionTurnedOn(E_GL_NV_integer_cooperative_matrix)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
     case TENSORARM:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_ARM_tensors))
+            parseContext.extensionTurnedOn(E_GL_ARM_tensors)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case COOPMAT:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_KHR_cooperative_matrix))
+            parseContext.extensionTurnedOn(E_GL_KHR_cooperative_matrix)) {
+            afterType = true;
             return keyword;
+        }
         return identifierOrType();
 
     case COOPVECNV:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_NV_cooperative_vector))
+            parseContext.extensionTurnedOn(E_GL_NV_cooperative_vector)) {
+            afterType = true;
             return keyword;
+        }
+        return identifierOrType();
+
+    case VECTOR:
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            parseContext.extensionTurnedOn(E_GL_EXT_long_vector)) {
+            afterType = true;
+            return keyword;
+        }
         return identifierOrType();
 
     case DEMOTE:
@@ -1907,6 +1949,13 @@ int TScanContext::tokenizeIdentifier()
             return keyword;
         return identifierOrType();
 
+    case HITOBJECTEXT:
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            (!parseContext.isEsProfile() && parseContext.version >= 460
+                 && parseContext.extensionTurnedOn(E_GL_EXT_shader_invocation_reorder)))
+            return keyword;
+        return identifierOrType();
+
     case HITOBJECTATTRNV:
         if (parseContext.symbolTable.atBuiltInLevel() ||
             (!parseContext.isEsProfile() && parseContext.version >= 460
@@ -1914,12 +1963,27 @@ int TScanContext::tokenizeIdentifier()
             return keyword;
         return identifierOrType();
 
+    case HITOBJECTATTREXT:
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            (!parseContext.isEsProfile() && parseContext.version >= 460
+                 && parseContext.extensionTurnedOn(E_GL_EXT_shader_invocation_reorder)))
+            return keyword;
+        return identifierOrType();
+
     case FUNCTION:
     case TENSORLAYOUTNV:
     case TENSORVIEWNV:
-        afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            parseContext.extensionTurnedOn(E_GL_NV_cooperative_matrix2))
+            parseContext.extensionTurnedOn(E_GL_NV_cooperative_matrix2)) {
+            afterType = true;
+            return keyword;
+        }
+        return identifierOrType();
+
+    case RESOURCEHEAP:
+    case SAMPLERHEAP:
+        if (parseContext.extensionTurnedOn(E_GL_EXT_structured_descriptor_heap) &&
+            parseContext.extensionTurnedOn(E_GL_EXT_descriptor_heap))
             return keyword;
         return identifierOrType();
 
@@ -1935,14 +1999,29 @@ int TScanContext::identifierOrType()
     if (field)
         return IDENTIFIER;
 
+    // If we see an identifier right after a type, this might be a declarator.
+    // But not in template parameters (inside angle brackets), array expressions (inside square brackets),
+    // or function parameters (inside parentheses)
+    if (afterType && angleBracketDepth == 0 && squareBracketDepth == 0 && parenDepth == 0) {
+        afterDeclarator = true;
+        afterType = false;
+        return IDENTIFIER;
+    }
+
     parserToken->sType.lex.symbol = parseContext.symbolTable.find(*parserToken->sType.lex.string);
     if ((afterType == false && afterStruct == false) && parserToken->sType.lex.symbol != nullptr) {
         if (const TVariable* variable = parserToken->sType.lex.symbol->getAsVariable()) {
             if (variable->isUserType() &&
                 // treat redeclaration of forward-declared buffer/uniform reference as an identifier
                 !(variable->getType().isReference() && afterBuffer)) {
-                afterType = true;
 
+                // If we're in a declarator list (like "float a, B;"), treat struct names as IDENTIFIER
+                // to fix GitHub issue #3931
+                if (inDeclaratorList) {
+                    return IDENTIFIER;
+                }
+                
+                afterType = true;
                 return TYPE_NAME;
             }
         }

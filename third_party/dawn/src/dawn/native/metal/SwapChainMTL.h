@@ -28,9 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_METAL_SWAPCHAINMTL_H_
 #define SRC_DAWN_NATIVE_METAL_SWAPCHAINMTL_H_
 
-#include "dawn/native/SwapChain.h"
-
 #include "dawn/common/NSRef.h"
+#include "dawn/native/SwapChain.h"
 
 @class CAMetalLayer;
 @protocol CAMetalDrawable;

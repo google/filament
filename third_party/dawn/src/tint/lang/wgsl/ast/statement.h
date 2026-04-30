@@ -44,10 +44,9 @@ class Statement : public Castable<Statement, Node> {
 
   protected:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of the expression
-    Statement(GenerationID pid, NodeID nid, const Source& src);
+    Statement(NodeID nid, const Source& src);
 };
 
 }  // namespace tint::ast

@@ -6,6 +6,6 @@ Files: shaders*/* reference/* tests-other/*
 Copyright: 2016-2021 The Khronos Group, Inc.
 License: Apache-2.0
 
-Files: spirv.h spirv.hpp GLSL.std.450.h
+Files: spirv.h spirv.hpp GLSL.std.450.h NonSemanticShaderDebugInfo100.h
 Copyright: 2016-2021 The Khronos Group, Inc.
 License: LicenseRef-KhronosFreeUse

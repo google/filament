@@ -1,0 +1,4 @@
+ERROR: 0:4: '#' : Illegal sequence of paste (##) and stringify (#). 
+ERROR: 1 compilation errors.  No code generated.
+
+

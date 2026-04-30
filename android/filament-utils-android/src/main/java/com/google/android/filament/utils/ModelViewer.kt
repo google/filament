@@ -143,7 +143,7 @@ class ModelViewer(
         light = EntityManager.get().create()
 
         val (r, g, b) = Colors.cct(6_500.0f)
-        LightManager.Builder(LightManager.Type.DIRECTIONAL)
+        LightManager.Builder(LightManager.Type.SUN)
                 .color(r, g, b)
                 .intensity(100_000.0f)
                 .direction(0.0f, -1.0f, 0.0f)
@@ -267,6 +267,35 @@ class ModelViewer(
     }
 
     /**
+     * Resets the model's transform, animation, and camera state to defaults.
+     * Call this when reusing the same model across multiple tests.
+     */
+    fun resetToDefaultState() {
+        // 1. Reset Camera parameters
+        cameraFocalLength = 28f
+        cameraNear = kNearPlane
+        cameraFar = kFarPlane
+        updateCameraProjection()
+
+        // 2. Reset the manipulator's look-at vectors to initial state
+        cameraManipulator?.let { cm ->
+            cm.jumpToBookmark(cm.homeBookmark)
+        }
+
+        // 3. Reset Animations
+        animator?.let {
+            if (it.animationCount > 0) {
+                it.applyAnimation(0, 0.0f)
+            }
+            it.updateBoneMatrices()
+        }
+
+        // 4. Re-apply the unit cube transform to clear custom scaling/translation
+        clearRootTransform()
+        transformToUnitCube()
+    }
+
+    /**
      * Frees all entities associated with the most recently-loaded model.
      */
     fun destroyModel() {
@@ -287,9 +316,9 @@ class ModelViewer(
      * @param frameTimeNanos time in nanoseconds when the frame started being rendered,
      *                       typically comes from {@link android.view.Choreographer.FrameCallback}
      */
-    fun render(frameTimeNanos: Long) {
+    fun render(frameTimeNanos: Long): Boolean {
         if (!uiHelper.isReadyToRender) {
-            return
+            return false
         }
 
         // Allow the resource loader to finalize textures that have become ready.
@@ -308,7 +337,9 @@ class ModelViewer(
         }
 
         // Render the scene, unless the renderer wants to skip the frame.
+        var rendered = false
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
+            rendered = true
             renderer.render(view)
 
             debugFrameCallback?.let {
@@ -331,6 +362,7 @@ class ModelViewer(
 
             renderer.endFrame()
         }
+        return rendered
     }
 
     /*
@@ -361,36 +393,43 @@ class ModelViewer(
         view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: android.view.View) {}
             override fun onViewDetachedFromWindow(v: android.view.View) {
-                uiHelper.detach()
-
-                destroyModel()
-                assetLoader.destroy()
-                materialProvider.destroyMaterials()
-                materialProvider.destroy()
-                resourceLoader.destroy()
-
-                if (indirectLightCubemap != null) {
-                    engine.destroyTexture(indirectLightCubemap!!)
-                    indirectLightCubemap = null
-                }
-
-                if (skyboxCubemap != null) {
-                    engine.destroyTexture(skyboxCubemap!!)
-                    skyboxCubemap = null
-                }
-
-                engine.destroyEntity(light)
-                engine.destroyRenderer(renderer)
-                engine.destroyView(this@ModelViewer.view)
-                engine.destroyScene(scene)
-                engine.destroyCameraComponent(camera.entity)
-                EntityManager.get().destroy(camera.entity)
-
-                EntityManager.get().destroy(light)
-
-                engine.destroy()
+                destroy()
             }
         })
+    }
+
+    /**
+     * Explicitly destroys the ModelViewer and its underlying Filament engine and resources.
+     */
+    fun destroy() {
+        uiHelper.detach()
+
+        destroyModel()
+        assetLoader.destroy()
+        materialProvider.destroyMaterials()
+        materialProvider.destroy()
+        resourceLoader.destroy()
+
+        if (indirectLightCubemap != null) {
+            engine.destroyTexture(indirectLightCubemap!!)
+            indirectLightCubemap = null
+        }
+
+        if (skyboxCubemap != null) {
+            engine.destroyTexture(skyboxCubemap!!)
+            skyboxCubemap = null
+        }
+
+        engine.destroyEntity(light)
+        engine.destroyRenderer(renderer)
+        engine.destroyView(this@ModelViewer.view)
+        engine.destroyScene(scene)
+        engine.destroyCameraComponent(camera.entity)
+        EntityManager.get().destroy(camera.entity)
+
+        EntityManager.get().destroy(light)
+
+        engine.destroy()
     }
 
     /**

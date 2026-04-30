@@ -463,7 +463,8 @@ TEST_P(BuiltinTextureConstExprArgValidationTest, GlobalVar) {
 
     EXPECT_FALSE(r()->Resolve());
     StringStream err;
-    err << "12:34 error: the " << param.name << " argument must be a const-expression";
+    err << "12:34 error: the '" << param.name << "' argument of '" << overload.function
+        << "' must be a const-expression";
     EXPECT_EQ(r()->error(), err.str());
 }
 INSTANTIATE_TEST_SUITE_P(
@@ -806,7 +807,7 @@ TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInArray) {
     // fn foo() {
     //   workgroupUniformLoad(&v);
     // }
-    GlobalVar("v", ty.array(ty.atomic<i32>(), 4_a), core::AddressSpace::kWorkgroup);
+    GlobalVar("v", ty.array(ty.atomic<i32>(), Expr(4_a)), core::AddressSpace::kWorkgroup);
     WrapInFunction(CallStmt(Call("workgroupUniformLoad", AddressOf(Source{{12, 34}}, "v"))));
 
     EXPECT_FALSE(r()->Resolve());
@@ -829,9 +830,10 @@ TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInStruct) {
     // fn foo() {
     //   workgroupUniformLoad(&v);
     // }
-    Structure("Inner", Vector{Member("a", ty.array(ty.atomic<i32>(), 4_a))});
-    Structure("S", Vector{Member("i", ty("Inner"))});
-    GlobalVar(Source{{12, 34}}, "v", ty.array(ty("S"), 4_a), core::AddressSpace::kWorkgroup);
+    Structure("Inner", Vector{Member("a", ty.array(ty.atomic<i32>(), Expr(4_a)))});
+    Structure("S", Vector{Member("i", ty.AsType("Inner"))});
+    GlobalVar(Source{{12, 34}}, "v", ty.array(ty.AsType("S"), Expr(4_a)),
+              core::AddressSpace::kWorkgroup);
     WrapInFunction(CallStmt(Call("workgroupUniformLoad", AddressOf("v"))));
 
     EXPECT_FALSE(r()->Resolve());
@@ -1139,7 +1141,7 @@ TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastLaneArgMustBeConst) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(12:34 error: the sourceLaneIndex argument of subgroupBroadcast must be a const-expression)");
+        R"(12:34 error: the 'sourceLaneIndex' argument of 'subgroupBroadcast' must be a const-expression)");
 }
 
 TEST_F(ResolverBuiltinValidationTest, QuadBroadcastIdArgMustBeConst) {
@@ -1151,7 +1153,7 @@ TEST_F(ResolverBuiltinValidationTest, QuadBroadcastIdArgMustBeConst) {
          });
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),
-              R"(12:34 error: the id argument of quadBroadcast must be a const-expression)");
+              R"(12:34 error: the 'id' argument of 'quadBroadcast' must be a const-expression)");
 }
 
 TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastLaneArgMustBeNonNeg) {

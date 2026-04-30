@@ -444,6 +444,61 @@ OpFunctionEnd)";
                         "before LocalSizeId constant value"));
 }
 
+TEST_F(ValidateMisc, CoopMatDeviceScope) {
+  const std::string body = R"(
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability VulkanMemoryModel
+               OpCapability CooperativeMatrixKHR
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main" %_
+               OpExecutionMode %main LocalSize 32 1 1
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpDecorate %InputA Block
+               OpMemberDecorate %InputA 0 Offset 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+    %uint_16 = OpConstant %uint 16
+     %uint_0 = OpConstant %uint 0
+         ;; Using Device Scope
+         %12 = OpTypeCooperativeMatrixKHR %half %uint_1 %uint_16 %uint_16 %uint_0
+%_ptr_Function_12 = OpTypePointer Function %12
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+     %InputA = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer_InputA = OpTypePointer StorageBuffer %InputA
+          %_ = OpVariable %_ptr_StorageBuffer_InputA StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %uint_5 = OpConstant %uint 5
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %v3uint = OpTypeVector %uint 3
+    %uint_32 = OpConstant %uint 32
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_32 %uint_1 %uint_1
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+          %A = OpVariable %_ptr_Function_12 Function
+         %23 = OpAccessChain %_ptr_StorageBuffer_uint %_ %int_0 %uint_0
+         %24 = OpCooperativeMatrixLoadKHR %12 %23 %int_0 %uint_16 MakePointerVisible|NonPrivatePointer %uint_5
+               OpStore %A %24
+               OpReturn
+               OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Scope-12243"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpTypeCooperativeMatrixKHR Scope is limited to "
+                        "Workgroup and Subgroup"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

@@ -27,13 +27,17 @@
 
 #include "src/tint/lang/core/type/struct.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/array_count.h"
 #include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/utils/math/hash.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 #include "src/tint/utils/text/string_stream.h"
@@ -76,23 +80,17 @@ Struct::Struct(Symbol name, bool is_wgsl_internal)
     : Base(Hash(tint::TypeCode::Of<Struct>().bits, name, is_wgsl_internal), type::Flags{}),
       name_(name),
       members_{},
-      align_(0),
       size_(0),
-      size_no_padding_(0),
       is_wgsl_internal_(is_wgsl_internal) {}
 
 Struct::Struct(Symbol name,
                VectorRef<const StructMember*> members,
-               uint32_t align,
                uint32_t size,
-               uint32_t size_no_padding,
                bool is_wgsl_internal)
     : Base(Hash(tint::TypeCode::Of<Struct>().bits, name, is_wgsl_internal), FlagsFrom(members)),
       name_(name),
       members_(std::move(members)),
-      align_(align),
       size_(size),
-      size_no_padding_(size_no_padding),
       is_wgsl_internal_(is_wgsl_internal) {}
 
 Struct::~Struct() = default;
@@ -114,7 +112,11 @@ const StructMember* Struct::FindMember(Symbol name) const {
 }
 
 uint32_t Struct::Align() const {
-    return align_;
+    uint32_t align = 0;
+    for (auto* mem : members_) {
+        align = std::max(align, mem->Align());
+    }
+    return align;
 }
 
 uint32_t Struct::Size() const {
@@ -215,6 +217,14 @@ const Type* Struct::Element(uint32_t index) const {
     return index < members_.Length() ? members_[index]->Type() : nullptr;
 }
 
+uint32_t Struct::SizeNoPadding() const {
+    if (members_.IsEmpty()) {
+        return 0;
+    }
+    auto& mem = members_.Back();
+    return mem->Offset() + mem->Size();
+}
+
 Struct* Struct::Clone(CloneContext& ctx) const {
     auto sym = ctx.dst.st->Register(name_.Name());
 
@@ -222,8 +232,7 @@ Struct* Struct::Clone(CloneContext& ctx) const {
     for (const auto& mem : members_) {
         members.Push(mem->Clone(ctx));
     }
-    return ctx.dst.mgr->Get<Struct>(sym, members, align_, size_, size_no_padding_,
-                                    is_wgsl_internal_);
+    return ctx.dst.mgr->Get<Struct>(sym, members, size_, is_wgsl_internal_);
 }
 
 StructMember::StructMember(Symbol name,
@@ -242,6 +251,28 @@ StructMember::StructMember(Symbol name,
       attributes_(attributes) {}
 
 StructMember::~StructMember() = default;
+
+uint32_t StructMember::MinimumRequiredSize() const {
+    auto* ty = type_;
+    uint32_t array_multiplier = 1;
+    while (ty->Is<core::type::Array>()) {
+        auto* arr = ty->As<core::type::Array>();
+        if (auto* count = arr->Count()->As<core::type::ConstantArrayCount>()) {
+            array_multiplier *= count->value;
+        }
+
+        ty = arr->ElemType();
+    }
+
+    auto* mat = ty->As<core::type::Matrix>();
+    if (!mat) {
+        return type_->Size();
+    }
+
+    uint32_t dim = is_row_major_ ? mat->Rows() : mat->Columns();
+    auto s = HasMatrixStride() ? matrix_stride_ * dim : mat->Size();
+    return (s * array_multiplier);
+}
 
 StructMember* StructMember::Clone(CloneContext& ctx) const {
     auto sym = ctx.dst.st->Register(name_.Name());

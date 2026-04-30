@@ -41,21 +41,21 @@ func TestCopyFile(t *testing.T) {
 		name    string
 		srcPath string
 		dstPath string
-		setupFS func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		setupFS func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 		wantErr bool
-		verify  func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		verify  func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 	}{
 		{
 			name:    "Simple copy",
 			srcPath: "/src/file.txt",
 			dstPath: "/dst/file.txt",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src", 0777))
 				require.NoError(t, fs.WriteFile("/src/file.txt", []byte("hello world"), 0666))
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				content, err := fs.ReadFile("/dst/file.txt")
 				require.NoError(t, err)
 				require.Equal(t, "hello world", string(content))
@@ -65,14 +65,14 @@ func TestCopyFile(t *testing.T) {
 			name:    "Overwrite existing file",
 			srcPath: "/src/file.txt",
 			dstPath: "/dst/file.txt",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src", 0777))
 				require.NoError(t, fs.WriteFile("/src/file.txt", []byte("new content"), 0666))
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 				require.NoError(t, fs.WriteFile("/dst/file.txt", []byte("old content"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				content, err := fs.ReadFile("/dst/file.txt")
 				require.NoError(t, err)
 				require.Equal(t, "new content", string(content))
@@ -82,7 +82,7 @@ func TestCopyFile(t *testing.T) {
 			name:    "Source does not exist",
 			srcPath: "/src/nonexistent.txt",
 			dstPath: "/dst/file.txt",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
 			wantErr: true,
@@ -91,7 +91,7 @@ func TestCopyFile(t *testing.T) {
 			name:    "Source is a directory",
 			srcPath: "/src/dir",
 			dstPath: "/dst/file.txt",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src/dir", 0777))
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
@@ -101,12 +101,12 @@ func TestCopyFile(t *testing.T) {
 			name:    "Destination directory does not exist",
 			srcPath: "/src/file.txt",
 			dstPath: "/nonexistent/dst/file.txt",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src", 0777))
 				require.NoError(t, fs.WriteFile("/src/file.txt", []byte("hello"), 0666))
 			},
 			wantErr: false, // CopyFile creates the destination directory
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				content, err := fs.ReadFile("/nonexistent/dst/file.txt")
 				require.NoError(t, err)
 				require.Equal(t, "hello", string(content))
@@ -116,7 +116,7 @@ func TestCopyFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(t, wrapper)
 			}
@@ -141,20 +141,20 @@ func TestCopyDir(t *testing.T) {
 		name    string
 		srcPath string
 		dstPath string
-		setupFS func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		setupFS func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 		wantErr bool
-		verify  func(t *testing.T, fs oswrapper.MemMapOSWrapper)
+		verify  func(t *testing.T, fs oswrapper.FSTestOSWrapper)
 	}{
 		{
 			name:    "Copy to non-existent destination",
 			srcPath: "/src/data",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src/data/subdir", 0777))
 				require.NoError(t, fs.WriteFile("/src/data/file1.txt", []byte("file1"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.True(t, fileutils.IsDir("/dst", fs))
 				content, err := fs.ReadFile(filepath.Join("/dst", "file1.txt"))
 				require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestCopyDir(t *testing.T) {
 			name:    "Overwrite existing destination",
 			srcPath: "/src/new_data",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				// Source
 				require.NoError(t, fs.MkdirAll("/src/new_data", 0777))
 				require.NoError(t, fs.WriteFile("/src/new_data/new_file.txt", []byte("new"), 0666))
@@ -175,7 +175,7 @@ func TestCopyDir(t *testing.T) {
 				require.NoError(t, fs.WriteFile("/dst/old_file.txt", []byte("old"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				// Check new file exists
 				content, err := fs.ReadFile(filepath.Join("/dst", "new_file.txt"))
 				require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestCopyDir(t *testing.T) {
 			name:    "Copy complex directory structure",
 			srcPath: "/src/complex",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				// Source with complex structure
 				require.NoError(t, fs.MkdirAll("/src/complex/a", 0777))
 				require.NoError(t, fs.MkdirAll("/src/complex/b/c", 0777))
@@ -202,7 +202,7 @@ func TestCopyDir(t *testing.T) {
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				content, err := fs.ReadFile(filepath.Join("/dst", "root.txt"))
 				require.NoError(t, err)
 				require.Equal(t, "root", string(content))
@@ -221,13 +221,13 @@ func TestCopyDir(t *testing.T) {
 			name:    "Copy empty directory to existing destination",
 			srcPath: "/src/empty",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src/empty", 0777))
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 				require.NoError(t, fs.WriteFile("/dst/old_file.txt", []byte("old"), 0666))
 			},
 			wantErr: false,
-			verify: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			verify: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				isEmpty, err := fileutils.IsEmptyDir("/dst", fs)
 				require.NoError(t, err)
 				require.True(t, isEmpty)
@@ -237,7 +237,7 @@ func TestCopyDir(t *testing.T) {
 			name:    "Source does not exist",
 			srcPath: "/src/nonexistent",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
 			wantErr: true,
@@ -246,7 +246,8 @@ func TestCopyDir(t *testing.T) {
 			name:    "Source is a file",
 			srcPath: "/src/file.txt",
 			dstPath: "/dst",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
+				require.NoError(t, fs.MkdirAll("/src", 0777))
 				require.NoError(t, fs.WriteFile("/src/file.txt", []byte("i am a file"), 0666))
 				require.NoError(t, fs.MkdirAll("/dst", 0777))
 			},
@@ -256,7 +257,7 @@ func TestCopyDir(t *testing.T) {
 			name:    "Destination is a file",
 			srcPath: "/src/data",
 			dstPath: "/dst_is_a_file",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src/data", 0777))
 				require.NoError(t, fs.WriteFile("/dst_is_a_file", []byte("i am a file"), 0666))
 			},
@@ -266,7 +267,7 @@ func TestCopyDir(t *testing.T) {
 			name:    "Destination is a subdirectory of source",
 			srcPath: "/src",
 			dstPath: "/src/sub",
-			setupFS: func(t *testing.T, fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(t *testing.T, fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/src/sub", 0777))
 			},
 			wantErr: true,
@@ -275,7 +276,7 @@ func TestCopyDir(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(t, wrapper)
 			}

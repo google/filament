@@ -55,7 +55,10 @@ Ref<PipelineCache> PipelineCache::CreateMonolithic(Device* device, const CacheKe
 }
 
 PipelineCache::PipelineCache(Device* device, const CacheKey& key, bool isMonolithicCache)
-    : PipelineCacheBase(device->GetBlobCache(), key, isMonolithicCache), mDevice(device) {}
+    : PipelineCacheBase(device->GetBlobCache(), key, isMonolithicCache),
+      mDevice(device),
+      mInvalidResultWorkaround(
+          device->IsToggleEnabled(Toggle::VulkanIncompletePipelineCacheWorkaround)) {}
 
 PipelineCache::~PipelineCache() {
     if (mHandle == VK_NULL_HANDLE) {
@@ -75,6 +78,10 @@ MaybeError PipelineCache::SerializeToBlobImpl(Blob* blob) {
         return {};
     }
 
+    if (mSkipSerialize) {
+        return {};
+    }
+
     size_t bufferSize;
     DAWN_TRY(CheckVkSuccess(
         mDevice->fn.GetPipelineCacheData(mDevice->GetVkDevice(), mHandle, &bufferSize, nullptr),
@@ -86,9 +93,19 @@ MaybeError PipelineCache::SerializeToBlobImpl(Blob* blob) {
         return {};
     }
     *blob = CreateBlob(bufferSize);
-    DAWN_TRY(CheckVkSuccess(mDevice->fn.GetPipelineCacheData(mDevice->GetVkDevice(), mHandle,
-                                                             &bufferSize, blob->Data()),
-                            "GetPipelineCacheData"));
+    auto result = mDevice->fn.GetPipelineCacheData(mDevice->GetVkDevice(), mHandle, &bufferSize,
+                                                   blob->Data());
+
+    if (result == VK_INCOMPLETE && mInvalidResultWorkaround) {
+        // Most of the time VK_INCOMPLETE is returned on Pixel 10 is due to a driver bug. The
+        // serialized data both returned here and cached in the driver is likely corrupted. Don't
+        // store it to the blob cache and don't call vkGetPipelineCacheData() since it will return
+        // corrupted data in future calls.
+        mSkipSerialize = true;
+        return {};
+    }
+
+    DAWN_TRY(CheckVkSuccess(result, "GetPipelineCacheData"));
     mStoredDataSize = bufferSize;
 
     return {};

@@ -28,14 +28,14 @@
 #ifndef COMMON_VERISON_AUTOGEN_H_
 #define COMMON_VERISON_AUTOGEN_H_
 
-#include <string_view>
+#include <array>
+#include <cstdint>
 
 namespace dawn {
 
-// The version string should either be a valid git hash or empty.
-static constexpr std::string_view kDawnVersion("{{get_version()}}");
-static_assert(kDawnVersion.size() == 40 || kDawnVersion.size() == 0);
+// The version is a 20-byte SHA1 hash. If the hash is not available, it is all zeros.
+static constexpr std::array<uint8_t, 20> kDawnVersion = { {{get_version_byte_array()}} };
 
-} // namespace dawn
+}  // namespace dawn
 
 #endif  // COMMON_VERISON_AUTOGEN_H_

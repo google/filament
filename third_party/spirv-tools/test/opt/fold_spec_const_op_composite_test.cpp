@@ -1,4 +1,5 @@
 // Copyright (c) 2016 Google Inc.
+// Copyright (c) 2025 Arm Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -737,6 +738,9 @@ std::vector<std::string> CommonTypesAndConstants() {
       "%inner_struct = OpTypeStruct %bool %int %float",
       "%outer_struct = OpTypeStruct %inner_struct %int",
       "%flat_struct = OpTypeStruct %bool %int %float",
+      "%flat_struct_replicate = OpTypeStruct %int %int %int",
+      "%inner_struct_replicate = OpTypeStruct %float %float %float",
+      "%outer_struct_replicate = OpTypeStruct %inner_struct_replicate %inner_struct_replicate",
 
       // common constants
       // scalar constants:
@@ -826,7 +830,7 @@ TEST_P(FoldSpecConstantOpAndCompositePassTest, ParamTestCase) {
             StripOpNameInstructions(optimized));
 }
 
-// Tests that OpSpecConstantComposite opcodes are replace with
+// Tests that OpSpecConstantComposite opcodes are replaced with
 // OpConstantComposite correctly.
 INSTANTIATE_TEST_SUITE_P(
     Composite, FoldSpecConstantOpAndCompositePassTest,
@@ -943,6 +947,113 @@ INSTANTIATE_TEST_SUITE_P(
                 "%quant_float = OpConstant %float 1",
               },
             }
+        // clang-format on
+    })));
+
+// Tests that OpSpecConstantCompositeReplicateEXT opcodes are replaced with
+// OpConstantCompositeReplicateEXT correctly.
+INSTANTIATE_TEST_SUITE_P(
+    CompositeReplicate, FoldSpecConstantOpAndCompositePassTest,
+    ::testing::ValuesIn(std::vector<
+                        FoldSpecConstantOpAndCompositePassTestCase>({
+        // clang-format off
+            // normal vector
+            {
+              // original
+              {
+                "%spec_v2bool = OpSpecConstantCompositeReplicateEXT %v2bool %bool_true",
+                "%spec_v2uint = OpSpecConstantCompositeReplicateEXT %v2uint %unsigned_one",
+                "%spec_v2int_a = OpSpecConstantCompositeReplicateEXT %v2int %signed_two",
+                // Spec constants whose value can not be fully resolved should
+                // not be processed.
+                "%spec_int = OpSpecConstant %int 99",
+                "%spec_v2int_b = OpSpecConstantCompositeReplicateEXT %v2int %spec_int",
+              },
+              // expected
+              {
+                "%spec_v2bool = OpConstantCompositeReplicateEXT %v2bool %bool_true",
+                "%spec_v2uint = OpConstantCompositeReplicateEXT %v2uint %unsigned_one",
+                "%spec_v2int_a = OpConstantCompositeReplicateEXT %v2int %signed_two",
+                "%spec_int = OpSpecConstant %int 99",
+                "%spec_v2int_b = OpSpecConstantCompositeReplicateEXT %v2int %spec_int",
+              },
+            },
+            // vector with null constants
+            {
+              // original
+              {
+                "%null_bool = OpConstantNull %bool",
+                "%null_int = OpConstantNull %int",
+                "%spec_v2bool = OpSpecConstantCompositeReplicateEXT %v2bool %null_bool",
+                "%spec_v3int = OpSpecConstantCompositeReplicateEXT %v3int %null_int",
+                "%spec_v4int = OpSpecConstantCompositeReplicateEXT %v4int %null_int",
+              },
+              // expected
+              {
+                "%null_bool = OpConstantNull %bool",
+                "%null_int = OpConstantNull %int",
+                "%spec_v2bool = OpConstantCompositeReplicateEXT %v2bool %null_bool",
+                "%spec_v3int = OpConstantCompositeReplicateEXT %v3int %null_int",
+                "%spec_v4int = OpConstantCompositeReplicateEXT %v4int %null_int",
+              },
+            },
+            // flat struct
+            {
+              // original
+              {
+                "%int_1 = OpConstant %int 1",
+                "%flat_1 = OpSpecConstantCompositeReplicateEXT %flat_struct_replicate %int_1",
+                // following struct should not be folded as the value of
+                // %spec_float is not determined.
+                "%spec_int = OpSpecConstant %int 1",
+                "%flat_2 = OpSpecConstantCompositeReplicateEXT %flat_struct_replicate %spec_int",
+              },
+              // expected
+              {
+                "%int_1 = OpConstant %int 1",
+                "%flat_1 = OpConstantCompositeReplicateEXT %flat_struct_replicate %int_1",
+                "%spec_int = OpSpecConstant %int 1",
+                "%flat_2 = OpSpecConstantCompositeReplicateEXT %flat_struct_replicate %spec_int",
+              }
+            },
+            // nested struct
+            {
+              // original
+              {
+                "%float_1 = OpConstant %float 1",
+                "%inner_1 = OpSpecConstantCompositeReplicateEXT %inner_struct_replicate %float_1",
+                "%outer_1 = OpSpecConstantCompositeReplicateEXT %outer_struct_replicate %inner_1",
+                // following structs should not be folded as the value of
+                // %spec_float is not determined.
+                "%spec_float = OpSpecConstant %float 1",
+                "%inner_2 = OpSpecConstantCompositeReplicateEXT %inner_struct_replicate %spec_float",
+                "%outer_2 = OpSpecConstantCompositeReplicateEXT %outer_struct_replicate %inner_2",
+              },
+              // expected
+              {
+                "%float_1 = OpConstant %float 1",
+                "%inner_1 = OpConstantCompositeReplicateEXT %inner_struct_replicate %float_1",
+                "%outer_1 = OpConstantCompositeReplicateEXT %outer_struct_replicate %inner_1",
+                "%spec_float = OpSpecConstant %float 1",
+                "%inner_2 = OpSpecConstantCompositeReplicateEXT %inner_struct_replicate %spec_float",
+                "%outer_2 = OpSpecConstantCompositeReplicateEXT %outer_struct_replicate %inner_2",
+              }
+            },
+            // composite constants touched by OpUndef should be skipped
+            {
+              // original
+              {
+                "%undef = OpUndef %float",
+                "%inner = OpConstantCompositeReplicateEXT %inner_struct_replicate %undef",
+                "%outer = OpSpecConstantCompositeReplicateEXT %outer_struct_replicate %inner",
+              },
+              // expected
+              {
+                "%undef = OpUndef %float",
+                "%inner = OpConstantCompositeReplicateEXT %inner_struct_replicate %undef",
+                "%outer = OpSpecConstantCompositeReplicateEXT %outer_struct_replicate %inner",
+              },
+            },
         // clang-format on
     })));
 

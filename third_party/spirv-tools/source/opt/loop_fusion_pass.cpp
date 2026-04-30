@@ -22,23 +22,27 @@ namespace spvtools {
 namespace opt {
 
 Pass::Status LoopFusionPass::Process() {
-  bool modified = false;
+  Status status = Status::SuccessWithoutChange;
   Module* module = context()->module();
 
   // Process each function in the module
   for (Function& f : *module) {
-    modified |= ProcessFunction(&f);
+    status = CombineStatus(status, ProcessFunction(&f));
+    if (status == Status::Failure) return Status::Failure;
   }
 
-  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+  return status;
 }
 
-bool LoopFusionPass::ProcessFunction(Function* function) {
+Pass::Status LoopFusionPass::ProcessFunction(Function* function) {
   LoopDescriptor& ld = *context()->GetLoopDescriptor(function);
 
   // If a loop doesn't have a preheader needs then it needs to be created. Make
   // sure to return Status::SuccessWithChange in that case.
-  auto modified = ld.CreatePreHeaderBlocksIfMissing();
+  bool modified = false;
+  auto status = ld.CreatePreHeaderBlocksIfMissing();
+  if (status == LoopDescriptor::Status::Failure) return Status::Failure;
+  modified = status == LoopDescriptor::Status::SuccessWithChange;
 
   // TODO(tremmelg): Could the only loop that |loop| could possibly be fused be
   // picked out so don't have to check every loop
@@ -55,13 +59,13 @@ bool LoopFusionPass::ProcessFunction(Function* function) {
           fusion.Fuse();
           // Recurse, as the current iterators will have been invalidated.
           ProcessFunction(function);
-          return true;
+          return Status::SuccessWithChange;
         }
       }
     }
   }
 
-  return modified;
+  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
 }  // namespace opt

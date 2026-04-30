@@ -20,10 +20,10 @@ The root object contains the following categories:
 | Key | Type | Description |
 | :--- | :--- | :--- |
 | `view` | Object | Post-processing and rendering quality settings. |
-| `camera` | Object | **[NEW]** Explicit camera control (pose, projection, exposure). |
-| `lighting` | Object | **[NEW]** Environment and dynamic light settings. |
+| `camera` | Object | Explicit camera control (pose, projection, exposure). |
+| `lighting` | Object | Environment and dynamic light settings. |
 | `viewer` | Object | Global viewer options (skybox, background, scaling). |
-| `animation` | Object | **[NEW]** Animation playback control. |
+| `animation` | Object | Animation playback control. |
 | `material` | Object | Material overrides. |
 
 ---

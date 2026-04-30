@@ -41,13 +41,13 @@ bool DirIncluder::operator()(const utils::CString& includedBy, IncludeResult& re
     const utils::Path headerPath = getHeaderPath();
 
     if (!headerPath.isFile()) {
-        utils::slog.e << "File " << headerPath << " does not exist." << utils::io::endl;
+        utils::slog.e << "File " << headerPath.c_str() << " does not exist." << utils::io::endl;
         return false;
     }
 
     std::ifstream stream(headerPath.getPath(), std::ios::binary);
     if (!stream) {
-        utils::slog.e << "Unable to open " << headerPath << "." << utils::io::endl;
+        utils::slog.e << "Unable to open " << headerPath.c_str() << "." << utils::io::endl;
         return false;
     }
 

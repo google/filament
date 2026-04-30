@@ -1,0 +1,34 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+static const int A = SPIRV_CROSS_CONSTANT_ID_1;
+static const uint _20 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+static const uint _21 = SPIRV_CROSS_CONSTANT_ID_0;
+static const uint3 gl_WorkGroupSize = uint3(_21, 1u, 1u);
+static const uint _25 = gl_WorkGroupSize.x;
+static const uint _26 = (_20 * _25);
+static const uint _30 = (uint(A) + 0u);
+static const uint _31 = gl_WorkGroupSize.x;
+static const uint _32 = (_30 * _31);
+
+RWByteAddressBuffer _48 : register(u0);
+
+static float D[_32];
+
+void comp_main()
+{
+    for (int i = 0; uint(i) < _26; i++)
+    {
+        D[i] = 1.0f + float(i);
+    }
+    _48.Store(4, asuint(D[int(_48.Load(0))] + D[int(_48.Load(0)) ^ 1]));
+}
+
+[numthreads(SPIRV_CROSS_CONSTANT_ID_0, 1, 1)]
+void main()
+{
+    comp_main();
+}

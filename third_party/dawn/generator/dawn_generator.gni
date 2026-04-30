@@ -90,8 +90,29 @@ template("dawn_json_generator") {
       rebase_path("${dawn_root}/src/dawn/dawn_kotlin.json", root_build_dir),
       "--targets",
       invoker.target,
+      "--webgpu-kt-docs",
+      rebase_path("${dawn_root}/src/dawn/webgpu_kt_docs.json", root_build_dir),
+
+      # IMPORTANT: If adding a new file here, add it to `inputs`, too. See
+      # crbug.com/466134210 for more context.
     ]
 
-    forward_variables_from(invoker, "*", [ "target" ])
+    inputs = [
+      "${dawn_root}/src/dawn/dawn.json",
+      "${dawn_root}/src/dawn/dawn_wire.json",
+      "${dawn_root}/src/dawn/dawn_kotlin.json",
+      "${dawn_root}/third_party/webgpu-headers/src/webgpu.json",
+    ]
+
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "target",
+                             "inputs",
+                           ])
+
+    if (defined(invoker.inputs)) {
+      inputs += invoker.inputs
+    }
   }
 }

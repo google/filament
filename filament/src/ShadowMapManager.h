@@ -138,6 +138,21 @@ public:
             RenderPassBuilder const& passBuilder,
             FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
+    FrameGraphId<FrameGraphTexture> gaussianBlurSeparatedPass(
+        FEngine& engine,
+        FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> output,
+        utils::FixedCapacityVector<ShadowMap const*> shadowMapList,
+        math::int2 dir);
+
+    FrameGraphId<FrameGraphTexture> vsmMipmapPass(
+            FEngine& engine,
+            FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            math::float4 clearColor) noexcept;
+
+
     // valid after calling update() above
     ShadowMappingUniforms getShadowMappingUniforms() const noexcept {
         return mShadowMappingUniforms;

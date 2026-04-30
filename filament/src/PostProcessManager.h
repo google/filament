@@ -53,6 +53,7 @@
 #include <array>
 #include <random>
 #include <string_view>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -301,26 +302,25 @@ public:
 
     // Resolves base level of input and outputs a texture from outDesc.
     // outDesc with, height, format and samples will be overridden.
-    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
+    // customPassName is an optional parameter to override the default "resolve" pass name.
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg, utils::StaticString outputBufferName,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphTexture::Descriptor outDesc,
+            utils::CString customPassName = {}) noexcept;
 
     // Resolves base level of input and outputs a texture from outDesc using a shader instead of
     // driver-implemented API.
     // outDesc with, height, format and samples will be overridden.
+    // customPassName is an optional parameter to override the default "resolveDepthWithShader" pass
+    // name.
     FrameGraphId<FrameGraphTexture> resolveDepthWithShader(FrameGraph& fg,
             utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor outDesc) noexcept;
-
-    // VSM shadow mipmap pass
-    FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
-            math::float4 clearColor) noexcept;
+            FrameGraphTexture::Descriptor outDesc, utils::CString customPassName = {}) noexcept;
 
     FrameGraphId<FrameGraphTexture> gaussianBlurPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> output,
-            bool reinhard, size_t kernelWidth, float sigma) noexcept;
+            bool reinhard, size_t kernelWidth, float sigma,
+            std::optional<backend::Viewport> scissor = {}) noexcept;
 
     FrameGraphId<FrameGraphTexture> debugShadowCascades(FrameGraph& fg,
             ShadowMapManager const& smm,
@@ -385,6 +385,8 @@ public:
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+
     backend::PipelineState getPipelineState(FMaterialInstance const* mi,
             Variant::type_t variant) const noexcept;
 
@@ -420,10 +422,13 @@ public:
 
     void resetForRender();
 
-private:
+    MaterialInstanceManager& getMaterialInstanceManager() noexcept {
+            return mMaterialInstanceManager;
+    }
+
     static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
 
-    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+private:
 
     // Helpers to get MaterialInstances.
     //

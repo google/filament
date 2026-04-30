@@ -15,6 +15,9 @@
 #include "draco/mesh/mesh_are_equivalent.h"
 
 #include <algorithm>
+#include <memory>
+
+#include "draco/texture/texture_utils.h"
 
 namespace draco {
 
@@ -113,6 +116,55 @@ bool MeshAreEquivalent::operator()(const Mesh &mesh0, const Mesh &mesh1) {
   // the two meshes face by face. It also determines the first corner of each
   // face with respect to lex order.
   Init(mesh0, mesh1);
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Compare geometry compression settings.
+  if (mesh0.IsCompressionEnabled() != mesh1.IsCompressionEnabled()) {
+    return false;
+  }
+  if (mesh0.GetCompressionOptions() != mesh1.GetCompressionOptions()) {
+    return false;
+  }
+
+  // Compare non-material texture library sizes.
+  if (mesh0.GetNonMaterialTextureLibrary().NumTextures() !=
+      mesh1.GetNonMaterialTextureLibrary().NumTextures()) {
+    return false;
+  }
+
+  // Compare mesh feature ID sets.
+  if (mesh0.NumMeshFeatures() != mesh1.NumMeshFeatures()) {
+    return false;
+  }
+  for (MeshFeaturesIndex i(0); i < mesh0.NumMeshFeatures(); ++i) {
+    const MeshFeatures &features0 = mesh0.GetMeshFeatures(i);
+    const MeshFeatures &features1 = mesh1.GetMeshFeatures(i);
+    if (features0.GetAttributeIndex() != features1.GetAttributeIndex()) {
+      return false;
+    }
+    if (features0.GetFeatureCount() != features1.GetFeatureCount()) {
+      return false;
+    }
+    if (features0.GetLabel() != features1.GetLabel()) {
+      return false;
+    }
+    if (features0.GetNullFeatureId() != features1.GetNullFeatureId()) {
+      return false;
+    }
+    if (features0.GetTextureChannels() != features1.GetTextureChannels()) {
+      return false;
+    }
+    if (features0.GetPropertyTableIndex() !=
+        features1.GetPropertyTableIndex()) {
+      return false;
+    }
+    const TextureMap &map0 = features0.GetTextureMap();
+    const TextureMap &map1 = features1.GetTextureMap();
+    if (map0.tex_coord_index() != map1.tex_coord_index()) {
+      return false;
+    }
+  }
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
   // Check for every attribute that is valid that every corner is identical.
   typedef GeometryAttribute::Type AttributeType;

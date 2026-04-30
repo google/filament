@@ -27,6 +27,8 @@
 
 import("../../../scripts/dawn_overrides_with_defaults.gni")
 
+import("${dawn_root}/scripts/dawn_features.gni")
+
 group("samples") {
   deps = [
     ":Animometer",
@@ -34,7 +36,7 @@ group("samples") {
     ":HelloTriangle",
   ]
 
-  if (!is_wasm) {
+  if (dawn_supports_glfw_for_windowing) {
     deps += [
       ":DawnInfo",
       ":ManualSurfaceTest",
@@ -53,11 +55,12 @@ static_library("utils") {
   public_deps = [
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
   ]
 
-  if (!is_wasm) {
+  if (dawn_supports_glfw_for_windowing) {
     public_deps += [
       "${dawn_root}/src/dawn/glfw",
       "${dawn_root}/src/dawn/native",
@@ -76,11 +79,10 @@ template("sample") {
     }
 
     if (is_wasm) {
-      # The Dawn samples require either JSPI or ASYNCIFY to run. Note that
-      # JSPI is still experimental, so we need to turn off warnings.
+      # The Dawn samples require either JSPI or Asyncify to run.
       ldflags = [
-        "-Wno-experimental",
-        "-sJSPI=1",
+        "-Wno-experimental",  # -sJSPI is experimental.
+        "-sJSPI",
       ]
     }
   }
@@ -98,10 +100,12 @@ sample("Animometer") {
   sources = [ "Animometer.cpp" ]
 }
 
-sample("ManualSurfaceTest") {
-  sources = [ "ManualSurfaceTest.cpp" ]
-}
+if (dawn_supports_glfw_for_windowing) {
+  sample("ManualSurfaceTest") {
+    sources = [ "ManualSurfaceTest.cpp" ]
+  }
 
-sample("DawnInfo") {
-  sources = [ "DawnInfo.cpp" ]
+  sample("DawnInfo") {
+    sources = [ "DawnInfo.cpp" ]
+  }
 }

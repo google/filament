@@ -64,8 +64,8 @@ TEST_P(TexelBufferFormatTest, Usage) {
     auto& params = GetParam();
     Require(wgsl::LanguageFeature::kTexelBuffers);
 
-    auto tb = ty(Source{{12, 34}}, "texel_buffer", tint::ToString(params.format),
-                 tint::ToString(core::Access::kRead));
+    auto tb = ty.AsType(Source{{12, 34}}, "texel_buffer", tint::ToString(params.format),
+                        tint::ToString(core::Access::kRead));
     GlobalVar("a", tb, Group(0_a), Binding(0_a));
 
     if (params.is_valid) {
@@ -85,7 +85,7 @@ INSTANTIATE_TEST_SUITE_P(ResolverTexelBufferTest,
 // Requires 2 template arguments: format and access
 TEST_F(ResolverTexelBufferTest, MissingAccess) {
     Require(wgsl::LanguageFeature::kTexelBuffers);
-    auto tb = ty(Source{{12, 34}}, "texel_buffer", "rgba32float");
+    auto tb = ty.AsType(Source{{12, 34}}, "texel_buffer", "rgba32float");
     GlobalVar("a", tb, Group(0_a), Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
@@ -95,8 +95,8 @@ TEST_F(ResolverTexelBufferTest, MissingAccess) {
 // Access must be read or read_write
 TEST_F(ResolverTexelBufferTest, InvalidAccess) {
     Require(wgsl::LanguageFeature::kTexelBuffers);
-    auto tb =
-        ty(Source{{12, 34}}, "texel_buffer", "rgba32float", Expr(Source{{12, 34}}, "read_only"));
+    auto tb = ty.AsType(Source{{12, 34}}, "texel_buffer", "rgba32float",
+                        Expr(Source{{12, 34}}, "read_only"));
     GlobalVar("a", tb, Group(0_a), Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
@@ -108,7 +108,8 @@ TEST_F(ResolverTexelBufferTest, InvalidAccess) {
 // Access must be read or read_write, not write
 TEST_F(ResolverTexelBufferTest, WriteOnlyAccess) {
     Require(wgsl::LanguageFeature::kTexelBuffers);
-    auto tb = ty(Source{{12, 34}}, "texel_buffer", "rgba32float", "write");
+    auto tb =
+        ty.texel_buffer(Source{{12, 34}}, core::TexelFormat::kRgba32Float, core::Access::kWrite);
     GlobalVar("a", tb, Group(0_a), Binding(0_a));
 
     EXPECT_FALSE(r()->Resolve());
@@ -117,7 +118,8 @@ TEST_F(ResolverTexelBufferTest, WriteOnlyAccess) {
 
 // Requires the texel_buffer language feature to be enabled
 TEST_F(ResolverTexelBufferTest, FeatureRequired) {
-    auto tb = ty(Source{{12, 34}}, "texel_buffer", "rgba32float", "read");
+    auto tb =
+        ty.texel_buffer(Source{{12, 34}}, core::TexelFormat::kRgba32Float, core::Access::kRead);
     GlobalVar("a", tb, Group(0_a), Binding(0_a));
 
     Resolver resolver{this, wgsl::AllowedFeatures{}};
@@ -182,7 +184,8 @@ TEST_F(ResolverTexelBufferTest, StructMember) {
 
     auto* s = Structure(
         "S", Vector{
-                 Member("buf", ty(Source{{12, 34}}, "texel_buffer", "rgba32float", "read")),
+                 Member("buf", ty.texel_buffer(Source{{12, 34}}, core::TexelFormat::kRgba32Float,
+                                               core::Access::kRead)),
              });
 
     GlobalVar("g", ty.Of(s), core::AddressSpace::kStorage, core::Access::kRead, Binding(0_a),
@@ -198,7 +201,9 @@ TEST_F(ResolverTexelBufferTest, StructMember) {
 TEST_F(ResolverTexelBufferTest, FunctionParameter) {
     Require(wgsl::LanguageFeature::kTexelBuffers);
 
-    Func("f", Vector{Param("p", ty(Source{{12, 34}}, "texel_buffer", "rgba32float", "read_write"))},
+    Func("f",
+         Vector{Param("p", ty.texel_buffer(Source{{12, 34}}, core::TexelFormat::kRgba32Float,
+                                           core::Access::kReadWrite))},
          ty.void_(), Empty);
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
@@ -207,7 +212,8 @@ TEST_F(ResolverTexelBufferTest, FunctionParameter) {
 // Global variable missing binding or group attributes
 TEST_F(ResolverTexelBufferTest, MissingBinding) {
     Require(wgsl::LanguageFeature::kTexelBuffers);
-    GlobalVar(Source{{12, 34}}, "G", ty("texel_buffer", "rgba32float", "read"));
+    GlobalVar(Source{{12, 34}}, "G",
+              ty.texel_buffer(core::TexelFormat::kRgba32Float, core::Access::kRead));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(),

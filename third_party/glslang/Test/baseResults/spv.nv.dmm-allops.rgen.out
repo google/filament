@@ -5,7 +5,7 @@ spv.nv.dmm-allops.rgen
 
                               Capability RayTracingKHR
                               Capability DisplacementMicromapNV
-                              Capability CapabilityRayTracingDisplacementMicromapNV
+                              Capability RayTracingDisplacementMicromapNV
                               Extension  "SPV_KHR_ray_tracing"
                               Extension  "SPV_NV_displacement_micromap"
                1:             ExtInstImport  "GLSL.std.450"

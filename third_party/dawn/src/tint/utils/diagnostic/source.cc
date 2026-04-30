@@ -41,8 +41,7 @@ namespace {
 bool ParseLineBreak(std::string_view str, size_t i, bool* is_line_break, size_t* line_break_size) {
     // See https://www.w3.org/TR/WGSL/#blankspace
 
-    auto* utf8 = reinterpret_cast<const uint8_t*>(&str[i]);
-    auto [cp, n] = tint::utf8::Decode(utf8, str.size() - i);
+    auto [cp, n] = tint::utf8::Decode(str.substr(i));
 
     if (n == 0) {
         return false;
@@ -68,8 +67,7 @@ bool ParseLineBreak(std::string_view str, size_t i, bool* is_line_break, size_t*
         *line_break_size = n;
 
         if (auto next_i = i + n; next_i < str.size()) {
-            auto* next_utf8 = reinterpret_cast<const uint8_t*>(&str[next_i]);
-            auto [next_cp, next_n] = tint::utf8::Decode(next_utf8, str.size() - next_i);
+            auto [next_cp, next_n] = tint::utf8::Decode(str.substr(next_i));
 
             if (next_n == 0) {
                 return false;

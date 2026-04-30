@@ -31,13 +31,11 @@
 #include <utility>
 
 #include "src/tint/api/common/override_id.h"
-
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/interpolation.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/sampler_kind.h"
-#include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/alias.h"
 #include "src/tint/lang/wgsl/ast/assignment_statement.h"
@@ -59,7 +57,6 @@
 #include "src/tint/lang/wgsl/ast/diagnostic_control.h"
 #include "src/tint/lang/wgsl/ast/diagnostic_directive.h"
 #include "src/tint/lang/wgsl/ast/diagnostic_rule_name.h"
-#include "src/tint/lang/wgsl/ast/disable_validation_attribute.h"
 #include "src/tint/lang/wgsl/ast/discard_statement.h"
 #include "src/tint/lang/wgsl/ast/enable.h"
 #include "src/tint/lang/wgsl/ast/float_literal_expression.h"
@@ -83,23 +80,21 @@
 #include "src/tint/lang/wgsl/ast/phony_expression.h"
 #include "src/tint/lang/wgsl/ast/requires.h"
 #include "src/tint/lang/wgsl/ast/return_statement.h"
-#include "src/tint/lang/wgsl/ast/row_major_attribute.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
-#include "src/tint/lang/wgsl/ast/stride_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct.h"
 #include "src/tint/lang/wgsl/ast/struct_member_align_attribute.h"
-#include "src/tint/lang/wgsl/ast/struct_member_offset_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct_member_size_attribute.h"
+#include "src/tint/lang/wgsl/ast/subgroup_size_attribute.h"
 #include "src/tint/lang/wgsl/ast/switch_statement.h"
 #include "src/tint/lang/wgsl/ast/templated_identifier.h"
 #include "src/tint/lang/wgsl/ast/type.h"
+#include "src/tint/lang/wgsl/ast/type_traits.h"
 #include "src/tint/lang/wgsl/ast/unary_op_expression.h"
 #include "src/tint/lang/wgsl/ast/var.h"
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 #include "src/tint/lang/wgsl/ast/while_statement.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
 #include "src/tint/lang/wgsl/enums.h"
-#include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/memory/block_allocator.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 #include "src/tint/utils/text/string.h"
@@ -108,87 +103,12 @@
 #error "internal tint header being #included from tint.h"
 #endif
 
-// Forward declarations
 namespace tint::ast {
-class CloneContext;
-class VariableDeclStatement;
-}  // namespace tint::ast
-
-namespace tint::ast {
-
-/// Evaluates to true if T is a Infer, AInt or AFloat.
-template <typename T>
-static constexpr const bool IsInferOrAbstract =
-    std::is_same_v<std::decay_t<T>, core::fluent_types::Infer> || core::IsAbstract<std::decay_t<T>>;
-
-// Forward declare metafunction that evaluates to true iff T can be wrapped in a statement.
-template <typename T, typename = void>
-struct CanWrapInStatement;
 
 /// Builder is a mutable builder for AST nodes.
 /// To construct a Program, populate the builder and then `std::move` it to a
 /// Program.
 class Builder {
-    /// Evaluates to true if T is a Source
-    template <typename T>
-    static constexpr const bool IsSource = std::is_same_v<T, Source>;
-
-    /// Evaluates to true if T is a Number or bool.
-    template <typename T>
-    static constexpr const bool IsScalar =
-        std::is_integral_v<core::UnwrapNumber<T>> ||
-        std::is_floating_point_v<core::UnwrapNumber<T>> || std::is_same_v<T, bool>;
-
-    /// Evaluates to true if T can be converted to an identifier.
-    template <typename T>
-    static constexpr const bool IsIdentifierLike = std::is_same_v<T, Symbol> ||  // Symbol
-                                                   std::is_enum_v<T> ||          // Enum
-                                                   traits::IsStringLike<T>;      // String
-
-    /// A helper used to disable overloads if the first type in `TYPES` is a Source. Used to avoid
-    /// ambiguities in overloads that take a Source as the first parameter and those that
-    /// perfectly-forward the first argument.
-    template <typename... TYPES>
-    using DisableIfSource =
-        std::enable_if_t<!IsSource<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to disable overloads if the first type in `TYPES` is a scalar type. Used to
-    /// avoid ambiguities in overloads that take a scalar as the first parameter and those that
-    /// perfectly-forward the first argument.
-    template <typename... TYPES>
-    using DisableIfScalar =
-        std::enable_if_t<!IsScalar<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to enable overloads if the first type in `TYPES` is a scalar type. Used to
-    /// avoid ambiguities in overloads that take a scalar as the first parameter and those that
-    /// perfectly-forward the first argument.
-    template <typename... TYPES>
-    using EnableIfScalar =
-        std::enable_if_t<IsScalar<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to disable overloads if the first type in `TYPES` is a Vector or
-    /// VectorRef.
-    template <typename... TYPES>
-    using DisableIfVectorLike =
-        std::enable_if_t<!IsVectorLike<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to enable overloads if the first type in `TYPES` is identifier-like.
-    template <typename... TYPES>
-    using EnableIfIdentifierLike =
-        std::enable_if_t<IsIdentifierLike<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to disable overloads if the first type in `TYPES` is Infer or an abstract
-    /// numeric.
-    template <typename... TYPES>
-    using DisableIfInferOrAbstract =
-        std::enable_if_t<!IsInferOrAbstract<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
-    /// A helper used to enable overloads if the first type in `TYPES` is Infer or an abstract
-    /// numeric.
-    template <typename... TYPES>
-    using EnableIfInferOrAbstract =
-        std::enable_if_t<IsInferOrAbstract<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
-
     /// VarOptions is a helper for accepting an arbitrary number of order independent options for
     /// constructing an ast::Var.
     struct VarOptions {
@@ -306,9 +226,6 @@ class Builder {
     /// @return this builder
     Builder& operator=(Builder&& rhs);
 
-    /// @returns the unique identifier for this program
-    GenerationID ID() const { return id_; }
-
     /// @returns a reference to the program's AST nodes storage
     ASTNodeAllocator& ASTNodes() {
         AssertNotMoved();
@@ -380,7 +297,7 @@ class Builder {
         requires(traits::IsTypeOrDerived<T, ast::Node>)
     T* create(const Source& source, ARGS&&... args) {
         AssertNotMoved();
-        return ast_nodes_.Create<T>(id_, AllocateNodeID(), source, std::forward<ARGS>(args)...);
+        return ast_nodes_.Create<T>(AllocateNodeID(), source, std::forward<ARGS>(args)...);
     }
 
     /// Creates a new ast::Node owned by the Builder, injecting the current
@@ -393,7 +310,7 @@ class Builder {
         requires(traits::IsTypeOrDerived<T, ast::Node>)
     T* create() {
         AssertNotMoved();
-        return ast_nodes_.Create<T>(id_, AllocateNodeID(), source_);
+        return ast_nodes_.Create<T>(AllocateNodeID(), source_);
     }
 
     /// Creates a new ast::Node owned by the Builder, injecting the current
@@ -411,7 +328,7 @@ class Builder {
                      T>*
     create(ARG0&& arg0, ARGS&&... args) {
         AssertNotMoved();
-        return ast_nodes_.Create<T>(id_, AllocateNodeID(), source_, std::forward<ARG0>(arg0),
+        return ast_nodes_.Create<T>(AllocateNodeID(), source_, std::forward<ARG0>(arg0),
                                     std::forward<ARGS>(args)...);
     }
 
@@ -436,156 +353,145 @@ class Builder {
             return CToAST<T>::get(this);
         }
 
-        /// @param type the type to return
-        /// @return type (passthrough)
-        ast::Type operator()(const ast::Type& type) const { return type; }
+        /// @param type the type
+        /// @return an ast::Type of the type declaration.
+        ast::Type Of(const ast::TypeDecl* type) const;
 
-        /// Creates a type
-        /// @param name the name
-        /// @param args the optional template arguments
-        /// @returns the type
-        template <typename NAME,
-                  typename... ARGS,
-                  typename = DisableIfSource<NAME>,
-                  typename = std::enable_if_t<!std::is_same_v<std::decay_t<NAME>, ast::Type>>>
-        ast::Type operator()(NAME&& name, ARGS&&... args) const {
-            if constexpr (traits::IsTypeOrDerived<traits::PtrElTy<NAME>, ast::Expression>) {
-                static_assert(sizeof...(ARGS) == 0);
-                return {name};
-            } else {
-                return {builder->Expr(
-                    builder->Ident(std::forward<NAME>(name), std::forward<ARGS>(args)...))};
-            }
+        /// @param sym the name of the type
+        /// @returns a type with the given name
+        ast::Type AsType(Symbol sym) const;
+
+        /// @param source the source
+        /// @param sym the name of the type
+        /// @returns a type with the given name
+        ast::Type AsType(const Source& source, Symbol sym) const;
+
+        /// @param name the name of the type
+        /// @returns a type with the given name
+        ast::Type AsType(std::string_view name) const;
+
+        /// @param source the source
+        /// @param name the name of the type
+        /// @returns a type with the given name
+        ast::Type AsType(const Source& source, std::string_view name) const;
+
+        /// @param name the name of the type
+        /// @returns a type with the given name
+        template <typename... ARGS>
+        ast::Type AsType(std::string_view name, ARGS&&... args) const {
+            return AsType(builder->source_, name, std::forward<ARGS>(args)...);
         }
 
-        /// Creates a type
-        /// @param source the Source of the node
-        /// @param name the name
-        /// @param args the optional template arguments
-        /// @returns the type
-        template <typename NAME,
-                  typename... ARGS,
-                  typename = std::enable_if_t<!std::is_same_v<std::decay_t<NAME>, ast::Type>>>
-        ast::Type operator()(const Source& source, NAME&& name, ARGS&&... args) const {
-            return {builder->Expr(
-                builder->Ident(source, std::forward<NAME>(name), std::forward<ARGS>(args)...))};
+        /// @param source the source
+        /// @param name the name of the type
+        /// @returns a type with the given name
+        template <typename... ARGS>
+        ast::Type AsType(const Source& source, std::string_view name, ARGS&&... args) const {
+            return {builder->Expr(builder->Ident(source, name, std::forward<ARGS>(args)...))};
         }
+
+        /// @param ident the name of the type
+        /// @returns a type with the given name
+        ast::Type AsType(const ast::IdentifierExpression* ident) const;
 
         /// @returns a a nullptr expression wrapped in an ast::Type
-        ast::Type void_() const { return ast::Type{}; }
+        ast::Type void_() const;
 
         /// @returns a 'bool' type
-        ast::Type bool_() const { return (*this)("bool"); }
+        ast::Type bool_() const;
 
         /// @param source the Source of the node
         /// @returns a 'bool' type
-        ast::Type bool_(const Source& source) const { return (*this)(source, "bool"); }
+        ast::Type bool_(const Source& source) const;
 
         /// @returns a 'f16' type
-        ast::Type f16() const { return (*this)("f16"); }
+        ast::Type f16() const;
 
         /// @param source the Source of the node
         /// @returns a 'f16' type
-        ast::Type f16(const Source& source) const { return (*this)(source, "f16"); }
+        ast::Type f16(const Source& source) const;
 
         /// @returns a 'f32' type
-        ast::Type f32() const { return (*this)("f32"); }
+        ast::Type f32() const;
 
         /// @param source the Source of the node
         /// @returns a 'f32' type
-        ast::Type f32(const Source& source) const { return (*this)(source, "f32"); }
+        ast::Type f32(const Source& source) const;
 
         /// @returns a 'i32' type
-        ast::Type i32() const { return (*this)("i32"); }
+        ast::Type i32() const;
 
         /// @param source the Source of the node
         /// @returns a 'i32' type
-        ast::Type i32(const Source& source) const { return (*this)(source, "i32"); }
+        ast::Type i32(const Source& source) const;
 
         /// @returns a 'u32' type
-        ast::Type u32() const { return (*this)("u32"); }
+        ast::Type u32() const;
 
         /// @param source the Source of the node
         /// @returns a 'u32' type
-        ast::Type u32(const Source& source) const { return (*this)(source, "u32"); }
+        ast::Type u32(const Source& source) const;
 
         /// @returns a 'i8' type
-        ast::Type i8() const { return (*this)("i8"); }
+        ast::Type i8() const;
 
         /// @param source the Source of the node
         /// @returns a 'i8' type
-        ast::Type i8(const Source& source) const { return (*this)(source, "i8"); }
+        ast::Type i8(const Source& source) const;
 
         /// @returns a 'u8' type
-        ast::Type u8() const { return (*this)("u8"); }
+        ast::Type u8() const;
 
         /// @param source the Source of the node
         /// @returns a 'u8' type
-        ast::Type u8(const Source& source) const { return (*this)(source, "u8"); }
+        ast::Type u8(const Source& source) const;
 
         /// @param type vector subtype
         /// @param n vector width in elements
         /// @return a @p n element vector of @p type
-        ast::Type vec(ast::Type type, uint32_t n) const { return vec(builder->source_, type, n); }
+        ast::Type vec(ast::Type type, uint32_t n) const;
 
         /// @param source the Source of the node
         /// @param type vector subtype
         /// @param n vector width in elements
         /// @return a @p n element vector of @p type
-        ast::Type vec(const Source& source, ast::Type type, uint32_t n) const {
-            switch (n) {
-                case 2:
-                    return vec2(source, type);
-                case 3:
-                    return vec3(source, type);
-                case 4:
-                    return vec4(source, type);
-            }
-            TINT_ICE() << "invalid vector width " << n;
-            return ast::Type{};
-        }
+        ast::Type vec(const Source& source, ast::Type type, uint32_t n) const;
 
         /// @param type vector subtype
         /// @return a 2-element vector of @p type
-        ast::Type vec2(ast::Type type) const { return vec2(builder->source_, type); }
+        ast::Type vec2(ast::Type type) const;
 
         /// @param source the vector source
         /// @param type vector subtype
         /// @return a 2-element vector of @p type
-        ast::Type vec2(const Source& source, ast::Type type) const {
-            return (*this)(source, "vec2", type);
-        }
+        ast::Type vec2(const Source& source, ast::Type type) const;
 
         /// @param type vector subtype
         /// @return a 3-element vector of @p type
-        ast::Type vec3(ast::Type type) const { return vec3(builder->source_, type); }
+        ast::Type vec3(ast::Type type) const;
 
         /// @param source the vector source
         /// @param type vector subtype
         /// @return a 3-element vector of @p type
-        ast::Type vec3(const Source& source, ast::Type type) const {
-            return (*this)(source, "vec3", type);
-        }
+        ast::Type vec3(const Source& source, ast::Type type) const;
 
         /// @param type vector subtype
         /// @return a 4-element vector of @p type
-        ast::Type vec4(ast::Type type) const { return vec4(builder->source_, type); }
+        ast::Type vec4(ast::Type type) const;
 
         /// @param source the vector source
         /// @param type vector subtype
         /// @return a 4-element vector of @p type
-        ast::Type vec4(const Source& source, ast::Type type) const {
-            return (*this)(source, "vec4", type);
-        }
+        ast::Type vec4(const Source& source, ast::Type type) const;
 
         /// @param source the Source of the node
         /// @return a 2-element vector of the type `T`
         template <typename T>
         ast::Type vec2(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "vec2");
+                return AsType(source, "vec2");
             } else {
-                return (*this)(source, "vec2", Of<T>());
+                return AsType(source, "vec2", Of<T>());
             }
         }
 
@@ -594,9 +500,9 @@ class Builder {
         template <typename T>
         ast::Type vec3(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "vec3");
+                return AsType(source, "vec3");
             } else {
-                return (*this)(source, "vec3", Of<T>());
+                return AsType(source, "vec3", Of<T>());
             }
         }
 
@@ -605,28 +511,40 @@ class Builder {
         template <typename T>
         ast::Type vec4(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "vec4");
+                return AsType(source, "vec4");
             } else {
-                return (*this)(source, "vec4", Of<T>());
+                return AsType(source, "vec4", Of<T>());
             }
         }
 
         /// @return a 2-element vector of the type `T`
         template <typename T>
         ast::Type vec2() const {
-            return vec2<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("vec2");
+            } else {
+                return vec2(Of<T>());
+            }
         }
 
         /// @return a 3-element vector of the type `T`
         template <typename T>
         ast::Type vec3() const {
-            return vec3<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("vec3");
+            } else {
+                return vec3(Of<T>());
+            }
         }
 
         /// @return a 4-element vector of the type `T`
         template <typename T>
         ast::Type vec4() const {
-            return vec4<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("vec4");
+            } else {
+                return vec4(Of<T>());
+            }
         }
 
         /// @param source the Source of the node
@@ -643,236 +561,333 @@ class Builder {
                     return vec4<T>(source);
             }
             TINT_ICE() << "invalid vector width " << n;
-            return ast::Type{};
         }
 
         /// @return a @p N element vector of @p type
         template <typename T, uint32_t N>
         ast::Type vec() const {
-            return vec<T>(builder->source_, N);
+            return vec<T>(N);
         }
 
         /// @param n vector width in elements
         /// @return a @p n element vector of @p type
         template <typename T>
         ast::Type vec(uint32_t n) const {
-            return vec<T>(builder->source_, n);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("vec" + std::to_string(n));
+            } else {
+                return vec(Of<T>(), n);
+            }
         }
 
         /// @param type matrix subtype
         /// @param columns number of columns for the matrix
         /// @param rows number of rows for the matrix
         /// @return a matrix of @p type
-        ast::Type mat(ast::Type type, uint32_t columns, uint32_t rows) const {
-            return mat(builder->source_, type, columns, rows);
-        }
+        ast::Type mat(ast::Type type, uint32_t columns, uint32_t rows) const;
 
         /// @param source the Source of the node
         /// @param type matrix subtype
         /// @param columns number of columns for the matrix
         /// @param rows number of rows for the matrix
         /// @return a matrix of @p type
-        ast::Type mat(const Source& source, ast::Type type, uint32_t columns, uint32_t rows) const {
-            if (DAWN_LIKELY(columns >= 2 && columns <= 4 && rows >= 2 && rows <= 4)) {
-                static constexpr std::array<const char*, 9> names = {
-                    "mat2x2", "mat2x3", "mat2x4",  //
-                    "mat3x2", "mat3x3", "mat3x4",  //
-                    "mat4x2", "mat4x3", "mat4x4",  //
-                };
-                auto i = (columns - 2) * 3 + (rows - 2);
-                return (*this)(source, names[i], type);
-            }
-            TINT_ICE() << "invalid matrix dimensions " << columns << "x" << rows;
-            return ast::Type{};
-        }
+        ast::Type mat(const Source& source, ast::Type type, uint32_t columns, uint32_t rows) const;
 
         /// @param type matrix subtype
         /// @return a 2x3 matrix of @p type.
-        ast::Type mat2x2(ast::Type type) const { return (*this)("mat2x2", type); }
+        ast::Type mat2x2(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 2x3 matrix of @p type.
-        ast::Type mat2x3(ast::Type type) const { return (*this)("mat2x3", type); }
+        ast::Type mat2x3(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 2x4 matrix of @p type.
-        ast::Type mat2x4(ast::Type type) const { return (*this)("mat2x4", type); }
+        ast::Type mat2x4(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 3x2 matrix of @p type.
-        ast::Type mat3x2(ast::Type type) const { return (*this)("mat3x2", type); }
+        ast::Type mat3x2(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 3x3 matrix of @p type.
-        ast::Type mat3x3(ast::Type type) const { return (*this)("mat3x3", type); }
+        ast::Type mat3x3(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 3x4 matrix of @p type.
-        ast::Type mat3x4(ast::Type type) const { return (*this)("mat3x4", type); }
+        ast::Type mat3x4(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 4x2 matrix of @p type.
-        ast::Type mat4x2(ast::Type type) const { return (*this)("mat4x2", type); }
+        ast::Type mat4x2(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 4x3 matrix of @p type.
-        ast::Type mat4x3(ast::Type type) const { return (*this)("mat4x3", type); }
+        ast::Type mat4x3(ast::Type type) const;
 
         /// @param type matrix subtype
         /// @return a 4x4 matrix of @p type.
-        ast::Type mat4x4(ast::Type type) const { return (*this)("mat4x4", type); }
+        ast::Type mat4x4(ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 2x2 matrix of the type `T`
         template <typename T>
         ast::Type mat2x2(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat2x2");
+                return mat2x2(source);
             } else {
-                return (*this)(source, "mat2x2", Of<T>());
+                return mat2x2(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 2x2 matrix
+        ast::Type mat2x2(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 2x2 matrix
+        ast::Type mat2x2(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 2x3 matrix of the type `T`
         template <typename T>
         ast::Type mat2x3(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat2x3");
+                return mat2x3(source);
             } else {
-                return (*this)(source, "mat2x3", Of<T>());
+                return mat2x3(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 2x3 matrix
+        ast::Type mat2x3(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 2x3 matrix
+        ast::Type mat2x3(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 2x4 matrix of the type `T`
         template <typename T>
         ast::Type mat2x4(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat2x4");
+                return mat2x4(source);
             } else {
-                return (*this)(source, "mat2x4", Of<T>());
+                return mat2x4(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 2x4 matrix
+        ast::Type mat2x4(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 2x4 matrix
+        ast::Type mat2x4(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 3x2 matrix of the type `T`
         template <typename T>
         ast::Type mat3x2(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat3x2");
+                return mat3x2(source);
             } else {
-                return (*this)(source, "mat3x2", Of<T>());
+                return mat3x2(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 3x2 matrix
+        ast::Type mat3x2(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 3x2 matrix
+        ast::Type mat3x2(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 3x3 matrix of the type `T`
         template <typename T>
         ast::Type mat3x3(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat3x3");
+                return mat3x3(source);
             } else {
-                return (*this)(source, "mat3x3", Of<T>());
+                return mat3x3(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 3x3 matrix
+        ast::Type mat3x3(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 3x3 matrix
+        ast::Type mat3x3(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 3x4 matrix of the type `T`
         template <typename T>
         ast::Type mat3x4(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat3x4");
+                return mat3x4(source);
             } else {
-                return (*this)(source, "mat3x4", Of<T>());
+                return mat3x4(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 3x4 matrix
+        ast::Type mat3x4(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 3x4 matrix
+        ast::Type mat3x4(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 4x2 matrix of the type `T`
         template <typename T>
         ast::Type mat4x2(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat4x2");
+                return mat4x2(source);
             } else {
-                return (*this)(source, "mat4x2", Of<T>());
+                return mat4x2(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 4x2 matrix
+        ast::Type mat4x2(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 4x2 matrix
+        ast::Type mat4x2(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 4x3 matrix of the type `T`
         template <typename T>
         ast::Type mat4x3(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat4x3");
+                return mat4x3(source);
             } else {
-                return (*this)(source, "mat4x3", Of<T>());
+                return mat4x3(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 4x3 matrix
+        ast::Type mat4x3(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 4x3 matrix
+        ast::Type mat4x3(const Source& source, ast::Type type) const;
 
         /// @param source the source of the type
         /// @return a 4x4 matrix of the type `T`
         template <typename T>
         ast::Type mat4x4(const Source& source) const {
             if constexpr (IsInferOrAbstract<T>) {
-                return (*this)(source, "mat4x4");
+                return mat4x4(source);
             } else {
-                return (*this)(source, "mat4x4", Of<T>());
+                return mat4x4(source, Of<T>());
             }
         }
+
+        /// @param source the source of the type
+        /// @return a 4x4 matrix
+        ast::Type mat4x4(const Source& source) const;
+
+        /// @param source the source of the type
+        /// @return a 4x4 matrix
+        ast::Type mat4x4(const Source& source, ast::Type type) const;
 
         /// @return a 2x2 matrix of the type `T`
         template <typename T>
         ast::Type mat2x2() const {
-            return mat2x2<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat2x2");
+            } else {
+                return mat2x2(Of<T>());
+            }
         }
 
         /// @return a 2x3 matrix of the type `T`
         template <typename T>
         ast::Type mat2x3() const {
-            return mat2x3<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat2x3");
+            } else {
+                return mat2x3(Of<T>());
+            }
         }
 
         /// @return a 2x4 matrix of the type `T`
         template <typename T>
         ast::Type mat2x4() const {
-            return mat2x4<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat2x4");
+            } else {
+                return mat2x4(Of<T>());
+            }
         }
 
         /// @return a 3x2 matrix of the type `T`
         template <typename T>
         ast::Type mat3x2() const {
-            return mat3x2<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat3x2");
+            } else {
+                return mat3x2(Of<T>());
+            }
         }
 
         /// @return a 3x3 matrix of the type `T`
         template <typename T>
         ast::Type mat3x3() const {
-            return mat3x3<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat3x3");
+            } else {
+                return mat3x3(Of<T>());
+            }
         }
 
         /// @return a 3x4 matrix of the type `T`
         template <typename T>
         ast::Type mat3x4() const {
-            return mat3x4<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat3x4");
+            } else {
+                return mat3x4(Of<T>());
+            }
         }
 
         /// @return a 4x2 matrix of the type `T`
         template <typename T>
         ast::Type mat4x2() const {
-            return mat4x2<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat4x2");
+            } else {
+                return mat4x2(Of<T>());
+            }
         }
 
         /// @return a 4x3 matrix of the type `T`
         template <typename T>
         ast::Type mat4x3() const {
-            return mat4x3<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat4x3");
+            } else {
+                return mat4x3(Of<T>());
+            }
         }
 
         /// @return a 4x4 matrix of the type `T`
         template <typename T>
         ast::Type mat4x4() const {
-            return mat4x4<T>(builder->source_);
+            if constexpr (IsInferOrAbstract<T>) {
+                return AsType("mat4x4");
+            } else {
+                return mat4x4(Of<T>());
+            }
         }
 
         /// @param source the Source of the node
@@ -902,7 +917,6 @@ class Builder {
                     return mat4x4<T>(source);
                 default:
                     TINT_ICE() << "invalid matrix dimensions " << columns << "x" << rows;
-                    return ast::Type{};
             }
         }
 
@@ -911,132 +925,139 @@ class Builder {
         /// @return a matrix of @p type
         template <typename T>
         ast::Type mat(uint32_t columns, uint32_t rows) const {
-            return mat<T>(builder->source_, columns, rows);
+            switch ((columns - 2) * 3 + (rows - 2)) {
+                case 0:
+                    return mat2x2<T>();
+                case 1:
+                    return mat2x3<T>();
+                case 2:
+                    return mat2x4<T>();
+                case 3:
+                    return mat3x2<T>();
+                case 4:
+                    return mat3x3<T>();
+                case 5:
+                    return mat3x4<T>();
+                case 6:
+                    return mat4x2<T>();
+                case 7:
+                    return mat4x3<T>();
+                case 8:
+                    return mat4x4<T>();
+                default:
+                    TINT_ICE() << "invalid matrix dimensions " << columns << "x" << rows;
+            }
         }
 
         /// @return a matrix of @p type
         template <typename T, uint32_t COLUMNS, uint32_t ROWS>
         ast::Type mat() const {
-            return mat<T>(builder->source_, COLUMNS, ROWS);
+            return mat<T>(COLUMNS, ROWS);
         }
 
+        /// @return an array of abstract type
+        ast::Type array() const;
+
+        /// @param source the source
+        /// @return an array of abstract type
+        ast::Type array(const Source& source) const;
+
         /// @param subtype the array element type
-        /// @param attrs the optional attributes for the array
         /// @return an array of type `T`
-        ast::Type array(ast::Type subtype, VectorRef<const ast::Attribute*> attrs = Empty) const {
-            return array(builder->source_, subtype, std::move(attrs));
-        }
+        ast::Type array(ast::Type subtype) const;
 
         /// @param source the Source of the node
         /// @param subtype the array element type
-        /// @param attrs the optional attributes for the array
         /// @return an array of type `T`
-        ast::Type array(const Source& source,
-                        ast::Type subtype,
-                        VectorRef<const ast::Attribute*> attrs = Empty) const {
-            return ast::Type{builder->Expr(
-                builder->create<ast::TemplatedIdentifier>(source, builder->Sym("array"),
-                                                          Vector{
-                                                              subtype.expr,
-                                                          },
-                                                          std::move(attrs)))};
-        }
+        ast::Type array(const Source& source, ast::Type subtype) const;
 
         /// @param subtype the array element type
-        /// @param n the array size. nullptr represents a runtime-array
-        /// @param attrs the optional attributes for the array
+        /// @param n the array size.
         /// @return an array of size `n` of type `T`
-        template <typename COUNT, typename = DisableIfVectorLike<COUNT>>
-        ast::Type array(ast::Type subtype,
-                        COUNT&& n,
-                        VectorRef<const ast::Attribute*> attrs = Empty) const {
-            return array(builder->source_, subtype, std::forward<COUNT>(n), std::move(attrs));
-        }
+        ast::Type array(ast::Type subtype, uint32_t n) const;
+
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(ast::Type subtype, const ast::Const* expr) const;
+
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(ast::Type subtype, const ast::Expression* expr) const;
+
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(ast::Type subtype, const ast::Override* expr) const;
 
         /// @param source the Source of the node
         /// @param subtype the array element type
-        /// @param n the array size. nullptr represents a runtime-array
-        /// @param attrs the optional attributes for the array
+        /// @param n the array size.
         /// @return an array of size `n` of type `T`
-        template <typename COUNT, typename = DisableIfVectorLike<COUNT>>
-        ast::Type array(const Source& source,
-                        ast::Type subtype,
-                        COUNT&& n,
-                        VectorRef<const ast::Attribute*> attrs = Empty) const {
-            return ast::Type{builder->Expr(
-                builder->create<ast::TemplatedIdentifier>(source, builder->Sym("array"),
-                                                          Vector{
-                                                              subtype.expr,
-                                                              builder->Expr(std::forward<COUNT>(n)),
-                                                          },
-                                                          std::move(attrs)))};
-        }
+        ast::Type array(const Source& source, ast::Type subtype, uint32_t n) const;
 
         /// @param source the Source of the node
-        /// @return a inferred-size or runtime-sized array of type `T`
-        template <typename T, int N = 0, typename = EnableIfInferOrAbstract<T>>
-        ast::Type array(const Source& source) const {
-            static_assert(N == 0, "arrays with a count cannot be inferred");
-            return (*this)(source, "array");
-        }
-
-        /// @return a inferred-size or runtime-sized array of type `T`
-        template <typename T, int N = 0, typename = EnableIfInferOrAbstract<T>>
-        ast::Type array() const {
-            static_assert(N == 0, "arrays with a count cannot be inferred");
-            return array<T>(builder->source_);
-        }
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(const Source& source, ast::Type subtype, const ast::Const* expr) const;
 
         /// @param source the Source of the node
-        /// @param attrs the optional attributes for the array
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(const Source& source, ast::Type subtype, const ast::Expression* expr) const;
+
+        /// @param source the Source of the node
+        /// @param subtype the array element type
+        /// @param expr the array size. nullptr means runtime array
+        /// @return an array of size `n` of type `T`
+        ast::Type array(const Source& source, ast::Type subtype, const ast::Override* expr) const;
+
+        /// @param source the Source of the node
         /// @return a inferred-size or runtime-sized array of type `T`
         template <typename T, int N = 0, typename = DisableIfInferOrAbstract<T>>
-        ast::Type array(const Source& source,
-                        VectorRef<const ast::Attribute*> attrs = Empty) const {
+        ast::Type array(const Source& source) const {
             if constexpr (N == 0) {
-                return ast::Type{builder->Expr(
-                    builder->create<ast::TemplatedIdentifier>(source, builder->Sym("array"),
-                                                              Vector<const ast::Expression*, 1>{
-                                                                  Of<T>().expr,
-                                                              },
-                                                              std::move(attrs)))};
+                ast::Expression* expr = nullptr;
+                return array(source, Of<T>(), expr);
             } else {
-                return ast::Type{builder->Expr(builder->create<ast::TemplatedIdentifier>(
-                    source, builder->Sym("array"),
-                    Vector{
-                        Of<T>().expr,
-                        builder->Expr(builder->source_, core::u32(N)),
-                    },
-                    std::move(attrs)))};
+                return array(source, Of<T>(), uint32_t(N));
             }
         }
 
-        /// @param attrs the optional attributes for the array
         /// @return an array of size `N` of type `T`
-        template <typename T, int N = 0, typename = DisableIfInferOrAbstract<T>>
-        ast::Type array(VectorRef<const ast::Attribute*> attrs = Empty) const {
-            return array<T, N>(builder->source_, std::move(attrs));
+        template <typename T, int N = 0>
+        ast::Type array() const {
+            if constexpr (std::is_same_v<T, core::fluent_types::Infer>) {
+                static_assert(N == 0, "arrays with a count cannot be inferred");
+                return array();
+            } else {
+                return array(Of<T>(), uint32_t(N));
+            }
         }
 
         /// Creates an alias type
         /// @param name the alias name
         /// @param type the alias type
         /// @returns the alias pointer
-        template <typename NAME>
-        const ast::Alias* alias(NAME&& name, ast::Type type) const {
-            return alias(builder->source_, std::forward<NAME>(name), type);
-        }
+        const ast::Alias* alias(std::string_view name, ast::Type type) const;
+
+        /// Creates an alias type
+        /// @param name the alias name
+        /// @param type the alias type
+        /// @returns the alias pointer
+        const ast::Alias* alias(Symbol name, ast::Type type) const;
 
         /// Creates an alias type
         /// @param source the Source of the node
         /// @param name the alias name
         /// @param type the alias type
         /// @returns the alias pointer
-        template <typename NAME>
-        const ast::Alias* alias(const Source& source, NAME&& name, ast::Type type) const {
-            return builder->create<ast::Alias>(source, builder->Ident(std::forward<NAME>(name)),
-                                               type);
-        }
+        const ast::Alias* alias(const Source& source,
+                                const ast::Identifier* name,
+                                ast::Type type) const;
 
         /// @param address_space the address space of the pointer
         /// @param type the type of the pointer
@@ -1044,9 +1065,7 @@ class Builder {
         /// @return the pointer to `type` with the given core::AddressSpace
         ast::Type ptr(core::AddressSpace address_space,
                       ast::Type type,
-                      core::Access access = core::Access::kUndefined) const {
-            return ptr(builder->source_, address_space, type, access);
-        }
+                      core::Access access = core::Access::kUndefined) const;
 
         /// @param source the Source of the node
         /// @param address_space the address space of the pointer
@@ -1056,13 +1075,7 @@ class Builder {
         ast::Type ptr(const Source& source,
                       core::AddressSpace address_space,
                       ast::Type type,
-                      core::Access access = core::Access::kUndefined) const {
-            if (access != core::Access::kUndefined) {
-                return (*this)(source, "ptr", address_space, type, access);
-            } else {
-                return (*this)(source, "ptr", address_space, type);
-            }
-        }
+                      core::Access access = core::Access::kUndefined) const;
 
         /// @param address_space the address space of the pointer
         /// @param access the optional access control of the pointer
@@ -1070,7 +1083,7 @@ class Builder {
         template <typename T>
         ast::Type ptr(core::AddressSpace address_space,
                       core::Access access = core::Access::kUndefined) const {
-            return ptr<T>(builder->source_, address_space, access);
+            return ptr(address_space, Of<T>(), access);
         }
 
         /// @param source the Source of the node
@@ -1088,7 +1101,7 @@ class Builder {
         /// access control `ACCESS`.
         template <core::AddressSpace ADDRESS, core::Access ACCESS = core::Access::kUndefined>
         ast::Type ptr(ast::Type type) const {
-            return ptr(builder->source_, ADDRESS, type, ACCESS);
+            return ptr(ADDRESS, type, ACCESS);
         }
 
         /// @param source the Source of the node
@@ -1106,7 +1119,7 @@ class Builder {
                   typename T,
                   core::Access ACCESS = core::Access::kUndefined>
         ast::Type ptr() const {
-            return ptr<T>(builder->source_, ADDRESS, ACCESS);
+            return ptr<T>(ADDRESS, ACCESS);
         }
 
         /// @param source the Source of the node
@@ -1119,22 +1132,20 @@ class Builder {
                       core::AddressSpace address_space,
                       core::Access access = core::Access::kUndefined) const {
             if (access != core::Access::kUndefined) {
-                return (*this)(source, "ptr", address_space, Of<T>(), access);
+                return ptr(source, address_space, Of<T>(), access);
             } else {
-                return (*this)(source, "ptr", address_space, Of<T>());
+                return ptr(source, address_space, Of<T>());
             }
         }
 
         /// @param source the Source of the node
         /// @param type the type of the atomic
         /// @return the atomic to `type`
-        ast::Type atomic(const Source& source, ast::Type type) const {
-            return (*this)(source, "atomic", type);
-        }
+        ast::Type atomic(const Source& source, ast::Type type) const;
 
         /// @param type the type of the atomic
         /// @return the atomic to `type`
-        ast::Type atomic(ast::Type type) const { return (*this)("atomic", type); }
+        ast::Type atomic(ast::Type type) const;
 
         /// @return the atomic to type `T`
         template <typename T>
@@ -1144,74 +1155,53 @@ class Builder {
 
         /// @param kind the kind of sampler
         /// @returns the sampler
-        ast::Type sampler(core::type::SamplerKind kind) const {
-            return sampler(builder->source_, kind);
-        }
+        ast::Type sampler(core::type::SamplerKind kind) const;
+
+        /// @param filtering the filtering setting
+        /// @returns the sampler
+        ast::Type sampler(core::SamplerFiltering filtering) const;
 
         /// @param source the Source of the node
         /// @param kind the kind of sampler
         /// @returns the sampler
-        ast::Type sampler(const Source& source, core::type::SamplerKind kind) const {
-            switch (kind) {
-                case core::type::SamplerKind::kSampler:
-                    return (*this)(source, "sampler");
-                case core::type::SamplerKind::kComparisonSampler:
-                    return (*this)(source, "sampler_comparison");
-            }
-            TINT_ICE() << "invalid sampler kind " << kind;
-            return ast::Type{};
-        }
+        ast::Type sampler(const Source& source, core::type::SamplerKind kind) const;
+
+        /// @param source the Source of the node
+        /// @param filtering the sampler filtering
+        /// @returns the sampler
+        ast::Type sampler(const Source& source, core::SamplerFiltering filtering) const;
 
         /// @param dims the dimensionality of the texture
         /// @returns the depth texture
-        ast::Type depth_texture(core::type::TextureDimension dims) const {
-            return depth_texture(builder->source_, dims);
-        }
+        ast::Type depth_texture(core::type::TextureDimension dims) const;
 
         /// @param source the Source of the node
         /// @param dims the dimensionality of the texture
         /// @returns the depth texture
-        ast::Type depth_texture(const Source& source, core::type::TextureDimension dims) const {
-            switch (dims) {
-                case core::type::TextureDimension::k2d:
-                    return (*this)(source, "texture_depth_2d");
-                case core::type::TextureDimension::k2dArray:
-                    return (*this)(source, "texture_depth_2d_array");
-                case core::type::TextureDimension::kCube:
-                    return (*this)(source, "texture_depth_cube");
-                case core::type::TextureDimension::kCubeArray:
-                    return (*this)(source, "texture_depth_cube_array");
-                default:
-                    break;
-            }
-            TINT_ICE() << "invalid depth_texture dimensions: " << dims;
-            return ast::Type{};
-        }
+        ast::Type depth_texture(const Source& source, core::type::TextureDimension dims) const;
 
         /// @param dims the dimensionality of the texture
         /// @returns the multisampled depth texture
-        ast::Type depth_multisampled_texture(core::type::TextureDimension dims) const {
-            return depth_multisampled_texture(builder->source_, dims);
-        }
+        ast::Type depth_multisampled_texture(core::type::TextureDimension dims) const;
 
         /// @param source the Source of the node
         /// @param dims the dimensionality of the texture
         /// @returns the multisampled depth texture
         ast::Type depth_multisampled_texture(const Source& source,
-                                             core::type::TextureDimension dims) const {
-            if (dims == core::type::TextureDimension::k2d) {
-                return (*this)(source, "texture_depth_multisampled_2d");
-            }
-            TINT_ICE() << "invalid depth_multisampled_texture dimensions: " << dims;
-            return ast::Type{};
-        }
+                                             core::type::TextureDimension dims) const;
 
         /// @param dims the dimensionality of the texture
         /// @param subtype the texture subtype.
         /// @returns the sampled texture
-        ast::Type sampled_texture(core::type::TextureDimension dims, ast::Type subtype) const {
-            return sampled_texture(builder->source_, dims, subtype);
-        }
+        ast::Type sampled_texture(core::type::TextureDimension dims, ast::Type subtype) const;
+
+        /// @param dims the dimensionality of the texture
+        /// @param subtype the texture subtype.
+        /// @param filterable the filterability
+        /// @returns the sampled texture
+        ast::Type sampled_texture(core::type::TextureDimension dims,
+                                  ast::Type subtype,
+                                  core::TextureFilterable filterable) const;
 
         /// @param source the Source of the node
         /// @param dims the dimensionality of the texture
@@ -1219,33 +1209,22 @@ class Builder {
         /// @returns the sampled texture
         ast::Type sampled_texture(const Source& source,
                                   core::type::TextureDimension dims,
-                                  ast::Type subtype) const {
-            switch (dims) {
-                case core::type::TextureDimension::k1d:
-                    return (*this)(source, "texture_1d", subtype);
-                case core::type::TextureDimension::k2d:
-                    return (*this)(source, "texture_2d", subtype);
-                case core::type::TextureDimension::k3d:
-                    return (*this)(source, "texture_3d", subtype);
-                case core::type::TextureDimension::k2dArray:
-                    return (*this)(source, "texture_2d_array", subtype);
-                case core::type::TextureDimension::kCube:
-                    return (*this)(source, "texture_cube", subtype);
-                case core::type::TextureDimension::kCubeArray:
-                    return (*this)(source, "texture_cube_array", subtype);
-                default:
-                    break;
-            }
-            TINT_ICE() << "invalid sampled_texture dimensions: " << dims;
-            return ast::Type{};
-        }
+                                  ast::Type subtype) const;
+
+        /// @param source the Source of the node
+        /// @param dims the dimensionality of the texture
+        /// @param subtype the texture subtype.
+        /// @param filterable the filterability
+        /// @returns the sampled texture
+        ast::Type sampled_texture(const Source& source,
+                                  core::type::TextureDimension dims,
+                                  ast::Type subtype,
+                                  core::TextureFilterable filterable) const;
 
         /// @param dims the dimensionality of the texture
         /// @param subtype the texture subtype.
         /// @returns the multisampled texture
-        ast::Type multisampled_texture(core::type::TextureDimension dims, ast::Type subtype) const {
-            return multisampled_texture(builder->source_, dims, subtype);
-        }
+        ast::Type multisampled_texture(core::type::TextureDimension dims, ast::Type subtype) const;
 
         /// @param source the Source of the node
         /// @param dims the dimensionality of the texture
@@ -1253,13 +1232,7 @@ class Builder {
         /// @returns the multisampled texture
         ast::Type multisampled_texture(const Source& source,
                                        core::type::TextureDimension dims,
-                                       ast::Type subtype) const {
-            if (dims == core::type::TextureDimension::k2d) {
-                return (*this)(source, "texture_multisampled_2d", subtype);
-            }
-            TINT_ICE() << "invalid multisampled_texture dimensions: " << dims;
-            return ast::Type{};
-        }
+                                       ast::Type subtype) const;
 
         /// @param dims the dimensionality of the texture
         /// @param format the texel format of the texture
@@ -1267,9 +1240,7 @@ class Builder {
         /// @returns the storage texture
         ast::Type storage_texture(core::type::TextureDimension dims,
                                   core::TexelFormat format,
-                                  core::Access access) const {
-            return storage_texture(builder->source_, dims, format, access);
-        }
+                                  core::Access access) const;
 
         /// @param source the Source of the node
         /// @param dims the dimensionality of the texture
@@ -1279,42 +1250,80 @@ class Builder {
         ast::Type storage_texture(const Source& source,
                                   core::type::TextureDimension dims,
                                   core::TexelFormat format,
-                                  core::Access access) const {
-            switch (dims) {
-                case core::type::TextureDimension::k1d:
-                    return (*this)(source, "texture_storage_1d", format, access);
-                case core::type::TextureDimension::k2d:
-                    return (*this)(source, "texture_storage_2d", format, access);
-                case core::type::TextureDimension::k2dArray:
-                    return (*this)(source, "texture_storage_2d_array", format, access);
-                case core::type::TextureDimension::k3d:
-                    return (*this)(source, "texture_storage_3d", format, access);
-                default:
-                    break;
-            }
-            TINT_ICE() << "invalid storage_texture  dimensions: " << dims;
-            return ast::Type{};
-        }
+                                  core::Access access) const;
 
-        /// @returns the external texture
-        ast::Type external_texture() const { return (*this)("texture_external"); }
-
+        /// @param format the texel format
+        /// @param access the access control
         /// @returns the texel buffer
-        ast::Type texel_buffer(core::TexelFormat format, core::Access access) const {
-            return (*this)("texel_buffer", format, access);
-        }
+        ast::Type texel_buffer(core::TexelFormat format, core::Access access) const;
+
+        /// @param source the source
+        /// @param format the texel format
+        /// @param access the access control
+        /// @returns the texel buffer
+        ast::Type texel_buffer(const Source& source,
+                               core::TexelFormat format,
+                               core::Access access) const;
 
         /// @param subtype the texture subtype.
         /// @returns the input attachment
-        ast::Type input_attachment(ast::Type subtype) const {
-            return (*this)("input_attachment", subtype);
-        }
+        ast::Type input_attachment(ast::Type subtype) const;
 
         /// @param source the Source of the node
         /// @returns the external texture
-        ast::Type external_texture(const Source& source) const {
-            return (*this)(source, "texture_external");
+        ast::Type external_texture(const Source& source) const;
+
+        /// @returns the external texture
+        ast::Type external_texture() const;
+
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        template <typename C, typename R>
+            requires(core::IsNumber<C> && core::IsNumeric<R>)
+        ast::Type subgroup_matrix_result(ast::Type el, C cols, R rows) const {
+            return AsType("subgroup_matrix_result", el, cols, rows);
         }
+
+        /// @param source the source
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        template <typename C, typename R>
+            requires(core::IsNumber<C> && core::IsNumeric<R>)
+        ast::Type subgroup_matrix_result(const Source& source, ast::Type el, C cols, R rows) const {
+            return AsType(source, "subgroup_matrix_result", el, cols, rows);
+        }
+
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        ast::Type subgroup_matrix_result(ast::Type el, uint32_t cols, uint32_t rows) const;
+
+        /// @param source the source
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        ast::Type subgroup_matrix_result(const Source& source,
+                                         ast::Type el,
+                                         uint32_t cols,
+                                         uint32_t rows) const;
+
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        ast::Type subgroup_matrix_right(ast::Type el, uint32_t cols, uint32_t rows) const;
+
+        /// @param el the subgroup matrix element type
+        /// @param cols the column count
+        /// @param rows the row count
+        /// @returns the subgroup matrix
+        ast::Type subgroup_matrix_left(ast::Type el, uint32_t cols, uint32_t rows) const;
 
         /// @param kind the subgroup matrix kind
         /// @param el the subgroup matrix element type
@@ -1324,27 +1333,27 @@ class Builder {
         ast::Type subgroup_matrix(core::SubgroupMatrixKind kind,
                                   ast::Type el,
                                   uint32_t cols,
-                                  uint32_t rows) const {
-            auto c = core::AInt(cols);
-            auto r = core::AInt(rows);
-            switch (kind) {
-                case core::SubgroupMatrixKind::kLeft:
-                    return (*this)("subgroup_matrix_left", el, c, r);
-                case core::SubgroupMatrixKind::kRight:
-                    return (*this)("subgroup_matrix_right", el, c, r);
-                case core::SubgroupMatrixKind::kResult:
-                    return (*this)("subgroup_matrix_result", el, c, r);
-                case core::SubgroupMatrixKind::kUndefined:
-                    TINT_UNREACHABLE();
-            }
+                                  uint32_t rows) const;
+
+        /// @param size the buffer size (0 is unsized)
+        /// @returns the buffer
+        template <typename NUM>
+            requires(core::IsNumber<NUM>)
+        ast::Type buffer(NUM size) const {
+            return AsType("buffer", size);
         }
 
-        /// @param type the type
-        /// @return an ast::Type of the type declaration.
-        ast::Type Of(const ast::TypeDecl* type) const { return (*this)(type->name->symbol); }
+        /// @param size the buffer size (0 is unsized)
+        /// @returns the buffer
+        ast::Type buffer(uint32_t size = 0) const;
 
-        /// The Builder
-        Builder* const builder;
+        /// @param el the binding_array element type
+        /// @param size the number of binding array elements
+        /// @returns the binding array
+        template <typename COUNT, typename = DisableIfVectorLike<COUNT>>
+        ast::Type binding_array(ast::Type el, COUNT&& size) const {
+            return AsType("binding_array", el, std::forward<COUNT>(size));
+        }
 
       private:
         /// CToAST<T> is specialized for various `T` types and each specialization
@@ -1354,6 +1363,9 @@ class Builder {
         ///    `static ast::Type get(Types* t)`
         template <typename T>
         struct CToAST {};
+
+        /// The Builder
+        Builder* const builder;
     };
 
     //////////////////////////////////////////////////////////////////////////////
@@ -1420,7 +1432,7 @@ class Builder {
             return create<ast::Identifier>(source, Sym(std::forward<IDENTIFIER>(identifier)));
         }
         return create<ast::TemplatedIdentifier>(source, Sym(std::forward<IDENTIFIER>(identifier)),
-                                                std::move(arg_exprs), Empty);
+                                                std::move(arg_exprs));
     }
 
     /// @param expr the expression
@@ -2366,23 +2378,6 @@ class Builder {
         return MemberAccessor(source_, std::forward<OBJECT>(object), std::forward<MEMBER>(member));
     }
 
-    /// Creates a ast::StructMemberOffsetAttribute
-    /// @param val the offset expression
-    /// @returns the offset attribute pointer
-    template <typename EXPR>
-    const ast::StructMemberOffsetAttribute* MemberOffset(EXPR&& val) {
-        return create<ast::StructMemberOffsetAttribute>(source_, Expr(std::forward<EXPR>(val)));
-    }
-
-    /// Creates a ast::StructMemberOffsetAttribute
-    /// @param source the source information
-    /// @param val the offset expression
-    /// @returns the offset attribute pointer
-    template <typename EXPR>
-    const ast::StructMemberOffsetAttribute* MemberOffset(const Source& source, EXPR&& val) {
-        return create<ast::StructMemberOffsetAttribute>(source, Expr(std::forward<EXPR>(val)));
-    }
-
     /// Creates a ast::StructMemberSizeAttribute
     /// @param source the source information
     /// @param val the size value
@@ -2415,13 +2410,6 @@ class Builder {
     template <typename EXPR>
     const ast::StructMemberAlignAttribute* MemberAlign(EXPR&& val) {
         return create<ast::StructMemberAlignAttribute>(source_, Expr(std::forward<EXPR>(val)));
-    }
-
-    /// Creates a ast::StrideAttribute
-    /// @param stride the array stride
-    /// @returns the ast::StrideAttribute attribute
-    const ast::StrideAttribute* Stride(uint32_t stride) {
-        return create<ast::StrideAttribute>(source_, stride);
     }
 
     /// Creates the ast::GroupAttribute
@@ -2594,9 +2582,25 @@ class Builder {
     /// @param name the alias name
     /// @param type the alias target type
     /// @returns the alias type
-    template <typename NAME>
-    const ast::Alias* Alias(NAME&& name, ast::Type type) {
-        return Alias(source_, std::forward<NAME>(name), type);
+    const ast::Alias* Alias(std::string_view name, ast::Type type) {
+        return Alias(source_, name, type);
+    }
+
+    /// Creates a ast::Alias registering it with the AST().TypeDecls().
+    /// @param name the alias name
+    /// @param type the alias target type
+    /// @returns the alias type
+    const ast::Alias* Alias(Symbol name, ast::Type type) { return Alias(source_, name, type); }
+
+    /// Creates a ast::Alias registering it with the AST().TypeDecls().
+    /// @param source the source information
+    /// @param name the alias name
+    /// @param type the alias target type
+    /// @returns the alias type
+    const ast::Alias* Alias(const Source& source, Symbol name, ast::Type type) {
+        auto out = ty.alias(source, Ident(name), type);
+        AST().AddTypeDecl(out);
+        return out;
     }
 
     /// Creates a ast::Alias registering it with the AST().TypeDecls().
@@ -2604,9 +2608,8 @@ class Builder {
     /// @param name the alias name
     /// @param type the alias target type
     /// @returns the alias type
-    template <typename NAME>
-    const ast::Alias* Alias(const Source& source, NAME&& name, ast::Type type) {
-        auto out = ty.alias(source, std::forward<NAME>(name), type);
+    const ast::Alias* Alias(const Source& source, std::string_view name, ast::Type type) {
+        auto out = ty.alias(source, Ident(name), type);
         AST().AddTypeDecl(out);
         return out;
     }
@@ -2666,19 +2669,6 @@ class Builder {
                                     VectorRef<const ast::Attribute*> attributes = Empty) {
         return create<ast::StructMember>(source, Ident(std::forward<NAME>(name)), type,
                                          std::move(attributes));
-    }
-
-    /// Creates a ast::StructMember with the given byte offset
-    /// @param offset the offset to use in the StructMemberOffsetAttribute
-    /// @param name the struct member name
-    /// @param type the struct member type
-    /// @returns the struct member pointer
-    template <typename NAME>
-    const ast::StructMember* Member(uint32_t offset, NAME&& name, ast::Type type) {
-        return create<ast::StructMember>(source_, Ident(std::forward<NAME>(name)), type,
-                                         Vector<const ast::Attribute*, 1>{
-                                             MemberOffset(core::AInt(offset)),
-                                         });
     }
 
     /// Creates a ast::BlockStatement with input statements and attributes
@@ -3111,18 +3101,29 @@ class Builder {
     const ast::CaseSelector* DefaultCaseSelector() { return create<ast::CaseSelector>(nullptr); }
 
     /// Creates an ast::BuiltinAttribute
-    /// @param source the source information
-    /// @param builtin the builtin value
-    /// @returns the builtin attribute pointer
-    const ast::BuiltinAttribute* Builtin(const Source& source, core::BuiltinValue builtin) {
-        return create<ast::BuiltinAttribute>(source, builtin);
-    }
-
-    /// Creates an ast::BuiltinAttribute
     /// @param builtin the builtin value
     /// @returns the builtin attribute pointer
     const ast::BuiltinAttribute* Builtin(core::BuiltinValue builtin) {
         return Builtin(source_, builtin);
+    }
+
+    /// Creates an ast::BuiltinAttribute
+    /// @param source the source information
+    /// @param builtin the builtin value
+    /// @returns the builtin attribute pointer
+    const ast::BuiltinAttribute* Builtin(const Source& source, core::BuiltinValue builtin) {
+        return Builtin(source, builtin, core::BuiltinDepthMode::kUndefined);
+    }
+
+    /// Creates an ast::BuiltinAttribute
+    /// @param source the source information
+    /// @param builtin the builtin value
+    /// @param depth_mode the depth mode
+    /// @returns the builtin attribute pointer
+    const ast::BuiltinAttribute* Builtin(const Source& source,
+                                         core::BuiltinValue builtin,
+                                         core::BuiltinDepthMode depth_mode) {
+        return create<ast::BuiltinAttribute>(source, builtin, depth_mode);
     }
 
     /// Creates an ast::InterpolateAttribute
@@ -3375,23 +3376,21 @@ class Builder {
                                                Expr(std::forward<EXPR_Z>(z)));
     }
 
-    /// Creates an ast::RowMajorAttribute
+    /// Creates an ast::SubgroupSizeAttribute
     /// @param source the source information
-    /// @returns the row-major attribute pointer
-    const ast::RowMajorAttribute* RowMajor(const Source& source) {
-        return create<ast::RowMajorAttribute>(source);
+    /// @param subgroup_size the subgroup size value expression
+    /// @returns the subgroup size attribute pointer
+    template <typename EXPR>
+    const ast::SubgroupSizeAttribute* SubgroupSize(const Source& source, EXPR&& subgroup_size) {
+        return create<ast::SubgroupSizeAttribute>(source, std::forward<EXPR>(subgroup_size));
     }
 
-    /// Creates an ast::RowMajorAttribute
-    /// @returns the row-major attribute pointer
-    const ast::RowMajorAttribute* RowMajor() { return create<ast::RowMajorAttribute>(source_); }
-
-    /// Creates an ast::DisableValidationAttribute
-    /// @param validation the validation to disable
-    /// @returns the disable validation attribute pointer
-    const ast::DisableValidationAttribute* Disable(ast::DisabledValidation validation) {
-        return ASTNodes().Create<ast::DisableValidationAttribute>(ID(), AllocateNodeID(),
-                                                                  validation);
+    /// Creates an ast::SubgroupSizeAttribute
+    /// @param subgroup_size the subgroup size value expression
+    /// @returns the subgroup size attribute pointer
+    template <typename EXPR>
+    const ast::SubgroupSizeAttribute* SubgroupSize(EXPR&& subgroup_size) {
+        return SubgroupSize(source_, Expr(std::forward<EXPR>(subgroup_size)));
     }
 
     /// Passthrough overload
@@ -3404,11 +3403,10 @@ class Builder {
     /// Creates an ast::DiagnosticRuleName
     /// @param name the diagnostic rule name
     /// @returns the diagnostic rule name
-    template <typename NAME>
-    const ast::DiagnosticRuleName* DiagnosticRuleName(NAME&& name) {
-        static_assert(!traits::IsType<traits::PtrElTy<NAME>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule name to be templated");
-        auto* name_ident = Ident(std::forward<NAME>(name));
+    const ast::DiagnosticRuleName* DiagnosticRuleName(const ast::Identifier* name) {
+        TINT_ASSERT(!name->Is<ast::TemplatedIdentifier>())
+            << "it is invalid for a diagnostic rule name to be templated";
+        auto* name_ident = Ident(name);
         return create<ast::DiagnosticRuleName>(name_ident->source, name_ident);
     }
 
@@ -3416,14 +3414,15 @@ class Builder {
     /// @param category the diagnostic rule category
     /// @param name the diagnostic rule name
     /// @returns the diagnostic rule name
-    template <typename CATEGORY, typename NAME, typename = DisableIfSource<CATEGORY>>
-    const ast::DiagnosticRuleName* DiagnosticRuleName(CATEGORY&& category, NAME&& name) {
-        static_assert(!traits::IsType<traits::PtrElTy<NAME>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule name to be templated");
-        static_assert(!traits::IsType<traits::PtrElTy<CATEGORY>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule category to be templated");
-        auto* category_ident = Ident(std::forward<CATEGORY>(category));
-        auto* name_ident = Ident(std::forward<NAME>(name));
+    const ast::DiagnosticRuleName* DiagnosticRuleName(const ast::Identifier* category,
+                                                      const ast::Identifier* name) {
+        TINT_ASSERT(!category->Is<ast::TemplatedIdentifier>())
+            << "it is invalid for a diagnostic rule category to be templated";
+        TINT_ASSERT(!name->Is<ast::TemplatedIdentifier>())
+            << "it is invalid for a diagnostic rule name to be templated";
+
+        auto* category_ident = Ident(category);
+        auto* name_ident = Ident(name);
         Source source = category_ident->source;
         source.range.end = name_ident->source.range.end;
         return create<ast::DiagnosticRuleName>(source, category_ident, name_ident);
@@ -3433,12 +3432,16 @@ class Builder {
     /// @param source the source information
     /// @param name the diagnostic rule name
     /// @returns the diagnostic rule name
-    template <typename NAME>
-    const ast::DiagnosticRuleName* DiagnosticRuleName(const Source& source, NAME&& name) {
-        static_assert(!traits::IsType<traits::PtrElTy<NAME>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule name to be templated");
-        auto* name_ident = Ident(std::forward<NAME>(name));
+    const ast::DiagnosticRuleName* DiagnosticRuleName(const Source& source, std::string_view name) {
+        auto* name_ident = Ident(name);
         return create<ast::DiagnosticRuleName>(source, name_ident);
+    }
+
+    /// Creates an ast::DiagnosticRuleName
+    /// @param name the diagnostic rule name
+    /// @returns the diagnostic rule name
+    const ast::DiagnosticRuleName* DiagnosticRuleName(std::string_view name) {
+        return DiagnosticRuleName(source_, name);
     }
 
     /// Creates an ast::DiagnosticRuleName
@@ -3446,55 +3449,51 @@ class Builder {
     /// @param category the diagnostic rule category
     /// @param name the diagnostic rule name
     /// @returns the diagnostic rule name
-    template <typename CATEGORY, typename NAME>
     const ast::DiagnosticRuleName* DiagnosticRuleName(const Source& source,
-                                                      CATEGORY&& category,
-                                                      NAME&& name) {
-        static_assert(!traits::IsType<traits::PtrElTy<NAME>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule name to be templated");
-        static_assert(!traits::IsType<traits::PtrElTy<CATEGORY>, ast::TemplatedIdentifier>,
-                      "it is invalid for a diagnostic rule category to be templated");
-        auto* category_ident = Ident(std::forward<CATEGORY>(category));
-        auto* name_ident = Ident(std::forward<NAME>(name));
+                                                      std::string_view category,
+                                                      std::string_view name) {
+        auto* category_ident = Ident(category);
+        auto* name_ident = Ident(name);
         return create<ast::DiagnosticRuleName>(source, category_ident, name_ident);
+    }
+
+    /// Creates an ast::DiagnosticRuleName
+    /// @param category the diagnostic rule category
+    /// @param name the diagnostic rule name
+    /// @returns the diagnostic rule name
+    const ast::DiagnosticRuleName* DiagnosticRuleName(std::string_view category,
+                                                      std::string_view name) {
+        return DiagnosticRuleName(source_, category, name);
     }
 
     /// Creates an ast::DiagnosticAttribute
     /// @param source the source information
     /// @param severity the diagnostic severity control
-    /// @param rule_args the arguments used to construct the rule name
+    /// @param rule the diagnostic rule
     /// @returns the diagnostic attribute pointer
-    template <typename... RULE_ARGS>
     const ast::DiagnosticAttribute* DiagnosticAttribute(const Source& source,
                                                         wgsl::DiagnosticSeverity severity,
-                                                        RULE_ARGS&&... rule_args) {
-        return create<ast::DiagnosticAttribute>(
-            source, ast::DiagnosticControl(
-                        severity, DiagnosticRuleName(std::forward<RULE_ARGS>(rule_args)...)));
+                                                        const ast::DiagnosticRuleName* rule) {
+        return create<ast::DiagnosticAttribute>(source, ast::DiagnosticControl(severity, rule));
     }
 
     /// Creates an ast::DiagnosticAttribute
     /// @param severity the diagnostic severity control
-    /// @param rule_args the arguments used to construct the rule name
+    /// @param rule the diagnostic rule
     /// @returns the diagnostic attribute pointer
-    template <typename... RULE_ARGS>
     const ast::DiagnosticAttribute* DiagnosticAttribute(wgsl::DiagnosticSeverity severity,
-                                                        RULE_ARGS&&... rule_args) {
-        return create<ast::DiagnosticAttribute>(
-            source_, ast::DiagnosticControl(
-                         severity, DiagnosticRuleName(std::forward<RULE_ARGS>(rule_args)...)));
+                                                        const ast::DiagnosticRuleName* rule) {
+        return DiagnosticAttribute(source_, severity, rule);
     }
 
     /// Add a diagnostic directive to the module.
     /// @param source the source information
     /// @param severity the diagnostic severity control
-    /// @param rule_args the arguments used to construct the rule name
+    /// @param rule the diagnostic rule
     /// @returns the diagnostic directive pointer
-    template <typename... RULE_ARGS>
     const ast::DiagnosticDirective* DiagnosticDirective(const Source& source,
                                                         wgsl::DiagnosticSeverity severity,
-                                                        RULE_ARGS&&... rule_args) {
-        auto* rule = DiagnosticRuleName(std::forward<RULE_ARGS>(rule_args)...);
+                                                        const ast::DiagnosticRuleName* rule) {
         auto* directive =
             create<ast::DiagnosticDirective>(source, ast::DiagnosticControl(severity, rule));
         AST().AddDiagnosticDirective(directive);
@@ -3503,16 +3502,11 @@ class Builder {
 
     /// Add a diagnostic directive to the module.
     /// @param severity the diagnostic severity control
-    /// @param rule_args the arguments used to construct the rule name
+    /// @param rule the diagnostic rule
     /// @returns the diagnostic directive pointer
-    template <typename... RULE_ARGS>
     const ast::DiagnosticDirective* DiagnosticDirective(wgsl::DiagnosticSeverity severity,
-                                                        RULE_ARGS&&... rule_args) {
-        auto* rule = DiagnosticRuleName(std::forward<RULE_ARGS>(rule_args)...);
-        auto* directive =
-            create<ast::DiagnosticDirective>(source_, ast::DiagnosticControl(severity, rule));
-        AST().AddDiagnosticDirective(directive);
-        return directive;
+                                                        const ast::DiagnosticRuleName* rule) {
+        return DiagnosticDirective(source_, severity, rule);
     }
 
     /// Sets the current builder source to `src`
@@ -3570,9 +3564,6 @@ class Builder {
     /// Asserts that the builder has not been moved.
     void AssertNotMoved() const;
 
-    /// The unique identifier for this program
-    GenerationID id_;
-
     /// The last Node identifier
     ast::NodeID last_ast_node_id_ = ast::NodeID{static_cast<decltype(ast::NodeID::value)>(0) - 1};
 
@@ -3583,7 +3574,7 @@ class Builder {
     ast::Module* ast_ = nullptr;
 
     /// The symbol table
-    SymbolTable symbols_{id_};
+    SymbolTable symbols_{};
 
     /// The diagnostic list
     diag::List diagnostics_;
@@ -3668,15 +3659,5 @@ struct CanWrapInStatement<
     : std::true_type {};
 
 }  // namespace tint::ast
-
-namespace tint {
-
-/// @param builder the Builder
-/// @returns the GenerationID of the ast::Builder
-inline GenerationID GenerationIDOf(const ast::Builder* builder) {
-    return builder->ID();
-}
-
-}  // namespace tint
 
 #endif  // SRC_TINT_LANG_WGSL_AST_BUILDER_H_

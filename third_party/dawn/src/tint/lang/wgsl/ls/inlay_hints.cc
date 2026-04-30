@@ -26,11 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "langsvr/lsp/primitives.h"
-#include "src/tint/lang/wgsl/ls/server.h"
-
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/variable.h"
+#include "src/tint/lang/wgsl/ls/server.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 #include "src/tint/lang/wgsl/sem/struct.h"
 #include "src/tint/lang/wgsl/sem/variable.h"

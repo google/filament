@@ -34,7 +34,15 @@ namespace {
 
 constexpr wgpu::TextureFormat kDepthFormat = wgpu::TextureFormat::Depth32Float;
 
-class FragDepthTests : public DawnTest {};
+class FragDepthTests : public DawnTest {
+  protected:
+    void SetUp() override {
+        DawnTest::SetUp();
+
+        // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+        DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+    }
+};
 
 // Test that when writing to FragDepth the result is clamped to the viewport.
 TEST_P(FragDepthTests, FragDepthIsClampedToViewport) {
@@ -90,9 +98,6 @@ TEST_P(FragDepthTests, FragDepthIsClampedToViewport) {
 TEST_P(FragDepthTests, ChangingPipelineLayoutDoesntInvalidateViewport) {
     // TODO(dawn:1805): Load ByteAddressBuffer in Pixel Shader doesn't work with NVIDIA on D3D11
     DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsNvidia());
-
-    // TODO(dawn:2393): ANGLE/D3D11 fails in HLSL shader compilation (UAV vs PS register bug)
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         @vertex fn vs() -> @builtin(position) vec4f {
@@ -253,7 +258,8 @@ DAWN_INSTANTIATE_TEST(FragDepthTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

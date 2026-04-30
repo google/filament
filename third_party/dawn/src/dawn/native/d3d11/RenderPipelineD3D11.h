@@ -54,6 +54,9 @@ class RenderPipeline final : public RenderPipelineBase {
     void ApplyDepthStencilState(const ScopedSwapStateCommandRecordingContext* commandContext,
                                 uint32_t stencilReference);
 
+    ID3D11VertexShader* GetD3D11VertexShaderForTesting();
+    ID3D11PixelShader* GetD3D11PixelShaderForTesting();
+
   private:
     RenderPipeline(Device* device, const UnpackedPtr<RenderPipelineDescriptor>& descriptor);
     ~RenderPipeline() override;

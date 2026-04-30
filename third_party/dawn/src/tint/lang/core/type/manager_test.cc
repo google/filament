@@ -146,14 +146,12 @@ TEST_F(ManagerTest, WrapDoesntAffectInner) {
 TEST_F(ManagerTest, ArrayImplicitStride) {
     Manager tm;
     auto* arr = tm.array<mat4x4<f32>, 4>();
-    EXPECT_EQ(arr->Stride(), 64u);
     EXPECT_EQ(arr->ImplicitStride(), 64u);
 }
 
 TEST_F(ManagerTest, RuntimeSizedArrayImplicitStride) {
     Manager tm;
     auto* arr = tm.array<mat4x4<f32>>();
-    EXPECT_EQ(arr->Stride(), 64u);
     EXPECT_EQ(arr->ImplicitStride(), 64u);
 }
 

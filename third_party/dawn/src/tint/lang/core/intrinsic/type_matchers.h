@@ -55,6 +55,7 @@
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/string.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/u64.h"
 #include "src/tint/lang/core/type/u8.h"
@@ -126,6 +127,14 @@ inline const type::U8* BuildU8(intrinsic::MatchState& state, const type::Type*) 
 
 inline bool MatchU8(intrinsic::MatchState&, const type::Type* ty) {
     return ty->IsAnyOf<intrinsic::Any, type::U8, type::AbstractInt>();
+}
+
+inline const type::U16* BuildU16(intrinsic::MatchState& state, const type::Type*) {
+    return state.types.u16();
+}
+
+inline bool MatchU16(intrinsic::MatchState&, const type::Type* ty) {
+    return ty->IsAnyOf<intrinsic::Any, type::U16, type::AbstractInt>();
 }
 
 inline bool MatchVec(intrinsic::MatchState&,
@@ -310,6 +319,40 @@ inline const type::SubgroupMatrix* BuildSubgroupMatrix(intrinsic::MatchState& st
                                        A.Value(), B.Value());
 }
 
+inline bool MatchUnsizedBuffer(intrinsic::MatchState&, const type::Type* ty) {
+    if (ty->Is<intrinsic::Any>()) {
+        return true;
+    }
+    if (auto* b = ty->As<type::Buffer>()) {
+        return b->Size() == 0;
+    }
+    return false;
+}
+
+inline const type::Buffer* BuildUnsizedBuffer(intrinsic::MatchState& state, const type::Type*) {
+    return state.types.unsized_buffer();
+}
+
+inline bool MatchBuffer(intrinsic::MatchState&, const type::Type* ty, intrinsic::Number& N) {
+    if (ty->Is<intrinsic::Any>()) {
+        N = intrinsic::Number::any;
+        return true;
+    }
+    if (auto* b = ty->As<type::Buffer>()) {
+        if (b->Size() != 0) {
+            N = b->Size();
+            return true;
+        }
+    }
+    return false;
+}
+
+inline const type::Buffer* BuildBuffer(intrinsic::MatchState& state,
+                                       const type::Type*,
+                                       intrinsic::Number N) {
+    return state.types.buffer(N.Value());
+}
+
 inline bool MatchArray(intrinsic::MatchState&,
                        const type::Type* ty,
                        const type::Type*& T,
@@ -468,11 +511,36 @@ inline bool MatchSampler(intrinsic::MatchState&, const type::Type* ty) {
     if (ty->Is<intrinsic::Any>()) {
         return true;
     }
-    return ty->Is([](const type::Sampler* s) { return s->Kind() == type::SamplerKind::kSampler; });
+    return ty->Is([](const type::Sampler* s) {
+        return s->Kind() == type::SamplerKind::kSampler &&
+               s->Filtering() == SamplerFiltering::kUndefined;
+    });
 }
 
 inline const type::Sampler* BuildSampler(intrinsic::MatchState& state, const type::Type*) {
     return state.types.sampler();
+}
+
+inline bool MatchSamplerFiltered(intrinsic::MatchState&,
+                                 const type::Type* ty,
+                                 intrinsic::Number& F) {
+    if (ty->Is<intrinsic::Any>()) {
+        F = intrinsic::Number::any;
+        return true;
+    }
+    if (auto* s = ty->As<type::Sampler>()) {
+        if (s->Filtering() != SamplerFiltering::kUndefined) {
+            F = intrinsic::Number(static_cast<uint32_t>(s->Filtering()));
+            return true;
+        }
+    }
+    return false;
+}
+
+inline const type::Sampler* BuildSamplerFiltered(intrinsic::MatchState& state,
+                                                 const type::Type*,
+                                                 intrinsic::Number& F) {
+    return state.types.sampler(static_cast<core::SamplerFiltering>(F.Value()));
 }
 
 inline bool MatchSamplerComparison(intrinsic::MatchState&, const type::Type* ty) {
@@ -497,7 +565,7 @@ inline bool MatchTexture(intrinsic::MatchState&,
         return true;
     }
     if (auto* v = ty->As<type::SampledTexture>()) {
-        if (v->Dim() == dim) {
+        if (v->Dim() == dim && v->Filterable() == TextureFilterable::kUndefined) {
             T = v->Type();
             return true;
         }
@@ -524,6 +592,50 @@ DECLARE_SAMPLED_TEXTURE(3D, type::TextureDimension::k3d)
 DECLARE_SAMPLED_TEXTURE(Cube, type::TextureDimension::kCube)
 DECLARE_SAMPLED_TEXTURE(CubeArray, type::TextureDimension::kCubeArray)
 #undef DECLARE_SAMPLED_TEXTURE
+
+inline bool MatchTextureFiltered(intrinsic::MatchState&,
+                                 const type::Type* ty,
+                                 type::TextureDimension dim,
+                                 const type::Type*& T,
+                                 intrinsic::Number& F) {
+    if (ty->Is<intrinsic::Any>()) {
+        T = ty;
+        F = intrinsic::Number::any;
+        return true;
+    }
+    if (auto* v = ty->As<type::SampledTexture>()) {
+        if (v->Dim() == dim && v->Filterable() != TextureFilterable::kUndefined) {
+            T = v->Type();
+            F = intrinsic::Number(static_cast<uint32_t>(v->Filterable()));
+            return true;
+        }
+    }
+    return false;
+}
+
+#define JOIN2(a, b, c) a##b##c
+
+#define DECLARE_SAMPLED_TEXTURE_FILTERED(suffix, dim)                                             \
+    inline bool JOIN2(MatchTexture, suffix, Filtered)(intrinsic::MatchState & state,              \
+                                                      const type::Type* ty, const type::Type*& T, \
+                                                      intrinsic::Number& F) {                     \
+        return MatchTextureFiltered(state, ty, dim, T, F);                                        \
+    }                                                                                             \
+    inline const type::SampledTexture* JOIN2(BuildTexture, suffix, Filtered)(                     \
+        intrinsic::MatchState & state, const type::Type*, const type::Type* T,                    \
+        intrinsic::Number& F) {                                                                   \
+        return state.types.sampled_texture(dim, T,                                                \
+                                           static_cast<core::TextureFilterable>(F.Value()));      \
+    }
+
+DECLARE_SAMPLED_TEXTURE_FILTERED(1D, type::TextureDimension::k1d)
+DECLARE_SAMPLED_TEXTURE_FILTERED(2D, type::TextureDimension::k2d)
+DECLARE_SAMPLED_TEXTURE_FILTERED(2DArray, type::TextureDimension::k2dArray)
+DECLARE_SAMPLED_TEXTURE_FILTERED(3D, type::TextureDimension::k3d)
+DECLARE_SAMPLED_TEXTURE_FILTERED(Cube, type::TextureDimension::kCube)
+DECLARE_SAMPLED_TEXTURE_FILTERED(CubeArray, type::TextureDimension::kCubeArray)
+#undef DECLARE_SAMPLED_TEXTURE_FILTERED
+#undef JOIN2
 
 inline bool MatchTextureMultisampled(intrinsic::MatchState&,
                                      const type::Type* ty,

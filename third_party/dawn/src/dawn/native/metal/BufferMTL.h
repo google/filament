@@ -28,11 +28,11 @@
 #ifndef SRC_DAWN_NATIVE_METAL_BUFFERMTL_H_
 #define SRC_DAWN_NATIVE_METAL_BUFFERMTL_H_
 
+#import <Metal/Metal.h>
+
 #include "dawn/common/NSRef.h"
 #include "dawn/common/SerialQueue.h"
 #include "dawn/native/Buffer.h"
-
-#import <Metal/Metal.h>
 
 namespace dawn::native::metal {
 
@@ -66,8 +66,9 @@ class Buffer final : public BufferBase {
     ~Buffer() override;
 
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
-    void UnmapImpl() override;
-    void DestroyImpl() override;
+    MaybeError FinalizeMapImpl(BufferState newState) override;
+    void UnmapImpl(BufferState oldState, BufferState newState) override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
     void* GetMappedPointerImpl() override;
     bool IsCPUWritableAtCreation() const override;

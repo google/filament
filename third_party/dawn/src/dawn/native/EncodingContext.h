@@ -62,6 +62,55 @@ class EncodingContext {
 
     CommandIterator AcquireCommands();
 
+    template <typename EncodeFunction>
+    inline bool TryEncode(const ApiObjectBase* encoder, EncodeFunction&& encodeFunction) {
+        if (ConsumedError(ValidateCanEncodeOn(encoder))) {
+            return false;
+        }
+        DAWN_ASSERT(!mWereCommandsAcquired);
+        return !ConsumedError(encodeFunction(&mPendingCommands));
+    }
+
+    template <typename EncodeFunction, typename... Args>
+    inline bool TryEncode(const ApiObjectBase* encoder,
+                          EncodeFunction&& encodeFunction,
+                          const char* formatStr,
+                          const Args&... args) {
+        if (ConsumedError(ValidateCanEncodeOn(encoder), formatStr, args...)) {
+            return false;
+        }
+        DAWN_ASSERT(!mWereCommandsAcquired);
+        return !ConsumedError(encodeFunction(&mPendingCommands), formatStr, args...);
+    }
+
+    // Must be called prior to encoding a BeginRenderPassCmd. Note that it's OK to call this
+    // and then not actually call EnterPass+ExitRenderPass, for example if some other pass setup
+    // failed validation before the BeginRenderPassCmd could be encoded.
+    void WillBeginRenderPass();
+
+    // Functions to set current encoder state
+    void EnterPass(const ApiObjectBase* passEncoder);
+    MaybeError ExitRenderPass(const ApiObjectBase* passEncoder,
+                              RenderPassResourceUsageTracker usageTracker,
+                              CommandEncoder* commandEncoder,
+                              IndirectDrawMetadata indirectDrawMetadata);
+    void ExitComputePass(const ApiObjectBase* passEncoder, ComputePassResourceUsage usages);
+    MaybeError Finish();
+
+    // Called when a pass encoder is deleted. Provides an opportunity to clean up if it's the
+    // mCurrentEncoder.
+    void EnsurePassExited(const ApiObjectBase* passEncoder);
+
+    const RenderPassUsages& GetRenderPassUsages() const;
+    const ComputePassUsages& GetComputePassUsages() const;
+    RenderPassUsages AcquireRenderPassUsages();
+    ComputePassUsages AcquireComputePassUsages();
+    std::vector<IndirectDrawMetadata> AcquireIndirectDrawMetadata();
+
+    void PushDebugGroupLabel(std::string_view groupLabel);
+    void PopDebugGroupLabel();
+
+  private:
     // Functions to handle encoder errors
     void HandleError(std::unique_ptr<ErrorData> error);
 
@@ -132,55 +181,6 @@ class EncodingContext {
         return {};
     }
 
-    template <typename EncodeFunction>
-    inline bool TryEncode(const ApiObjectBase* encoder, EncodeFunction&& encodeFunction) {
-        if (ConsumedError(ValidateCanEncodeOn(encoder))) {
-            return false;
-        }
-        DAWN_ASSERT(!mWereCommandsAcquired);
-        return !ConsumedError(encodeFunction(&mPendingCommands));
-    }
-
-    template <typename EncodeFunction, typename... Args>
-    inline bool TryEncode(const ApiObjectBase* encoder,
-                          EncodeFunction&& encodeFunction,
-                          const char* formatStr,
-                          const Args&... args) {
-        if (ConsumedError(ValidateCanEncodeOn(encoder), formatStr, args...)) {
-            return false;
-        }
-        DAWN_ASSERT(!mWereCommandsAcquired);
-        return !ConsumedError(encodeFunction(&mPendingCommands), formatStr, args...);
-    }
-
-    // Must be called prior to encoding a BeginRenderPassCmd. Note that it's OK to call this
-    // and then not actually call EnterPass+ExitRenderPass, for example if some other pass setup
-    // failed validation before the BeginRenderPassCmd could be encoded.
-    void WillBeginRenderPass();
-
-    // Functions to set current encoder state
-    void EnterPass(const ApiObjectBase* passEncoder);
-    MaybeError ExitRenderPass(const ApiObjectBase* passEncoder,
-                              RenderPassResourceUsageTracker usageTracker,
-                              CommandEncoder* commandEncoder,
-                              IndirectDrawMetadata indirectDrawMetadata);
-    void ExitComputePass(const ApiObjectBase* passEncoder, ComputePassResourceUsage usages);
-    MaybeError Finish();
-
-    // Called when a pass encoder is deleted. Provides an opportunity to clean up if it's the
-    // mCurrentEncoder.
-    void EnsurePassExited(const ApiObjectBase* passEncoder);
-
-    const RenderPassUsages& GetRenderPassUsages() const;
-    const ComputePassUsages& GetComputePassUsages() const;
-    RenderPassUsages AcquireRenderPassUsages();
-    ComputePassUsages AcquireComputePassUsages();
-    std::vector<IndirectDrawMetadata> AcquireIndirectDrawMetadata();
-
-    void PushDebugGroupLabel(std::string_view groupLabel);
-    void PopDebugGroupLabel();
-
-  private:
     enum class Status {
         Open,
         Finished,

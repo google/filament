@@ -29,7 +29,6 @@
 #define SRC_TINT_LANG_CORE_IR_EXIT_H_
 
 #include "src/tint/lang/core/ir/terminator.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 
 // Forward declarations
 namespace tint::core::ir {
@@ -62,7 +61,7 @@ class Exit : public Castable<Exit, Terminator> {
     void SetControlInstruction(ir::ControlInstruction* ctrl_inst);
 
   private:
-    ConstPropagatingPtr<ir::ControlInstruction> ctrl_inst_;
+    ir::ControlInstruction* ctrl_inst_ = nullptr;
 };
 
 }  // namespace tint::core::ir

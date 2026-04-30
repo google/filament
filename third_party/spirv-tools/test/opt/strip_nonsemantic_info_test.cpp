@@ -224,6 +224,70 @@ OpFunctionEnd
   SinglePassRunAndMatch<StripNonSemanticInfoPass>(text, true);
 }
 
+TEST_F(StripNonSemanticInfoTest, StripNonSemanticScopes) {
+  std::string text = R"(
+;CHECK-NOT: OpExtension "SPV_KHR_non_semantic_info
+;CHECK-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugInfoNon
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugSource
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugCompilationUnit
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugTypeFunction
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugFunction
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugScope
+;CHECK-NOT: OpExtInst %8 {{%\w+}} DebugNoScope
+               OpCapability Shader
+               OpExtension "SPV_KHR_non_semantic_info"
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+          %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main" %3
+               OpExecutionMode %2 LocalSize 1 1 1
+          %4 = OpString ""
+               OpDecorate %5 ArrayStride 4
+               OpDecorate %6 ArrayStride 4
+               OpDecorate %7 Block
+               OpMemberDecorate %7 0 Offset 0
+               OpDecorate %3 Binding 0
+               OpDecorate %3 DescriptorSet 0
+          %8 = OpTypeVoid
+          %9 = OpTypeInt 32 0
+         %10 = OpConstant %9 100
+         %11 = OpTypeFunction %8
+         %12 = OpTypeInt 32 1
+         %13 = OpConstant %12 0
+         %14 = OpTypeFloat 32
+          %5 = OpTypePointer StorageBuffer %14
+          %6 = OpTypeRuntimeArray %14
+          %7 = OpTypeStruct %6
+         %15 = OpTypePointer StorageBuffer %7
+         %16 = OpConstant %14 0
+          %3 = OpVariable %15 StorageBuffer
+         %17 = OpExtInst %8 %1 DebugInfoNone
+         %18 = OpExtInst %8 %1 DebugSource %4 %4
+         %19 = OpExtInst %8 %1 DebugCompilationUnit %10 %10 %18 %10
+         %20 = OpExtInst %8 %1 DebugTypeFunction %10 %8
+         %21 = OpExtInst %8 %1 DebugFunction %4 %20 %18 %10 %10 %19 %4 %10 %10
+         %22 = OpExtInst %8 %1 DebugEntryPoint %21 %19 %4 %4
+         %23 = OpExtInst %8 %1 DebugTypeBasic %4 %10 %10 %10
+         %24 = OpExtInst %8 %1 DebugTypeArray %23 %10
+         %25 = OpExtInst %8 %1 DebugTypeMember %4 %24 %18 %10 %10 %10 %10 %10
+         %26 = OpExtInst %8 %1 DebugTypeComposite %4 %10 %18 %10 %10 %19 %4 %10 %10 %25
+         %27 = OpExtInst %8 %1 DebugGlobalVariable %4 %26 %18 %10 %10 %19 %4 %3 %10
+          %2 = OpFunction %8 None %11
+         %28 = OpLabel
+         %29 = OpExtInst %8 %1 DebugFunctionDefinition %21 %2
+         %30 = OpExtInst %8 %1 DebugScope %21
+         %31 = OpExtInst %8 %1 DebugLine %18 %10 %10 %10 %10
+         %32 = OpAccessChain %5 %3 %13 %13
+               OpStore %32 %16
+               OpReturn
+         %33 = OpExtInst %8 %1 DebugNoScope
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<StripNonSemanticInfoPass>(text, false);
+}
+
 // Make sure that strip reflect does not remove the debug info (OpString and
 // OpLine).
 TEST_F(StripNonSemanticInfoTest, DontStripDebug) {

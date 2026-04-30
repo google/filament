@@ -39,6 +39,18 @@ class Enable;
 
 namespace tint::wgsl::reader {
 
+/// Options for converting a WGSL program to IR.
+struct IROptions {
+    /// The callback to use for any ICE produced while processing the IR module
+    InternalCompilerErrorCallback ice_callback = std::nullopt;
+
+    /// If true, dump the IR whenever validation is performed.
+    bool dump_ir_when_validating = false;
+
+    /// If true, enable validation assertions.
+    bool enable_validation_asserts = false;
+};
+
 /// Parses the WGSL source, returning the parsed program.
 /// If the source fails to parse then the returned
 /// `program.Diagnostics.ContainsErrors()` will be true, and the
@@ -56,15 +68,13 @@ Result<core::ir::Module> WgslToIR(const Source::File* file, const Options& optio
 
 /// Builds a core-dialect core::ir::Module from the given Program
 /// @param program the Program to use.
-/// @param ice_callback the callback to use for any ICE produced while processing the IR module
+/// @param options the configuration options to use when generating the IR module
 /// @returns the core-dialect IR module.
 ///
 /// @note this assumes the `program.IsValid()`, and has had const-eval done so
 /// any abstract values have been calculated and converted into the relevant
 /// concrete types.
-Result<core::ir::Module> ProgramToLoweredIR(
-    const Program& program,
-    InternalCompilerErrorCallback ice_callback = std::nullopt);
+Result<core::ir::Module> ProgramToLoweredIR(const Program& program, const IROptions& options = {});
 
 /// Allows for checking if an extension is currently supported/unsupported by IR
 /// before trying to convert to it.

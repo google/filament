@@ -40,8 +40,4 @@ IfStatement::IfStatement(const ast::IfStatement* declaration,
 
 IfStatement::~IfStatement() = default;
 
-const ast::IfStatement* IfStatement::Declaration() const {
-    return static_cast<const ast::IfStatement*>(Base::Declaration());
-}
-
 }  // namespace tint::sem

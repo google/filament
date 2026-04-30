@@ -1,0 +1,104 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+constant uint _7_tmp [[function_constant(0)]];
+constant uint _7 = is_function_constant_defined(_7_tmp) ? _7_tmp : 1u;
+constant uint _8_tmp [[function_constant(2)]];
+constant uint _8 = is_function_constant_defined(_8_tmp) ? _8_tmp : 1u;
+constant uint _9_tmp [[function_constant(3)]];
+constant uint _9 = is_function_constant_defined(_9_tmp) ? _9_tmp : 1u;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+constant int A = SPIRV_CROSS_CONSTANT_ID_1;
+constant uint _23 = (uint(A) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+constant uint _24 = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 1u
+#endif
+constant uint _25 = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 1u
+#endif
+constant uint _26 = SPIRV_CROSS_CONSTANT_ID_3;
+constant uint3 _28 = uint3(_24, _25, _26);
+constant uint _29 = _24;
+constant uint _30 = (_23 * _29);
+constant uint _34 = (uint(A) + 0u);
+constant uint _35 = _24;
+constant uint _36 = (_34 * _35);
+constant uint _62 = (uint(A) + 0u);
+constant uint _64 = _26;
+constant uint _65 = (_62 * _64);
+
+struct SSBO
+{
+    int I;
+    float V;
+};
+
+constant uint _91 = (uint(A) + 0u);
+constant uint _92 = _26;
+constant uint _93 = (_91 * _92);
+
+kernel void main0(device SSBO& _79 [[buffer(0)]])
+{
+    spvUnsafeArray<float, _36> D;
+    spvUnsafeArray<float, _93> E;
+    for (int i = 0; uint(i) < _30; i++)
+    {
+        D[i] = 1.0 + float(uint(i) + _28.y);
+    }
+    for (int i_1 = 0; uint(i_1) < _65; i_1++)
+    {
+        D[i_1] = 1.0 + float(uint(i_1) + _28.y);
+    }
+    _79.V = (D[_79.I] + D[_79.I ^ 1]) + E[_79.I];
+}
+

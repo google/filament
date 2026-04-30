@@ -110,7 +110,7 @@ struct State {
                     ConvertRelational(binary);
                     break;
                 default:
-                    TINT_UNIMPLEMENTED();
+                    TINT_IR_UNIMPLEMENTED(ir);
             }
         }
     }
@@ -137,7 +137,7 @@ struct State {
                 func = glsl::BuiltinFn::kGreaterThanEqual;
                 break;
             default:
-                TINT_UNREACHABLE();
+                TINT_IR_UNREACHABLE(ir);
         }
         b.InsertBefore(binary, [&] {
             b.CallWithResult<glsl::ir::BuiltinCall>(binary->DetachResult(), func, binary->LHS(),
@@ -155,13 +155,13 @@ struct State {
             core::ir::Value* result = nullptr;
             switch (binary->Op()) {
                 case core::BinaryOp::kAnd:
-                    result = b.And(res_ty, lhs, rhs)->Result();
+                    result = b.And(lhs, rhs)->Result();
                     break;
                 case core::BinaryOp::kOr:
-                    result = b.Or(res_ty, lhs, rhs)->Result();
+                    result = b.Or(lhs, rhs)->Result();
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
             }
             b.ConvertWithResult(binary->DetachResult(), result);
         });
@@ -178,10 +178,10 @@ struct State {
             b.Append(f->Block(), [&] {
                 core::ir::Value* ret = nullptr;
 
-                ret = b.Divide(type, x, y)->Result();
+                ret = b.Divide(x, y)->Result();
                 ret = b.Call(type, core::BuiltinFn::kTrunc, ret)->Result();
-                ret = b.Multiply(type, y, ret)->Result();
-                ret = b.Subtract(type, x, ret)->Result();
+                ret = b.Multiply(y, ret)->Result();
+                ret = b.Subtract(x, ret)->Result();
                 b.Return(f, ret);
             });
             return f;
@@ -216,12 +216,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "glsl.BinaryPolyfill",
-        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
-    if (result != Success) {
-        return result.Failure();
-    }
+    core::ir::AssertValid(ir, core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings},
+                          "before glsl.BinaryPolyfill");
 
     State{ir}.Process();
 

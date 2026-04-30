@@ -27,64 +27,62 @@
 
 import("../../../scripts/dawn_overrides_with_defaults.gni")
 
-if (dawn_has_fuzzers) {
-  import("//build_overrides/build.gni")
-  import("//testing/libfuzzer/fuzzer_test.gni")
-  import("${dawn_root}/scripts/dawn_features.gni")
+import("//build_overrides/build.gni")
+import("//testing/libfuzzer/fuzzer_test.gni")
+import("${dawn_root}/scripts/dawn_features.gni")
 
-  static_library("dawn_wire_server_fuzzer_common") {
-    sources = [
-      "DawnWireServerFuzzer.cpp",
-      "DawnWireServerFuzzer.h",
-    ]
-    public_deps = [
-      "${dawn_root}/include/dawn:cpp_headers",
-      "${dawn_root}/src/dawn:proc",
-      "${dawn_root}/src/dawn/common",
-      "${dawn_root}/src/dawn/native:static",
-      "${dawn_root}/src/dawn/utils:system_utils",
-      "${dawn_root}/src/dawn/utils:test_utils",
-      "${dawn_root}/src/dawn/utils:wgpu_utils",
-      "${dawn_root}/src/dawn/wire:static",
-    ]
-  }
+static_library("dawn_wire_server_fuzzer_common") {
+  sources = [
+    "DawnWireServerFuzzer.cpp",
+    "DawnWireServerFuzzer.h",
+  ]
+  public_deps = [
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:static",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:test_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
+    "${dawn_root}/src/dawn/wire:static",
+  ]
+}
 
-  fuzzer_test("dawn_wire_server_and_frontend_fuzzer") {
-    sources = [ "DawnWireServerAndFrontendFuzzer.cpp" ]
+fuzzer_test("dawn_wire_server_and_frontend_fuzzer") {
+  sources = [ "DawnWireServerAndFrontendFuzzer.cpp" ]
+
+  deps = [ ":dawn_wire_server_fuzzer_common" ]
+
+  additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
+}
+
+if (is_win) {
+  fuzzer_test("dawn_wire_server_and_d3d12_backend_fuzzer") {
+    sources = [ "DawnWireServerAndD3D12BackendFuzzer.cpp" ]
 
     deps = [ ":dawn_wire_server_fuzzer_common" ]
 
     additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
   }
+}
+
+fuzzer_test("dawn_wire_server_and_vulkan_backend_fuzzer") {
+  sources = [ "DawnWireServerAndVulkanBackendFuzzer.cpp" ]
+
+  deps = [ ":dawn_wire_server_fuzzer_common" ]
+
+  additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
+}
+
+# A group target to build all the fuzzers
+group("fuzzers") {
+  testonly = true
+  deps = [
+    ":dawn_wire_server_and_frontend_fuzzer",
+    ":dawn_wire_server_and_vulkan_backend_fuzzer",
+  ]
 
   if (is_win) {
-    fuzzer_test("dawn_wire_server_and_d3d12_backend_fuzzer") {
-      sources = [ "DawnWireServerAndD3D12BackendFuzzer.cpp" ]
-
-      deps = [ ":dawn_wire_server_fuzzer_common" ]
-
-      additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
-    }
-  }
-
-  fuzzer_test("dawn_wire_server_and_vulkan_backend_fuzzer") {
-    sources = [ "DawnWireServerAndVulkanBackendFuzzer.cpp" ]
-
-    deps = [ ":dawn_wire_server_fuzzer_common" ]
-
-    additional_configs = [ "${dawn_root}/src/dawn/common:internal_config" ]
-  }
-
-  # A group target to build all the fuzzers
-  group("fuzzers") {
-    testonly = true
-    deps = [
-      ":dawn_wire_server_and_frontend_fuzzer",
-      ":dawn_wire_server_and_vulkan_backend_fuzzer",
-    ]
-
-    if (is_win) {
-      deps += [ ":dawn_wire_server_and_d3d12_backend_fuzzer" ]
-    }
+    deps += [ ":dawn_wire_server_and_d3d12_backend_fuzzer" ]
   }
 }

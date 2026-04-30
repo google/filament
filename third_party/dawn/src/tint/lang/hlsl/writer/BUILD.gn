@@ -49,10 +49,11 @@ if (tint_build_hlsl_writer) {
       "writer.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
+      "${tint_src_dir}/lang/core/intrinsic",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/type",
@@ -84,6 +85,7 @@ if (tint_build_unittests) {
         "constant_test.cc",
         "construct_test.cc",
         "convert_test.cc",
+        "dynamic_offset_test.cc",
         "function_test.cc",
         "helper_test.h",
         "if_test.cc",
@@ -94,7 +96,7 @@ if (tint_build_unittests) {
         "writer_test.cc",
       ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:gmock_and_gtest",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
@@ -129,15 +131,15 @@ if (tint_build_hlsl_writer) {
   tint_fuzz_source_set("fuzz") {
     sources = [ "writer_fuzz.cc" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
+      "${tint_src_dir}/api/helpers",
       "${tint_src_dir}/cmd/fuzz/ir:fuzz",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/hlsl/writer/common",
-      "${tint_src_dir}/lang/hlsl/writer/helpers",
       "${tint_src_dir}/lang/hlsl/writer/printer",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/bytes",

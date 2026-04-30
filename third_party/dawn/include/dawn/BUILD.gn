@@ -61,6 +61,7 @@ dawn_json_generator("cpp_headers_gen") {
     "include/dawn/webgpu_cpp_print.h",
     "include/webgpu/webgpu_cpp_chained_struct.h",
     "include/dawn/wire/client/webgpu_cpp.h",
+    "include/dawn/wire/client/webgpu_cpp_print.h",
   ]
 }
 

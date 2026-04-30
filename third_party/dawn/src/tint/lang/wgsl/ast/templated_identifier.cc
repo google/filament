@@ -30,37 +30,22 @@
 #include <utility>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::TemplatedIdentifier);
 
 namespace tint::ast {
 
-TemplatedIdentifier::TemplatedIdentifier(GenerationID pid,
-                                         NodeID nid,
+TemplatedIdentifier::TemplatedIdentifier(NodeID nid,
                                          const Source& src,
                                          const Symbol& sym,
-                                         VectorRef<const Expression*> args,
-                                         VectorRef<const Attribute*> attrs)
-    : Base(pid, nid, src, sym), arguments(std::move(args)), attributes(std::move(attrs)) {
+                                         VectorRef<const Expression*> args)
+    : Base(nid, src, sym), arguments(std::move(args)) {
     TINT_ASSERT(!arguments.IsEmpty());  // Should have been an Identifier if this fires.
     for (auto* arg : arguments) {
-        TINT_ASSERT_GENERATION_IDS_EQUAL(arg, generation_id);
-    }
-    for (auto* attr : attributes) {
-        TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(attr, generation_id);
+        TINT_ASSERT(arg);
     }
 }
 
 TemplatedIdentifier::~TemplatedIdentifier() = default;
-
-const TemplatedIdentifier* TemplatedIdentifier::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto sym = ctx.Clone(symbol);
-    auto args = ctx.Clone(arguments);
-    auto attrs = ctx.Clone(attributes);
-    return ctx.dst->create<TemplatedIdentifier>(src, sym, std::move(args), std::move(attrs));
-}
 
 }  // namespace tint::ast

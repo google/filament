@@ -318,6 +318,8 @@ public:
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
      * Default is 1 and disables MSAA.
+     * Note that post-processing is disabled at FL0. If the feature level is 
+     * set to 0, values passed to this function are ignored.
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.\n
      *              0: treated as 1
@@ -408,7 +410,9 @@ public:
 
     /**
      * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
-     *
+     * Note that MSAA is a post-processing effect, and post-processing is disabled at FL0. 
+     * If the feature level is set to 0, values passed to this function are ignored.
+     * 
      * @param options multi-sample anti-aliasing options
      */
     void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
@@ -460,7 +464,7 @@ public:
     /**
      * Enables or disables bloom in the post-processing stage. Disabled by default.
      *
-     * @param options options
+     * @param options options. Values may be silently clamped to valid ranges.
      */
     void setBloomOptions(BloomOptions options) noexcept;
 
@@ -585,6 +589,32 @@ public:
      *
      */
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
+
+    /**
+     * Sets the grid size for grid-based world origin snapping.
+     *
+     * The world origin used for rendering will snap to a grid of this size. 
+     * This avoids recomputing all transforms every frame when the camera moves within a grid cell.
+     *
+     * Hysteresis is applied automatically to avoid rapid snapping near edges.
+     *
+     * @param size The size of the grid cell in world units. If set to 0 or negative,
+     *             the grid size is automatically calculated based on the camera frustum.
+     */
+    void setGridSize(double size) noexcept;
+
+    /**
+     * Returns the grid size used for grid-based world origin snapping.
+     * @return The grid size in world units. A value of 0 or negative means automatic calculation is enabled.
+     */
+    double getGridSize() const noexcept;
+
+    /**
+     * Returns the effective grid size used for grid-based world origin snapping.
+     * If grid size was set to 0 or negative, this returns the automatically calculated size.
+     * @return The effective grid size in world units.
+     */
+    double getEffectiveGridSize() const noexcept;
 
     /*
      * Set the shadow mapping technique this View uses.

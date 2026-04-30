@@ -38,6 +38,8 @@ TEST_COPTS = COMMON_COPTS + [
         "-Wno-self-assign",
         "-Wno-shadow",
         "-Wno-unused-parameter",
+        # Work around looseness in protobuf parse table generated code
+        "-Wno-implicit-int-conversion",
     ],
 })
 
@@ -58,8 +60,7 @@ def _merge_dicts(dicts):
         merged.update(d)
     return merged
 
-
-def ExtInst(name, target = "", prefix =""):
+def ExtInst(name, target = "", prefix = ""):
     """
     Returns a dictionary specifying the info needed to
     process an extended instruction set.
@@ -74,21 +75,19 @@ def ExtInst(name, target = "", prefix =""):
     Returns a dictionary with keys 'name', 'target', 'prefix' and the
     corresponding values.
     """
-    return {'name':name, 'target':target, 'prefix':prefix}
-
+    return {"name": name, "target": target, "prefix": prefix}
 
 def _extinst_grammar_target(e):
     """
     Args: e, as returned from extinst
     Returns the SPIRV-Headers target for the given extended instruction set spec.
     """
-    target = e['target']
-    name = e['name']
+    target = e["target"]
+    name = e["name"]
     if len(target) > 0:
         return "@spirv_headers//:{}".format(target)
     name_part = name.replace("-", "_").replace(".", "_")
     return "@spirv_headers//:spirv_ext_inst_{}_grammar_unified1".format(name_part)
-
 
 def create_grammar_tables_target(name, extinsts):
     """
@@ -109,7 +108,7 @@ def create_grammar_tables_target(name, extinsts):
     )
     extinst_args = []
     for e in extinsts:
-        extinst_args.append('--extinst={},$(location {})'.format(e['prefix'],_extinst_grammar_target(e)))
+        extinst_args.append("--extinst={},$(location {})".format(e["prefix"], _extinst_grammar_target(e)))
 
     cmd = (
         "$(location :ggt)" +

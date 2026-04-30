@@ -34,8 +34,6 @@
 #                       Do not modify this file directly
 ################################################################################
 
-include(lang/spirv/reader/ast_lower/BUILD.cmake)
-include(lang/spirv/reader/ast_parser/BUILD.cmake)
 include(lang/spirv/reader/common/BUILD.cmake)
 include(lang/spirv/reader/lower/BUILD.cmake)
 include(lang/spirv/reader/parser/BUILD.cmake)
@@ -58,10 +56,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader lib
   tint_lang_core_ir
   tint_lang_core_type
   tint_lang_spirv_reader_lower
-  tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -80,7 +74,6 @@ tint_target_add_external_dependencies(tint_lang_spirv_reader lib
 
 if(TINT_BUILD_SPV_READER)
   tint_target_add_dependencies(tint_lang_spirv_reader lib
-    tint_lang_spirv_reader_ast_parser
     tint_lang_spirv_reader_common
     tint_lang_spirv_reader_parser
   )
@@ -106,10 +99,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader_test test
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_type
-  tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

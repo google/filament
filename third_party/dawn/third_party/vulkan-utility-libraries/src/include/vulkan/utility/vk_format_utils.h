@@ -93,11 +93,21 @@ enum VKU_FORMAT_COMPATIBILITY_CLASS {
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_10X8,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_12X10,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_12X12,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_3X3X3,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X3X3,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X3,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X4,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X4,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X4X4,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X4,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X5,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X5,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X5X5,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X5,
+    VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X6,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_8X5,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_8X6,
     VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_8X8,
@@ -131,204 +141,204 @@ enum VKU_FORMAT_COMPATIBILITY_CLASS {
 //     VK_IMAGE_ASPECT_PLANE_1_BIT -> 1
 //     VK_IMAGE_ASPECT_PLANE_2_BIT -> 2
 //     <any other value> -> VKU_FORMAT_INVALID_INDEX
-inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect);
+static inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect);
 
 // Returns whether a VkFormat is of the numerical format BOOL
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsBOOL(VkFormat format);
+static inline bool vkuFormatIsBOOL(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SFIXED5
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSFIXED5(VkFormat format);
+static inline bool vkuFormatIsSFIXED5(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SFLOAT
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSFLOAT(VkFormat format);
+static inline bool vkuFormatIsSFLOAT(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SINT
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSINT(VkFormat format);
+static inline bool vkuFormatIsSINT(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SNORM
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSNORM(VkFormat format);
+static inline bool vkuFormatIsSNORM(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SRGB
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSRGB(VkFormat format);
+static inline bool vkuFormatIsSRGB(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SSCALED
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsSSCALED(VkFormat format);
+static inline bool vkuFormatIsSSCALED(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format UFLOAT
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsUFLOAT(VkFormat format);
+static inline bool vkuFormatIsUFLOAT(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format UINT
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsUINT(VkFormat format);
+static inline bool vkuFormatIsUINT(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format UNORM
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsUNORM(VkFormat format);
+static inline bool vkuFormatIsUNORM(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format USCALED
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
-inline bool vkuFormatIsUSCALED(VkFormat format);
+static inline bool vkuFormatIsUSCALED(VkFormat format);
 
 // Returns whether the type of a VkFormat is a OpTypeInt (SPIR-V) from "Interpretation of Numeric Format" table
-inline bool vkuFormatIsSampledInt(VkFormat format);
+static inline bool vkuFormatIsSampledInt(VkFormat format);
 
 // Returns whether the type of a VkFormat is a OpTypeFloat (SPIR-V) from "Interpretation of Numeric Format" table
-inline bool vkuFormatIsSampledFloat(VkFormat format);
+static inline bool vkuFormatIsSampledFloat(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type ASTC_HDR
-inline bool vkuFormatIsCompressed_ASTC_HDR(VkFormat format);
+static inline bool vkuFormatIsCompressed_ASTC_HDR(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type ASTC_LDR
-inline bool vkuFormatIsCompressed_ASTC_LDR(VkFormat format);
+static inline bool vkuFormatIsCompressed_ASTC_LDR(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type BC
-inline bool vkuFormatIsCompressed_BC(VkFormat format);
+static inline bool vkuFormatIsCompressed_BC(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type EAC
-inline bool vkuFormatIsCompressed_EAC(VkFormat format);
+static inline bool vkuFormatIsCompressed_EAC(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type ETC2
-inline bool vkuFormatIsCompressed_ETC2(VkFormat format);
+static inline bool vkuFormatIsCompressed_ETC2(VkFormat format);
 
 // Returns whether a VkFormat is a compressed format of type PVRTC
-inline bool vkuFormatIsCompressed_PVRTC(VkFormat format);
+static inline bool vkuFormatIsCompressed_PVRTC(VkFormat format);
 
 // Returns whether a VkFormat is of any compressed format type
-inline bool vkuFormatIsCompressed(VkFormat format);
+static inline bool vkuFormatIsCompressed(VkFormat format);
 
 // Returns whether a VkFormat is either a depth or stencil format
-inline bool vkuFormatIsDepthOrStencil(VkFormat format);
+static inline bool vkuFormatIsDepthOrStencil(VkFormat format);
 
 // Returns whether a VkFormat is a depth and stencil format
-inline bool vkuFormatIsDepthAndStencil(VkFormat format);
+static inline bool vkuFormatIsDepthAndStencil(VkFormat format);
 
 // Returns whether a VkFormat is a depth only format
-inline bool vkuFormatIsDepthOnly(VkFormat format);
+static inline bool vkuFormatIsDepthOnly(VkFormat format);
 
 // Returns whether a VkFormat is a stencil only format
-inline bool vkuFormatIsStencilOnly(VkFormat format);
+static inline bool vkuFormatIsStencilOnly(VkFormat format);
 
 // Returns whether a VkFormat has a depth component
-inline bool vkuFormatHasDepth(VkFormat format) { return (vkuFormatIsDepthOnly(format) || vkuFormatIsDepthAndStencil(format)); }
+static inline bool vkuFormatHasDepth(VkFormat format) { return (vkuFormatIsDepthOnly(format) || vkuFormatIsDepthAndStencil(format)); }
 
 // Returns whether a VkFormat has a stencil component
-inline bool vkuFormatHasStencil(VkFormat format) { return (vkuFormatIsStencilOnly(format) || vkuFormatIsDepthAndStencil(format)); }
+static inline bool vkuFormatHasStencil(VkFormat format) { return (vkuFormatIsStencilOnly(format) || vkuFormatIsDepthAndStencil(format)); }
 
 // Returns the size of the depth component in bits if it has one. Otherwise it returns 0
-inline uint32_t vkuFormatDepthSize(VkFormat format);
+static inline uint32_t vkuFormatDepthSize(VkFormat format);
 
 // Returns the size of the stencil component in bits if it has one. Otherwise it returns 0
-inline uint32_t vkuFormatStencilSize(VkFormat format);
+static inline uint32_t vkuFormatStencilSize(VkFormat format);
 
 // Returns the numerical type of the depth component if it has one.  Otherwise it returns VKU_FORMAT_NUMERICAL_TYPE_NONE
-inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatDepthNumericalType(VkFormat format);
+static inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatDepthNumericalType(VkFormat format);
 
 // Returns the numerical type of the stencil component if it has one.  Otherwise it returns VKU_FORMAT_NUMERICAL_TYPE_NONE
-inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatStencilNumericalType(VkFormat format);
+static inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatStencilNumericalType(VkFormat format);
 
 // Returns whether a VkFormat is packed
-inline bool vkuFormatIsPacked(VkFormat format);
+static inline bool vkuFormatIsPacked(VkFormat format);
 
 // Returns whether a VkFormat is YCbCr
 // This corresponds to formats with _444, _422, or _420 in their name
-inline bool vkuFormatRequiresYcbcrConversion(VkFormat format);
+static inline bool vkuFormatRequiresYcbcrConversion(VkFormat format);
 
 // Returns whether a VkFormat is XChromaSubsampled
 // This corresponds to formats with _422 or 420 in their name
-inline bool vkuFormatIsXChromaSubsampled(VkFormat format);
+static inline bool vkuFormatIsXChromaSubsampled(VkFormat format);
 
 // Returns whether a VkFormat is YChromaSubsampled
 // This corresponds to formats with _420 in their name
-inline bool vkuFormatIsYChromaSubsampled(VkFormat format);
+static inline bool vkuFormatIsYChromaSubsampled(VkFormat format);
 
 // Returns whether a VkFormat is Multiplane
 // Single-plane "_422" formats are treated as 2x1 compressed (for copies)
-inline bool vkuFormatIsSinglePlane_422(VkFormat format);
+static inline bool vkuFormatIsSinglePlane_422(VkFormat format);
 
 // Returns number of planes in format (which is 1 by default)
-inline uint32_t vkuFormatPlaneCount(VkFormat format);
+static inline uint32_t vkuFormatPlaneCount(VkFormat format);
 
 // Returns whether a VkFormat is multiplane
 // Note - Formats like VK_FORMAT_G8B8G8R8_422_UNORM are NOT multi-planar, they require a
 //        VkSamplerYcbcrConversion and you should use vkuFormatRequiresYcbcrConversion instead
-inline bool vkuFormatIsMultiplane(VkFormat format) { return ((vkuFormatPlaneCount(format)) > 1u); }
+static inline bool vkuFormatIsMultiplane(VkFormat format) { return ((vkuFormatPlaneCount(format)) > 1u); }
 
 // Returns a VkFormat that is compatible with a given plane of a multiplane format
 // Will return VK_FORMAT_UNDEFINED if given a plane aspect that doesn't exist for the format
-inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
+static inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
 
 // Returns the extent divisors of a multiplane format given a plane
 // Will return {1, 1} if given a plane aspect that doesn't exist for the VkFormat
-inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
+static inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
 
 // From table in spec vkspec.html#formats-compatible-zs-color
 // Introduced in VK_KHR_maintenance8 to allow copying between color and depth/stencil formats
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask);
+static inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask);
 
 // Returns the count of components in a VkFormat
-inline uint32_t vkuFormatComponentCount(VkFormat format);
+static inline uint32_t vkuFormatComponentCount(VkFormat format);
 
 // Returns the texel block extent of a VkFormat
-inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format);
+static inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format);
 
 // Returns the Compatibility Class of a VkFormat as defined by the spec
-inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format);
+static inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format);
 
 // Returns the number of texels inside a texel block
 // Will always be 1 when not using compressed block formats
-inline uint32_t vkuFormatTexelsPerBlock(VkFormat format);
+static inline uint32_t vkuFormatTexelsPerBlock(VkFormat format);
 
 // Returns the number of bytes in a single Texel Block.
 // When dealing with a depth/stencil format, need to consider using vkuFormatStencilSize or vkuFormatDepthSize.
 // When dealing with mulit-planar formats, need to consider using vkuGetPlaneIndex.
-inline uint32_t vkuFormatTexelBlockSize(VkFormat format);
+static inline uint32_t vkuFormatTexelBlockSize(VkFormat format);
 
 // Returns whether a VkFormat contains only 8-bit sized components
-inline bool vkuFormatIs8bit(VkFormat format);
+static inline bool vkuFormatIs8bit(VkFormat format);
 
 // Returns whether a VkFormat contains only 16-bit sized components
-inline bool vkuFormatIs16bit(VkFormat format);
+static inline bool vkuFormatIs16bit(VkFormat format);
 
 // Returns whether a VkFormat contains only 32-bit sized components
-inline bool vkuFormatIs32bit(VkFormat format);
+static inline bool vkuFormatIs32bit(VkFormat format);
 
 // Returns whether a VkFormat contains only 64-bit sized components
-inline bool vkuFormatIs64bit(VkFormat format);
+static inline bool vkuFormatIs64bit(VkFormat format);
 
 // Returns whether a VkFormat has a component of a given size
-inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size);
+static inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size);
 
 // Returns whether a VkFormat has a Red color component
-inline bool vkuFormatHasRed(VkFormat format);
+static inline bool vkuFormatHasRed(VkFormat format);
 
 // Returns whether a VkFormat has a Green color component
-inline bool vkuFormatHasGreen(VkFormat format);
+static inline bool vkuFormatHasGreen(VkFormat format);
 
 // Returns whether a VkFormat has a Blue color component
-inline bool vkuFormatHasBlue(VkFormat format);
+static inline bool vkuFormatHasBlue(VkFormat format);
 
 // Returns whether a VkFormat has a Alpha color component
-inline bool vkuFormatHasAlpha(VkFormat format);
+static inline bool vkuFormatHasAlpha(VkFormat format);
 
 // Returns whether a VkFormat is equal to VK_FORMAT_UNDEFINED
-inline bool vkuFormatIsUndefined(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
+static inline bool vkuFormatIsUndefined(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
 
 // Returns whether a VkFormat is a "blocked image" as defined in the spec (vkspec.html#blocked-image)
-inline bool vkuFormatIsBlockedImage(VkFormat format) {
+static inline bool vkuFormatIsBlockedImage(VkFormat format) {
     return (vkuFormatIsCompressed(format) || vkuFormatIsSinglePlane_422(format));
 }
 
 // Returns whether a VkFormat is a "color format'. Because there is no official specification definition of
 // "color format", it is defined here as anything that isn't a depth/stencil format, multiplane format, or the undefined format.
-inline bool vkuFormatIsColor(VkFormat format) {
+static inline bool vkuFormatIsColor(VkFormat format) {
     return !(vkuFormatIsUndefined(format) || vkuFormatIsDepthOrStencil(format) || vkuFormatIsMultiplane(format));
 }
 
@@ -359,7 +369,7 @@ struct VKU_FORMAT_INFO {
     uint32_t component_count;
     struct VKU_FORMAT_COMPONENT_INFO components[VKU_FORMAT_MAX_COMPONENTS];
 };
-const struct VKU_FORMAT_INFO vku_formats[265] = {
+const struct VKU_FORMAT_INFO vku_formats[298] = {
     { VKU_FORMAT_COMPATIBILITY_CLASS_NONE, 0, 0, {0, 0, 0}, 0, {} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}, {VKU_FORMAT_COMPONENT_TYPE_A, 4}} },
@@ -601,12 +611,45 @@ const struct VKU_FORMAT_INFO vku_formats[265] = {
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_3PLANE_422, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 16}, {VKU_FORMAT_COMPONENT_TYPE_B, 16}, {VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_2PLANE_422, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 16}, {VKU_FORMAT_COMPONENT_TYPE_B, 16}, {VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_3PLANE_444, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 16}, {VKU_FORMAT_COMPONENT_TYPE_B, 16}, {VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_3X3X3, 16, 27, {3, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_3X3X3, 16, 27, {3, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_3X3X3, 16, 27, {3, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X3X3, 16, 36, {4, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X3X3, 16, 36, {4, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X3X3, 16, 36, {4, 3, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X3, 16, 48, {4, 4, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X3, 16, 48, {4, 4, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X3, 16, 48, {4, 4, 3}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X4, 16, 64, {4, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X4, 16, 64, {4, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_4X4X4, 16, 64, {4, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X4X4, 16, 80, {5, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X4X4, 16, 80, {5, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X4X4, 16, 80, {5, 4, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X4, 16, 100, {5, 5, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X4, 16, 100, {5, 5, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X4, 16, 100, {5, 5, 4}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X5, 16, 125, {5, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X5, 16, 125, {5, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_5X5X5, 16, 125, {5, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X5X5, 16, 150, {6, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X5X5, 16, 150, {6, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X5X5, 16, 150, {6, 5, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X5, 16, 180, {6, 6, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X5, 16, 180, {6, 6, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X5, 16, 180, {6, 6, 5}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X6, 16, 216, {6, 6, 6}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X6, 16, 216, {6, 6, 6}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_ASTC_6X6X6, 16, 216, {6, 6, 6}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_G, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_B, VKU_FORMAT_COMPRESSED_COMPONENT}, {VKU_FORMAT_COMPONENT_TYPE_A, VKU_FORMAT_COMPRESSED_COMPONENT}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT_2PLANE_444, 3, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 8}, {VKU_FORMAT_COMPONENT_TYPE_B, 8}, {VKU_FORMAT_COMPONENT_TYPE_R, 8}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_10BIT_2PLANE_444, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 10}, {VKU_FORMAT_COMPONENT_TYPE_B, 10}, {VKU_FORMAT_COMPONENT_TYPE_R, 10}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_12BIT_2PLANE_444, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 12}, {VKU_FORMAT_COMPONENT_TYPE_B, 12}, {VKU_FORMAT_COMPONENT_TYPE_R, 12}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_2PLANE_444, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 16}, {VKU_FORMAT_COMPONENT_TYPE_B, 16}, {VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 4}, {VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_R, 4}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 8}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 8}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 8}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 16}, {VKU_FORMAT_COMPONENT_TYPE_G, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 1}, {VKU_FORMAT_COMPONENT_TYPE_B, 5}, {VKU_FORMAT_COMPONENT_TYPE_G, 5}, {VKU_FORMAT_COMPONENT_TYPE_R, 5}} },
@@ -626,17 +669,18 @@ const struct VKU_FORMAT_INFO vku_formats[265] = {
     { VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_420, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_422, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
 };
-inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {
+static inline struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {
     if (VK_FORMAT_UNDEFINED <= format && format <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK ) { return vku_formats[format - VK_FORMAT_UNDEFINED + 0]; }
     else if (VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG <= format && format <= VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG ) { return vku_formats[format - VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG + 185]; }
     else if (VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK <= format && format <= VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK ) { return vku_formats[format - VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK + 193]; }
     else if (VK_FORMAT_G8B8G8R8_422_UNORM <= format && format <= VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM ) { return vku_formats[format - VK_FORMAT_G8B8G8R8_422_UNORM + 207]; }
-    else if (VK_FORMAT_G8_B8R8_2PLANE_444_UNORM <= format && format <= VK_FORMAT_G16_B16R16_2PLANE_444_UNORM ) { return vku_formats[format - VK_FORMAT_G8_B8R8_2PLANE_444_UNORM + 241]; }
-    else if (VK_FORMAT_A4R4G4B4_UNORM_PACK16 <= format && format <= VK_FORMAT_A4B4G4R4_UNORM_PACK16 ) { return vku_formats[format - VK_FORMAT_A4R4G4B4_UNORM_PACK16 + 245]; }
-    else if (VK_FORMAT_R8_BOOL_ARM <= format && format <= VK_FORMAT_R8_BOOL_ARM ) { return vku_formats[format - VK_FORMAT_R8_BOOL_ARM + 247]; }
-    else if (VK_FORMAT_R16G16_SFIXED5_NV <= format && format <= VK_FORMAT_R16G16_SFIXED5_NV ) { return vku_formats[format - VK_FORMAT_R16G16_SFIXED5_NV + 248]; }
-    else if (VK_FORMAT_A1B5G5R5_UNORM_PACK16 <= format && format <= VK_FORMAT_A8_UNORM ) { return vku_formats[format - VK_FORMAT_A1B5G5R5_UNORM_PACK16 + 249]; }
-    else if (VK_FORMAT_R10X6_UINT_PACK16_ARM <= format && format <= VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM ) { return vku_formats[format - VK_FORMAT_R10X6_UINT_PACK16_ARM + 251]; }
+    else if (VK_FORMAT_ASTC_3x3x3_UNORM_BLOCK_EXT <= format && format <= VK_FORMAT_ASTC_6x6x6_SFLOAT_BLOCK_EXT ) { return vku_formats[format - VK_FORMAT_ASTC_3x3x3_UNORM_BLOCK_EXT + 241]; }
+    else if (VK_FORMAT_G8_B8R8_2PLANE_444_UNORM <= format && format <= VK_FORMAT_G16_B16R16_2PLANE_444_UNORM ) { return vku_formats[format - VK_FORMAT_G8_B8R8_2PLANE_444_UNORM + 271]; }
+    else if (VK_FORMAT_A4R4G4B4_UNORM_PACK16 <= format && format <= VK_FORMAT_A4B4G4R4_UNORM_PACK16 ) { return vku_formats[format - VK_FORMAT_A4R4G4B4_UNORM_PACK16 + 275]; }
+    else if (VK_FORMAT_R8_BOOL_ARM <= format && format <= VK_FORMAT_R8_SFLOAT_FPENCODING_FLOAT8E5M2_ARM ) { return vku_formats[format - VK_FORMAT_R8_BOOL_ARM + 277]; }
+    else if (VK_FORMAT_R16G16_SFIXED5_NV <= format && format <= VK_FORMAT_R16G16_SFIXED5_NV ) { return vku_formats[format - VK_FORMAT_R16G16_SFIXED5_NV + 281]; }
+    else if (VK_FORMAT_A1B5G5R5_UNORM_PACK16 <= format && format <= VK_FORMAT_A8_UNORM ) { return vku_formats[format - VK_FORMAT_A1B5G5R5_UNORM_PACK16 + 282]; }
+    else if (VK_FORMAT_R10X6_UINT_PACK16_ARM <= format && format <= VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM ) { return vku_formats[format - VK_FORMAT_R10X6_UINT_PACK16_ARM + 284]; }
     // Default case - return VK_FORMAT_UNDEFINED
     else {
         return vku_formats[0];
@@ -655,7 +699,7 @@ struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY {
 };
 
 // Source: Vulkan spec Table 47. Plane Format Compatibility Table
-inline const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY vkuGetFormatCompatibility(VkFormat format) {
+static inline struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY vkuGetFormatCompatibility(VkFormat format) {
     switch (format) {
         case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM: {
             struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY out = {{{1, 1, VK_FORMAT_R8_UNORM }, {2, 2, VK_FORMAT_R8_UNORM }, {2, 2, VK_FORMAT_R8_UNORM }}};
@@ -792,6 +836,19 @@ bool vkuFormatIsSFLOAT(VkFormat format) {
         case VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_3x3x3_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x3_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x4x4_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x4_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x5x5_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x5_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_R16_SFLOAT_FPENCODING_BFLOAT16_ARM:
+        case VK_FORMAT_R8_SFLOAT_FPENCODING_FLOAT8E4M3_ARM:
+        case VK_FORMAT_R8_SFLOAT_FPENCODING_FLOAT8E5M2_ARM:
             return true;
         default:
             return false;
@@ -890,6 +947,16 @@ bool vkuFormatIsSRGB(VkFormat format) {
         case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
         case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
         case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+        case VK_FORMAT_ASTC_3x3x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x4x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x5x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_SRGB_BLOCK_EXT:
             return true;
         default:
             return false;
@@ -1062,6 +1129,16 @@ bool vkuFormatIsUNORM(VkFormat format) {
         case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
         case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
         case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
+        case VK_FORMAT_ASTC_3x3x3_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x3_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x4x4_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x4_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x5x5_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x5_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_UNORM_BLOCK_EXT:
         case VK_FORMAT_G8_B8R8_2PLANE_444_UNORM:
         case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
@@ -1101,8 +1178,8 @@ bool vkuFormatIsUSCALED(VkFormat format) {
     }
 }
 
-inline bool vkuFormatIsSampledInt(VkFormat format) { return (vkuFormatIsSINT(format) || vkuFormatIsUINT(format)); }
-inline bool vkuFormatIsSampledFloat(VkFormat format) {
+static inline bool vkuFormatIsSampledInt(VkFormat format) { return (vkuFormatIsSINT(format) || vkuFormatIsUINT(format)); }
+static inline bool vkuFormatIsSampledFloat(VkFormat format) {
     return (vkuFormatIsUNORM(format) || vkuFormatIsSNORM(format) ||
             vkuFormatIsUSCALED(format) || vkuFormatIsSSCALED(format) ||
             vkuFormatIsUFLOAT(format) || vkuFormatIsSFLOAT(format) ||
@@ -1118,11 +1195,21 @@ bool vkuFormatIsCompressed_ASTC_HDR(VkFormat format) {
         case VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_3x3x3_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_4x4x3_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_5x4x4_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_5x5x4_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_6x5x5_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK:
+        case VK_FORMAT_ASTC_6x6x5_SFLOAT_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_SFLOAT_BLOCK_EXT:
         case VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK:
         case VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK:
@@ -1147,16 +1234,36 @@ bool vkuFormatIsCompressed_ASTC_LDR(VkFormat format) {
         case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
         case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
         case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_3x3x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_3x3x3_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x3x3_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
         case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_4x4x3_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x3_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_4x4x4_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
         case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x4x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x4x4_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
         case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_5x5x4_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x4_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_5x5x5_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
         case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x5x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x5x5_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
         case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+        case VK_FORMAT_ASTC_6x6x5_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x5_UNORM_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_SRGB_BLOCK_EXT:
+        case VK_FORMAT_ASTC_6x6x6_UNORM_BLOCK_EXT:
         case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
         case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
         case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
@@ -1589,7 +1696,7 @@ uint32_t vkuFormatPlaneCount(VkFormat format) {
 }
 
 // Will return VK_FORMAT_UNDEFINED if given a plane aspect that doesn't exist for the format
-inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
+static inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
     const uint32_t plane_idx = vkuGetPlaneIndex(plane_aspect);
     const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY multiplane_compatibility = vkuGetFormatCompatibility(mp_fmt);
     if ((multiplane_compatibility.per_plane[0].compatible_format == VK_FORMAT_UNDEFINED) || (plane_idx >= VKU_FORMAT_MAX_PLANES)) {
@@ -1599,7 +1706,7 @@ inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspect
     return multiplane_compatibility.per_plane[plane_idx].compatible_format;
 }
 
-inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
+static inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
     VkExtent2D divisors = {1, 1};
     const uint32_t plane_idx = vkuGetPlaneIndex(plane_aspect);
     const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY multiplane_compatibility = vkuGetFormatCompatibility(mp_fmt);
@@ -1614,7 +1721,7 @@ inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspect
 
 // TODO - This should be generated, but will need updating the spec XML and table
 // Some few case don't have an aspect mask, so might need to check both the Depth and Stencil possiblity
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask) {
+static inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask) {
     bool valid = false;
 
     if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
@@ -1639,17 +1746,17 @@ inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format
     return valid;
 }
 
-inline uint32_t vkuFormatComponentCount(VkFormat format) { return vkuGetFormatInfo(format).component_count; }
+static inline uint32_t vkuFormatComponentCount(VkFormat format) { return vkuGetFormatInfo(format).component_count; }
 
-inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format) { return vkuGetFormatInfo(format).block_extent; }
+static inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format) { return vkuGetFormatInfo(format).block_extent; }
 
-inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format) { return vkuGetFormatInfo(format).compatibility; }
+static inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format) { return vkuGetFormatInfo(format).compatibility; }
 
-inline uint32_t vkuFormatTexelsPerBlock(VkFormat format) { return vkuGetFormatInfo(format).texels_per_block; }
+static inline uint32_t vkuFormatTexelsPerBlock(VkFormat format) { return vkuGetFormatInfo(format).texels_per_block; }
 
-inline uint32_t vkuFormatTexelBlockSize(VkFormat format) { return vkuGetFormatInfo(format).texel_block_size; }
+static inline uint32_t vkuFormatTexelBlockSize(VkFormat format) { return vkuGetFormatInfo(format).texel_block_size; }
 
-inline bool vkuFormatIs8bit(VkFormat format) {
+static inline bool vkuFormatIs8bit(VkFormat format) {
     switch (format) {
         case VK_FORMAT_A8_UNORM:
         case VK_FORMAT_R8_UNORM:
@@ -1711,12 +1818,14 @@ inline bool vkuFormatIs8bit(VkFormat format) {
         case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
         case VK_FORMAT_G8_B8R8_2PLANE_444_UNORM:
         case VK_FORMAT_R8_BOOL_ARM:
+        case VK_FORMAT_R8_SFLOAT_FPENCODING_FLOAT8E4M3_ARM:
+        case VK_FORMAT_R8_SFLOAT_FPENCODING_FLOAT8E5M2_ARM:
             return true;
         default:
             return false;
     }
 }
-inline bool vkuFormatIs16bit(VkFormat format) {
+static inline bool vkuFormatIs16bit(VkFormat format) {
     switch (format) {
         case VK_FORMAT_R16_UNORM:
         case VK_FORMAT_R16_SNORM:
@@ -1756,12 +1865,13 @@ inline bool vkuFormatIs16bit(VkFormat format) {
         case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM:
         case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
         case VK_FORMAT_R16G16_SFIXED5_NV:
+        case VK_FORMAT_R16_SFLOAT_FPENCODING_BFLOAT16_ARM:
             return true;
         default:
             return false;
     }
 }
-inline bool vkuFormatIs32bit(VkFormat format) {
+static inline bool vkuFormatIs32bit(VkFormat format) {
     switch (format) {
         case VK_FORMAT_R32_UINT:
         case VK_FORMAT_R32_SINT:
@@ -1781,7 +1891,7 @@ inline bool vkuFormatIs32bit(VkFormat format) {
             return false;
     }
 }
-inline bool vkuFormatIs64bit(VkFormat format) {
+static inline bool vkuFormatIs64bit(VkFormat format) {
     switch (format) {
         case VK_FORMAT_R64_UINT:
         case VK_FORMAT_R64_SINT:
@@ -1801,7 +1911,7 @@ inline bool vkuFormatIs64bit(VkFormat format) {
     }
 }
 
-inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
+static inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
     const struct VKU_FORMAT_INFO format_info = vkuGetFormatInfo(format);
     bool equal_component_size = false;
     for (size_t i = 0; i < VKU_FORMAT_MAX_COMPONENTS; i++) {
@@ -1810,7 +1920,7 @@ inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
     return equal_component_size;
 }
 
-inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT_TYPE component) {
+static inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT_TYPE component) {
     const struct VKU_FORMAT_INFO format_info = vkuGetFormatInfo(format);
     bool equal_component_type = false;
     for (size_t i = 0; i < VKU_FORMAT_MAX_COMPONENTS; i++) {
@@ -1819,15 +1929,15 @@ inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT
     return equal_component_type;
 }
 
-inline bool vkuFormatHasRed(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_R); }
+static inline bool vkuFormatHasRed(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_R); }
 
-inline bool vkuFormatHasGreen(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_G); }
+static inline bool vkuFormatHasGreen(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_G); }
 
-inline bool vkuFormatHasBlue(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_B); }
+static inline bool vkuFormatHasBlue(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_B); }
 
-inline bool vkuFormatHasAlpha(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_A); }
+static inline bool vkuFormatHasAlpha(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_A); }
 
-inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect) {
+static inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect) {
     switch (aspect) {
         case VK_IMAGE_ASPECT_PLANE_0_BIT:
             return 0;

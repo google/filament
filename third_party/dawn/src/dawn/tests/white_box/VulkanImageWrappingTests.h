@@ -35,9 +35,8 @@
 
 // This must be above all other includes otherwise VulkanBackend.h includes vulkan.h before we had
 // time to wrap it with vulkan_platform.h
-#include "dawn/common/vulkan_platform.h"
-
 #include "dawn/common/NonCopyable.h"
+#include "dawn/common/vulkan_platform.h"
 #include "dawn/native/VulkanBackend.h"
 
 namespace dawn::native::vulkan {

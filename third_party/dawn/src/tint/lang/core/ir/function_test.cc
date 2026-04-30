@@ -25,9 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/ir/function.h"
+
 #include <string>
 
-#include "src/tint/lang/core/ir/function.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 
 namespace tint::core::ir {
@@ -142,6 +143,14 @@ TEST_F(IR_FunctionTest, CloneWithExits) {
     EXPECT_EQ(1u, new_f->Block()->Length());
     EXPECT_TRUE(new_f->Block()->Front()->Is<Return>());
     EXPECT_EQ(new_f, new_f->Block()->Front()->As<Return>()->Func());
+}
+
+TEST_F(IR_FunctionTest, CloneWithoutName) {
+    auto* f = b.Function(mod.Types().void_());
+    b.Append(f->Block(), [&] { b.Return(f); });
+
+    auto* new_f = clone_ctx.Clone(f);
+    EXPECT_FALSE(mod.NameOf(new_f).IsValid());
 }
 
 TEST_F(IR_FunctionTest, Parameters) {

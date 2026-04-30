@@ -237,7 +237,7 @@ void ShaderCompilerService::init() noexcept {
         uint32_t poolSize = 1;
         JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
 
-        auto const& renderer = mDriver.getContext().state.renderer;
+        auto const& renderer = mDriver.getContext().renderer;
         // Some drivers support parallel shader compilation well, so we use N
         // threads, we can use lower priority threads here because urgent compilations
         // will most likely happen on the main gl thread. Using too many thread can
@@ -367,14 +367,15 @@ void ShaderCompilerService::compileProgram(
                                     << " failed to link or compile";
 #endif
                         }
+                        // The program blob is cached prior to signaling to ensure data integrity.
+                        // Since the receiving thread may immediately modify gl.program (e.g., via
+                        // glUniformBlockBinding) upon receipt of the signal, caching must be
+                        // finalized first.
+                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
-                        // We try caching the program blob after sending the signal. This allows us
-                        // to unblock the engine thread as soon as the token is ready while
-                        // performing an expensive caching operation still in the pool.
-                        tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
                         // Updates the token's state. If the token is canceled while this function
                         // executes, this update notifies `tick` that GL resource loading is
                         // complete, allowing `tick` to proceed with resource destruction.

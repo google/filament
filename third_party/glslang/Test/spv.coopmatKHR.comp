@@ -28,6 +28,7 @@ layout(set = 0, binding = 0, buffer_reference) coherent buffer Block {
 } block;
 
 layout(set = 0, binding = 0) coherent buffer Block16 {
+    float16_t arr[256][256];
     float16_t y[1024*1024];
     float16_t x[];
 
@@ -108,6 +109,9 @@ void main()
     coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> ms;
     coopMatLoad(ms, shmatrix, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
     coopMatStore(ms, shmatrix, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopMatLoad(ms, block16.arr[8], 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(ms, block16.arr[16], 1, 2, gl_CooperativeMatrixLayoutRowMajor);
 
     coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> ms8A;
     coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseB> ms8B;

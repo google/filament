@@ -35,7 +35,6 @@
 ################################################################################
 
 include(lang/hlsl/writer/common/BUILD.cmake)
-include(lang/hlsl/writer/helpers/BUILD.cmake)
 include(lang/hlsl/writer/printer/BUILD.cmake)
 include(lang/hlsl/writer/raise/BUILD.cmake)
 
@@ -54,6 +53,7 @@ tint_target_add_dependencies(tint_lang_hlsl_writer lib
   tint_api_common
   tint_lang_core
   tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_type
@@ -92,6 +92,7 @@ tint_add_target(tint_lang_hlsl_writer_test test
   lang/hlsl/writer/constant_test.cc
   lang/hlsl/writer/construct_test.cc
   lang/hlsl/writer/convert_test.cc
+  lang/hlsl/writer/dynamic_offset_test.cc
   lang/hlsl/writer/function_test.cc
   lang/hlsl/writer/helper_test.h
   lang/hlsl/writer/if_test.cc
@@ -148,13 +149,13 @@ tint_add_target(tint_lang_hlsl_writer_fuzz fuzz
 
 tint_target_add_dependencies(tint_lang_hlsl_writer_fuzz fuzz
   tint_api_common
+  tint_api_helpers
   tint_cmd_fuzz_ir_fuzz
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_type
   tint_lang_hlsl_writer_common
-  tint_lang_hlsl_writer_helpers
   tint_lang_hlsl_writer_printer
   tint_utils
   tint_utils_bytes

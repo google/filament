@@ -25,15 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/core/enums.h"
-#include "src/tint/lang/core/type/depth_texture.h"
-#include "src/tint/lang/core/type/multisampled_texture.h"
-#include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/writer/ast_printer/helper_test.h"
 #include "src/tint/utils/text/string_stream.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::wgsl::writer {
 namespace {
@@ -64,17 +60,6 @@ TEST_F(WgslASTPrinterTest, EmitType_Array) {
     gen.EmitExpression(out, type);
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
     EXPECT_EQ(out.str(), "array<bool, 4u>");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_Array_Attribute) {
-    auto type = Alias("make_type_reachable", ty.array(ty.bool_(), 4_u, Vector{Stride(16)}))->type;
-
-    ASTPrinter& gen = Build();
-
-    StringStream out;
-    gen.EmitExpression(out, type);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(out.str(), "@stride(16) array<bool, 4u>");
 }
 
 TEST_F(WgslASTPrinterTest, EmitType_RuntimeArray) {
@@ -193,113 +178,6 @@ TEST_F(WgslASTPrinterTest, EmitType_Struct) {
     gen.EmitExpression(out, type);
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
     EXPECT_EQ(out.str(), "S");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_StructOffsetDecl) {
-    auto* s = Structure("S", Vector{
-                                 Member("a", ty.i32(), Vector{MemberOffset(8_a)}),
-                                 Member("b", ty.f32(), Vector{MemberOffset(16_a)}),
-                             });
-
-    ASTPrinter& gen = Build();
-
-    gen.EmitStructType(s);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(gen.Result(), R"(struct S {
-  @size(8)
-  padding_0 : u32,
-  /* @offset(8) */
-  a : i32,
-  @size(4)
-  padding_1 : u32,
-  /* @offset(16) */
-  b : f32,
-}
-)");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_StructOffsetDecl_ExceedStaticVectorSize) {
-    auto* s = Structure("S", Vector{
-                                 Member("a", ty.i32(), Vector{MemberOffset(i32(8 * 0))}),
-                                 Member("b", ty.i32(), Vector{MemberOffset(i32(8 * 1))}),
-                                 Member("c", ty.i32(), Vector{MemberOffset(i32(8 * 2))}),
-                                 Member("d", ty.i32(), Vector{MemberOffset(i32(8 * 3))}),
-                                 Member("e", ty.i32(), Vector{MemberOffset(i32(8 * 4))}),
-                                 Member("f", ty.i32(), Vector{MemberOffset(i32(8 * 5))}),
-                                 Member("g", ty.i32(), Vector{MemberOffset(i32(8 * 6))}),
-                                 Member("h", ty.i32(), Vector{MemberOffset(i32(8 * 7))}),
-                                 Member("i", ty.i32(), Vector{MemberOffset(i32(8 * 8))}),
-                                 Member("j", ty.i32(), Vector{MemberOffset(i32(8 * 9))}),
-                             });
-
-    ASTPrinter& gen = Build();
-
-    gen.EmitStructType(s);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(gen.Result(), R"(struct S {
-  /* @offset(0i) */
-  a : i32,
-  @size(4)
-  padding_0 : u32,
-  /* @offset(8i) */
-  b : i32,
-  @size(4)
-  padding_1 : u32,
-  /* @offset(16i) */
-  c : i32,
-  @size(4)
-  padding_2 : u32,
-  /* @offset(24i) */
-  d : i32,
-  @size(4)
-  padding_3 : u32,
-  /* @offset(32i) */
-  e : i32,
-  @size(4)
-  padding_4 : u32,
-  /* @offset(40i) */
-  f : i32,
-  @size(4)
-  padding_5 : u32,
-  /* @offset(48i) */
-  g : i32,
-  @size(4)
-  padding_6 : u32,
-  /* @offset(56i) */
-  h : i32,
-  @size(4)
-  padding_7 : u32,
-  /* @offset(64i) */
-  i : i32,
-  @size(4)
-  padding_8 : u32,
-  /* @offset(72i) */
-  j : i32,
-}
-)");
-}
-
-TEST_F(WgslASTPrinterTest, EmitType_StructOffsetDecl_WithSymbolCollisions) {
-    auto* s = Structure("S", Vector{
-                                 Member("tint_0_padding", ty.i32(), Vector{MemberOffset(8_a)}),
-                                 Member("tint_2_padding", ty.f32(), Vector{MemberOffset(16_a)}),
-                             });
-
-    ASTPrinter& gen = Build();
-
-    gen.EmitStructType(s);
-    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
-    EXPECT_EQ(gen.Result(), R"(struct S {
-  @size(8)
-  padding_0 : u32,
-  /* @offset(8) */
-  tint_0_padding : i32,
-  @size(4)
-  padding_1 : u32,
-  /* @offset(16) */
-  tint_2_padding : f32,
-}
-)");
 }
 
 TEST_F(WgslASTPrinterTest, EmitType_StructAlignDecl) {
@@ -457,6 +335,34 @@ TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32) {
     gen.EmitExpression(out, type);
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
     EXPECT_EQ(out.str(), std::string(param.name) + "<f32>");
+}
+
+TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32_Filterable) {
+    auto param = GetParam();
+
+    auto t = ty.sampled_texture(param.dim, ty.f32(), core::TextureFilterable::kFilterable);
+    auto type = Alias("make_type_reachable", t)->type;
+
+    ASTPrinter& gen = Build();
+
+    StringStream out;
+    gen.EmitExpression(out, type);
+    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
+    EXPECT_EQ(out.str(), std::string(param.name) + "<f32, filterable>");
+}
+
+TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_F32_Unfilterable) {
+    auto param = GetParam();
+
+    auto t = ty.sampled_texture(param.dim, ty.f32(), core::TextureFilterable::kUnfilterable);
+    auto type = Alias("make_type_reachable", t)->type;
+
+    ASTPrinter& gen = Build();
+
+    StringStream out;
+    gen.EmitExpression(out, type);
+    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
+    EXPECT_EQ(out.str(), std::string(param.name) + "<f32, unfilterable>");
 }
 
 TEST_P(WgslGenerator_SampledTextureTest, EmitType_SampledTexture_I32) {
@@ -630,6 +536,30 @@ TEST_F(WgslASTPrinterTest, EmitType_Sampler) {
     gen.EmitExpression(out, type);
     EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
     EXPECT_EQ(out.str(), "sampler");
+}
+
+TEST_F(WgslASTPrinterTest, EmitType_SamplerFiltering) {
+    auto sampler = ty.sampler(core::SamplerFiltering::kFiltering);
+    auto type = Alias("make_type_reachable", sampler)->type;
+
+    ASTPrinter& gen = Build();
+
+    StringStream out;
+    gen.EmitExpression(out, type);
+    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
+    EXPECT_EQ(out.str(), "sampler<filtering>");
+}
+
+TEST_F(WgslASTPrinterTest, EmitType_SamplerNonFiltering) {
+    auto sampler = ty.sampler(core::SamplerFiltering::kNonFiltering);
+    auto type = Alias("make_type_reachable", sampler)->type;
+
+    ASTPrinter& gen = Build();
+
+    StringStream out;
+    gen.EmitExpression(out, type);
+    EXPECT_THAT(gen.Diagnostics(), testing::IsEmpty());
+    EXPECT_EQ(out.str(), "sampler<non_filtering>");
 }
 
 TEST_F(WgslASTPrinterTest, EmitType_SamplerComparison) {

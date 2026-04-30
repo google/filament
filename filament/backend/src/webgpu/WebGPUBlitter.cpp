@@ -717,7 +717,7 @@ wgpu::ShaderModule WebGPUBlitter::createShaderModule(ShaderModuleKey const& key)
         { DST_PRIM_TYPE, dstPrimType },
     });
 
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
+    wgpu::ShaderSourceWGSL wgslDescriptor{};
     wgslDescriptor.code = source.data();
     const wgpu::ShaderModuleDescriptor shaderModuleDescriptor{
         .nextInChain = &wgslDescriptor,

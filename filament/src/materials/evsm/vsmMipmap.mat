@@ -1,0 +1,55 @@
+material {
+    name : vsmMipmap,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : color,
+            precision: high
+        },
+        {
+            type : int,
+            name : layer
+        }
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4,
+            precision : high
+        }
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false,
+    culling: none
+}
+
+fragment {
+    void postProcess(inout PostProcessInputs postProcess) {
+        // For EVSM mipmapping, we use a custom box filter (instead of the GPU's bilinear filter), because GPUs often
+        // use a lower precision for texture interpolation and EVSM moments are very sensitive to that.
+
+        highp ivec2 destCoord = ivec2(gl_FragCoord.xy);
+        highp ivec3 srcCoord = ivec3(destCoord * 2, materialParams.layer);
+
+#if defined(TARGET_WEBGPU_ENVIRONMENT)
+        // it looks like WebGPU doesn't support texelFetchOffset
+        highp vec4 m0 = texelFetch(materialParams_color, ivec3(srcCoord.xy + ivec2(0, 0), srcCoord.z), 0);
+        highp vec4 m1 = texelFetch(materialParams_color, ivec3(srcCoord.xy + ivec2(1, 0), srcCoord.z), 0);
+        highp vec4 m2 = texelFetch(materialParams_color, ivec3(srcCoord.xy + ivec2(0, 1), srcCoord.z), 0);
+        highp vec4 m3 = texelFetch(materialParams_color, ivec3(srcCoord.xy + ivec2(1, 1), srcCoord.z), 0);
+#else
+        highp vec4 m0 = texelFetchOffset(materialParams_color, srcCoord, 0, ivec2(0, 0));
+        highp vec4 m1 = texelFetchOffset(materialParams_color, srcCoord, 0, ivec2(1, 0));
+        highp vec4 m2 = texelFetchOffset(materialParams_color, srcCoord, 0, ivec2(0, 1));
+        highp vec4 m3 = texelFetchOffset(materialParams_color, srcCoord, 0, ivec2(1, 1));
+#endif
+
+        // Make sure to not overflow the moments when averaging them
+        postProcess.color = (m0 * 0.25) +
+                            (m1 * 0.25) +
+                            (m2 * 0.25) +
+                            (m3 * 0.25);
+    }
+}

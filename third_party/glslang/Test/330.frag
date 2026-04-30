@@ -77,7 +77,7 @@ struct S2 {
 };
 
 layout(location = 28) in inblock2 {
-    bool b1;
+    bool b1;                              // ERROR
     float f1;
     layout(location = 25) float f2;
     vec4 f3;

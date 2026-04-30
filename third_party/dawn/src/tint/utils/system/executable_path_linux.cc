@@ -27,12 +27,12 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_linux)
 
-#include "src/tint/utils/system/executable_path.h"
-
 #include <unistd.h>
+
 #include <filesystem>
 
 #include "src/tint/utils/containers/vector.h"
+#include "src/tint/utils/system/executable_path.h"
 
 std::string tint::ExecutablePath() {
     tint::Vector<char, 1024> buff;

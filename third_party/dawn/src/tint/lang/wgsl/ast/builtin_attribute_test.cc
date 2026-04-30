@@ -37,6 +37,7 @@ using BuiltinAttributeDeathTest = BuiltinAttributeTest;
 TEST_F(BuiltinAttributeTest, Creation) {
     auto* d = Builtin(core::BuiltinValue::kFragDepth);
     EXPECT_EQ(d->builtin, core::BuiltinValue::kFragDepth);
+    EXPECT_EQ(d->depth_mode, core::BuiltinDepthMode::kUndefined);
 }
 
 }  // namespace

@@ -15,13 +15,9 @@ struct spvDescriptor
 template<typename T>
 struct spvDescriptorArray
 {
-    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
-    {
-    }
-    const device T& operator [] (size_t i) const
-    {
-        return ptr[i];
-    }
+    spvDescriptorArray(const device spvDescriptor<T>* ptr_) : ptr(&ptr_->value) {}
+    spvDescriptorArray(const device void *ptr_) : spvDescriptorArray(static_cast<const device spvDescriptor<T>*>(ptr_)) {}
+    const device T& operator [] (size_t i) const { return ptr[i]; }
     const device T* ptr;
 };
 
@@ -81,7 +77,7 @@ struct spvDescriptorSetBuffer0
 
 struct spvDescriptorSetBuffer1
 {
-    spvDescriptor<device B30 *> b30 [[id(0)]][1] /* unsized array hack */;
+    spvDescriptor<const device B30 *> b30 [[id(0)]][1] /* unsized array hack */;
     // Overlapping binding: spvDescriptor<constant B31 *> b31 [[id(0)]][1] /* unsized array hack */;
     // Overlapping binding: spvDescriptor<texture2d<float>> t30 [[id(0)]][1] /* unsized array hack */;
     // Overlapping binding: spvDescriptor<texture2d<uint>> t31 [[id(0)]][1] /* unsized array hack */;
@@ -92,7 +88,7 @@ struct spvDescriptorSetBuffer1
 
 struct spvDescriptorSetBuffer2
 {
-    device B20* b20 [[id(0)]][8];
+    const device B20* b20 [[id(0)]][8];
     // Overlapping binding: constant B21* b21 [[id(0)]][8];
     // Overlapping binding: array<texture2d<float>, 8> t20 [[id(0)]];
     // Overlapping binding: array<texture2d<uint>, 8> t21 [[id(0)]];
@@ -103,14 +99,14 @@ struct spvDescriptorSetBuffer2
 
 struct spvDescriptorSetBuffer3
 {
-    device B10* b10 [[id(0)]][8];
+    const device B10* b10 [[id(0)]][8];
     // Overlapping binding: constant B11* b11 [[id(0)]][8];
     // Overlapping binding: array<texture_buffer<uint, access::read_write>, 8> u1 [[id(0)]];
 };
 
 struct spvDescriptorSetBuffer4
 {
-    device B40* b40 [[id(0)]];
+    const device B40* b40 [[id(0)]];
     // Overlapping binding: constant B41* b41 [[id(0)]];
     // Overlapping binding: depth2d<float> t40 [[id(0)]];
     // Overlapping binding: texture2d<uint> t41 [[id(0)]];
@@ -120,7 +116,7 @@ struct spvDescriptorSetBuffer4
 };
 
 static inline __attribute__((always_inline))
-void in_function(thread float4& r0, const device array<texture2d<float>, 8>& t00, const device array<sampler, 8>& s00, const device array<texture2d<uint>, 8>& t01, const device array<texture2d<int>, 8>& t02, const device array<texture_buffer<uint, access::read_write>, 8>& u0, thread float4& r1, device B10* constant (&b10)[8], constant B11* constant (&b11)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u1, thread float4& r2, constant array<texture2d<float>, 8>& t20, constant array<sampler, 8>& s20, constant array<texture2d<uint>, 8>& t21, constant array<texture2d<int>, 8>& t22, device B20* constant (&b20)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u2, constant B21* constant (&b21)[8], const spvDescriptorArray<device B30*> b30, thread uint3& gl_WorkGroupID, thread float4& r3, const spvDescriptorArray<texture2d<float>> t30, const spvDescriptorArray<sampler> s30, const spvDescriptorArray<texture2d<uint>> t31, const spvDescriptorArray<texture2d<int>> t32, const spvDescriptorArray<constant B31*> b31, const spvDescriptorArray<texture_buffer<uint, access::read_write>> u3, thread float4& r4, depth2d<float> t40, sampler s40, texture2d<uint> t41, texture2d<int> t42, device B40& b40, constant B41& b41, texture_buffer<uint, access::read_write> u4)
+void in_function(thread float4& r0, const device array<texture2d<float>, 8>& t00, const device array<sampler, 8>& s00, const device array<texture2d<uint>, 8>& t01, const device array<texture2d<int>, 8>& t02, const device array<texture_buffer<uint, access::read_write>, 8>& u0, thread float4& r1, const device B10* constant (&b10)[8], constant B11* constant (&b11)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u1, thread float4& r2, constant array<texture2d<float>, 8>& t20, constant array<sampler, 8>& s20, constant array<texture2d<uint>, 8>& t21, constant array<texture2d<int>, 8>& t22, const device B20* constant (&b20)[8], constant array<texture_buffer<uint, access::read_write>, 8>& u2, constant B21* constant (&b21)[8], const spvDescriptorArray<const device B30*> b30, thread uint3& gl_WorkGroupID, thread float4& r3, const spvDescriptorArray<texture2d<float>> t30, const spvDescriptorArray<sampler> s30, const spvDescriptorArray<texture2d<uint>> t31, const spvDescriptorArray<texture2d<int>> t32, const spvDescriptorArray<constant B31*> b31, const spvDescriptorArray<texture_buffer<uint, access::read_write>> u3, thread float4& r4, depth2d<float> t40, sampler s40, texture2d<uint> t41, texture2d<int> t42, const device B40& b40, constant B41& b41, texture_buffer<uint, access::read_write> u4)
 {
     r0 = t00[0].sample(s00[3], float2(0.0), level(0.0));
     r0.x = as_type<float>(t01[1].read(uint2(int2(0)), 0).x);
@@ -160,7 +156,7 @@ void in_function(thread float4& r0, const device array<texture2d<float>, 8>& t00
 
 kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], const device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], constant spvDescriptorSetBuffer2& spvDescriptorSet2 [[buffer(2)]], constant spvDescriptorSetBuffer3& spvDescriptorSet3 [[buffer(3)]], constant spvDescriptorSetBuffer4& spvDescriptorSet4 [[buffer(4)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
 {
-    spvDescriptorArray<device B30*> b30 {spvDescriptorSet1.b30};
+    spvDescriptorArray<const device B30*> b30 {spvDescriptorSet1.b30};
     spvDescriptorArray<texture2d<float>> t30 {reinterpret_cast<const device spvDescriptor<texture2d<float>>*>(&spvDescriptorSet1.b30)};
     spvDescriptorArray<sampler> s30 {reinterpret_cast<const device spvDescriptor<sampler>*>(&spvDescriptorSet1.b30)};
     spvDescriptorArray<texture2d<uint>> t31 {reinterpret_cast<const device spvDescriptor<texture2d<uint>>*>(&spvDescriptorSet1.b30)};

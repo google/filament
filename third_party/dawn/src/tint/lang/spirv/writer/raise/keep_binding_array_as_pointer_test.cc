@@ -49,7 +49,7 @@ TEST_F(SpirvWriter_KeepBindingArrayAsPointer, SkippedForPtrToBindingArray) {
     b.Append(fn->Block(), [&] {
         auto* t_ptr = b.Access(ty.ptr<handle>(texture_type), var_ts, 0_i);
         auto* t = b.Load(t_ptr);
-        b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, t, b.Zero(ty.vec2<u32>()), 0_u);
+        b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, t, b.Zero(ty.vec2u()), 0_u);
         b.Return(fn);
     });
 
@@ -84,7 +84,7 @@ TEST_F(SpirvWriter_KeepBindingArrayAsPointer, LoadOfBindingArrayIsReplaced) {
     b.Append(fn->Block(), [&] {
         auto* ts = b.Load(var_ts);
         auto* t = b.Access(texture_type, ts, 0_i);
-        b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureLoad, t, b.Zero(ty.vec2<u32>()), 0_u);
+        b.Call(ty.vec4f(), core::BuiltinFn::kTextureLoad, t, b.Zero(ty.vec2u()), 0_u);
         b.Return(fn);
     });
 

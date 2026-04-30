@@ -111,13 +111,13 @@ struct State {
                 b.InsertBefore(store, [&] {
                     // Create an access to the array in the struct to copy from
                     auto* array_access = b.Access(ty.ptr(to_ptr->AddressSpace(), type), object,
-                                                  ToVector<4>(indices.Slice().Truncate(i + 1)));
+                                                  ToVector<4>(indices.AsSpan().subspan(0, i + 1)));
                     // Copy the struct array to a local variable
                     auto* local_array = b.Var("tint_array_copy", b.Load(array_access));
                     // Store the previous store's From to the local array at the same index
                     auto* local_array_value_access =
                         b.Access(ty.ptr<function>(to_ptr->StoreType()), local_array,
-                                 ToVector<4>(indices.Slice().Offset(i + 1)));
+                                 ToVector<4>(indices.AsSpan().subspan(i + 1)));
                     b.Store(local_array_value_access, store->From());
                     // Finally, copy back the data from the local array to the struct array
                     b.Store(array_access, b.Load(local_array));
@@ -157,12 +157,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> LocalizeStructArrayAssignment(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "hlsl.LocalizeStructArrayAssignment",
-        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir, core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings},
+                "before hlsl.LocalizeStructArrayAssignment");
 
     State{ir}.Process();
 

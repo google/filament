@@ -892,6 +892,9 @@ TEST_P(CreatePipelineAsyncTest, CreateRenderPipelineAsyncWithVertexBufferLayouts
 
 // Verify calling CreateRenderPipelineAsync() with valid depthStencilState works on all backends.
 TEST_P(CreatePipelineAsyncTest, CreateRenderPipelineAsyncWithDepthStencilState) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
+
     wgpu::TextureDescriptor textureDescriptor;
     textureDescriptor.size = {1, 1, 1};
     textureDescriptor.format = wgpu::TextureFormat::RGBA8Unorm;
@@ -965,6 +968,12 @@ TEST_P(CreatePipelineAsyncTest, CreateRenderPipelineAsyncWithDepthStencilState) 
 
 // Verify calling CreateRenderPipelineAsync() with multisample.Count > 1 works on all backends.
 TEST_P(CreatePipelineAsyncTest, CreateRenderPipelineWithMultisampleState) {
+    // TODO(crbug.com/468047555): Fails on Win11/NVIDIA GTX 1660.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsNvidia() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/468047555): Fails on Win11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     wgpu::TextureDescriptor textureDescriptor;
     textureDescriptor.size = {1, 1, 1};
     textureDescriptor.format = wgpu::TextureFormat::RGBA8Unorm;
@@ -1144,7 +1153,8 @@ DAWN_INSTANTIATE_TEST(CreatePipelineAsyncTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

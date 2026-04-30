@@ -32,12 +32,10 @@
 #include <utility>
 
 #include "src/tint/lang/core/ir/control_instruction.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 
 // Forward declarations
 namespace tint::core::ir {
 class Constant;
-class MultiInBlock;
 }  // namespace tint::core::ir
 
 namespace tint::core::ir {
@@ -60,6 +58,8 @@ namespace tint::core::ir {
 /// ```
 class Switch final : public Castable<Switch, ControlInstruction> {
   public:
+    /// The number of supported operands
+    static constexpr size_t kNumOperands = 1;
     /// The offset in Operands() for the condition
     static constexpr size_t kConditionOperandOffset = 0;
 
@@ -69,7 +69,7 @@ class Switch final : public Castable<Switch, ControlInstruction> {
         bool IsDefault() const { return val == nullptr; }
 
         /// The selector value, or nullptr if this is the default selector
-        ConstPropagatingPtr<Constant> val;
+        Constant* val = nullptr;
     };
 
     /// A case label in the struct
@@ -78,7 +78,7 @@ class Switch final : public Castable<Switch, ControlInstruction> {
         Vector<CaseSelector, 4> selectors;
 
         /// The case block.
-        ConstPropagatingPtr<ir::Block> block;
+        ir::Block* block = nullptr;
     };
 
     /// Constructor (no results, no operands, no cases)
@@ -104,6 +104,13 @@ class Switch final : public Castable<Switch, ControlInstruction> {
     /// @returns the switch cases
     Vector<Case, 4>& Cases() { return cases_; }
 
+    /// @returns the switch cases by moving them
+    Vector<Case, 4> TakeCases() {
+        auto rtn = std::move(cases_);
+        cases_.Clear();
+        return rtn;
+    }
+
     /// @returns the switch cases
     VectorRef<Case> Cases() const { return cases_; }
 
@@ -121,7 +128,7 @@ class Switch final : public Castable<Switch, ControlInstruction> {
         for (auto& c : cases_) {
             for (auto& s : c.selectors) {
                 if (s.IsDefault()) {
-                    return c.block.Get();
+                    return c.block;
                 }
             }
         }

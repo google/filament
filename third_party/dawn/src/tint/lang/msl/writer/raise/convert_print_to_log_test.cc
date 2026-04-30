@@ -213,7 +213,7 @@ $B1: {  # root
 
 TEST_F(MslWriter_ConvertPrintToLogTest, Compute_ExistingBuiltin) {
     auto* func = b.ComputeFunction("foo");
-    auto* id = b.FunctionParam("id", ty.vec3<u32>());
+    auto* id = b.FunctionParam("id", ty.vec3u());
     id->SetBuiltin(core::BuiltinValue::kGlobalInvocationId);
     func->AppendParam(id);
     b.Append(func->Block(), [&] {
@@ -244,6 +244,67 @@ $B1: {  # root
     %6:u32 = swizzle %4, y
     %7:u32 = swizzle %4, z
     %8:void = msl.os_log "[ comp foo:L0 global_invocation_id(%u, %u, %u) ] %u", %5, %6, %7, 42u
+    ret
+  }
+}
+)";
+
+    Run(ConvertPrintToLog);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ConvertPrintToLogTest, Compute_ExistingBuiltin_InStruct) {
+    auto* input_struct =
+        ty.Struct(mod.symbols.New("Inputs"),
+                  {
+                      {
+                          mod.symbols.New("id"),
+                          ty.vec3u(),
+                          core::IOAttributes{.builtin = core::BuiltinValue::kGlobalInvocationId},
+                      },
+                  });
+
+    auto* func = b.ComputeFunction("foo");
+    auto* inputs = b.FunctionParam("inputs", input_struct);
+    func->AppendParam(inputs);
+    b.Append(func->Block(), [&] {
+        b.Call<void>(core::BuiltinFn::kPrint, 42_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+Inputs = struct @align(16) {
+  id:vec3<u32> @offset(0), @builtin(global_invocation_id)
+}
+
+%foo = @compute @workgroup_size(1u, 1u, 1u) func(%inputs:Inputs):void {
+  $B1: {
+    %3:void = print 42u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+Inputs = struct @align(16) {
+  id:vec3<u32> @offset(0), @builtin(global_invocation_id)
+}
+
+$B1: {  # root
+  %tint_print_invocation_id:ptr<private, vec3<u32>, read_write> = var undef
+}
+
+%foo = @compute @workgroup_size(1u, 1u, 1u) func(%inputs:Inputs):void {
+  $B2: {
+    %4:vec3<u32> = access %inputs, 0u
+    store %tint_print_invocation_id, %4
+    %5:vec3<u32> = load %tint_print_invocation_id
+    %6:u32 = swizzle %5, x
+    %7:u32 = swizzle %5, y
+    %8:u32 = swizzle %5, z
+    %9:void = msl.os_log "[ comp foo:L0 global_invocation_id(%u, %u, %u) ] %u", %6, %7, %8, 42u
     ret
   }
 }
@@ -297,7 +358,7 @@ $B1: {  # root
 
 TEST_F(MslWriter_ConvertPrintToLogTest, Fragment_ExistingBuiltin) {
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
-    auto* position = b.FunctionParam("position", ty.vec4<f32>());
+    auto* position = b.FunctionParam("position", ty.vec4f());
     position->SetBuiltin(core::BuiltinValue::kPosition);
     func->AppendParam(position);
     b.Append(func->Block(), [&] {
@@ -339,8 +400,70 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(MslWriter_ConvertPrintToLogTest, Fragment_ExistingBuiltin_InStruct) {
+    auto* input_struct =
+        ty.Struct(mod.symbols.New("Inputs"),
+                  {
+                      {
+                          mod.symbols.New("pos"),
+                          ty.vec4f(),
+                          core::IOAttributes{.builtin = core::BuiltinValue::kPosition},
+                      },
+                  });
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    auto* inputs = b.FunctionParam("inputs", input_struct);
+    func->AppendParam(inputs);
+    b.Append(func->Block(), [&] {
+        b.Call<void>(core::BuiltinFn::kPrint, 42_u);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+Inputs = struct @align(16) {
+  pos:vec4<f32> @offset(0), @builtin(position)
+}
+
+%foo = @fragment func(%inputs:Inputs):void {
+  $B1: {
+    %3:void = print 42u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+Inputs = struct @align(16) {
+  pos:vec4<f32> @offset(0), @builtin(position)
+}
+
+$B1: {  # root
+  %tint_print_invocation_id:ptr<private, vec3<f32>, read_write> = var undef
+}
+
+%foo = @fragment func(%inputs:Inputs):void {
+  $B2: {
+    %4:vec4<f32> = access %inputs, 0u
+    %5:vec3<f32> = swizzle %4, xyz
+    store %tint_print_invocation_id, %5
+    %6:vec3<f32> = load %tint_print_invocation_id
+    %7:f32 = swizzle %6, x
+    %8:f32 = swizzle %6, y
+    %9:f32 = swizzle %6, z
+    %10:void = msl.os_log "[ frag foo:L0 position(%f, %f, %f) ] %u", %7, %8, %9, 42u
+    ret
+  }
+}
+)";
+
+    Run(ConvertPrintToLog);
+
+    EXPECT_EQ(expect, str());
+}
+
 TEST_F(MslWriter_ConvertPrintToLogTest, Vertex) {
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
     b.Append(func->Block(), [&] {
         b.Call<void>(core::BuiltinFn::kPrint, 42_u);
@@ -381,7 +504,7 @@ $B1: {  # root
 }
 
 TEST_F(MslWriter_ConvertPrintToLogTest, Vertex_ExistingBuiltin) {
-    auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     func->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     auto* instance = b.FunctionParam("instance", ty.u32());
@@ -420,6 +543,78 @@ $B1: {  # root
     %7:u32 = swizzle %6, x
     %8:u32 = swizzle %6, y
     %9:void = msl.os_log "[ vert foo:L0 instance=%u, vertex=%u ] %u", %7, %8, 42u
+    ret vec4<f32>(0.0f)
+  }
+}
+)";
+
+    Run(ConvertPrintToLog);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ConvertPrintToLogTest, Vertex_ExistingBuiltin_InStruct) {
+    auto* input_struct =
+        ty.Struct(mod.symbols.New("Inputs"),
+                  {
+                      {
+                          mod.symbols.New("instance_index"),
+                          ty.u32(),
+                          core::IOAttributes{.builtin = core::BuiltinValue::kInstanceIndex},
+                      },
+                      {
+                          mod.symbols.New("vertex_index"),
+                          ty.u32(),
+                          core::IOAttributes{.builtin = core::BuiltinValue::kVertexIndex},
+                      },
+                  });
+
+    auto* func = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
+    func->SetReturnBuiltin(core::BuiltinValue::kPosition);
+
+    auto* inputs = b.FunctionParam("inputs", input_struct);
+    func->AppendParam(inputs);
+
+    b.Append(func->Block(), [&] {
+        b.Call<void>(core::BuiltinFn::kPrint, 42_u);
+        b.Return(func, b.Zero<vec4<f32>>());
+    });
+
+    auto* src = R"(
+Inputs = struct @align(4) {
+  instance_index:u32 @offset(0), @builtin(instance_index)
+  vertex_index:u32 @offset(4), @builtin(vertex_index)
+}
+
+%foo = @vertex func(%inputs:Inputs):vec4<f32> [@position] {
+  $B1: {
+    %3:void = print 42u
+    ret vec4<f32>(0.0f)
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+Inputs = struct @align(4) {
+  instance_index:u32 @offset(0), @builtin(instance_index)
+  vertex_index:u32 @offset(4), @builtin(vertex_index)
+}
+
+$B1: {  # root
+  %tint_print_invocation_id:ptr<private, vec2<u32>, read_write> = var undef
+}
+
+%foo = @vertex func(%inputs:Inputs):vec4<f32> [@position] {
+  $B2: {
+    %4:u32 = access %inputs, 0u
+    %5:u32 = access %inputs, 1u
+    %6:vec2<u32> = construct %4, %5
+    store %tint_print_invocation_id, %6
+    %7:vec2<u32> = load %tint_print_invocation_id
+    %8:u32 = swizzle %7, x
+    %9:u32 = swizzle %7, y
+    %10:void = msl.os_log "[ vert foo:L0 instance=%u, vertex=%u ] %u", %8, %9, 42u
     ret vec4<f32>(0.0f)
   }
 }

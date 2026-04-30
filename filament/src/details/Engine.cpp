@@ -62,6 +62,7 @@
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
@@ -72,6 +73,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/tribool.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -89,10 +91,18 @@
 #include <unordered_map>
 #include <utility>
 
+#ifdef __EXCEPTIONS
+#include <exception>
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
 
 #include "generated/resources/materials.h"
 
@@ -105,6 +115,27 @@ using namespace backend;
 using namespace filaflat;
 
 namespace {
+
+#if FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
+utils::CString getPortString(std::string_view serviceType) {
+    #ifndef __ANDROID__
+    char const* portString = getenv(serviceType.data());
+    #else
+    char const* portString = [&]() -> char const*{
+        if (serviceType == "FILAMENT_MATDBG_PORT") {
+            return "8081";
+        } else if (serviceType == "FILAMENT_FGVIEWER_PORT") {
+            return "8085";
+        }
+        return nullptr;
+    }();
+    #endif
+    if (portString) {
+        return utils::CString { portString };
+    }
+    return {};
+}
+#endif // FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
 
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
     Platform::DriverConfig const driverConfig {
@@ -269,6 +300,7 @@ FEngine::FEngine(Builder const& builder) :
         mRenderableManager(*this),
         mLightManager(*this),
         mCameraManager(*this),
+        mMaterialCache(builder->mConfig.materialCacheCapacity, builder->mConfig.programCacheCapacity),
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
                 builder->mConfig.commandBufferSizeMB * MiB,
@@ -346,10 +378,6 @@ void FEngine::init() {
     DriverApi& driverApi = getDriverApi();
 
     mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
-
-#ifndef FILAMENT_ENABLE_FEATURE_LEVEL_0
-    assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
-#endif
 
     LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
     LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
@@ -458,34 +486,23 @@ void FEngine::init() {
             driverApi,
             descriptor_sets::getPerRenderableLayout() };
 
-#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
-    if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
-        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        defaultMaterialBuilder.package(
-                MATERIALS_DEFAULTMATERIAL_FL0_DATA, MATERIALS_DEFAULTMATERIAL_FL0_SIZE);
-        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
-    } else
-#endif
-    {
-        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        switch (mConfig.stereoscopicType) {
-            case StereoscopicType::NONE:
-            case StereoscopicType::INSTANCED:
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
-                break;
-            case StereoscopicType::MULTIVIEW:
+    FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+    switch (mConfig.stereoscopicType) {
+        case StereoscopicType::NONE:
+        case StereoscopicType::INSTANCED:
+            defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+            break;
+        case StereoscopicType::MULTIVIEW:
 #ifdef FILAMENT_ENABLE_MULTIVIEW
-                defaultMaterialBuilder.package(
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA,
-                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+            defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
 #else
-                assert_invariant(false);
+            assert_invariant(false);
 #endif
-                break;
-        }
-        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
+            break;
     }
+    mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
 
     // We must commit the default material instance here. It may not be used in a scene, but its
     // descriptor set may still be used for shared variants.
@@ -592,9 +609,6 @@ void FEngine::shutdown() {
     DLOG(INFO) << "CircularBuffer: High watermark " << wm / 1024 << " KiB (" << wmpct << "%)";
 #endif
 
-    /* Destroy any leftover items in the cache. */
-    mMaterialCache.terminate(*this);
-
     DriverApi& driver = getDriverApi();
 
     /*
@@ -668,6 +682,11 @@ void FEngine::shutdown() {
     for (auto& item : mMaterialInstances) {
         cleanupResourceList(std::move(item.second));
     }
+
+    /* Destroy any leftover items in the cache. This should be after material list cleanup to prevent
+     * double-free.
+     */
+    mMaterialCache.terminate(*this);
 
     cleanupResourceListLocked(mFenceListLock, std::move(mFences));
 
@@ -818,6 +837,11 @@ void FEngine::submitFrame() {
 }
 
 void FEngine::flush() {
+    if (UTILS_VERY_UNLIKELY(mCommandBufferQueue.hasUnrecoverableError())) {
+        return;
+    }
+    propagateBackendException();
+
     // flush the command buffer
     flushCommandBuffer(mCommandBufferQueue);
 
@@ -833,6 +857,11 @@ void FEngine::flushAndWait() {
 }
 
 bool FEngine::flushAndWait(uint64_t const timeout) {
+    if (UTILS_VERY_UNLIKELY(mCommandBufferQueue.hasUnrecoverableError())) {
+        return false;
+    }
+    propagateBackendException();
+
     FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isPaused())
             << "Cannot call Engine::flushAndWait() when rendering thread is paused!";
 
@@ -882,13 +911,8 @@ int FEngine::loop() {
     }
 
 #if FILAMENT_ENABLE_MATDBG
-    #ifdef __ANDROID__
-        const char* portString = "8081";
-    #else
-        const char* portString = getenv("FILAMENT_MATDBG_PORT");
-    #endif
-    if (portString != nullptr) {
-        const int port = atoi(portString);
+    if (auto portString = getPortString("FILAMENT_MATDBG_PORT"); !portString.empty()) {
+        const int port = atoi(portString.c_str());
 
         ShaderLanguage preferredLanguage = ShaderLanguage::UNSPECIFIED;
         if (mBackend == Backend::METAL) {
@@ -912,20 +936,13 @@ int FEngine::loop() {
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER // NOLINT(*-include-cleaner)
-#ifdef __ANDROID__
-    const char* fgviewerPortString = "8085";
-#else
-    const char* fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
-#endif
-    if (fgviewerPortString != nullptr) {
-        const int fgviewerPort = atoi(fgviewerPortString);
-        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort);
-
+    if (auto portString = getPortString("FILAMENT_FGVIEWER_PORT"); !portString.empty()) {
+        debug.fgviewer = new FgviewerManager(*this, std::move(portString));
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
-        if (!debug.fgviewerServer->isReady()) {
-            delete debug.fgviewerServer;
-            debug.fgviewerServer = nullptr;
+        if (!debug.fgviewer->isReady()) {
+            delete debug.fgviewer;
+            debug.fgviewer = nullptr;
         }
     }
 #endif
@@ -942,8 +959,8 @@ int FEngine::loop() {
     }
 #endif
 #if FILAMENT_ENABLE_FGVIEWER
-    if(debug.fgviewerServer) {
-        delete debug.fgviewerServer;
+    if (debug.fgviewer) {
+        delete debug.fgviewer;
     }
 #endif
 
@@ -953,8 +970,10 @@ int FEngine::loop() {
 }
 
 void FEngine::flushCommandBuffer(CommandBufferQueue& commandBufferQueue) const {
-    getDriver().purge();
-    commandBufferQueue.flush();
+    if (!commandBufferQueue.hasUnrecoverableError()) {
+        getDriver().purge();
+        commandBufferQueue.flush();
+    }
 }
 
 const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
@@ -1593,14 +1612,38 @@ bool FEngine::execute() {
         return false;
     }
 
-    // execute all command buffers
-    auto& driver = getDriverApi();
-    for (auto& item : buffers) {
-        if (UTILS_LIKELY(item.begin)) {
-            driver.execute(item.begin);
+    if (UTILS_VERY_UNLIKELY(mCommandBufferQueue.hasUnrecoverableError())) {
+        for (auto& item : buffers) {
             mCommandBufferQueue.releaseBuffer(item);
         }
+        return true;
     }
+
+
+    // execute all command buffers
+    auto& driver = getDriverApi();
+    size_t i = 0;
+#ifdef __EXCEPTIONS
+    try {
+#endif
+        for (; i < buffers.size(); ++i) {
+            auto& item = buffers[i];
+            if (UTILS_LIKELY(item.begin)) {
+                driver.execute(item.begin);
+                mCommandBufferQueue.releaseBuffer(item);
+            }
+        }
+#ifdef __EXCEPTIONS
+    } catch (...) {
+        mCommandBufferQueue.setUnrecoverableException(std::current_exception());
+        mDriver->setUnrecoverableError();
+        setFenceUnrecoverableError();
+        // Release remaining buffers (including the one that failed)
+        for (; i < buffers.size(); ++i) {
+            mCommandBufferQueue.releaseBuffer(buffers[i]);
+        }
+    }
+#endif
 
     return true;
 }
@@ -1618,6 +1661,40 @@ bool FEngine::isPaused() const noexcept {
 
 void FEngine::setPaused(bool const paused) {
     mCommandBufferQueue.setPaused(paused);
+}
+
+void FEngine::setFenceUnrecoverableError() noexcept {
+    std::lock_guard const lock(mFenceLock);
+    mFenceHasUnrecoverableError = true;
+    mFenceCondition.notify_all();
+}
+
+void FEngine::signalFence(FenceSignal& signal, FenceSignal::State s) noexcept {
+    std::lock_guard const lock(mFenceLock);
+    signal.mState = s;
+    mFenceCondition.notify_all();
+}
+
+Fence::FenceStatus FEngine::waitFence(FenceSignal& signal, uint64_t const timeout) noexcept {
+    std::unique_lock lock(mFenceLock);
+    while (signal.mState == FenceSignal::UNSIGNALED && !mFenceHasUnrecoverableError) {
+        if (timeout == FENCE_WAIT_FOR_EVER) {
+            mFenceCondition.wait(lock);
+        } else {
+            if (timeout == 0 ||
+                    mFenceCondition.wait_for(lock, std::chrono::nanoseconds(timeout)) == std::cv_status::timeout) {
+                if (mFenceHasUnrecoverableError) break;
+                return Fence::FenceStatus::TIMEOUT_EXPIRED;
+            }
+        }
+    }
+    if (UTILS_VERY_UNLIKELY(mFenceHasUnrecoverableError)) {
+        return Fence::FenceStatus::ERROR;
+    }
+    if (signal.mState == FenceSignal::DESTROYED) {
+        return Fence::FenceStatus::ERROR;
+    }
+    return Fence::FenceStatus::CONDITION_SATISFIED;
 }
 
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
@@ -1671,6 +1748,89 @@ std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
 
 bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
     return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
+}
+
+FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
+        FView const* view,
+        tribool const shadowReceiver,
+        tribool const skinning) noexcept {
+
+    // the maximum possible is 6 variants (4 color + 2 depth)
+    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
+
+    // apply() iteratively expands the `variants` vector by mutating existing elements
+    // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
+    //
+    // @param start   The index in `variants` to begin the operation.
+    // @param value   The tribool state (false, true, or indeterminate) of the feature.
+    // @param setter  A pointer to a member function of Variant that sets the feature bit.
+    auto apply = [&variants](size_t const start, tribool const value, auto setter) {
+        if (value.is_indeterminate()) {
+            size_t const count = variants.size();
+            for (size_t i = start; i < count; ++i) {
+                // To maintain permutations, we first grab a copy of the variant
+                Variant v = variants[i];
+                // Mutate the original in-place for the `false` state
+                (variants[i].*setter)(false);
+                // Set the `true` state on our copy and push it as a new permutation
+                (v.*setter)(true);
+                variants.push_back(v);
+            }
+        } else {
+            // The feature is statically known, so just mutate all existing elements in-place
+            bool const b = value.is_true();
+            for (size_t i = start; i < variants.size(); ++i) {
+                (variants[i].*setter)(b);
+            }
+        }
+    };
+
+    Variant baseVariant{};
+    baseVariant.setDirectionalLighting(view->hasDirectionalLighting());
+    baseVariant.setDynamicLighting(view->hasDynamicLighting());
+    baseVariant.setFog(view->hasFog());
+    baseVariant.setShadowSampler2D(view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
+    baseVariant.setStereo(view->hasStereo());
+
+    variants.push_back(baseVariant);
+    apply(0, skinning, &Variant::setSkinning);
+    apply(0, shadowReceiver, &Variant::setShadowReceiver);
+
+    Variant depthVariant{};
+    if (view->hasShadowing()) {
+        // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+        depthVariant.setDepthMoments(view->getShadowType() == ShadowType::VSM);
+    }
+    if (view->hasPostProcessPass()) {
+        // This is needed if we're going to generate the structure pass. That is however very hard to tell
+        // because the logic exists only in the FrameGraph. For now, we assume that if postFx is enabled, we'll
+        // need the depth variant.
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+    }
+
+    if (Variant::isValidDepthVariant(depthVariant)) {
+        // if we have a valid depth variant, add the stereo and skinning bits
+        depthVariant.setStereo(view->hasStereo());
+
+        size_t const depthStart = variants.size();
+        variants.push_back(depthVariant);
+        apply(depthStart, skinning, &Variant::setSkinning);
+    }
+
+    return variants;
+}
+
+void FEngine::compile(
+        CompilerPriorityQueue const priority,
+        FMaterial const* material,
+        FView const* view,
+        tribool const shadowReceiver,
+        tribool const skinning,
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) {
+    auto const variants = getMaterialCompileVariants(view, shadowReceiver, skinning);
+    const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------

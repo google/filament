@@ -37,6 +37,8 @@
 #ifndef SRC_TINT_LANG_CORE_ENUMS_H_
 #define SRC_TINT_LANG_CORE_ENUMS_H_
 
+// clang-format off
+
 #include <cstdint>
 
 #include "src/tint/utils/reflection.h"
@@ -79,7 +81,7 @@ constexpr std::string_view kAccessStrings[] = {
 /// Address space of a given pointer.
 enum class AddressSpace : uint8_t {
     kUndefined,
-    kIn,   // Tint-internal enum entry - not parsed
+    kIn,  // Tint-internal enum entry - not parsed
     kOut,  // Tint-internal enum entry - not parsed
     kFunction,
     kHandle,  // Tint-internal enum entry - not parsed
@@ -110,14 +112,21 @@ auto& operator<<(STREAM& out, AddressSpace value) {
 AddressSpace ParseAddressSpace(std::string_view str);
 
 constexpr std::string_view kAddressSpaceStrings[] = {
-    "function", "immediate", "pixel_local", "private", "storage", "uniform", "workgroup",
+    "function",
+    "immediate",
+    "pixel_local",
+    "private",
+    "storage",
+    "uniform",
+    "workgroup",
 };
 
 /// @returns true if the AddressSpace is host-shareable
 /// @param address_space the AddressSpace
 /// @see https://gpuweb.github.io/gpuweb/wgsl.html#host-shareable
 inline bool IsHostShareable(AddressSpace address_space) {
-    return address_space == AddressSpace::kUniform || address_space == AddressSpace::kStorage ||
+    return address_space == AddressSpace::kUniform ||
+           address_space == AddressSpace::kStorage ||
            address_space == AddressSpace::kImmediate;
 }
 
@@ -146,12 +155,15 @@ auto& operator<<(STREAM& out, InterpolationSampling value) {
 
 /// ParseInterpolationSampling parses a InterpolationSampling from a string.
 /// @param str the string to parse
-/// @returns the parsed enum, or InterpolationSampling::kUndefined if the string could not be
-/// parsed.
+/// @returns the parsed enum, or InterpolationSampling::kUndefined if the string could not be parsed.
 InterpolationSampling ParseInterpolationSampling(std::string_view str);
 
 constexpr std::string_view kInterpolationSamplingStrings[] = {
-    "center", "centroid", "either", "first", "sample",
+    "center",
+    "centroid",
+    "either",
+    "first",
+    "sample",
 };
 
 /// The interpolation type.
@@ -184,6 +196,66 @@ constexpr std::string_view kInterpolationTypeStrings[] = {
     "flat",
     "linear",
     "perspective",
+};
+
+/// The sampler filtering.
+enum class SamplerFiltering : uint8_t {
+    kUndefined,
+    kFiltering,
+    kNonFiltering,
+};
+
+/// @param value the enum value
+/// @returns the string for the given enum value
+std::string_view ToString(SamplerFiltering value);
+
+/// @param out the stream to write to
+/// @param value the SamplerFiltering
+/// @returns @p out so calls can be chained
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
+auto& operator<<(STREAM& out, SamplerFiltering value) {
+    return out << ToString(value);
+}
+
+/// ParseSamplerFiltering parses a SamplerFiltering from a string.
+/// @param str the string to parse
+/// @returns the parsed enum, or SamplerFiltering::kUndefined if the string could not be parsed.
+SamplerFiltering ParseSamplerFiltering(std::string_view str);
+
+constexpr std::string_view kSamplerFilteringStrings[] = {
+    "filtering",
+    "non_filtering",
+};
+
+/// The texture filterable.
+enum class TextureFilterable : uint8_t {
+    kUndefined,
+    kFilterable,
+    kUnfilterable,
+};
+
+/// @param value the enum value
+/// @returns the string for the given enum value
+std::string_view ToString(TextureFilterable value);
+
+/// @param out the stream to write to
+/// @param value the TextureFilterable
+/// @returns @p out so calls can be chained
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
+auto& operator<<(STREAM& out, TextureFilterable value) {
+    return out << ToString(value);
+}
+
+/// ParseTextureFilterable parses a TextureFilterable from a string.
+/// @param str the string to parse
+/// @returns the parsed enum, or TextureFilterable::kUndefined if the string could not be parsed.
+TextureFilterable ParseTextureFilterable(std::string_view str);
+
+constexpr std::string_view kTextureFilterableStrings[] = {
+    "filterable",
+    "unfilterable",
 };
 
 /// Address space of a given pointer.
@@ -282,13 +354,46 @@ auto& operator<<(STREAM& out, TexelFormat value) {
 TexelFormat ParseTexelFormat(std::string_view str);
 
 constexpr std::string_view kTexelFormatStrings[] = {
-    "bgra8unorm",  "r16float",      "r16sint",     "r16snorm",     "r16uint",     "r16unorm",
-    "r32float",    "r32sint",       "r32uint",     "r8sint",       "r8snorm",     "r8uint",
-    "r8unorm",     "rg11b10ufloat", "rg16float",   "rg16sint",     "rg16snorm",   "rg16uint",
-    "rg16unorm",   "rg32float",     "rg32sint",    "rg32uint",     "rg8sint",     "rg8snorm",
-    "rg8uint",     "rg8unorm",      "rgb10a2uint", "rgb10a2unorm", "rgba16float", "rgba16sint",
-    "rgba16snorm", "rgba16uint",    "rgba16unorm", "rgba32float",  "rgba32sint",  "rgba32uint",
-    "rgba8sint",   "rgba8snorm",    "rgba8uint",   "rgba8unorm",
+    "bgra8unorm",
+    "r16float",
+    "r16sint",
+    "r16snorm",
+    "r16uint",
+    "r16unorm",
+    "r32float",
+    "r32sint",
+    "r32uint",
+    "r8sint",
+    "r8snorm",
+    "r8uint",
+    "r8unorm",
+    "rg11b10ufloat",
+    "rg16float",
+    "rg16sint",
+    "rg16snorm",
+    "rg16uint",
+    "rg16unorm",
+    "rg32float",
+    "rg32sint",
+    "rg32uint",
+    "rg8sint",
+    "rg8snorm",
+    "rg8uint",
+    "rg8unorm",
+    "rgb10a2uint",
+    "rgb10a2unorm",
+    "rgba16float",
+    "rgba16sint",
+    "rgba16snorm",
+    "rgba16uint",
+    "rgba16unorm",
+    "rgba32float",
+    "rgba32sint",
+    "rgba32uint",
+    "rgba8sint",
+    "rgba8snorm",
+    "rgba8uint",
+    "rgba8unorm",
 };
 
 /// An enumerator of builtin types.
@@ -324,6 +429,7 @@ enum class BuiltinType : uint8_t {
     kAtomic,
     kBindingArray,
     kBool,
+    kBuffer,
     kF16,
     kF32,
     kI32,
@@ -380,6 +486,7 @@ enum class BuiltinType : uint8_t {
     kTextureStorage2D,
     kTextureStorage2DArray,
     kTextureStorage3D,
+    kU16,
     kU32,
     kU8,
     kVec2,
@@ -448,6 +555,7 @@ constexpr std::string_view kBuiltinTypeStrings[] = {
     "atomic",
     "binding_array",
     "bool",
+    "buffer",
     "f16",
     "f32",
     "i32",
@@ -504,6 +612,7 @@ constexpr std::string_view kBuiltinTypeStrings[] = {
     "texture_storage_2d",
     "texture_storage_2d_array",
     "texture_storage_3d",
+    "u16",
     "u32",
     "u8",
     "vec2",
@@ -527,18 +636,20 @@ constexpr std::string_view kBuiltinTypeStrings[] = {
 enum class BuiltinValue : uint8_t {
     kUndefined,
     kCullDistance,  // Tint-internal enum entry - not parsed
-    kPointSize,     // Tint-internal enum entry - not parsed
+    kPointSize,  // Tint-internal enum entry - not parsed
     kBarycentricCoord,
     kClipDistances,
     kFragDepth,
     kFrontFacing,
     kGlobalInvocationId,
+    kGlobalInvocationIndex,
     kInstanceIndex,
     kLocalInvocationId,
     kLocalInvocationIndex,
+    kNumSubgroups,
     kNumWorkgroups,
     kPosition,
-    kPrimitiveId,
+    kPrimitiveIndex,
     kSampleIndex,
     kSampleMask,
     kSubgroupId,
@@ -546,6 +657,7 @@ enum class BuiltinValue : uint8_t {
     kSubgroupSize,
     kVertexIndex,
     kWorkgroupId,
+    kWorkgroupIndex,
 };
 
 /// @param value the enum value
@@ -572,12 +684,14 @@ constexpr std::string_view kBuiltinValueStrings[] = {
     "frag_depth",
     "front_facing",
     "global_invocation_id",
+    "global_invocation_index",
     "instance_index",
     "local_invocation_id",
     "local_invocation_index",
+    "num_subgroups",
     "num_workgroups",
     "position",
-    "primitive_id",
+    "primitive_index",
     "sample_index",
     "sample_mask",
     "subgroup_id",
@@ -585,6 +699,39 @@ constexpr std::string_view kBuiltinValueStrings[] = {
     "subgroup_size",
     "vertex_index",
     "workgroup_id",
+    "workgroup_index",
+};
+
+/// Builtin depth mode defined with `@builtin(<name>, <depth_mode>)`.
+enum class BuiltinDepthMode : uint8_t {
+    kUndefined,
+    kAny,
+    kGreater,
+    kLess,
+};
+
+/// @param value the enum value
+/// @returns the string for the given enum value
+std::string_view ToString(BuiltinDepthMode value);
+
+/// @param out the stream to write to
+/// @param value the BuiltinDepthMode
+/// @returns @p out so calls can be chained
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
+auto& operator<<(STREAM& out, BuiltinDepthMode value) {
+    return out << ToString(value);
+}
+
+/// ParseBuiltinDepthMode parses a BuiltinDepthMode from a string.
+/// @param str the string to parse
+/// @returns the parsed enum, or BuiltinDepthMode::kUndefined if the string could not be parsed.
+BuiltinDepthMode ParseBuiltinDepthMode(std::string_view str);
+
+constexpr std::string_view kBuiltinDepthModeStrings[] = {
+    "any",
+    "greater",
+    "less",
 };
 
 /// Address space of a given pointer.
@@ -606,6 +753,7 @@ enum class Attribute : uint8_t {
     kLocation,
     kMustUse,
     kSize,
+    kSubgroupSize,
     kVertex,
     kWorkgroupSize,
 };
@@ -645,6 +793,7 @@ constexpr std::string_view kAttributeStrings[] = {
     "location",
     "must_use",
     "size",
+    "subgroup_size",
     "vertex",
     "workgroup_size",
 };
@@ -656,6 +805,7 @@ enum class ParameterUsage : uint8_t {
     kBase,
     kBias,
     kBits,
+    kColMajor,
     kCompareValue,
     kComponent,
     kConstOffset,
@@ -677,23 +827,27 @@ enum class ParameterUsage : uint8_t {
     kId,
     kImage,
     kImageOperands,
+    kIndex,
     kInputAttachment,
     kInsert,
     kLevel,
     kLocation,
     kLod,
+    kM,
     kMask,
     kNumLevels,
     kOffset,
     kOriginalValue,
     kRefz,
     kResult,
+    kS,
     kSample,
     kSampleIndex,
     kSampler,
     kSamples,
     kScope,
     kSourceLaneIndex,
+    kStride,
     kTexel,
     kTexture,
     kValue,
@@ -736,6 +890,7 @@ enum class BuiltinFn : uint8_t {
     kAtan,
     kAtan2,
     kAtanh,
+    kBitcast,
     kCeil,
     kClamp,
     kCos,
@@ -804,7 +959,6 @@ enum class BuiltinFn : uint8_t {
     kSmoothstep,
     kSqrt,
     kStep,
-    kStorageBarrier,
     kTan,
     kTanh,
     kTranspose,
@@ -816,6 +970,7 @@ enum class BuiltinFn : uint8_t {
     kUnpack4X8Unorm,
     kUnpack4XI8,
     kUnpack4XU8,
+    kStorageBarrier,
     kWorkgroupBarrier,
     kTextureBarrier,
     kTextureDimensions,
@@ -845,6 +1000,8 @@ enum class BuiltinFn : uint8_t {
     kAtomicXor,
     kAtomicExchange,
     kAtomicCompareExchangeWeak,
+    kAtomicStoreMax,
+    kAtomicStoreMin,
     kSubgroupBallot,
     kSubgroupElect,
     kSubgroupBroadcast,
@@ -874,7 +1031,15 @@ enum class BuiltinFn : uint8_t {
     kSubgroupMatrixStore,
     kSubgroupMatrixMultiply,
     kSubgroupMatrixMultiplyAccumulate,
+    kSubgroupMatrixScalarAdd,
+    kSubgroupMatrixScalarSubtract,
+    kSubgroupMatrixScalarMultiply,
+    kBufferView,
+    kBufferArrayView,
+    kBufferLength,
     kPrint,
+    kHasResource,
+    kGetResource,
     kNone,
 };
 
@@ -893,7 +1058,7 @@ const char* str(BuiltinFn i);
 template <typename STREAM>
     requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, BuiltinFn i) {
-    return o << str(i);
+  return o << str(i);
 }
 
 /// All builtin functions
@@ -909,6 +1074,7 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kAtan,
     BuiltinFn::kAtan2,
     BuiltinFn::kAtanh,
+    BuiltinFn::kBitcast,
     BuiltinFn::kCeil,
     BuiltinFn::kClamp,
     BuiltinFn::kCos,
@@ -977,7 +1143,6 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kSmoothstep,
     BuiltinFn::kSqrt,
     BuiltinFn::kStep,
-    BuiltinFn::kStorageBarrier,
     BuiltinFn::kTan,
     BuiltinFn::kTanh,
     BuiltinFn::kTranspose,
@@ -989,6 +1154,7 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kUnpack4X8Unorm,
     BuiltinFn::kUnpack4XI8,
     BuiltinFn::kUnpack4XU8,
+    BuiltinFn::kStorageBarrier,
     BuiltinFn::kWorkgroupBarrier,
     BuiltinFn::kTextureBarrier,
     BuiltinFn::kTextureDimensions,
@@ -1018,6 +1184,8 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kAtomicXor,
     BuiltinFn::kAtomicExchange,
     BuiltinFn::kAtomicCompareExchangeWeak,
+    BuiltinFn::kAtomicStoreMax,
+    BuiltinFn::kAtomicStoreMin,
     BuiltinFn::kSubgroupBallot,
     BuiltinFn::kSubgroupElect,
     BuiltinFn::kSubgroupBroadcast,
@@ -1047,7 +1215,15 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kSubgroupMatrixStore,
     BuiltinFn::kSubgroupMatrixMultiply,
     BuiltinFn::kSubgroupMatrixMultiplyAccumulate,
+    BuiltinFn::kSubgroupMatrixScalarAdd,
+    BuiltinFn::kSubgroupMatrixScalarSubtract,
+    BuiltinFn::kSubgroupMatrixScalarMultiply,
+    BuiltinFn::kBufferView,
+    BuiltinFn::kBufferArrayView,
+    BuiltinFn::kBufferLength,
     BuiltinFn::kPrint,
+    BuiltinFn::kHasResource,
+    BuiltinFn::kGetResource,
 };
 
 /// All builtin function names
@@ -1063,6 +1239,7 @@ constexpr const char* kBuiltinFnStrings[] = {
     "atan",
     "atan2",
     "atanh",
+    "bitcast",
     "ceil",
     "clamp",
     "cos",
@@ -1131,7 +1308,6 @@ constexpr const char* kBuiltinFnStrings[] = {
     "smoothstep",
     "sqrt",
     "step",
-    "storageBarrier",
     "tan",
     "tanh",
     "transpose",
@@ -1143,6 +1319,7 @@ constexpr const char* kBuiltinFnStrings[] = {
     "unpack4x8unorm",
     "unpack4xI8",
     "unpack4xU8",
+    "storageBarrier",
     "workgroupBarrier",
     "textureBarrier",
     "textureDimensions",
@@ -1172,6 +1349,8 @@ constexpr const char* kBuiltinFnStrings[] = {
     "atomicXor",
     "atomicExchange",
     "atomicCompareExchangeWeak",
+    "atomicStoreMax",
+    "atomicStoreMin",
     "subgroupBallot",
     "subgroupElect",
     "subgroupBroadcast",
@@ -1201,7 +1380,15 @@ constexpr const char* kBuiltinFnStrings[] = {
     "subgroupMatrixStore",
     "subgroupMatrixMultiply",
     "subgroupMatrixMultiplyAccumulate",
+    "subgroupMatrixScalarAdd",
+    "subgroupMatrixScalarSubtract",
+    "subgroupMatrixScalarMultiply",
+    "bufferView",
+    "bufferArrayView",
+    "bufferLength",
     "print",
+    "hasResource",
+    "getResource",
 };
 
 /// Determines if the given `f` is a coarse derivative.
@@ -1276,5 +1463,7 @@ TINT_REFLECT_ENUM_RANGE(core::Access, kUndefined, kWrite);
 TINT_REFLECT_ENUM_RANGE(core::SubgroupMatrixKind, kUndefined, kRight);
 
 }  // namespace tint
+
+// clang-format on
 
 #endif  // SRC_TINT_LANG_CORE_ENUMS_H_

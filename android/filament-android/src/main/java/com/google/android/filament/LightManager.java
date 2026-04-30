@@ -781,6 +781,7 @@ public class LightManager {
          *
          * @param engine Reference to the {@link Engine} to associate this light with.
          * @param entity Entity to add the light component to.
+         * @throws RuntimeException if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid.
          */
         public void build(@NonNull Engine engine, @Entity int entity) {
             if (!nBuilderBuild(mNativeBuilder, engine.getNativeObject(), entity)) {

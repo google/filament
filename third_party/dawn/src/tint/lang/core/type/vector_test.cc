@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/type/vector.h"
+
 #include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
 #include "src/tint/lang/core/type/i32.h"
@@ -40,10 +41,10 @@ using VectorTest = TestHelper;
 
 TEST_F(VectorTest, Creation) {
     Manager ty;
-    auto* a = ty.vec2(ty.i32());
-    auto* b = ty.vec2(ty.i32());
-    auto* c = ty.vec2(ty.f32());
-    auto* d = ty.vec3(ty.f32());
+    auto* a = ty.vec2i();
+    auto* b = ty.vec2i();
+    auto* c = ty.vec2f();
+    auto* d = ty.vec3f();
 
     EXPECT_EQ(a->Type(), ty.i32());
     EXPECT_EQ(a->Width(), 2u);
@@ -55,7 +56,7 @@ TEST_F(VectorTest, Creation) {
 
 TEST_F(VectorTest, Creation_Packed) {
     Manager ty;
-    auto* v = ty.vec3(ty.f32());
+    auto* v = ty.vec3f();
     auto* p1 = ty.Get<Vector>(ty.f32(), 3u, true);
     auto* p2 = ty.Get<Vector>(ty.f32(), 3u, true);
 
@@ -71,18 +72,18 @@ TEST_F(VectorTest, Creation_Packed) {
 
 TEST_F(VectorTest, Hash) {
     Manager ty;
-    auto* a = ty.vec2(ty.i32());
-    auto* b = ty.vec2(ty.i32());
+    auto* a = ty.vec2i();
+    auto* b = ty.vec2i();
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(VectorTest, Equals) {
     Manager ty;
-    auto* a = ty.vec2(ty.i32());
-    auto* b = ty.vec2(ty.i32());
-    auto* c = ty.vec2(ty.f32());
-    auto* d = ty.vec3(ty.f32());
+    auto* a = ty.vec2i();
+    auto* b = ty.vec2i();
+    auto* c = ty.vec2f();
+    auto* d = ty.vec3f();
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -92,8 +93,7 @@ TEST_F(VectorTest, Equals) {
 
 TEST_F(VectorTest, FriendlyName) {
     Manager ty;
-    auto* f32 = ty.f32();
-    auto* v = ty.vec3(f32);
+    auto* v = ty.vec3f();
     EXPECT_EQ(v->FriendlyName(), "vec3<f32>");
 }
 
@@ -106,7 +106,7 @@ TEST_F(VectorTest, FriendlyName_Packed) {
 
 TEST_F(VectorTest, Clone) {
     Manager ty;
-    auto* a = ty.vec2(ty.i32());
+    auto* a = ty.vec2i();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

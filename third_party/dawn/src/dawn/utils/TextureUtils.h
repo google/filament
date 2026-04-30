@@ -37,7 +37,7 @@
 namespace dawn::utils {
 
 #ifndef __EMSCRIPTEN__
-static constexpr std::array<wgpu::TextureFormat, 101> kAllTextureFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 101> kAllTextureFormats = {
     wgpu::TextureFormat::R8Unorm,
     wgpu::TextureFormat::R8Snorm,
     wgpu::TextureFormat::R8Uint,
@@ -141,7 +141,7 @@ static constexpr std::array<wgpu::TextureFormat, 101> kAllTextureFormats = {
     wgpu::TextureFormat::ASTC12x12UnormSrgb};
 #endif  // __EMSCRIPTEN__
 
-static constexpr std::array<wgpu::TextureFormat, 41> kFormatsInCoreSpec = {
+inline constexpr std::array<wgpu::TextureFormat, 41> kFormatsInCoreSpec = {
     wgpu::TextureFormat::R8Unorm,
     wgpu::TextureFormat::R8Snorm,
     wgpu::TextureFormat::R8Uint,
@@ -185,7 +185,7 @@ static constexpr std::array<wgpu::TextureFormat, 41> kFormatsInCoreSpec = {
     wgpu::TextureFormat::Depth24PlusStencil8,
 };
 
-static constexpr std::array<wgpu::TextureFormat, 14> kBCFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 14> kBCFormats = {
     wgpu::TextureFormat::BC1RGBAUnorm,  wgpu::TextureFormat::BC1RGBAUnormSrgb,
     wgpu::TextureFormat::BC2RGBAUnorm,  wgpu::TextureFormat::BC2RGBAUnormSrgb,
     wgpu::TextureFormat::BC3RGBAUnorm,  wgpu::TextureFormat::BC3RGBAUnormSrgb,
@@ -194,14 +194,14 @@ static constexpr std::array<wgpu::TextureFormat, 14> kBCFormats = {
     wgpu::TextureFormat::BC6HRGBUfloat, wgpu::TextureFormat::BC6HRGBFloat,
     wgpu::TextureFormat::BC7RGBAUnorm,  wgpu::TextureFormat::BC7RGBAUnormSrgb};
 
-static constexpr std::array<wgpu::TextureFormat, 10> kETC2Formats = {
+inline constexpr std::array<wgpu::TextureFormat, 10> kETC2Formats = {
     wgpu::TextureFormat::ETC2RGB8Unorm,   wgpu::TextureFormat::ETC2RGB8UnormSrgb,
     wgpu::TextureFormat::ETC2RGB8A1Unorm, wgpu::TextureFormat::ETC2RGB8A1UnormSrgb,
     wgpu::TextureFormat::ETC2RGBA8Unorm,  wgpu::TextureFormat::ETC2RGBA8UnormSrgb,
     wgpu::TextureFormat::EACR11Unorm,     wgpu::TextureFormat::EACR11Snorm,
     wgpu::TextureFormat::EACRG11Unorm,    wgpu::TextureFormat::EACRG11Snorm};
 
-static constexpr std::array<wgpu::TextureFormat, 28> kASTCFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 28> kASTCFormats = {
     wgpu::TextureFormat::ASTC4x4Unorm,   wgpu::TextureFormat::ASTC4x4UnormSrgb,
     wgpu::TextureFormat::ASTC5x4Unorm,   wgpu::TextureFormat::ASTC5x4UnormSrgb,
     wgpu::TextureFormat::ASTC5x5Unorm,   wgpu::TextureFormat::ASTC5x5UnormSrgb,
@@ -218,7 +218,7 @@ static constexpr std::array<wgpu::TextureFormat, 28> kASTCFormats = {
     wgpu::TextureFormat::ASTC12x12Unorm, wgpu::TextureFormat::ASTC12x12UnormSrgb,
 };
 
-static constexpr std::array<wgpu::TextureFormat, 52> kCompressedFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 52> kCompressedFormats = {
     wgpu::TextureFormat::BC1RGBAUnorm,    wgpu::TextureFormat::BC1RGBAUnormSrgb,
     wgpu::TextureFormat::BC2RGBAUnorm,    wgpu::TextureFormat::BC2RGBAUnormSrgb,
     wgpu::TextureFormat::BC3RGBAUnorm,    wgpu::TextureFormat::BC3RGBAUnormSrgb,
@@ -249,24 +249,22 @@ static_assert(kCompressedFormats.size() ==
                   kBCFormats.size() + kETC2Formats.size() + kASTCFormats.size(),
               "Number of compressed format must equal number of BC, ETC2, and ASTC formats.");
 
-#ifndef __EMSCRIPTEN__
-static constexpr std::array<wgpu::TextureFormat, 6> kNorm16Formats = {
+inline constexpr std::array<wgpu::TextureFormat, 6> kNorm16Formats = {
     wgpu::TextureFormat::R16Unorm, wgpu::TextureFormat::RG16Unorm, wgpu::TextureFormat::RGBA16Unorm,
     wgpu::TextureFormat::R16Snorm, wgpu::TextureFormat::RG16Snorm, wgpu::TextureFormat::RGBA16Snorm,
 };
-#endif  // __EMSCRIPTEN__
 
-static constexpr std::array<wgpu::TextureFormat, 5> kDepthFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 5> kDepthFormats = {
     wgpu::TextureFormat::Depth16Unorm,         wgpu::TextureFormat::Depth32Float,
     wgpu::TextureFormat::Depth24Plus,          wgpu::TextureFormat::Depth24PlusStencil8,
     wgpu::TextureFormat::Depth32FloatStencil8,
 };
-static constexpr std::array<wgpu::TextureFormat, 3> kStencilFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 3> kStencilFormats = {
     wgpu::TextureFormat::Depth24PlusStencil8,
     wgpu::TextureFormat::Depth32FloatStencil8,
     wgpu::TextureFormat::Stencil8,
 };
-static constexpr std::array<wgpu::TextureFormat, 2> kDepthAndStencilFormats = {
+inline constexpr std::array<wgpu::TextureFormat, 2> kDepthAndStencilFormats = {
     wgpu::TextureFormat::Depth24PlusStencil8,
     wgpu::TextureFormat::Depth32FloatStencil8,
 };
@@ -310,13 +308,6 @@ constexpr std::array<wgpu::TextureFormat, 15> kTier2AdditionalStorageFormats = {
     wgpu::TextureFormat::RGBA16Sint, wgpu::TextureFormat::RGBA16Float,
     wgpu::TextureFormat::RGBA32Uint, wgpu::TextureFormat::RGBA32Sint,
     wgpu::TextureFormat::RGBA32Float};
-
-constexpr std::array<wgpu::TextureFormat, 10> kTier2AdditionalIntStorageFormats = {
-    wgpu::TextureFormat::R8Uint,     wgpu::TextureFormat::R8Sint,
-    wgpu::TextureFormat::RGBA8Uint,  wgpu::TextureFormat::RGBA8Sint,
-    wgpu::TextureFormat::R16Uint,    wgpu::TextureFormat::R16Sint,
-    wgpu::TextureFormat::RGBA16Uint, wgpu::TextureFormat::RGBA16Sint,
-    wgpu::TextureFormat::RGBA32Uint, wgpu::TextureFormat::RGBA32Sint};
 #endif  // __EMSCRIPTEN__
 
 class SubsamplingFactor {
@@ -331,12 +322,12 @@ class SubsamplingFactor {
     const uint32_t verticalFactor = 1;
 };
 
-bool TextureFormatSupportsStorageTexture(wgpu::TextureFormat format,
-                                         const wgpu::Device& device,
-                                         bool isCompatibilityMode);
-bool TextureFormatSupportsReadWriteStorageTexture(wgpu::TextureFormat format);
+bool TextureFormatSupportsStorageTexture(const wgpu::Device& device, wgpu::TextureFormat format);
+bool TextureFormatSupportsReadWriteStorageTexture(const wgpu::Device& device,
+                                                  wgpu::TextureFormat format);
 
 bool IsBCTextureFormat(wgpu::TextureFormat textureFormat);
+bool IsNormalizedUncompressedColorTextureFormat(wgpu::TextureFormat textureFormat);
 bool IsETC2TextureFormat(wgpu::TextureFormat textureFormat);
 bool IsASTCTextureFormat(wgpu::TextureFormat textureFormat);
 bool IsCompressedTextureFormat(wgpu::TextureFormat textureFormat);
@@ -378,6 +369,8 @@ const char* GetWGSLColorTextureComponentTypeStr(wgpu::TextureFormat textureForma
 const char* GetWGSLImageFormatQualifier(wgpu::TextureFormat textureFormat);
 uint32_t GetTextureComponentCount(wgpu::TextureFormat textureFormat);
 
+float GetNormalizedFormatMaxComponentValue(wgpu::TextureFormat textureFormat,
+                                           uint32_t componentIndex = 0);
 wgpu::TextureDimension ViewDimensionToTextureDimension(const wgpu::TextureViewDimension dimension);
 }  // namespace dawn::utils
 

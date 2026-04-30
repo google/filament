@@ -25,10 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/native/vulkan/external_memory/MemoryService.h"
+
 #include <utility>
 
 #include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/external_memory/MemoryService.h"
 
 #if DAWN_PLATFORM_IS(LINUX_DESKTOP) || DAWN_PLATFORM_IS(CHROMEOS)
 #include "dawn/native/vulkan/external_memory/MemoryServiceImplementationDmaBuf.h"

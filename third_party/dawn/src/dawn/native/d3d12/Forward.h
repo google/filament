@@ -45,6 +45,7 @@ class PipelineLayout;
 class QuerySet;
 class Queue;
 class RenderPipeline;
+class ResourceTable;
 class Sampler;
 class ShaderModule;
 class SharedFence;
@@ -67,6 +68,7 @@ struct D3D12BackendTraits {
     using QueueType = Queue;
     using RenderPipelineType = RenderPipeline;
     using ResourceHeapType = Heap;
+    using ResourceTableType = ResourceTable;
     using SamplerType = Sampler;
     using ShaderModuleType = ShaderModule;
     using SharedFenceType = SharedFence;

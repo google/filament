@@ -40,9 +40,7 @@ namespace tint {
 class SymbolTable {
   public:
     /// Constructor
-    /// @param generation_id the identifier of the program that owns this symbol
-    /// table
-    explicit SymbolTable(tint::GenerationID generation_id);
+    SymbolTable();
     /// Move Constructor
     SymbolTable(SymbolTable&&);
     /// Destructor
@@ -96,10 +94,10 @@ class SymbolTable {
         }
     }
 
-    /// @returns the identifier of the Program that owns this symbol table.
-    tint::GenerationID GenerationID() const { return generation_id_; }
+    GenerationID GenIDForTesting() const { return generation_id_; }
 
   private:
+    explicit SymbolTable(GenerationID gen_id);
     SymbolTable(const SymbolTable&) = delete;
     SymbolTable& operator=(const SymbolTable& other) = delete;
 
@@ -110,16 +108,10 @@ class SymbolTable {
 
     Hashmap<std::string_view, uint32_t, 0> name_to_symbol_;
     Hashmap<std::string, size_t, 0> last_prefix_to_index_;
-    tint::GenerationID generation_id_;
+    GenerationID generation_id_;
 
     tint::BumpAllocator name_allocator_;
 };
-
-/// @param symbol_table the SymbolTable
-/// @returns the GenerationID that owns the given SymbolTable
-inline GenerationID GenerationIDOf(const SymbolTable& symbol_table) {
-    return symbol_table.GenerationID();
-}
 
 }  // namespace tint
 

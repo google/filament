@@ -26,6 +26,7 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -82,11 +83,13 @@ Java_com_google_android_filament_VertexBuffer_nBuilderNormalized(JNIEnv*, jclass
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_VertexBuffer_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_VertexBuffer_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
     VertexBuffer::Builder* builder = (VertexBuffer::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -104,30 +107,34 @@ Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass,
     VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
     Engine *engine = (Engine *) nativeEngine;
 
-    AutoBuffer nioBuffer(env, buffer, count);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+    return filament::android::wrapJni<jint>(env, [=]() {
+        AutoBuffer nioBuffer(env, buffer, count);
+        void* data = nioBuffer.getData();
+        size_t sizeInBytes = nioBuffer.getSize();
+        if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+            // BufferOverflowException
+            return -1;
+        }
 
-    auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+        auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    BufferDescriptor desc(data, sizeInBytes,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+        BufferDescriptor desc(data, sizeInBytes,
+                callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    vertexBuffer->setBufferAt(*engine, (uint8_t) bufferIndex, std::move(desc),
-            (uint32_t) destOffsetInBytes);
+        vertexBuffer->setBufferAt(*engine, (uint8_t) bufferIndex, std::move(desc),
+                (uint32_t) destOffsetInBytes);
 
-    return 0;
+        return 0;
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_VertexBuffer_nSetBufferObjectAt(JNIEnv*, jclass,
+Java_com_google_android_filament_VertexBuffer_nSetBufferObjectAt(JNIEnv* env, jclass,
         jlong nativeVertexBuffer, jlong nativeEngine, jint bufferIndex, jlong nativeBufferObject) {
     VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
     Engine *engine = (Engine *) nativeEngine;
     BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
-    vertexBuffer->setBufferObjectAt(*engine, (uint8_t) bufferIndex, bufferObject);
+    filament::android::wrapJni(env, [=]() {
+        vertexBuffer->setBufferObjectAt(*engine, (uint8_t) bufferIndex, bufferObject);
+    });
 }

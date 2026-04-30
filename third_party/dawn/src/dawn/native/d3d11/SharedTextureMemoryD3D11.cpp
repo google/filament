@@ -135,8 +135,7 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
                                                            /*isSharedWithHandle=*/true));
 
     auto result =
-        AcquireRef(new SharedTextureMemory(device, label, properties, std::move(d3d11Resource),
-                                           /*requiresFenceSignalOverride=*/std::nullopt));
+        AcquireRef(new SharedTextureMemory(device, label, properties, std::move(d3d11Resource)));
     result->Initialize();
     return result;
 }
@@ -162,9 +161,8 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
     DAWN_TRY_ASSIGN(properties, PropertiesFromD3D11Texture(device, descriptor->texture,
                                                            /*isSharedWithHandle=*/false));
 
-    auto result = AcquireRef(new SharedTextureMemory(
-        device, label, properties, std::move(d3d11Resource),
-        /*requiresFenceSignalOverride=*/descriptor->requiresEndAccessFence));
+    auto result =
+        AcquireRef(new SharedTextureMemory(device, label, properties, std::move(d3d11Resource)));
     result->Initialize();
     return result;
 }
@@ -172,11 +170,8 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
 SharedTextureMemory::SharedTextureMemory(Device* device,
                                          StringView label,
                                          SharedTextureMemoryProperties properties,
-                                         ComPtr<ID3D11Resource> resource,
-                                         std::optional<bool> requiresFenceSignalOverride)
-    : d3d::SharedTextureMemory(device, label, properties),
-      mResource(std::move(resource)),
-      mRequiresFenceSignalOverride(std::move(requiresFenceSignalOverride)) {
+                                         ComPtr<ID3D11Resource> resource)
+    : d3d::SharedTextureMemory(device, label, properties), mResource(std::move(resource)) {
     ComPtr<IDXGIKeyedMutex> dxgiKeyedMutex;
     mResource.As(&dxgiKeyedMutex);
     if (dxgiKeyedMutex) {
@@ -184,7 +179,7 @@ SharedTextureMemory::SharedTextureMemory(Device* device,
     }
 }
 
-void SharedTextureMemory::DestroyImpl() {
+void SharedTextureMemory::DestroyImpl(DestroyReason reason) {
     mKeyedMutex = nullptr;
     mResource = nullptr;
 }
@@ -213,9 +208,7 @@ MaybeError SharedTextureMemory::BeginAccessImpl(
 
     auto* contents = static_cast<SharedTextureMemoryContentsD3D11*>(GetContents());
 
-    if (mRequiresFenceSignalOverride) {
-        contents->mRequiresFenceSignal = *mRequiresFenceSignalOverride;
-    } else if (auto* d3d11beginState = descriptor.Get<SharedTextureMemoryD3D11BeginState>()) {
+    if (auto* d3d11beginState = descriptor.Get<SharedTextureMemoryD3D11BeginState>()) {
         contents->mRequiresFenceSignal |= d3d11beginState->requiresEndAccessFence;
     } else {
         // If there is no SharedTextureMemoryD3D11BeginState, default to true

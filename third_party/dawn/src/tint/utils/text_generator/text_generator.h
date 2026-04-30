@@ -89,6 +89,10 @@ class TextGenerator {
         /// @param indent additional indentation to apply to each line
         std::string String(uint32_t indent = 0) const;
 
+        /// @returns the buffer's content as a single string with all
+        /// unneeded whitespace removed.
+        std::string MinifiedString() const;
+
         /// The current indentation of the TextBuffer. Lines appended to the
         /// TextBuffer will use this indentation.
         uint32_t current_indent = 0;
@@ -143,7 +147,7 @@ class TextGenerator {
     static LineWriter Line(TextBuffer* buffer) { return LineWriter(buffer); }
 
     /// @returns the result data
-    virtual std::string Result() const { return main_buffer_.String(); }
+    virtual std::string Result() const;
 
     /// @returns the list of diagnostics raised by the generator.
     const diag::List& Diagnostics() const { return diagnostics_; }

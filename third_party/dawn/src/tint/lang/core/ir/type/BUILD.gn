@@ -45,9 +45,8 @@ libtint_source_set("type") {
     "array_count.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/lang/core/type",
-    "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
     "${tint_src_dir}/utils/ice",
     "${tint_src_dir}/utils/macros",

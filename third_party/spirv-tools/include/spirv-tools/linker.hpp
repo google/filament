@@ -67,12 +67,36 @@ class SPIRV_TOOLS_EXPORT LinkerOptions {
     allow_ptr_type_mismatch_ = allow_ptr_type_mismatch;
   }
 
+  std::string GetFnVarTargetsCsv() const { return fnvar_targets_csv_; }
+  void SetFnVarTargetsCsv(std::string fnvar_targets_csv) {
+    fnvar_targets_csv_ = fnvar_targets_csv;
+  }
+
+  std::string GetFnVarArchitecturesCsv() const {
+    return fnvar_architectures_csv_;
+  }
+  void SetFnVarArchitecturesCsv(std::string fnvar_architectures_csv) {
+    fnvar_architectures_csv_ = fnvar_architectures_csv;
+  }
+
+  bool GetHasFnVarCapabilities() const { return has_fnvar_capabilities_; }
+  void SetHasFnVarCapabilities(bool fnvar_capabilities) {
+    has_fnvar_capabilities_ = fnvar_capabilities;
+  }
+
+  std::vector<std::string> GetInFiles() const { return in_files_; }
+  void SetInFiles(std::vector<std::string> in_files) { in_files_ = in_files; }
+
  private:
   bool create_library_{false};
   bool verify_ids_{false};
   bool allow_partial_linkage_{false};
   bool use_highest_version_{false};
   bool allow_ptr_type_mismatch_{false};
+  std::string fnvar_targets_csv_{""};
+  std::string fnvar_architectures_csv_{""};
+  bool has_fnvar_capabilities_ = false;
+  std::vector<std::string> in_files_{{}};
 };
 
 // Links one or more SPIR-V modules into a new SPIR-V module. That is, combine

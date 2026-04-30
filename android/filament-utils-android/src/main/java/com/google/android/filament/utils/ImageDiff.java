@@ -50,6 +50,8 @@ public class ImageDiff {
         public Status status;
         public long failingPixelCount;
         public float[] maxDiffFound; // [R, G, B, A]
+        public float[] averageError; // [R, G, B, A] for failing pixels
+        public int[] errorHistogram; // 10 bins of magnitude distribution
         public Bitmap diffImage; // Null if not generated
     }
 

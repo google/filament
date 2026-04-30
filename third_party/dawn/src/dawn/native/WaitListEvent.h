@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "dawn/common/RefCounted.h"
-#include "dawn/native/IntegerTypes.h"
+#include "dawn/common/Time.h"
 #include "dawn/native/SystemEvent.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
@@ -45,7 +45,7 @@ namespace dawn::native {
 
 class WaitListEvent : public RefCounted {
   public:
-    WaitListEvent();
+    explicit WaitListEvent(uint64_t requiredSignalCount = 1);
 
     bool IsSignaled() const;
     void Signal();
@@ -65,7 +65,7 @@ class WaitListEvent : public RefCounted {
     };
 
     mutable std::mutex mMutex;
-    std::atomic_bool mSignaled{false};
+    std::atomic<uint64_t> mRemainingSignalCount;
     std::vector<raw_ptr<SyncWaiter>> mSyncWaiters;
     std::vector<SystemEventPipeSender> mAsyncWaiters;
 };
@@ -73,7 +73,11 @@ class WaitListEvent : public RefCounted {
 template <typename It>
 bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
                             It eventAndReadyStateEnd,
-                            Nanoseconds timeout) {
+                            Nanoseconds timeout)
+    // This method conditionally locks a set of events, and then unlocks them.
+    // The thread-safety analysis does not handle conditional locking, so
+    // we turn off the analysis to avoid spurious warnings.
+    DAWN_NO_THREAD_SAFETY_ANALYSIS {
     static_assert(std::is_base_of_v<std::random_access_iterator_tag,
                                     typename std::iterator_traits<It>::iterator_category>);
     static_assert(std::is_same_v<typename std::iterator_traits<It>::value_type,
@@ -85,7 +89,7 @@ bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
     }
 
     struct EventState {
-        WaitListEvent* event = nullptr;
+        raw_ptr<WaitListEvent> event = nullptr;
         size_t origIndex;
         bool isReady = false;
     };
@@ -159,9 +163,8 @@ bool WaitListEvent::WaitAny(It eventAndReadyStateBegin,
 
     // Any values larger than those representatable by std::chrono::nanoseconds will be treated as
     // infinite waits - in particular this covers values greater than INT64_MAX.
-    static constexpr uint64_t kMaxDurationNanos = std::chrono::nanoseconds::max().count();
     [[maybe_unused]] bool waitDone = false;
-    if (timeout > Nanoseconds(kMaxDurationNanos)) {
+    if (timeout > kMaxDurationNanos) {
         waiter.cv.wait(waiterLock, [&waiter]() { return waiter.waitDone; });
         DAWN_ASSERT(waiter.waitDone);
         waitDone = true;

@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/reader/parser/helper_test.h"
-
 #include "src/tint/utils/text/string_stream.h"
 
 namespace tint::wgsl::reader {

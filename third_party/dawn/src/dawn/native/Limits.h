@@ -37,6 +37,67 @@
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {
+namespace detail {
+
+enum class LimitClass {
+    Alignment,
+    Maximum,
+};
+
+template <LimitClass C>
+struct CheckLimit;
+
+template <>
+struct CheckLimit<LimitClass::Alignment> {
+    template <typename T>
+    static bool IsBetter(T lhs, T rhs) {
+        return lhs < rhs;
+    }
+
+    template <typename T>
+    static MaybeError Validate(T supported, T required) {
+        DAWN_INVALID_IF(IsBetter(required, supported),
+                        "Required limit (%u) is lower than the supported limit (%u).", required,
+                        supported);
+        DAWN_INVALID_IF(!IsPowerOfTwo(required), "Required limit (%u) is not a power of two.",
+                        required);
+        return {};
+    }
+};
+
+template <>
+struct CheckLimit<LimitClass::Maximum> {
+    template <typename T>
+    static bool IsBetter(T lhs, T rhs) {
+        return lhs > rhs;
+    }
+
+    template <typename T>
+    static MaybeError Validate(T supported, T required) {
+        DAWN_INVALID_IF(IsBetter(required, supported),
+                        "Required limit (%u) is greater than the supported limit (%u).", required,
+                        supported);
+        return {};
+    }
+};
+
+template <typename T>
+bool IsLimitUndefined(T value) {
+    static_assert(sizeof(T) != sizeof(T), "IsLimitUndefined not implemented for this type");
+    return false;
+}
+
+template <>
+inline bool IsLimitUndefined<uint32_t>(uint32_t value) {
+    return value == wgpu::kLimitU32Undefined;
+}
+
+template <>
+inline bool IsLimitUndefined<uint64_t>(uint64_t value) {
+    return value == wgpu::kLimitU64Undefined;
+}
+
+}  // namespace detail
 
 // TODO(crbug.com/421950205): Replace this with dawn::utils::ComboLimits.
 struct CombinedLimits {

@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "dawn/common/GPUInfo.h"
 
 #include <algorithm>
@@ -33,6 +38,7 @@
 #include <sstream>
 
 #include "dawn/common/Assert.h"
+#include "dawn/common/GPUInfo_autogen.h"
 
 namespace dawn::gpu_info {
 namespace {
@@ -41,6 +47,9 @@ namespace {
 // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/include/pci_ids/iris_pci_ids.h
 // gen9
 const std::array<PCIDeviceID, 2> IrisPlus655 = {{0x3EA5, 0x3EA8}};
+
+// ARM
+const PCIDeviceID kMaliG68 = 0x92041010;
 
 }  // anonymous namespace
 
@@ -76,6 +85,12 @@ std::string DriverVersion::ToString() const {
     return oss.str();
 }
 
+std::strong_ordering DriverVersion::operator<=>(const DriverVersion& other) const {
+    return std::lexicographical_compare_three_way(mDriverVersion.begin(), mDriverVersion.end(),
+                                                  other.mDriverVersion.begin(),
+                                                  other.mDriverVersion.end());
+}
+
 // According to Intel graphics driver version schema, build number is generated from the
 // last two fields.
 // See https://www.intel.com/content/www/us/en/support/articles/000005654/graphics.html for
@@ -89,16 +104,6 @@ IntelWindowsDriverVersion::IntelWindowsDriverVersion(const DriverVersion& driver
 IntelWindowsDriverVersion::IntelWindowsDriverVersion(const std::initializer_list<uint16_t>& version)
     : IntelWindowsDriverVersion(DriverVersion(version)) {}
 
-int CompareIntelMesaDriverVersion(const DriverVersion& version1, const DriverVersion& version2) {
-    for (uint32_t i = 0; i < 3; ++i) {
-        int diff = static_cast<int32_t>(version1[i]) - static_cast<int32_t>(version2[i]);
-        if (diff != 0) {
-            return diff;
-        }
-    }
-    return 0;
-}
-
 // Intel GPUs
 bool IsSkylake(PCIDeviceID deviceId) {
     return (deviceId & 0xFF00) == 0x1900;
@@ -108,9 +113,49 @@ bool IsIrisPlus655(PCIDeviceID deviceId) {
     return std::find(IrisPlus655.cbegin(), IrisPlus655.cend(), deviceId) != IrisPlus655.cend();
 }
 
-bool IsIntelGen11OrOlder(PCIVendorID venderId, PCIDeviceID deviceId) {
-    return IsIntelGen7(venderId, deviceId) || IsIntelGen8(venderId, deviceId) ||
-           IsIntelGen9(venderId, deviceId) || IsIntelGen11(venderId, deviceId);
+IntelGen GetIntelGen(PCIVendorID venderId, PCIDeviceID deviceId) {
+    DAWN_CHECK(gpu_info::IsIntel(venderId));
+
+    if (gpu_info::IsIntelGen7(venderId, deviceId)) {
+        return IntelGen::Gen7;
+    } else if (gpu_info::IsIntelGen8(venderId, deviceId)) {
+        return IntelGen::Gen8;
+    } else if (gpu_info::IsIntelGen9(venderId, deviceId)) {
+        return IntelGen::Gen9;
+    } else if (gpu_info::IsIntelGen11(venderId, deviceId)) {
+        return IntelGen::Gen11;
+    } else if (gpu_info::IsIntelGen12LP(venderId, deviceId)) {
+        return IntelGen::Xe;
+    } else if (gpu_info::IsIntelGen12HP(venderId, deviceId)) {
+        return IntelGen::Xe;
+    } else if (gpu_info::IsIntelXeLPG(venderId, deviceId)) {
+        return IntelGen::Xe;
+    } else if (gpu_info::IsIntelXe2LPG(venderId, deviceId)) {
+        return IntelGen::Xe2;
+    } else if (gpu_info::IsIntelXe2HPG(venderId, deviceId)) {
+        return IntelGen::Xe2;
+    } else if (gpu_info::IsIntelXe3LPG(venderId, deviceId)) {
+        return IntelGen::Xe3;
+    } else {
+        return IntelGen::Unknown;
+    }
+}
+
+QualcommACPIGen GetQualcommACPIGen(PCIVendorID venderId, PCIDeviceID deviceId) {
+    DAWN_CHECK(gpu_info::IsQualcommACPI(venderId));
+
+    if (gpu_info::IsQualcommACPIAdreno6xx(venderId, deviceId)) {
+        return QualcommACPIGen::Adreno6xx;
+    } else if (gpu_info::IsQualcommACPIAdreno7xx(venderId, deviceId)) {
+        return QualcommACPIGen::Adreno7xx;
+    } else {
+        return QualcommACPIGen::Unknown;
+    }
+}
+
+// ARM GPUs
+bool IsMaliG68(PCIDeviceID deviceId) {
+    return deviceId == kMaliG68;
 }
 
 }  // namespace dawn::gpu_info

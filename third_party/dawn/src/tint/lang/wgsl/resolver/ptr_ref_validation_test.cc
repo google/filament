@@ -170,7 +170,7 @@ TEST_F(ResolverPtrRefValidationTest, AddressOfAccess) {
     WrapInFunction(expr);
 
     EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(), R"(12:34 error: cannot use access 'read_write' as value)");
+    EXPECT_EQ(r()->error(), R"(12:34 error: cannot use access enumerant 'read_write' as value)");
 }
 
 TEST_F(ResolverPtrRefValidationTest, AddressOfAddressSpace) {
@@ -218,6 +218,32 @@ TEST_F(ResolverPtrRefValidationTest, AddressOfVectorComponent_IndexAccessor) {
     // &v[2i]
     auto* v = Var("v", ty.vec4<i32>());
     auto* expr = AddressOf(IndexAccessor(Source{{12, 34}}, "v", 2_i));
+
+    WrapInFunction(v, expr);
+
+    EXPECT_FALSE(r()->Resolve());
+
+    EXPECT_EQ(r()->error(), R"(12:34 error: cannot take the address of a vector component)");
+}
+
+TEST_F(ResolverPtrRefValidationTest, AddressOfVectorComponent_MemberAccessorOnPointer) {
+    // var v : vec4<i32>;
+    // &((&v).y)
+    auto* v = Var("v", ty.vec4<i32>());
+    auto* expr = AddressOf(MemberAccessor(Source{{12, 34}}, AddressOf("v"), "y"));
+
+    WrapInFunction(v, expr);
+
+    EXPECT_FALSE(r()->Resolve());
+
+    EXPECT_EQ(r()->error(), R"(12:34 error: cannot take the address of a vector component)");
+}
+
+TEST_F(ResolverPtrRefValidationTest, AddressOfVectorComponent_IndexAccessorOnPointer) {
+    // var v : vec4<i32>;
+    // &((&v)[2i])
+    auto* v = Var("v", ty.vec4<i32>());
+    auto* expr = AddressOf(IndexAccessor(Source{{12, 34}}, AddressOf("v"), 2_i));
 
     WrapInFunction(v, expr);
 

@@ -30,9 +30,6 @@
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
-#include "vulkan/utils/StaticVector.h"
-
-#include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
@@ -241,118 +238,6 @@ struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
     uint32_t offset = 0;
 };
 
-using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
-using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
-
-struct PushConstantDescription {
-    explicit PushConstantDescription(backend::Program const& program);
-
-    VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
-    uint32_t getVkRangeCount() const noexcept { return mRangeCount; }
-    void write(VkCommandBuffer cmdbuf, VkPipelineLayout layout, backend::ShaderStage stage,
-            uint8_t index, backend::PushConstantVariant const& value);
-
-private:
-    static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
-
-    struct ConstantDescription {
-        utils::FixedCapacityVector<backend::ConstantType> types;
-        uint32_t offset = 0;
-    };
-
-    // Describes the constants in each shader stage.
-    ConstantDescription mDescriptions[Program::SHADER_TYPE_COUNT];
-    VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
-    uint32_t mRangeCount;
-};
-
-struct VulkanProgram : public HwProgram, fvkmemory::Resource {
-    using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
-
-    VulkanProgram(VkDevice device, Program const& builder) noexcept;
-    ~VulkanProgram();
-
-    /**
-     * Cancels any parallel compilation jobs that have not yet run for this
-     * program.
-     */
-    inline void cancelParallelCompilation() {
-        mParallelCompilationCanceled.store(true, std::memory_order_release);
-    }
-
-    /**
-     * Writes out any queued push constants using the provided VkPipelineLayout.
-     *
-     * @param layout The layout that is to be used along with these push constants,
-     *               in the next draw call.
-     */
-    void flushPushConstants(VkPipelineLayout layout);
-
-    inline VkShaderModule getVertexShader() const {
-        return mInfo->shaders[0];
-    }
-
-    inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
-
-    inline uint32_t getPushConstantRangeCount() const {
-        return mInfo->pushConstantDescription.getVkRangeCount();
-    }
-
-    inline VkPushConstantRange const* getPushConstantRanges() const {
-        return mInfo->pushConstantDescription.getVkRanges();
-    }
-
-    /**
-     * Returns true if parallel compilation is canceled, false if not. Parallel
-     * compilation will be canceled if this program is destroyed before relevant
-     * pipelines are created.
-     *
-     * @return true if parallel compilation should run for this program, false if not
-     */
-    inline bool isParallelCompilationCanceled() const {
-        return mParallelCompilationCanceled.load(std::memory_order_acquire);
-    }
-
-    inline void writePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
-            backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        // It's possible that we don't have the layout yet. When external samplers are used, bindPipeline()
-        // in VulkanDriver returns early, without binding a layout. If that happens, the layout is not
-        // set until draw time. Any push constants that are written during that time should be saved for
-        // later, and flushed when the layout is set.
-        if (layout != VK_NULL_HANDLE) {
-            mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
-        } else {
-            mQueuedPushConstants.push_back({cmdbuf, stage, index, value});
-        }
-    }
-
-    // TODO: handle compute shaders.
-    // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
-    static constexpr uint8_t const MAX_SHADER_MODULES = 2;
-
-private:
-    struct PipelineInfo {
-        explicit PipelineInfo(backend::Program const& program) noexcept
-            : pushConstantDescription(program)
-            {}
-
-        VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
-        PushConstantDescription pushConstantDescription;
-    };
-
-    struct PushConstantInfo {
-        VkCommandBuffer cmdbuf;
-        backend::ShaderStage stage;
-        uint8_t index;
-        backend::PushConstantVariant value;
-    };
-
-    PipelineInfo* mInfo;
-    VkDevice mDevice = VK_NULL_HANDLE;
-    std::atomic<bool> mParallelCompilationCanceled { false };
-    std::vector<PushConstantInfo> mQueuedPushConstants;
-};
-
 // The render target bundles together a set of attachments, each of which can have one of the
 // following ownership semantics:
 //
@@ -367,7 +252,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
             VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
             VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount);
+            VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount);
 
     ~VulkanRenderTarget();
 
@@ -399,12 +284,12 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->attachments[0];
     }
 
-    inline VulkanAttachment& getDepth() const {
-        assert_invariant(hasDepth());
+    inline VulkanAttachment& getDepthStencil() const {
+        assert_invariant(hasDepthStencil());
         if (mInfo->fbkey.samples == 1) {
-            return mInfo->attachments[mInfo->depthIndex];
+            return mInfo->attachments[mInfo->depthStencilIndex];
         }
-        return mInfo->attachments[mInfo->msaaDepthIndex];
+        return mInfo->attachments[mInfo->msaaDepthStencilIndex];
     }
 
     inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
@@ -421,7 +306,7 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
 
     uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
-    inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
+    inline bool hasDepthStencil() const { return mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX; }
 
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }
@@ -456,8 +341,8 @@ private:
         VulkanFboCache::FboKey fbkey = {};
         std::vector<VulkanAttachment> attachments;
         utils::bitset32 colors;
-        int8_t depthIndex = UNDEFINED_INDEX;
-        int8_t msaaDepthIndex = UNDEFINED_INDEX;
+        int8_t depthStencilIndex = UNDEFINED_INDEX;
+        int8_t msaaDepthStencilIndex = UNDEFINED_INDEX;
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
     bool mOffscreen;

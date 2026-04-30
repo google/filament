@@ -26,6 +26,7 @@
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
+#include <utils/tribool.h>
 
 #include <functional>
 #include <initializer_list>
@@ -441,6 +442,24 @@ public:
          * invoking asynchronous methods.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
+
+        /**
+         * Capacity of the LRU cache for material definitions.
+         *
+         * A value of 0 indicates that definitions will be destroyed immediately when they are no
+         * longer referenced by any material instances or scenes. A value greater than 0 defines
+         * the maximum number of unreferenced definitions to keep alive to avoid re-compilation.
+         */
+        uint32_t materialCacheCapacity = 0;
+
+        /**
+         * Capacity of the LRU cache for program specializations.
+         *
+         * Similar to materialCacheCapacity, but applies to the underlying shader programs generated
+         * for materials. A value of 0 means immediate destruction of unreferenced programs. A
+         * positive value caches up to that number of programs.
+         */
+        uint32_t programCacheCapacity = 0;
     };
 
 
@@ -764,6 +783,17 @@ public:
     bool isAsynchronousModeEnabled() const noexcept;
 
     /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * If this returns true, the engine is in an unrecoverable state and further calls to
+     * rendering methods will fail or be ignored. Apps can use this to check for fatal
+     * errors instead of relying on exceptions.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    bool hasUnrecoverableFailure() const noexcept;
+
+    /**
      * Retrieves the configuration settings of this Engine.
      *
      * This method returns the configuration object that was supplied to the Engine's
@@ -1080,6 +1110,8 @@ public:
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
      */
     void flushAndWait();
 
@@ -1099,6 +1131,8 @@ public:
      * @param timeout A timeout in nanoseconds
      * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
      * might still be executing on both the CPU and GPU sides.
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.
      */
     bool flushAndWait(uint64_t timeout);
 
@@ -1108,7 +1142,9 @@ public:
      *
      * <p>This is typically used after creating a lot of objects to start draining the command
      * queue which has a limited size.</p>
-      */
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
+     */
     void flush();
 
     /**
@@ -1283,6 +1319,53 @@ public:
      * @return a pointer to the feature flag value, or nullptr if the feature flag is constant or doesn't exist
      */
     bool* UTILS_NULLABLE getFeatureFlagPtr(char const* UTILS_NONNULL name) const noexcept;
+
+
+    /**
+     * Asynchronously ensures that the variants of the specified Material needed to render it
+     * in the provided View are compiled. This takes into account the view's features
+     * (e.g. dynamic lighting, fog, stereo, shadowing), alongside the specified shadow receiver
+     * and skinning configurations.
+     *
+     * After issuing several Engine::compile() calls in a row, it is recommended to call
+     * Engine::flush() such that the backend can start the compilation work as soon as possible.
+     * The provided callback is guaranteed to be called on the main thread after all computed
+     * variants of the material are compiled. This can take hundreds of milliseconds.
+     *
+     * If all the needed variants are already compiled, the callback will be scheduled as
+     * soon as possible, but this might take a few dozen milliseconds, corresponding to how
+     * many previous frames are enqueued in the backend. 
+     *
+     * If the same variant is scheduled for compilation multiple times, the first scheduling
+     * takes precedence; later scheduling are ignored.
+     *
+     * The callback is guaranteed to be called. If the engine is destroyed while some material
+     * variants are still compiling or in the queue, these will be discarded and the corresponding
+     * callback will be called. In that case however the Material pointer passed to the callback
+     * is guaranteed to be invalid (either because it's been destroyed by the user already, or,
+     * because it's been cleaned-up by the Engine).
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material to compile.
+     * @param view           The View in which the material will be rendered.
+     * @param shadowReceiver Indicates whether to compile the shadow-receiving variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param skinning       Indicates whether to compile the skinning variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param handler        Handler to dispatch the callback or nullptr for the default handler.
+     * @param callback       Callback called on the main thread when the compilation is done
+     *                       by the backend.
+     * 
+     * @see Material::compile
+     */
+    void compile(
+            backend::CompilerPriorityQueue priority,
+            Material const* UTILS_NONNULL material,
+            View const* UTILS_NONNULL view,
+            utils::tribool shadowReceiver,
+            utils::tribool skinning,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {});
 
 protected:
     //! \privatesection

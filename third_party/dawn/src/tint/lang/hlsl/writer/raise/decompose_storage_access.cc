@@ -71,7 +71,7 @@ struct State {
 
             // Var must be a pointer
             auto* var_ty = var->Result()->Type()->As<core::type::Pointer>();
-            TINT_ASSERT(var_ty);
+            TINT_IR_ASSERT(ir, var_ty);
 
             // Only care about storage address space variables.
             if (var_ty->AddressSpace() != core::AddressSpace::kStorage) {
@@ -112,7 +112,7 @@ struct State {
                                 usage_worklist.Push(call);
                                 break;
                             default:
-                                TINT_UNREACHABLE() << call->Func();
+                                TINT_IR_UNREACHABLE(ir) << call->Func();
                         }
                     },
                     //
@@ -186,7 +186,7 @@ struct State {
                                 AtomicLoad(var, call, {});
                                 break;
                             default:
-                                TINT_UNREACHABLE();
+                                TINT_IR_UNREACHABLE(ir);
                         }
                     },
                     TINT_ICE_ON_NO_MATCH);
@@ -204,7 +204,7 @@ struct State {
         auto* arr_ty = type->As<core::type::Array>();
         // If the `arrayLength` was called directly on the storage buffer then
         // it _must_ be a runtime array.
-        TINT_ASSERT(arr_ty && arr_ty->Count()->As<core::type::RuntimeArrayCount>());
+        TINT_IR_ASSERT(ir, arr_ty && arr_ty->Count()->As<core::type::RuntimeArrayCount>());
 
         b.InsertBefore(call, [&] {
             // The `GetDimensions` call uses out parameters for all return values, there is no
@@ -218,9 +218,9 @@ struct State {
 
             inst = b.Load(inst);
             if (offset > 0) {
-                inst = b.Subtract(ty.u32(), inst, u32(offset));
+                inst = b.Subtract(inst, u32(offset));
             }
-            auto* div = b.Divide(ty.u32(), inst, u32(arr_ty->Stride()));
+            auto* div = b.Divide(inst, u32(arr_ty->ImplicitStride()));
             call->Result()->ReplaceAllUsesWith(div->Result());
         });
         call->Destroy();
@@ -242,9 +242,8 @@ struct State {
             auto* original_value = b.Var(ty.ptr(function, type));
             original_value->SetInitializer(b.Zero(type));
 
-            b.MemberCall<hlsl::ir::MemberBuiltinCall>(
-                ty.void_(), fn, var, b.InsertConvertIfNeeded(type, OffsetToValue(offset)), args[1],
-                original_value);
+            b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), fn, var, OffsetToValue(offset),
+                                                      args[1], original_value);
             b.LoadWithResult(call->DetachResult(), original_value);
         });
         call->Destroy();
@@ -289,10 +288,9 @@ struct State {
             auto* original_value = b.Var(ty.ptr(function, type));
             original_value->SetInitializer(b.Zero(type));
 
-            auto* val = b.Subtract(type, b.Zero(type), args[1]);
-            b.MemberCall<hlsl::ir::MemberBuiltinCall>(
-                ty.void_(), BuiltinFn::kInterlockedAdd, var,
-                b.InsertConvertIfNeeded(type, OffsetToValue(offset)), val, original_value);
+            auto* val = b.Subtract(b.Zero(type), args[1]);
+            b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedAdd, var,
+                                                      OffsetToValue(offset), val, original_value);
             b.LoadWithResult(call->DetachResult(), original_value);
         });
         call->Destroy();
@@ -309,11 +307,11 @@ struct State {
 
             auto* cmp = args[1];
             b.MemberCall<hlsl::ir::MemberBuiltinCall>(
-                ty.void_(), BuiltinFn::kInterlockedCompareExchange, var,
-                b.InsertConvertIfNeeded(type, OffsetToValue(offset)), cmp, args[2], original_value);
+                ty.void_(), BuiltinFn::kInterlockedCompareExchange, var, OffsetToValue(offset), cmp,
+                args[2], original_value);
 
             auto* o = b.Load(original_value);
-            b.ConstructWithResult(call->DetachResult(), o, b.Equal(ty.bool_(), o, cmp));
+            b.ConstructWithResult(call->DetachResult(), o, b.Equal(o, cmp));
         });
         call->Destroy();
     }
@@ -325,9 +323,9 @@ struct State {
             auto* original_value = b.Var(ty.ptr(function, type));
             original_value->SetInitializer(b.Zero(type));
 
-            b.MemberCall<hlsl::ir::MemberBuiltinCall>(
-                ty.void_(), BuiltinFn::kInterlockedOr, var,
-                b.InsertConvertIfNeeded(type, OffsetToValue(offset)), b.Zero(type), original_value);
+            b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedOr, var,
+                                                      OffsetToValue(offset), b.Zero(type),
+                                                      original_value);
             b.LoadWithResult(call->DetachResult(), original_value);
         });
         call->Destroy();
@@ -343,9 +341,9 @@ struct State {
             auto* original_value = b.Var(ty.ptr(function, type));
             original_value->SetInitializer(b.Zero(type));
 
-            b.MemberCall<hlsl::ir::MemberBuiltinCall>(
-                ty.void_(), BuiltinFn::kInterlockedExchange, var,
-                b.InsertConvertIfNeeded(type, OffsetToValue(offset)), args[1], original_value);
+            b.MemberCall<hlsl::ir::MemberBuiltinCall>(ty.void_(), BuiltinFn::kInterlockedExchange,
+                                                      var, OffsetToValue(offset), args[1],
+                                                      original_value);
         });
         call->Destroy();
     }
@@ -362,7 +360,7 @@ struct State {
                 if (val->Type() != ty.u32()) {
                     idx = b.Convert(ty.u32(), val)->Result();
                 }
-                offset->expr.Push(b.Multiply(ty.u32(), idx, u32(elm_size))->Result());
+                offset->expr.Push(b.Multiply(idx, u32(elm_size))->Result());
             },
             TINT_ICE_ON_NO_MATCH);
     }
@@ -371,7 +369,7 @@ struct State {
     core::ir::Value* OffsetToValue(const OffsetData& offset) {
         core::ir::Value* val = b.Value(u32(offset.byte_offset));
         for (core::ir::Value* expr : offset.expr) {
-            val = b.Add(ty.u32(), val, expr)->Result();
+            val = b.Add(val, expr)->Result();
         }
         return val;
     }
@@ -412,28 +410,33 @@ struct State {
                                  core::ir::Value* from,
                                  core::ir::Value* offset) {
         bool is_f16 = from->Type()->DeepestElement()->Is<core::type::F16>();
+        bool is_u16 = from->Type()->DeepestElement()->Is<core::type::U16>();
 
         const core::type::Type* cast_ty = ty.MatchWidth(ty.u32(), from->Type());
-        auto fn = is_f16 ? BuiltinFn::kStoreF16 : BuiltinFn::kStore;
+        auto fn =
+            is_f16 ? BuiltinFn::kStoreF16 : (is_u16 ? BuiltinFn::kStoreU16 : BuiltinFn::kStore);
         if (auto* vec = from->Type()->As<core::type::Vector>()) {
             switch (vec->Width()) {
                 case 2:
-                    fn = is_f16 ? BuiltinFn::kStore2F16 : BuiltinFn::kStore2;
+                    fn = is_f16 ? BuiltinFn::kStore2F16
+                                : (is_u16 ? BuiltinFn::kStore2U16 : BuiltinFn::kStore2);
                     break;
                 case 3:
-                    fn = is_f16 ? BuiltinFn::kStore3F16 : BuiltinFn::kStore3;
+                    fn = is_f16 ? BuiltinFn::kStore3F16
+                                : (is_u16 ? BuiltinFn::kStore3U16 : BuiltinFn::kStore3);
                     break;
                 case 4:
-                    fn = is_f16 ? BuiltinFn::kStore4F16 : BuiltinFn::kStore4;
+                    fn = is_f16 ? BuiltinFn::kStore4F16
+                                : (is_u16 ? BuiltinFn::kStore4U16 : BuiltinFn::kStore4);
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
             }
         }
 
         core::ir::Value* cast = nullptr;
-        // The `f16` type is not cast in a store as the store itself ends up templated.
-        if (is_f16) {
+        // The `f16` and `u16` types are not cast in a store as the store itself ends up templated.
+        if (is_f16 || is_u16) {
             cast = from;
         } else {
             cast = b.Bitcast(cast_ty, from)->Result();
@@ -478,37 +481,43 @@ struct State {
                                            const core::type::Type* result_ty,
                                            core::ir::Value* offset) {
         bool is_f16 = result_ty->DeepestElement()->Is<core::type::F16>();
+        bool is_u16 = result_ty->DeepestElement()->Is<core::type::U16>();
 
         const core::type::Type* load_ty = nullptr;
-        // An `f16` load returns an `f16` instead of a `u32`
+        // `f16` and `u16` loads return their native type instead of a `u32`
         if (is_f16) {
             load_ty = ty.MatchWidth(ty.f16(), result_ty);
+        } else if (is_u16) {
+            load_ty = ty.MatchWidth(ty.u16(), result_ty);
         } else {
             load_ty = ty.MatchWidth(ty.u32(), result_ty);
         }
 
-        auto fn = is_f16 ? BuiltinFn::kLoadF16 : BuiltinFn::kLoad;
+        auto fn = is_f16 ? BuiltinFn::kLoadF16 : (is_u16 ? BuiltinFn::kLoadU16 : BuiltinFn::kLoad);
         if (auto* v = result_ty->As<core::type::Vector>()) {
             switch (v->Width()) {
                 case 2:
-                    fn = is_f16 ? BuiltinFn::kLoad2F16 : BuiltinFn::kLoad2;
+                    fn = is_f16 ? BuiltinFn::kLoad2F16
+                                : (is_u16 ? BuiltinFn::kLoad2U16 : BuiltinFn::kLoad2);
                     break;
                 case 3:
-                    fn = is_f16 ? BuiltinFn::kLoad3F16 : BuiltinFn::kLoad3;
+                    fn = is_f16 ? BuiltinFn::kLoad3F16
+                                : (is_u16 ? BuiltinFn::kLoad3U16 : BuiltinFn::kLoad3);
                     break;
                 case 4:
-                    fn = is_f16 ? BuiltinFn::kLoad4F16 : BuiltinFn::kLoad4;
+                    fn = is_f16 ? BuiltinFn::kLoad4F16
+                                : (is_u16 ? BuiltinFn::kLoad4U16 : BuiltinFn::kLoad4);
                     break;
                 default:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
             }
         }
 
         auto* builtin = b.MemberCall<hlsl::ir::MemberBuiltinCall>(load_ty, fn, var, offset);
         core::ir::Call* res = nullptr;
 
-        // Do not bitcast the `f16` conversions as they need to be a templated Load instruction
-        if (is_f16) {
+        // Do not bitcast `f16` or `u16` conversions as they use templated Load instructions
+        if (is_f16 || is_u16) {
             res = builtin;
         } else {
             res = b.Bitcast(result_ty, builtin->Result());
@@ -537,9 +546,9 @@ struct State {
             b.Append(fn->Block(), [&] {
                 Vector<core::ir::Value*, 4> values;
                 for (const auto* mem : s->Members()) {
-                    values.Push(MakeLoad(inst, var, mem->Type(),
-                                         b.Add<u32>(p, u32(mem->Offset()))->Result())
-                                    ->Result());
+                    values.Push(
+                        MakeLoad(inst, var, mem->Type(), b.Add(p, u32(mem->Offset()))->Result())
+                            ->Result());
                 }
 
                 b.Return(fn, b.Construct(s, values));
@@ -561,8 +570,7 @@ struct State {
             b.Append(fn->Block(), [&] {
                 for (const auto* mem : s->Members()) {
                     auto* from = b.Access(mem->Type(), obj, u32(mem->Index()));
-                    MakeStore(inst, var, from->Result(),
-                              b.Add<u32>(p, u32(mem->Offset()))->Result());
+                    MakeStore(inst, var, from->Result(), b.Add(p, u32(mem->Offset()))->Result());
                 }
 
                 b.Return(fn);
@@ -593,7 +601,7 @@ struct State {
             b.Append(fn->Block(), [&] {
                 Vector<core::ir::Value*, 4> values;
                 for (size_t i = 0; i < mat->Columns(); ++i) {
-                    auto* add = b.Add<u32>(p, u32(i * mat->ColumnStride()));
+                    auto* add = b.Add(p, u32(i * mat->ColumnStride()));
                     auto* load = MakeLoad(inst, var, mat->ColumnType(), add->Result());
                     values.Push(load->Result());
                 }
@@ -619,7 +627,7 @@ struct State {
                 for (size_t i = 0; i < mat->Columns(); ++i) {
                     auto* from = b.Access(mat->ColumnType(), obj, u32(i));
                     MakeStore(inst, var, from->Result(),
-                              b.Add<u32>(p, u32(i * mat->ColumnStride()))->Result());
+                              b.Add(p, u32(i * mat->ColumnStride()))->Result());
                 }
 
                 b.Return(fn);
@@ -639,7 +647,7 @@ struct State {
     //     if (i >= A length) {
     //       break;
     //     }
-    //     a[i] = <load array type>(offset + (i * A->Stride()));
+    //     a[i] = <load array type>(offset + (i * A->ImplicitStride()));
     //     i = i + 1;
     //   }
     //   return a;
@@ -656,12 +664,12 @@ struct State {
                 auto* result_arr = b.Var<function>("a", b.Zero(arr));
 
                 auto* count = arr->Count()->As<core::type::ConstantArrayCount>();
-                TINT_ASSERT(count);
+                TINT_IR_ASSERT(ir, count);
 
-                b.LoopRange(ty, 0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
+                b.LoopRange(0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
                     auto* access = b.Access(ty.ptr<function>(arr->ElemType()), result_arr, idx);
-                    auto* stride = b.Multiply<u32>(idx, u32(arr->Stride()));
-                    auto* byte_offset = b.Add<u32>(p, stride);
+                    auto* stride = b.Multiply(idx, u32(arr->ImplicitStride()));
+                    auto* byte_offset = b.Add(p, stride);
                     b.Store(access, MakeLoad(inst, var, arr->ElemType(), byte_offset->Result()));
                 });
 
@@ -683,12 +691,12 @@ struct State {
 
             b.Append(fn->Block(), [&] {
                 auto* count = arr->Count()->As<core::type::ConstantArrayCount>();
-                TINT_ASSERT(count);
+                TINT_IR_ASSERT(ir, count);
 
-                b.LoopRange(ty, 0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
+                b.LoopRange(0_u, u32(count->value), 1_u, [&](core::ir::Value* idx) {
                     auto* from = b.Access(arr->ElemType(), obj, idx);
-                    auto* stride = b.Multiply<u32>(idx, u32(arr->Stride()));
-                    auto* byte_offset = b.Add<u32>(p, stride);
+                    auto* stride = b.Multiply(idx, u32(arr->ImplicitStride()));
+                    auto* byte_offset = b.Add(p, stride);
                     MakeStore(inst, var, from->Result(), byte_offset->Result());
                 });
 
@@ -724,14 +732,15 @@ struct State {
                     obj = m->ColumnType();
                 },
                 [&](const core::type::Array* ary) {
-                    b.InsertBefore(a, [&] { UpdateOffsetData(idx_value, ary->Stride(), &offset); });
+                    b.InsertBefore(
+                        a, [&] { UpdateOffsetData(idx_value, ary->ImplicitStride(), &offset); });
                     obj = ary->ElemType();
                 },
                 [&](const core::type::Struct* s) {
                     auto* cnst = idx_value->As<core::ir::Constant>();
 
                     // A struct index must be a constant
-                    TINT_ASSERT(cnst);
+                    TINT_IR_ASSERT(ir, cnst);
 
                     uint32_t idx = cnst->Value()->ValueAs<uint32_t>();
                     auto* mem = s->Members()[idx];
@@ -832,7 +841,7 @@ struct State {
                             AtomicLoad(var, call, offset);
                             break;
                         default:
-                            TINT_UNREACHABLE() << call->Func();
+                            TINT_IR_UNREACHABLE(ir) << call->Func();
                     }
                 },  //
                 TINT_ICE_ON_NO_MATCH);
@@ -899,14 +908,13 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DecomposeStorageAccess(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.DecomposeStorageAccess",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowClipDistancesOnF32,
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllow16BitIntegers,
+                              core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                              core::ir::Capability::kAllowDuplicateBindings,
+                          },
+                          "before hlsl.DecomposeStorageAccess");
 
     State{ir}.Process();
 

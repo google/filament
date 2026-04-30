@@ -25,11 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/array.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::resolver {
 namespace {
@@ -138,9 +137,8 @@ INSTANTIATE_TEST_SUITE_P(ResolverTest, ResolverInferredTypeParamTest, testing::V
 
 TEST_F(ResolverInferredTypeTest, InferArray_Pass) {
     auto type = ty.array<u32, 10>();
-    auto* expected_type =
-        create<sem::Array>(create<core::type::U32>(), create<core::type::ConstantArrayCount>(10u),
-                           4u, 4u * 10u, 4u, 4u);
+    auto* expected_type = create<sem::Array>(create<core::type::U32>(),
+                                             create<core::type::ConstantArrayCount>(10u), 4u * 10u);
 
     auto* ctor_expr = Call(type);
     auto* var = Var("a", core::AddressSpace::kFunction, ctor_expr);
@@ -158,7 +156,7 @@ TEST_F(ResolverInferredTypeTest, InferStruct_Pass) {
         str, str->name->symbol,
         Vector{create<sem::StructMember>(member, member->name->symbol, create<core::type::I32>(),
                                          0u, 0u, 0u, 4u, core::IOAttributes{})},
-        0u, 4u, 4u);
+        4u);
 
     auto* ctor_expr = Call(ty.Of(str));
 

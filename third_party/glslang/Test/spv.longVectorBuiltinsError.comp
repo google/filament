@@ -1,0 +1,38 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_expect_assume : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(constant_id = 0) const uint32_t c0 = 0;
+
+void main()
+{
+    vector<float, 5> vf;
+    float f;
+    vector<uint32_t, 5> vu;
+    uint32_t u;
+    vector<int32_t, 5> vi;
+    int32_t i;
+    vector<float16_t, 5> vf16;
+    float16_t f16;
+    vector<bool, 5> vb;
+    bool b;
+    vector<float64_t, 5> vf64;
+    vector<uint32_t, c0> vuc;
+
+    vf = max(vf, vu);
+    vu = max(vu, vector<uint16_t, 5>(0));
+    vu = max(vu, i);
+    vu = max(vu, f);
+    vf = smoothstep(f, f16, vf);
+    vf64 = radians(vf64);
+    vf64 = sin(vf64);
+    vf64 = atanh(vf64);
+    vu = abs(vu);
+    vu = max(vu, vector<uint32_t, 6>(0));
+    vu = max(vu, vuc);
+}

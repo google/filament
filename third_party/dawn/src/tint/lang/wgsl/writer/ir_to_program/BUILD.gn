@@ -47,10 +47,9 @@ libtint_source_set("ir_to_program") {
   sources = [
     "ir_to_program.cc",
     "ir_to_program.h",
-    "program_options.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -64,6 +63,7 @@ libtint_source_set("ir_to_program") {
     "${tint_src_dir}/lang/wgsl/program",
     "${tint_src_dir}/lang/wgsl/resolver",
     "${tint_src_dir}/lang/wgsl/sem",
+    "${tint_src_dir}/lang/wgsl/writer/common",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
     "${tint_src_dir}/utils/diagnostic",
@@ -80,7 +80,7 @@ if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [ "ir_to_program_test.h" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
@@ -95,6 +95,7 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/wgsl/ir",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
+      "${tint_src_dir}/lang/wgsl/writer/common",
       "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",

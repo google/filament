@@ -31,10 +31,9 @@
 #include <span>
 #include <string>
 
+#include "dawn/common/DynamicLib.h"
 #include "dawn/native/d3d/PlatformFunctions.h"
 #include "dawn/native/d3d12/d3d12_platform.h"
-
-#include "dawn/common/DynamicLib.h"
 
 namespace dawn::native::d3d12 {
 

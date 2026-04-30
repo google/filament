@@ -702,7 +702,9 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, utils::ImmutableCString&& tag) {
     // The handle is constructed synchronously in createFenceS.
     const auto fence = handleCast<WebGPUFence>(fenceHandle);
-    fence->setSubmissionState(mQueueManager.getLatestSubmissionState());
+    signalFence([&] {
+        fence->setSubmissionState(mQueueManager.getLatestSubmissionState());
+    });
     setDebugTag(fenceHandle.getId(), std::move(tag));
 }
 
@@ -772,11 +774,7 @@ void WebGPUDriver::fenceCancel(FenceHandle fh) {
 }
 
 FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
-    const auto fence = handleCast<WebGPUFence>(fenceHandle);
-    if (!fence) {
-        return FenceStatus::ERROR;
-    }
-    return fence->getStatus();
+    return fenceWait(fenceHandle, 0);
 }
 
 FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const timeout) {
@@ -784,7 +782,42 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(timeout);
+    
+    using namespace std::chrono;
+    auto now = steady_clock::now();
+    steady_clock::time_point until = steady_clock::time_point::max();
+
+    using TimeoutType = decltype(timeout);
+    constexpr TimeoutType maxTimeout = std::numeric_limits<TimeoutType>::max();
+    constexpr nanoseconds maxNano = nanoseconds::max();
+    if (timeout < maxNano.count() && timeout < maxTimeout && // Need to account for overflow
+            now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+        until = now + nanoseconds(timeout);
+    }
+
+    std::shared_ptr<WebGPUSubmissionState> state;
+    FenceStatus status = waitForFence([&] {
+        state = fence->getState();
+        return bool(state);
+    }, until);
+    
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
+    
+    if (status == FenceStatus::TIMEOUT_EXPIRED) {
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
+    
+    auto duration_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
+                    .count());
+    // In the unlikely event that duration_ns is too close to timeout, we just assume the leftover
+    // timeout is 0.
+    if (timeout == 0 || duration_ns > timeout) {
+        duration_ns = timeout;
+    }
+    return state->waitForCompletion(timeout - duration_ns);
 }
 
 void WebGPUDriver::destroySync(Handle<HwSync> syncHandle) {
@@ -820,6 +853,17 @@ bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
     }
 
     return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(webGpuFormat);
+}
+
+bool WebGPUDriver::isTextureFormatFilterable(TextureFormat format) {
+    if (isFp32ColorFormat(format)) {
+        return mDevice.HasFeature(wgpu::FeatureName::Float32Filterable);
+    }
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+        isDepthFormat(format) || isStencilFormat(format)) {
+        return false;
+    }
+    return true;
 }
 
 bool WebGPUDriver::isRenderTargetFormatSupported(const TextureFormat format) {
@@ -1428,7 +1472,18 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
-    //todo
+    assert_invariant(mRenderPassEncoder && "Should be called within a renderpass");
+    uint32_t data = 0;
+    if (std::holds_alternative<int32_t>(value)) {
+        int32_t v = std::get<int32_t>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<float>(value)) {
+        float v = std::get<float>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<bool>(value)) {
+        data = std::get<bool>(value) ? 1 : 0;
+    }
+    mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {
@@ -1974,15 +2029,15 @@ void WebGPUDriver::scissor(Viewport scissor) {
     assert_invariant(mRenderPassEncoder);
     assert_invariant(mCurrentRenderTarget);
 
-    // The WebGPU scissor starts from the top-left corner
-    assert_invariant(scissor.left >= 0 &&
-                     mCurrentRenderTarget->height >= scissor.bottom + scissor.height /*top >= 0*/ &&
-                     scissor.width <= mCurrentRenderTarget->width &&
-                     scissor.height <= mCurrentRenderTarget->height);
+    uint32_t rtHeight = mCurrentRenderTarget->height;
+    uint32_t rtWidth = mCurrentRenderTarget->width;
+    uint32_t left = std::max(0, scissor.left);
+    uint32_t bottom = std::max(0, scissor.bottom);
+    uint32_t top = rtHeight > (bottom + scissor.height) ? rtHeight - bottom - scissor.height : 0;
+    uint32_t width = std::min((uint32_t)scissor.width, rtWidth - left);
+    uint32_t height = std::min((uint32_t)scissor.height, rtHeight - top);
 
-    mRenderPassEncoder.SetScissorRect(scissor.left,
-            mCurrentRenderTarget->height - scissor.bottom - scissor.height /*top*/, scissor.width,
-            scissor.height);
+    mRenderPassEncoder.SetScissorRect(left, top, width, height);
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

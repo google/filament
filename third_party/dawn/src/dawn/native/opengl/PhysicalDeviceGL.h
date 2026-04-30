@@ -43,7 +43,8 @@ class PhysicalDevice : public PhysicalDeviceBase {
   public:
     static ResultOrError<Ref<PhysicalDevice>> Create(wgpu::BackendType backendType,
                                                      Ref<DisplayEGL> display,
-                                                     bool forceES31AndMinExtensions);
+                                                     bool forceES31AndMinExtensions,
+                                                     EGLint angleVirtualizationGroup);
 
     ~PhysicalDevice() override = default;
 
@@ -57,8 +58,12 @@ class PhysicalDevice : public PhysicalDeviceBase {
         InstanceBase* instance,
         const Surface* surface) const override;
 
+    bool SupportTextureComponentSwizzle() const;
+
   private:
-    PhysicalDevice(wgpu::BackendType backendType, Ref<DisplayEGL> display);
+    PhysicalDevice(wgpu::BackendType backendType,
+                   Ref<DisplayEGL> display,
+                   EGLint angleVirtualizationGroup);
 
     MaybeError InitializeImpl() override;
     void InitializeSupportedFeaturesImpl() override;
@@ -78,10 +83,12 @@ class PhysicalDevice : public PhysicalDeviceBase {
         const TogglesState& deviceToggles,
         Ref<DeviceBase::DeviceLostEvent>&& lostEvent) override;
 
-    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                   const TogglesState& adapterToggles) const override;
 
     OpenGLFunctions mFunctions;
     Ref<DisplayEGL> mDisplay;
+    EGLint mAngleVirtualizationGroup;
 };
 
 }  // namespace dawn::native::opengl

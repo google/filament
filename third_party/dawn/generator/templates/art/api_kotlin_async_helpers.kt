@@ -1,78 +1,83 @@
-//* Copyright 2024 The Dawn & Tint Authors
-//*
-//* Redistribution and use in source and binary forms, with or without
-//* modification, are permitted provided that the following conditions are met:
-//*
-//* 1. Redistributions of source code must retain the above copyright notice, this
-//*    list of conditions and the following disclaimer.
-//*
-//* 2. Redistributions in binary form must reproduce the above copyright notice,
-//*    this list of conditions and the following disclaimer in the documentation
-//*    and/or other materials provided with the distribution.
-//*
-//* 3. Neither the name of the copyright holder nor the names of its
-//*    contributors may be used to endorse or promote products derived from
-//*    this software without specific prior written permission.
-//*
-//* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-//* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-//* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-//* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-//* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-//* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-//* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-//* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-//* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/*
+ * Copyright 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package {{ kotlin_package }}
 
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-{% from 'art/api_kotlin_types.kt' import kotlin_declaration, kotlin_definition with context %}
+{% from 'art/api_kotlin_types.kt' import kotlin_annotation, kotlin_declaration, kotlin_definition, check_if_doc_present, generate_kdoc with context %}
 
-//* Provide an async wrapper for the 'callback info' type of async methods.
-{% for obj in by_category['object'] %}
-    {% for method in obj.methods if has_callbackInfoStruct(method) %}
-        {% set callback_info = method.arguments[-1].type %}
-        {% set callback_function = callback_info.members[-1].type %}
-        {% set return_name = callback_function.name.chunks[:-1] | map('title') | join + 'Return' %}
-
-        //* We make a return class for every callback method so that it can be used inline
-        //* (without callbacks) in a suspend (async) function.
-        public data class {{ return_name }}(
-            {% for arg in kotlin_record_members(callback_function.arguments) %}
-                val {{ as_varName(arg.name) }}: {{ kotlin_declaration(arg) }},
-            {% endfor %})
-
-        //* Every method that is identified as using callbacks is given a helper method that wraps
-        //* call with a suspend function.
-        public suspend fun {{ obj.name.CamelCase() }}.{{ method.name.camelCase() }}(
-            {%- for arg in method.arguments[:-1] %}
-                {{- as_varName(arg.name) }}: {{ kotlin_definition(arg) }},
-            {%- endfor %}): {{ return_name }} = suspendCoroutine {
-                {{ method.name.camelCase() }}(
-                    {%- for arg in method.arguments %}
-                        {{- as_varName(arg.name) }}
-                        {%- if loop.last %}
-                            //* The final parameter of a callback method is always callback info.
-                            //* We make this and include our generated callback.
-                            {{- ' = ' }}
-                            {{- callback_info.name.CamelCase() }}(CallbackMode.AllowSpontaneous)
-                        {%- else %}
-                            //* Non-final parameters are whatever the client supplied.
-                            {{- ', ' }}
-                        {%- endif %}
-                    {%- endfor %}{
-                    {%- for arg in kotlin_record_members(callback_function.arguments) %}
-                        {{- as_varName(arg.name) }},
-                    {%- endfor %} -> it.resume({{ return_name }}(
-                        //* We make an instance of the callback parameters -> return type wrapper.
-                        {%- for arg in kotlin_record_members(callback_function.arguments) %}
-                            {{- as_varName(arg.name) }} {{ ', ' }}
-                        {%- endfor %})
-                    )
-                })
-            }
+{% macro analyze_callback(callback_arg, output_ns) %}
+    {% set output_ns.status_arg = none %}
+    {% set output_ns.message_arg = none %}
+    {% set output_ns.payload_arg = none %}
+    {% for arg in kotlin_record_members(callback_arg.type.arguments) %}
+        {% if arg.name.get() == 'status' %}
+            {% set output_ns.status_arg = arg %}
+        {% elif arg.name.get() == 'message' %}
+            {% set output_ns.message_arg = arg %}
+        {% else %}
+            {% set output_ns.payload_arg = arg %}
+        {% endif %}
     {% endfor %}
-{% endfor %}
+{% endmacro %}
 
+{% set all_objects = kdocs.objects %}
+{% macro async_wrapper(obj, method, callback_arg) %}
+    {% set ns = namespace() %}
+    {{ analyze_callback(callback_arg, ns) }}
+
+    //* Generating KDocs
+    {% set object_info = all_objects.get(obj.name.get()) %}
+    {% set method_info = object_info.methods.get(method.name.snake_case()) if object_info else None %}
+    {% if not method_info %}
+        {% set method_info = object_info.methods.get(method.name.camelCase()) if object_info else None %}
+    {% endif %}
+    {% set method_doc = method_info.doc if method_info and method_info.doc else "" %}
+    {% set return_doc = method_info.returns_doc if method_info and method_info.returns_doc else "" %}
+    {% set args_doc = method_info.args if method_info else {} %}
+    {% set method_args = [] %}
+    {% for arg in method.arguments %}
+        {% if arg.name.get() != 'callback info' %}
+            {% do method_args.append(arg) %}
+        {% endif %}
+    {% endfor %}
+    {% if check_if_doc_present(method_doc, return_doc, args_doc, method_args) != 'False' %}
+        {{ generate_kdoc(method_doc, return_doc, args_doc, method_args, line_wrap_prefix = "\n * ") }}
+
+    {%- endif %}
+    //* The wrapped method has executor and callback function stripped out (the wrapper supplies
+    //* those so the client doesn't have to).
+    {% set exception_name = (ns.status_arg.name.chunks[:-1] if len(ns.status_arg.name.chunks) > 1 else ['web', 'gpu']) | map('title') | join + 'Exception' %}
+    @Throws({{ exception_name}}::class{% if ns.payload_arg and ns.payload_arg.type.name.get() == 'error type' %}, WebGpuRuntimeException::class{% endif %})
+    public suspend fun {{ method.name.camelCase() | replace('Async', 'AndAwait') }}(
+        {%- for arg in kotlin_record_members(method.arguments) if not (
+            arg.type.category == 'callback function' or
+            (arg.type.category == 'kotlin type' and arg.type.name.get() == 'java.util.concurrent.Executor')
+        ) %}
+            {{ kotlin_annotation(arg) }} {{ as_varName(arg.name) }}: {{ kotlin_definition(arg) }},
+        {%- endfor %}): {{ kotlin_annotation(ns.payload_arg) + ' ' + kotlin_declaration(ns.payload_arg, true) if ns.payload_arg else 'Unit' -}}
+        = awaitGPURequest { callback ->
+            {{ method.name.camelCase() }}(
+            {%- for arg in kotlin_record_members(method.arguments) %}
+                {%- if arg.type.category == 'kotlin type' and arg.type.name.get() == 'java.util.concurrent.Executor' -%}
+                    Executor(Runnable::run),
+                {%- elif arg.name.get() == callback_arg.name.get() -%}
+                    callback
+                {%- else -%}
+                    {{ as_varName(arg.name) }},
+                {%- endif %}
+            {%- endfor -%}
+          )
+    }
+{% endmacro %}

@@ -1,102 +1,137 @@
-# Generated with cmake-format 0.5.1
-# How wide to allow formatted cmake files
-line_width = 80
-
-# How many spaces to tab for indent
-tab_size = 2
-
-# If arglists are longer than this, break them always
-max_subargs_per_line = 10
-
-# If true, separate flow control names from their parentheses with a space
-separate_ctrl_name_with_space = False
-
-# If true, separate function names from parentheses with a space
-separate_fn_name_with_space = False
-
-# If a statement is wrapped to more than one line, than dangle the closing
-# parenthesis on its own line
-dangle_parens = False
-
-# What character to use for bulleted lists
-bullet_char = '*'
-
-# What character to use as punctuation after numerals in an enumerated list
-enum_char = '.'
-
-# What style line endings to use in the output.
-line_ending = u'unix'
-
-# Format command names consistently as 'lower' or 'upper' case
-command_case = u'lower'
-
-# Format keywords consistently as 'lower' or 'upper' case
-keyword_case = u'unchanged'
-
-# Specify structure for custom cmake functions
-additional_commands = {
-  "foo": {
-    "flags": [
-      "BAR",
-      "BAZ"
-    ],
-    "kwargs": {
-      "HEADERS": "*",
-      "DEPENDS": "*",
-      "SOURCES": "*"
-    }
+with section('parse'):
+  # Specify structure for custom cmake functions
+  additional_commands = {
+      'draco_add_emscripten_executable': {
+          'kwargs': {
+              'NAME': '*',
+              'SOURCES': '*',
+              'OUTPUT_NAME': '*',
+              'DEFINES': '*',
+              'INCLUDES': '*',
+              'COMPILE_FLAGS': '*',
+              'LINK_FLAGS': '*',
+              'OBJLIB_DEPS': '*',
+              'LIB_DEPS': '*',
+              'GLUE_PATH': '*',
+              'PRE_LINK_JS_SOURCES': '*',
+              'POST_LINK_JS_SOURCES': '*',
+              'FEATURES': '*',
+          },
+          'pargs': 0,
+      },
+      'draco_add_executable': {
+          'kwargs': {
+              'NAME': '*',
+              'SOURCES': '*',
+              'OUTPUT_NAME': '*',
+              'TEST': 0,
+              'DEFINES': '*',
+              'INCLUDES': '*',
+              'COMPILE_FLAGS': '*',
+              'LINK_FLAGS': '*',
+              'OBJLIB_DEPS': '*',
+              'LIB_DEPS': '*',
+          },
+          'pargs': 0,
+      },
+      'draco_add_library': {
+          'kwargs': {
+              'NAME': '*',
+              'TYPE': '*',
+              'SOURCES': '*',
+              'TEST': 0,
+              'OUTPUT_NAME': '*',
+              'DEFINES': '*',
+              'INCLUDES': '*',
+              'COMPILE_FLAGS': '*',
+              'LINK_FLAGS': '*',
+              'OBJLIB_DEPS': '*',
+              'LIB_DEPS': '*',
+              'PUBLIC_INCLUDES': '*',
+          },
+          'pargs': 0,
+      },
+      'draco_generate_emscripten_glue': {
+          'kwargs': {
+              'INPUT_IDL': '*',
+              'OUTPUT_PATH': '*',
+          },
+          'pargs': 0,
+      },
+      'draco_get_required_emscripten_flags': {
+          'kwargs': {
+              'FLAG_LIST_VAR_COMPILER': '*',
+              'FLAG_LIST_VAR_LINKER': '*',
+          },
+          'pargs': 0,
+      },
+      'draco_option': {
+          'kwargs': {
+              'NAME': '*',
+              'HELPSTRING': '*',
+              'VALUE': '*',
+          },
+          'pargs': 0,
+      },
+      # Rules for built in CMake commands and those from dependencies.
+      'list': {
+          'kwargs': {
+              'APPEND': '*',
+              'FILTER': '*',
+              'FIND': '*',
+              'GET': '*',
+              'INSERT': '*',
+              'JOIN': '*',
+              'LENGTH': '*',
+              'POP_BACK': '*',
+              'POP_FRONT': '*',
+              'PREPEND': '*',
+              'REMOVE_DUPLICATES': '*',
+              'REMOVE_ITEM': '*',
+              'REVERSE': '*',
+              'SORT': '*',
+              'SUBLIST': '*',
+              'TRANSFORM': '*',
+          },
+      },
+      'protobuf_generate': {
+        'kwargs': {
+            'IMPORT_DIRS': '*',
+            'LANGUAGE': '*',
+            'OUT_VAR': '*',
+            'PROTOC_OUT_DIR': '*',
+            'PROTOS': '*',
+        },
+      },
   }
-}
 
-# A list of command names which should always be wrapped
-always_wrap = []
+with section('format'):
+  # Formatting options.
 
-# Specify the order of wrapping algorithms during successive reflow attempts
-algorithm_order = [0, 1, 2, 3, 4]
+  # How wide to allow formatted cmake files
+  line_width = 80
 
-# If true, the argument lists which are known to be sortable will be sorted
-# lexicographicall
-autosort = False
+  # How many spaces to tab for indent
+  tab_size = 2
 
-# enable comment markup parsing and reflow
-enable_markup = True
+  # If true, separate flow control names from their parentheses with a space
+  separate_ctrl_name_with_space = False
 
-# If comment markup is enabled, don't reflow the first comment block in
-# eachlistfile. Use this to preserve formatting of your
-# copyright/licensestatements.
-first_comment_is_literal = False
+  # If true, separate function names from parentheses with a space
+  separate_fn_name_with_space = False
 
-# If comment markup is enabled, don't reflow any comment block which matchesthis
-# (regex) pattern. Default is `None` (disabled).
-literal_comment_pattern = None
+  # If a statement is wrapped to more than one line, than dangle the closing
+  # parenthesis on its own line.
+  dangle_parens = False
 
-# Regular expression to match preformat fences in comments
-# default=r'^\s*([`~]{3}[`~]*)(.*)$'
-fence_pattern = u'^\\s*([`~]{3}[`~]*)(.*)$'
+  # Do not sort argument lists.
+  enable_sort = False
 
-# Regular expression to match rulers in comments
-# default=r'^\s*[^\w\s]{3}.*[^\w\s]{3}$'
-ruler_pattern = u'^\\s*[^\\w\\s]{3}.*[^\\w\\s]{3}$'
+  # What style line endings to use in the output.
+  line_ending = 'unix'
 
-# If true, emit the unicode byte-order mark (BOM) at the start of the file
-emit_byteorder_mark = False
+  # Format command names consistently as 'lower' or 'upper' case
+  command_case = 'canonical'
 
-# If a comment line starts with at least this many consecutive hash characters,
-# then don't lstrip() them off. This allows for lazy hash rulers where the first
-# hash char is not separated by space
-hashruler_min_length = 10
-
-# If true, then insert a space between the first hash char and remaining hash
-# chars in a hash ruler, and normalize its length to fill the column
-canonicalize_hashrulers = True
-
-# Specify the encoding of the input file. Defaults to utf-8.
-input_encoding = u'utf-8'
-
-# Specify the encoding of the output file. Defaults to utf-8. Note that cmake
-# only claims to support utf-8 so be careful when using anything else
-output_encoding = u'utf-8'
-
-# A dictionary containing any per-command configuration overrides. Currently
-# only `command_case` is supported.
-per_command = {}
+  # Format keywords consistently as 'lower' or 'upper' case
+  keyword_case = 'upper'

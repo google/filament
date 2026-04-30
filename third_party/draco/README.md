@@ -2,16 +2,107 @@
 <img width="350px" src="docs/artwork/draco3d-vert.svg" />
 </p>
 
-![Build Status: master](https://travis-ci.org/google/draco.svg?branch=master)
+[![draco-ci](https://github.com/google/draco/workflows/draco-ci/badge.svg?branch=master)](https://github.com/google/draco/actions/workflows/ci.yml)
 
 News
 =======
+
+Attention GStatic users: the Draco team strongly recommends using the versioned
+URLs for accessing Draco GStatic content. If you are using the URLs that include
+the `v1/decoders` substring within the URL, edge caching and GStatic propagation
+delays can result in transient errors that can be difficult to diagnose when
+new Draco releases are launched. To avoid the issue pin your sites to a
+versioned release.
+
+### Version 1.5.7 release:
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.5.7, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.5.7/*
+* Added support for normalized attributes to Emscripten encoder API.
+* Bug fixes.
+* Security fixes.
+
+### Version 1.5.6 release:
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.5.6, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.5.6/*
+* The CMake flag DRACO_DEBUG_MSVC_WARNINGS has been replaced with
+  DRACO_DEBUG_COMPILER_WARNINGS, and the behavior has changed. It is now a
+  boolean flag defined in draco_options.cmake.
+* Bug fixes.
+* Security fixes.
+
+### Version 1.5.5 release:
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.5.5, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.5.5/*
+* Bug fix: https://github.com/google/draco/issues/935
+
+### Version 1.5.4 release:
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.5.4, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.5.4/*
+* Added partial support for glTF extensions EXT_mesh_features and
+  EXT_structural_metadata.
+* Bug fixes.
+* Security fixes.
+
+### Version 1.5.3 release:
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.5.3, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.5.3/*
+* Bug fixes.
+
+### Version 1.5.2 release
+* This is the same as v1.5.1 with the following two bug fixes:
+  * Fixes DRACO_TRANSCODER_SUPPORTED enabled builds.
+  * ABI version updated.
+
+### Version 1.5.1 release
+* Adds assertion enabled Emscripten builds to the release, and a subset of the
+  assertion enabled builds to GStatic. See the file listing below.
+* Custom paths to third party dependencies are now supported. See BUILDING.md
+  for more information.
+* The CMake configuration file draco-config.cmake is now tested and known to
+  work for using Draco in Linux, MacOS, and Windows CMake projects. See the
+  `install_test` subdirectory of `src/draco/tools` for more information.
+* Bug fixes.
+
+### Version 1.5.0 release
+* Adds the draco_transcoder tool. See the section below on the glTF transcoding
+  tool, and BUILDING.md for build and dependency information.
+* Some changes to configuration variables have been made for this release:
+  - The DRACO_GLTF flag has been renamed to DRACO_GLTF_BITSTREAM to help
+    increase understanding of its purpose, which is to limit Draco features to
+    those included in the Draco glTF specification.
+  - Variables exported in CMake via draco-config.cmake and find-draco.cmake
+    (formerly FindDraco.cmake) have been renamed. It's unlikely that this
+    impacts any existing projects as the aforementioned files were not formed
+    correctly. See [PR775](https://github.com/google/draco/pull/775) for full
+    details of the changes.
+* A CMake version file has been added.
+* The CMake install target now uses absolute paths direct from CMake instead
+  of building them using CMAKE_INSTALL_PREFIX. This was done to make Draco
+  easier to use for downstream packagers and should have little to no impact on
+  users picking up Draco from source.
+* Certain MSVC warnings have had their levels changed via compiler flag to
+  reduce the amount of noise output by the MSVC compilers. Set MSVC warning
+  level to 4, or define DRACO_DEBUG_MSVC_WARNINGS at CMake configuration time
+  to restore previous behavior.
+* Bug fixes.
+
+### Version 1.4.3 release
+* Using the versioned www.gstatic.com WASM and Javascript decoders continues
+  to be recommended. To use v1.4.3, use this URL:
+  * https://www.gstatic.com/draco/versioned/decoders/1.4.3/*
+* Bug fixes
+
 ### Version 1.4.1 release
-* Using the versioned gstatic.com WASM and Javascript decoders is now
+* Using the versioned www.gstatic.com WASM and Javascript decoders is now
   recommended. To use v1.4.1, use this URL:
   * https://www.gstatic.com/draco/versioned/decoders/1.4.1/*
     * Replace the * with the files to load. E.g.
-    * https://gstatic.com/draco/versioned/decoders/1.4.1/draco_decoder.js
+    * https://www.gstatic.com/draco/versioned/decoders/1.4.1/draco_decoder.js
   * This works with the v1.3.6 and v1.4.0 releases, and will work with future
     Draco releases.
 * Bug fixes
@@ -129,6 +220,7 @@ _**Contents**_
     * [Encoding Tool](#encoding-tool)
     * [Encoding Point Clouds](#encoding-point-clouds)
     * [Decoding Tool](#decoding-tool)
+    * [glTF Transcoding Tool](#gltf-transcoding-tool)
     * [C++ Decoder API](#c-decoder-api)
     * [Javascript Encoder API](#javascript-encoder-api)
     * [Javascript Decoder API](#javascript-decoder-api)
@@ -136,6 +228,7 @@ _**Contents**_
     * [Metadata API](#metadata-api)
     * [NPM Package](#npm-package)
     * [three.js Renderer Example](#threejs-renderer-example)
+  * [GStatic Javascript Builds](#gstatic-javascript-builds)
   * [Support](#support)
   * [License](#license)
   * [References](#references)
@@ -170,16 +263,18 @@ Command Line Applications
 ------------------------
 
 The default target created from the build files will be the `draco_encoder`
-and `draco_decoder` command line applications. For both applications, if you
-run them without any arguments or `-h`, the applications will output usage and
-options.
+and `draco_decoder` command line applications. Additionally, `draco_transcoder`
+is generated when CMake is run with the DRACO_TRANSCODER_SUPPORTED variable set
+to ON (see [BUILDING](BUILDING.md#transcoder) for more details). For all
+applications, if you run them without any arguments or `-h`, the applications
+will output usage and options.
 
 Encoding Tool
 -------------
 
-`draco_encoder` will read OBJ or PLY files as input, and output Draco-encoded
-files. We have included Stanford's [Bunny] mesh for testing. The basic command
-line looks like this:
+`draco_encoder` will read OBJ, STL or PLY files as input, and output
+Draco-encoded files. We have included Stanford's [Bunny] mesh for testing. The
+basic command line looks like this:
 
 ~~~~~ bash
 ./draco_encoder -i testdata/bun_zipper.ply -o out.drc
@@ -232,15 +327,34 @@ and denser point clouds.
 Decoding Tool
 -------------
 
-`draco_decoder` will read Draco files as input, and output OBJ or PLY files.
-The basic command line looks like this:
+`draco_decoder` will read Draco files as input, and output OBJ, STL or PLY
+files. The basic command line looks like this:
 
 ~~~~~ bash
 ./draco_decoder -i in.drc -o out.obj
 ~~~~~
 
+glTF Transcoding Tool
+---------------------
+
+`draco_transcoder` can be used to add Draco compression to glTF assets. The
+basic command line looks like this:
+
+~~~~~ bash
+./draco_transcoder -i in.glb -o out.glb
+~~~~~
+
+This command line will add geometry compression to all meshes in the `in.glb`
+file. Quantization values for different glTF attributes can be specified
+similarly to the `draco_encoder` tool. For example `-qp` can be used to define
+quantization of the position attribute:
+
+~~~~~ bash
+./draco_transcoder -i in.glb -o out.glb -qp 12
+~~~~~
+
 C++ Decoder API
--------------
+---------------
 
 If you'd like to add decoding to your applications you will need to include
 the `draco_dec` library. In order to use the Draco decoder you need to
@@ -441,6 +555,30 @@ Here's an [example] of a geometric compressed with Draco loaded via a
 Javascript decoder using the `three.js` renderer.
 
 Please see the [javascript/example/README.md](javascript/example/README.md) file for more information.
+
+GStatic Javascript Builds
+=========================
+
+Prebuilt versions of the Emscripten-built Draco javascript decoders are hosted
+on www.gstatic.com in version labeled directories:
+
+https://www.gstatic.com/draco/versioned/decoders/VERSION/*
+
+As of the v1.4.3 release the files available are:
+
+- [draco_decoder.js](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_decoder.js)
+- [draco_decoder.wasm](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_decoder.wasm)
+- [draco_decoder_gltf.js](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_decoder_gltf.js)
+- [draco_decoder_gltf.wasm](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_decoder_gltf.wasm)
+- [draco_wasm_wrapper.js](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_wasm_wrapper.js)
+- [draco_wasm_wrapper_gltf.js](https://www.gstatic.com/draco/versioned/decoders/1.4.3/draco_wasm_wrapper_gltf.js)
+
+Beginning with the v1.5.1 release assertion enabled builds of the following
+files are available:
+
+- [draco_decoder.js](https://www.gstatic.com/draco/versioned/decoders/1.5.1/with_asserts/draco_decoder.js)
+- [draco_decoder.wasm](https://www.gstatic.com/draco/versioned/decoders/1.5.1/with_asserts/draco_decoder.wasm)
+- [draco_wasm_wrapper.js](https://www.gstatic.com/draco/versioned/decoders/1.5.1/with_asserts/draco_wasm_wrapper.js)
 
 Support
 =======

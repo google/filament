@@ -84,16 +84,12 @@ class Struct : public Castable<Struct, Type> {
     /// Constructor
     /// @param name the name of the structure
     /// @param members the structure members
-    /// @param align the byte alignment of the structure
     /// @param size the byte size of the structure
-    /// @param size_no_padding size of the members without the end of structure
     /// @param is_wgsl_internal `true` if the structure is an internally defined structure in WGSL
     /// alignment padding
     Struct(Symbol name,
            VectorRef<const StructMember*> members,
-           uint32_t align,
            uint32_t size,
-           uint32_t size_no_padding,
            bool is_wgsl_internal = false);
 
     /// Destructor
@@ -131,7 +127,7 @@ class Struct : public Castable<Struct, Type> {
 
     /// @returns the byte size of the members without the end of structure
     /// alignment padding
-    uint32_t SizeNoPadding() const { return size_no_padding_; }
+    uint32_t SizeNoPadding() const;
 
     /// @returns the structure flags
     core::type::StructFlags StructFlags() const { return struct_flags_; }
@@ -191,9 +187,7 @@ class Struct : public Castable<Struct, Type> {
   private:
     Symbol name_;
     const tint::Vector<const StructMember*, 4> members_;
-    const uint32_t align_;
     const uint32_t size_;
-    const uint32_t size_no_padding_;
     const bool is_wgsl_internal_;
     core::type::StructFlags struct_flags_;
     Hashset<core::AddressSpace, 1> address_space_usage_;
@@ -247,6 +241,9 @@ class StructMember : public Castable<StructMember, Node> {
 
     /// @returns byte size
     uint32_t Size() const { return size_; }
+
+    /// @returns the minimum size required for this struct member.
+    uint32_t MinimumRequiredSize() const;
 
     /// @returns the optional attributes
     const IOAttributes& Attributes() const { return attributes_; }

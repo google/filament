@@ -1,0 +1,21 @@
+#version 450
+layout(local_size_x_id = 0, local_size_y_id = 2, local_size_z_id = 3) in;
+
+layout(constant_id = 1) const int A = 2;
+float D[A * gl_WorkGroupSize.x];
+float E[A * gl_WorkGroupSize.z];
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	int I;
+	float V;
+};
+
+void main ()
+{
+	for (int i = 0; i < A * gl_WorkGroupSize.x; i++)
+		D[i] = 1.0 + float(i + gl_WorkGroupSize.y);
+	for (int i = 0; i < A * gl_WorkGroupSize.z; i++)
+		D[i] = 1.0 + float(i + gl_WorkGroupSize.y);
+	V = D[I] + D[I ^ 1] + E[I];
+}

@@ -35,13 +35,13 @@ namespace dawn::native {
 class DeviceBase;
 class CommandEncoder;
 struct TextureCopy;
-struct Extent3D;
+struct TexelExtent3D;
 
 MaybeError BlitDepthToDepth(DeviceBase* device,
                             CommandEncoder* commandEncoder,
                             const TextureCopy& src,
                             const TextureCopy& dst,
-                            const Extent3D& copyExtent);
+                            const TexelExtent3D& copyExtent);
 
 }  // namespace dawn::native
 

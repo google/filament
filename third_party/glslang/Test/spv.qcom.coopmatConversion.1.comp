@@ -1,0 +1,196 @@
+#version 450 core
+#pragma use_vulkan_memory_model
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_control_flow_attributes : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+
+#extension GL_EXT_shader_explicit_arithmetic_types_float32 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int32   : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int8    : enable
+#extension GL_QCOM_cooperative_matrix_conversion : enable
+
+layout(set=0, binding=0) readonly buffer InputA { float x[]; } inputA;
+layout(set=0, binding=1) readonly buffer InputB { float x[]; } inputB;
+layout(set=0, binding=2) readonly buffer InputC { float x[]; } inputC;
+layout(set=0, binding=3) buffer Output { float x[]; } outputO;
+
+layout(local_size_x = 64, local_size_y = 2, local_size_z = 2) in;
+
+void main()
+{
+    float16_t hvec8A[16];
+    float32_t  vec8A[8];
+      int32_t ivec8A[8];
+     uint32_t uvec8A[8];
+    float16_t hvec32B[64];
+    float32_t  vec32B[32];
+      int32_t ivec32B[32];
+     uint32_t uvec32B[32];
+        float  vec64Acc[64];
+          int ivec64Acc[64];
+         uint uvec64Acc[64];
+    float16_t hvec8A_4[4];
+
+    // bitcastQCOM
+    {
+      bitcastQCOM(hvec8A, uvec8A);
+      bitcastQCOM(uvec8A, hvec8A);
+      bitcastQCOM(ivec8A,  vec8A);
+      bitcastQCOM( vec8A, ivec8A);
+
+      bitcastQCOM(hvec32B, ivec32B);
+      bitcastQCOM(ivec32B, hvec32B);
+      bitcastQCOM(uvec32B,  vec32B);
+      bitcastQCOM( vec32B, uvec32B);
+
+      bitcastQCOM(uvec64Acc, ivec64Acc);
+      bitcastQCOM(ivec64Acc, uvec64Acc);
+      bitcastQCOM(uvec64Acc,  vec64Acc);
+      bitcastQCOM( vec64Acc, uvec64Acc);
+    }
+
+    // extractSubArrayQCOM
+    {
+      extractSubArrayQCOM(ivec64Acc, 0, ivec8A);
+      extractSubArrayQCOM(ivec64Acc, 8, ivec32B);
+      extractSubArrayQCOM(uvec64Acc, 0, uvec8A);
+      extractSubArrayQCOM(uvec64Acc, 8, uvec32B);
+      extractSubArrayQCOM( vec64Acc, 0,  vec8A);
+      extractSubArrayQCOM( vec64Acc, 4,  vec32B);
+      extractSubArrayQCOM(hvec32B,   0, hvec8A);
+      extractSubArrayQCOM(hvec32B,   4, hvec8A_4);
+    }
+
+    coopmat<  uint8_t, gl_ScopeSubgroup, 64,  32, gl_MatrixUseA> matA_u8_64_32;
+    coopmat<   int8_t, gl_ScopeSubgroup, 64,  32, gl_MatrixUseA> matA_i8_64_32;
+    coopmat<float16_t, gl_ScopeSubgroup, 64,  16, gl_MatrixUseA> matA_f16_64_16;
+    coopmat<float32_t, gl_ScopeSubgroup, 64,   8, gl_MatrixUseA> matA_f32_64_8;
+
+    // vectorToCoopmatQCOM gl_MatrixUseA
+    {
+      vectorToCoopmatQCOM( vec8A, matA_f32_64_8);
+      vectorToCoopmatQCOM(uvec8A, matA_f32_64_8);
+
+      vectorToCoopmatQCOM(hvec8A, matA_f16_64_16);
+      vectorToCoopmatQCOM(uvec8A, matA_f16_64_16);
+
+      int8_t i8vec8A[32];
+      vectorToCoopmatQCOM(i8vec8A, matA_i8_64_32);
+      vectorToCoopmatQCOM( uvec8A, matA_i8_64_32);
+
+      uint8_t u8vec8A[32];
+      vectorToCoopmatQCOM(u8vec8A, matA_u8_64_32);
+      vectorToCoopmatQCOM( uvec8A, matA_u8_64_32);
+    }
+
+    coopmat<  uint8_t, gl_ScopeSubgroup, 32, 64, gl_MatrixUseB> matB_u8_32_64;
+    coopmat<   int8_t, gl_ScopeSubgroup, 32, 64, gl_MatrixUseB> matB_i8_32_64;
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 64, gl_MatrixUseB> matB_f16_16_64;
+    coopmat<float32_t, gl_ScopeSubgroup,  8, 64, gl_MatrixUseB> matB_f32_8_64;
+
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 32, gl_MatrixUseB> matB_f16_16_32;
+    coopmat<   int8_t, gl_ScopeSubgroup, 32, 16, gl_MatrixUseB> matB_i8_32_16;
+
+    // vectorToCoopmatQCOM gl_MatrixUseB
+    {
+      vectorToCoopmatQCOM( vec8A, matB_f32_8_64);
+      vectorToCoopmatQCOM(uvec8A, matB_f32_8_64);
+
+      vectorToCoopmatQCOM(hvec8A, matB_f16_16_64);
+      vectorToCoopmatQCOM(uvec8A, matB_f16_16_64);
+
+      int8_t i8vec8B[32];
+      vectorToCoopmatQCOM(i8vec8B, matB_i8_32_64);
+      vectorToCoopmatQCOM( uvec8A, matB_i8_32_64);
+
+      uint8_t u8vec8B[32];
+      vectorToCoopmatQCOM(u8vec8B, matB_u8_32_64);
+      vectorToCoopmatQCOM( uvec8A, matB_u8_32_64);
+
+      vectorToCoopmatQCOM(hvec8A, matB_f16_16_32);
+      vectorToCoopmatQCOM(uvec8A, matB_f16_16_32);
+
+      vectorToCoopmatQCOM(i8vec8B, matB_i8_32_16);
+      vectorToCoopmatQCOM(uvec8A, matB_i8_32_16);
+    }
+
+    coopmat< uint32_t, gl_ScopeSubgroup, 64, 64, gl_MatrixUseAccumulator> matAcc_u32_64_64;
+    coopmat<  int32_t, gl_ScopeSubgroup, 64, 64, gl_MatrixUseAccumulator> matAcc_i32_64_64;
+    coopmat<float16_t, gl_ScopeSubgroup, 64, 64, gl_MatrixUseAccumulator> matAcc_f16_64_64;
+    coopmat<float32_t, gl_ScopeSubgroup, 64, 64, gl_MatrixUseAccumulator> matAcc_f32_64_64;
+
+    // vectorToCoopmatQCOM gl_MatrixUseAccumulator
+    {
+      vectorToCoopmatQCOM( vec64Acc, matAcc_f32_64_64);
+      vectorToCoopmatQCOM(uvec64Acc, matAcc_f32_64_64);
+
+      float16_t hvec64Acc[64];
+      vectorToCoopmatQCOM(hvec64Acc, matAcc_f16_64_64);
+      vectorToCoopmatQCOM(uvec32B, matAcc_f16_64_64);
+
+      vectorToCoopmatQCOM(ivec64Acc, matAcc_i32_64_64);
+      vectorToCoopmatQCOM(uvec64Acc, matAcc_i32_64_64);
+
+      vectorToCoopmatQCOM(uvec64Acc, matAcc_u32_64_64);
+    }
+
+    // coopmatToVectorQCOM gl_MatrixUseA
+    {
+      coopmatToVectorQCOM(matA_f32_64_8,  vec8A);
+      coopmatToVectorQCOM(matA_f32_64_8, uvec8A);
+
+      coopmatToVectorQCOM(matA_f16_64_16, hvec8A);
+      coopmatToVectorQCOM(matA_f16_64_16, uvec8A);
+
+      int8_t i8vec8A[32];
+      coopmatToVectorQCOM(matA_i8_64_32, i8vec8A);
+      coopmatToVectorQCOM(matA_i8_64_32,  uvec8A);
+
+      uint8_t u8vec8A[32];
+      coopmatToVectorQCOM(matA_u8_64_32, u8vec8A);
+      coopmatToVectorQCOM(matA_u8_64_32,  uvec8A);
+    }
+
+    // coopmatToVectorQCOM gl_MatrixUseB
+    {
+      coopmatToVectorQCOM(matB_f32_8_64, vec8A);
+      coopmatToVectorQCOM(matB_f32_8_64, uvec8A);
+
+      coopmatToVectorQCOM(matB_f16_16_64, hvec8A);
+      coopmatToVectorQCOM(matB_f16_16_64, uvec8A);
+
+      int8_t i8vec8B[32];
+      coopmatToVectorQCOM(matB_i8_32_64, i8vec8B);
+      coopmatToVectorQCOM(matB_i8_32_64,  uvec8A);
+
+      uint8_t u8vec8B[32];
+      coopmatToVectorQCOM(matB_u8_32_64, u8vec8B);
+      coopmatToVectorQCOM(matB_u8_32_64,  uvec8A);
+
+      coopmatToVectorQCOM(matB_f16_16_32, hvec8A);
+      coopmatToVectorQCOM(matB_f16_16_32, uvec8A);
+
+      coopmatToVectorQCOM(matB_i8_32_16, i8vec8B);
+      coopmatToVectorQCOM(matB_i8_32_16, uvec8A);
+    }
+
+    // coopmatToVectorQCOM gl_MatrixUseAccumulator
+    {
+      coopmatToVectorQCOM(matAcc_f32_64_64,  vec64Acc);
+      coopmatToVectorQCOM(matAcc_f32_64_64, uvec64Acc);
+
+      float16_t hvec64Acc[64];
+      coopmatToVectorQCOM(matAcc_f16_64_64, hvec64Acc);
+      coopmatToVectorQCOM(matAcc_f16_64_64,  uvec32B);
+
+      coopmatToVectorQCOM(matAcc_i32_64_64, ivec64Acc);
+      coopmatToVectorQCOM(matAcc_i32_64_64, uvec64Acc);
+
+      coopmatToVectorQCOM(matAcc_u32_64_64, uvec64Acc);
+    }
+}

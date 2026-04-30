@@ -45,6 +45,8 @@ tint_add_target(tint_lang_core_ir_analysis lib
   lang/core/ir/analysis/integer_range_analysis.h
   lang/core/ir/analysis/loop_analysis.cc
   lang/core/ir/analysis/loop_analysis.h
+  lang/core/ir/analysis/subgroup_matrix.cc
+  lang/core/ir/analysis/subgroup_matrix.h
 )
 
 tint_target_add_dependencies(tint_lang_core_ir_analysis lib
@@ -78,6 +80,7 @@ tint_add_target(tint_lang_core_ir_analysis_test test
   lang/core/ir/analysis/for_loop_analysis_test.cc
   lang/core/ir/analysis/integer_range_analysis_test.cc
   lang/core/ir/analysis/loop_analysis_test.cc
+  lang/core/ir/analysis/subgroup_matrix_test.cc
 )
 
 tint_target_add_dependencies(tint_lang_core_ir_analysis_test test

@@ -32,12 +32,16 @@
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/type/struct.h"
+#include "src/tint/utils/ice/ice.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
 namespace tint::core::ir::transform {
 
 namespace {
+
+constexpr uint32_t kMaxImmediateBlockSize = 0x1000;
 
 /// PIMPL state for the transform.
 struct State {
@@ -53,7 +57,7 @@ struct State {
     /// The type manager.
     core::type::Manager& ty{ir.Types()};
 
-    ImmediateDataLayout Run() {
+    Result<ImmediateDataLayout> Run() {
         if (config.internal_immediate_data.empty()) {
             return ImmediateDataLayout{};
         }
@@ -69,12 +73,12 @@ struct State {
                 continue;
             }
             auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-            if (ptr->AddressSpace() != core::AddressSpace::kImmediate) {
+            if (!ptr || ptr->AddressSpace() != core::AddressSpace::kImmediate) {
                 continue;
             }
 
             if (user_defined_immediates) {
-                TINT_ICE() << "multiple user-defined immediate data variables";
+                TINT_IR_ICE(ir) << "multiple user-defined immediate data variables";
             }
             user_defined_immediates = var;
 
@@ -90,20 +94,36 @@ struct State {
 
         // Create the structure and immediate data variable.
         for (auto& internal : config.internal_immediate_data) {
+            auto offset = internal.first;
+
             if (!members.IsEmpty()) {
-                TINT_ASSERT(internal.first >= members.Back()->Offset() + members.Back()->Size());
+                if (members.Back()->Offset() + members.Back()->Size() > offset) {
+                    return Failure("immediate offset for '" + internal.second.name.Name() +
+                                   "' overlaps with previous member '" +
+                                   members.Back()->Name().Name() + "'");
+                }
+            }
+            if (offset & (internal.second.type->Align() - 1)) {
+                return Failure("immediate offset for '" + internal.second.name.Name() +
+                               "' must be aligned to " +
+                               std::to_string(internal.second.type->Align()) + " bytes");
+            }
+            if (offset + internal.second.type->Size() > kMaxImmediateBlockSize) {
+                return Failure("immediate '" + internal.second.name.Name() +
+                               "' exceeds maximum immediate block size");
             }
 
             auto index = static_cast<uint32_t>(members.Length());
-            layout.offset_to_index.Add(internal.first, index);
+            layout.offset_to_index.Add(offset, index);
             members.Push(ty.Get<core::type::StructMember>(internal.second.name,
                                                           internal.second.type,
                                                           /* index */ index,
-                                                          /* offset */ internal.first,
+                                                          /* offset */ offset,
                                                           /* align */ internal.second.type->Align(),
                                                           /* size */ internal.second.type->Size(),
                                                           /* attributes */ IOAttributes{}));
         }
+
         auto* immediate_constant_struct =
             ty.Struct(ir.symbols.New("tint_immediate_data_struct"), std::move(members));
         immediate_constant_struct->SetStructFlag(type::kBlock);
@@ -129,13 +149,14 @@ struct State {
 
 Result<ImmediateDataLayout> PrepareImmediateData(Module& ir,
                                                  const PrepareImmediateDataConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.PrepareImmediateData",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllowDuplicateBindings,
+                              core::ir::Capability::kAllow8BitIntegers,
+                              core::ir::Capability::kAllow16BitIntegers,
+                              core::ir::Capability::kAllowNonCoreTypes,
+                          },
+                          "before core.PrepareImmediateData");
 
     return State{config, ir}.Run();
 }

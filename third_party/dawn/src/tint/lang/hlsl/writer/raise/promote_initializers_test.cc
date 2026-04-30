@@ -357,7 +357,59 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(HlslWriterPromoteInitializersTest, ModuleScopedStruct_DontPromoteZero) {
+    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowModuleScopeLets};
+
+    auto* str_ty = ty.Struct(mod.symbols.New("S"), {
+                                                       {mod.symbols.New("a"), ty.i32()},
+                                                   });
+
+    b.ir.root_block->Append(b.Var<private_>("a", b.Zero(str_ty)));
+
+    auto* src = R"(
+S = struct @align(4) {
+  a:i32 @offset(0)
+}
+
+$B1: {  # root
+  %a:ptr<private, S, read_write> = var S(0i)
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = src;
+    Run(PromoteInitializers);
+
+    EXPECT_EQ(expect, str());
+}
+
 TEST_F(HlslWriterPromoteInitializersTest, ModuleScopedArray) {
+    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowModuleScopeLets};
+
+    b.ir.root_block->Append(b.Var<private_>("a", b.Composite(ty.array<i32, 2>(), 1_i, 2_i)));
+
+    auto* src = R"(
+$B1: {  # root
+  %a:ptr<private, array<i32, 2>, read_write> = var array<i32, 2>(1i, 2i)
+}
+
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %1:array<i32, 2> = let array<i32, 2>(1i, 2i)
+  %a:ptr<private, array<i32, 2>, read_write> = var %1
+}
+
+)";
+    Run(PromoteInitializers);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterPromoteInitializersTest, ModuleScopedArray_DontPromoteZero) {
     capabilities = core::ir::Capabilities{core::ir::Capability::kAllowModuleScopeLets};
 
     b.ir.root_block->Append(b.Var<private_>("a", b.Zero<array<i32, 2>>()));
@@ -370,13 +422,8 @@ $B1: {  # root
 )";
     EXPECT_EQ(src, str());
 
-    auto* expect = R"(
-$B1: {  # root
-  %1:array<i32, 2> = let array<i32, 2>(0i)
-  %a:ptr<private, array<i32, 2>, read_write> = var %1
-}
+    auto* expect = src;
 
-)";
     Run(PromoteInitializers);
 
     EXPECT_EQ(expect, str());
@@ -459,7 +506,8 @@ TEST_F(HlslWriterPromoteInitializersTest, ModuleScopedArrayNestedInStruct) {
                                                        {mod.symbols.New("a"), ty.array<i32, 3>()},
                                                    });
 
-    b.ir.root_block->Append(b.Var<private_>("a", b.Composite(str_ty, b.Zero(ty.array<i32, 3>()))));
+    b.ir.root_block->Append(
+        b.Var<private_>("a", b.Composite(str_ty, b.Composite(ty.array<i32, 3>(), 1_i, 2_i, 3_i))));
 
     auto* src = R"(
 S = struct @align(4) {
@@ -467,7 +515,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %a:ptr<private, S, read_write> = var S(array<i32, 3>(0i))
+  %a:ptr<private, S, read_write> = var S(array<i32, 3>(1i, 2i, 3i))
 }
 
 )";
@@ -479,7 +527,7 @@ S = struct @align(4) {
 }
 
 $B1: {  # root
-  %1:S = construct array<i32, 3>(0i)
+  %1:S = construct array<i32, 3>(1i, 2i, 3i)
   %2:S = let %1
   %a:ptr<private, S, read_write> = var %2
 }
@@ -911,18 +959,18 @@ TEST_F(HlslWriterPromoteInitializersTest, LetOfLet) {
     capabilities = core::ir::Capabilities{core::ir::Capability::kAllowModuleScopeLets};
 
     auto* str_ty = ty.Struct(mod.symbols.New("S"), {
-                                                       {mod.symbols.New("a"), ty.vec4<i32>()},
+                                                       {mod.symbols.New("a"), ty.vec4i()},
                                                    });
 
     auto* inner = b.Function("inner", str_ty);
     b.Append(inner->Block(),
-             [&] { b.Return(inner, b.Construct(str_ty, b.Splat(ty.vec4<i32>(), 1_i))); });
+             [&] { b.Return(inner, b.Construct(str_ty, b.Splat(ty.vec4i(), 1_i))); });
 
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {
         auto* in = b.Call(inner);
         auto* l = b.Let("a", in);
-        b.Access(ty.vec4<i32>(), l, 0_u);
+        b.Access(ty.vec4i(), l, 0_u);
         b.Return(func);
     });
 

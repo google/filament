@@ -61,6 +61,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size
 add_library(filament-utils-jni SHARED
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
+        src/main/cpp/DeviceUtils.cpp
         src/main/cpp/HDRLoader.cpp
         src/main/cpp/IBLPrefilterContext.cpp
         src/main/cpp/Utils.cpp

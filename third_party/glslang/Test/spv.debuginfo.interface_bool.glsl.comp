@@ -1,0 +1,27 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 1) in;
+
+uniform UBO
+{
+	bool b;
+	bvec4 bv;
+	bool[4] ba;
+};
+
+buffer SSBO {
+	bool b;
+	bvec4 bv;
+	bool[4] ba;
+} ssbo;
+
+void main()
+{
+	if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0) {
+		ssbo.b = b;
+		ssbo.bv = bv;
+		for (int i = 0; i < 4; ++i) {
+			ssbo.ba[i] = ba[i];
+		}
+	}
+}

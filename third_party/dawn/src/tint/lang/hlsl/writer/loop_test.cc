@@ -34,7 +34,7 @@ namespace tint::hlsl::writer {
 namespace {
 
 TEST_F(HlslWriterTest, Loop) {
-    auto* func = b.ComputeFunction("a");
+    auto* func = b.ComputeFunction("main");
 
     b.Append(func->Block(), [&] {
         auto* l = b.Loop();
@@ -43,10 +43,11 @@ TEST_F(HlslWriterTest, Loop) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void a() {
+void main() {
   {
     uint2 tint_loop_idx = (4294967295u).xx;
     while(true) {
@@ -62,7 +63,7 @@ void a() {
 }
 
 TEST_F(HlslWriterTest, LoopContinueAndBreakIf) {
-    auto* func = b.ComputeFunction("a");
+    auto* func = b.ComputeFunction("main");
 
     b.Append(func->Block(), [&] {
         auto* l = b.Loop();
@@ -71,10 +72,11 @@ TEST_F(HlslWriterTest, LoopContinueAndBreakIf) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void a() {
+void main() {
   {
     uint2 tint_loop_idx = (4294967295u).xx;
     while(true) {
@@ -88,7 +90,6 @@ void a() {
         tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (true) { break; }
       }
-      continue;
     }
   }
 }
@@ -97,7 +98,7 @@ void a() {
 }
 
 TEST_F(HlslWriterTest, LoopBodyVarInContinue) {
-    auto* func = b.ComputeFunction("a");
+    auto* func = b.ComputeFunction("main");
 
     b.Append(func->Block(), [&] {
         auto* l = b.Loop();
@@ -105,15 +106,16 @@ TEST_F(HlslWriterTest, LoopBodyVarInContinue) {
             auto* v = b.Var("v", true);
             b.Continue(l);
 
-            b.Append(l->Continuing(), [&] { b.BreakIf(l, v); });
+            b.Append(l->Continuing(), [&] { b.BreakIf(l, b.Load(v)); });
         });
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void a() {
+void main() {
   {
     uint2 tint_loop_idx = (4294967295u).xx;
     while(true) {
@@ -128,7 +130,6 @@ void a() {
         tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
-      continue;
     }
   }
 }
@@ -137,7 +138,7 @@ void a() {
 }
 
 TEST_F(HlslWriterTest, LoopInitializer) {
-    auto* func = b.ComputeFunction("a");
+    auto* func = b.ComputeFunction("main");
 
     b.Append(func->Block(), [&] {
         auto* l = b.Loop();
@@ -146,15 +147,16 @@ TEST_F(HlslWriterTest, LoopInitializer) {
             b.NextIteration(l);
 
             b.Append(l->Body(), [&] { b.Continue(l); });
-            b.Append(l->Continuing(), [&] { b.BreakIf(l, v); });
+            b.Append(l->Continuing(), [&] { b.BreakIf(l, b.Load(v)); });
         });
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 [numthreads(1, 1, 1)]
-void a() {
+void main() {
   {
     uint2 tint_loop_idx = (4294967295u).xx;
     bool v = true;
@@ -169,7 +171,6 @@ void a() {
         tint_loop_idx.y = (tint_loop_idx.y - tint_carry);
         if (v) { break; }
       }
-      continue;
     }
   }
 }
@@ -186,7 +187,14 @@ TEST_F(HlslWriterTest, Loop_UnconditionalReturn_NonVoid) {
         b.Unreachable();
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.hlsl;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.hlsl;
     EXPECT_EQ(output_.hlsl, R"(
 int a() {
   {
@@ -203,7 +211,8 @@ int a() {
 }
 
 [numthreads(1, 1, 1)]
-void unused_entry_point() {
+void main() {
+  int x = a();
 }
 
 )");

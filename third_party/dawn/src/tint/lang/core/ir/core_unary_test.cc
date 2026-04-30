@@ -41,7 +41,7 @@ using IR_UnaryTest = IRTestHelper;
 using IR_UnaryDeathTest = IR_UnaryTest;
 
 TEST_F(IR_UnaryTest, CreateComplement) {
-    auto* inst = b.Complement(mod.Types().i32(), 4_i);
+    auto* inst = b.Complement(4_i);
 
     ASSERT_TRUE(inst->Is<Unary>());
     EXPECT_EQ(inst->Op(), UnaryOp::kComplement);
@@ -53,7 +53,7 @@ TEST_F(IR_UnaryTest, CreateComplement) {
 }
 
 TEST_F(IR_UnaryTest, CreateNegation) {
-    auto* inst = b.Negation(mod.Types().i32(), 4_i);
+    auto* inst = b.Negation(4_i);
 
     ASSERT_TRUE(inst->Is<Unary>());
     EXPECT_EQ(inst->Op(), UnaryOp::kNegation);
@@ -65,7 +65,7 @@ TEST_F(IR_UnaryTest, CreateNegation) {
 }
 
 TEST_F(IR_UnaryTest, CreateNot) {
-    auto* inst = b.Not(mod.Types().bool_(), true);
+    auto* inst = b.Not(true);
 
     ASSERT_TRUE(inst->Is<Unary>());
     EXPECT_EQ(inst->Op(), UnaryOp::kNot);
@@ -77,7 +77,7 @@ TEST_F(IR_UnaryTest, CreateNot) {
 }
 
 TEST_F(IR_UnaryTest, Usage) {
-    auto* inst = b.Negation(mod.Types().i32(), 4_i);
+    auto* inst = b.Negation(4_i);
 
     EXPECT_EQ(inst->Op(), UnaryOp::kNegation);
 
@@ -86,24 +86,14 @@ TEST_F(IR_UnaryTest, Usage) {
 }
 
 TEST_F(IR_UnaryTest, Result) {
-    auto* inst = b.Negation(mod.Types().i32(), 4_i);
+    auto* inst = b.Negation(4_i);
     EXPECT_EQ(inst->Results().Length(), 1u);
     EXPECT_TRUE(inst->Result()->Is<InstructionResult>());
     EXPECT_EQ(inst->Result()->Instruction(), inst);
 }
 
-TEST_F(IR_UnaryDeathTest, Fail_NullType) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            Module mod;
-            Builder b{mod};
-            b.Negation(nullptr, 1_i);
-        },
-        "internal compiler error");
-}
-
 TEST_F(IR_UnaryTest, Clone) {
-    auto* inst = b.Complement(mod.Types().i32(), 4_i);
+    auto* inst = b.Complement(4_i);
     auto* new_inst = clone_ctx.Clone(inst);
 
     EXPECT_NE(inst, new_inst);

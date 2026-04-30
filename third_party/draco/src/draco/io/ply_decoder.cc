@@ -94,7 +94,7 @@ Status PlyDecoder::DecodeInternal() {
 Status PlyDecoder::DecodeFaceData(const PlyElement *face_element) {
   // We accept point clouds now.
   if (face_element == nullptr) {
-    return Status(Status::INVALID_PARAMETER, "face_element is null");
+    return OkStatus();
   }
   const PlyProperty *vertex_indices =
       face_element->GetPropertyByName("vertex_indices");

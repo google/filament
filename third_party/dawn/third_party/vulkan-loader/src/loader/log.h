@@ -83,3 +83,7 @@ void loader_log_asm_function_not_supported(const struct loader_instance *inst, V
                                            const char *func_name) ASM_NAME("loader_log_asm_function_not_supported");
 
 #undef ASM_NAME
+
+#define UUID_STR_LEN 37  // always 32 digits, 4 dashes, and 1 null terminator
+
+void loader_log_generate_uuid_string(const uint8_t uuid[16], char output[UUID_STR_LEN]);

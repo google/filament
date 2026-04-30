@@ -1,0 +1,10 @@
+Name: DirectX-Headers
+Short Name: DirectX-Headers
+URL: https://github.com/microsoft/DirectX-Headers
+Update Mechanism: Manual
+Security Critical: no
+Version: N/A
+Revision: DEPS
+License: MIT
+License File: LICENSE
+Shipped: no

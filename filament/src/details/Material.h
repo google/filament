@@ -108,6 +108,11 @@ public:
             backend::CallbackHandler* handler,
             utils::Invocable<void(Material*)>&& callback) noexcept;
 
+    void compile(CompilerPriorityQueue priority,
+        utils::FixedCapacityVector<Variant> const& variants,
+        backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback) noexcept;
+
     // Creates an instance of this material, specifying the batching mode.
     FMaterialInstance* createInstance(const char* name) const noexcept;
 
@@ -280,9 +285,9 @@ private:
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
 
-    void precacheDepthVariants(backend::DriverApi& driver);
-
-    void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
+    void compileAllPrograms(CompilerPriorityQueue priority,
+        backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback) noexcept;
 
     MaterialDefinition const& mDefinition;
 

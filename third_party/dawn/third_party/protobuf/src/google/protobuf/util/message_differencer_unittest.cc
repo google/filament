@@ -33,6 +33,7 @@
 #include "google/protobuf/map_test_util.h"
 #include "google/protobuf/map_unittest.pb.h"
 #include "google/protobuf/message.h"
+#include "google/protobuf/reflection_tester.h"
 #include "google/protobuf/test_util.h"
 #include "google/protobuf/text_format.h"
 #include "google/protobuf/unittest.pb.h"
@@ -77,7 +78,7 @@ proto3_unittest::TestNoPresenceField MakeTestNoPresenceField() {
 const FieldDescriptor* GetFieldDescriptor(const Message& message,
                                           const std::string& field_name) {
   std::vector<std::string> field_path =
-      absl::StrSplit(field_name, ".", absl::SkipEmpty());
+      absl::StrSplit(field_name, '.', absl::SkipEmpty());
   const Descriptor* descriptor = message.GetDescriptor();
   const FieldDescriptor* field = nullptr;
   for (int i = 0; i < field_path.size(); i++) {
@@ -2395,7 +2396,7 @@ TEST(MessageDifferencerTest, TreatRepeatedFieldAsSetWithIgnoredFields) {
   TextFormat::MergeFromString("rm { a: 11\n b: 13 }", &msg2);
   util::MessageDifferencer differ;
   differ.TreatAsSet(GetFieldDescriptor(msg1, "rm"));
-  differ.AddIgnoreCriteria(absl::WrapUnique(new TestIgnorer));
+  differ.AddIgnoreCriteria(std::make_unique<TestIgnorer>());
   EXPECT_TRUE(differ.Compare(msg1, msg2));
 }
 
@@ -2407,7 +2408,7 @@ TEST(MessageDifferencerTest, TreatRepeatedFieldAsMapWithIgnoredKeyFields) {
   util::MessageDifferencer differ;
   differ.TreatAsMap(GetFieldDescriptor(msg1, "rm"),
                     GetFieldDescriptor(msg1, "rm.m"));
-  differ.AddIgnoreCriteria(absl::WrapUnique(new TestIgnorer));
+  differ.AddIgnoreCriteria(std::make_unique<TestIgnorer>());
   EXPECT_TRUE(differ.Compare(msg1, msg2));
 }
 
@@ -2875,7 +2876,7 @@ TEST(MessageDifferencerTest, IgnoreField_SetReportIgnoresFalse) {
 // passed to the comparison function.
 class ParentSavingFieldComparator : public util::FieldComparator {
  public:
-  ParentSavingFieldComparator() {}
+  ParentSavingFieldComparator() = default;
 
   ComparisonResult Compare(const Message& message_1, const Message& message_2,
                            const FieldDescriptor* field, int index_1,
@@ -2933,7 +2934,7 @@ class ComparisonTest : public testing::Test {
     unknown2_ = empty2_.mutable_unknown_fields();
   }
 
-  ~ComparisonTest() override {}
+  ~ComparisonTest() override = default;
 
   void SetSpecialFieldOption(const Message& message,
                              util::MessageDifferencer* d) {
@@ -3961,9 +3962,9 @@ class MatchingTest : public testing::Test {
   typedef util::MessageDifferencer MessageDifferencer;
 
  protected:
-  MatchingTest() {}
+  MatchingTest() = default;
 
-  ~MatchingTest() override {}
+  ~MatchingTest() override = default;
 
   std::string RunWithResult(MessageDifferencer* differencer,
                             const Message& msg1, const Message& msg2,

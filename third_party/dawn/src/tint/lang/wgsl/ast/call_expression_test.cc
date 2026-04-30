@@ -113,35 +113,5 @@ TEST_F(CallExpressionDeathTest, Assert_Null_Param) {
         "internal compiler error");
 }
 
-TEST_F(CallExpressionDeathTest, Assert_DifferentGenerationID_Identifier) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Call(b2.Ident("func"));
-        },
-        "internal compiler error");
-}
-
-TEST_F(CallExpressionDeathTest, Assert_DifferentGenerationID_Type) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Call(b2.ty.f32());
-        },
-        "internal compiler error");
-}
-
-TEST_F(CallExpressionDeathTest, Assert_DifferentGenerationID_Param) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Call(b1.Ident("func"), b2.Expr("param1"));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

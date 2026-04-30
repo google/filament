@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "dawn/native/BackendConnection.h"
-
 #include "dawn/native/d3d/BackendD3D.h"
 #include "dawn/native/d3d12/d3d12_platform.h"
 

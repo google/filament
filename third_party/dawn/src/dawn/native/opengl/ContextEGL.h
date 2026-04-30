@@ -29,12 +29,15 @@
 #define SRC_DAWN_NATIVE_OPENGL_CONTEXTEGL_H_
 
 #include <memory>
+#include <mutex>
+#include <thread>
 #include <utility>
 
 #include "dawn/common/NonMovable.h"
+#include "dawn/common/Ref.h"
 #include "dawn/common/egl_platform.h"
-#include "dawn/native/opengl/DeviceGL.h"
 #include "dawn/native/opengl/EGLFunctions.h"
+#include "dawn/native/opengl/opengl_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::opengl {
@@ -46,37 +49,94 @@ class ContextEGL : NonMovable {
     static ResultOrError<std::unique_ptr<ContextEGL>> Create(Ref<DisplayEGL> display,
                                                              wgpu::BackendType backend,
                                                              bool useRobustness,
+                                                             bool disableEGL15Robustness,
                                                              bool useANGLETextureSharing,
-                                                             bool forceES31AndMinExtensions);
+                                                             bool forceES31AndMinExtensions,
+                                                             bool bindContextOnlyDuringUse,
+                                                             EGLint angleVirtualizationGroup);
 
-    explicit ContextEGL(Ref<DisplayEGL> display);
     ~ContextEGL();
 
-    MaybeError Initialize(wgpu::BackendType backend,
-                          bool useRobustness,
-                          bool useANGLETextureSharing,
-                          bool forceES31AndMinExtensions);
     void RequestRequiredExtensionsExplicitly();
+    bool IsInScopedMakeCurrent() const;
 
     // Make the surface used by all MakeCurrent until the scoper gets out of scope.
-    class ScopedMakeSurfaceCurrent : NonMovable {
+    class ScopedSetCurrentSurface : NonMovable {
       public:
-        ScopedMakeSurfaceCurrent(ContextEGL* context, EGLSurface surface);
-        ~ScopedMakeSurfaceCurrent();
+        ScopedSetCurrentSurface(ContextEGL* context, EGLSurface surface);
+        ~ScopedSetCurrentSurface();
 
       private:
         raw_ptr<ContextEGL> mContext;
     };
-    [[nodiscard]] ScopedMakeSurfaceCurrent MakeSurfaceCurrentScope(EGLSurface surface);
+    [[nodiscard]] ScopedSetCurrentSurface SetCurrentSurfaceScope(EGLSurface surface);
 
-    void MakeCurrent();
+    // TODO(451928481): remove this once all call sites use MakeCurrent
+    void DeprecatedMakeCurrent();
+
+    struct ContextState {
+        EGLContext context = EGL_NO_CONTEXT;
+        EGLSurface drawSurface = EGL_NO_SURFACE;
+        EGLSurface readSurface = EGL_NO_SURFACE;
+
+        bool operator==(const ContextState& other) const;
+        bool operator!=(const ContextState& other) const;
+    };
+
+    class ScopedMakeCurrent {
+      public:
+        ScopedMakeCurrent() = default;
+        ScopedMakeCurrent(ScopedMakeCurrent&& src);
+        ScopedMakeCurrent(const ScopedMakeCurrent&) = delete;
+        ~ScopedMakeCurrent();
+
+        ScopedMakeCurrent& operator=(ScopedMakeCurrent&& src);
+        ScopedMakeCurrent& operator=(const ScopedMakeCurrent&) = delete;
+
+        MaybeError End();
+
+      private:
+        friend class ContextEGL;
+
+        explicit ScopedMakeCurrent(ContextEGL* context);
+        MaybeError Initialize();
+
+        raw_ptr<ContextEGL> mContext = nullptr;
+        ContextState mPrevState;
+        std::unique_lock<std::mutex> mLock;
+    };
+
+    ResultOrError<ScopedMakeCurrent> MakeCurrent();
 
   private:
+    explicit ContextEGL(Ref<DisplayEGL> display, bool bindContextOnlyDuringUse);
+
+    MaybeError Initialize(wgpu::BackendType backend,
+                          bool useRobustness,
+                          bool useANGLETextureSharing,
+                          bool disableEGL15Robustness,
+                          bool forceES31AndMinExtensions,
+                          EGLint angleVirtualizationGroup);
+
+    bool IsNotCurrentOnAnotherThread() const;
+
+    // This mutex is used to make sure only one thread can enter ScopedMakeCurrent at a time.
+    std::mutex mExclusiveMakeCurrentMutex;
+
     Ref<DisplayEGL> mDisplay;
-    EGLContext mContext = EGL_NO_CONTEXT;
-    EGLSurface mCurrentSurface = EGL_NO_SURFACE;
+    ContextState mState;
     EGLSurface mOffscreenSurface = EGL_NO_SURFACE;
     bool mForceES31AndMinExtensions = false;
+
+    // Flag to allow this context to be used on multiple threads. A GL context cannot be used on
+    // multiple threads at the same time. But if one thread locks the context, then unbinds it, that
+    // will allow the context to be used on another thread.
+    const bool mBindContextOnlyDuringUse = false;
+
+    // For debugging purpose, storing the id of the thread that has the context current.
+#if defined(DAWN_ENABLE_ASSERTS)
+    std::thread::id mCurrentThread;
+#endif
 };
 
 }  // namespace dawn::native::opengl

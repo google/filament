@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
+#include "src/tint/lang/wgsl/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
 namespace tint {
@@ -48,7 +48,7 @@ void Shutdown();
 /// @param wgsl_options the options to use for generating WGSL
 /// @returns the WGSL module, or a failure
 tint::Result<std::string> SpirvToWgsl(const std::vector<uint32_t>& spirv,
-                                      const wgsl::writer::ProgramOptions& wgsl_options = {});
+                                      const wgsl::writer::Options& wgsl_options = {});
 
 }  // namespace tint
 

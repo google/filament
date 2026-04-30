@@ -198,13 +198,13 @@ set_target_properties(gltfio_core PROPERTIES FOLDER Libs)
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
 target_link_libraries(gltfio_core PUBLIC dracodec meshoptimizer ${WEBP_DECODER_LIB_TARGET})
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
     target_compile_definitions(gltfio_core PUBLIC -DFILAMENT_WASM_THREADS)
 endif()
 
 target_compile_options(gltfio_core PRIVATE ${FILAMENT_WARNINGS})
 
-if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
+if (NOT WASM AND NOT ANDROID AND NOT IOS)
 
     # ==================================================================================================
     # Link the core library with additional dependencies to create the "full" library
@@ -246,7 +246,7 @@ if (FILAMENT_BUILD_TESTING)
 
     # The following tests rely on private APIs that are stripped
     # away in Release builds
-    if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
+    if (TNT_DEV AND NOT WASM AND NOT ANDROID AND NOT IOS)
         set(TEST_TARGET test_gltfio)
 
         add_executable(${TEST_TARGET} test/gltfio_test.cpp)

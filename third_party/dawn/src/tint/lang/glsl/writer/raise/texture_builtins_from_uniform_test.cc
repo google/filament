@@ -49,6 +49,84 @@ namespace {
 
 using GlslWriter_TextureBuiltinsFromUniformTest = core::ir::transform::TransformTest;
 
+TEST_F(GlslWriter_TextureBuiltinsFromUniformTest, MissingConfig) {
+    auto* t = b.Var(ty.ptr(handle, ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
+                           core::Access::kRead));
+    t->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(t);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* tex = b.Load(t);
+        b.Let("len", b.Call(ty.u32(), core::BuiltinFn::kTextureNumLevels, tex));
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %1:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:texture_2d<f32> = load %1
+    %4:u32 = textureNumLevels %3
+    %len:u32 = let %4
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+
+    TextureBuiltinsFromUniformOptions cfg = {{.group = 0, .binding = 30u}, {}};
+    auto result = RunWithFailure(TextureBuiltinsFromUniform, cfg);
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, "texture missing from texture_builtins_from_uniform list");
+}
+
+TEST_F(GlslWriter_TextureBuiltinsFromUniformTest, BindingArray_CountTooSmall) {
+    auto* texture_type = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
+    auto* textures = b.Var(ty.ptr<handle>(ty.binding_array(texture_type, 3)));
+    textures->SetBindingPoint(0, 0);
+    b.ir.root_block->Append(textures);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* ptr_texture = b.Access(ty.ptr<handle>(texture_type), textures, 1_u);
+        auto* texture = b.Load(ptr_texture);
+        b.Let("len", b.Call(ty.u32(), core::BuiltinFn::kTextureNumLevels, texture));
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %1:ptr<handle, binding_array<texture_2d<f32>, 3>, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<handle, texture_2d<f32>, read> = access %1, 1u
+    %4:texture_2d<f32> = load %3
+    %5:u32 = textureNumLevels %4
+    %len:u32 = let %5
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 2, .binding = {.group = 0, .binding = 0}}}};
+    auto result = RunWithFailure(TextureBuiltinsFromUniform, cfg);
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(
+        result.Failure().reason,
+        "binding_array of textures doesn't have enough data in texture_builtins_from_uniform list");
+}
+
 TEST_F(GlslWriter_TextureBuiltinsFromUniformTest, TextureNumLevels) {
     auto* t = b.Var(ty.ptr(handle, ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
                            core::Access::kRead));
@@ -101,7 +179,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 1, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 1, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -158,7 +238,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 1, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 1, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -215,7 +297,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 42, .count = 1, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 42, .count = 1, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -277,7 +361,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 3, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 3, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -340,7 +426,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 3, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 3, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -405,7 +493,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 3, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 3, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -471,7 +561,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 1, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 1, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }
@@ -537,7 +629,9 @@ $B1: {  # root
 }
 )";
 
-    TextureBuiltinsFromUniformOptions cfg = {{30u}, {{.offset = 0, .count = 1, .binding = {0}}}};
+    TextureBuiltinsFromUniformOptions cfg = {
+        {.group = 0, .binding = 30u},
+        {{.offset = 0, .count = 1, .binding = {.group = 0, .binding = 0}}}};
     Run(TextureBuiltinsFromUniform, cfg);
     EXPECT_EQ(expect, str());
 }

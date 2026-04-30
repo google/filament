@@ -77,7 +77,7 @@ TEST_F(IR_ExitSwitchTest, Clone) {
     EXPECT_EQ(new_switch, new_exit->Switch());
 
     auto args = new_exit->Args();
-    ASSERT_EQ(2u, args.Length());
+    ASSERT_EQ(2u, args.size());
 
     auto new_arg1 = args[0]->As<Constant>()->Value();
     ASSERT_TRUE(new_arg1->Is<core::constant::Scalar<u32>>());
@@ -96,7 +96,7 @@ TEST_F(IR_ExitSwitchTest, CloneNoArgs) {
     auto* new_exit = clone_ctx.Clone(e);
 
     EXPECT_EQ(new_switch, new_exit->Switch());
-    EXPECT_TRUE(new_exit->Args().IsEmpty());
+    EXPECT_TRUE(new_exit->Args().empty());
 }
 
 }  // namespace

@@ -1,8 +1,13 @@
 bsheedy@google.com
 cwallez@chromium.org
-tandrii@chromium.org
 ynovikov@chromium.org
 
 # CBRI Branch Day Automation go/automate-branch-day
 per-file global/generated/...=chrome-branch-day@chops-service-accounts.iam.gserviceaccount.com
 per-file global/milestones.json=chrome-branch-day@chops-service-accounts.iam.gserviceaccount.com
+
+# Chromium -> Dawn autoroller, which includes the chromium-luci Starlark
+# code in its changes.
+per-file global/generated/...=dawn-autoroll@skia-public.iam.gserviceaccount.com
+per-file global/PACKAGE.lock=dawn-autoroll@skia-public.iam.gserviceaccount.com
+per-file global/PACKAGE.star=dawn-autoroll@skia-public.iam.gserviceaccount.com

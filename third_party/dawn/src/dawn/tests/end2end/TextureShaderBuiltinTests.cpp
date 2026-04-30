@@ -65,7 +65,7 @@ class TextureShaderBuiltinTests : public DawnTest {
 
         // Only set the textureBindingViewDimension in compat mode. It's not needed
         // nor used in non-compat.
-        wgpu::TextureBindingViewDimensionDescriptor textureBindingViewDimensionDesc;
+        wgpu::TextureBindingViewDimension textureBindingViewDimensionDesc;
         if (IsCompatibilityMode()) {
             textureBindingViewDimensionDesc.textureBindingViewDimension =
                 textureBindingViewDimension;
@@ -205,8 +205,6 @@ TEST_P(TextureShaderBuiltinTests, Basic) {
 
 // Testing that baseMipLevel is handled correctly.
 TEST_P(TextureShaderBuiltinTests, BaseMipLevelTextureView) {
-    // TODO(dawn:2538): failing on OpenGLES Angle backed by D3D11.
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
     constexpr uint32_t kLayers = 1;
     constexpr uint32_t kMipLevels = 3;
     wgpu::Texture tex =
@@ -271,9 +269,6 @@ TEST_P(TextureShaderBuiltinTests, BaseMipLevelTextureView) {
 
 // Testing that baseMipLevel is handled correctly for texture_cube.
 TEST_P(TextureShaderBuiltinTests, BaseMipLevelTextureViewCube) {
-    // TODO(crbug.com/dawn/2442): diagnose this failure on Win Angle D3D11
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-
     constexpr uint32_t kCubeLayers = 6;
     constexpr uint32_t kMipLevels = 3;
     wgpu::Texture texCube =
@@ -907,7 +902,8 @@ DAWN_INSTANTIATE_TEST(TextureShaderBuiltinTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -131,7 +131,7 @@ class NonzeroTextureCreationTests : public DawnTestWithParams<Params> {
 
         // Only set the textureBindingViewDimension in compat mode. It's not needed
         // nor used in non-compat.
-        wgpu::TextureBindingViewDimensionDescriptor textureBindingViewDimensionDesc;
+        wgpu::TextureBindingViewDimension textureBindingViewDimensionDesc;
         if (IsCompatibilityMode()) {
             if (descriptor.dimension == wgpu::TextureDimension::e2D &&
                 descriptor.size.depthOrArrayLayers == 6) {
@@ -296,11 +296,17 @@ TEST_P(NonzeroDepthTextureCreationTests, TextureCreationClears) {
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(crbug.com/474396043): [Capture] error value on Mac Intel.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled() && IsMetal() && IsIntel());
+
     Run();
 }
 
 // Test that texture clears to a non-zero value because toggle is enabled.
 TEST_P(NonzeroDepthStencilTextureCreationTests, TextureCreationClears) {
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     Run();
 }
 
@@ -319,18 +325,22 @@ TEST_P(NonzeroMultisampledTextureCreationTests, TextureCreationClears) {
 
 DAWN_INSTANTIATE_TEST_P(
     NonzeroTextureCreationTests,
-    {D3D11Backend({"nonzero_clear_resources_on_creation_for_testing"},
-                  {"lazy_clear_resource_on_first_use"}),
-     D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"},
-                  {"lazy_clear_resource_on_first_use"}),
-     MetalBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                  {"lazy_clear_resource_on_first_use"}),
-     OpenGLBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                   {"lazy_clear_resource_on_first_use"}),
-     OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
+    {
+        D3D11Backend({"nonzero_clear_resources_on_creation_for_testing"},
                      {"lazy_clear_resource_on_first_use"}),
-     VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                   {"lazy_clear_resource_on_first_use"})},
+        D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"},
+                     {"lazy_clear_resource_on_first_use"}),
+        MetalBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                     {"lazy_clear_resource_on_first_use"}),
+        OpenGLBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                      {"lazy_clear_resource_on_first_use"}),
+        OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                        {"lazy_clear_resource_on_first_use"}),
+        VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                      {"lazy_clear_resource_on_first_use"}),
+        WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                      {"lazy_clear_resource_on_first_use"}),
+    },
     {wgpu::TextureFormat::R8Unorm, wgpu::TextureFormat::RG8Unorm, wgpu::TextureFormat::RGBA8Unorm},
     {wgpu::TextureAspect::All},
     {wgpu::TextureUsage(wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc),
@@ -354,6 +364,8 @@ DAWN_INSTANTIATE_TEST_P(NonzeroNonrenderableTextureCreationTests,
                          OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                          {"lazy_clear_resource_on_first_use"}),
                          VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                       {"lazy_clear_resource_on_first_use"}),
+                         WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                        {"lazy_clear_resource_on_first_use"})},
                         {wgpu::TextureFormat::RGBA8Snorm},
                         {wgpu::TextureAspect::All},
@@ -377,6 +389,8 @@ DAWN_INSTANTIATE_TEST_P(NonzeroCompressedTextureCreationTests,
                          OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                          {"lazy_clear_resource_on_first_use"}),
                          VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                       {"lazy_clear_resource_on_first_use"}),
+                         WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                                        {"lazy_clear_resource_on_first_use"})},
                         {wgpu::TextureFormat::BC1RGBAUnorm},
                         {wgpu::TextureAspect::All},
@@ -389,18 +403,22 @@ DAWN_INSTANTIATE_TEST_P(NonzeroCompressedTextureCreationTests,
 );
 
 DAWN_INSTANTIATE_TEST_P(NonzeroDepthTextureCreationTests,
-                        {D3D11Backend({"nonzero_clear_resources_on_creation_for_testing"},
-                                      {"lazy_clear_resource_on_first_use"}),
-                         D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"},
-                                      {"lazy_clear_resource_on_first_use"}),
-                         MetalBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                                      {"lazy_clear_resource_on_first_use"}),
-                         OpenGLBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                                       {"lazy_clear_resource_on_first_use"}),
-                         OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                        {
+                            D3D11Backend({"nonzero_clear_resources_on_creation_for_testing"},
                                          {"lazy_clear_resource_on_first_use"}),
-                         VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
-                                       {"lazy_clear_resource_on_first_use"})},
+                            D3D12Backend({"nonzero_clear_resources_on_creation_for_testing"},
+                                         {"lazy_clear_resource_on_first_use"}),
+                            MetalBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                         {"lazy_clear_resource_on_first_use"}),
+                            OpenGLBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                          {"lazy_clear_resource_on_first_use"}),
+                            OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                            {"lazy_clear_resource_on_first_use"}),
+                            VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                          {"lazy_clear_resource_on_first_use"}),
+                            WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                                          {"lazy_clear_resource_on_first_use"}),
+                        },
                         {wgpu::TextureFormat::Depth32Float},
                         {wgpu::TextureAspect::All, wgpu::TextureAspect::DepthOnly},
                         {wgpu::TextureUsage(wgpu::TextureUsage::RenderAttachment |
@@ -426,6 +444,8 @@ DAWN_INSTANTIATE_TEST_P(
      OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                      {"lazy_clear_resource_on_first_use"}),
      VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                   {"lazy_clear_resource_on_first_use"}),
+     WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                    {"lazy_clear_resource_on_first_use"})},
     {wgpu::TextureFormat::Depth24PlusStencil8},
     {wgpu::TextureAspect::DepthOnly, wgpu::TextureAspect::StencilOnly},
@@ -452,6 +472,8 @@ DAWN_INSTANTIATE_TEST_P(
      OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                      {"lazy_clear_resource_on_first_use"}),
      VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                   {"lazy_clear_resource_on_first_use"}),
+     WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                    {"lazy_clear_resource_on_first_use"})},
     {wgpu::TextureFormat::Stencil8},
     {wgpu::TextureAspect::All, wgpu::TextureAspect::StencilOnly},
@@ -481,6 +503,8 @@ DAWN_INSTANTIATE_TEST_P(
      OpenGLESBackend({"nonzero_clear_resources_on_creation_for_testing"},
                      {"lazy_clear_resource_on_first_use"}),
      VulkanBackend({"nonzero_clear_resources_on_creation_for_testing"},
+                   {"lazy_clear_resource_on_first_use"}),
+     WebGPUBackend({"nonzero_clear_resources_on_creation_for_testing"},
                    {"lazy_clear_resource_on_first_use"})},
     {wgpu::TextureFormat::R8Unorm, wgpu::TextureFormat::RG8Unorm, wgpu::TextureFormat::RGBA8Unorm},
     {wgpu::TextureAspect::All},

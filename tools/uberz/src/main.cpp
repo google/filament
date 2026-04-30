@@ -191,7 +191,11 @@ int main(int argc, char* argv[]) {
         uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
         ZSTD_decompress(basePointer, decompSize, archiveData, archiveSize);
         existingArchive = (ReadableArchive*) basePointer;
-        convertOffsetsToPointers(existingArchive);
+        if (!convertOffsetsToPointers(existingArchive, decompSize)) {
+            cerr << "Failed to parse existing uberz archive" << endl;
+            utils::aligned_free(basePointer);
+            exit(1);
+        }
         existingMaterialsCount = existingArchive->specsCount;
     }
 

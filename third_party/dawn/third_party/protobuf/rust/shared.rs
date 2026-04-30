@@ -18,7 +18,7 @@ pub use crate::codegen_traits::{
     create::Parse,
     interop::{MessageMutInterop, MessageViewInterop, OwnedMessageInterop},
     read::Serialize,
-    write::{Clear, ClearAndParse, MergeFrom},
+    write::{Clear, ClearAndParse, CopyFrom, MergeFrom, TakeFrom},
     Message, MessageMut, MessageView,
 };
 pub use crate::cord::{ProtoBytesCow, ProtoStringCow};
@@ -31,6 +31,7 @@ pub use crate::proxied::{
 pub use crate::r#enum::{Enum, UnknownEnumValue};
 pub use crate::repeated::{ProxiedInRepeated, Repeated, RepeatedIter, RepeatedMut, RepeatedView};
 pub use crate::string::{ProtoBytes, ProtoStr, ProtoString, Utf8Error};
+pub use protobuf_macros::proto_proc as proto;
 
 pub mod prelude;
 
@@ -59,7 +60,6 @@ mod r#enum;
 mod map;
 mod optional;
 mod primitive;
-mod proto_macro;
 mod proxied;
 mod repeated;
 mod string;

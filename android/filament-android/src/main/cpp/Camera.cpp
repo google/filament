@@ -17,6 +17,7 @@
 #include <jni.h>
 
 #include <filament/Camera.h>
+#include <common/JniUtils.h>
 
 
 #include <utils/Entity.h>
@@ -24,21 +25,26 @@
 #include <math/mat4.h>
 
 using namespace filament;
+using namespace filament::android;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Camera_nSetProjection(JNIEnv*, jclass, jlong nativeCamera,
+Java_com_google_android_filament_Camera_nSetProjection(JNIEnv* env, jclass, jlong nativeCamera,
         jint projection, jdouble left, jdouble right, jdouble bottom, jdouble top, jdouble near,
         jdouble far) {
     Camera *camera = (Camera *) nativeCamera;
-    camera->setProjection((Camera::Projection) projection, left, right, bottom, top, near, far);
+    wrapJni(env, [=]() {
+        camera->setProjection((Camera::Projection) projection, left, right, bottom, top, near, far);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Camera_nSetProjectionFov(JNIEnv*, jclass ,
+Java_com_google_android_filament_Camera_nSetProjectionFov(JNIEnv* env, jclass ,
         jlong nativeCamera, jdouble fovInDegrees, jdouble aspect, jdouble near, jdouble far,
         jint fov) {
     Camera *camera = (Camera *) nativeCamera;
-    camera->setProjection(fovInDegrees, aspect, near, far, (Camera::Fov) fov);
+    wrapJni(env, [=]() {
+        camera->setProjection(fovInDegrees, aspect, near, far, (Camera::Fov) fov);
+    });
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
@@ -49,10 +55,12 @@ Java_com_google_android_filament_Camera_nGetFieldOfViewInDegrees(JNIEnv*, jclass
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Camera_nSetLensProjection(JNIEnv*, jclass,
+Java_com_google_android_filament_Camera_nSetLensProjection(JNIEnv* env, jclass,
         jlong nativeCamera, jdouble focalLength, jdouble aspect, jdouble near, jdouble far) {
     Camera *camera = (Camera *) nativeCamera;
-    camera->setLensProjection(focalLength, aspect, near, far);
+    wrapJni(env, [=]() {
+        camera->setLensProjection(focalLength, aspect, near, far);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -62,10 +70,12 @@ Java_com_google_android_filament_Camera_nSetCustomProjection(JNIEnv *env, jclass
     Camera *camera = (Camera *) nativeCamera;
     jdouble *inProjection = env->GetDoubleArrayElements(inProjection_, NULL);
     jdouble *inProjectionForCulling = env->GetDoubleArrayElements(inProjectionForCulling_, NULL);
-    camera->setCustomProjection(
-            *reinterpret_cast<const filament::math::mat4 *>(inProjection),
-            *reinterpret_cast<const filament::math::mat4 *>(inProjectionForCulling),
-            near, far);
+    wrapJni(env, [=]() {
+        camera->setCustomProjection(
+                *reinterpret_cast<const filament::math::mat4 *>(inProjection),
+                *reinterpret_cast<const filament::math::mat4 *>(inProjectionForCulling),
+                near, far);
+    });
     env->ReleaseDoubleArrayElements(inProjection_, inProjection, JNI_ABORT);
     env->ReleaseDoubleArrayElements(inProjectionForCulling_, inProjectionForCulling, JNI_ABORT);
 }
@@ -77,10 +87,12 @@ Java_com_google_android_filament_Camera_nSetCustomEyeProjection(JNIEnv *env, jcl
     Camera *camera = (Camera *) nativeCamera;
     jdouble *inProjection = env->GetDoubleArrayElements(inProjection_, NULL);
     jdouble *inProjectionForCulling = env->GetDoubleArrayElements(inProjectionForCulling_, NULL);
-    camera->setCustomEyeProjection(
-            reinterpret_cast<const filament::math::mat4 *>(inProjection), (size_t) count,
-            *reinterpret_cast<const filament::math::mat4 *>(inProjectionForCulling),
-            near, far);
+    wrapJni(env, [=]() {
+        camera->setCustomEyeProjection(
+                reinterpret_cast<const filament::math::mat4 *>(inProjection), (size_t) count,
+                *reinterpret_cast<const filament::math::mat4 *>(inProjectionForCulling),
+                near, far);
+    });
     env->ReleaseDoubleArrayElements(inProjection_, inProjection, JNI_ABORT);
     env->ReleaseDoubleArrayElements(inProjectionForCulling_, inProjectionForCulling, JNI_ABORT);
 }
@@ -154,7 +166,9 @@ Java_com_google_android_filament_Camera_nSetEyeModelMatrix(JNIEnv *env, jclass,
         jlong nativeCamera, jint eyeId, jdoubleArray model_) {
     Camera* camera = (Camera *) nativeCamera;
     jdouble *model = env->GetDoubleArrayElements(model_, NULL);
-    camera->setEyeModelMatrix((uint8_t)eyeId, *reinterpret_cast<const filament::math::mat4*>(model));
+    wrapJni(env, [=]() {
+        camera->setEyeModelMatrix((uint8_t)eyeId, *reinterpret_cast<const filament::math::mat4 *>(model));
+    });
     env->ReleaseDoubleArrayElements(model_, model, JNI_ABORT);
 }
 

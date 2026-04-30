@@ -43,7 +43,8 @@ TEST_F(GlslWriterTest, CallWithoutParams) {
         b.Return(ep);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 bool a() {
   return false;
@@ -69,7 +70,8 @@ TEST_F(GlslWriterTest, CallWithParams) {
         b.Return(ep);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 bool a(float p1, bool p2) {
   return p2;
@@ -97,7 +99,8 @@ TEST_F(GlslWriterTest, CallWithPointerParams) {
         b.Return(ep);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 bool a(float p1, bool p2, inout int p3) {
   return p2;
@@ -120,7 +123,8 @@ TEST_F(GlslWriterTest, CallStatement) {
         b.Return(ep);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 bool a() {
   return false;

@@ -28,18 +28,22 @@
 #ifndef SRC_DAWN_COMMON_NSREF_H_
 #define SRC_DAWN_COMMON_NSREF_H_
 
-#include "dawn/common/RefBase.h"
-
 #import <Foundation/NSObject.h>
+
+#include "dawn/common/RefBase.h"
 
 #if !defined(__OBJC__)
 #error "NSRef can only be used in Objective C/C++ code."
 #endif
 
+#if __has_feature(objc_arc)
+#error "Dawn expects to be built with ARC disabled."
+#endif
+
 namespace dawn {
 
 // This file contains smart pointers that automatically reference and release Objective C objects
-// and prototocals in a manner very similar to Ref<>. Note that NSRef<> and NSPRef's constructor add
+// and protocols in a manner very similar to Ref<>. Note that NSRef<> and NSPRef's constructor add
 // a reference to the object by default, so the pattern to get a reference for a newly created
 // NSObject is the following:
 //
@@ -58,7 +62,7 @@ namespace dawn {
 //    [*foo setMember: 1];
 //    someVar = [*foo member];
 //
-// Also did you notive the extra '*' in the example above? That's because Objective C's message
+// Also did you notice the extra '*' in the example above? That's because Objective C's message
 // passing doesn't automatically call a C++ operator to dereference smart pointers (like -> does) so
 // we have to dereference manually using '*'. In some cases the extra * or message passing syntax
 // can get a bit annoying so instead a local "naked" pointer can be borrowed from the NSRef. This

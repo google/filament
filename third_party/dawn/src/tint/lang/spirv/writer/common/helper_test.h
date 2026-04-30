@@ -93,45 +93,45 @@ class SpirvWriterTestHelperBase : public BASE {
     core::type::Manager& ty{mod.Types()};
 
   protected:
-    /// Errors produced during codegen or SPIR-V validation.
-    std::string err_;
-
     /// SPIR-V output.
     std::string output_;
 
     /// Workgroup info
-    Output::WorkgroupInfo workgroup_info;
+    WorkgroupInfo workgroup_info;
 
-    /// @returns the error string from the validation
-    std::string Error() const { return err_; }
+    /// Subgroup Matrix Info
+    SubgroupMatrixInfo subgroup_matrix_info;
 
     /// Run the printer on the IR module and validate the result.
     /// @param options the optional writer options to use when raising the IR
     /// storage class with OpConstantNull
-    /// @returns true if generation and validation succeeded
-    bool Generate(Options options = {}) {
-        auto result = writer::Generate(mod, options);
-        if (result != Success) {
-            err_ = result.Failure().reason;
-            return false;
+    /// @returns success or a failure message
+    tint::Result<SuccessType> Generate(Options options = {}) {
+        mod.enable_validation_asserts = true;
+
+        if (options.entry_point_name.empty()) {
+            options.entry_point_name = "main";
         }
+
+        auto result = writer::Generate(mod, options);
+        TINT_CHECK_RESULT(result);
 
         output_ = Disassemble(result->spirv, SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES |
                                                  SPV_BINARY_TO_TEXT_OPTION_INDENT |
                                                  SPV_BINARY_TO_TEXT_OPTION_COMMENT);
 
-        if (!Validate(result->spirv)) {
-            return false;
-        }
-        workgroup_info = result->workgroup_info;
+        TINT_CHECK_RESULT(Validate(result->spirv));
 
-        return true;
+        workgroup_info = result->workgroup_info;
+        subgroup_matrix_info = result->subgroup_matrix_info;
+
+        return Success;
     }
 
     /// Validate the generated SPIR-V using the SPIR-V Tools Validator.
     /// @param binary the SPIR-V binary module to validate
-    /// @returns true if validation succeeded, false otherwise
-    bool Validate(const std::vector<uint32_t>& binary) {
+    /// @returns success or a failure message
+    tint::Result<SuccessType> Validate(const std::vector<uint32_t>& binary) {
         std::string spv_errors;
         auto msg_consumer = [&spv_errors](spv_message_level_t level, const char*,
                                           const spv_position_t& position, const char* message) {
@@ -159,8 +159,10 @@ class SpirvWriterTestHelperBase : public BASE {
         tools.SetMessageConsumer(msg_consumer);
 
         auto result = tools.Validate(binary);
-        err_ = std::move(spv_errors);
-        return result;
+        if (!result) {
+            return tint::Failure{spv_errors};
+        }
+        return Success;
     }
 
     /// Helper to make a scalar type corresponding to the element type `type`.
@@ -219,7 +221,7 @@ class SpirvWriterTestHelperBase : public BASE {
             case kI32:
                 return b.Composite(MakeVectorType(type), 42_i, -10_i);
             case kU32:
-                return b.Composite(MakeVectorType(type), 42_u, 10_u);
+                return b.Composite(MakeVectorType(type), 31_u, 10_u);
             case kF32:
                 return b.Composite(MakeVectorType(type), 42_f, -0.5_f);
             case kF16:

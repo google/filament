@@ -72,7 +72,7 @@ bool DecodeTaggedSymbols(uint32_t num_values, int num_components,
   int value_id = 0;
   for (uint32_t i = 0; i < num_values; i += num_components) {
     // Decode the tag.
-    const int bit_length = tag_decoder.DecodeSymbol();
+    const uint32_t bit_length = tag_decoder.DecodeSymbol();
     // Decode the actual value.
     for (int j = 0; j < num_components; ++j) {
       uint32_t val;

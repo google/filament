@@ -43,10 +43,12 @@ tint_add_target(tint_utils_memory lib
   utils/memory/bitcast.h
   utils/memory/block_allocator.h
   utils/memory/bump_allocator.h
+  utils/memory/copy.h
   utils/memory/memory.cc
 )
 
 tint_target_add_dependencies(tint_utils_memory lib
+  tint_utils_ice
   tint_utils_macros
   tint_utils_math
 )

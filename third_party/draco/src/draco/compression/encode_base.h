@@ -98,7 +98,7 @@ class EncoderBase {
                       "Invalid prediction scheme for attribute type.");
       }
     }
-    // TODO(hemmer): Try to enable more prediction schemes for normals.
+    // TODO(b/199760123): Try to enable more prediction schemes for normals.
     if (att_type == GeometryAttribute::NORMAL) {
       if (!(prediction_scheme == PREDICTION_DIFFERENCE ||
             prediction_scheme == MESH_PREDICTION_GEOMETRIC_NORMAL)) {

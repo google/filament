@@ -36,8 +36,11 @@
 #include "src/tint/lang/core/ir/constant.h"
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/function.h"
+#include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/scalar.h"
 #include "src/tint/lang/core/type/storage_texture.h"
@@ -59,12 +62,15 @@
 namespace tint::msl::writer::raise {
 namespace {
 
-using namespace tint::core::fluent_types;  // NOLINT
+using namespace tint::core::fluent_types;     // NOLINT
+using namespace tint::core::number_suffixes;  // NOLINT
 
 /// PIMPL state for the transform.
 struct State {
     /// The IR module.
     core::ir::Module& ir;
+
+    BuiltinPolyfillConfig config;
 
     /// The IR builder.
     core::ir::Builder b{ir};
@@ -82,6 +88,8 @@ struct State {
     void Process() {
         // Find the builtins that need replacing.
         Vector<core::ir::CoreBuiltinCall*, 4> builtin_worklist;
+        // Find the construct calls to replace with make_filled_subgroup_matrix
+        Vector<core::ir::Construct*, 4> construct_worklist;
         for (auto* inst : ir.Instructions()) {
             if (auto* builtin = inst->As<core::ir::CoreBuiltinCall>()) {
                 switch (builtin->Func()) {
@@ -92,6 +100,8 @@ struct State {
                     case core::BuiltinFn::kAtomicLoad:
                     case core::BuiltinFn::kAtomicMax:
                     case core::BuiltinFn::kAtomicMin:
+                    case core::BuiltinFn::kAtomicStoreMin:
+                    case core::BuiltinFn::kAtomicStoreMax:
                     case core::BuiltinFn::kAtomicOr:
                     case core::BuiltinFn::kAtomicStore:
                     case core::BuiltinFn::kAtomicSub:
@@ -111,6 +121,9 @@ struct State {
                     case core::BuiltinFn::kSubgroupMatrixStore:
                     case core::BuiltinFn::kSubgroupMatrixMultiply:
                     case core::BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
+                    case core::BuiltinFn::kSubgroupMatrixScalarAdd:
+                    case core::BuiltinFn::kSubgroupMatrixScalarSubtract:
+                    case core::BuiltinFn::kSubgroupMatrixScalarMultiply:
                     case core::BuiltinFn::kTextureDimensions:
                     case core::BuiltinFn::kTextureGather:
                     case core::BuiltinFn::kTextureGatherCompare:
@@ -131,8 +144,30 @@ struct State {
                     case core::BuiltinFn::kUnpack2X16Float:
                         builtin_worklist.Push(builtin);
                         break;
+                    case core::BuiltinFn::kUnpack2X16Snorm:
+                        if (config.polyfill_unpack_2x16_snorm) {
+                            builtin_worklist.Push(builtin);
+                        }
+                        break;
+                    case core::BuiltinFn::kUnpack2X16Unorm:
+                        if (config.polyfill_unpack_2x16_unorm) {
+                            builtin_worklist.Push(builtin);
+                        }
+                        break;
+                    case core::BuiltinFn::kTanh: {
+                        if (builtin->Args()[0]->Type()->DeepestElement()->Is<core::type::F16>() &&
+                            config.polyfill_tanh_f16) {
+                            builtin_worklist.Push(builtin);
+                        }
+                        break;
+                    }
                     default:
                         break;
+                }
+            }
+            if (auto* construct = inst->As<core::ir::Construct>()) {
+                if (construct->Result()->Type()->Is<core::type::SubgroupMatrix>()) {
+                    construct_worklist.Push(construct);
                 }
             }
         }
@@ -161,6 +196,12 @@ struct State {
                     break;
                 case core::BuiltinFn::kAtomicMin:
                     AtomicCall(builtin, msl::BuiltinFn::kAtomicFetchMinExplicit);
+                    break;
+                case core::BuiltinFn::kAtomicStoreMin:
+                    AtomicCall(builtin, msl::BuiltinFn::kAtomicMinExplicit);
+                    break;
+                case core::BuiltinFn::kAtomicStoreMax:
+                    AtomicCall(builtin, msl::BuiltinFn::kAtomicMaxExplicit);
                     break;
                 case core::BuiltinFn::kAtomicOr:
                     AtomicCall(builtin, msl::BuiltinFn::kAtomicFetchOrExplicit);
@@ -271,6 +312,12 @@ struct State {
                 case core::BuiltinFn::kUnpack2X16Float:
                     Unpack2x16Float(builtin);
                     break;
+                case core::BuiltinFn::kUnpack2X16Snorm:
+                    Unpack2x16Snorm(builtin);
+                    break;
+                case core::BuiltinFn::kUnpack2X16Unorm:
+                    Unpack2x16Unorm(builtin);
+                    break;
 
                 // Subgroup matrix builtins.
                 case core::BuiltinFn::kSubgroupMatrixLoad:
@@ -285,11 +332,53 @@ struct State {
                 case core::BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
                     SubgroupMatrixMultiplyAccumulate(builtin);
                     break;
+                case core::BuiltinFn::kSubgroupMatrixScalarAdd:
+                    SubgroupMatrixScalarAdd(builtin);
+                    break;
+                case core::BuiltinFn::kSubgroupMatrixScalarSubtract:
+                    SubgroupMatrixScalarSubtract(builtin);
+                    break;
+                case core::BuiltinFn::kSubgroupMatrixScalarMultiply:
+                    SubgroupMatrixScalarMultiply(builtin);
+                    break;
+
+                // Workarounds
+                case core::BuiltinFn::kTanh:
+                    Tanh(builtin);
+                    break;
 
                 default:
                     break;
             }
         }
+
+        // Replace the construct calls
+        for (auto* construct : construct_worklist) {
+            Construct(construct);
+        }
+    }
+
+    /// Replace construct calls with the intrinsic to make a filled matrix
+    /// @param construct the construct call instruction
+    void Construct(core::ir::Construct* construct) {
+        core::ir::Value* value = nullptr;
+
+        auto* sm_ty = construct->Result()->Type()->As<core::type::SubgroupMatrix>();
+        TINT_ASSERT(sm_ty);
+
+        auto args = construct->Args();
+        if (args.size() > 0) {
+            value = args[0];
+        } else {
+            value = b.Zero(sm_ty->DeepestElement());
+        }
+
+        b.InsertBefore(construct, [&] {
+            b.CallExplicitWithResult<msl::ir::BuiltinCall>(
+                construct->DetachResult(), msl::BuiltinFn::kMakeFilledSimdgroupMatrix,
+                Vector{sm_ty}, value);
+        });
+        construct->Destroy();
     }
 
     /// Replace an atomic builtin call with an equivalent MSL intrinsic.
@@ -353,7 +442,7 @@ struct State {
             auto* arg1 = builtin->Args()[1];
             if (arg0->Type()->Is<core::type::Scalar>()) {
                 // Calls to `distance` with a scalar argument are replaced with `abs(a - b)`.
-                auto* sub = b.Subtract(builtin->Result()->Type(), arg0, arg1);
+                auto* sub = b.Subtract(arg0, arg1);
                 b.CallWithResult(builtin->DetachResult(), core::BuiltinFn::kAbs, sub);
             } else {
                 b.CallWithResult<msl::ir::BuiltinCall>(builtin->DetachResult(),
@@ -385,10 +474,10 @@ struct State {
                     auto* func = b.Function("tint_dot", el_ty);
                     func->SetParams({lhs, rhs});
                     b.Append(func->Block(), [&] {
-                        auto* mul = b.Multiply(vec, lhs, rhs);
+                        auto* mul = b.Multiply(lhs, rhs);
                         auto* sum = b.Access(el_ty, mul, u32(0))->Result();
                         for (uint32_t i = 1; i < vec->Width(); i++) {
-                            sum = b.Add(el_ty, sum, b.Access(el_ty, mul, u32(i)))->Result();
+                            sum = b.Add(sum, b.Access(el_ty, mul, u32(i)))->Result();
                         }
                         b.Return(func, sum);
                     });
@@ -399,6 +488,24 @@ struct State {
                 b.CallWithResult<msl::ir::BuiltinCall>(builtin->DetachResult(),
                                                        msl::BuiltinFn::kDot, arg0, arg1);
             }
+        });
+        builtin->Destroy();
+    }
+
+    /// Polyfill a tanh f16 call
+    /// @param builtin the builtin call instruction
+    ///
+    /// Converts the `f16` to an `f32`, runs `tanh` on the `f32` and converts back to the `f16`
+    /// result.
+    void Tanh(core::ir::CoreBuiltinCall* builtin) {
+        const auto& args = builtin->Args();
+
+        b.InsertBefore(builtin, [&] {
+            auto* f32_ty = ty.MatchWidth(ty.f32(), builtin->Result()->Type());
+
+            auto* in = b.Convert(f32_ty, args[0]);
+            auto* c = b.Call(f32_ty, core::BuiltinFn::kTanh, in);
+            b.ConvertWithResult(builtin->DetachResult(), c);
         });
         builtin->Destroy();
     }
@@ -510,12 +617,11 @@ struct State {
             if (type->IsIntegerScalarOrVector()) {
                 core::ir::Value* pos_one = b.MatchWidth(i32(1), type);
                 core::ir::Value* neg_one = b.MatchWidth(i32(-1), type);
-                const core::type::Type* bool_type = ty.MatchWidth(ty.bool_(), type);
                 auto* zero = b.Zero(type);
                 auto* sign = b.Call(type, core::BuiltinFn::kSelect, neg_one, pos_one,
-                                    b.GreaterThan(bool_type, arg, zero));
+                                    b.GreaterThan(arg, zero));
                 b.CallWithResult(builtin->DetachResult(), core::BuiltinFn::kSelect, sign, zero,
-                                 b.Equal(bool_type, arg, zero));
+                                 b.Equal(arg, zero));
             } else {
                 b.CallWithResult<msl::ir::BuiltinCall>(builtin->DetachResult(),
                                                        msl::BuiltinFn::kSign, arg);
@@ -537,7 +643,7 @@ struct State {
             // If we need a LOD argument, use the one provided or default to 0.
             core::ir::Value* lod = nullptr;
             if (needs_lod_arg) {
-                if (builtin->Args().Length() == 1) {
+                if (builtin->Args().size() == 1) {
                     lod = b.Value(u32(0));
                 } else {
                     lod = builtin->Args()[1];
@@ -580,10 +686,10 @@ struct State {
         auto* component = builtin->Args()[0]->As<core::ir::Constant>();
         if (component) {
             tex = builtin->Args()[1];
-            args = builtin->Args().Offset(2);
+            args = Vector<core::ir::Value*, 4>{builtin->Args().subspan(2)};
         } else {
             tex = builtin->Args()[0];
-            args = builtin->Args().Offset(1);
+            args = Vector<core::ir::Value*, 4>{builtin->Args().subspan(1)};
         }
         auto* tex_type = tex->Type()->As<core::type::Texture>();
 
@@ -615,7 +721,7 @@ struct State {
     /// @param builtin the builtin call instruction
     void TextureGatherCompare(core::ir::CoreBuiltinCall* builtin) {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
         auto* call = b.MemberCallWithResult<msl::ir::MemberBuiltinCall>(
             builtin->DetachResult(), msl::BuiltinFn::kGatherCompare, builtin->Args()[0],
             std::move(args));
@@ -687,9 +793,7 @@ struct State {
                 const uint32_t kArrayIndex = 2;
                 auto* index_arg = builtin->Args()[kArrayIndex];
                 if (index_arg->Type()->IsSignedIntegerScalar()) {
-                    builtin->SetArg(kArrayIndex, b.Call(ty.i32(), core::BuiltinFn::kMax, index_arg,
-                                                        b.Zero<i32>())
-                                                     ->Result());
+                    builtin->SetArg(kArrayIndex, b.Max(index_arg, b.Zero<i32>())->Result());
                 }
             }
         });
@@ -717,7 +821,7 @@ struct State {
     /// @param builtin the builtin call instruction
     void TextureSample(core::ir::CoreBuiltinCall* builtin) {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
         auto* call = b.MemberCallWithResult<msl::ir::MemberBuiltinCall>(
             builtin->DetachResult(), msl::BuiltinFn::kSample, builtin->Args()[0], std::move(args));
         call->InsertBefore(builtin);
@@ -731,7 +835,7 @@ struct State {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
         auto* tex = builtin->Args()[0];
         auto* tex_type = tex->Type()->As<core::type::Texture>();
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
 
         b.InsertBefore(builtin, [&] {
             // Wrap the bias argument in a constructor for the MSL `bias` builtin type.
@@ -754,7 +858,7 @@ struct State {
     /// @param builtin the builtin call instruction
     void TextureSampleCompare(core::ir::CoreBuiltinCall* builtin) {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
         auto* call = b.MemberCallWithResult<msl::ir::MemberBuiltinCall>(
             builtin->DetachResult(), msl::BuiltinFn::kSampleCompare, builtin->Args()[0],
             std::move(args));
@@ -768,7 +872,7 @@ struct State {
     void TextureSampleCompareLevel(core::ir::CoreBuiltinCall* builtin) {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
         auto* tex = builtin->Args()[0];
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
 
         // The overloads that don't use an offset all have the depth_ref as their final argument.
         const bool has_offset = !args.Back()->Type()->Is<core::type::F32>();
@@ -797,7 +901,7 @@ struct State {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
         auto* tex = builtin->Args()[0];
         auto* tex_type = tex->Type()->As<core::type::Texture>();
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
 
         b.InsertBefore(builtin, [&] {
             // Find the ddx and ddy arguments.
@@ -825,7 +929,7 @@ struct State {
                     break;
                 case core::type::TextureDimension::k1d:
                 case core::type::TextureDimension::kNone:
-                    TINT_UNREACHABLE();
+                    TINT_IR_UNREACHABLE(ir);
             }
             args[grad_idx] = b.Construct(ty.Get<msl::type::Gradient>(dim), ddx, ddy)->Result();
 
@@ -851,7 +955,7 @@ struct State {
         // The MSL intrinsic is a member function, so we split the first argument off as the object.
         auto* tex = builtin->Args()[0];
         auto* tex_type = tex->Type()->As<core::type::Texture>();
-        auto args = Vector<core::ir::Value*, 4>(builtin->Args().Offset(1));
+        auto args = Vector<core::ir::Value*, 4>(builtin->Args().subspan(1));
 
         b.InsertBefore(builtin, [&] {
             // Wrap the LOD argument in a constructor for the MSL `level` builtin type.
@@ -953,6 +1057,47 @@ struct State {
         b.InsertBefore(builtin, [&] {
             auto* bitcast = b.Bitcast<vec2<f16>>(builtin->Args()[0]);
             b.ConvertWithResult(builtin->DetachResult(), bitcast);
+        });
+        builtin->Destroy();
+    }
+
+    /// Polyfill a `unpack2x16snorm` builtin call
+    /// @param builtin the builtin call instruction
+    void Unpack2x16Snorm(core::ir::CoreBuiltinCall* builtin) {
+        auto* arg = builtin->Args()[0];
+        b.InsertBefore(builtin, [&] {
+            auto* conv = b.Convert(ty.i32(), arg);
+            auto* x = b.ShiftLeft(conv, 16_u);
+
+            auto* vec = b.Construct(ty.vec2i(), x, conv);
+            auto* v = b.ShiftRight(vec, b.Splat(ty.vec2u(), 16_u));
+
+            auto* flt = b.Convert(ty.vec2f(), v);
+            auto* scale = b.Divide(flt, 32767_f);
+
+            auto* lower = b.Splat(ty.vec2f(), -1_f);
+            auto* upper = b.Splat(ty.vec2f(), 1_f);
+            b.Clamp(scale, lower, upper)->SetResult(builtin->DetachResult());
+        });
+        builtin->Destroy();
+    }
+
+    /// Polyfill a `unpack2x16unorm` builtin call
+    /// @param builtin the builtin call instruction
+    void Unpack2x16Unorm(core::ir::CoreBuiltinCall* builtin) {
+        auto* arg = builtin->Args()[0];
+        b.InsertBefore(builtin, [&] {
+            auto* x = b.ShiftLeft(arg, 16_u);
+
+            auto* vec = b.Construct(ty.vec2u(), x, arg);
+            auto* v = b.ShiftRight(vec, b.Splat(ty.vec2u(), 16_u));
+
+            auto* flt = b.Convert(ty.vec2f(), v);
+            auto* scale = b.Divide(flt, 65535_f);
+
+            auto* lower = b.Splat(ty.vec2f(), 0_f);
+            auto* upper = b.Splat(ty.vec2f(), 1_f);
+            b.Clamp(scale, lower, upper)->SetResult(builtin->DetachResult());
         });
         builtin->Destroy();
     }
@@ -1064,26 +1209,152 @@ struct State {
         });
         builtin->Destroy();
     }
+
+    core::ir::Value* MakeSubgroupRightMatrix(const core::type::SubgroupMatrix* sm_ty,
+                                             core::ir::Value* scalar) {
+        auto* right_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kRight, sm_ty->Type(),
+                                            sm_ty->Columns(), sm_ty->Rows());
+        return b
+            .CallExplicit<msl::ir::BuiltinCall>(
+                right_ty, msl::BuiltinFn::kMakeDiagonalSimdgroupMatrix, Vector{right_ty}, scalar)
+            ->Result();
+    }
+
+    core::ir::Value* MakeSubgroupAccumulatorMatrix(const core::type::SubgroupMatrix* result_ty,
+                                                   core::ir::Value* scalar) {
+        return b
+            .CallExplicit<msl::ir::BuiltinCall>(
+                result_ty, msl::BuiltinFn::kMakeFilledSimdgroupMatrix, Vector{result_ty}, scalar)
+            ->Result();
+    }
+
+    core::ir::Value* ConvertSubgroupMatrixToLeft(const core::type::SubgroupMatrix* sm_ty,
+                                                 core::ir::Value* mat) {
+        auto* left_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kLeft, sm_ty->Type(),
+                                           sm_ty->Columns(), sm_ty->Rows());
+        return b
+            .CallExplicit<msl::ir::BuiltinCall>(left_ty, msl::BuiltinFn::kConvert, Vector{left_ty},
+                                                mat)
+            ->Result();
+    }
+
+    core::ir::Value* One(const core::type::SubgroupMatrix* sm_ty) {
+        return sm_ty->DeepestElement()->Is<core::type::F32>() ? b.Constant(1_f) : b.Constant(1_h);
+    }
+
+    /// Replace a subgroupMatrixScalarAdd builtin.
+    /// @param builtin the builtin call instruction
+    void SubgroupMatrixScalarAdd(core::ir::CoreBuiltinCall* builtin) {
+        b.InsertBefore(builtin, [&] {
+            auto* mat = builtin->Args()[0];
+            auto* scalar = builtin->Args()[1];
+
+            auto* sm_ty = mat->Type()->As<core::type::SubgroupMatrix>();
+            TINT_ASSERT(sm_ty);
+
+            auto* result_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kResult, sm_ty->Type(),
+                                                 sm_ty->Columns(), sm_ty->Rows());
+
+            // Declare a local variable to receive the result.
+            auto* tmp = b.Var(ty.ptr<function>(result_ty));
+            auto* val = ConvertSubgroupMatrixToLeft(sm_ty, mat);
+            auto* identity = MakeSubgroupRightMatrix(sm_ty, One(sm_ty));
+            auto* acc = MakeSubgroupAccumulatorMatrix(result_ty, scalar);
+
+            // Note: We need to use a `load` instruction to pass the variable, as the intrinsic
+            // definition expects a value type (as we do not have reference types in the IR). The
+            // printer will just fold away the load, which achieves the pass-by-reference semantics
+            // that we want.
+            b.Call<msl::ir::BuiltinCall>(ty.void_(), msl::BuiltinFn::kSimdgroupMultiplyAccumulate,
+                                         b.Load(tmp->Result()), val, identity, acc);
+            auto* ld = b.Load(tmp);
+
+            b.CallExplicitWithResult<msl::ir::BuiltinCall>(
+                builtin->DetachResult(), msl::BuiltinFn::kConvert, Vector{sm_ty}, ld);
+        });
+        builtin->Destroy();
+    }
+
+    /// Replace a subgroupMatrixScalarSubtract builtin.
+    /// @param builtin the builtin call instruction
+    void SubgroupMatrixScalarSubtract(core::ir::CoreBuiltinCall* builtin) {
+        b.InsertBefore(builtin, [&] {
+            auto* mat = builtin->Args()[0];
+            auto* scalar = builtin->Args()[1];
+
+            auto* sm_ty = mat->Type()->As<core::type::SubgroupMatrix>();
+            TINT_ASSERT(sm_ty);
+
+            auto* result_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kResult, sm_ty->Type(),
+                                                 sm_ty->Columns(), sm_ty->Rows());
+
+            // Declare a local variable to receive the result.
+            auto* tmp = b.Var(ty.ptr<function>(result_ty));
+            auto* val = ConvertSubgroupMatrixToLeft(sm_ty, mat);
+            auto* identity = MakeSubgroupRightMatrix(sm_ty, One(sm_ty));
+            auto* acc = MakeSubgroupAccumulatorMatrix(result_ty, b.Negation(scalar)->Result());
+
+            // Note: We need to use a `load` instruction to pass the variable, as the intrinsic
+            // definition expects a value type (as we do not have reference types in the IR). The
+            // printer will just fold away the load, which achieves the pass-by-reference semantics
+            // that we want.
+            b.Call<msl::ir::BuiltinCall>(ty.void_(), msl::BuiltinFn::kSimdgroupMultiplyAccumulate,
+                                         b.Load(tmp->Result()), val, identity, acc);
+            auto* ld = b.Load(tmp);
+
+            b.CallExplicitWithResult<msl::ir::BuiltinCall>(
+                builtin->DetachResult(), msl::BuiltinFn::kConvert, Vector{sm_ty}, ld);
+        });
+        builtin->Destroy();
+    }
+
+    /// Replace a subgroupMatrixScalarMultiply builtin.
+    /// @param builtin the builtin call instruction
+    void SubgroupMatrixScalarMultiply(core::ir::CoreBuiltinCall* builtin) {
+        b.InsertBefore(builtin, [&] {
+            auto* mat = builtin->Args()[0];
+            auto* scalar = builtin->Args()[1];
+
+            auto* sm_ty = mat->Type()->As<core::type::SubgroupMatrix>();
+            TINT_ASSERT(sm_ty);
+
+            auto* result_ty = ty.subgroup_matrix(core::SubgroupMatrixKind::kResult, sm_ty->Type(),
+                                                 sm_ty->Columns(), sm_ty->Rows());
+
+            // Declare a local variable to receive the result.
+            auto* tmp = b.Var(ty.ptr<function>(result_ty));
+            auto* val = ConvertSubgroupMatrixToLeft(sm_ty, mat);
+            auto* mul = MakeSubgroupRightMatrix(sm_ty, scalar);
+
+            // Note: We need to use a `load` instruction to pass the variable, as the intrinsic
+            // definition expects a value type (as we do not have reference types in the IR). The
+            // printer will just fold away the load, which achieves the pass-by-reference semantics
+            // that we want.
+            b.Call<msl::ir::BuiltinCall>(ty.void_(), msl::BuiltinFn::kSimdgroupMultiply,
+                                         b.Load(tmp->Result()), val, mul);
+            auto* ld = b.Load(tmp);
+
+            b.CallExplicitWithResult<msl::ir::BuiltinCall>(
+                builtin->DetachResult(), msl::BuiltinFn::kConvert, Vector{sm_ty}, ld);
+        });
+        builtin->Destroy();
+    }
 };
 
 }  // namespace
 
-Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "msl.BuiltinPolyfill",
-                                core::ir::Capabilities{
-                                    core::ir::Capability::kAllow8BitIntegers,
-                                    core::ir::Capability::kAllowPointersAndHandlesInStructures,
-                                    core::ir::Capability::kAllowPrivateVarsInFunctions,
-                                    core::ir::Capability::kAllowAnyLetType,
-                                    core::ir::Capability::kAllowNonCoreTypes,
-                                    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
-                                });
-    if (result != Success) {
-        return result.Failure();
-    }
+Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir, const BuiltinPolyfillConfig& config) {
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllow8BitIntegers,
+                    core::ir::Capability::kAllowPointSizeBuiltin,
+                    core::ir::Capability::kAllowAnyLetType,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                    core::ir::Capability::kMslAllowEntryPointInterface,
+                },
+                "before msl.BuiltinPolyfill");
 
-    State{ir}.Process();
+    State{ir, config}.Process();
 
     return Success;
 }

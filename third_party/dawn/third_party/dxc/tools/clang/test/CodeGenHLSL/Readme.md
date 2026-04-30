@@ -1,1 +1,0 @@
-Files in this directory are used by tests implemented in CompilerTest.cpp

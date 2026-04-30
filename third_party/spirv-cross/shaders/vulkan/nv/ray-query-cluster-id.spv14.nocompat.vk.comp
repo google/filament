@@ -1,0 +1,40 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_ray_tracing : require
+#extension GL_NV_cluster_acceleration_structure : require
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT AS;
+
+layout(set = 0, binding = 1) uniform Params
+{
+	uint ray_flags;
+	uint cull_mask;
+	vec3 origin;
+	float tmin;
+	vec3 dir;
+	float tmax;
+};
+
+layout(set = 0, binding = 2) buffer SSBO
+{
+	int id;
+};
+
+void main()
+{
+	rayQueryEXT q;
+	rayQueryInitializeEXT(q, AS, ray_flags, cull_mask, origin, tmin, dir, tmax);
+
+	while (rayQueryProceedEXT(q))
+	{
+		if (rayQueryGetIntersectionTypeEXT(q, false) == gl_RayQueryCandidateIntersectionTriangleEXT
+				&& rayQueryGetIntersectionClusterIdNV(q, false) != gl_ClusterIDNoneNV)
+		{
+			rayQueryTerminateEXT(q);
+			rayQueryConfirmIntersectionEXT(q);
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(q, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+		id = rayQueryGetIntersectionClusterIdNV(q, true);
+}

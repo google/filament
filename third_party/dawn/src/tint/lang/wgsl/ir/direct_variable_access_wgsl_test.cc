@@ -27,12 +27,10 @@
 
 // GEN_BUILD:CONDITION(tint_build_wgsl_reader && tint_build_wgsl_writer)
 
-#include "src/tint/lang/core/ir/transform/direct_variable_access.h"
-
 #include <utility>
 
+#include "src/tint/lang/core/ir/transform/direct_variable_access.h"
 #include "src/tint/lang/core/ir/transform/helper_test.h"
-
 #include "src/tint/lang/wgsl/reader/program_to_ir/program_to_ir.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 #include "src/tint/lang/wgsl/writer/ir_to_program/ir_to_program.h"
@@ -62,7 +60,7 @@ class DirectVariableAccessTest : public TransformTestBase<testing::Test> {
   public:
     std::string Run(std::string in,
                     const DirectVariableAccessOptions& transform_options = {},
-                    const wgsl::writer::ProgramOptions program_options = {}) {
+                    const wgsl::writer::Options program_options = {}) {
         wgsl::reader::Options parser_options;
         parser_options.allowed_features = wgsl::AllowedFeatures::Everything();
         Source::File file{"test", in};
@@ -864,28 +862,20 @@ fn f0_1(p_indices : array<u32, 2u>) -> f32 {
 
 fn f1() -> f32 {
   var res : f32;
-  let v = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v);
-  let v_1 = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v_1);
-  let v_2 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_2);
-  let v_3 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_3);
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
 fn f1_1(p_indices : array<u32, 1u>) -> f32 {
-  let v_4 = p_indices[0u];
+  let v = p_indices[0u];
   var res : f32;
-  let v_5 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_5);
-  let v_6 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_6);
-  let v_7 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_7);
-  let v_8 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_8);
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
@@ -1111,28 +1101,20 @@ fn f0_1(p_indices : array<u32, 2u>) -> f32 {
 
 fn f1() -> f32 {
   var res : f32;
-  let v = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v);
-  let v_1 = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v_1);
-  let v_2 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_2);
-  let v_3 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_3);
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
 fn f1_1(p_indices : array<u32, 1u>) -> f32 {
-  let v_4 = p_indices[0u];
+  let v = p_indices[0u];
   var res : f32;
-  let v_5 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_5);
-  let v_6 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_6);
-  let v_7 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_7);
-  let v_8 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_8);
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
@@ -1310,28 +1292,20 @@ fn f0_1(p_indices : array<u32, 2u>) -> f32 {
 
 fn f1() -> f32 {
   var res : f32;
-  let v = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v);
-  let v_1 = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v_1);
-  let v_2 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_2);
-  let v_3 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_3);
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
 fn f1_1(p_indices : array<u32, 1u>) -> f32 {
-  let v_4 = p_indices[0u];
+  let v = p_indices[0u];
   var res : f32;
-  let v_5 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_5);
-  let v_6 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_6);
-  let v_7 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_7);
-  let v_8 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_8);
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
@@ -1483,7 +1457,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);
@@ -1548,7 +1522,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);
@@ -1637,7 +1611,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);
@@ -1728,28 +1702,20 @@ fn f0_1(p_indices : array<u32, 2u>) -> f32 {
 
 fn f1() -> f32 {
   var res : f32;
-  let v = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v);
-  let v_1 = f0(array<u32, 1u>(u32(1i)));
-  res = (res + v_1);
-  let v_2 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_2);
-  let v_3 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_3);
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0(array<u32, 1u>(u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
 fn f1_1(p_indices : array<u32, 1u>) -> f32 {
-  let v_4 = p_indices[0u];
+  let v = p_indices[0u];
   var res : f32;
-  let v_5 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_5);
-  let v_6 = f0_1(array<u32, 2u>(v_4, u32(1i)));
-  res = (res + v_6);
-  let v_7 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_7);
-  let v_8 = f0_1(array<u32, 2u>(u32(2i), u32(1i)));
-  res = (res + v_8);
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(v, u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
+  res = (res + f0_1(array<u32, 2u>(u32(2i), u32(1i))));
   return res;
 }
 
@@ -1828,7 +1794,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);
@@ -2060,7 +2026,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);
@@ -2086,7 +2052,7 @@ fn b() {
 
     auto* expect = src;
 
-    wgsl::writer::ProgramOptions program_options;
+    wgsl::writer::Options program_options;
     program_options.allowed_features.features.emplace(
         wgsl::LanguageFeature::kUnrestrictedPointerParameters);
     auto got = Run(src, /* transform_options */ {}, program_options);

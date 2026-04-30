@@ -30,17 +30,17 @@
 
 #include <webgpu/webgpu.h>
 
-#include "partition_alloc/pointers/raw_ptr.h"
-
 #include "dawn/common/Ref.h"
 #include "dawn/common/RefCounted.h"
 #include "dawn/wire/ObjectHandle.h"
 #include "dawn/wire/ObjectType_autogen.h"
 #include "dawn/wire/client/EventManager.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::wire::client {
 
 class Client;
+class ClientBase;
 
 struct ObjectBaseParams {
     raw_ptr<Client> client;
@@ -63,9 +63,7 @@ class ObjectBase : public RefCounted {
     bool IsRegistered() const;
     void Unregister();
 
-    const ObjectHandle& GetWireHandle() const;
-    ObjectId GetWireId() const;
-    ObjectGeneration GetWireGeneration() const;
+    const ObjectHandle& GetWireHandle(const ClientBase* forClient) const;
     Client* GetClient() const;
 
   protected:

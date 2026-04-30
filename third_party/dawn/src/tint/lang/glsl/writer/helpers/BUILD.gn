@@ -45,7 +45,7 @@ if (tint_build_glsl_writer) {
       "generate_bindings.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",

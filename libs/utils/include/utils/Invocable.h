@@ -136,9 +136,15 @@ Invocable<R(Args...)>::Invocable(Invocable&& rhs) noexcept
 template<typename R, typename... Args>
 Invocable<R(Args...)>& Invocable<R(Args...)>::operator=(Invocable&& rhs) noexcept {
     if (this != &rhs) {
-        std::swap(mInvocable, rhs.mInvocable);
-        std::swap(mDeleter, rhs.mDeleter);
-        std::swap(mInvoker, rhs.mInvoker);
+        if (mDeleter) {
+            mDeleter(mInvocable);
+        }
+        mInvocable = rhs.mInvocable;
+        mDeleter = rhs.mDeleter;
+        mInvoker = rhs.mInvoker;
+        rhs.mInvocable = nullptr;
+        rhs.mDeleter = nullptr;
+        rhs.mInvoker = nullptr;
     }
     return *this;
 }

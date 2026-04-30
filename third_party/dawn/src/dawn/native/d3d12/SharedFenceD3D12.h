@@ -50,7 +50,7 @@ class SharedFence : public d3d::SharedFence {
 
   private:
     using d3d::SharedFence::SharedFence;
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     ComPtr<ID3D12Fence> mFence;
 };

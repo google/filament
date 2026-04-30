@@ -35,13 +35,18 @@
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/builder.h"
 
+// Forward declarations
+namespace tint {
+class ProgramBuilder;
+}
+
 namespace tint::ast::test {
 
 /// The name of the texture global variable used by the tests.
-static constexpr const char* kTextureName = "Texture";
+inline constexpr const char* kTextureName = "Texture";
 
 /// The name of the sampler global variable used by the tests.
-static constexpr const char* kSamplerName = "Sampler";
+inline constexpr const char* kSamplerName = "Sampler";
 
 enum class TextureKind { kRegular, kDepth, kDepthMultisampled, kMultisampled, kStorage };
 enum class TextureDataType { kF32, kU32, kI32 };

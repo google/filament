@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/dawn/node/binding/TogglesLoader.h"
+
 #include "src/dawn/node/binding/Split.h"
 
 namespace wgpu::binding {

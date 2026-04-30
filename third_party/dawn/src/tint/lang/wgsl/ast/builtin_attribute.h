@@ -39,27 +39,23 @@ namespace tint::ast {
 class BuiltinAttribute final : public Castable<BuiltinAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param builtin the builtin value
-    BuiltinAttribute(GenerationID pid,
-                     NodeID nid,
+    BuiltinAttribute(NodeID nid,
                      const Source& src,
-                     const core::BuiltinValue builtin);
+                     const core::BuiltinValue builtin,
+                     const core::BuiltinDepthMode depth_mode);
     ~BuiltinAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
 
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const BuiltinAttribute* Clone(CloneContext& ctx) const override;
-
     /// The builtin value
     const core::BuiltinValue builtin;
+
+    /// The builtin depth mode
+    const core::BuiltinDepthMode depth_mode;
 };
 
 }  // namespace tint::ast

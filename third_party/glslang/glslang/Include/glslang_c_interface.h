@@ -253,6 +253,8 @@ GLSLANG_EXPORT void glslang_finalize_process(void);
 GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* input);
 GLSLANG_EXPORT void glslang_shader_delete(glslang_shader_t* shader);
 GLSLANG_EXPORT void glslang_shader_set_preamble(glslang_shader_t* shader, const char* s);
+GLSLANG_EXPORT void glslang_shader_set_entry_point(glslang_shader_t* shader, const char* s);
+GLSLANG_EXPORT void glslang_shader_set_invert_y(glslang_shader_t* shader, bool y);
 GLSLANG_EXPORT void glslang_shader_shift_binding(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base);
 GLSLANG_EXPORT void glslang_shader_shift_binding_for_set(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base, unsigned int set);
 GLSLANG_EXPORT void glslang_shader_set_options(glslang_shader_t* shader, int options); // glslang_shader_options_t

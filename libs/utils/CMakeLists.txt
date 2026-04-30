@@ -22,6 +22,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/tribool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ImmutableCString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
@@ -86,6 +87,7 @@ set(SRCS
         src/Panic.cpp
         src/Path.cpp
         src/Profiler.cpp
+        src/SingleInstanceComponentManager.cpp
         src/sstream.cpp
         src/string.cpp
         src/ThreadUtils.cpp
@@ -113,7 +115,7 @@ if (APPLE)
     list(APPEND SRCS src/darwin/Systrace.cpp)
     list(APPEND SRCS src/darwin/Tracing.cpp)
 endif()
-if (WEBGL)
+if (WASM)
     list(APPEND SRCS src/web/Path.cpp)
 endif()
 
@@ -179,6 +181,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_algorithm.cpp
             test/test_Allocators.cpp
             test/test_bitset.cpp
+            test/test_tribool.cpp
             test/test_CountDownLatch.cpp
             test/test_CString.cpp
             test/test_ImmutableCString.cpp
@@ -194,6 +197,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_QuadTreeArray.cpp
             test/test_RangeMap.cpp
             test/test_RefCountedMap.cpp
+            test/test_SingleInstanceComponentManager.cpp
             test/test_Slice.cpp
             test/test_StructureOfArrays.cpp
             test/test_sstream.cpp
@@ -204,12 +208,12 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Status.cpp
     )
 
-    if (WEBGL_PTHREADS)
+    if (WASM_PTHREADS)
         target_compile_definitions(${TARGET} PUBLIC -DFILAMENT_WASM_THREADS)
     endif()
 
     # The Path tests are platform-specific
-    if (NOT WEBGL)
+    if (NOT WASM)
         if (WIN32)
             list(APPEND TEST_SRCS test/test_WinPath.cpp)
         else()
@@ -227,7 +231,7 @@ endif()
 # Benchmarks
 # ==================================================================================================
 
-if (FILAMENT_BUILD_TESTING AND NOT WEBGL)
+if (FILAMENT_BUILD_TESTING AND NOT WASM)
 
     add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)
     set_target_properties(benchmark_${TARGET}_callee PROPERTIES FOLDER Benchmarks)

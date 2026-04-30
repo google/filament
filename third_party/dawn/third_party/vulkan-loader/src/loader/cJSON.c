@@ -58,8 +58,6 @@
 
 #include "cJSON.h"
 
-#include <vulkan/vulkan_core.h>
-
 #include "allocation.h"
 
 /* define our own boolean type */
@@ -825,8 +823,8 @@ loader_cJSON_ParseWithLengthOpts(const VkAllocationCallbacks *pAllocator, const 
     cJSON *item = NULL;
 
     /* reset error position */
-    global_error.json = NULL;
-    global_error.position = 0;
+    // global_error.json = NULL;
+    // global_error.position = 0;
 
     if (value == NULL || 0 == buffer_length) {
         goto fail;
@@ -882,7 +880,7 @@ fail:
             *return_parse_end = (const char *)local_error.json + local_error.position;
         }
 
-        global_error = local_error;
+        // global_error = local_error;
     }
 
     return NULL;

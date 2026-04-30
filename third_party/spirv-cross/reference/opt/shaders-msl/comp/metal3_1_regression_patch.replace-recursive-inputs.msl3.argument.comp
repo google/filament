@@ -8,20 +8,20 @@ struct recurs;
 struct recurs
 {
     int m1;
-    device recurs* m2;
+    const device recurs* m2;
 };
 
 struct recurs_1
 {
     int m1;
-    device recurs_1* m2;
+    const device recurs_1* m2;
 };
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
 struct spvDescriptorSetBuffer0
 {
-    device recurs* nums [[id(0)]];
+    const device recurs* nums [[id(0)]];
     texture2d<uint, access::write> tex [[id(1)]];
 };
 

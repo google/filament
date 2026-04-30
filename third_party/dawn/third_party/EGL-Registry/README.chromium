@@ -1,0 +1,10 @@
+Name: EGL-Registry
+Short Name: EGL-Registry
+URL: https://github.com/KhronosGroup/EGL-Registry/
+Update Mechanism: Manual
+Security Critical: no
+Version: N/A
+Revision: DEPS
+License: Apache-2.0, MIT
+License File: LICENSE
+Shipped: yes

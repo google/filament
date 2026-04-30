@@ -55,16 +55,15 @@ class SpirvReader_DecomposeStridedMatrixTest : public core::ir::transform::Trans
             ty.Get<core::type::StructMember>(mod.symbols.New("b"), member_type, 1u, matrix_stride,
                                              matrix_stride, member_size, core::IOAttributes{});
         matrix_member->SetMatrixStride(matrix_stride);
-        return ty.Struct(
-            mod.symbols.New("S"),
-            Vector{
-                ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.u32(), 0u, 0u, 4u, 4u,
-                                                 core::IOAttributes{}),
-                matrix_member,
-                ty.Get<core::type::StructMember>(mod.symbols.New("c"), ty.u32(), 2u,
-                                                 matrix_member->Offset() + matrix_member->Size(),
-                                                 4u, 4u, core::IOAttributes{}),
-            });
+        return ty.Struct(mod.symbols.New("S"),
+                         Vector{
+                             ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.u32(), 0u,
+                                                              0u, 4u, 4u, core::IOAttributes{}),
+                             matrix_member,
+                             ty.Get<core::type::StructMember>(mod.symbols.New("c"), ty.u32(), 2u,
+                                                              matrix_member->Offset() + member_size,
+                                                              4u, 4u, core::IOAttributes{}),
+                         });
     }
 };
 
@@ -1230,7 +1229,7 @@ TEST_F(SpirvReader_DecomposeStridedMatrixTest, LoadMatrix_StructNestedInStridedA
     auto* matrix_type = ty.mat4x4<f32>();
     auto* struct_type = Struct(matrix_type, 64);
     auto* strided_array = ty.Get<spirv::type::ExplicitLayoutArray>(
-        struct_type, ty.Get<core::type::ConstantArrayCount>(4u), 16u, 1024u, 256u);
+        struct_type, ty.Get<core::type::ConstantArrayCount>(4u), 1024u, 256u);
 
     auto* var = b.Var("var", ty.ptr<private_>(strided_array));
     mod.root_block->Append(var);
@@ -1458,7 +1457,7 @@ S_1 = struct @align(64) {
 
 TEST_F(SpirvReader_DecomposeStridedMatrixTest, ExistingStridedArray) {
     auto* strided_array = ty.Get<spirv::type::ExplicitLayoutArray>(
-        ty.vec4<f32>(), ty.Get<core::type::ConstantArrayCount>(4u), 16u, 64u, 16u);
+        ty.vec4f(), ty.Get<core::type::ConstantArrayCount>(4u), 64u, 16u);
     auto* struct_ty =
         ty.Struct(mod.symbols.New("MyStruct"), {
                                                    {mod.symbols.New("a"), ty.u32()},

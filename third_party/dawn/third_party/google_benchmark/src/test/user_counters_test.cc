@@ -1,7 +1,11 @@
 
 #undef NDEBUG
 
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
+#include "benchmark/counter.h"
+#include "benchmark/registration.h"
+#include "benchmark/state.h"
+#include "benchmark/utils.h"
 #include "output_test.h"
 
 // ========================================================================= //
@@ -21,7 +25,7 @@ ADD_CASES(TC_CSVOut, {{"%csv_header,\"bar\",\"foo\""}});
 // ========================================================================= //
 // ------------------------- Simple Counters Output ------------------------ //
 // ========================================================================= //
-
+namespace {
 void BM_Counters_Simple(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -56,6 +60,7 @@ void CheckSimple(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 2. * its, 0.001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_Simple", &CheckSimple);
+}  // end namespace
 
 // ========================================================================= //
 // --------------------- Counters+Items+Bytes/s Output --------------------- //
@@ -63,11 +68,11 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_Simple", &CheckSimple);
 
 namespace {
 int num_calls1 = 0;
-}
 void BM_Counters_WithBytesAndItemsPSec(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   state.counters["foo"] = 1;
@@ -111,15 +116,17 @@ void CheckBytesAndItemsPSec(Results const& e) {
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_WithBytesAndItemsPSec",
                         &CheckBytesAndItemsPSec);
+}  // end namespace
 
 // ========================================================================= //
 // ------------------------- Rate Counters Output -------------------------- //
 // ========================================================================= //
-
+namespace {
 void BM_Counters_Rate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -155,15 +162,18 @@ void CheckRate(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 2. / t, 0.001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_Rate", &CheckRate);
+}  // end namespace
 
 // ========================================================================= //
 // ----------------------- Inverted Counters Output ------------------------ //
 // ========================================================================= //
 
+namespace {
 void BM_Invert(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -196,15 +206,18 @@ void CheckInvert(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 0.0001, 0.0001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Invert", &CheckInvert);
+}  // end namespace
 
 // ========================================================================= //
 // --------------------- InvertedRate Counters Output ---------------------- //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_InvertedRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -243,11 +256,13 @@ void CheckInvertedRate(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, t / 8192.0, 0.001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_InvertedRate", &CheckInvertedRate);
+}  // end namespace
 
 // ========================================================================= //
 // ------------------------- Thread Counters Output ------------------------ //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_Threads(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -283,11 +298,13 @@ void CheckThreads(Results const& e) {
   CHECK_COUNTER_VALUE(e, int, "bar", EQ, 2 * e.NumThreads());
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_Threads/threads:%int", &CheckThreads);
+}  // end namespace
 
 // ========================================================================= //
 // ---------------------- ThreadAvg Counters Output ------------------------ //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_AvgThreads(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -325,15 +342,18 @@ void CheckAvgThreads(Results const& e) {
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_AvgThreads/threads:%int",
                         &CheckAvgThreads);
+}  // end namespace
 
 // ========================================================================= //
 // ---------------------- ThreadAvg Counters Output ------------------------ //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_AvgThreadsRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -365,16 +385,20 @@ ADD_CASES(TC_CSVOut, {{"^\"BM_Counters_AvgThreadsRate/"
 // VS2013 does not allow this function to be passed as a lambda argument
 // to CHECK_BENCHMARK_RESULTS()
 void CheckAvgThreadsRate(Results const& e) {
-  CHECK_FLOAT_COUNTER_VALUE(e, "foo", EQ, 1. / e.DurationCPUTime(), 0.001);
-  CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 2. / e.DurationCPUTime(), 0.001);
+  // this (and not real time) is the time used
+  double t = e.DurationCPUTime() / e.NumThreads();
+  CHECK_FLOAT_COUNTER_VALUE(e, "foo", EQ, 1. / t, 0.001);
+  CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 2. / t, 0.001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_AvgThreadsRate/threads:%int",
                         &CheckAvgThreadsRate);
+}  // end namespace
 
 // ========================================================================= //
 // ------------------- IterationInvariant Counters Output ------------------ //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_IterationInvariant(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -413,15 +437,18 @@ void CheckIterationInvariant(Results const& e) {
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_IterationInvariant",
                         &CheckIterationInvariant);
+}  // end namespace
 
 // ========================================================================= //
 // ----------------- IterationInvariantRate Counters Output ---------------- //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_kIsIterationInvariantRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -463,11 +490,13 @@ void CheckIsIterationInvariantRate(Results const& e) {
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_kIsIterationInvariantRate",
                         &CheckIsIterationInvariantRate);
+}  // end namespace
 
 // ========================================================================= //
 // --------------------- AvgIterations Counters Output --------------------- //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_AvgIterations(benchmark::State& state) {
   for (auto _ : state) {
   }
@@ -505,15 +534,18 @@ void CheckAvgIterations(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 2. / its, 0.001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_AvgIterations", &CheckAvgIterations);
+}  // end namespace
 
 // ========================================================================= //
 // ------------------- AvgIterationsRate Counters Output ------------------- //
 // ========================================================================= //
 
+namespace {
 void BM_Counters_kAvgIterationsRate(benchmark::State& state) {
   for (auto _ : state) {
     // This test requires a non-zero CPU time to avoid divide-by-zero
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
   namespace bm = benchmark;
@@ -553,9 +585,13 @@ void CheckAvgIterationsRate(Results const& e) {
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_kAvgIterationsRate",
                         &CheckAvgIterationsRate);
+}  // end namespace
 
 // ========================================================================= //
 // --------------------------- TEST CASES END ------------------------------ //
 // ========================================================================= //
 
-int main(int argc, char* argv[]) { RunOutputTests(argc, argv); }
+int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+  RunOutputTests(argc, argv);
+}

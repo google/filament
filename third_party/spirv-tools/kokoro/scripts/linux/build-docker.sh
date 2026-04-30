@@ -230,7 +230,7 @@ elif [ $TOOL = "android-ndk-build" ]; then
 
   echo $(date): ndk-build completed.
 elif [ $TOOL = "bazel" ]; then
-  using bazel-7.0.2
+  using bazel-7.4.0
 
   echo $(date): Build everything...
   bazel build --cxxopt=-std=c++17 :all

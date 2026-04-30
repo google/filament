@@ -1491,14 +1491,14 @@ TEST_F(IR_Std140Test, NonDefaultAlignAndSize) {
     auto* structure = ty.Get<core::type::Struct>(
         mod.symbols.New("MyStruct"),
         Vector{
-            ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.i32(), 0u, 0u, 0u, 16u,
+            ty.Get<core::type::StructMember>(mod.symbols.New("a"), ty.i32(), 0u, 0u, 4u, 16u,
                                              core::IOAttributes{}),
             ty.Get<core::type::StructMember>(mod.symbols.New("m"), mat, 1u, 64u, 32u, 64u,
                                              core::IOAttributes{}),
             ty.Get<core::type::StructMember>(mod.symbols.New("b"), ty.i32(), 2u, 128u, 8u, 32u,
                                              core::IOAttributes{}),
         },
-        128u, 256u, 160u);
+        256u);
     structure->SetStructFlag(core::type::kBlock);
 
     auto* buffer = b.Var("buffer", ty.ptr(uniform, structure));
@@ -1517,7 +1517,7 @@ TEST_F(IR_Std140Test, NonDefaultAlignAndSize) {
     });
 
     auto* src = R"(
-MyStruct = struct @align(128), @block {
+MyStruct = struct @align(32), @block {
   a:i32 @offset(0) @size(16)
   m:mat4x2<f32> @offset(64) @size(64)
   b:i32 @offset(128) @size(32)
@@ -1545,13 +1545,13 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-MyStruct = struct @align(128), @block {
+MyStruct = struct @align(32), @block {
   a:i32 @offset(0) @size(16)
   m:mat4x2<f32> @offset(64) @size(64)
   b:i32 @offset(128) @size(32)
 }
 
-MyStruct_std140 = struct @align(128), @block {
+MyStruct_std140 = struct @align(8), @block {
   a:i32 @offset(0) @size(16)
   m_col0:vec2<f32> @offset(64)
   m_col1:vec2<f32> @offset(72)
@@ -1698,21 +1698,21 @@ TEST_F(IR_Std140Test, NotAllMatricesDecomposed) {
     }
 
     {
-        auto* func = b.Function("load_mat_a", ty.vec4<f32>());
+        auto* func = b.Function("load_mat_a", ty.vec4f());
         b.Append(func->Block(), [&] {
             auto* access_mat = b.Access(ty.ptr(uniform, mat4x4), buffer, 0_u);
             auto* load_mat = b.Load(access_mat);
-            auto* extract_vec = b.Access(ty.vec4<f32>(), load_mat, 0_u);
+            auto* extract_vec = b.Access(ty.vec4f(), load_mat, 0_u);
             b.Return(func, extract_vec);
         });
     }
 
     {
-        auto* func = b.Function("load_mat_b", ty.vec2<f32>());
+        auto* func = b.Function("load_mat_b", ty.vec2f());
         b.Append(func->Block(), [&] {
             auto* access_mat = b.Access(ty.ptr(uniform, mat3x2), buffer, 1_u);
             auto* load_mat = b.Load(access_mat);
-            auto* extract_vec = b.Access(ty.vec2<f32>(), load_mat, 0_u);
+            auto* extract_vec = b.Access(ty.vec2f(), load_mat, 0_u);
             b.Return(func, extract_vec);
         });
     }
@@ -1948,9 +1948,9 @@ TEST_F(IR_Std140Test, F16) {
     b.Append(func->Block(), [&] {
         b.Let("struct", b.Load(buffer));
         b.Let("mat", b.Load(b.Access(ty.ptr(uniform, ty.mat4x4<f16>()), buffer, 3_u)));
-        b.Let("col", b.Load(b.Access(ty.ptr(uniform, ty.vec3<f16>()), buffer, 2_u, 1_u)));
-        b.Let("el", b.LoadVectorElement(b.Access(ty.ptr(uniform, ty.vec4<f16>()), buffer, 1_u, 0_u),
-                                        3_u));
+        b.Let("col", b.Load(b.Access(ty.ptr(uniform, ty.vec3h()), buffer, 2_u, 1_u)));
+        b.Let("el",
+              b.LoadVectorElement(b.Access(ty.ptr(uniform, ty.vec4h()), buffer, 1_u, 0_u), 3_u));
         b.Return(func);
     });
 

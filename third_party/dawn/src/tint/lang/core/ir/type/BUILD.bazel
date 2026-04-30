@@ -46,7 +46,6 @@ cc_library(
   ],
   deps = [
     "//src/tint/lang/core/type",
-    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",

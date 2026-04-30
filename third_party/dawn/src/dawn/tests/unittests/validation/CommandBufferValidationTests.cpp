@@ -414,11 +414,10 @@ TEST_F(CommandBufferValidationTest, InjectedValidateErrorVariousStringTypes) {
     }
 }
 
+// Test having the device destroyed before encoding.
 TEST_F(CommandBufferValidationTest, EncodeAfterDeviceDestroyed) {
     PlaceholderRenderPass placeholderRenderPass(device);
 
-    // Device destroyed before encoding.
-    {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
         ExpectDeviceDestruction();
         device.Destroy();
@@ -427,19 +426,20 @@ TEST_F(CommandBufferValidationTest, EncodeAfterDeviceDestroyed) {
         wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&placeholderRenderPass);
         pass.End();
         encoder.Finish();
-    }
+}
 
-    // Device destroyed after encoding.
-    {
-        ExpectDeviceDestruction();
-        device.Destroy();
-        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        // The encoder should not accessing any device info if device is destroyed when try
-        // encoding.
-        wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&placeholderRenderPass);
-        pass.End();
-        encoder.Finish();
-    }
+// Test having the device destroyed after encoding but before Finish().
+TEST_F(CommandBufferValidationTest, FinishAfterDeviceDestroyed) {
+    PlaceholderRenderPass placeholderRenderPass(device);
+
+    ExpectDeviceDestruction();
+    device.Destroy();
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    // The encoder should not accessing any device info if device is destroyed when try
+    // encoding.
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&placeholderRenderPass);
+    pass.End();
+    encoder.Finish();
 }
 
 // Test that an error is produced when encoding happens after ending a pass.

@@ -137,9 +137,9 @@ func run(osWrapper oswrapper.OSWrapper) error {
 
 			start := time.Now()
 			out, err := cmd.CombinedOutput()
-			time := time.Since(start)
+			since := time.Since(start)
 
-			result.time += time
+			result.time += since
 			if err != nil {
 				result.errs = append(result.errs, fmt.Errorf("%v", string(out)))
 				segError.Count++

@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/spirv/writer/raise/shader_io.h"
+
 #include <utility>
 
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/type/struct.h"
-#include "src/tint/lang/spirv/writer/raise/shader_io.h"
 
 namespace tint::spirv::writer::raise {
 namespace {
@@ -37,7 +38,14 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using SpirvWriter_ShaderIOTest = core::ir::transform::TransformTest;
+class SpirvWriter_ShaderIOTest : public core::ir::transform::TransformTest {
+  public:
+    SpirvWriter_ShaderIOTest() {
+        capabilities.Add(
+            core::ir::Capabilities{core::ir::Capability::kLoosenValidationForShaderIO,
+                                   core::ir::Capability::kAllowLocationForNumericElements});
+    }
+};
 
 TEST_F(SpirvWriter_ShaderIOTest, NoInputsOrOutputs) {
     auto* ep = b.ComputeFunction("foo");
@@ -68,7 +76,7 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_NonStruct) {
     auto* ep = b.Function("foo", ty.void_());
     auto* front_facing = b.FunctionParam("front_facing", ty.bool_());
     front_facing->SetBuiltin(core::BuiltinValue::kFrontFacing);
-    auto* position = b.FunctionParam("position", ty.vec4<f32>());
+    auto* position = b.FunctionParam("position", ty.vec4f());
     position->SetBuiltin(core::BuiltinValue::kPosition);
     position->SetInvariant(true);
     auto* color1 = b.FunctionParam("color1", ty.f32());
@@ -84,7 +92,7 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_NonStruct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -157,7 +165,7 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_Struct) {
                                  },
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -192,10 +200,10 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_Struct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(b.Access(ty.bool_(), str_param, 0_i));
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 1_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 1_i);
             auto* color1 = b.Access(ty.f32(), str_param, 2_i);
             auto* color2 = b.Access(ty.f32(), str_param, 3_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -284,7 +292,7 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_Mixed) {
         ty.Struct(mod.symbols.New("Inputs"), {
                                                  {
                                                      mod.symbols.New("position"),
-                                                     ty.vec4<f32>(),
+                                                     ty.vec4f(),
                                                      core::IOAttributes{
                                                          .builtin = core::BuiltinValue::kPosition,
                                                          .invariant = true,
@@ -314,9 +322,9 @@ TEST_F(SpirvWriter_ShaderIOTest, Parameters_Mixed) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 0_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 0_i);
             auto* color1 = b.Access(ty.f32(), str_param, 1_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -393,13 +401,13 @@ $B1: {  # root
 }
 
 TEST_F(SpirvWriter_ShaderIOTest, ReturnValue_NonStructBuiltin) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     ep->SetReturnInvariant(true);
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -440,12 +448,12 @@ $B1: {  # root
 }
 
 TEST_F(SpirvWriter_ShaderIOTest, ReturnValue_NonStructLocation) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetReturnLocation(1u);
     ep->SetStage(core::ir::Function::PipelineStage::kFragment);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -490,7 +498,7 @@ TEST_F(SpirvWriter_ShaderIOTest, ReturnValue_Struct) {
                              {
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -521,7 +529,7 @@ TEST_F(SpirvWriter_ShaderIOTest, ReturnValue_Struct) {
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4<f32>(), 0_f), 0.25_f, 0.75_f));
+        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4f(), 0_f), 0.25_f, 0.75_f));
     });
 
     auto* src = R"(
@@ -583,6 +591,7 @@ $B1: {  # root
 }
 
 TEST_F(SpirvWriter_ShaderIOTest, ReturnValue_DualSourceBlending) {
+    capabilities.Add(core::ir::Capability::kLoosenValidationForShaderIO);
     auto* str_ty = ty.Struct(mod.symbols.New("Output"), {
                                                             {
                                                                 mod.symbols.New("color1"),
@@ -661,7 +670,7 @@ $B1: {  # root
 }
 
 TEST_F(SpirvWriter_ShaderIOTest, Struct_SharedWithBuffer) {
-    auto* vec4f = ty.vec4<f32>();
+    auto* vec4f = ty.vec4f();
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"), {
                                                   {
@@ -851,19 +860,19 @@ TEST_F(SpirvWriter_ShaderIOTest, InterpolationOnVertexInput) {
                                  },
                              });
 
-    auto* ep = b.Function("vert", ty.vec4<f32>());
+    auto* ep = b.Function("vert", ty.vec4f());
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     ep->SetReturnInvariant(true);
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
 
     auto* str_param = b.FunctionParam("input", str_ty);
     auto* ival = b.FunctionParam("ival", ty.i32());
-    ival->SetLocation(1);
+    ival->SetLocation(2);
     ival->SetInterpolation(core::Interpolation{core::InterpolationType::kFlat});
     ep->SetParams({str_param, ival});
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -871,7 +880,7 @@ MyStruct = struct @align(4) {
   color:f32 @offset(0), @location(1), @interpolate(linear, sample)
 }
 
-%vert = @vertex func(%input:MyStruct, %ival:i32 [@location(1), @interpolate(flat)]):vec4<f32> [@invariant, @position] {
+%vert = @vertex func(%input:MyStruct, %ival:i32 [@location(2), @interpolate(flat)]):vec4<f32> [@invariant, @position] {
   $B1: {
     %4:vec4<f32> = construct 0.5f
     ret %4
@@ -887,7 +896,7 @@ MyStruct = struct @align(4) {
 
 $B1: {  # root
   %vert_loc1_Input:ptr<__in, f32, read> = var undef @location(1)
-  %vert_loc1_Input_1:ptr<__in, i32, read> = var undef @location(1)  # %vert_loc1_Input_1: 'vert_loc1_Input'
+  %vert_loc2_Input:ptr<__in, i32, read> = var undef @location(2)
   %vert_position_Output:ptr<__out, vec4<f32>, write> = var undef @invariant @builtin(position)
 }
 
@@ -901,7 +910,7 @@ $B1: {  # root
   $B3: {
     %9:f32 = load %vert_loc1_Input
     %10:MyStruct = construct %9
-    %11:i32 = load %vert_loc1_Input_1
+    %11:i32 = load %vert_loc2_Input
     %12:vec4<f32> = call %vert_inner, %10, %11
     store %vert_position_Output, %12
     ret
@@ -1115,8 +1124,12 @@ $B1: {  # root
 )";
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
-    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("depth_min"), ty.f32());
-    immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("depth_max"), ty.f32());
+    ASSERT_EQ(
+        immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("depth_min"), ty.f32()),
+        Success);
+    ASSERT_EQ(
+        immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("depth_max"), ty.f32()),
+        Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
@@ -1128,12 +1141,12 @@ $B1: {  # root
 }
 
 TEST_F(SpirvWriter_ShaderIOTest, EmitVertexPointSize) {
-    auto* ep = b.Function("foo", ty.vec4<f32>());
+    auto* ep = b.Function("foo", ty.vec4f());
     ep->SetStage(core::ir::Function::PipelineStage::kVertex);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {  //
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -1171,6 +1184,8 @@ $B1: {  # root
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     config.emit_vertex_point_size = true;
+
+    capabilities.Set(core::ir::Capability::kAllowPointSizeBuiltin, true);
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());
@@ -1187,7 +1202,7 @@ TEST_F(SpirvWriter_ShaderIOTest, F16_IO_WithoutPolyfill) {
                                                               },
                                                               {
                                                                   mod.symbols.New("out2"),
-                                                                  ty.vec4<f16>(),
+                                                                  ty.vec4h(),
                                                                   core::IOAttributes{
                                                                       .location = 2u,
                                                                   },
@@ -1195,7 +1210,7 @@ TEST_F(SpirvWriter_ShaderIOTest, F16_IO_WithoutPolyfill) {
                                                           });
 
     auto* in1 = b.FunctionParam("in1", ty.f16());
-    auto* in2 = b.FunctionParam("in2", ty.vec4<f16>());
+    auto* in2 = b.FunctionParam("in2", ty.vec4h());
     in1->SetLocation(1);
     in2->SetLocation(2);
     auto* func = b.Function("main", outputs, core::ir::Function::PipelineStage::kFragment);
@@ -1271,7 +1286,7 @@ TEST_F(SpirvWriter_ShaderIOTest, F16_IO_WithPolyfill) {
                                                               },
                                                               {
                                                                   mod.symbols.New("out2"),
-                                                                  ty.vec4<f16>(),
+                                                                  ty.vec4h(),
                                                                   core::IOAttributes{
                                                                       .location = 2u,
                                                                   },
@@ -1279,7 +1294,7 @@ TEST_F(SpirvWriter_ShaderIOTest, F16_IO_WithPolyfill) {
                                                           });
 
     auto* in1 = b.FunctionParam("in1", ty.f16());
-    auto* in2 = b.FunctionParam("in2", ty.vec4<f16>());
+    auto* in2 = b.FunctionParam("in2", ty.vec4h());
     in1->SetLocation(1);
     in2->SetLocation(2);
     auto* func = b.Function("main", outputs, core::ir::Function::PipelineStage::kFragment);
@@ -1343,6 +1358,695 @@ $B1: {  # root
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     config.polyfill_f16_io = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_SampleInterpolation) {
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* color = b.FunctionParam("color", ty.f32());
+    color->SetLocation(0);
+    color->SetInterpolation(core::Interpolation{core::InterpolationType::kLinear,
+                                                core::InterpolationSampling::kSample});
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, color});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @fragment func(%position:vec4<f32> [@position], %color:f32 [@location(0), @interpolate(linear, sample)]):void {
+  $B1: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_loc0_Input:ptr<__in, f32, read> = var undef @location(0) @interpolate(linear, sample)
+  %foo_loc1_Input:ptr<__in, vec4<f32>, read> = var undef @location(1) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %color:f32):void {
+  $B2: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc1_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:f32 = load %foo_loc0_Input
+    %18:void = call %foo_inner, %16, %17
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_SampleIndex) {
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* idx = b.FunctionParam("idx", ty.u32());
+    idx->SetBuiltin(core::BuiltinValue::kSampleIndex);
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, idx});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @fragment func(%position:vec4<f32> [@position], %idx:u32 [@sample_index]):void {
+  $B1: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_sample_index_Input:ptr<__in, u32, read> = var undef @interpolate(flat) @builtin(sample_index)
+  %foo_loc0_Input:ptr<__in, vec4<f32>, read> = var undef @location(0) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %idx:u32):void {
+  $B2: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc0_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:u32 = load %foo_sample_index_Input
+    %18:void = call %foo_inner, %16, %17
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_NoModification) {
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* color = b.FunctionParam("color", ty.f32());
+    color->SetLocation(0);
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, color});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @fragment func(%position:vec4<f32> [@position], %color:f32 [@location(0)]):void {
+  $B1: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_loc0_Input:ptr<__in, f32, read> = var undef @location(0)
+  %foo_loc1_Input:ptr<__in, vec4<f32>, read> = var undef @location(1) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %color:f32):void {
+  $B2: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc1_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:f32 = load %foo_loc0_Input
+    %18:void = call %foo_inner, %16, %17
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_SampleInterpolation_InStruct) {
+    auto* str_ty = ty.Struct(mod.symbols.New("MyStruct"),
+                             {
+                                 {
+                                     mod.symbols.New("color"),
+                                     ty.f32(),
+                                     core::IOAttributes{
+                                         .location = 1u,
+                                         .interpolation =
+                                             core::Interpolation{
+                                                 core::InterpolationType::kLinear,
+                                                 core::InterpolationSampling::kSample,
+                                             },
+                                     },
+                                 },
+                             });
+
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* str_param = b.FunctionParam("input", str_ty);
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, str_param});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+MyStruct = struct @align(4) {
+  color:f32 @offset(0), @location(1), @interpolate(linear, sample)
+}
+
+%foo = @fragment func(%position:vec4<f32> [@position], %input:MyStruct):void {
+  $B1: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+MyStruct = struct @align(4) {
+  color:f32 @offset(0)
+}
+
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_loc1_Input:ptr<__in, f32, read> = var undef @location(1) @interpolate(linear, sample)
+  %foo_loc0_Input:ptr<__in, vec4<f32>, read> = var undef @location(0) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %input:MyStruct):void {
+  $B2: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc0_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:f32 = load %foo_loc1_Input
+    %18:MyStruct = construct %17
+    %19:void = call %foo_inner, %16, %18
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_SampleIndex_InStruct) {
+    auto* str_ty = ty.Struct(mod.symbols.New("MyStruct"),
+                             {
+                                 {
+                                     mod.symbols.New("idx"),
+                                     ty.u32(),
+                                     core::IOAttributes{
+                                         .builtin = core::BuiltinValue::kSampleIndex,
+                                     },
+                                 },
+                             });
+
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* str_param = b.FunctionParam("input", str_ty);
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, str_param});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("p", position);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+MyStruct = struct @align(4) {
+  idx:u32 @offset(0), @builtin(sample_index)
+}
+
+%foo = @fragment func(%position:vec4<f32> [@position], %input:MyStruct):void {
+  $B1: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+MyStruct = struct @align(4) {
+  idx:u32 @offset(0)
+}
+
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_sample_index_Input:ptr<__in, u32, read> = var undef @interpolate(flat) @builtin(sample_index)
+  %foo_loc0_Input:ptr<__in, vec4<f32>, read> = var undef @location(0) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %input:MyStruct):void {
+  $B2: {
+    %p:vec4<f32> = let %position
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc0_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:u32 = load %foo_sample_index_Input
+    %18:MyStruct = construct %17
+    %19:void = call %foo_inner, %16, %18
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, ForcePixelCenters_PositionNotUsed) {
+    auto* position = b.FunctionParam("position", ty.vec4f());
+    position->SetBuiltin(core::BuiltinValue::kPosition);
+    auto* color = b.FunctionParam("color", ty.f32());
+    color->SetLocation(0);
+    color->SetInterpolation(core::Interpolation{core::InterpolationType::kLinear,
+                                                core::InterpolationSampling::kSample});
+
+    auto* ep = b.Function("foo", ty.void_());
+    ep->SetParams({position, color});
+    ep->SetStage(core::ir::Function::PipelineStage::kFragment);
+
+    b.Append(ep->Block(), [&] {
+        b.Let("c", color);
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @fragment func(%position:vec4<f32> [@position], %color:f32 [@location(0), @interpolate(linear, sample)]):void {
+  $B1: {
+    %c:f32 = let %color
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_position_Input:ptr<__in, vec4<f32>, read> = var undef @builtin(position)
+  %foo_loc0_Input:ptr<__in, f32, read> = var undef @location(0) @interpolate(linear, sample)
+  %foo_loc1_Input:ptr<__in, vec4<f32>, read> = var undef @location(1) @interpolate(linear, center)
+}
+
+%foo_inner = func(%position:vec4<f32>, %color:f32):void {
+  $B2: {
+    %c:f32 = let %color
+    ret
+  }
+}
+%foo = @fragment func():void {
+  $B3: {
+    %9:vec4<f32> = load %foo_position_Input
+    %10:vec2<f32> = swizzle %9, xy
+    %11:vec2<f32> = floor %10
+    %12:vec2<f32> = add %11, vec2<f32>(0.5f)
+    %13:vec4<f32> = load %foo_loc1_Input
+    %14:f32 = swizzle %13, z
+    %15:f32 = swizzle %13, w
+    %16:vec4<f32> = construct %12, %14, %15
+    %17:f32 = load %foo_loc0_Input
+    %18:void = call %foo_inner, %16, %17
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    config.polyfill_pixel_center = true;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, WorkgroupIndex_ReuseExistingBuiltins) {
+    auto* workgroup_id = b.FunctionParam("wgid", ty.vec3u());
+    workgroup_id->SetBuiltin(core::BuiltinValue::kWorkgroupId);
+
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_id, num_workgroups, workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgid:vec3<u32> [@workgroup_id], %numwgs:vec3<u32> [@num_workgroups], %wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %5:u32 = add %wgindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_workgroup_id_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(workgroup_id)
+  %foo_num_workgroups_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(num_workgroups)
+}
+
+%foo_inner = func(%wgid:vec3<u32>, %numwgs:vec3<u32>, %wgindex:u32):void {
+  $B2: {
+    %7:u32 = add %wgindex, 0u
+    %x:u32 = let %7
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func():void {
+  $B3: {
+    %10:vec3<u32> = load %foo_workgroup_id_Input
+    %11:vec3<u32> = load %foo_num_workgroups_Input
+    %12:vec3<u32> = load %foo_workgroup_id_Input
+    %13:vec3<u32> = load %foo_num_workgroups_Input
+    %14:u32 = access %13, 0u
+    %15:u32 = access %13, 1u
+    %16:u32 = mul %14, %15
+    %17:u32 = access %12, 2u
+    %18:u32 = mul %17, %16
+    %19:u32 = access %12, 1u
+    %20:u32 = mul %19, %14
+    %21:u32 = access %12, 0u
+    %22:u32 = add %21, %20
+    %23:u32 = add %22, %18
+    %24:void = call %foo_inner, %10, %11, %23
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, WorkgroupIndex_AddMissingBuiltins) {
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %3:u32 = add %wgindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_workgroup_id_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(workgroup_id)
+  %foo_num_workgroups_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(num_workgroups)
+}
+
+%foo_inner = func(%wgindex:u32):void {
+  $B2: {
+    %5:u32 = add %wgindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func():void {
+  $B3: {
+    %8:vec3<u32> = load %foo_workgroup_id_Input
+    %9:vec3<u32> = load %foo_num_workgroups_Input
+    %10:u32 = access %9, 0u
+    %11:u32 = access %9, 1u
+    %12:u32 = mul %10, %11
+    %13:u32 = access %8, 2u
+    %14:u32 = mul %13, %12
+    %15:u32 = access %8, 1u
+    %16:u32 = mul %15, %10
+    %17:u32 = access %8, 0u
+    %18:u32 = add %17, %16
+    %19:u32 = add %18, %14
+    %20:void = call %foo_inner, %19
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, GlobalInvocationIndex_ReuseExistingBuiltins) {
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({num_workgroups, global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%numwgs:vec3<u32> [@num_workgroups], %gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %4:u32 = add %gindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_num_workgroups_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(num_workgroups)
+  %foo_global_invocation_id_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(global_invocation_id)
+}
+
+%foo_inner = func(%numwgs:vec3<u32>, %gindex:u32):void {
+  $B2: {
+    %6:u32 = add %gindex, 0u
+    %x:u32 = let %6
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func():void {
+  $B3: {
+    %9:vec3<u32> = load %foo_num_workgroups_Input
+    %10:vec3<u32> = load %foo_num_workgroups_Input
+    %11:vec3<u32> = load %foo_global_invocation_id_Input
+    %12:u32 = access %11, 0u
+    %13:u32 = access %11, 1u
+    %14:u32 = access %11, 2u
+    %15:u32 = access %10, 0u
+    %16:u32 = access %10, 1u
+    %17:u32 = mul %15, 3u
+    %18:u32 = mul %16, 2u
+    %19:u32 = mul %17, %18
+    %20:u32 = mul %14, %19
+    %21:u32 = mul %13, %17
+    %22:u32 = add %12, %21
+    %23:u32 = add %22, %20
+    %24:void = call %foo_inner, %9, %23
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_ShaderIOTest, GlobalInvocationIndex_AddMissingBuiltins) {
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %3:u32 = add %gindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %foo_num_workgroups_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(num_workgroups)
+  %foo_global_invocation_id_Input:ptr<__in, vec3<u32>, read> = var undef @builtin(global_invocation_id)
+}
+
+%foo_inner = func(%gindex:u32):void {
+  $B2: {
+    %5:u32 = add %gindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func():void {
+  $B3: {
+    %8:vec3<u32> = load %foo_num_workgroups_Input
+    %9:vec3<u32> = load %foo_global_invocation_id_Input
+    %10:u32 = access %9, 0u
+    %11:u32 = access %9, 1u
+    %12:u32 = access %9, 2u
+    %13:u32 = access %8, 0u
+    %14:u32 = access %8, 1u
+    %15:u32 = mul %13, 3u
+    %16:u32 = mul %14, 2u
+    %17:u32 = mul %15, %16
+    %18:u32 = mul %12, %17
+    %19:u32 = mul %11, %15
+    %20:u32 = add %10, %19
+    %21:u32 = add %20, %18
+    %22:void = call %foo_inner, %21
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());

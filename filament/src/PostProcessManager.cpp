@@ -29,6 +29,7 @@
 #include "materials/bloom/bloom.h"
 #include "materials/colorGrading/colorGrading.h"
 #include "materials/dof/dof.h"
+#include "materials/evsm/evsm.h"
 #include "materials/flare/flare.h"
 #include "materials/fog/fog.h"
 #include "materials/fsr/fsr.h"
@@ -309,7 +310,6 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
                 { {"arraySampler", false}, {"componentCount", 4} } },
         { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 4} } },
-        { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
         { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
         { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
         { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
@@ -379,6 +379,9 @@ void PostProcessManager::init() noexcept {
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         UTILS_NOUNROLL
         for (auto const& info: sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getEvsmMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
         for (auto const& info: getBloomMaterialList()) {
@@ -1260,7 +1263,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> const input,
         FrameGraphId<FrameGraphTexture> output,
-        bool const reinhard, size_t kernelWidth, const float sigma) noexcept {
+        bool const reinhard, size_t kernelWidth, const float sigma,
+        std::optional<backend::Viewport> scissor) noexcept {
 
     auto computeGaussianCoefficients =
             [kernelWidth, sigma](float2* kernel, size_t const size) -> size_t {
@@ -1398,6 +1402,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 {
                     // horizontal pass
                     auto mi = getMaterialInstance(mEngine, driver, separableGaussianBlur);
+                    if (scissor.has_value()) {
+                        mi->setScissor(scissor.value());
+                    }
+
                     setCommonParams(mi);
                     mi->setParameter(sourceParameterName, hwIn, SamplerParams{
                                 .filterMag = SamplerMagFilter::LINEAR,
@@ -1416,6 +1424,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 {
                     // vertical pass
                     auto mi = getMaterialInstance(mEngine, driver, separableGaussianBlur);
+                    if (scissor.has_value()) {
+                        mi->setScissor(scissor.value());
+                    }
                     setCommonParams(mi);
                     UTILS_UNUSED_IN_RELEASE auto width = outDesc.width;
                     UTILS_UNUSED_IN_RELEASE auto height = outDesc.height;
@@ -3691,7 +3702,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
+        FrameGraphTexture::Descriptor outDesc, utils::CString customPassName) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
     auto const& inDesc = fg.getDescriptor(input);
@@ -3705,7 +3716,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
     //     through shaders or some other manipulation.
     if ((isDepthFormat(inDesc.format) || isStencilFormat(inDesc.format)) &&
             (!mDepthStencilResolveSupported)) {
-        return resolveDepthWithShader(fg, outputBufferName, input, outDesc);
+        return resolveDepthWithShader(fg, outputBufferName, input, outDesc,
+                std::move(customPassName));
     }
 
     outDesc.width = inDesc.width;
@@ -3718,7 +3730,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolve",
+    auto const& ppResolve = fg.addPass<ResolveData>(
+            customPassName.empty() ? "resolve" : customPassName.c_str(),
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
@@ -3746,7 +3759,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(FrameGraph& fg,
         utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> const input,
-        FrameGraphTexture::Descriptor outDesc) noexcept {
+        FrameGraphTexture::Descriptor outDesc, utils::CString customPassName) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
     auto const& inDesc = fg.getDescriptor(input);
@@ -3769,7 +3782,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(Frame
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto const& ppResolve = fg.addPass<ResolveData>("resolveDepthWithShader",
+    auto const& ppResolve = fg.addPass<ResolveData>(
+            customPassName.empty() ? "resolveDepthWithShader" : customPassName.c_str(),
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
@@ -3794,67 +3808,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepthWithShader(Frame
             });
 
     return ppResolve->output;
-}
-
-FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> const input, uint8_t layer, size_t const level,
-        float4 clearColor) noexcept {
-
-    struct VsmMipData {
-        FrameGraphId<FrameGraphTexture> in;
-    };
-
-    auto const& depthMipmapPass = fg.addPass<VsmMipData>("VSM Generate Mipmap Pass",
-            [&](FrameGraph::Builder& builder, auto& data) {
-                StaticString const name = builder.getName(input);
-                data.in = builder.sample(input);
-
-                auto out = builder.createSubresource(data.in, "Mip level", {
-                        .level = uint8_t(level + 1), .layer = layer });
-
-                out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass(name, {
-                    .attachments = { .color = { out }},
-                    .clearColor = clearColor,
-                    .clearFlags = TargetBufferFlags::COLOR
-                });
-            },
-            [=, this](FrameGraphResources const& resources,
-                    auto const& data, DriverApi& driver) {
-                bindPostProcessDescriptorSet(driver);
-                bindPerRenderableDescriptorSet(driver);
-
-                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
-                auto out = resources.getRenderPassInfo();
-
-                auto const& inDesc = resources.getDescriptor(data.in);
-                auto width = inDesc.width;
-                assert_invariant(width == inDesc.height);
-                uint32_t const dim = std::max(1u, width >> (level + 1));
-
-                auto& material = getPostProcessMaterial("vsmMipmap");
-                FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = getMaterialInstance(driver, ma);
-
-                auto const pipeline = getPipelineState(mi);
-                backend::Viewport const scissor = { 0, 0, dim, dim };
-
-                mi->setParameter("color", in, SamplerParams{
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-                mi->setParameter("layer", uint32_t(layer));
-                mi->setParameter("uvscale", 1.0f / float(dim));
-                mi->commit(driver, getUboManager());
-                mi->use(driver);
-
-                renderFullScreenQuadWithScissor(out, pipeline, scissor, driver);
-                unbindAllDescriptorSets(driver);
-
-                driver.destroyTexture(in); // `in` is just a view on `data.in`
-            });
-
-    return depthMipmapPass->in;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGraph& fg,

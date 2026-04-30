@@ -94,7 +94,7 @@ spv_result_t ValidateExecutionScope(ValidationState_t& _,
 
   // Vulkan specific rules
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    // Vulkan 1.1 specific rules
+    // Subgroups were not added until 1.1
     if (_.context()->target_env != SPV_ENV_VULKAN_1_0) {
       // Scope for Non Uniform Group Operations must be limited to Subgroup
       if ((spvOpcodeIsNonUniformGroupOperation(opcode) &&

@@ -79,8 +79,8 @@ struct WrapperStruct {
 template <typename T>
 static constexpr size_t AlignOfInStruct = alignof(WrapperStruct<T>);
 
-static constexpr size_t kNativeVkHandleAlignment = AlignOfInStruct<VkSomeHandle>;
-static constexpr size_t kUint64Alignment = AlignOfInStruct<uint64_t>;
+inline constexpr size_t kNativeVkHandleAlignment = AlignOfInStruct<VkSomeHandle>;
+inline constexpr size_t kUint64Alignment = AlignOfInStruct<uint64_t>;
 
 // Simple handle types that supports "nullptr_t" as a 0 value.
 template <typename Tag, typename HandleType>
@@ -192,6 +192,6 @@ const HandleType* AsVkArray(const detail::VkHandle<Tag, HandleType>* handle) {
 
 // Redefine VK_NULL_HANDLE for better type safety where possible.
 #undef VK_NULL_HANDLE
-static constexpr std::nullptr_t VK_NULL_HANDLE = nullptr;
+inline constexpr std::nullptr_t VK_NULL_HANDLE = nullptr;
 
 #endif  // SRC_DAWN_COMMON_VULKAN_PLATFORM_H_

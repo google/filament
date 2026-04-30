@@ -27,13 +27,19 @@
 
 #pragma once
 
-#include "test_util.h"
-
-#include <unordered_map>
-#include <unordered_set>
 #include <stdlib.h>
 
-#if defined(WIN32)
+#include <array>
+#include <filesystem>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#if defined(_WIN32)
+
+#include <direct.h>
+#include <Windows.h>
 #include <strsafe.h>
 #include <cfgmgr32.h>
 #include <initguid.h>
@@ -46,10 +52,24 @@
 #include <adapters.h>
 #endif
 
-enum class ManifestCategory { implicit_layer, explicit_layer, icd, settings };
+#include "util/test_defines.h"
+
+#if TESTING_COMMON_UNIX_PLATFORMS
+#include <dirent.h>
+#endif
+
+#include "util/folder_manager.h"
+#include "util/functions.h"
+
 enum class GpuType { unspecified, integrated, discrete, external };
 
-#if defined(WIN32)
+struct TempFile {
+    explicit TempFile(std::filesystem::path filename) : filename(filename) {}
+    ~TempFile() { std::filesystem::remove(filename); }
+    std::filesystem::path filename;
+};
+
+#if defined(_WIN32)
 #define VK_VARIANT_REG_STR ""
 #define VK_VARIANT_REG_STR_W L""
 
@@ -117,15 +137,15 @@ struct D3DKMT_Adapter {
     D3DKMT_Adapter& add_path(std::filesystem::path src, std::vector<std::wstring>& dest);
 };
 
-#elif COMMON_UNIX_PLATFORMS
+#elif TESTING_COMMON_UNIX_PLATFORMS
 
 struct DirEntry {
     DIR* directory = nullptr;
-    std::string folder_path;
+    fs::Folder* folder_represented;
     std::vector<struct dirent*> contents;
     // the current item being read by an app (incremented by readdir, reset to zero by opendir & closedir)
     size_t current_index = 0;
-    bool is_fake_path = false;  // true when this entry is for folder redirection
+    // bool is_fake_path = false;  // true when this entry is for folder redirection
 };
 
 #endif
@@ -136,12 +156,9 @@ struct FrameworkEnvironment;  // forward declaration
 // defined in the .cpp wont be found by the rest of the application
 struct PlatformShim {
     PlatformShim() { fputs_stderr_log.reserve(65536); }
-    PlatformShim(GetFoldersFunc get_folders_by_name_function) : get_folders_by_name_function(get_folders_by_name_function) {
-        fputs_stderr_log.reserve(65536);
-    }
 
     // Used to get info about which drivers & layers have been added to folders
-    GetFoldersFunc get_folders_by_name_function;
+    fs::FileSystemManager* file_system_manager;
 
     // Captures the output to stderr from fputs & fputc - aka the output of loader_log()
     std::string fputs_stderr_log;
@@ -149,27 +166,24 @@ struct PlatformShim {
     // Test Framework interface
     void reset();
 
-    void redirect_all_paths(std::filesystem::path const& path);
-    void redirect_category(std::filesystem::path const& new_path, ManifestCategory category);
-
     // fake paths are paths that the loader normally looks in but actually point to locations inside the test framework
-    void set_fake_path(ManifestCategory category, std::filesystem::path const& path);
+    // void set_fake_path(ManifestCategory category, std::filesystem::path const& path);
 
     // known paths are real paths but since the test framework guarantee's the order files are found in, files in these paths
     // need to be ordered correctly
-    void add_known_path(std::filesystem::path const& path);
-
-    void add_manifest(ManifestCategory category, std::filesystem::path const& path);
-    void add_unsecured_manifest(ManifestCategory category, std::filesystem::path const& path);
+    // void add_known_path(std::filesystem::path const& path);
 
     void clear_logs() { fputs_stderr_log.clear(); }
     bool find_in_log(std::string const& search_text) const { return fputs_stderr_log.find(search_text) != std::string::npos; }
 
 // platform specific shim interface
-#if defined(WIN32)
+#if defined(_WIN32)
     // Control Platform Elevation Level
     void set_elevated_privilege(bool elev) { elevation_level = (elev) ? SECURITY_MANDATORY_HIGH_RID : SECURITY_MANDATORY_LOW_RID; }
     unsigned long elevation_level = SECURITY_MANDATORY_LOW_RID;
+
+    void add_manifest_to_registry(ManifestCategory category, std::filesystem::path const& path);
+    void add_unsecured_manifest_to_registry(ManifestCategory category, std::filesystem::path const& path);
 
     void add_dxgi_adapter(GpuType gpu_preference, DXGI_ADAPTER_DESC1 desc1);
     void add_d3dkmt_adapter(D3DKMT_Adapter const& adapter);
@@ -202,26 +216,17 @@ struct PlatformShim {
     size_t created_key_count = 0;
     std::vector<HKeyHandle> created_keys;
 
-#elif COMMON_UNIX_PLATFORMS
-    bool is_fake_path(std::filesystem::path const& path);
-    std::filesystem::path const& get_real_path_from_fake_path(std::filesystem::path const& path);
+#elif TESTING_COMMON_UNIX_PLATFORMS
+    // Add a filename that dlopen can "find" with no absolute or relative path given.
+    // EG, dlopen("libfoobar.so") gets turned into dlopen(actual_path)
+    void add_system_library(std::string const& filename, std::filesystem::path const& actual_path);
 
-    void redirect_path(std::filesystem::path const& path, std::filesystem::path const& new_path);
-    void remove_redirect(std::filesystem::path const& path);
+    // Returns the real path of the system library "filename", if it exists. Else returns empty path
+    std::filesystem::path get_system_library(std::string const& filename);
 
-    bool is_known_path(std::filesystem::path const& path);
-    void remove_known_path(std::filesystem::path const& path);
-
-    void redirect_dlopen_name(std::filesystem::path const& filename, std::filesystem::path const& actual_path);
-    bool is_dlopen_redirect_name(std::filesystem::path const& filename);
-
-    std::filesystem::path query_default_redirect_path(ManifestCategory category);
+    std::unordered_map<std::string, std::filesystem::path> system_library_redirection_map;
 
     void set_app_package_path(std::filesystem::path const& path);
-
-    std::unordered_map<std::string, std::filesystem::path> redirection_map;
-    std::unordered_map<std::string, std::filesystem::path> dlopen_redirection_map;
-    std::unordered_set<std::string> known_path_set;
 
     void set_elevated_privilege(bool elev) { use_fake_elevation = elev; }
     bool use_fake_elevation = false;
@@ -232,6 +237,9 @@ struct PlatformShim {
     std::string bundle_contents;
 #endif
 #endif
+    std::vector<uint8_t> fuzz_data;
+    std::vector<TempFile> temp_fuzz_files;
+    bool is_finished_setup = false;
     bool is_during_destruction = false;
 };
 
@@ -240,12 +248,12 @@ std::string category_path_name(ManifestCategory category);
 
 extern "C" {
 // dynamically link on windows and macos
-#if defined(WIN32) || defined(__APPLE__)
-using PFN_get_platform_shim = PlatformShim* (*)(GetFoldersFunc get_folders_by_name_function);
+#if defined(_WIN32) || defined(__APPLE__)
+using PFN_get_platform_shim = PlatformShim* (*)();
 #define GET_PLATFORM_SHIM_STR "get_platform_shim"
 
 #elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__GNU__) || defined(__QNX__)
 // statically link on linux
-PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function);
+PlatformShim* get_platform_shim();
 #endif
 }

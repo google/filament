@@ -290,13 +290,18 @@ Filament._createTextureFromImageFile = function(fileContents, engine, options) {
         pbtype = Filament.PixelDataType.UBYTE;
     }
 
-    const tex = Filament.Texture.Builder()
+    let tex = Filament.Texture.Builder()
         .width(decodedImage.width)
         .height(decodedImage.height)
         .levels(nomips ? 1 : 0xff)
         .sampler(Sampler.SAMPLER_2D)
-        .format(texformat)
-        .build(engine);
+        .format(texformat);
+
+    if (options['usage'] !== undefined) {
+        tex.usage(options['usage']);
+    }
+
+    tex = tex.build(engine);
 
     const pixelbuffer = Filament.PixelBuffer(decodedImage.data.getBytes(), pbformat, pbtype);
     tex.setImage(engine, 0, pixelbuffer);

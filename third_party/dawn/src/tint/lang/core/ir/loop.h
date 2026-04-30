@@ -31,7 +31,6 @@
 #include <string>
 
 #include "src/tint/lang/core/ir/control_instruction.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 
 // Forward declarations
 namespace tint::core::ir {
@@ -132,9 +131,9 @@ class Loop final : public Castable<Loop, ControlInstruction> {
     std::string FriendlyName() const override { return "loop"; }
 
   private:
-    ConstPropagatingPtr<ir::Block> initializer_;
-    ConstPropagatingPtr<ir::MultiInBlock> body_;
-    ConstPropagatingPtr<ir::MultiInBlock> continuing_;
+    ir::Block* initializer_ = nullptr;
+    ir::MultiInBlock* body_ = nullptr;
+    ir::MultiInBlock* continuing_ = nullptr;
 };
 
 }  // namespace tint::core::ir

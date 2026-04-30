@@ -120,14 +120,14 @@ class InvocationInterlockPlacementPass : public Pass {
   // For the edge from block to next_id, places a begin or end instruction on
   // the edge, based on the direction we are walking the CFG, specified in
   // reverse_cfg.
-  bool placeInstructionsForEdge(BasicBlock* block, uint32_t next_id,
-                                BlockSet& inside, BlockSet& previous_inside,
-                                spv::Op opcode, bool reverse_cfg);
+  Status placeInstructionsForEdge(BasicBlock* block, uint32_t next_id,
+                                  BlockSet& inside, BlockSet& previous_inside,
+                                  spv::Op opcode, bool reverse_cfg);
   // Calls placeInstructionsForEdge for each edge in block.
-  bool placeInstructions(BasicBlock* block);
+  Status placeInstructions(BasicBlock* block);
 
   // Processes a single fragment shader entry function.
-  bool processFragmentShaderEntry(Function* entry_func);
+  Status processFragmentShaderEntry(Function* entry_func);
 
   // Returns whether the module has the SPV_EXT_fragment_shader_interlock
   // extension and one of the FragmentShader*InterlockEXT capabilities.

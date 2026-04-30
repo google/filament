@@ -27,6 +27,7 @@
 
 #include <vector>
 
+#include "dawn/common/ExternalTextureParams.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
@@ -151,13 +152,22 @@ class CopyExternalTextureForBrowserTests : public Parent {
                                  &externalTexturePlane1DataLayout, &externalTexturePlane1Desc.size);
 
         // Create an ExternalTextureDescriptor from the texture views
+        ExternalTextureColorSpaceParams params;
+        wgpu::Status status = ComputeExternalTextureParams(
+            {
+                .primaries = wgpu::ColorSpacePrimariesDawn::Rec709,
+                .transfer = wgpu::ColorSpaceTransferDawn::SMPTE_170M,
+                .yCbCrRange = wgpu::ColorSpaceYCbCrRangeDawn::Narrow,
+                .yCbCrMatrix = wgpu::ColorSpaceYCbCrMatrixDawn::Rec709,
+            },
+            wgpu::PredefinedColorSpace::SRGB, &params);
+        DAWN_ASSERT(status == wgpu::Status::Success);
+
         wgpu::ExternalTextureDescriptor externalDesc;
-        utils::ColorSpaceConversionInfo info =
-            utils::GetYUVBT709ToRGBSRGBColorSpaceConversionInfo();
-        externalDesc.yuvToRgbConversionMatrix = info.yuvToRgbConversionMatrix.data();
-        externalDesc.gamutConversionMatrix = info.gamutConversionMatrix.data();
-        externalDesc.srcTransferFunctionParameters = info.srcTransferFunctionParameters.data();
-        externalDesc.dstTransferFunctionParameters = info.dstTransferFunctionParameters.data();
+        externalDesc.yuvToRgbConversionMatrix = params.yuvToRgbConversionMatrix.data();
+        externalDesc.gamutConversionMatrix = params.gamutConversionMatrix.data();
+        externalDesc.srcTransferFunctionParameters = params.srcTransferFunction.data();
+        externalDesc.dstTransferFunctionParameters = params.dstTransferFunction.data();
 
         externalDesc.plane0 = externalTexturePlane0.CreateView();
         externalDesc.plane1 = externalTexturePlane1.CreateView();
@@ -405,7 +415,7 @@ TEST_P(CopyExternalTextureForBrowserTests_Basic, Copy) {
 DAWN_INSTANTIATE_TEST_P(
     CopyExternalTextureForBrowserTests_Basic,
     {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(), OpenGLESBackend(),
-     VulkanBackend()},
+     VulkanBackend(), WebGPUBackend()},
     std::vector<CopyRect>({CopyRect::TopLeft, CopyRect::TopRight, CopyRect::BottomLeft,
                            CopyRect::BottomRight, CopyRect::FullSize}),
     std::vector<CopyRect>({CopyRect::TopLeft, CopyRect::TopRight, CopyRect::BottomLeft,
@@ -437,7 +447,9 @@ DAWN_INSTANTIATE_TEST(CopyExternalTextureForBrowserTests_Aspect,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      VulkanBackend({"vulkan_force_static_samplers_for_external_textures"}),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

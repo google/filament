@@ -64,7 +64,7 @@ struct Config {
 };
 
 static void printUsage(const char* name) {
-    std::string execName(utils::Path(name).getName());
+    std::string const execName(utils::Path(name).getName());
     std::string usage(
             "MATINFO prints information about material files compiled with matc\n"
             "\n"
@@ -590,7 +590,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
                 return false;
             }
 
-            size_t shaderCount = getShaderCount(container, filamat::ChunkType::MaterialWgsl);
+            size_t const shaderCount = getShaderCount(container, filamat::ChunkType::MaterialWgsl);
             info.resize(shaderCount);
             if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialWgsl)) {
                 std::cerr << "Failed to parse WebGPU chunk." << std::endl;
@@ -632,8 +632,65 @@ static bool parseChunks(Config config, void* data, size_t size) {
             return false;
         }
 
+        std::vector<uint32_t> counts(dictionary.size(), 0);
+        bool hasCounts = false;
+
+        filamat::ChunkType chunkType = filamat::ChunkType::Unknown;
+        if (config.printDictionaryGLSL) {
+            chunkType = filamat::ChunkType::MaterialGlsl;
+        } else if (config.printDictionaryESSL1) {
+            chunkType = filamat::ChunkType::MaterialEssl1;
+        } else if (config.printDictionaryMetal) {
+            chunkType = filamat::ChunkType::MaterialMetal;
+        } else if (config.printDictionaryWGSL) {
+            chunkType = filamat::ChunkType::MaterialWgsl;
+        }
+
+        size_t indicesSize = 0;
+        if (chunkType != filamat::ChunkType::Unknown) {
+            filaflat::MaterialChunk materialChunk(container);
+            if (materialChunk.initialize(chunkType)) {
+                indicesSize = materialChunk.getDictionaryOccurrences(counts);
+                hasCounts = true;
+            }
+        }
+
+        size_t dictSize = 0;
+        for (uint32_t i = 0; i < dictionary.size(); i++) {
+            // Null-terminated string sizes map physically 1:1 with uncompressed Dictionary byte bounds
+            dictSize += dictionary[i].size();
+        }
+
+        std::cout << "Dictionary size: " << dictSize << " bytes" << std::endl;
+        if (hasCounts) {
+            std::cout << "Indices size: " << indicesSize << " bytes" << std::endl;
+        }
+        std::cout << std::endl;
+
+        uint32_t index = 0;
         for (auto const& i : dictionary) {
-            std::cout << (const char*)i.data() << std::endl;
+            if (hasCounts && counts[index] == 0) {
+                index++;
+                continue;
+            }
+
+            std::string str((const char*)i.data());
+            // Replace \n with literal \n
+            size_t pos = 0;
+            while ((pos = str.find('\n', pos)) != std::string::npos) {
+                str.replace(pos, 1, "\\n");
+                pos += 2;
+            }
+            if (hasCounts) {
+                int const bytes = (index < 240) ? 1 : ((index < 4080) ? 2 : 3);
+                std::cout << std::setw(6) << counts[index] << " | "
+                          << std::setw(4) << index << " | "
+                          << bytes << " | "
+                          << str << std::endl;
+            } else {
+                std::cout << str << std::endl;
+            }
+            index++;
         }
 
         return true;
@@ -670,21 +727,21 @@ static bool parseBinary(Config config, std::istream& in, long fileSize) {
 
 int main(int argc, char* argv[]) {
     Config config;
-    int optionIndex = handleArguments(argc, argv, &config);
+    int const optionIndex = handleArguments(argc, argv, &config);
 
-    int numArgs = argc - optionIndex;
+    int const numArgs = argc - optionIndex;
     if (numArgs < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
-    Path src(argv[optionIndex]);
+    Path const src(argv[optionIndex]);
     if (!src.exists()) {
         std::cerr << "The source material " << src << " does not exist." << std::endl;
         return 1;
     }
 
-    long fileSize = static_cast<long>(getFileSize(src.c_str()));
+    long const fileSize = static_cast<long>(getFileSize(src.c_str()));
     if (fileSize <= 0) {
         std::cerr << "The source material " << src << " is invalid." << std::endl;
         return 1;

@@ -93,9 +93,9 @@ class ConcurrentExecutionTest : public DawnPerfTestWithParams<ConcurrentExecutio
     ConcurrentExecutionTest() : DawnPerfTestWithParams(kNumIterations, 1) {}
     ~ConcurrentExecutionTest() override = default;
 
-    void SetUp() override;
-
   protected:
+    void SetUpPerfTest() override;
+
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         auto requirements =
             DawnPerfTestWithParams<ConcurrentExecutionTestParams>::GetRequiredFeatures();
@@ -110,9 +110,7 @@ class ConcurrentExecutionTest : public DawnPerfTestWithParams<ConcurrentExecutio
     wgpu::ComputePipeline mPipeline;
 };
 
-void ConcurrentExecutionTest::SetUp() {
-    DawnPerfTestWithParams<ConcurrentExecutionTestParams>::SetUp();
-
+void ConcurrentExecutionTest::SetUpPerfTest() {
     uint64_t byteDstSize = sizeof(uint32_t) * kBufferSize;
     wgpu::BufferDescriptor desc = {};
     desc.usage = wgpu::BufferUsage::Storage;

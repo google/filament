@@ -76,6 +76,14 @@ ResultOrError<wgpu::TextureFormat> GetFormatEquivalentToIOSurfaceFormat(uint32_t
             return wgpu::TextureFormat::R10X6BG10X6Biplanar444Unorm;
         case kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar:
             return wgpu::TextureFormat::R8BG8A8Triplanar420Unorm;
+        case kCVPixelFormatType_DepthFloat16:
+            return wgpu::TextureFormat::R16Float;
+        case kCVPixelFormatType_DepthFloat32:
+            return wgpu::TextureFormat::R32Float;
+        case kCVPixelFormatType_DisparityFloat16:
+            return wgpu::TextureFormat::R16Float;
+        case kCVPixelFormatType_DisparityFloat32:
+            return wgpu::TextureFormat::R32Float;
         default:
             return DAWN_VALIDATION_ERROR("Unsupported IOSurface format (%x).", format);
     }
@@ -155,8 +163,8 @@ SharedTextureMemory::SharedTextureMemory(Device* device,
       mMtlFormat(mtlFormat),
       mMtlUsage(mtlUsage) {}
 
-void SharedTextureMemory::DestroyImpl() {
-    SharedTextureMemoryBase::DestroyImpl();
+void SharedTextureMemory::DestroyImpl(DestroyReason reason) {
+    SharedTextureMemoryBase::DestroyImpl(reason);
     mIOSurface = nullptr;
 }
 
@@ -216,10 +224,19 @@ ResultOrError<FenceAndSignalValue> SharedTextureMemory::EndAccessImpl(
     TextureBase* texture,
     ExecutionSerial lastUsageSerial,
     UnpackedPtr<EndAccessState>& state) {
-    DAWN_TRY(state.ValidateSubset<>());
+    DAWN_TRY(state.ValidateSubset<SharedTextureMemoryMetalEndAccessState>());
     DAWN_INVALID_IF(!GetDevice()->HasFeature(Feature::SharedFenceMTLSharedEvent),
                     "Required feature (%s) is missing.",
                     wgpu::FeatureName::SharedFenceMTLSharedEvent);
+
+    auto* metalEndAccessState = state.Get<SharedTextureMemoryMetalEndAccessState>();
+    if (metalEndAccessState) {
+        DAWN_INVALID_IF(metalEndAccessState->commandsScheduledFuture.id != kNullFutureID,
+                        "Commands scheduled future has already been set.");
+        metalEndAccessState->commandsScheduledFuture.id =
+            ToBackend(GetDevice()->GetQueue())->GetCommandsScheduledFuture();
+    }
+
     Ref<SharedFence> fence;
     DAWN_TRY_ASSIGN(fence, ToBackend(GetDevice()->GetQueue())->GetOrCreateSharedFence());
     return FenceAndSignalValue{std::move(fence), static_cast<uint64_t>(lastUsageSerial)};

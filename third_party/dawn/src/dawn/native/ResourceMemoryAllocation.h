@@ -30,6 +30,8 @@
 
 #include <cstdint>
 
+#include "partition_alloc/pointers/raw_ptr.h"
+
 namespace dawn::native {
 
 class ResourceHeapBase;
@@ -90,8 +92,10 @@ class ResourceMemoryAllocation {
   private:
     AllocationInfo mInfo;
     uint64_t mOffset;
-    ResourceHeapBase* mResourceHeap;
-    uint8_t* mMappedPointer;
+    // TODO(crbug.com/485825675): Investigate why this pointer is dangling.
+    raw_ptr<ResourceHeapBase, DanglingUntriaged> mResourceHeap;
+    // TODO(crbug.com/485825675): Investigate why this pointer is dangling.
+    raw_ptr<uint8_t, DanglingUntriaged | AllowPtrArithmetic> mMappedPointer;
 };
 }  // namespace dawn::native
 

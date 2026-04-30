@@ -42,6 +42,7 @@
 #include "dawn/native/Commands.h"
 #include "dawn/native/ExternalTexture.h"
 #include "dawn/native/ImmediateConstantsTracker.h"
+#include "dawn/native/Queue.h"
 #include "dawn/native/RenderBundle.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d11/BindGroupTrackerD3D11.h"
@@ -224,12 +225,9 @@ class ImmediateConstantTracker : public T {
     ImmediateConstantTracker() = default;
 
     MaybeError Apply(const ScopedSwapStateCommandRecordingContext* commandContext) {
-        auto* lastPipeline = this->mLastPipeline;
-        if (!lastPipeline) {
-            return {};
-        }
+        DAWN_ASSERT(this->mLastPipeline != nullptr);
 
-        ImmediateConstantMask pipelineMask = lastPipeline->GetImmediateMask();
+        ImmediateConstantMask pipelineMask = this->mLastPipeline->GetImmediateMask();
         ImmediateConstantMask uploadBits = this->mDirty & pipelineMask;
         for (auto&& [offset, size] : IterateRanges(uploadBits)) {
             uint32_t immediateContentStartOffset =
@@ -265,7 +263,10 @@ Ref<CommandBuffer> CommandBuffer::Create(CommandEncoder* encoder,
 }
 
 MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* commandContext) {
-    auto LazyClearSyncScope = [&commandContext](const SyncScopeResourceUsage& scope) -> MaybeError {
+    ExecutionSerial pendingSerial = GetDevice()->GetQueue()->GetPendingCommandSerial();
+
+    auto LazyClearSyncScope = [&commandContext,
+                               pendingSerial](const SyncScopeResourceUsage& scope) -> MaybeError {
         for (size_t i = 0; i < scope.textures.size(); i++) {
             Texture* texture = ToBackend(scope.textures[i]);
 
@@ -286,8 +287,8 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
         }
 
         for (BufferBase* buffer : scope.buffers) {
+            DAWN_TRY(ToBackend(buffer)->TrackUsage(commandContext, pendingSerial));
             DAWN_TRY(ToBackend(buffer)->EnsureDataInitialized(commandContext));
-            buffer->MarkUsedInPendingCommands();
         }
 
         return {};
@@ -301,14 +302,6 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
         switch (type) {
             case Command::BeginComputePass: {
                 mCommands.NextCommand<BeginComputePassCmd>();
-                for (BufferBase* buffer :
-                     GetResourceUsages().computePasses[nextComputePassNumber].referencedBuffers) {
-                    buffer->MarkUsedInPendingCommands();
-                }
-                for (TextureBase* texture :
-                     GetResourceUsages().computePasses[nextComputePassNumber].referencedTextures) {
-                    DAWN_TRY(ToBackend(texture)->SynchronizeTextureBeforeUse(commandContext));
-                }
                 for (const SyncScopeResourceUsage& scope :
                      GetResourceUsages().computePasses[nextComputePassNumber].dispatchUsages) {
                     for (TextureBase* texture : scope.textures) {
@@ -355,18 +348,18 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                 Buffer* source = ToBackend(copy->source.Get());
                 Buffer* destination = ToBackend(copy->destination.Get());
 
+                DAWN_TRY(source->TrackUsage(commandContext, pendingSerial));
+                DAWN_TRY(destination->TrackUsage(commandContext, pendingSerial));
+
                 // Buffer::Copy() will ensure the source and destination buffers are initialized.
                 DAWN_TRY(Buffer::Copy(commandContext, source, copy->sourceOffset, copy->size,
                                       destination, copy->destinationOffset));
-                source->MarkUsedInPendingCommands();
-                destination->MarkUsedInPendingCommands();
                 break;
             }
 
             case Command::CopyBufferToTexture: {
                 CopyBufferToTextureCmd* copy = mCommands.NextCommand<CopyBufferToTextureCmd>();
-                if (copy->copySize.width == 0 || copy->copySize.height == 0 ||
-                    copy->copySize.depthOrArrayLayers == 0) {
+                if (copy->copySize.IsEmpty()) {
                     // Skip no-op copies.
                     continue;
                 }
@@ -375,22 +368,25 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                 auto& dst = copy->destination;
 
                 Buffer* buffer = ToBackend(src.buffer.Get());
+                DAWN_TRY(buffer->TrackUsage(commandContext, pendingSerial));
+
                 uint64_t bufferOffset = src.offset;
                 Ref<BufferBase> stagingBuffer;
+                const TypedTexelBlockInfo& blockInfo = GetBlockInfo(dst);
+
                 // If the buffer is not mappable, we need to create a staging buffer and copy the
                 // data from the buffer to the staging buffer.
+                std::optional<BufferBase::ScopedUseBuffer> use;
                 if (!buffer->IsCPUReadable()) {
-                    const TexelBlockInfo& blockInfo =
-                        ToBackend(dst.texture)->GetFormat().GetAspectInfo(dst.aspect).block;
                     // TODO(dawn:1768): use compute shader to copy data from buffer to texture.
                     BufferDescriptor desc;
-                    DAWN_TRY_ASSIGN(desc.size,
-                                    ComputeRequiredBytesInCopy(blockInfo, copy->copySize,
-                                                               src.bytesPerRow, src.rowsPerImage));
+                    desc.size =
+                        ComputeRequiredBytesInCopy(blockInfo, blockInfo.ToBlock(copy->copySize),
+                                                   src.blocksPerRow, src.rowsPerImage);
                     desc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
                     DAWN_TRY_ASSIGN(stagingBuffer, Buffer::Create(ToBackend(GetDevice()),
                                                                   Unpack(&desc), commandContext));
-
+                    use = stagingBuffer->UseInternal();
                     DAWN_TRY(Buffer::Copy(commandContext, buffer, src.offset,
                                           stagingBuffer->GetSize(), ToBackend(stagingBuffer.Get()),
                                           0));
@@ -409,17 +405,17 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
 
                 DAWN_ASSERT(scopedMap.GetMappedData());
                 const uint8_t* data = scopedMap.GetMappedData() + bufferOffset;
-                DAWN_TRY(texture->Write(commandContext, subresources, dst.origin, copy->copySize,
-                                        data, src.bytesPerRow, src.rowsPerImage));
-
-                buffer->MarkUsedInPendingCommands();
+                uint64_t bytesPerRow = blockInfo.ToBytes(src.blocksPerRow);
+                DAWN_TRY(texture->Write(commandContext, subresources, dst.origin.ToOrigin3D(),
+                                        copy->copySize.ToExtent3D(), data,
+                                        static_cast<uint32_t>(bytesPerRow),
+                                        static_cast<uint32_t>(src.rowsPerImage)));
                 break;
             }
 
             case Command::CopyTextureToBuffer: {
                 CopyTextureToBufferCmd* copy = mCommands.NextCommand<CopyTextureToBufferCmd>();
-                if (copy->copySize.width == 0 || copy->copySize.height == 0 ||
-                    copy->copySize.depthOrArrayLayers == 0) {
+                if (copy->copySize.IsEmpty()) {
                     // Skip no-op copies.
                     continue;
                 }
@@ -427,13 +423,15 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                 auto& src = copy->source;
                 auto& dst = copy->destination;
 
+                Buffer* buffer = ToBackend(dst.buffer.Get());
+                DAWN_TRY(buffer->TrackUsage(commandContext, pendingSerial));
+
                 SubresourceRange subresources = GetSubresourcesAffectedByCopy(src, copy->copySize);
                 Texture* texture = ToBackend(src.texture.Get());
                 DAWN_TRY(texture->SynchronizeTextureBeforeUse(commandContext));
                 DAWN_TRY(
                     texture->EnsureSubresourceContentInitialized(commandContext, subresources));
 
-                Buffer* buffer = ToBackend(dst.buffer.Get());
                 Buffer::ScopedMap scopedDstMap;
                 DAWN_TRY_ASSIGN(scopedDstMap, Buffer::ScopedMap::Create(commandContext, buffer,
                                                                         wgpu::MapMode::Write));
@@ -447,18 +445,19 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                     return {};
                 };
 
-                DAWN_TRY(ToBackend(src.texture)
-                             ->Read(commandContext, subresources, src.origin, copy->copySize,
-                                    dst.bytesPerRow, dst.rowsPerImage, callback));
+                const TypedTexelBlockInfo& blockInfo = GetBlockInfo(src);
+                uint64_t bytesPerRow = blockInfo.ToBytes(dst.blocksPerRow);
 
-                dst.buffer->MarkUsedInPendingCommands();
+                DAWN_TRY(ToBackend(src.texture)
+                             ->Read(commandContext, subresources, src.origin.ToOrigin3D(),
+                                    copy->copySize.ToExtent3D(), static_cast<uint32_t>(bytesPerRow),
+                                    static_cast<uint32_t>(dst.rowsPerImage), callback));
                 break;
             }
 
             case Command::CopyTextureToTexture: {
                 CopyTextureToTextureCmd* copy = mCommands.NextCommand<CopyTextureToTextureCmd>();
-                if (copy->copySize.width == 0 || copy->copySize.height == 0 ||
-                    copy->copySize.depthOrArrayLayers == 0) {
+                if (copy->copySize.IsEmpty()) {
                     // Skip no-op copies.
                     continue;
                 }
@@ -478,8 +477,8 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                     break;
                 }
                 Buffer* buffer = ToBackend(cmd->buffer.Get());
+                DAWN_TRY(buffer->TrackUsage(commandContext, pendingSerial));
                 DAWN_TRY(buffer->Clear(commandContext, 0, cmd->offset, cmd->size));
-                buffer->MarkUsedInPendingCommands();
                 break;
             }
 
@@ -491,9 +490,9 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                 Buffer* destination = ToBackend(cmd->destination.Get());
                 uint64_t destinationOffset = cmd->destinationOffset;
 
+                DAWN_TRY(destination->TrackUsage(commandContext, pendingSerial));
                 DAWN_TRY(querySet->Resolve(commandContext, firstQuery, queryCount, destination,
                                            destinationOffset));
-                destination->MarkUsedInPendingCommands();
                 break;
             }
 
@@ -509,9 +508,9 @@ MaybeError CommandBuffer::Execute(const ScopedSwapStateCommandRecordingContext* 
                 }
 
                 Buffer* dstBuffer = ToBackend(cmd->buffer.Get());
+                DAWN_TRY(dstBuffer->TrackUsage(commandContext, pendingSerial));
                 uint8_t* data = mCommands.NextData<uint8_t>(cmd->size);
                 DAWN_TRY(dstBuffer->Write(commandContext, cmd->offset, data, cmd->size));
-                dstBuffer->MarkUsedInPendingCommands();
 
                 break;
             }
@@ -614,12 +613,11 @@ MaybeError CommandBuffer::ExecuteComputePass(
                 break;
             }
 
-            case Command::SetImmediateData: {
-                SetImmediateDataCmd* cmd = mCommands.NextCommand<SetImmediateDataCmd>();
+            case Command::SetImmediates: {
+                SetImmediatesCmd* cmd = mCommands.NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = mCommands.NextData<uint8_t>(cmd->size);
-                immediates.SetImmediateData(cmd->offset, value, cmd->size);
+                uint8_t* value = mCommands.NextData<uint8_t>(cmd->size);
+                immediates.SetImmediates(cmd->offset, value, cmd->size);
                 break;
             }
 
@@ -643,10 +641,19 @@ MaybeError CommandBuffer::ExecuteRenderPass(
         // Skip the clear as it will be handled by the workaround.
         colorAttachment.loadOp = wgpu::LoadOp::Load;
         // Mark the resource as initialized to avoid the lazy clear.
-        SubresourceRange range = colorAttachment.view->GetSubresourceRange();
-        colorAttachment.view->GetTexture()->SetIsSubresourceContentInitialized(true, range);
+        // For 3D textures, the view range covers the entire mip level (all depth slices), but
+        // the workaround only clears a single slice. So we must not mark it as initialized
+        // here, and let LazyClearRenderPassAttachments handle the initialization of the
+        // other slices.
+        if (colorAttachment.view->GetTexture()->GetDimension() != wgpu::TextureDimension::e3D) {
+            SubresourceRange range = colorAttachment.view->GetSubresourceRange();
+            colorAttachment.view->GetTexture()->SetIsSubresourceContentInitialized(true, range);
+        }
     }
-    LazyClearRenderPassAttachments(renderPass);
+    DAWN_TRY(LazyClearRenderPassAttachments(
+        GetDevice(), renderPass, [&](TextureBase* texture, const SubresourceRange& range) {
+            return ToBackend(texture)->EnsureSubresourceContentInitialized(commandContext, range);
+        }));
 
     auto* d3d11DeviceContext = commandContext->GetD3D11DeviceContext3();
     // Hold ID3D11RenderTargetView ComPtr to make attachments alive.
@@ -873,12 +880,11 @@ MaybeError CommandBuffer::ExecuteRenderPass(
                 break;
             }
 
-            case Command::SetImmediateData: {
-                SetImmediateDataCmd* cmd = mCommands.NextCommand<SetImmediateDataCmd>();
+            case Command::SetImmediates: {
+                SetImmediatesCmd* cmd = iter->NextCommand<SetImmediatesCmd>();
                 DAWN_ASSERT(cmd->size > 0);
-                uint8_t* value = nullptr;
-                value = mCommands.NextData<uint8_t>(cmd->size);
-                immediates.SetImmediateData(cmd->offset, value, cmd->size);
+                uint8_t* value = iter->NextData<uint8_t>(cmd->size);
+                immediates.SetImmediates(cmd->offset, value, cmd->size);
                 break;
             }
 
@@ -895,36 +901,59 @@ MaybeError CommandBuffer::ExecuteRenderPass(
         switch (type) {
             case Command::EndRenderPass: {
                 mCommands.NextCommand<EndRenderPassCmd>();
-                d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
-                if (renderPass->attachmentState->GetSampleCount() <= 1) {
-                    return {};
+                if (renderPass->attachmentState->GetSampleCount() > 1) {
+                    // Resolve multisampled textures.
+                    for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
+                        const auto& attachment = renderPass->colorAttachments[i];
+                        if (!attachment.resolveTarget.Get()) {
+                            continue;
+                        }
+
+                        DAWN_ASSERT(attachment.view->GetAspects() == Aspect::Color);
+                        DAWN_ASSERT(attachment.resolveTarget->GetAspects() == Aspect::Color);
+
+                        Texture* resolveTexture = ToBackend(attachment.resolveTarget->GetTexture());
+                        Texture* colorTexture = ToBackend(attachment.view->GetTexture());
+                        uint32_t dstSubresource = resolveTexture->GetSubresourceIndex(
+                            attachment.resolveTarget->GetBaseMipLevel(),
+                            attachment.resolveTarget->GetBaseArrayLayer(), Aspect::Color);
+                        uint32_t srcSubresource = colorTexture->GetSubresourceIndex(
+                            attachment.view->GetBaseMipLevel(),
+                            attachment.view->GetBaseArrayLayer(), Aspect::Color);
+                        d3d11DeviceContext->ResolveSubresource(
+                            resolveTexture->GetD3D11Resource(), dstSubresource,
+                            colorTexture->GetD3D11Resource(), srcSubresource,
+                            d3d::DXGITextureFormat(GetDevice(),
+                                                   attachment.resolveTarget->GetFormat().format));
+                    }
                 }
 
-                // Resolve multisampled textures.
-                for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
-                    const auto& attachment = renderPass->colorAttachments[i];
-                    if (!attachment.resolveTarget.Get()) {
-                        continue;
+                if (GetDevice()->IsToggleEnabled(Toggle::D3D11UseDiscardView)) {
+                    // Discard render pass' attachments having StoreOp::Discard.
+                    for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
+                        if (renderPass->colorAttachments[i].storeOp == wgpu::StoreOp::Discard) {
+                            d3d11DeviceContext->DiscardView(d3d11RenderTargetViews[i]);
+                        }
                     }
 
-                    DAWN_ASSERT(attachment.view->GetAspects() == Aspect::Color);
-                    DAWN_ASSERT(attachment.resolveTarget->GetAspects() == Aspect::Color);
-
-                    Texture* resolveTexture = ToBackend(attachment.resolveTarget->GetTexture());
-                    Texture* colorTexture = ToBackend(attachment.view->GetTexture());
-                    uint32_t dstSubresource = resolveTexture->GetSubresourceIndex(
-                        attachment.resolveTarget->GetBaseMipLevel(),
-                        attachment.resolveTarget->GetBaseArrayLayer(), Aspect::Color);
-                    uint32_t srcSubresource = colorTexture->GetSubresourceIndex(
-                        attachment.view->GetBaseMipLevel(), attachment.view->GetBaseArrayLayer(),
-                        Aspect::Color);
-                    d3d11DeviceContext->ResolveSubresource(
-                        resolveTexture->GetD3D11Resource(), dstSubresource,
-                        colorTexture->GetD3D11Resource(), srcSubresource,
-                        d3d::DXGITextureFormat(GetDevice(),
-                                               attachment.resolveTarget->GetFormat().format));
+                    if (renderPass->attachmentState->HasDepthStencilAttachment()) {
+                        auto* attachmentInfo = &renderPass->depthStencilAttachment;
+                        const Format& attachmentFormat =
+                            attachmentInfo->view->GetTexture()->GetFormat();
+                        bool discardDepth = !attachmentFormat.HasDepth() ||
+                                            attachmentInfo->depthStoreOp == wgpu::StoreOp::Discard;
+                        bool discardStencil =
+                            !attachmentFormat.HasStencil() ||
+                            attachmentInfo->stencilStoreOp == wgpu::StoreOp::Discard;
+                        if (discardDepth && discardStencil) {
+                            d3d11DeviceContext->DiscardView(d3d11DepthStencilView);
+                        }
+                    }
                 }
+
+                // Unbind attachments.
+                d3d11DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
                 return {};
             }

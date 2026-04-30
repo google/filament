@@ -14,8 +14,10 @@
 //
 #include "draco/io/obj_decoder.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <utility>
 
 #include "draco/io/file_utils.h"
 #include "draco/io/parser_utils.h"
@@ -36,15 +38,25 @@ ObjDecoder::ObjDecoder()
       norm_att_id_(-1),
       material_att_id_(-1),
       sub_obj_att_id_(-1),
+      added_edge_att_id_(-1),
       deduplicate_input_values_(true),
       last_material_id_(0),
       use_metadata_(false),
+      preserve_polygons_(false),
+      has_polygons_(false),
+      mesh_files_(nullptr),
       out_mesh_(nullptr),
       out_point_cloud_(nullptr) {}
 
 Status ObjDecoder::DecodeFromFile(const std::string &file_name,
                                   Mesh *out_mesh) {
+  return DecodeFromFile(file_name, out_mesh, nullptr);
+}
+
+Status ObjDecoder::DecodeFromFile(const std::string &file_name, Mesh *out_mesh,
+                                  std::vector<std::string> *mesh_files) {
   out_mesh_ = out_mesh;
+  mesh_files_ = mesh_files;
   return DecodeFromFile(file_name, static_cast<PointCloud *>(out_mesh));
 }
 
@@ -88,6 +100,10 @@ Status ObjDecoder::DecodeInternal() {
   }
   if (!status.ok()) {
     return status;
+  }
+
+  if (mesh_files_ && !input_file_name_.empty()) {
+    mesh_files_->push_back(input_file_name_);
   }
 
   bool use_identity_mapping = false;
@@ -145,6 +161,24 @@ Status ObjDecoder::DecodeInternal() {
             sizeof(float) * 3, 0);
     norm_att_id_ =
         out_point_cloud_->AddAttribute(va, use_identity_mapping, num_normals_);
+  }
+  if (preserve_polygons_ && has_polygons_) {
+    // Create attribute for polygon reconstruction.
+    GeometryAttribute va;
+    va.Init(GeometryAttribute::GENERIC, nullptr, 1, DT_UINT8, false, 1, 0);
+    PointCloud *const pc = out_point_cloud_;
+    added_edge_att_id_ = pc->AddAttribute(va, false, 2);
+
+    // Set attribute values to zero and one representing old edge and new edge.
+    for (const uint8_t i : {0, 1}) {
+      const AttributeValueIndex avi(i);
+      pc->attribute(added_edge_att_id_)->SetAttributeValue(avi, &i);
+    }
+
+    // Add attribute metadata with name.
+    std::unique_ptr<AttributeMetadata> metadata(new draco::AttributeMetadata());
+    metadata->AddEntryString("name", "added_edges");
+    pc->AddAttributeMetadata(added_edge_att_id_, std::move(metadata));
   }
   if (num_materials_ > 0 && num_obj_faces_ > 0) {
     GeometryAttribute va;
@@ -381,6 +415,7 @@ bool ObjDecoder::ParseTexCoord(Status *status) {
 }
 
 bool ObjDecoder::ParseFace(Status *status) {
+  constexpr int kMaxCorners = 8;
   char c;
   if (!buffer()->Peek(&c)) {
     return false;
@@ -391,37 +426,35 @@ bool ObjDecoder::ParseFace(Status *status) {
   // Face definition found!
   buffer()->Advance(1);
   if (!counting_mode_) {
-    std::array<int32_t, 3> indices[4];
-    // Parse face indices (we try to look for up to four to support quads).
+    std::array<int32_t, 3> indices[kMaxCorners];
+    // Parse face indices.
     int num_valid_indices = 0;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < kMaxCorners; ++i) {
       if (!ParseVertexIndices(&indices[i])) {
-        if (i == 3) {
-          break;  // It's OK if there is no fourth vertex index.
+        if (i >= 3) {
+          break;  // It's OK if there is no fourth or higher vertex index.
         }
         *status = Status(Status::DRACO_ERROR, "Failed to parse vertex indices");
         return true;
       }
       ++num_valid_indices;
     }
-    // Process the first face.
-    for (int i = 0; i < 3; ++i) {
-      const PointIndex vert_id(3 * num_obj_faces_ + i);
-      MapPointToVertexIndices(vert_id, indices[i]);
-    }
-    ++num_obj_faces_;
-    if (num_valid_indices == 4) {
-      // Add an additional triangle for the quad.
-      //
-      //   3----2
-      //   |  / |
-      //   | /  |
-      //   0----1
-      //
-      const PointIndex vert_id(3 * num_obj_faces_);
-      MapPointToVertexIndices(vert_id, indices[0]);
-      MapPointToVertexIndices(vert_id + 1, indices[2]);
-      MapPointToVertexIndices(vert_id + 2, indices[3]);
+    // Split quads and other n-gons into n - 2 triangles.
+    const int nt = num_valid_indices - 2;
+    // Iterate over triangles.
+    for (int t = 0; t < nt; t++) {
+      // Iterate over corners.
+      for (int c = 0; c < 3; c++) {
+        const PointIndex vert_id(3 * num_obj_faces_ + c);
+        const int triangulated_index = Triangulate(t, c);
+        MapPointToVertexIndices(vert_id, indices[triangulated_index]);
+        // Save info about new edges that will allow us to reconstruct polygons.
+        if (added_edge_att_id_ >= 0) {
+          const AttributeValueIndex avi(IsNewEdge(nt, t, c));
+          out_point_cloud_->attribute(added_edge_att_id_)
+              ->SetPointMapEntry(vert_id, avi);
+        }
+      }
       ++num_obj_faces_;
     }
   } else {
@@ -443,12 +476,14 @@ bool ObjDecoder::ParseFace(Status *status) {
         }
       }
     }
-    if (num_indices < 3 || num_indices > 4) {
-      *status =
-          Status(Status::DRACO_ERROR, "Invalid number of indices on a face");
+    if (num_indices > 3) {
+      has_polygons_ = true;
+    }
+    if (num_indices < 3 || num_indices > kMaxCorners) {
+      *status = ErrorStatus("Invalid number of indices on a face");
       return false;
     }
-    // Either one or two new triangles.
+    // Either one or more new triangles.
     num_obj_faces_ += num_indices - 2;
   }
   parser::SkipLine(buffer());
@@ -478,6 +513,9 @@ bool ObjDecoder::ParseMaterialLib(Status *status) {
   parser::SkipLine(&line_buffer);
 
   if (!material_file_name_.empty()) {
+    if (mesh_files_) {
+      mesh_files_->push_back(material_file_name_);
+    }
     if (!ParseMaterialFile(material_file_name_, status)) {
       // Silently ignore problems with material files for now.
       return true;
@@ -503,7 +541,7 @@ bool ObjDecoder::ParseMaterial(Status * /* status */) {
   parser::SkipWhitespace(&line_buffer);
   std::string mat_name;
   parser::ParseLine(&line_buffer, &mat_name);
-  if (mat_name.length() == 0) {
+  if (mat_name.empty()) {
     return false;
   }
   auto it = material_name_to_id_.find(mat_name);
@@ -534,7 +572,7 @@ bool ObjDecoder::ParseObject(Status *status) {
   if (!parser::ParseString(&line_buffer, &obj_name)) {
     return false;
   }
-  if (obj_name.length() == 0) {
+  if (obj_name.empty()) {
     return true;  // Ignore empty name entries.
   }
   auto it = obj_name_to_id_.find(obj_name);
@@ -703,6 +741,46 @@ bool ObjDecoder::ParseMaterialFileDefinition(Status * /* status */) {
     material_name_to_id_[str] = num_materials_++;
   }
   return true;
+}
+
+// Methods Triangulate() and IsNewEdge() are used for polygon triangulation and
+// representation as an attribute for reconstruction in the decoder.
+//
+// Polygon reconstruction attribute is associated with every triangle corner and
+// has values zero or one. Zero indicates that an edge opposite to the corner is
+// present in the original mesh (dashed lines), and one indicates that the
+// opposite edge has been added during polygon triangulation (dotted lines).
+//
+// Polygon triangulation is illustrated below. Pentagon ABCDE is split into
+// three triangles ABC, ACD, ADE. It is sufficient to set polygon reconstruction
+// attribute at corners ABC and ACD. The attribute at the second corner of all
+// triangles except for the last is set to one.
+//
+//          C           D
+//          * --------- *
+//         /. 1     0  .|
+//        / .         . |
+//       /  .        .  |
+//      / 0 .       . 0 |
+//     /    .      .    |
+//  B * 1   .     .     |
+//     \    .    .      |
+//      \ 0 . 0 .       |
+//       \  .  .        |
+//        \ . .         |
+//         \..  0     0 |
+//          *-----------*
+//          A           E
+//
+inline int ObjDecoder::Triangulate(int tri_index, int tri_corner) {
+  return tri_corner == 0 ? 0 : tri_index + tri_corner;
+}
+
+inline bool ObjDecoder::IsNewEdge(int tri_count, int tri_index,
+                                  int tri_corner) {
+  // All but the last triangle of the triangulated polygon have an added edge
+  // opposite of corner 1.
+  return tri_index != tri_count - 1 && tri_corner == 1;
 }
 
 }  // namespace draco

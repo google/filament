@@ -62,10 +62,10 @@ type Env struct {
 	TurboCov string // path to the turbo-cov tool (one of Cov or TurboCov must be supplied)
 }
 
-// TODO(crbug.com/344014313): Add unittest coverage.
 // AllSourceFiles returns a *Coverage containing all the source files without
 // coverage data. This populates the coverage view with files even if they
 // didn't get compiled.
+// TODO(crbug.com/344014313): Add unittest coverage.
 func (e Env) AllSourceFiles(fsReader oswrapper.FilesystemReader) *Coverage {
 	var ignorePaths = map[string]bool{
 		//
@@ -99,13 +99,13 @@ func (e Env) AllSourceFiles(fsReader oswrapper.FilesystemReader) *Coverage {
 	return &cov
 }
 
-// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
-// dependency injection.
 // Import uses the llvm-profdata and llvm-cov tools to import the coverage
 // information from a .profraw file.
-func (e Env) Import(profrawPath string, fsReader oswrapper.FilesystemReader) (*Coverage, error) {
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
+func (e Env) Import(profrawPath string, fsReaderWriter oswrapper.FilesystemReaderWriter) (*Coverage, error) {
 	profdata := profrawPath + ".profdata"
-	defer os.Remove(profdata)
+	defer fsReaderWriter.Remove(profdata)
 
 	if e.Profdata == "" {
 		return nil, fmt.Errorf("cov.Env.Profdata must be specified")
@@ -136,7 +136,7 @@ func (e Env) Import(profrawPath string, fsReader oswrapper.FilesystemReader) (*C
 		if err != nil {
 			return nil, fmt.Errorf("llvm-cov errored: %v\n%v", string(data), err)
 		}
-		cov, err := e.parseCov(data, fsReader)
+		cov, err := e.parseCov(data, fsReaderWriter)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse coverage json data: %w", err)
 		}
@@ -147,7 +147,7 @@ func (e Env) Import(profrawPath string, fsReader oswrapper.FilesystemReader) (*C
 	if err != nil {
 		return nil, fmt.Errorf("turbo-cov errored: %v\n%v", string(data), err)
 	}
-	cov, err := e.parseTurboCov(data, fsReader)
+	cov, err := e.parseTurboCov(data, fsReaderWriter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process turbo-cov output: %w", err)
 	}

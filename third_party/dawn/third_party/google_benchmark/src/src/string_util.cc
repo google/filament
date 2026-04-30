@@ -11,7 +11,7 @@
 #include <sstream>
 
 #include "arraysize.h"
-#include "benchmark/benchmark.h"
+#include "benchmark/types.h"
 
 namespace benchmark {
 namespace {
@@ -29,15 +29,17 @@ static_assert(arraysize(kBigSIUnits) == arraysize(kBigIECUnits),
 static_assert(arraysize(kSmallSIUnits) == arraysize(kBigSIUnits),
               "Small SI and Big SI unit arrays must be the same size");
 
-static const int64_t kUnitsSize = arraysize(kBigSIUnits);
+const int64_t kUnitsSize = arraysize(kBigSIUnits);
 
-void ToExponentAndMantissa(double val, int precision, double one_k,
-                           std::string* mantissa, int64_t* exponent) {
-  std::stringstream mantissa_stream;
-
+std::pair<std::string, int64_t> ToExponentAndMantissa(double val, int precision,
+                                                      double one_k) {
+  std::string mantissa;
+  int64_t exponent = 0;
   if (val < 0) {
-    mantissa_stream << "-";
+    mantissa = "-";
     val = -val;
+  } else {
+    mantissa.clear();
   }
 
   // Adjust threshold so that it never excludes things which can't be rendered
@@ -49,48 +51,56 @@ void ToExponentAndMantissa(double val, int precision, double one_k,
   // Values in ]simple_threshold,small_threshold[ will be printed as-is
   const double simple_threshold = 0.01;
 
+  auto format_mantissa = [&](double v) { mantissa += StrFormat("%g", v); };
+
+  // Positive powers
   if (val > big_threshold) {
-    // Positive powers
     double scaled = val;
     for (size_t i = 0; i < arraysize(kBigSIUnits); ++i) {
       scaled /= one_k;
       if (scaled <= big_threshold) {
-        mantissa_stream << scaled;
-        *exponent = static_cast<int64_t>(i + 1);
-        *mantissa = mantissa_stream.str();
-        return;
+        format_mantissa(scaled);
+        exponent = static_cast<int64_t>(i + 1);
+        return std::make_pair(mantissa, exponent);
       }
     }
-    mantissa_stream << val;
-    *exponent = 0;
-  } else if (val < small_threshold) {
-    // Negative powers
+    format_mantissa(val);
+    exponent = 0;
+    return std::make_pair(mantissa, exponent);
+  }
+
+  // Negative powers
+  if (val < small_threshold) {
     if (val < simple_threshold) {
       double scaled = val;
       for (size_t i = 0; i < arraysize(kSmallSIUnits); ++i) {
         scaled *= one_k;
         if (scaled >= small_threshold) {
-          mantissa_stream << scaled;
-          *exponent = -static_cast<int64_t>(i + 1);
-          *mantissa = mantissa_stream.str();
-          return;
+          format_mantissa(scaled);
+          exponent = -static_cast<int64_t>(i + 1);
+          return std::make_pair(mantissa, exponent);
         }
       }
     }
-    mantissa_stream << val;
-    *exponent = 0;
-  } else {
-    mantissa_stream << val;
-    *exponent = 0;
+    format_mantissa(val);
+    exponent = 0;
+    return std::make_pair(mantissa, exponent);
   }
-  *mantissa = mantissa_stream.str();
+
+  format_mantissa(val);
+  exponent = 0;
+  return std::make_pair(mantissa, exponent);
 }
 
 std::string ExponentToPrefix(int64_t exponent, bool iec) {
-  if (exponent == 0) return "";
+  if (exponent == 0) {
+    return {};
+  }
 
   const int64_t index = (exponent > 0 ? exponent - 1 : -exponent - 1);
-  if (index >= kUnitsSize) return "";
+  if (index >= kUnitsSize) {
+    return {};
+  }
 
   const char* const* array =
       (exponent > 0 ? (iec ? kBigIECUnits : kBigSIUnits) : kSmallSIUnits);
@@ -100,22 +110,20 @@ std::string ExponentToPrefix(int64_t exponent, bool iec) {
 
 std::string ToBinaryStringFullySpecified(double value, int precision,
                                          Counter::OneK one_k) {
-  std::string mantissa;
-  int64_t exponent;
-  ToExponentAndMantissa(value, precision,
-                        one_k == Counter::kIs1024 ? 1024.0 : 1000.0, &mantissa,
-                        &exponent);
+  auto [mantissa, exponent] = ToExponentAndMantissa(
+      value, precision, one_k == Counter::kIs1024 ? 1024.0 : 1000.0);
   return mantissa + ExponentToPrefix(exponent, one_k == Counter::kIs1024);
 }
 
+PRINTF_FORMAT_STRING_FUNC(1, 0)
 std::string StrFormatImp(const char* msg, va_list args) {
   // we might need a second shot at this, so pre-emptivly make a copy
   va_list args_cp;
   va_copy(args_cp, args);
 
-  // TODO(ericwf): use std::array for first attempt to avoid one memory
-  // allocation guess what the size might be
-  std::array<char, 256> local_buff;
+  // Use std::array for first attempt to avoid one memory allocation guess what
+  // the size might be
+  std::array<char, 256> local_buff = {};
 
   // 2015-10-08: vsnprintf is used instead of snd::vsnprintf due to a limitation
   // in the android-ndk
@@ -124,9 +132,12 @@ std::string StrFormatImp(const char* msg, va_list args) {
   va_end(args_cp);
 
   // handle empty expansion
-  if (ret == 0) return std::string{};
-  if (static_cast<std::size_t>(ret) < local_buff.size())
+  if (ret == 0) {
+    return {};
+  }
+  if (static_cast<std::size_t>(ret) < local_buff.size()) {
     return std::string(local_buff.data());
+  }
 
   // we did not provide a long enough buffer on our first attempt.
   // add 1 to size to account for null-byte in size cast to prevent overflow
@@ -134,7 +145,10 @@ std::string StrFormatImp(const char* msg, va_list args) {
   auto buff_ptr = std::unique_ptr<char[]>(new char[size]);
   // 2015-10-08: vsnprintf is used instead of snd::vsnprintf due to a limitation
   // in the android-ndk
-  vsnprintf(buff_ptr.get(), size, msg, args);
+  va_list args_cp2;
+  va_copy(args_cp2, args);
+  vsnprintf(buff_ptr.get(), size, msg, args_cp2);
+  va_end(args_cp2);
   return std::string(buff_ptr.get());
 }
 
@@ -153,7 +167,9 @@ std::string StrFormat(const char* format, ...) {
 }
 
 std::vector<std::string> StrSplit(const std::string& str, char delim) {
-  if (str.empty()) return {};
+  if (str.empty()) {
+    return {};
+  }
   std::vector<std::string> ret;
   size_t first = 0;
   size_t next = str.find(delim);

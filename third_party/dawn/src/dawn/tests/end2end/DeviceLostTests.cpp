@@ -105,9 +105,6 @@ TEST_P(DeviceLostTest, CreateBindGroupLayoutFails) {
 
 // Test that GetBindGroupLayout fails when device is lost
 TEST_P(DeviceLostTest, GetBindGroupLayoutFails) {
-    // TODO(crbug.com/413053623): implement webgpu::Pipeline
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     wgpu::ShaderModule csModule = utils::CreateShaderModule(device, R"(
         struct UniformBuffer {
             pos : vec4f
@@ -182,9 +179,6 @@ TEST_P(DeviceLostTest, CreateRenderBundleEncoderFails) {
 
 // Tests that CreateComputePipeline fails when device is lost
 TEST_P(DeviceLostTest, CreateComputePipelineFails) {
-    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     wgpu::ShaderModule shader = utils::CreateShaderModule(device, "");
 
     WaitABit();
@@ -198,9 +192,6 @@ TEST_P(DeviceLostTest, CreateComputePipelineFails) {
 
 // Tests that CreateRenderPipeline fails when device is lost
 TEST_P(DeviceLostTest, CreateRenderPipelineFails) {
-    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     wgpu::ShaderModule shader = utils::CreateShaderModule(device, "");
 
     WaitABit();
@@ -416,6 +407,9 @@ TEST_P(DeviceLostTest, GetMappedRange_CreateBufferMappedAtCreationAfterLoss) {
     ExpectObjectIsError(buffer);
 
     ASSERT_NE(buffer.GetMappedRange(), nullptr);
+
+    // Write to the range as it should still point to valid memory.
+    *static_cast<uint32_t*>(buffer.GetMappedRange()) = 42;
 }
 
 // Test that device loss doesn't change the result of GetMappedRange, mappedAtCreation version.
@@ -431,6 +425,9 @@ TEST_P(DeviceLostTest, GetMappedRange_CreateBufferMappedAtCreationBeforeLoss) {
 
     ASSERT_NE(buffer.GetMappedRange(), nullptr);
     ASSERT_EQ(buffer.GetMappedRange(), rangeBeforeLoss);
+
+    // Write to the range as it should still point to valid memory.
+    *static_cast<uint32_t*>(buffer.GetMappedRange()) = 42;
 }
 
 // Test that device loss doesn't change the result of GetMappedRange, mapping for reading version.
@@ -448,6 +445,14 @@ TEST_P(DeviceLostTest, GetMappedRange_MapAsyncReading) {
 
     ASSERT_NE(buffer.GetConstMappedRange(), nullptr);
     ASSERT_EQ(buffer.GetConstMappedRange(), rangeBeforeLoss);
+
+    if (!IsNull()) {
+        // Read from the range as it should still point to valid memory. Also check the value to
+        // force the compiler to keep the read. The null backend doesn't do zero init so we skip
+        // there.
+        uint32_t zero = *static_cast<const uint32_t*>(buffer.GetConstMappedRange());
+        ASSERT_EQ(zero, 0u);
+    }
 }
 
 // Test that device loss doesn't change the result of GetMappedRange, mapping for writing version.
@@ -465,6 +470,9 @@ TEST_P(DeviceLostTest, GetMappedRange_MapAsyncWriting) {
 
     ASSERT_NE(buffer.GetConstMappedRange(), nullptr);
     ASSERT_EQ(buffer.GetConstMappedRange(), rangeBeforeLoss);
+
+    // Write to the range as it should still point to valid memory.
+    *static_cast<uint32_t*>(buffer.GetMappedRange()) = 42;
 }
 
 // TODO(dawn:929): mapasync read + resolve + loss getmappedrange != nullptr.
@@ -518,9 +526,6 @@ TEST_P(DeviceLostTest, DeviceLostDoesntCallUncapturedError) {
 // Test that WGPUCreatePipelineAsyncStatus_Success is returned when device is lost
 // before the callback of Create*PipelineAsync() is called.
 TEST_P(DeviceLostTest, DeviceLostBeforeCreatePipelineAsyncCallback) {
-    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     wgpu::ShaderModule csModule = utils::CreateShaderModule(device, R"(
         @compute @workgroup_size(1) fn main() {
         })");
@@ -543,9 +548,6 @@ TEST_P(DeviceLostTest, DeviceLostBeforeCreatePipelineAsyncCallback) {
 // references to bind group layouts such that the cache was non-empty at the end
 // of shut down.
 TEST_P(DeviceLostTest, FreeBindGroupAfterDeviceLossWithPendingCommands) {
-    // TODO(crbug.com/413053623): implement webgpu::BindGroup
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
@@ -583,9 +585,6 @@ TEST_P(DeviceLostTest, FreeBindGroupAfterDeviceLossWithPendingCommands) {
 // This is a regression test for crbug.com/1365011 where ending a render pass with an indirect draw
 // in it after the device is lost would cause render commands to be leaked.
 TEST_P(DeviceLostTest, DeviceLostInRenderPassWithDrawIndirect) {
-    // TODO(crbug.com/413053623): implement webgpu::Pipeline, etc.
-    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
-
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 4u, 4u);
     utils::ComboRenderPipelineDescriptor desc;
     desc.vertex.module = utils::CreateShaderModule(device, R"(

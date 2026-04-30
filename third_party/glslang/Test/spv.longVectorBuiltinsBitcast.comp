@@ -1,0 +1,67 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_EXT_long_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_expect_assume : enable
+#extension GL_EXT_bfloat16 : enable
+#extension GL_EXT_float_e5m2 : enable
+#extension GL_EXT_float_e4m3 : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    vector<bfloat16_t, 5> vbf16;
+    vector<float16_t, 5> vf16;
+    vector<float, 5> vf32;
+    vector<float64_t, 5> vf64;
+    vector<uint16_t, 5> vu16;
+    vector<int16_t, 5> vi16;
+    vector<uint32_t, 5> vu32;
+    vector<int32_t, 5> vi32;
+    vector<uint64_t, 5> vu64;
+    vector<int64_t, 5> vi64;
+    vector<floate5m2_t, 5> vfe5m2;
+    vector<floate4m3_t, 5> vfe4m3;
+    vector<int8_t, 5> vi8;
+    vector<uint8_t, 5> vu8;
+
+    vi16 = halfBitsToInt16(vf16);
+    vu16 = halfBitsToUint16(vf16);
+    vf16 = int16BitsToHalf(vi16);
+    vf16 = uint16BitsToHalf(vu16);
+
+    vi16 = float16BitsToInt16(vf16);
+    vu16 = float16BitsToUint16(vf16);
+    vf16 = int16BitsToFloat16(vi16);
+    vf16 = uint16BitsToFloat16(vu16);
+
+    vi16 = bfloat16BitsToIntEXT(vbf16);
+    vu16 = bfloat16BitsToUintEXT(vbf16);
+    vbf16 = intBitsToBFloat16EXT(vi16);
+    vbf16 = uintBitsToBFloat16EXT(vu16);
+
+    vi32 = floatBitsToInt(vf32);
+    vu32 = floatBitsToUint(vf32);
+    vf32 = intBitsToFloat(vi32);
+    vf32 = uintBitsToFloat(vu32);
+
+    vi64 = doubleBitsToInt64(vf64);
+    vu64 = doubleBitsToUint64(vf64);
+    vf64 = int64BitsToDouble(vi64);
+    vf64 = uint64BitsToDouble(vu64);
+
+    vi8 = floate5m2BitsToIntEXT(vfe5m2);
+    vu8 = floate5m2BitsToUintEXT(vfe5m2);
+    vfe5m2 = intBitsToFloate5m2EXT(vi8);
+    vfe5m2 = uintBitsToFloate5m2EXT(vu8);
+
+    vi8 = floate4m3BitsToIntEXT(vfe4m3);
+    vu8 = floate4m3BitsToUintEXT(vfe4m3);
+    vfe4m3 = intBitsToFloate4m3EXT(vi8);
+    vfe4m3 = uintBitsToFloate4m3EXT(vu8);
+
+    saturatedConvertEXT(vfe5m2, vf16);
+    saturatedConvertEXT(vfe4m3, vf32);
+}

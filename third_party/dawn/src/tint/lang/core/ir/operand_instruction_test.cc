@@ -38,7 +38,7 @@ using IR_OperandInstructionTest = IRTestHelper;
 
 TEST_F(IR_OperandInstructionTest, Destroy) {
     auto* block = b.Block();
-    auto* inst = b.Add(ty.i32(), 1_i, 2_i);
+    auto* inst = b.Add(1_i, 2_i);
     block->Append(inst);
     auto* lhs = inst->LHS();
     auto* rhs = inst->RHS();

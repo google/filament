@@ -52,7 +52,7 @@ void DataBuffer::Resize(int64_t size) {
 }
 
 void DataBuffer::WriteDataToStream(std::ostream &stream) {
-  if (data_.size() == 0) {
+  if (data_.empty()) {
     return;
   }
   stream.write(reinterpret_cast<char *>(data_.data()), data_.size());

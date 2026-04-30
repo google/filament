@@ -153,13 +153,17 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     int32_t directionalShadows;
     float ssContactShadowDistance;
 
+    math::float2 shadowAtlasResolution;         // dim, 1/dim
+    float shadowReserved0;
+    float shadowReserved1;
+
     // position of cascade splits, in world space (not including the near plane)
     // -Inf stored in unused components
     math::float4 cascadeSplits;
     // bit 0-3: cascade count
     // bit 8-11: cascade has visible shadows
     int32_t cascades;
-    float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
+    float shadowPenumbraRatioScale;             // For DPCF or PCSS, scale penumbra ratio for artistic use
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
@@ -213,7 +217,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[22];
+    math::float4 reserved[21];
 };
 
 // 2 KiB == 128 float4s

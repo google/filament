@@ -50,9 +50,11 @@ using ValidateConstant = spvtest::ValidateBase<bool>;
   "%true = OpConstantTrue %bool "               \
   "%null = OpConstantNull %_ptr_uint "
 
-#define kShaderPreamble    \
-  "OpCapability Shader\n"  \
-  "OpCapability Linkage\n" \
+#define kShaderPreamble                         \
+  "OpCapability Shader\n"                       \
+  "OpCapability Linkage\n"                      \
+  "OpCapability VariablePointers\n"             \
+  "OpExtension \"SPV_KHR_variable_pointers\"\n" \
   "OpMemoryModel Logical Simple\n"
 
 #define kKernelPreamble      \
@@ -343,9 +345,11 @@ INSTANTIATE_TEST_SUITE_P(
         // SPV_AMD_gpu_shader_int16 should enable UConvert for OpSpecConstantOp
         // https://github.com/KhronosGroup/glslang/issues/848
         {SPV_ENV_UNIVERSAL_1_0,
-         "OpCapability Shader "
+         "OpCapability Shader\n"
+         "OpCapability VariablePointers\n"
          "OpCapability Linkage ; So we don't need to define a function\n"
-         "OpExtension \"SPV_AMD_gpu_shader_int16\" "
+         "OpExtension \"SPV_AMD_gpu_shader_int16\"\n"
+         "OpExtension \"SPV_KHR_variable_pointers\"\n"
          "OpMemoryModel Logical Simple " kBasicTypes
          "%v = OpSpecConstantOp %uint UConvert %uint_0",
          true, ""},

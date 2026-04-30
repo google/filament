@@ -43,10 +43,6 @@ set(SPIRV_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/CInterface/spirv_c_interface.cpp
     PARENT_SCOPE)
 
-set(SPVREMAP_SOURCES
-    SPVRemapper.cpp
-    doc.cpp)
-
 set(SPIRV_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/bitutils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/spirv.hpp11
@@ -70,16 +66,11 @@ set(SPIRV_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/NonSemanticShaderDebugInfo100.h
     PARENT_SCOPE)
 
-set(SPVREMAP_HEADERS
-    SPVRemapper.h
-    doc.h)
-
 set(PUBLIC_HEADERS
     GlslangToSpv.h
     disassemble.h
     Logger.h
     spirv.hpp11
-    SPVRemapper.h
     SpvTools.h)
 
 add_library(SPIRV ${LIB_TYPE} ${CMAKE_CURRENT_SOURCE_DIR}/../glslang/stub.cpp)
@@ -94,22 +85,8 @@ target_include_directories(SPIRV PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 glslang_only_export_explicit_symbols(SPIRV)
 
-if (ENABLE_SPVREMAPPER)
-    add_library(SPVRemapper ${LIB_TYPE} ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
-    add_library(glslang::SPVRemapper ALIAS SPVRemapper)
-    set_target_properties(SPVRemapper PROPERTIES
-        FOLDER glslang
-        POSITION_INDEPENDENT_CODE ON
-        VERSION   "${GLSLANG_VERSION}"
-        SOVERSION "${GLSLANG_VERSION_MAJOR}")
-    glslang_only_export_explicit_symbols(SPVRemapper)
-endif()
-
 if(WIN32 AND BUILD_SHARED_LIBS)
     set_target_properties(SPIRV PROPERTIES PREFIX "")
-    if (ENABLE_SPVREMAPPER)
-        set_target_properties(SPVRemapper PROPERTIES PREFIX "")
-    endif()
 endif()
 
 if(ENABLE_OPT)
@@ -122,14 +99,9 @@ endif()
 
 if(WIN32)
     source_group("Source" FILES ${SOURCES} ${HEADERS})
-    source_group("Source" FILES ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
 endif()
 
 if(GLSLANG_ENABLE_INSTALL)
-    if (ENABLE_SPVREMAPPER)
-        install(TARGETS SPVRemapper EXPORT glslang-targets)
-    endif()
-
     install(TARGETS SPIRV EXPORT glslang-targets)
 
     install(FILES ${PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/glslang/SPIRV/)

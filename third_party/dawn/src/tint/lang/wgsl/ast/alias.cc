@@ -28,25 +28,16 @@
 #include "src/tint/lang/wgsl/ast/alias.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::Alias);
 
 namespace tint::ast {
 
-Alias::Alias(GenerationID pid, NodeID nid, const Source& src, const Identifier* n, Type subtype)
-    : Base(pid, nid, src, n), type(subtype) {
+Alias::Alias(NodeID nid, const Source& src, const Identifier* n, Type subtype)
+    : Base(nid, src, n), type(subtype) {
     TINT_ASSERT(type);
 }
 
 Alias::~Alias() = default;
-
-const Alias* Alias::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto sym = ctx.Clone(name);
-    auto ty = ctx.Clone(type);
-    return ctx.dst->create<Alias>(src, sym, ty);
-}
 
 }  // namespace tint::ast

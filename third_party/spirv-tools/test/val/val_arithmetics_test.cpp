@@ -1210,6 +1210,199 @@ TEST_F(ValidateArithmetics, DotBfloat16) {
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+std::string GenerateFmaCode(const std::string& main_body) {
+  const std::string prefix =
+      R"(
+OpCapability Shader
+OpCapability Int64
+OpCapability Float16
+OpCapability Float64
+OpCapability FMAKHR
+OpExtension "SPV_KHR_fma"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%f64 = OpTypeFloat 64
+%f16vec2 = OpTypeVector %f16 2
+%f32vec2 = OpTypeVector %f32 2
+%f64vec2 = OpTypeVector %f64 2
+%f16vec3 = OpTypeVector %f16 3
+%f32vec3 = OpTypeVector %f32 3
+%f64vec3 = OpTypeVector %f64 3
+%f16vec4 = OpTypeVector %f16 4
+%f32vec4 = OpTypeVector %f32 4
+%f64vec4 = OpTypeVector %f64 4
+%u32vec2 = OpTypeVector %u32 2
+
+%f16_1 = OpConstant %f16 1
+%f16_2 = OpConstant %f16 2
+%f16_4 = OpConstant %f16 4
+
+%f32_1 = OpConstant %f32 1
+%f32_2 = OpConstant %f32 2
+%f32_4 = OpConstant %f32 4
+
+%f64_1 = OpConstant %f64 1
+%f64_2 = OpConstant %f64 2
+%f64_4 = OpConstant %f64 4
+
+%u32_1 = OpConstant %u32 1
+%u32_2 = OpConstant %u32 2
+%u32_4 = OpConstant %u32 4
+
+%f16vec2_12 = OpConstantComposite %f16vec2 %f16_1 %f16_2
+%f16vec2_24 = OpConstantComposite %f16vec2 %f16_2 %f16_4
+%f16vec3_124 = OpConstantComposite %f16vec3 %f16_1 %f16_2 %f16_4
+%f16vec4_1241 = OpConstantComposite %f16vec4 %f16_1 %f16_2 %f16_4 %f16_1
+
+%f32vec2_12 = OpConstantComposite %f32vec2 %f32_1 %f32_2
+%f32vec2_24 = OpConstantComposite %f32vec2 %f32_2 %f32_4
+%f32vec3_124 = OpConstantComposite %f32vec3 %f32_1 %f32_2 %f32_4
+%f32vec4_1241 = OpConstantComposite %f32vec4 %f32_1 %f32_2 %f32_4 %f32_1
+
+%f64vec2_12 = OpConstantComposite %f64vec2 %f64_1 %f64_2
+%f64vec2_24 = OpConstantComposite %f64vec2 %f64_2 %f64_4
+%f64vec3_124 = OpConstantComposite %f64vec3 %f64_1 %f64_2 %f64_4
+%f64vec4_1241 = OpConstantComposite %f64vec4 %f64_1 %f64_2 %f64_4 %f64_1
+
+%u32vec2_12 = OpConstantComposite %u32vec2 %u32_1 %u32_2
+%u32vec2_24 = OpConstantComposite %u32vec2 %u32_2 %u32_4
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel)";
+
+  const std::string suffix =
+      R"(
+OpReturn
+OpFunctionEnd)";
+
+  return prefix + main_body + suffix;
+}
+
+TEST_F(ValidateArithmetics, FmaSuccess) {
+  const std::string body = R"(
+%val1 = OpFmaKHR %f16 %f16_1 %f16_2 %f16_4
+%val2 = OpFmaKHR %f32 %f32_1 %f32_2 %f32_4
+%val3 = OpFmaKHR %f64 %f64_1 %f64_2 %f64_4
+%val4 = OpFmaKHR %f16vec2 %f16vec2_12 %f16vec2_24 %f16vec2_12
+%val5 = OpFmaKHR %f32vec2 %f32vec2_12 %f32vec2_24 %f32vec2_12
+%val6 = OpFmaKHR %f64vec2 %f64vec2_12 %f64vec2_24 %f64vec2_12
+%val7 = OpFmaKHR %f16vec3 %f16vec3_124 %f16vec3_124 %f16vec3_124
+%val8 = OpFmaKHR %f32vec3 %f32vec3_124 %f32vec3_124 %f32vec3_124
+%val9 = OpFmaKHR %f64vec3 %f64vec3_124 %f64vec3_124 %f64vec3_124
+%val10 = OpFmaKHR %f16vec4 %f16vec4_1241 %f16vec4_1241 %f16vec4_1241
+%val11 = OpFmaKHR %f32vec4 %f32vec4_1241 %f32vec4_1241 %f32vec4_1241
+%val12 = OpFmaKHR %f64vec4 %f64vec4_1241 %f64vec4_1241 %f64vec4_1241
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateArithmetics, FmaTypeIdU32) {
+  const std::string body = R"(
+%val = OpFmaKHR %u32 %u32_1 %u32_2 %u32_4
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected floating scalar or vector type as Result Type: FmaKHR"));
+}
+
+TEST_F(ValidateArithmetics, FmaTypeIdVec2U32) {
+  const std::string body = R"(
+%val = OpFmaKHR %u32vec2 %u32vec2_12 %u32vec2_24 %u32vec2_12
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected floating scalar or vector type as Result Type: FmaKHR"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongOperand1) {
+  const std::string body = R"(
+%val = OpFmaKHR %f32 %u32_1 %f32_2 %f32_4
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 2"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongOperand2) {
+  const std::string body = R"(
+%val = OpFmaKHR %f32 %f32_1 %u32_2 %f32_4
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 3"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongOperand3) {
+  const std::string body = R"(
+%val = OpFmaKHR %f32 %f32_1 %f32_2 %u32_4
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 4"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongVectorOperand1) {
+  const std::string body = R"(
+%val = OpFmaKHR %f64vec3 %f32vec3_124 %f64vec3_124 %f64vec3_124
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 2"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongVectorOperand2) {
+  const std::string body = R"(
+%val = OpFmaKHR %f32vec3 %f32vec3_124 %f64vec3_124 %f32vec3_124
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 3"));
+}
+
+TEST_F(ValidateArithmetics, FmaWrongVectorOperand3) {
+  const std::string body = R"(
+%val = OpFmaKHR %f32vec3 %f32vec3_124 %f32vec3_124 %f64vec3_124
+)";
+
+  CompileSuccessfully(GenerateFmaCode(body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected arithmetic operands to be of Result Type: "
+                        "FmaKHR operand index 4"));
+}
+
 std::string GenerateCoopMatCode(const std::string& extra_types,
                                 const std::string& main_body) {
   const std::string prefix =
@@ -1220,6 +1413,7 @@ OpCapability CooperativeMatrixNV
 OpExtension "SPV_NV_cooperative_matrix"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 32 1 1
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -1324,9 +1518,9 @@ TEST_F(ValidateArithmetics, CoopMatMatrixTimesScalarMismatchFail) {
 
 TEST_F(ValidateArithmetics, CoopMatScopeFail) {
   const std::string types = R"(
-%device = OpConstant %u32 1
+%workgroup = OpConstant %u32 2
 
-%mat16x16_dv = OpTypeCooperativeMatrixNV %f16 %device %u32_16 %u32_16
+%mat16x16_dv = OpTypeCooperativeMatrixNV %f16 %workgroup %u32_16 %u32_16
 %f16matdv_16x16_1 = OpConstantComposite %mat16x16_dv %f16_1
 )";
 
@@ -1527,6 +1721,7 @@ OpExtension "SPV_NV_cooperative_matrix2"
 OpExtension "SPV_KHR_vulkan_memory_model"
 OpMemoryModel Logical Vulkan
 OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 32 1 1
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -1631,8 +1826,8 @@ TEST_F(ValidateArithmetics, CoopMatMatrixKHRTimesScalarMismatchFail) {
 
 TEST_F(ValidateArithmetics, CoopMatKHRScopeFail) {
   const std::string types = R"(
-%device = OpConstant %u32 1
-%mat16x16_dv = OpTypeCooperativeMatrixKHR %f16 %device %u32_16 %u32_16 %useC
+%workgroup = OpConstant %u32 2
+%mat16x16_dv = OpTypeCooperativeMatrixKHR %f16 %workgroup %u32_16 %u32_16 %useC
 %f16matdv_16x16_1 = OpConstantComposite %mat16x16_dv %f16_1
 )";
 
@@ -2056,14 +2251,14 @@ TEST_F(ValidateArithmetics, CoopVecDimFail) {
 
 TEST_F(ValidateArithmetics, CoopVecComponentTypeNotScalarNumeric) {
   const std::string types = R"(
-%bad = OpTypeCooperativeVectorNV %bool %u32_8
+%bad = OpTypeCooperativeVectorNV %f16vec %u32_8
 )";
 
   CompileSuccessfully(GenerateCoopVecCode(types, "").c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpTypeCooperativeVectorNV Component Type <id> "
-                        "'5[%bool]' is not a scalar numerical type."));
+              HasSubstr("OpTypeVectorIdEXT Component Type <id> "
+                        "'14[%14]' is not a scalar numerical type."));
 }
 
 TEST_F(ValidateArithmetics, CoopVecDimNotConstantInt) {
@@ -2074,8 +2269,8 @@ TEST_F(ValidateArithmetics, CoopVecDimNotConstantInt) {
   CompileSuccessfully(GenerateCoopVecCode(types, "").c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpTypeCooperativeVectorNV component count <id> "
-                        "'19[%float_1]' is not a constant integer type"));
+              HasSubstr("OpTypeVectorIdEXT component count type <id> "
+                        "'7[%float]' is not a 32-bit integer type"));
 }
 
 }  // namespace

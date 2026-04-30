@@ -28,10 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SHADERMODULEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SHADERMODULEMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/ShaderModule.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -46,7 +45,7 @@ class ShaderModuleMock : public ShaderModuleBase {
 
     ~ShaderModuleMock() override;
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 
   protected:
     ShaderModuleMock(DeviceMock* device, const UnpackedPtr<ShaderModuleDescriptor>& descriptor);

@@ -127,146 +127,146 @@ extern "C" {
         out.append('//     VK_IMAGE_ASPECT_PLANE_1_BIT -> 1\n')
         out.append('//     VK_IMAGE_ASPECT_PLANE_2_BIT -> 2\n')
         out.append('//     <any other value> -> VKU_FORMAT_INVALID_INDEX\n')
-        out.append('inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect);\n\n')
+        out.append('static inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect);\n\n')
 
         for numericFormat in sorted(self.numericFormats):
             out.append(f'// Returns whether a VkFormat is of the numerical format {numericFormat}\n')
             out.append('// Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false\n')
-            out.append(f'inline bool vkuFormatIs{numericFormat}(VkFormat format);\n\n')
+            out.append(f'static inline bool vkuFormatIs{numericFormat}(VkFormat format);\n\n')
 
         out.append('''// Returns whether the type of a VkFormat is a OpTypeInt (SPIR-V) from "Interpretation of Numeric Format" table
-inline bool vkuFormatIsSampledInt(VkFormat format);
+static inline bool vkuFormatIsSampledInt(VkFormat format);
 
 // Returns whether the type of a VkFormat is a OpTypeFloat (SPIR-V) from "Interpretation of Numeric Format" table
-inline bool vkuFormatIsSampledFloat(VkFormat format);
+static inline bool vkuFormatIsSampledFloat(VkFormat format);
 
 ''')
 
         for key in sorted(self.compressedFormats.keys()):
             out.append(f'// Returns whether a VkFormat is a compressed format of type {key}\n')
-            out.append(f'inline bool vkuFormatIsCompressed_{key}(VkFormat format);\n\n')
+            out.append(f'static inline bool vkuFormatIsCompressed_{key}(VkFormat format);\n\n')
         out.append('// Returns whether a VkFormat is of any compressed format type\n')
-        out.append('inline bool vkuFormatIsCompressed(VkFormat format);\n')
+        out.append('static inline bool vkuFormatIsCompressed(VkFormat format);\n')
 
         out.append('''
 // Returns whether a VkFormat is either a depth or stencil format
-inline bool vkuFormatIsDepthOrStencil(VkFormat format);
+static inline bool vkuFormatIsDepthOrStencil(VkFormat format);
 
 // Returns whether a VkFormat is a depth and stencil format
-inline bool vkuFormatIsDepthAndStencil(VkFormat format);
+static inline bool vkuFormatIsDepthAndStencil(VkFormat format);
 
 // Returns whether a VkFormat is a depth only format
-inline bool vkuFormatIsDepthOnly(VkFormat format);
+static inline bool vkuFormatIsDepthOnly(VkFormat format);
 
 // Returns whether a VkFormat is a stencil only format
-inline bool vkuFormatIsStencilOnly(VkFormat format);
+static inline bool vkuFormatIsStencilOnly(VkFormat format);
 
 // Returns whether a VkFormat has a depth component
-inline bool vkuFormatHasDepth(VkFormat format) { return (vkuFormatIsDepthOnly(format) || vkuFormatIsDepthAndStencil(format)); }
+static inline bool vkuFormatHasDepth(VkFormat format) { return (vkuFormatIsDepthOnly(format) || vkuFormatIsDepthAndStencil(format)); }
 
 // Returns whether a VkFormat has a stencil component
-inline bool vkuFormatHasStencil(VkFormat format) { return (vkuFormatIsStencilOnly(format) || vkuFormatIsDepthAndStencil(format)); }
+static inline bool vkuFormatHasStencil(VkFormat format) { return (vkuFormatIsStencilOnly(format) || vkuFormatIsDepthAndStencil(format)); }
 
 // Returns the size of the depth component in bits if it has one. Otherwise it returns 0
-inline uint32_t vkuFormatDepthSize(VkFormat format);
+static inline uint32_t vkuFormatDepthSize(VkFormat format);
 
 // Returns the size of the stencil component in bits if it has one. Otherwise it returns 0
-inline uint32_t vkuFormatStencilSize(VkFormat format);
+static inline uint32_t vkuFormatStencilSize(VkFormat format);
 
 // Returns the numerical type of the depth component if it has one.  Otherwise it returns VKU_FORMAT_NUMERICAL_TYPE_NONE
-inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatDepthNumericalType(VkFormat format);
+static inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatDepthNumericalType(VkFormat format);
 
 // Returns the numerical type of the stencil component if it has one.  Otherwise it returns VKU_FORMAT_NUMERICAL_TYPE_NONE
-inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatStencilNumericalType(VkFormat format);
+static inline enum VKU_FORMAT_NUMERICAL_TYPE vkuFormatStencilNumericalType(VkFormat format);
 
 // Returns whether a VkFormat is packed
-inline bool vkuFormatIsPacked(VkFormat format);
+static inline bool vkuFormatIsPacked(VkFormat format);
 
 // Returns whether a VkFormat is YCbCr
 // This corresponds to formats with _444, _422, or _420 in their name
-inline bool vkuFormatRequiresYcbcrConversion(VkFormat format);
+static inline bool vkuFormatRequiresYcbcrConversion(VkFormat format);
 
 // Returns whether a VkFormat is XChromaSubsampled
 // This corresponds to formats with _422 or 420 in their name
-inline bool vkuFormatIsXChromaSubsampled(VkFormat format);
+static inline bool vkuFormatIsXChromaSubsampled(VkFormat format);
 
 // Returns whether a VkFormat is YChromaSubsampled
 // This corresponds to formats with _420 in their name
-inline bool vkuFormatIsYChromaSubsampled(VkFormat format);
+static inline bool vkuFormatIsYChromaSubsampled(VkFormat format);
 
 // Returns whether a VkFormat is Multiplane
 // Single-plane "_422" formats are treated as 2x1 compressed (for copies)
-inline bool vkuFormatIsSinglePlane_422(VkFormat format);
+static inline bool vkuFormatIsSinglePlane_422(VkFormat format);
 
 // Returns number of planes in format (which is 1 by default)
-inline uint32_t vkuFormatPlaneCount(VkFormat format);
+static inline uint32_t vkuFormatPlaneCount(VkFormat format);
 
 // Returns whether a VkFormat is multiplane
 // Note - Formats like VK_FORMAT_G8B8G8R8_422_UNORM are NOT multi-planar, they require a
 //        VkSamplerYcbcrConversion and you should use vkuFormatRequiresYcbcrConversion instead
-inline bool vkuFormatIsMultiplane(VkFormat format) { return ((vkuFormatPlaneCount(format)) > 1u); }
+static inline bool vkuFormatIsMultiplane(VkFormat format) { return ((vkuFormatPlaneCount(format)) > 1u); }
 
 // Returns a VkFormat that is compatible with a given plane of a multiplane format
 // Will return VK_FORMAT_UNDEFINED if given a plane aspect that doesn't exist for the format
-inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
+static inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
 
 // Returns the extent divisors of a multiplane format given a plane
 // Will return {1, 1} if given a plane aspect that doesn't exist for the VkFormat
-inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
+static inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect);
 
 // From table in spec vkspec.html#formats-compatible-zs-color
 // Introduced in VK_KHR_maintenance8 to allow copying between color and depth/stencil formats
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask);
+static inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask);
 
 // Returns the count of components in a VkFormat
-inline uint32_t vkuFormatComponentCount(VkFormat format);
+static inline uint32_t vkuFormatComponentCount(VkFormat format);
 
 // Returns the texel block extent of a VkFormat
-inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format);
+static inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format);
 
 // Returns the Compatibility Class of a VkFormat as defined by the spec
-inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format);
+static inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format);
 
 // Returns the number of texels inside a texel block
 // Will always be 1 when not using compressed block formats
-inline uint32_t vkuFormatTexelsPerBlock(VkFormat format);
+static inline uint32_t vkuFormatTexelsPerBlock(VkFormat format);
 
 // Returns the number of bytes in a single Texel Block.
 // When dealing with a depth/stencil format, need to consider using vkuFormatStencilSize or vkuFormatDepthSize.
 // When dealing with mulit-planar formats, need to consider using vkuGetPlaneIndex.
-inline uint32_t vkuFormatTexelBlockSize(VkFormat format);
+static inline uint32_t vkuFormatTexelBlockSize(VkFormat format);
 
 ''')
         for bits in ['8', '16', '32', '64']:
             out.append(f'// Returns whether a VkFormat contains only {bits}-bit sized components\n')
-            out.append(f'inline bool vkuFormatIs{bits}bit(VkFormat format);\n\n')
+            out.append(f'static inline bool vkuFormatIs{bits}bit(VkFormat format);\n\n')
 
         out.append('''// Returns whether a VkFormat has a component of a given size
-inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size);
+static inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size);
 
 // Returns whether a VkFormat has a Red color component
-inline bool vkuFormatHasRed(VkFormat format);
+static inline bool vkuFormatHasRed(VkFormat format);
 
 // Returns whether a VkFormat has a Green color component
-inline bool vkuFormatHasGreen(VkFormat format);
+static inline bool vkuFormatHasGreen(VkFormat format);
 
 // Returns whether a VkFormat has a Blue color component
-inline bool vkuFormatHasBlue(VkFormat format);
+static inline bool vkuFormatHasBlue(VkFormat format);
 
 // Returns whether a VkFormat has a Alpha color component
-inline bool vkuFormatHasAlpha(VkFormat format);
+static inline bool vkuFormatHasAlpha(VkFormat format);
 
 // Returns whether a VkFormat is equal to VK_FORMAT_UNDEFINED
-inline bool vkuFormatIsUndefined(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
+static inline bool vkuFormatIsUndefined(VkFormat format) { return (format == VK_FORMAT_UNDEFINED); }
 
 // Returns whether a VkFormat is a "blocked image" as defined in the spec (vkspec.html#blocked-image)
-inline bool vkuFormatIsBlockedImage(VkFormat format) {
+static inline bool vkuFormatIsBlockedImage(VkFormat format) {
     return (vkuFormatIsCompressed(format) || vkuFormatIsSinglePlane_422(format));
 }
 
 // Returns whether a VkFormat is a "color format'. Because there is no official specification definition of
 // "color format", it is defined here as anything that isn't a depth/stencil format, multiplane format, or the undefined format.
-inline bool vkuFormatIsColor(VkFormat format) {
+static inline bool vkuFormatIsColor(VkFormat format) {
     return !(vkuFormatIsUndefined(format) || vkuFormatIsDepthOrStencil(format) || vkuFormatIsMultiplane(format));
 }
 
@@ -341,7 +341,7 @@ struct VKU_FORMAT_INFO {
             format_groups.append(FormatGroup(formats_in_order[start_value].name, formats_in_order[end_value].name, index))
             index += (end_value - start_value) + 1
 
-        out.append('inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {\n')
+        out.append('static inline struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {\n')
         for group in format_groups:
             out.append(f'    {"else " if group.array_index != 0 else ""}if ({group.begin_format} <= format && format <= {group.end_format} )')
             out.append(f' {{ return vku_formats[format - {group.begin_format} + {group.array_index}]; }}\n')
@@ -364,7 +364,7 @@ struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY {
 
 ''')
         out.append('// Source: Vulkan spec Table 47. Plane Format Compatibility Table\n')
-        out.append('inline const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY vkuGetFormatCompatibility(VkFormat format) {\n')
+        out.append('static inline struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY vkuGetFormatCompatibility(VkFormat format) {\n')
         out.append('    switch (format) {\n')
         for format in [x for x in self.vk.formats.values() if x.planes]:
             out.extend(f'        case {format.name}: {{\n')
@@ -397,8 +397,8 @@ struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY {
             out.append(self.commonBoolSwitch)
 
         out.append('''
-inline bool vkuFormatIsSampledInt(VkFormat format) { return (vkuFormatIsSINT(format) || vkuFormatIsUINT(format)); }
-inline bool vkuFormatIsSampledFloat(VkFormat format) {
+static inline bool vkuFormatIsSampledInt(VkFormat format) { return (vkuFormatIsSINT(format) || vkuFormatIsUINT(format)); }
+static inline bool vkuFormatIsSampledFloat(VkFormat format) {
     return (vkuFormatIsUNORM(format) || vkuFormatIsSNORM(format) ||
             vkuFormatIsUSCALED(format) || vkuFormatIsSSCALED(format) ||
             vkuFormatIsUFLOAT(format) || vkuFormatIsSFLOAT(format) ||
@@ -565,7 +565,7 @@ inline bool vkuFormatIsSampledFloat(VkFormat format) {
         out.append('}\n')
         out.append('''
 // Will return VK_FORMAT_UNDEFINED if given a plane aspect that doesn't exist for the format
-inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
+static inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
     const uint32_t plane_idx = vkuGetPlaneIndex(plane_aspect);
     const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY multiplane_compatibility = vkuGetFormatCompatibility(mp_fmt);
     if ((multiplane_compatibility.per_plane[0].compatible_format == VK_FORMAT_UNDEFINED) || (plane_idx >= VKU_FORMAT_MAX_PLANES)) {
@@ -575,7 +575,7 @@ inline VkFormat vkuFindMultiplaneCompatibleFormat(VkFormat mp_fmt, VkImageAspect
     return multiplane_compatibility.per_plane[plane_idx].compatible_format;
 }
 
-inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
+static inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspectFlagBits plane_aspect) {
     VkExtent2D divisors = {1, 1};
     const uint32_t plane_idx = vkuGetPlaneIndex(plane_aspect);
     const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY multiplane_compatibility = vkuGetFormatCompatibility(mp_fmt);
@@ -590,7 +590,7 @@ inline VkExtent2D vkuFindMultiplaneExtentDivisors(VkFormat mp_fmt, VkImageAspect
 
 // TODO - This should be generated, but will need updating the spec XML and table
 // Some few case don't have an aspect mask, so might need to check both the Depth and Stencil possiblity
-inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask) {
+static inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format, VkFormat ds_format, VkImageAspectFlags aspect_mask) {
     bool valid = false;
 
     if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
@@ -615,26 +615,26 @@ inline bool vkuFormatIsDepthStencilWithColorSizeCompatible(VkFormat color_format
     return valid;
 }
 
-inline uint32_t vkuFormatComponentCount(VkFormat format) { return vkuGetFormatInfo(format).component_count; }
+static inline uint32_t vkuFormatComponentCount(VkFormat format) { return vkuGetFormatInfo(format).component_count; }
 
-inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format) { return vkuGetFormatInfo(format).block_extent; }
+static inline VkExtent3D vkuFormatTexelBlockExtent(VkFormat format) { return vkuGetFormatInfo(format).block_extent; }
 
-inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format) { return vkuGetFormatInfo(format).compatibility; }
+static inline enum VKU_FORMAT_COMPATIBILITY_CLASS vkuFormatCompatibilityClass(VkFormat format) { return vkuGetFormatInfo(format).compatibility; }
 
-inline uint32_t vkuFormatTexelsPerBlock(VkFormat format) { return vkuGetFormatInfo(format).texels_per_block; }
+static inline uint32_t vkuFormatTexelsPerBlock(VkFormat format) { return vkuGetFormatInfo(format).texels_per_block; }
 
-inline uint32_t vkuFormatTexelBlockSize(VkFormat format) { return vkuGetFormatInfo(format).texel_block_size; }
+static inline uint32_t vkuFormatTexelBlockSize(VkFormat format) { return vkuGetFormatInfo(format).texel_block_size; }
 
 ''')
         # Could loop the components, but faster to just list these
         for bits in ['8', '16', '32', '64']:
-            out.append(f'inline bool vkuFormatIs{bits}bit(VkFormat format) {{\n')
+            out.append(f'static inline bool vkuFormatIs{bits}bit(VkFormat format) {{\n')
             out.append('    switch (format) {\n')
             out.extend([f'        case {f.name}:\n' for f in self.vk.formats.values() if formatHasEqualBitsize(f, bits)])
             out.append(self.commonBoolSwitch)
 
         out.append('''
-inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
+static inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
     const struct VKU_FORMAT_INFO format_info = vkuGetFormatInfo(format);
     bool equal_component_size = false;
     for (size_t i = 0; i < VKU_FORMAT_MAX_COMPONENTS; i++) {
@@ -643,7 +643,7 @@ inline bool vkuFormatHasComponentSize(VkFormat format, uint32_t size) {
     return equal_component_size;
 }
 
-inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT_TYPE component) {
+static inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT_TYPE component) {
     const struct VKU_FORMAT_INFO format_info = vkuGetFormatInfo(format);
     bool equal_component_type = false;
     for (size_t i = 0; i < VKU_FORMAT_MAX_COMPONENTS; i++) {
@@ -652,15 +652,15 @@ inline bool vkuFormatHasComponentType(VkFormat format, enum VKU_FORMAT_COMPONENT
     return equal_component_type;
 }
 
-inline bool vkuFormatHasRed(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_R); }
+static inline bool vkuFormatHasRed(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_R); }
 
-inline bool vkuFormatHasGreen(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_G); }
+static inline bool vkuFormatHasGreen(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_G); }
 
-inline bool vkuFormatHasBlue(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_B); }
+static inline bool vkuFormatHasBlue(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_B); }
 
-inline bool vkuFormatHasAlpha(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_A); }
+static inline bool vkuFormatHasAlpha(VkFormat format) { return vkuFormatHasComponentType(format, VKU_FORMAT_COMPONENT_TYPE_A); }
 
-inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect) {
+static inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect) {
     switch (aspect) {
         case VK_IMAGE_ASPECT_PLANE_0_BIT:
             return 0;

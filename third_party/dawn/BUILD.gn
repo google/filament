@@ -36,92 +36,139 @@ if (!is_clang && is_win) {
   assert(!use_custom_libcxx, "MSVC build requires use_custom_libcxx=false")
 }
 
-group("benchmarks") {
-  testonly = true
-  deps = [ "src/tint:benchmarks" ]
-}
-
-group("fuzzers") {
-  testonly = true
-  deps = [
-    "src/dawn/fuzzers",
-    "src/tint:fuzzers",
-  ]
-}
-
-group("libs") {
-  deps = [
-    "src/dawn/native:webgpu_dawn",
-    "src/tint:libs",
-  ]
-  if (dawn_build_node_bindings) {
-    assert(
-        !defined(use_libfuzzer) || !use_libfuzzer,
-        "Building dawn node bindings with use_libfuzzer currently not supported")
-    deps += [ "src/dawn/node:dawn_node" ]
+if (dawn_standalone) {
+  group("benchmarks") {
+    testonly = true
+    deps = [ "src/tint:benchmarks" ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [
-    "src/dawn/tests",
-    "src/tint:tests",
-  ]
-}
-
-group("cmds") {
-  deps = [ "src/tint:cmds" ]
-  if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
-      (target_cpu == "arm64" && is_win)) {
-    deps += [ "third_party/gn/dxc:dxc" ]
+  group("fuzzers") {
+    testonly = true
+    deps = [
+      "src/dawn/fuzzers",
+      "src/tint:fuzzers",
+    ]
   }
-}
 
-group("samples") {
-  deps = [ "src/dawn/samples" ]
+  group("libs") {
+    deps = [
+      "src/dawn/native:webgpu_dawn",
+      "src/tint:libs",
+    ]
+    if (dawn_build_node_bindings) {
+      assert(
+          !defined(use_libfuzzer) || !use_libfuzzer,
+          "Building dawn node bindings with use_libfuzzer currently not supported")
+      deps += [ "src/dawn/node:dawn_node" ]
+    }
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [
+      "src/dawn/tests",
+      "src/tint:tests",
+    ]
+    if (dawn_wasm) {
+      deps += [ ":emdawnwebgpu_tests" ]
+    }
+    if (dawn_build_node_bindings) {
+      deps += [ "scripts/dawn_node_cts" ]
+    }
+  }
+
+  group("cmds") {
+    deps = [ "src/tint:cmds" ]
+    if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
+        (target_cpu == "arm64" && is_win)) {
+      deps += [ "${dawn_dxc_gn_dir}:dxc" ]
+    }
+  }
+
+  group("samples") {
+    deps = [ "src/dawn/samples" ]
+    if (dawn_wasm) {
+      deps += [ ":emdawnwebgpu_samples" ]
+    }
+    if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
+        (target_cpu == "arm64" && is_win)) {
+      deps += [ "${dawn_dxc_gn_dir}:dxc" ]
+    }
+  }
+
+  group("android") {
+    deps = [ "tools/android" ]
+  }
+
   if (dawn_wasm) {
-    deps += [ "src/dawn/samples(//build/toolchain/wasm:wasm)" ]
+    # These targets are only valid when the Wasm toolchain is available.
+
+    group("emdawnwebgpu") {
+      deps = [ "src/emdawnwebgpu(//build/toolchain/wasm:wasm)" ]
+    }
+
+    group("emdawnwebgpu_samples") {
+      deps = [ "src/dawn/samples(//build/toolchain/wasm:wasm)" ]
+    }
+
+    group("emdawnwebgpu_tests") {
+      testonly = true
+      deps = [ "src/emdawnwebgpu:tests(//build/toolchain/wasm:wasm)" ]
+    }
   }
-  if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
-      (target_cpu == "arm64" && is_win)) {
-    deps += [ "third_party/gn/dxc:dxc" ]
+
+  group("emdawnwebgpu_all") {
+    testonly = true
+    deps = []
+    if (dawn_wasm) {
+      deps += [
+        ":emdawnwebgpu",
+        ":emdawnwebgpu_samples",
+        ":emdawnwebgpu_tests",
+      ]
+    }
+  }
+
+  group("all") {
+    testonly = true
+    deps = [
+      ":android",
+      ":benchmarks",
+      ":cmds",
+      ":emdawnwebgpu_all",
+      ":fuzzers",
+      ":libs",
+      ":samples",
+      ":tests",
+    ]
+  }
+
+  # This target is built when no specific target is specified on the command line.
+  group("default") {
+    testonly = true
+    deps = [ ":all" ]
   }
 }
 
-group("android") {
-  deps = [ "tools/android" ]
-}
+config("abseil_config") {
+  if (is_clang) {
+    cflags = [
+      # Allow the use of enable_if()
+      "-Wno-gcc-compat",
+      "-Wno-unreachable-code-break",
 
-group("emdawnwebgpu") {
-  # Without a copy of Emscripten, we can only generate a few files.
-  deps = [
-    "src/emdawnwebgpu:emdawnwebgpu_headers_gen",
-    "src/emdawnwebgpu:emdawnwebgpu_js_gen",
-  ]
-  if (is_wasm) {
-    deps += [ "src/emdawnwebgpu:emdawnwebgpu" ]
+      # Allows use of _Nullable, _Nonnull & _Null_unspecified
+      "-Wno-nullability-extension",
+
+      # vlog has some shadowing, which Windows Clang doesn't like
+      "-Wno-shadow",
+    ]
   }
 }
 
-group("all") {
-  testonly = true
-  deps = [
-    ":android",
-    ":benchmarks",
-    ":cmds",
-    ":emdawnwebgpu",
-    ":fuzzers",
-    ":libs",
-    ":samples",
-    ":tests",
-  ]
-}
-
-# This target is built when no specific target is specified on the command line.
-group("default") {
-  testonly = true
-  deps = [ ":all" ]
+group("abseil") {
+  public_deps = [ "${dawn_abseil_dir}:absl" ]
+  public_configs = [ ":abseil_config" ]
 }
 
 # GN evaluates each .gn file once per toolchain, so restricting to default

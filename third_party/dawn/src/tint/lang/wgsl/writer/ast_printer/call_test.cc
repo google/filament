@@ -25,11 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/ast/call_statement.h"
 #include "src/tint/lang/wgsl/writer/ast_printer/helper_test.h"
 #include "src/tint/utils/text/string_stream.h"
-
-#include "gmock/gmock.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 

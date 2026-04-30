@@ -514,28 +514,30 @@ OpFunctionEnd
 %14 = OpFAdd %half %55 %56
 %16 = OpCompositeConstruct %v2half %13 %14
 %58 = OpFConvert %float %14
-%18 = OpImageSampleDrefImplicitLod %float %46 %16 %58
+%59 = OpFConvert %v2float %16
+%18 = OpImageSampleDrefImplicitLod %float %46 %59 %58
 %48 = OpLoad %27 %g_tTex1df4
 %49 = OpLoad %29 %g_sSamp
 %50 = OpSampledImage %31 %48 %49
-%59 = OpFConvert %half %12
-%60 = OpFConvert %half %float_0_200000003
-%15 = OpFMul %half %59 %60
+%60 = OpFConvert %half %12
+%61 = OpFConvert %half %float_0_200000003
+%15 = OpFMul %half %60 %61
 %51 = OpAccessChain %_ptr_Uniform_float %_ %int_1
 %17 = OpLoad %float %51
-%61 = OpFConvert %half %17
-%62 = OpFConvert %half %float_0_200000003
-%19 = OpFAdd %half %61 %62
+%62 = OpFConvert %half %17
+%63 = OpFConvert %half %float_0_200000003
+%19 = OpFAdd %half %62 %63
 %20 = OpCompositeConstruct %v2half %15 %19
-%63 = OpFConvert %float %19
-%21 = OpImageSampleDrefImplicitLod %float %50 %20 %63
-%64 = OpFConvert %half %18
-%65 = OpFConvert %half %21
-%22 = OpFAdd %half %64 %65
-%66 = OpFConvert %half %float_0_5
-%23 = OpFMul %half %22 %66
-%67 = OpFConvert %float %23
-OpStore %_entryPointOutput_Color %67
+%64 = OpFConvert %float %19
+%65 = OpFConvert %v2float %20
+%21 = OpImageSampleDrefImplicitLod %float %50 %65 %64
+%66 = OpFConvert %half %18
+%67 = OpFConvert %half %21
+%22 = OpFAdd %half %66 %67
+%68 = OpFConvert %half %float_0_5
+%23 = OpFMul %half %22 %68
+%69 = OpFConvert %float %23
+OpStore %_entryPointOutput_Color %69
 OpReturn
 OpFunctionEnd
 )";
@@ -1616,6 +1618,7 @@ OpFunctionEnd
 TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
   // Ensure that a non-relaxed texture coordinate does not get relaxed nor
   // converted to half precision if the image instruction is marked relaxed.
+  // Update - coordinates are not allowed to be 16-bit regardless
 
   // Also ensure that a relaxed local variable does get converted to half
   // precision before being passed to an image opeartor.
@@ -1639,7 +1642,7 @@ TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
                OpCapability Float16
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %4 "main" %13 %25
+               OpEntryPoint Fragment %4 "main" %13 %26
                OpExecutionMode %4 OriginUpperLeft
                OpSource ESSL 310
                OpDecorate %9 RelaxedPrecision
@@ -1648,8 +1651,8 @@ TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
                OpDecorate %17 DescriptorSet 3
                OpDecorate %17 Binding 0
                OpDecorate %18 RelaxedPrecision
-               OpDecorate %23 RelaxedPrecision
-               OpDecorate %25 Location 10
+               OpDecorate %24 RelaxedPrecision
+               OpDecorate %26 Location 10
           %2 = OpTypeVoid
           %3 = OpTypeFunction %2
           %6 = OpTypeFloat 32
@@ -1669,13 +1672,13 @@ TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
          %17 = OpVariable %16 UniformConstant
          %19 = OpTypeVector %6 2
 ;CHECK: [[vec2_t:%\w+]] = OpTypeVector [[float32_t]] 2
-         %24 = OpTypePointer Input %7
+         %25 = OpTypePointer Input %7
 ;CHECK: [[input_ptr_t:%\w+]] = OpTypePointer Input [[vec4_t]]
-         %25 = OpVariable %24 Input
-         %29 = OpTypeFloat 16
+         %26 = OpVariable %25 Input
+         %30 = OpTypeFloat 16
 ;CHECK: [[float16_t:%\w+]] = OpTypeFloat 16
-         %30 = OpTypeVector %29 4
-         %33 = OpTypeVector %29 2
+         %31 = OpTypeVector %30 4
+         %34 = OpTypeVector %30 2
 ;CHECK: [[vec2_16b_t:%\w+]] = OpTypeVector [[float16_t]] 2
           %4 = OpFunction %2 None %3
           %5 = OpLabel
@@ -1686,26 +1689,27 @@ TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
                OpStore %9 %11
          %18 = OpLoad %15 %17
          %20 = OpLoad %7 %9
-         %31 = OpFConvert %30 %20
-         %32 = OpFConvert %30 %20
+         %32 = OpFConvert %31 %20
+         %33 = OpFConvert %31 %20
 
-; The first sample op should get a 16b coordinate
-         %21 = OpVectorShuffle %33 %31 %32 0 1
+; The first sample op should get a 32b coordinate, even if relaxed
+         %21 = OpVectorShuffle %34 %32 %33 0 1
 ;CHECK: [[uv_16b:%\w+]] = OpVectorShuffle [[vec2_16b_t]]
-         %22 = OpImageSampleImplicitLod %7 %18 %21
-;CHECK: OpImageSampleImplicitLod [[vec4_t]] {{%\w+}} [[uv_16b]]
+         %22 = OpFConvert %19 %21
+         %23 = OpImageSampleImplicitLod %7 %18 %22
+;CHECK: OpImageSampleImplicitLod [[vec4_t]] {{%\w+}} {{%\w+}}
 
-               OpStore %13 %22
-         %23 = OpLoad %15 %17
-         %26 = OpLoad %7 %25
+               OpStore %13 %23
+         %24 = OpLoad %15 %17
+         %27 = OpLoad %7 %26
 
 ; The second sample op should get a 32b coordinate
-         %27 = OpVectorShuffle %19 %26 %26 0 1
+         %28 = OpVectorShuffle %19 %27 %27 0 1
 ;CHECK: [[uv_32b:%\w+]] = OpVectorShuffle [[vec2_t]]
-         %28 = OpImageSampleImplicitLod %7 %23 %27
+         %29 = OpImageSampleImplicitLod %7 %24 %28
 ;CHECK: OpImageSampleImplicitLod [[vec4_t]] {{%\w+}} [[uv_32b]]
 
-               OpStore %13 %28
+               OpStore %13 %29
                OpReturn
                OpFunctionEnd
   )";

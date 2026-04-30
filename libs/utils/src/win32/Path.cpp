@@ -64,6 +64,14 @@ std::vector<Path> Path::listContents() const {
 
     WIN32_FIND_DATA findData;
     HANDLE find = FindFirstFile(dirName, &findData);
+    if (find == INVALID_HANDLE_VALUE) {
+        return {};
+    }
+
+    struct FindCloser {
+        HANDLE h;
+        ~FindCloser() { FindClose(h); }
+    } closer{find};
 
     std::vector<Path> directory_contents;
     do

@@ -2008,6 +2008,111 @@ OpFunctionEnd
   SinglePassRunAndCheck<CanonicalizeIdsPass>(before, after, false, false);
 }
 
+TEST_F(CanonicalizeIdsTest, NonSemanticDebugInfo) {
+  std::string before = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %2 "main"
+OpExecutionMode %2 LocalSize 1 1 1
+%4 = OpString ""
+OpDecorate %6 ArrayStride 4
+OpDecorate %7 Block
+OpMemberDecorate %7 0 Offset 0
+OpDecorate %3 Binding 0
+OpDecorate %3 DescriptorSet 0
+%8 = OpTypeVoid
+%9 = OpTypeInt 32 0
+%10 = OpConstant %9 100
+%11 = OpTypeFunction %8
+%12 = OpTypeInt 32 1
+%13 = OpConstant %12 0
+%14 = OpTypeFloat 32
+%5 = OpTypePointer StorageBuffer %14
+%6 = OpTypeRuntimeArray %14
+%7 = OpTypeStruct %6
+%15 = OpTypePointer StorageBuffer %7
+%16 = OpConstant %14 0
+%3 = OpVariable %15 StorageBuffer
+%17 = OpExtInst %8 %1 DebugInfoNone
+%18 = OpExtInst %8 %1 DebugSource %4 %4
+%19 = OpExtInst %8 %1 DebugCompilationUnit %10 %10 %18 %10
+%20 = OpExtInst %8 %1 DebugTypeFunction %10 %8
+%21 = OpExtInst %8 %1 DebugFunction %4 %20 %18 %10 %10 %19 %4 %10 %10
+%22 = OpExtInst %8 %1 DebugEntryPoint %21 %19 %4 %4
+%23 = OpExtInst %8 %1 DebugTypeBasic %4 %10 %10 %10
+%24 = OpExtInst %8 %1 DebugTypeArray %23 %10
+%25 = OpExtInst %8 %1 DebugTypeMember %4 %24 %18 %10 %10 %10 %10 %10
+%26 = OpExtInst %8 %1 DebugTypeComposite %4 %10 %18 %10 %10 %19 %4 %10 %10 %25
+%27 = OpExtInst %8 %1 DebugGlobalVariable %4 %26 %18 %10 %10 %19 %4 %3 %10
+%2 = OpFunction %8 None %11
+%28 = OpLabel
+%29 = OpExtInst %8 %1 DebugFunctionDefinition %21 %2
+%30 = OpExtInst %8 %1 DebugScope %21
+%31 = OpExtInst %8 %1 DebugLine %18 %10 %10 %10 %10
+%32 = OpAccessChain %5 %3 %13 %13
+OpStore %32 %16
+OpReturn
+%33 = OpExtInst %8 %1 DebugNoScope
+OpFunctionEnd
+)";
+
+  std::string after = R"(OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %10742 "main"
+OpExecutionMode %10742 LocalSize 1 1 1
+%3 = OpString ""
+OpDecorate %2002 ArrayStride 4
+OpDecorate %1952 Block
+OpMemberDecorate %1952 0 Offset 0
+OpDecorate %2 Binding 0
+OpDecorate %2 DescriptorSet 0
+%8 = OpTypeVoid
+%11 = OpTypeInt 32 0
+%2870 = OpConstant %11 100
+%1282 = OpTypeFunction %8
+%12 = OpTypeInt 32 1
+%2571 = OpConstant %12 0
+%13 = OpTypeFloat 32
+%650 = OpTypePointer StorageBuffer %13
+%2002 = OpTypeRuntimeArray %13
+%1952 = OpTypeStruct %2002
+%2589 = OpTypePointer StorageBuffer %1952
+%2572 = OpConstant %13 0
+%2 = OpVariable %2589 StorageBuffer
+%4 = OpExtInst %8 %1 DebugInfoNone
+%5 = OpExtInst %8 %1 DebugSource %3 %3
+%6 = OpExtInst %8 %1 DebugCompilationUnit %2870 %2870 %5 %2870
+%7 = OpExtInst %8 %1 DebugTypeFunction %2870 %8
+%9 = OpExtInst %8 %1 DebugFunction %3 %7 %5 %2870 %2870 %6 %3 %2870 %2870
+%10 = OpExtInst %8 %1 DebugEntryPoint %9 %6 %3 %3
+%14 = OpExtInst %8 %1 DebugTypeBasic %3 %2870 %2870 %2870
+%15 = OpExtInst %8 %1 DebugTypeArray %14 %2870
+%16 = OpExtInst %8 %1 DebugTypeMember %3 %15 %5 %2870 %2870 %2870 %2870 %2870
+%17 = OpExtInst %8 %1 DebugTypeComposite %3 %2870 %5 %2870 %2870 %6 %3 %2870 %2870 %16
+%18 = OpExtInst %8 %1 DebugGlobalVariable %3 %17 %5 %2870 %2870 %6 %3 %2 %2870
+%10742 = OpFunction %8 None %1282
+%9442 = OpLabel
+%15450 = OpExtInst %8 %1 DebugFunctionDefinition %9 %10742
+%20275 = OpExtInst %8 %1 DebugScope %9
+%19 = OpExtInst %8 %1 DebugLine %5 %2870 %2870 %2870 %2870
+%20274 = OpAccessChain %650 %2 %2571 %2571
+OpStore %20274 %2572
+OpReturn
+%20276 = OpExtInst %8 %1 DebugNoScope
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  SinglePassRunAndCheck<CanonicalizeIdsPass>(before, after, false, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

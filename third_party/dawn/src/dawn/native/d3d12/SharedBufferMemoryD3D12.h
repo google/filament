@@ -28,9 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_SHARED_BUFFER_MEMORY_D3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_SHARED_BUFFER_MEMORY_D3D12_H_
 
+#include <memory>
+
 #include "dawn/native/D3D12Backend.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/SharedBufferMemory.h"
+#include "dawn/native/d3d12/HeapD3D12.h"
 #include "dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
@@ -43,6 +46,11 @@ class SharedBufferMemory final : public SharedBufferMemoryBase {
         StringView label,
         const SharedBufferMemoryD3D12ResourceDescriptor* descriptor);
 
+    static ResultOrError<Ref<SharedBufferMemory>> Create(
+        Device* device,
+        StringView label,
+        const SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor* descriptor);
+
     ID3D12Resource* GetD3DResource() const;
 
   private:
@@ -50,8 +58,13 @@ class SharedBufferMemory final : public SharedBufferMemoryBase {
                        StringView label,
                        SharedBufferMemoryProperties properties,
                        ComPtr<ID3D12Resource> resource);
+    SharedBufferMemory(Device* device,
+                       StringView label,
+                       SharedBufferMemoryProperties properties,
+                       std::unique_ptr<Heap> heap,
+                       ComPtr<ID3D12Resource> resource);
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     ResultOrError<Ref<BufferBase>> CreateBufferImpl(
         const UnpackedPtr<BufferDescriptor>& descriptor) override;
@@ -61,6 +74,7 @@ class SharedBufferMemory final : public SharedBufferMemoryBase {
                                                      ExecutionSerial lastUsageSerial,
                                                      UnpackedPtr<EndAccessState>& state) override;
 
+    std::unique_ptr<Heap> mHeap;
     ComPtr<ID3D12Resource> mResource;
 };
 

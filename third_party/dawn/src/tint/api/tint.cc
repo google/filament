@@ -60,10 +60,19 @@
 #endif
 
 #if TINT_BUILD_WGSL_WRITER
+#include "src/tint/lang/wgsl/program/program.h"
 #include "src/tint/lang/wgsl/writer/writer.h"  // nogncheck
 #endif
 
+#if TINT_BUILD_NULL_WRITER
+#include "src/tint/lang/null/writer/writer.h"  // nogncheck
+#endif
+
 // IWYU pragma: end_keep
+
+#if TINT_BUILD_SPV_READER && TINT_BUILD_WGSL_WRITER
+#include "src/tint/lang/core/ir/module.h"
+#endif
 
 namespace tint {
 
@@ -87,25 +96,20 @@ void Shutdown() {
 }
 
 Result<std::string> SpirvToWgsl([[maybe_unused]] const std::vector<uint32_t>& spirv,
-                                [[maybe_unused]] const wgsl::writer::ProgramOptions& wgsl_options) {
+                                [[maybe_unused]] const wgsl::writer::Options& wgsl_options) {
 #if !TINT_BUILD_SPV_READER
     return Failure{"Tint SPIR-V reader is not enabled"};
 #elif !TINT_BUILD_WGSL_WRITER
     return Failure{"Tint WGSL writer is not enabled"};
 #else
     // Convert the SPIR-V program to an IR module.
-    auto ir_from_spirv = tint::spirv::reader::ReadIR(spirv);
-    if (ir_from_spirv != Success) {
-        return ir_from_spirv.Failure();
-    }
+    TINT_CHECK_RESULT_UNWRAP(ir_from_spirv, tint::spirv::reader::ReadIR(spirv));
 
     // Convert the IR module to WGSL.
-    auto wgsl_from_ir = tint::wgsl::writer::WgslFromIR(ir_from_spirv.Get(), wgsl_options);
-    if (wgsl_from_ir != Success) {
-        return wgsl_from_ir.Failure();
-    }
+    TINT_CHECK_RESULT_UNWRAP(wgsl_from_ir,
+                             tint::wgsl::writer::WgslFromIR(ir_from_spirv, wgsl_options));
 
-    return wgsl_from_ir->wgsl;
+    return wgsl_from_ir.wgsl;
 #endif  // TINT_BUILD_SPV_READER && TINT_BUILD_WGSL_WRITER
 }
 

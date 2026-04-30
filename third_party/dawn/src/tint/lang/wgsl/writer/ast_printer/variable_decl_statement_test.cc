@@ -26,9 +26,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
-#include "src/tint/lang/wgsl/writer/ast_printer/helper_test.h"
 
 #include "gmock/gmock.h"
+#include "src/tint/lang/wgsl/writer/ast_printer/helper_test.h"
 
 namespace tint::wgsl::writer {
 namespace {

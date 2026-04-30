@@ -36,7 +36,7 @@ namespace tint::core::ir {
 class InstructionResult : public Castable<InstructionResult, Value> {
   public:
     /// Constructor
-    InstructionResult() = default;
+    InstructionResult() : Base(nullptr) {}
 
     /// Constructor
     /// @param type the type of the value
@@ -51,13 +51,6 @@ class InstructionResult : public Castable<InstructionResult, Value> {
     /// @copydoc Value::Clone()
     InstructionResult* Clone(CloneContext& ctx) override;
 
-    /// Sets the type of the value to @p type
-    /// @param type the new type of the value
-    void SetType(const core::type::Type* type) { type_ = type; }
-
-    /// @returns the type of the value
-    const core::type::Type* Type() const override { return type_; }
-
     /// Sets the instruction for this value
     /// @param inst the instruction to set
     void SetInstruction(Instruction* inst) { instruction_ = inst; }
@@ -70,7 +63,6 @@ class InstructionResult : public Castable<InstructionResult, Value> {
 
   private:
     ir::Instruction* instruction_ = nullptr;
-    const core::type::Type* type_ = nullptr;
 };
 
 }  // namespace tint::core::ir

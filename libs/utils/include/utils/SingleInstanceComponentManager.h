@@ -21,9 +21,14 @@
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 #include <utils/EntityManager.h>
+#include <utils/Invocable.h>
+#include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
 #include <tsl/robin_map.h>
+
+#include <utility>
+#include <vector>
 
 #include <assert.h>
 #include <stddef.h>
@@ -32,6 +37,66 @@
 namespace utils {
 
 class EntityManager;
+
+/**
+ * Base class for SingleInstanceComponentManager to handle callbacks without template bloat.
+ */
+class UTILS_PUBLIC SingleInstanceComponentManagerBase {
+public:
+    using ChangeCallback = Invocable<void(Slice<const Entity>)>;
+
+    static constexpr bool USE_SORTED_DIRTY_ARRAY = false;
+
+    /**
+     * Registers a callback to be triggered when components are added, removed, or modified.
+     * @param token A unique identifier for the listener (e.g., 'this' pointer).
+     * @param callback The callback to invoke.
+     * @note Registering the same token multiple times will result in multiple
+     *       registrations and the callback being invoked multiple times.
+     */
+    void registerChangeCallback(void const* token, ChangeCallback callback) noexcept;
+
+    /**
+     * Unregisters a callback.
+     * @param token The token used during registration.
+     * @note If the token is not registered, this operation is a safe no-op.
+     *       If the token was registered multiple times, all instances will be removed.
+     */
+    void unregisterChangeCallback(void const* token) noexcept;
+
+    /**
+     * Flushes any pending notifications to listeners.
+     * This is called automatically when the internal buffer is full,
+     * but can also be called manually (e.g., at the end of a frame).
+     */
+    void flushNotifications() noexcept;
+
+    /**
+     * Records a change for the given entity.
+     * Flushes notifications if the internal buffer becomes full.
+     */
+    void notifyChange(Entity e) noexcept;
+
+protected:
+    SingleInstanceComponentManagerBase() noexcept = default;
+    ~SingleInstanceComponentManagerBase() noexcept = default;
+
+    SingleInstanceComponentManagerBase(const SingleInstanceComponentManagerBase&) = delete;
+    SingleInstanceComponentManagerBase& operator=(const SingleInstanceComponentManagerBase&) = delete;
+    SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&&) noexcept = default;
+    SingleInstanceComponentManagerBase& operator=(SingleInstanceComponentManagerBase&&) noexcept = default;
+
+private:
+    struct CallbackInfo {
+        void const* token;
+        ChangeCallback callback;
+    };
+
+    static constexpr size_t MAX_DIRTY_COUNT = 16;
+    Entity mDirtyEntities[MAX_DIRTY_COUNT];
+    size_t mDirtyCount = 0;
+    std::vector<CallbackInfo> mChangeCallbacks;
+};
 
 /*
  * Helper class to create single instance component managers.
@@ -45,14 +110,12 @@ class EntityManager;
  *
  */
 template <typename ... Elements>
-class UTILS_PUBLIC SingleInstanceComponentManager {
-private:
-
+class UTILS_PUBLIC SingleInstanceComponentManager : public SingleInstanceComponentManagerBase {
     // this is just to avoid using std::default_random_engine, since we're in a public header.
     class default_random_engine {
         uint32_t mState = 1u; // must be 0 < seed < 0x7fffffff
     public:
-        inline uint32_t operator()() noexcept {
+        uint32_t operator()() noexcept {
             return mState = uint32_t((uint64_t(mState) * 48271u) % 0x7fffffffu);
         }
     };
@@ -60,41 +123,36 @@ private:
 protected:
     static constexpr size_t ENTITY_INDEX = sizeof ... (Elements);
 
-
 public:
     using SoA = StructureOfArrays<Elements ..., Entity>;
-
     using Structure = typename SoA::Structure;
-
     using Instance = EntityInstanceBase::Type;
 
     SingleInstanceComponentManager() noexcept {
         // We always start with a dummy entry because index=0 is reserved. The component
         // at index = 0, is guaranteed to be default-initialized.
-        // Sub-classes can use this to their advantage.
+        // Subclasses can use this to their advantage.
         mData.push_back(Structure{});
     }
 
-    SingleInstanceComponentManager(SingleInstanceComponentManager&&) noexcept {/* = default */}
-    SingleInstanceComponentManager& operator=(SingleInstanceComponentManager&&) noexcept {/* = default */}
     ~SingleInstanceComponentManager() noexcept = default;
 
-    // not copyable
     SingleInstanceComponentManager(SingleInstanceComponentManager const& rhs) = delete;
     SingleInstanceComponentManager& operator=(SingleInstanceComponentManager const& rhs) = delete;
-
+    SingleInstanceComponentManager(SingleInstanceComponentManager&&) noexcept = default;
+    SingleInstanceComponentManager& operator=(SingleInstanceComponentManager&&) = default;
 
     // returns true if the given Entity has a component of this Manager
-    bool hasComponent(Entity e) const noexcept {
+    bool hasComponent(Entity const e) const noexcept {
         return getInstance(e) != 0;
     }
 
     // Get instance of this Entity to be used to retrieve components
     UTILS_NOINLINE
-    Instance getInstance(Entity e) const noexcept {
+    Instance getInstance(Entity const e) const noexcept {
         auto const& map = mInstanceMap;
         // find() generates quite a bit of code
-        auto pos = map.find(e);
+        auto const pos = map.find(e);
         return pos != map.end() ? pos->second : 0;
     }
 
@@ -112,18 +170,18 @@ public:
         return data<ENTITY_INDEX>() + 1;
     }
 
-    Entity getEntity(Instance i) const noexcept {
+    Entity getEntity(Instance const i) const noexcept {
         return elementAt<ENTITY_INDEX>(i);
     }
 
     // Add a component to the given Entity. If the entity already has a component from this
     // manager, this function is a no-op.
     // This invalidates all pointers components.
-    inline Instance addComponent(Entity e);
+    Instance addComponent(Entity e);
 
     // Removes a component from the given entity.
     // This invalidates all pointers components.
-    inline Instance removeComponent(Entity e);
+    Instance removeComponent(Entity e);
 
     // return the first instance
     Instance begin() const noexcept { return 1u; }
@@ -205,7 +263,7 @@ protected:
     }
 
     // swap only internals
-    void swap(Instance i, Instance j) noexcept {
+    void swap(Instance const i, Instance const j) noexcept {
         assert(i);
         assert(j);
         if (i && j) {
@@ -230,7 +288,7 @@ protected:
     }
 
     template<typename REMOVE>
-    void gc(const EntityManager& em, size_t ratio,
+    void gc(const EntityManager& em, size_t const ratio,
             REMOVE&& removeComponent) noexcept {
         Entity const* const pEntities = begin<ENTITY_INDEX>();
         size_t count = getComponentCount();
@@ -249,11 +307,10 @@ protected:
             }
             removeComponent(entity);
             aliveInARow = 0;
-            count--;
+            --count;
         }
     }
 
-protected:
     SoA mData;
 
 private:
@@ -274,6 +331,7 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
             // index 0 is used when the component doesn't exist
             ci = Instance(mData.size() - 1);
             mInstanceMap[e] = ci;
+            notifyChange(e);
         } else {
             // if the entity already has this component, just return its instance
             ci = mInstanceMap[e];
@@ -286,9 +344,9 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
 // Keep these outside of the class because CLion has trouble parsing them
 template <typename ... Elements>
 typename SingleInstanceComponentManager<Elements ...>::Instance
-SingleInstanceComponentManager<Elements ... >::removeComponent(Entity e) {
+SingleInstanceComponentManager<Elements ... >::removeComponent(Entity const e) {
     auto& map = mInstanceMap;
-    auto pos = map.find(e);
+    auto const pos = map.find(e);
     if (UTILS_LIKELY(pos != map.end())) {
         size_t index = pos->second;
         assert(index != 0);
@@ -300,11 +358,12 @@ SingleInstanceComponentManager<Elements ... >::removeComponent(Entity e) {
                 p[index] = std::move(p[last]);
             });
 
-            Entity lastEntity = mData.template elementAt<ENTITY_INDEX>(index);
+            Entity const lastEntity = mData.template elementAt<ENTITY_INDEX>(index);
             map[lastEntity] = index;
         }
         mData.pop_back();
         map.erase(pos);
+        notifyChange(e);
         return last;
     }
     return 0;

@@ -28,21 +28,34 @@ import org.json.JSONObject
 data class ValidationResult(
     val testName: String,
     val passed: Boolean,
-    val diffMetric: Float = 0f
+    val diffMetric: Float = 0f,
+    val goldenPath: String? = null
 )
 
-class ValidationResultManager(private val outputDir: File) {
+class ValidationResultManager(
+    private val outputDir: File,
+    private val deviceName: String,
+    private val deviceHardware: String,
+    private val deviceCodeName: String,
+    private val androidVersion: String,
+    private val androidBuildNumber: String
+) {
 
     companion object {
         private const val TAG = "ValidationResultManager"
     }
 
-    private val results = mutableListOf<ValidationResult>()
+    private val results = java.util.concurrent.CopyOnWriteArrayList<ValidationResult>()
+    private val gpuDriverInfos = JSONObject()
 
     init {
         if (!outputDir.exists()) {
             outputDir.mkdirs()
         }
+    }
+
+    fun addGpuDriverInfo(backend: String, info: String) {
+        gpuDriverInfos.put(backend, info)
     }
 
     fun addResult(result: ValidationResult) {
@@ -64,9 +77,9 @@ class ValidationResultManager(private val outputDir: File) {
         return outputDir
     }
 
-    fun finalizeResults(): File? {
+    fun finalizeResults(totalTimeMs: Long): File? {
         // Write results JSON
-        writeResultsJson()
+        writeResultsJson(totalTimeMs)
         return null
     }
 
@@ -76,18 +89,19 @@ class ValidationResultManager(private val outputDir: File) {
      * - input test bundle (as nested zip), if provided
      * - diff images (if any failure)
      */
-    fun exportTestResults(sourceZip: File?, timestamp: String): File? {
+    fun exportTestResults(sourceZip: File?, config: RenderTestConfig, timestamp: String): File? {
         // Safe parent dir resolution
         val parentDir = outputDir.canonicalFile.parentFile ?: outputDir.parentFile
         if (parentDir == null) return null
 
         val resultZipName = "results_$timestamp"
-        val zipFile = File(parentDir, "$resultZipName.zip")
+        val tempZipFile = File(parentDir, "$resultZipName.zip.tmp")
+        val finalZipFile = File(parentDir, "$resultZipName.zip")
 
-        Log.i(TAG, "Exporting results to ${zipFile.absolutePath}")
+        Log.i(TAG, "Exporting results to ${tempZipFile.absolutePath}")
 
         try {
-            ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
+            ZipOutputStream(FileOutputStream(tempZipFile)).use { zos ->
                 // 1. Add results.json
                 val resultsJson = File(outputDir, "results.json")
                 if (resultsJson.exists()) {
@@ -96,24 +110,28 @@ class ValidationResultManager(private val outputDir: File) {
                     zos.closeEntry()
                 }
 
-                // 2. Add source zip if exists
+                // 2. Add test bundle zip (fallback to sourceZip)
                 if (sourceZip != null && sourceZip.exists()) {
-                    zos.putNextEntry(ZipEntry(sourceZip.name))
+                    zos.putNextEntry(ZipEntry("bundle.zip"))
                     sourceZip.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
 
-                // 3. Add diff images (any file ending in _diff.png in outputDir)
-                outputDir.listFiles { _, name -> name.endsWith("_diff.png") }?.forEach { diffFile ->
-                    zos.putNextEntry(ZipEntry(diffFile.name))
-                    diffFile.inputStream().use { it.copyTo(zos) }
+                // 3. Add images (exclude diffs, frontend computes them)
+                outputDir.listFiles { _, name -> name.endsWith(".png") && !name.endsWith("_diff.png") }?.forEach { imgFile ->
+                    zos.putNextEntry(ZipEntry(imgFile.name))
+                    imgFile.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
             }
-            Log.i(TAG, "Exported results to ${zipFile.absolutePath}")
-            return zipFile
+
+            tempZipFile.renameTo(finalZipFile)
+
+            Log.i(TAG, "Exported results to ${finalZipFile.absolutePath}")
+            return finalZipFile
         } catch (e: Exception) {
             Log.e(TAG, "Failed to export results", e)
+            tempZipFile.delete()
             return null
         }
     }
@@ -132,7 +150,7 @@ class ValidationResultManager(private val outputDir: File) {
      *     goldens/
      *       test_result.png
      */
-    fun exportTestBundle(config: RenderTestConfig, timestamp: String): File? {
+    fun exportTestBundle(config: RenderTestConfig, timestamp: String, bundleNameOverride: String? = null): File? {
         Log.i(TAG, "Starting exportTestBundle for ${config.name} at $timestamp")
         Log.i(TAG, "OutputDir: ${outputDir.absolutePath}")
 
@@ -143,8 +161,7 @@ class ValidationResultManager(private val outputDir: File) {
         }
         Log.i(TAG, "Using parentDir for export: ${parentDir.absolutePath}")
 
-        val testNameWithTimestamp = "${config.name}_$timestamp"
-        val exportNameNoSpaces = testNameWithTimestamp.replace(" ", "_")
+        val exportNameNoSpaces = bundleNameOverride ?: config.name.lowercase(java.util.Locale.US).replace(" ", "_")
 
         val exportDir = File(parentDir, "export_temp_$timestamp")
 
@@ -192,7 +209,7 @@ class ValidationResultManager(private val outputDir: File) {
             // 3. Create modified config JSON
             Log.i(TAG, "Creating config.json...")
             val newConfigJson = JSONObject()
-            newConfigJson.put("name", testNameWithTimestamp) // Keep spaces in JSON name
+            newConfigJson.put("name", config.name) // Keep spaces in JSON name
 
             // Reconstruct backends
             val backendsArray = JSONArray()
@@ -228,7 +245,7 @@ class ValidationResultManager(private val outputDir: File) {
 
                 // Backends (optional override)
                  val testBackends = JSONArray()
-                 test.backends.forEach { testBackends.put(it) }
+                 testBackends.put(test.backend)
                  testJson.put("backends", testBackends)
 
                 testsArray.put(testJson)
@@ -239,10 +256,11 @@ class ValidationResultManager(private val outputDir: File) {
             File(rootDir, "config.json").writeText(newConfigJson.toString(4))
 
             // 4. Zip it
-            val zipFile = File(parentDir, "$exportNameNoSpaces.zip")
-            Log.i(TAG, "Zipping to ${zipFile.absolutePath}...")
+            val tempZipFile = File(parentDir, "$exportNameNoSpaces.zip.tmp")
+            val finalZipFile = File(parentDir, "$exportNameNoSpaces.zip")
+            Log.i(TAG, "Zipping to ${tempZipFile.absolutePath}...")
 
-            ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
+            ZipOutputStream(FileOutputStream(tempZipFile)).use { zos ->
                 rootDir.walkTopDown().forEach { file ->
                     if (file.isFile) {
                         val entryName = file.relativeTo(exportDir).path
@@ -253,20 +271,35 @@ class ValidationResultManager(private val outputDir: File) {
                 }
             }
 
+            tempZipFile.renameTo(finalZipFile)
+
             // Cleanup temp dir
             exportDir.deleteRecursively()
 
-            Log.i(TAG, "Exported test bundle to ${zipFile.absolutePath}")
-            return zipFile
+            Log.i(TAG, "Exported test bundle to ${finalZipFile.absolutePath}")
+            return finalZipFile
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to export test bundle", e)
             exportDir.deleteRecursively()
+            File(parentDir, "$exportNameNoSpaces.zip.tmp").delete()
             return null
         }
     }
 
-    private fun writeResultsJson() {
+    private fun writeResultsJson(totalTimeMs: Long) {
+        val rootObject = JSONObject()
+
+        val metadataObject = JSONObject()
+        metadataObject.put("gpu_driver_info", gpuDriverInfos)
+        metadataObject.put("total_time_ms", totalTimeMs)
+        metadataObject.put("device_name", deviceName ?: "")
+        metadataObject.put("device_hardware", deviceHardware ?: "")
+        metadataObject.put("device_code_name", deviceCodeName ?: "")
+        metadataObject.put("android_version", androidVersion ?: "")
+        metadataObject.put("android_build_number", androidBuildNumber ?: "")
+        rootObject.put("metadata", metadataObject)
+
         val jsonArray = JSONArray()
         for (result in results) {
             val jsonObject = JSONObject()
@@ -275,11 +308,12 @@ class ValidationResultManager(private val outputDir: File) {
             jsonObject.put("diff_metric", result.diffMetric)
             jsonArray.put(jsonObject)
         }
+        rootObject.put("results", jsonArray)
 
         val jsonFile = File(outputDir, "results.json")
         try {
             FileOutputStream(jsonFile).use { out ->
-                out.write(jsonArray.toString(4).toByteArray())
+                out.write(rootObject.toString(4).toByteArray())
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write results.json", e)

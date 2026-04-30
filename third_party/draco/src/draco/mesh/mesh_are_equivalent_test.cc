@@ -15,6 +15,7 @@
 #include "draco/mesh/mesh_are_equivalent.h"
 
 #include <sstream>
+#include <utility>
 
 #include "draco/core/draco_test_base.h"
 #include "draco/core/draco_test_utils.h"
@@ -30,6 +31,14 @@ TEST_F(MeshAreEquivalentTest, TestOnIndenticalMesh) {
   const std::string file_name = "test_nm.obj";
   const std::unique_ptr<Mesh> mesh(ReadMeshFromTestFile(file_name));
   ASSERT_NE(mesh, nullptr) << "Failed to load test model." << file_name;
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Add mesh feature ID set to the mesh.
+  std::unique_ptr<MeshFeatures> mesh_features(new MeshFeatures());
+  mesh->AddMeshFeatures(std::move(mesh_features));
+#endif
+
+  // Check that mesh is equivalent to itself.
   MeshAreEquivalent equiv;
   ASSERT_TRUE(equiv(*mesh, *mesh));
 }
@@ -95,4 +104,32 @@ TEST_F(MeshAreEquivalentTest, TestOnBigMesh) {
   ASSERT_TRUE(equiv(*mesh0, *mesh1));
 }
 
+#ifdef DRACO_TRANSCODER_SUPPORTED
+
+TEST_F(MeshAreEquivalentTest, TestMeshFeatures) {
+  const std::string file_name = "test_nm.obj";
+  const std::unique_ptr<Mesh> mesh0(ReadMeshFromTestFile(file_name));
+  const std::unique_ptr<Mesh> mesh1(ReadMeshFromTestFile(file_name));
+  ASSERT_NE(mesh0, nullptr);
+  ASSERT_NE(mesh1, nullptr);
+
+  // Add identical mesh feature ID sets to meshes.
+  mesh0->AddMeshFeatures(std::unique_ptr<MeshFeatures>(new MeshFeatures()));
+  mesh1->AddMeshFeatures(std::unique_ptr<MeshFeatures>(new MeshFeatures()));
+
+  // Empty feature sets should match.
+  MeshAreEquivalent equiv;
+  ASSERT_TRUE(equiv(*mesh0, *mesh1));
+
+  // Make mesh features different and check that the meshes are not equivalent.
+  mesh0->GetMeshFeatures(MeshFeaturesIndex(0)).SetFeatureCount(5);
+  mesh1->GetMeshFeatures(MeshFeaturesIndex(0)).SetFeatureCount(6);
+  ASSERT_FALSE(equiv(*mesh0, *mesh1));
+
+  // Make mesh features identical and check that the meshes are equivalent.
+  mesh0->GetMeshFeatures(MeshFeaturesIndex(0)).SetFeatureCount(1);
+  mesh1->GetMeshFeatures(MeshFeaturesIndex(0)).SetFeatureCount(1);
+  ASSERT_TRUE(equiv(*mesh0, *mesh1));
+}
+#endif  // DRACO_TRANSCODER_SUPPORTED
 }  // namespace draco

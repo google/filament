@@ -434,5 +434,41 @@ TEST_F(SpirvParserTest, Name_FunctionParamName) {
 )");
 }
 
+TEST_F(SpirvParserTest, Name_VoidResult) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %result "result"
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+
+       %main = OpFunction %void None %void_fn
+ %main_start = OpLabel
+     %result = OpFunctionCall %void %foo
+               OpReturn
+               OpFunctionEnd
+
+        %foo = OpFunction %void None %void_fn
+  %foo_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:void = call %3
+    ret
+  }
+}
+%3 = func():void {
+  $B2: {
+    ret
+  }
+}
+)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

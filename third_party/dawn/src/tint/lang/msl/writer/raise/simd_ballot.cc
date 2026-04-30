@@ -105,13 +105,13 @@ struct State {
         //     return vec4u(simd_vote & tint_subgroup_size_mask, 0, 0);
         //   }
         auto* pred = b.FunctionParam("pred", ty.bool_());
-        subgroup_ballot_polyfill = b.Function("tint_subgroup_ballot", ty.vec4<u32>());
+        subgroup_ballot_polyfill = b.Function("tint_subgroup_ballot", ty.vec4u());
         subgroup_ballot_polyfill->SetParams({pred});
         b.Append(subgroup_ballot_polyfill->Block(), [&] {
             auto* simd_vote =
-                b.Call<msl::ir::BuiltinCall>(ty.vec2<u32>(), msl::BuiltinFn::kSimdBallot, pred);
-            auto* masked = b.And<vec2<u32>>(simd_vote, b.Load(subgroup_size_mask));
-            auto* result = b.Construct(ty.vec4<u32>(), masked, u32(0), u32(0));
+                b.Call<msl::ir::BuiltinCall>(ty.vec2u(), msl::BuiltinFn::kSimdBallot, pred);
+            auto* masked = b.And(simd_vote, b.Load(subgroup_size_mask));
+            auto* result = b.Construct(ty.vec4u(), masked, u32(0), u32(0));
             b.Return(subgroup_ballot_polyfill, result);
         });
 
@@ -142,12 +142,10 @@ struct State {
         //   tint_subgroup_size_mask[0u] = high;
         //   tint_subgroup_size_mask[1u] = low;
         b.InsertBefore(ep->Block()->Front(), [&] {
-            auto* gt32 = b.GreaterThan<bool>(subgroup_size, u32(32));
-            auto* high_mask =
-                b.ShiftRight<u32>(u32::Highest(), b.Subtract<u32>(u32(32), subgroup_size));
+            auto* gt32 = b.GreaterThan(subgroup_size, u32(32));
+            auto* high_mask = b.ShiftRight<u32>(u32::Highest(), b.Subtract(u32(32), subgroup_size));
             auto* high = b.Call<u32>(core::BuiltinFn::kSelect, high_mask, u32::Highest(), gt32);
-            auto* low_mask =
-                b.ShiftRight<u32>(u32::Highest(), b.Subtract<u32>(u32(64), subgroup_size));
+            auto* low_mask = b.ShiftRight<u32>(u32::Highest(), b.Subtract(u32(64), subgroup_size));
             auto* low = b.Call<u32>(core::BuiltinFn::kSelect, u32(0), low_mask, gt32);
             b.StoreVectorElement(subgroup_size_mask, u32(0), high);
             b.StoreVectorElement(subgroup_size_mask, u32(1), low);
@@ -158,15 +156,14 @@ struct State {
 }  // namespace
 
 Result<SuccessType> SimdBallot(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "msl.SimdBallot",
-                                          tint::core::ir::Capabilities{
-                                              core::ir::Capability::kAllow8BitIntegers,
-                                              core::ir::Capability::kAllowDuplicateBindings,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                tint::core::ir::Capabilities{
+                    core::ir::Capability::kAllow8BitIntegers,
+                    core::ir::Capability::kAllowPointSizeBuiltin,
+                    core::ir::Capability::kAllowDuplicateBindings,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                },
+                "before msl.SimdBallot");
 
     State{ir}.Process();
 

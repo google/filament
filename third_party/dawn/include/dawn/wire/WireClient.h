@@ -96,6 +96,8 @@ class DAWN_WIRE_EXPORT WireClient : public CommandHandler {
     // Commands allocated after this point will not be sent.
     void Disconnect();
 
+    client::Client* GetImplForTesting();
+
   private:
     std::unique_ptr<client::Client> mImpl;
 };
@@ -126,11 +128,14 @@ class DAWN_WIRE_EXPORT MemoryTransferService {
         virtual size_t SerializeCreateSize() = 0;
 
         // Serialize the handle into |serializePointer| so it can be received by the server.
+        // TODO(https://issues.chromium.org/492456046): Pass as a span with the size from
+        // SerializeCreateSize.
         virtual void SerializeCreate(void* serializePointer) = 0;
 
         // Simply return the base address of the allocation (without applying any offset)
         // Returns nullptr if the allocation failed.
         // The data must live at least until the ReadHandle is destructued
+        // TODO(https://issues.chromium.org/492456046): Return as a span.
         virtual const void* GetData() = 0;
 
         // Gets called when a MapReadCallback resolves.
@@ -138,6 +143,9 @@ class DAWN_WIRE_EXPORT MemoryTransferService {
         // it to the range (offset, offset + size) of allocation
         // There could be nothing to be deserialized (if using shared memory)
         // Needs to check potential offset/size OOB and overflow
+        // TODO(https://issues.chromium.org/492456046): Pass deserializePointer+deserializeSize as a
+        // span, and the region to update as a span as well. It also seems that `size` is redundant
+        // with deserializeSize?
         virtual bool DeserializeDataUpdate(const void* deserializePointer,
                                            size_t deserializeSize,
                                            size_t offset,
@@ -157,12 +165,15 @@ class DAWN_WIRE_EXPORT MemoryTransferService {
         virtual size_t SerializeCreateSize() = 0;
 
         // Serialize the handle into |serializePointer| so it can be received by the server.
+        // TODO(https://issues.chromium.org/492456046): Pass as a span with the size from
+        // SerializeCreateSize.
         virtual void SerializeCreate(void* serializePointer) = 0;
 
         // Simply return the base address of the allocation (without applying any offset)
         // The data returned should be zero-initialized.
         // The data returned must live at least until the WriteHandle is destructed.
         // On failure, the pointer returned should be null.
+        // TODO(https://issues.chromium.org/492456046): Return as a span.
         virtual void* GetData() = 0;
 
         // Get the required serialization size for SerializeDataUpdate
@@ -172,6 +183,7 @@ class DAWN_WIRE_EXPORT MemoryTransferService {
         // the subrange (offset, offset + size) of the allocation at buffer unmap
         // This subrange is always the whole mapped region for now
         // There could be nothing to be serialized (if using shared memory)
+        // TODO(https://issues.chromium.org/492456046): Pass serializePointer as a span.
         virtual void SerializeDataUpdate(void* serializePointer, size_t offset, size_t size) = 0;
 
       private:

@@ -31,11 +31,10 @@ import (
 	"testing"
 
 	"dawn.googlesource.com/dawn/tools/src/cts/expectations"
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 )
 
-func TestValidate(t *testing.T) {
-	header := `# BEGIN TAG HEADER
+const header = `# BEGIN TAG HEADER
 # OS
 # tags: [ os-a os-b os-c ]
 # GPU
@@ -43,23 +42,24 @@ func TestValidate(t *testing.T) {
 # END TAG HEADER
 `
 
+func TestValidate(t *testing.T) {
 	type Test struct {
 		name         string
 		expectations string
 		diagnostics  expectations.Diagnostics
 	}
 	for _, test := range []Test{
-		{ //////////////////////////////////////////////////////////////////////
+		{
 			name:         "empty",
 			expectations: ``,
 		},
-		{ //////////////////////////////////////////////////////////////////////
+		{
 			name: "simple",
 			expectations: `
 crbug.com/a/123 a:b,c:d,* [ Failure ]
 `,
 		},
-		{ //////////////////////////////////////////////////////////////////////
+		{
 			name: "slow invalid",
 			expectations: `
 crbug.com/a/123 a:b,c:d,* [ Slow ]
@@ -73,14 +73,79 @@ crbug.com/a/123 a:b,c:d,* [ Slow ]
 			},
 		},
 	} {
-		ex, err := expectations.Parse("expectations.txt", header+test.expectations)
-		if err != nil {
-			t.Fatalf("'%v': expectations.Parse():\n%v", test.name, err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			ex, err := expectations.Parse("expectations.txt", header+test.expectations)
+			require.NoError(t, err)
 
-		diagnostics := ex.Validate()
-		if diff := cmp.Diff(diagnostics, test.diagnostics); diff != "" {
-			t.Errorf("'%v': expectations.Update() error:\n%v", test.name, diff)
-		}
+			diagnostics := ex.Validate()
+			require.Equal(t, test.diagnostics, diagnostics)
+		})
+	}
+}
+
+func TestValidateSlowTests(t *testing.T) {
+	type Test struct {
+		name         string
+		expectations string
+		diagnostics  expectations.Diagnostics
+	}
+	for _, test := range []Test{
+		{
+			name:         "empty",
+			expectations: ``,
+		},
+		{
+			name: "simple",
+			expectations: `
+crbug.com/a/123 a:b,c:d,* [ Slow ]
+`,
+		},
+		{
+			name: "failure invalid",
+			expectations: `
+crbug.com/a/123 a:b,c:d,* [ Failure ]
+`,
+			diagnostics: expectations.Diagnostics{
+				{
+					Line:     8,
+					Severity: expectations.Error,
+					Message:  "slow test expectation for a:b,c:d,* must be [Slow] but was [Failure]",
+				},
+			},
+		},
+		{
+			name: "mixed invalid",
+			expectations: `
+crbug.com/a/123 a:b,c:d,* [ Slow Failure ]
+`,
+			diagnostics: expectations.Diagnostics{
+				{
+					Line:     8,
+					Severity: expectations.Error,
+					Message:  "slow test expectation for a:b,c:d,* must be [Slow] but was [Failure Slow]",
+				},
+			},
+		},
+		{
+			name: "empty tags invalid",
+			expectations: `
+crbug.com/a/123 a:b,c:d,* [ ]
+`,
+			diagnostics: expectations.Diagnostics{
+				{
+					Line:     8,
+					Severity: expectations.Error,
+					Message:  "slow test expectation for a:b,c:d,* must be [Slow] but was []",
+				},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ex, err := expectations.Parse("expectations.txt", header+test.expectations)
+			require.NoError(t, err)
+
+			diagnostics := ex.ValidateSlowTests()
+			require.Equal(t, test.diagnostics, diagnostics)
+		})
 	}
 }

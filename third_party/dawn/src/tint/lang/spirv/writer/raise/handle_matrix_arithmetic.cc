@@ -129,7 +129,7 @@ struct State {
                     break;
 
                 default:
-                    TINT_UNREACHABLE() << "unhandled matrix arithmetic instruction";
+                    TINT_IR_UNREACHABLE(ir) << "unhandled matrix arithmetic instruction";
             }
         });
 
@@ -163,11 +163,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> HandleMatrixArithmetic(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.HandleMatrixArithmetic",
-                                          kHandleMatrixArithmeticCapabilities);
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir, kHandleMatrixArithmeticCapabilities, "before spirv.HandleMatrixArithmetic");
 
     State{ir}.Process();
 

@@ -28,9 +28,8 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUEUEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUEUEMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/Queue.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -54,13 +53,13 @@ class QueueMock : public QueueBase {
                  const TexelCopyBufferLayout&,
                  const Extent3D&),
                 (override));
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 
     MOCK_METHOD(ResultOrError<ExecutionSerial>, CheckAndUpdateCompletedSerials, (), (override));
     MOCK_METHOD(bool, HasPendingCommands, (), (const, override));
     MOCK_METHOD(MaybeError, SubmitPendingCommandsImpl, (), (override));
     MOCK_METHOD(void, ForceEventualFlushOfCommands, (), (override));
-    MOCK_METHOD(MaybeError, WaitForIdleForDestruction, (), (override));
+    MOCK_METHOD(MaybeError, WaitForIdleForDestructionImpl, (), (override));
     MOCK_METHOD(ResultOrError<ExecutionSerial>,
                 WaitForQueueSerialImpl,
                 (ExecutionSerial, Nanoseconds),

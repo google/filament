@@ -21,6 +21,8 @@ if(PLATFORM_NAME STREQUAL "iphonesimulator")
     add_definitions(-DFILAMENT_IOS_SIMULATOR)
     # The simulator only supports iOS >= 13.0
     set(IOS_MIN_TARGET "13.0")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target ${IOS_ARCH}-apple-ios${IOS_MIN_TARGET}-simulator")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${IOS_ARCH}-apple-ios${IOS_MIN_TARGET}-simulator")
 endif()
 
 SET(CMAKE_SYSTEM_NAME Darwin)

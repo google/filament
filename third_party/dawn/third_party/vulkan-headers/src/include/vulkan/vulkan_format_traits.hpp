@@ -1,4 +1,4 @@
-// Copyright 2015-2025 The Khronos Group Inc.
+// Copyright 2015-2026 The Khronos Group Inc.
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
@@ -8,7 +8,11 @@
 #ifndef VULKAN_FORMAT_TRAITS_HPP
 #define VULKAN_FORMAT_TRAITS_HPP
 
-#include <vulkan/vulkan.hpp>
+#if defined( VULKAN_HPP_CXX_MODULE )
+#  define VULKAN_HPP_EXPORT export
+#else
+#  include <vulkan/vulkan.hpp>
+#endif
 
 namespace VULKAN_HPP_NAMESPACE
 {
@@ -19,92 +23,92 @@ namespace VULKAN_HPP_NAMESPACE
   //=== Function Declarations ===
 
   // The three-dimensional extent of a texel block.
-  VULKAN_HPP_CONSTEXPR_14 std::array<uint8_t, 3> blockExtent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 std::array<uint8_t, 3> blockExtent( Format format );
 
   // The texel block size in bytes.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t blockSize( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t blockSize( Format format );
 
   // The class of the format (can't be just named "class"!)
-  VULKAN_HPP_CONSTEXPR_14 char const * compatibilityClass( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 char const * compatibilityClass( Format format );
 
   // The number of bits in this component, if not compressed, otherwise 0.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t componentBits( Format format, uint8_t component );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t componentBits( Format format, uint8_t component );
 
   // The number of components of this format.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t componentCount( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t componentCount( Format format );
 
   // The name of the component
-  VULKAN_HPP_CONSTEXPR_14 char const * componentName( Format format, uint8_t component );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 char const * componentName( Format format, uint8_t component );
 
   // The numeric format of the component
-  VULKAN_HPP_CONSTEXPR_14 char const * componentNumericFormat( Format format, uint8_t component );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 char const * componentNumericFormat( Format format, uint8_t component );
 
   // The plane this component lies in.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t componentPlaneIndex( Format format, uint8_t component );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t componentPlaneIndex( Format format, uint8_t component );
 
   // True, if the components of this format are compressed, otherwise false.
-  VULKAN_HPP_CONSTEXPR_14 bool componentsAreCompressed( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool componentsAreCompressed( Format format );
 
   // A textual description of the compression scheme, or an empty string if it is not compressed
-  VULKAN_HPP_CONSTEXPR_14 char const * compressionScheme( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 char const * compressionScheme( Format format );
 
   // Get all formats
-  std::vector<Format> const & getAllFormats();
+  VULKAN_HPP_EXPORT std::vector<Format> const & getAllFormats();
 
   // Get all color with a color component
-  std::vector<Format> const & getColorFormats();
+  VULKAN_HPP_EXPORT std::vector<Format> const & getColorFormats();
 
   // Get all formats with a depth component
-  std::vector<Format> const & getDepthFormats();
+  VULKAN_HPP_EXPORT std::vector<Format> const & getDepthFormats();
 
   // Get all formats with a depth and a stencil component
-  std::vector<Format> const & getDepthStencilFormats();
+  VULKAN_HPP_EXPORT std::vector<Format> const & getDepthStencilFormats();
 
   // Get all formats with a stencil component
-  std::vector<Format> const & getStencilFormats();
+  VULKAN_HPP_EXPORT std::vector<Format> const & getStencilFormats();
 
   // True, if this format has an alpha component
-  VULKAN_HPP_CONSTEXPR_14 bool hasAlphaComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasAlphaComponent( Format format );
 
   // True, if this format has a blue component
-  VULKAN_HPP_CONSTEXPR_14 bool hasBlueComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasBlueComponent( Format format );
 
   // True, if this format has a depth component
-  VULKAN_HPP_CONSTEXPR_14 bool hasDepthComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasDepthComponent( Format format );
 
   // True, if this format has a green component
-  VULKAN_HPP_CONSTEXPR_14 bool hasGreenComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasGreenComponent( Format format );
 
   // True, if this format has a red component
-  VULKAN_HPP_CONSTEXPR_14 bool hasRedComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasRedComponent( Format format );
 
   // True, if this format has a stencil component
-  VULKAN_HPP_CONSTEXPR_14 bool hasStencilComponent( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool hasStencilComponent( Format format );
 
   // True, if the format is a color
-  VULKAN_HPP_CONSTEXPR_14 bool isColor( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool isColor( Format format );
 
   // True, if this format is a compressed one.
-  VULKAN_HPP_CONSTEXPR_14 bool isCompressed( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 bool isCompressed( Format format );
 
   // The number of bits into which the format is packed. A single image element in this format can be stored in the same space as a scalar type of this bit
   // width.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t packed( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t packed( Format format );
 
   // The single-plane format that this plane is compatible with.
-  VULKAN_HPP_CONSTEXPR_14 Format planeCompatibleFormat( Format format, uint8_t plane );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 Format planeCompatibleFormat( Format format, uint8_t plane );
 
   // The number of image planes of this format.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t planeCount( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t planeCount( Format format );
 
   // The relative height of this plane. A value of k means that this plane is 1/k the height of the overall format.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t planeHeightDivisor( Format format, uint8_t plane );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t planeHeightDivisor( Format format, uint8_t plane );
 
   // The relative width of this plane. A value of k means that this plane is 1/k the width of the overall format.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t planeWidthDivisor( Format format, uint8_t plane );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t planeWidthDivisor( Format format, uint8_t plane );
 
   // The number of texels in a texel block.
-  VULKAN_HPP_CONSTEXPR_14 uint8_t texelsPerBlock( Format format );
+  VULKAN_HPP_EXPORT VULKAN_HPP_CONSTEXPR_14 uint8_t texelsPerBlock( Format format );
 
   //=== Function Definitions ===
 
@@ -197,6 +201,36 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG             : return { { 4, 4, 1 } };
       case Format::ePvrtc22BppSrgbBlockIMG             : return { { 8, 4, 1 } };
       case Format::ePvrtc24BppSrgbBlockIMG             : return { { 4, 4, 1 } };
+      case Format::eAstc3x3x3UnormBlockEXT             : return { { 3, 3, 3 } };
+      case Format::eAstc3x3x3SrgbBlockEXT              : return { { 3, 3, 3 } };
+      case Format::eAstc3x3x3SfloatBlockEXT            : return { { 3, 3, 3 } };
+      case Format::eAstc4x3x3UnormBlockEXT             : return { { 4, 3, 3 } };
+      case Format::eAstc4x3x3SrgbBlockEXT              : return { { 4, 3, 3 } };
+      case Format::eAstc4x3x3SfloatBlockEXT            : return { { 4, 3, 3 } };
+      case Format::eAstc4x4x3UnormBlockEXT             : return { { 4, 4, 3 } };
+      case Format::eAstc4x4x3SrgbBlockEXT              : return { { 4, 4, 3 } };
+      case Format::eAstc4x4x3SfloatBlockEXT            : return { { 4, 4, 3 } };
+      case Format::eAstc4x4x4UnormBlockEXT             : return { { 4, 4, 4 } };
+      case Format::eAstc4x4x4SrgbBlockEXT              : return { { 4, 4, 4 } };
+      case Format::eAstc4x4x4SfloatBlockEXT            : return { { 4, 4, 4 } };
+      case Format::eAstc5x4x4UnormBlockEXT             : return { { 5, 4, 4 } };
+      case Format::eAstc5x4x4SrgbBlockEXT              : return { { 5, 4, 4 } };
+      case Format::eAstc5x4x4SfloatBlockEXT            : return { { 5, 4, 4 } };
+      case Format::eAstc5x5x4UnormBlockEXT             : return { { 5, 5, 4 } };
+      case Format::eAstc5x5x4SrgbBlockEXT              : return { { 5, 5, 4 } };
+      case Format::eAstc5x5x4SfloatBlockEXT            : return { { 5, 5, 4 } };
+      case Format::eAstc5x5x5UnormBlockEXT             : return { { 5, 5, 5 } };
+      case Format::eAstc5x5x5SrgbBlockEXT              : return { { 5, 5, 5 } };
+      case Format::eAstc5x5x5SfloatBlockEXT            : return { { 5, 5, 5 } };
+      case Format::eAstc6x5x5UnormBlockEXT             : return { { 6, 5, 5 } };
+      case Format::eAstc6x5x5SrgbBlockEXT              : return { { 6, 5, 5 } };
+      case Format::eAstc6x5x5SfloatBlockEXT            : return { { 6, 5, 5 } };
+      case Format::eAstc6x6x5UnormBlockEXT             : return { { 6, 6, 5 } };
+      case Format::eAstc6x6x5SrgbBlockEXT              : return { { 6, 6, 5 } };
+      case Format::eAstc6x6x5SfloatBlockEXT            : return { { 6, 6, 5 } };
+      case Format::eAstc6x6x6UnormBlockEXT             : return { { 6, 6, 6 } };
+      case Format::eAstc6x6x6SrgbBlockEXT              : return { { 6, 6, 6 } };
+      case Format::eAstc6x6x6SfloatBlockEXT            : return { { 6, 6, 6 } };
 
       default: return { { 1, 1, 1 } };
     }
@@ -455,7 +489,40 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG                 : return 8;
       case Format::ePvrtc22BppSrgbBlockIMG                 : return 8;
       case Format::ePvrtc24BppSrgbBlockIMG                 : return 8;
+      case Format::eAstc3x3x3UnormBlockEXT                 : return 16;
+      case Format::eAstc3x3x3SrgbBlockEXT                  : return 16;
+      case Format::eAstc3x3x3SfloatBlockEXT                : return 16;
+      case Format::eAstc4x3x3UnormBlockEXT                 : return 16;
+      case Format::eAstc4x3x3SrgbBlockEXT                  : return 16;
+      case Format::eAstc4x3x3SfloatBlockEXT                : return 16;
+      case Format::eAstc4x4x3UnormBlockEXT                 : return 16;
+      case Format::eAstc4x4x3SrgbBlockEXT                  : return 16;
+      case Format::eAstc4x4x3SfloatBlockEXT                : return 16;
+      case Format::eAstc4x4x4UnormBlockEXT                 : return 16;
+      case Format::eAstc4x4x4SrgbBlockEXT                  : return 16;
+      case Format::eAstc4x4x4SfloatBlockEXT                : return 16;
+      case Format::eAstc5x4x4UnormBlockEXT                 : return 16;
+      case Format::eAstc5x4x4SrgbBlockEXT                  : return 16;
+      case Format::eAstc5x4x4SfloatBlockEXT                : return 16;
+      case Format::eAstc5x5x4UnormBlockEXT                 : return 16;
+      case Format::eAstc5x5x4SrgbBlockEXT                  : return 16;
+      case Format::eAstc5x5x4SfloatBlockEXT                : return 16;
+      case Format::eAstc5x5x5UnormBlockEXT                 : return 16;
+      case Format::eAstc5x5x5SrgbBlockEXT                  : return 16;
+      case Format::eAstc5x5x5SfloatBlockEXT                : return 16;
+      case Format::eAstc6x5x5UnormBlockEXT                 : return 16;
+      case Format::eAstc6x5x5SrgbBlockEXT                  : return 16;
+      case Format::eAstc6x5x5SfloatBlockEXT                : return 16;
+      case Format::eAstc6x6x5UnormBlockEXT                 : return 16;
+      case Format::eAstc6x6x5SrgbBlockEXT                  : return 16;
+      case Format::eAstc6x6x5SfloatBlockEXT                : return 16;
+      case Format::eAstc6x6x6UnormBlockEXT                 : return 16;
+      case Format::eAstc6x6x6SrgbBlockEXT                  : return 16;
+      case Format::eAstc6x6x6SfloatBlockEXT                : return 16;
       case Format::eR8BoolARM                              : return 1;
+      case Format::eR16SfloatFpencodingBfloat16ARM         : return 2;
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM        : return 1;
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM        : return 1;
       case Format::eR16G16Sfixed5NV                        : return 4;
       case Format::eR10X6UintPack16ARM                     : return 2;
       case Format::eR10X6G10X6Uint2Pack16ARM               : return 4;
@@ -729,7 +796,40 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG                 : return "PVRTC1_4BPP";
       case Format::ePvrtc22BppSrgbBlockIMG                 : return "PVRTC2_2BPP";
       case Format::ePvrtc24BppSrgbBlockIMG                 : return "PVRTC2_4BPP";
+      case Format::eAstc3x3x3UnormBlockEXT                 : return "ASTC_3x3x3";
+      case Format::eAstc3x3x3SrgbBlockEXT                  : return "ASTC_3x3x3";
+      case Format::eAstc3x3x3SfloatBlockEXT                : return "ASTC_3x3x3";
+      case Format::eAstc4x3x3UnormBlockEXT                 : return "ASTC_4x3x3";
+      case Format::eAstc4x3x3SrgbBlockEXT                  : return "ASTC_4x3x3";
+      case Format::eAstc4x3x3SfloatBlockEXT                : return "ASTC_4x3x3";
+      case Format::eAstc4x4x3UnormBlockEXT                 : return "ASTC_4x4x3";
+      case Format::eAstc4x4x3SrgbBlockEXT                  : return "ASTC_4x4x3";
+      case Format::eAstc4x4x3SfloatBlockEXT                : return "ASTC_4x4x3";
+      case Format::eAstc4x4x4UnormBlockEXT                 : return "ASTC_4x4x4";
+      case Format::eAstc4x4x4SrgbBlockEXT                  : return "ASTC_4x4x4";
+      case Format::eAstc4x4x4SfloatBlockEXT                : return "ASTC_4x4x4";
+      case Format::eAstc5x4x4UnormBlockEXT                 : return "ASTC_5x4x4";
+      case Format::eAstc5x4x4SrgbBlockEXT                  : return "ASTC_5x4x4";
+      case Format::eAstc5x4x4SfloatBlockEXT                : return "ASTC_5x4x4";
+      case Format::eAstc5x5x4UnormBlockEXT                 : return "ASTC_5x5x4";
+      case Format::eAstc5x5x4SrgbBlockEXT                  : return "ASTC_5x5x4";
+      case Format::eAstc5x5x4SfloatBlockEXT                : return "ASTC_5x5x4";
+      case Format::eAstc5x5x5UnormBlockEXT                 : return "ASTC_5x5x5";
+      case Format::eAstc5x5x5SrgbBlockEXT                  : return "ASTC_5x5x5";
+      case Format::eAstc5x5x5SfloatBlockEXT                : return "ASTC_5x5x5";
+      case Format::eAstc6x5x5UnormBlockEXT                 : return "ASTC_6x5x5";
+      case Format::eAstc6x5x5SrgbBlockEXT                  : return "ASTC_6x5x5";
+      case Format::eAstc6x5x5SfloatBlockEXT                : return "ASTC_6x5x5";
+      case Format::eAstc6x6x5UnormBlockEXT                 : return "ASTC_6x6x5";
+      case Format::eAstc6x6x5SrgbBlockEXT                  : return "ASTC_6x6x5";
+      case Format::eAstc6x6x5SfloatBlockEXT                : return "ASTC_6x6x5";
+      case Format::eAstc6x6x6UnormBlockEXT                 : return "ASTC_6x6x6";
+      case Format::eAstc6x6x6SrgbBlockEXT                  : return "ASTC_6x6x6";
+      case Format::eAstc6x6x6SfloatBlockEXT                : return "ASTC_6x6x6";
       case Format::eR8BoolARM                              : return "8-bit";
+      case Format::eR16SfloatFpencodingBfloat16ARM         : return "16-bit";
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM        : return "8-bit";
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM        : return "8-bit";
       case Format::eR16G16Sfixed5NV                        : return "32-bit";
       case Format::eR10X6UintPack16ARM                     : return "16-bit";
       case Format::eR10X6G10X6Uint2Pack16ARM               : return "32-bit";
@@ -2147,6 +2247,24 @@ namespace VULKAN_HPP_NAMESPACE
           case 0 : return 8;
           default: VULKAN_HPP_ASSERT( false ); return 0;
         }
+      case Format::eR16SfloatFpencodingBfloat16ARM:
+        switch ( component )
+        {
+          case 0 : return 16;
+          default: VULKAN_HPP_ASSERT( false ); return 0;
+        }
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM:
+        switch ( component )
+        {
+          case 0 : return 8;
+          default: VULKAN_HPP_ASSERT( false ); return 0;
+        }
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM:
+        switch ( component )
+        {
+          case 0 : return 8;
+          default: VULKAN_HPP_ASSERT( false ); return 0;
+        }
       case Format::eR16G16Sfixed5NV:
         switch ( component )
         {
@@ -2516,7 +2634,40 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG                 : return 4;
       case Format::ePvrtc22BppSrgbBlockIMG                 : return 4;
       case Format::ePvrtc24BppSrgbBlockIMG                 : return 4;
+      case Format::eAstc3x3x3UnormBlockEXT                 : return 4;
+      case Format::eAstc3x3x3SrgbBlockEXT                  : return 4;
+      case Format::eAstc3x3x3SfloatBlockEXT                : return 4;
+      case Format::eAstc4x3x3UnormBlockEXT                 : return 4;
+      case Format::eAstc4x3x3SrgbBlockEXT                  : return 4;
+      case Format::eAstc4x3x3SfloatBlockEXT                : return 4;
+      case Format::eAstc4x4x3UnormBlockEXT                 : return 4;
+      case Format::eAstc4x4x3SrgbBlockEXT                  : return 4;
+      case Format::eAstc4x4x3SfloatBlockEXT                : return 4;
+      case Format::eAstc4x4x4UnormBlockEXT                 : return 4;
+      case Format::eAstc4x4x4SrgbBlockEXT                  : return 4;
+      case Format::eAstc4x4x4SfloatBlockEXT                : return 4;
+      case Format::eAstc5x4x4UnormBlockEXT                 : return 4;
+      case Format::eAstc5x4x4SrgbBlockEXT                  : return 4;
+      case Format::eAstc5x4x4SfloatBlockEXT                : return 4;
+      case Format::eAstc5x5x4UnormBlockEXT                 : return 4;
+      case Format::eAstc5x5x4SrgbBlockEXT                  : return 4;
+      case Format::eAstc5x5x4SfloatBlockEXT                : return 4;
+      case Format::eAstc5x5x5UnormBlockEXT                 : return 4;
+      case Format::eAstc5x5x5SrgbBlockEXT                  : return 4;
+      case Format::eAstc5x5x5SfloatBlockEXT                : return 4;
+      case Format::eAstc6x5x5UnormBlockEXT                 : return 4;
+      case Format::eAstc6x5x5SrgbBlockEXT                  : return 4;
+      case Format::eAstc6x5x5SfloatBlockEXT                : return 4;
+      case Format::eAstc6x6x5UnormBlockEXT                 : return 4;
+      case Format::eAstc6x6x5SrgbBlockEXT                  : return 4;
+      case Format::eAstc6x6x5SfloatBlockEXT                : return 4;
+      case Format::eAstc6x6x6UnormBlockEXT                 : return 4;
+      case Format::eAstc6x6x6SrgbBlockEXT                  : return 4;
+      case Format::eAstc6x6x6SfloatBlockEXT                : return 4;
       case Format::eR8BoolARM                              : return 1;
+      case Format::eR16SfloatFpencodingBfloat16ARM         : return 1;
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM        : return 1;
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM        : return 1;
       case Format::eR16G16Sfixed5NV                        : return 2;
       case Format::eR10X6UintPack16ARM                     : return 1;
       case Format::eR10X6G10X6Uint2Pack16ARM               : return 2;
@@ -4560,7 +4711,295 @@ namespace VULKAN_HPP_NAMESPACE
           case 3 : return "A";
           default: VULKAN_HPP_ASSERT( false ); return "";
         }
+      case Format::eAstc3x3x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc3x3x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc3x3x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "R";
+          case 1 : return "G";
+          case 2 : return "B";
+          case 3 : return "A";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
       case Format::eR8BoolARM:
+        switch ( component )
+        {
+          case 0 : return "R";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR16SfloatFpencodingBfloat16ARM:
+        switch ( component )
+        {
+          case 0 : return "R";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM:
+        switch ( component )
+        {
+          case 0 : return "R";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM:
         switch ( component )
         {
           case 0 : return "R";
@@ -6705,10 +7144,298 @@ namespace VULKAN_HPP_NAMESPACE
           case 3 : return "UNORM";
           default: VULKAN_HPP_ASSERT( false ); return "";
         }
+      case Format::eAstc3x3x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc3x3x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc3x3x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x3x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x3SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc4x4x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x4x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x4SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc5x5x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x5x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x5SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6UnormBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "UNORM";
+          case 1 : return "UNORM";
+          case 2 : return "UNORM";
+          case 3 : return "UNORM";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6SrgbBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SRGB";
+          case 1 : return "SRGB";
+          case 2 : return "SRGB";
+          case 3 : return "SRGB";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eAstc6x6x6SfloatBlockEXT:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          case 1 : return "SFLOAT";
+          case 2 : return "SFLOAT";
+          case 3 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
       case Format::eR8BoolARM:
         switch ( component )
         {
           case 0 : return "BOOL";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR16SfloatFpencodingBfloat16ARM:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
+          default: VULKAN_HPP_ASSERT( false ); return "";
+        }
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM:
+        switch ( component )
+        {
+          case 0 : return "SFLOAT";
           default: VULKAN_HPP_ASSERT( false ); return "";
         }
       case Format::eR16G16Sfixed5NV:
@@ -7121,7 +7848,37 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc12BppSrgbBlockIMG:
       case Format::ePvrtc14BppSrgbBlockIMG:
       case Format::ePvrtc22BppSrgbBlockIMG:
-      case Format::ePvrtc24BppSrgbBlockIMG : return true;
+      case Format::ePvrtc24BppSrgbBlockIMG:
+      case Format::eAstc3x3x3UnormBlockEXT:
+      case Format::eAstc3x3x3SrgbBlockEXT:
+      case Format::eAstc3x3x3SfloatBlockEXT:
+      case Format::eAstc4x3x3UnormBlockEXT:
+      case Format::eAstc4x3x3SrgbBlockEXT:
+      case Format::eAstc4x3x3SfloatBlockEXT:
+      case Format::eAstc4x4x3UnormBlockEXT:
+      case Format::eAstc4x4x3SrgbBlockEXT:
+      case Format::eAstc4x4x3SfloatBlockEXT:
+      case Format::eAstc4x4x4UnormBlockEXT:
+      case Format::eAstc4x4x4SrgbBlockEXT:
+      case Format::eAstc4x4x4SfloatBlockEXT:
+      case Format::eAstc5x4x4UnormBlockEXT:
+      case Format::eAstc5x4x4SrgbBlockEXT:
+      case Format::eAstc5x4x4SfloatBlockEXT:
+      case Format::eAstc5x5x4UnormBlockEXT:
+      case Format::eAstc5x5x4SrgbBlockEXT:
+      case Format::eAstc5x5x4SfloatBlockEXT:
+      case Format::eAstc5x5x5UnormBlockEXT:
+      case Format::eAstc5x5x5SrgbBlockEXT:
+      case Format::eAstc5x5x5SfloatBlockEXT:
+      case Format::eAstc6x5x5UnormBlockEXT:
+      case Format::eAstc6x5x5SrgbBlockEXT:
+      case Format::eAstc6x5x5SfloatBlockEXT:
+      case Format::eAstc6x6x5UnormBlockEXT:
+      case Format::eAstc6x6x5SrgbBlockEXT:
+      case Format::eAstc6x6x5SfloatBlockEXT:
+      case Format::eAstc6x6x6UnormBlockEXT:
+      case Format::eAstc6x6x6SrgbBlockEXT:
+      case Format::eAstc6x6x6SfloatBlockEXT: return true;
       default                              : return false;
     }
   }
@@ -7207,6 +7964,36 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG : return "PVRTC";
       case Format::ePvrtc22BppSrgbBlockIMG : return "PVRTC";
       case Format::ePvrtc24BppSrgbBlockIMG : return "PVRTC";
+      case Format::eAstc3x3x3UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc3x3x3SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc3x3x3SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc4x3x3UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc4x3x3SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc4x3x3SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc4x4x3UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc4x4x3SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc4x4x3SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc4x4x4UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc4x4x4SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc4x4x4SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc5x4x4UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc5x4x4SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc5x4x4SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc5x5x4UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc5x5x4SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc5x5x4SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc5x5x5UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc5x5x5SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc5x5x5SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc6x5x5UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc6x5x5SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc6x5x5SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc6x6x5UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc6x6x5SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc6x6x5SfloatBlockEXT: return "ASTC HDR";
+      case Format::eAstc6x6x6UnormBlockEXT : return "ASTC LDR";
+      case Format::eAstc6x6x6SrgbBlockEXT  : return "ASTC LDR";
+      case Format::eAstc6x6x6SfloatBlockEXT: return "ASTC HDR";
 
       default: return "";
     }
@@ -7463,7 +8250,40 @@ namespace VULKAN_HPP_NAMESPACE
                                               Format::ePvrtc14BppSrgbBlockIMG,
                                               Format::ePvrtc22BppSrgbBlockIMG,
                                               Format::ePvrtc24BppSrgbBlockIMG,
+                                              Format::eAstc3x3x3UnormBlockEXT,
+                                              Format::eAstc3x3x3SrgbBlockEXT,
+                                              Format::eAstc3x3x3SfloatBlockEXT,
+                                              Format::eAstc4x3x3UnormBlockEXT,
+                                              Format::eAstc4x3x3SrgbBlockEXT,
+                                              Format::eAstc4x3x3SfloatBlockEXT,
+                                              Format::eAstc4x4x3UnormBlockEXT,
+                                              Format::eAstc4x4x3SrgbBlockEXT,
+                                              Format::eAstc4x4x3SfloatBlockEXT,
+                                              Format::eAstc4x4x4UnormBlockEXT,
+                                              Format::eAstc4x4x4SrgbBlockEXT,
+                                              Format::eAstc4x4x4SfloatBlockEXT,
+                                              Format::eAstc5x4x4UnormBlockEXT,
+                                              Format::eAstc5x4x4SrgbBlockEXT,
+                                              Format::eAstc5x4x4SfloatBlockEXT,
+                                              Format::eAstc5x5x4UnormBlockEXT,
+                                              Format::eAstc5x5x4SrgbBlockEXT,
+                                              Format::eAstc5x5x4SfloatBlockEXT,
+                                              Format::eAstc5x5x5UnormBlockEXT,
+                                              Format::eAstc5x5x5SrgbBlockEXT,
+                                              Format::eAstc5x5x5SfloatBlockEXT,
+                                              Format::eAstc6x5x5UnormBlockEXT,
+                                              Format::eAstc6x5x5SrgbBlockEXT,
+                                              Format::eAstc6x5x5SfloatBlockEXT,
+                                              Format::eAstc6x6x5UnormBlockEXT,
+                                              Format::eAstc6x6x5SrgbBlockEXT,
+                                              Format::eAstc6x6x5SfloatBlockEXT,
+                                              Format::eAstc6x6x6UnormBlockEXT,
+                                              Format::eAstc6x6x6SrgbBlockEXT,
+                                              Format::eAstc6x6x6SfloatBlockEXT,
                                               Format::eR8BoolARM,
+                                              Format::eR16SfloatFpencodingBfloat16ARM,
+                                              Format::eR8SfloatFpencodingFloat8E4M3ARM,
+                                              Format::eR8SfloatFpencodingFloat8E5M2ARM,
                                               Format::eR16G16Sfixed5NV,
                                               Format::eR10X6UintPack16ARM,
                                               Format::eR10X6G10X6Uint2Pack16ARM,
@@ -7726,7 +8546,40 @@ namespace VULKAN_HPP_NAMESPACE
                                                 Format::ePvrtc14BppSrgbBlockIMG,
                                                 Format::ePvrtc22BppSrgbBlockIMG,
                                                 Format::ePvrtc24BppSrgbBlockIMG,
+                                                Format::eAstc3x3x3UnormBlockEXT,
+                                                Format::eAstc3x3x3SrgbBlockEXT,
+                                                Format::eAstc3x3x3SfloatBlockEXT,
+                                                Format::eAstc4x3x3UnormBlockEXT,
+                                                Format::eAstc4x3x3SrgbBlockEXT,
+                                                Format::eAstc4x3x3SfloatBlockEXT,
+                                                Format::eAstc4x4x3UnormBlockEXT,
+                                                Format::eAstc4x4x3SrgbBlockEXT,
+                                                Format::eAstc4x4x3SfloatBlockEXT,
+                                                Format::eAstc4x4x4UnormBlockEXT,
+                                                Format::eAstc4x4x4SrgbBlockEXT,
+                                                Format::eAstc4x4x4SfloatBlockEXT,
+                                                Format::eAstc5x4x4UnormBlockEXT,
+                                                Format::eAstc5x4x4SrgbBlockEXT,
+                                                Format::eAstc5x4x4SfloatBlockEXT,
+                                                Format::eAstc5x5x4UnormBlockEXT,
+                                                Format::eAstc5x5x4SrgbBlockEXT,
+                                                Format::eAstc5x5x4SfloatBlockEXT,
+                                                Format::eAstc5x5x5UnormBlockEXT,
+                                                Format::eAstc5x5x5SrgbBlockEXT,
+                                                Format::eAstc5x5x5SfloatBlockEXT,
+                                                Format::eAstc6x5x5UnormBlockEXT,
+                                                Format::eAstc6x5x5SrgbBlockEXT,
+                                                Format::eAstc6x5x5SfloatBlockEXT,
+                                                Format::eAstc6x6x5UnormBlockEXT,
+                                                Format::eAstc6x6x5SrgbBlockEXT,
+                                                Format::eAstc6x6x5SfloatBlockEXT,
+                                                Format::eAstc6x6x6UnormBlockEXT,
+                                                Format::eAstc6x6x6SrgbBlockEXT,
+                                                Format::eAstc6x6x6SfloatBlockEXT,
                                                 Format::eR8BoolARM,
+                                                Format::eR16SfloatFpencodingBfloat16ARM,
+                                                Format::eR8SfloatFpencodingFloat8E4M3ARM,
+                                                Format::eR8SfloatFpencodingFloat8E5M2ARM,
                                                 Format::eR16G16Sfixed5NV,
                                                 Format::eR10X6UintPack16ARM,
                                                 Format::eR10X6G10X6Uint2Pack16ARM,
@@ -7891,6 +8744,36 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG:
       case Format::ePvrtc22BppSrgbBlockIMG:
       case Format::ePvrtc24BppSrgbBlockIMG:
+      case Format::eAstc3x3x3UnormBlockEXT:
+      case Format::eAstc3x3x3SrgbBlockEXT:
+      case Format::eAstc3x3x3SfloatBlockEXT:
+      case Format::eAstc4x3x3UnormBlockEXT:
+      case Format::eAstc4x3x3SrgbBlockEXT:
+      case Format::eAstc4x3x3SfloatBlockEXT:
+      case Format::eAstc4x4x3UnormBlockEXT:
+      case Format::eAstc4x4x3SrgbBlockEXT:
+      case Format::eAstc4x4x3SfloatBlockEXT:
+      case Format::eAstc4x4x4UnormBlockEXT:
+      case Format::eAstc4x4x4SrgbBlockEXT:
+      case Format::eAstc4x4x4SfloatBlockEXT:
+      case Format::eAstc5x4x4UnormBlockEXT:
+      case Format::eAstc5x4x4SrgbBlockEXT:
+      case Format::eAstc5x4x4SfloatBlockEXT:
+      case Format::eAstc5x5x4UnormBlockEXT:
+      case Format::eAstc5x5x4SrgbBlockEXT:
+      case Format::eAstc5x5x4SfloatBlockEXT:
+      case Format::eAstc5x5x5UnormBlockEXT:
+      case Format::eAstc5x5x5SrgbBlockEXT:
+      case Format::eAstc5x5x5SfloatBlockEXT:
+      case Format::eAstc6x5x5UnormBlockEXT:
+      case Format::eAstc6x5x5SrgbBlockEXT:
+      case Format::eAstc6x5x5SfloatBlockEXT:
+      case Format::eAstc6x6x5UnormBlockEXT:
+      case Format::eAstc6x6x5SrgbBlockEXT:
+      case Format::eAstc6x6x5SfloatBlockEXT:
+      case Format::eAstc6x6x6UnormBlockEXT:
+      case Format::eAstc6x6x6SrgbBlockEXT:
+      case Format::eAstc6x6x6SfloatBlockEXT:
       case Format::eR10X6G10X6B10X6A10X6Uint4Pack16ARM:
       case Format::eR12X4G12X4B12X4A12X4Uint4Pack16ARM:
       case Format::eR14X2G14X2B14X2A14X2Uint4Pack16ARM:
@@ -8091,6 +8974,36 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG:
       case Format::ePvrtc22BppSrgbBlockIMG:
       case Format::ePvrtc24BppSrgbBlockIMG:
+      case Format::eAstc3x3x3UnormBlockEXT:
+      case Format::eAstc3x3x3SrgbBlockEXT:
+      case Format::eAstc3x3x3SfloatBlockEXT:
+      case Format::eAstc4x3x3UnormBlockEXT:
+      case Format::eAstc4x3x3SrgbBlockEXT:
+      case Format::eAstc4x3x3SfloatBlockEXT:
+      case Format::eAstc4x4x3UnormBlockEXT:
+      case Format::eAstc4x4x3SrgbBlockEXT:
+      case Format::eAstc4x4x3SfloatBlockEXT:
+      case Format::eAstc4x4x4UnormBlockEXT:
+      case Format::eAstc4x4x4SrgbBlockEXT:
+      case Format::eAstc4x4x4SfloatBlockEXT:
+      case Format::eAstc5x4x4UnormBlockEXT:
+      case Format::eAstc5x4x4SrgbBlockEXT:
+      case Format::eAstc5x4x4SfloatBlockEXT:
+      case Format::eAstc5x5x4UnormBlockEXT:
+      case Format::eAstc5x5x4SrgbBlockEXT:
+      case Format::eAstc5x5x4SfloatBlockEXT:
+      case Format::eAstc5x5x5UnormBlockEXT:
+      case Format::eAstc5x5x5SrgbBlockEXT:
+      case Format::eAstc5x5x5SfloatBlockEXT:
+      case Format::eAstc6x5x5UnormBlockEXT:
+      case Format::eAstc6x5x5SrgbBlockEXT:
+      case Format::eAstc6x5x5SfloatBlockEXT:
+      case Format::eAstc6x6x5UnormBlockEXT:
+      case Format::eAstc6x6x5SrgbBlockEXT:
+      case Format::eAstc6x6x5SfloatBlockEXT:
+      case Format::eAstc6x6x6UnormBlockEXT:
+      case Format::eAstc6x6x6SrgbBlockEXT:
+      case Format::eAstc6x6x6SfloatBlockEXT:
       case Format::eR10X6G10X6B10X6A10X6Uint4Pack16ARM:
       case Format::eR12X4G12X4B12X4A12X4Uint4Pack16ARM:
       case Format::eR14X2G14X2B14X2A14X2Uint4Pack16ARM:
@@ -8335,6 +9248,36 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG:
       case Format::ePvrtc22BppSrgbBlockIMG:
       case Format::ePvrtc24BppSrgbBlockIMG:
+      case Format::eAstc3x3x3UnormBlockEXT:
+      case Format::eAstc3x3x3SrgbBlockEXT:
+      case Format::eAstc3x3x3SfloatBlockEXT:
+      case Format::eAstc4x3x3UnormBlockEXT:
+      case Format::eAstc4x3x3SrgbBlockEXT:
+      case Format::eAstc4x3x3SfloatBlockEXT:
+      case Format::eAstc4x4x3UnormBlockEXT:
+      case Format::eAstc4x4x3SrgbBlockEXT:
+      case Format::eAstc4x4x3SfloatBlockEXT:
+      case Format::eAstc4x4x4UnormBlockEXT:
+      case Format::eAstc4x4x4SrgbBlockEXT:
+      case Format::eAstc4x4x4SfloatBlockEXT:
+      case Format::eAstc5x4x4UnormBlockEXT:
+      case Format::eAstc5x4x4SrgbBlockEXT:
+      case Format::eAstc5x4x4SfloatBlockEXT:
+      case Format::eAstc5x5x4UnormBlockEXT:
+      case Format::eAstc5x5x4SrgbBlockEXT:
+      case Format::eAstc5x5x4SfloatBlockEXT:
+      case Format::eAstc5x5x5UnormBlockEXT:
+      case Format::eAstc5x5x5SrgbBlockEXT:
+      case Format::eAstc5x5x5SfloatBlockEXT:
+      case Format::eAstc6x5x5UnormBlockEXT:
+      case Format::eAstc6x5x5SrgbBlockEXT:
+      case Format::eAstc6x5x5SfloatBlockEXT:
+      case Format::eAstc6x6x5UnormBlockEXT:
+      case Format::eAstc6x6x5SrgbBlockEXT:
+      case Format::eAstc6x6x5SfloatBlockEXT:
+      case Format::eAstc6x6x6UnormBlockEXT:
+      case Format::eAstc6x6x6SrgbBlockEXT:
+      case Format::eAstc6x6x6SfloatBlockEXT:
       case Format::eR16G16Sfixed5NV:
       case Format::eR10X6G10X6Uint2Pack16ARM:
       case Format::eR10X6G10X6B10X6A10X6Uint4Pack16ARM:
@@ -8595,7 +9538,40 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG:
       case Format::ePvrtc22BppSrgbBlockIMG:
       case Format::ePvrtc24BppSrgbBlockIMG:
+      case Format::eAstc3x3x3UnormBlockEXT:
+      case Format::eAstc3x3x3SrgbBlockEXT:
+      case Format::eAstc3x3x3SfloatBlockEXT:
+      case Format::eAstc4x3x3UnormBlockEXT:
+      case Format::eAstc4x3x3SrgbBlockEXT:
+      case Format::eAstc4x3x3SfloatBlockEXT:
+      case Format::eAstc4x4x3UnormBlockEXT:
+      case Format::eAstc4x4x3SrgbBlockEXT:
+      case Format::eAstc4x4x3SfloatBlockEXT:
+      case Format::eAstc4x4x4UnormBlockEXT:
+      case Format::eAstc4x4x4SrgbBlockEXT:
+      case Format::eAstc4x4x4SfloatBlockEXT:
+      case Format::eAstc5x4x4UnormBlockEXT:
+      case Format::eAstc5x4x4SrgbBlockEXT:
+      case Format::eAstc5x4x4SfloatBlockEXT:
+      case Format::eAstc5x5x4UnormBlockEXT:
+      case Format::eAstc5x5x4SrgbBlockEXT:
+      case Format::eAstc5x5x4SfloatBlockEXT:
+      case Format::eAstc5x5x5UnormBlockEXT:
+      case Format::eAstc5x5x5SrgbBlockEXT:
+      case Format::eAstc5x5x5SfloatBlockEXT:
+      case Format::eAstc6x5x5UnormBlockEXT:
+      case Format::eAstc6x5x5SrgbBlockEXT:
+      case Format::eAstc6x5x5SfloatBlockEXT:
+      case Format::eAstc6x6x5UnormBlockEXT:
+      case Format::eAstc6x6x5SrgbBlockEXT:
+      case Format::eAstc6x6x5SfloatBlockEXT:
+      case Format::eAstc6x6x6UnormBlockEXT:
+      case Format::eAstc6x6x6SrgbBlockEXT:
+      case Format::eAstc6x6x6SfloatBlockEXT:
       case Format::eR8BoolARM:
+      case Format::eR16SfloatFpencodingBfloat16ARM:
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM:
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM:
       case Format::eR16G16Sfixed5NV:
       case Format::eR10X6UintPack16ARM:
       case Format::eR10X6G10X6Uint2Pack16ARM:
@@ -9621,7 +10597,40 @@ namespace VULKAN_HPP_NAMESPACE
       case Format::ePvrtc14BppSrgbBlockIMG                 : return 1;
       case Format::ePvrtc22BppSrgbBlockIMG                 : return 1;
       case Format::ePvrtc24BppSrgbBlockIMG                 : return 1;
+      case Format::eAstc3x3x3UnormBlockEXT                 : return 27;
+      case Format::eAstc3x3x3SrgbBlockEXT                  : return 27;
+      case Format::eAstc3x3x3SfloatBlockEXT                : return 27;
+      case Format::eAstc4x3x3UnormBlockEXT                 : return 36;
+      case Format::eAstc4x3x3SrgbBlockEXT                  : return 36;
+      case Format::eAstc4x3x3SfloatBlockEXT                : return 36;
+      case Format::eAstc4x4x3UnormBlockEXT                 : return 48;
+      case Format::eAstc4x4x3SrgbBlockEXT                  : return 48;
+      case Format::eAstc4x4x3SfloatBlockEXT                : return 48;
+      case Format::eAstc4x4x4UnormBlockEXT                 : return 64;
+      case Format::eAstc4x4x4SrgbBlockEXT                  : return 64;
+      case Format::eAstc4x4x4SfloatBlockEXT                : return 64;
+      case Format::eAstc5x4x4UnormBlockEXT                 : return 80;
+      case Format::eAstc5x4x4SrgbBlockEXT                  : return 80;
+      case Format::eAstc5x4x4SfloatBlockEXT                : return 80;
+      case Format::eAstc5x5x4UnormBlockEXT                 : return 100;
+      case Format::eAstc5x5x4SrgbBlockEXT                  : return 100;
+      case Format::eAstc5x5x4SfloatBlockEXT                : return 100;
+      case Format::eAstc5x5x5UnormBlockEXT                 : return 125;
+      case Format::eAstc5x5x5SrgbBlockEXT                  : return 125;
+      case Format::eAstc5x5x5SfloatBlockEXT                : return 125;
+      case Format::eAstc6x5x5UnormBlockEXT                 : return 150;
+      case Format::eAstc6x5x5SrgbBlockEXT                  : return 150;
+      case Format::eAstc6x5x5SfloatBlockEXT                : return 150;
+      case Format::eAstc6x6x5UnormBlockEXT                 : return 180;
+      case Format::eAstc6x6x5SrgbBlockEXT                  : return 180;
+      case Format::eAstc6x6x5SfloatBlockEXT                : return 180;
+      case Format::eAstc6x6x6UnormBlockEXT                 : return 216;
+      case Format::eAstc6x6x6SrgbBlockEXT                  : return 216;
+      case Format::eAstc6x6x6SfloatBlockEXT                : return 216;
       case Format::eR8BoolARM                              : return 1;
+      case Format::eR16SfloatFpencodingBfloat16ARM         : return 1;
+      case Format::eR8SfloatFpencodingFloat8E4M3ARM        : return 1;
+      case Format::eR8SfloatFpencodingFloat8E5M2ARM        : return 1;
       case Format::eR16G16Sfixed5NV                        : return 1;
       case Format::eR10X6UintPack16ARM                     : return 1;
       case Format::eR10X6G10X6Uint2Pack16ARM               : return 1;

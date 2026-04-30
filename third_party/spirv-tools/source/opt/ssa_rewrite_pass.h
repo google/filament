@@ -232,7 +232,7 @@ class SSARewriter {
   // during rewriting.
   //
   // Once the candidate Phi is created, it returns its ID.
-  PhiCandidate& CreatePhiCandidate(uint32_t var_id, BasicBlock* bb);
+  PhiCandidate* CreatePhiCandidate(uint32_t var_id, BasicBlock* bb);
 
   // Attempts to remove a trivial Phi candidate |phi_cand|. Trivial Phis are
   // those that only reference themselves and one other value |val| any number

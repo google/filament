@@ -174,12 +174,12 @@ class unordered_map {
     }
 
     bool empty() const {
-        bool result = 0;
-        for (int h = 0; h < BUCKETS; ++h) {
+        bool all_maps_empty = true;
+        for (size_t h = 0; h < BUCKETS; ++h) {
             ReadLockGuard lock(locks[h].lock);
-            result |= maps[h].empty();
+            all_maps_empty &= maps[h].empty();
         }
-        return result;
+        return all_maps_empty;
     }
 
   private:

@@ -27,6 +27,8 @@
 
 #include "dawn/wire/client/Client.h"
 
+#include <algorithm>
+
 #include "dawn/common/Compiler.h"
 #include "dawn/common/StringViewUtils.h"
 #include "dawn/wire/client/Device.h"
@@ -44,7 +46,10 @@ class NoopCommandSerializer final : public CommandSerializer {
 
     ~NoopCommandSerializer() override = default;
 
-    size_t GetMaximumAllocationSize() const final { return 0; }
+    size_t GetMaximumAllocationSize() const final {
+        // Return SIZE_MAX so ChunkedCommandSerializer won't unnecessarily try to chunk commands.
+        return SIZE_MAX;
+    }
     void* GetCmdSpace(size_t size) final { return nullptr; }
     bool Flush() final { return false; }
 };
@@ -84,18 +89,18 @@ ReservedBuffer Client::ReserveBuffer(WGPUDevice device, const WGPUBufferDescript
         Make<Buffer>(FromAPI(device)->GetEventManagerHandle(), FromAPI(device), descriptor);
 
     ReservedBuffer result;
-    result.handle = buffer->GetWireHandle();
-    result.deviceHandle = FromAPI(device)->GetWireHandle();
+    result.handle = buffer->GetWireHandle(this);
+    result.deviceHandle = FromAPI(device)->GetWireHandle(this);
     result.buffer = ReturnToAPI(std::move(buffer));
     return result;
 }
 
 ReservedTexture Client::ReserveTexture(WGPUDevice device, const WGPUTextureDescriptor* descriptor) {
-    Ref<Texture> texture = Make<Texture>(descriptor);
+    Ref<Texture> texture = Make<Texture>(FromAPI(device), descriptor);
 
     ReservedTexture result;
-    result.handle = texture->GetWireHandle();
-    result.deviceHandle = FromAPI(device)->GetWireHandle();
+    result.handle = texture->GetWireHandle(this);
+    result.deviceHandle = FromAPI(device)->GetWireHandle(this);
     result.texture = ReturnToAPI(std::move(texture));
     return result;
 }
@@ -105,8 +110,8 @@ ReservedSurface Client::ReserveSurface(WGPUInstance instance,
     Ref<Surface> surface = Make<Surface>(capabilities);
 
     ReservedSurface result;
-    result.handle = surface->GetWireHandle();
-    result.instanceHandle = FromAPI(instance)->GetWireHandle();
+    result.handle = surface->GetWireHandle(this);
+    result.instanceHandle = FromAPI(instance)->GetWireHandle(this);
     result.surface = ReturnToAPI(std::move(surface));
     return result;
 }
@@ -118,11 +123,29 @@ ReservedInstance Client::ReserveInstance(const WGPUInstanceDescriptor* descripto
         return {nullptr, {0, 0}};
     }
 
+    // Check for future related features and limits that are relevant to the EventManager.
+    bool enabledTimedWaitAny = false;
+    size_t timedWaitAnyMaxCount = 0;
+    if (descriptor) {
+        auto instanceFeatures =
+            std::span(descriptor->requiredFeatures, descriptor->requiredFeatureCount);
+        enabledTimedWaitAny =
+            std::find(instanceFeatures.begin(), instanceFeatures.end(),
+                      WGPUInstanceFeatureName_TimedWaitAny) != instanceFeatures.end();
+        if (enabledTimedWaitAny) {
+            if (descriptor->requiredLimits) {
+                timedWaitAnyMaxCount = descriptor->requiredLimits->timedWaitAnyMaxCount;
+            }
+            timedWaitAnyMaxCount = std::max(timedWaitAnyMaxCount, kTimedWaitAnyMaxCountDefault);
+        }
+    }
+
     // Reserve an EventManager for the given instance and make the association in the map.
-    mEventManagers.emplace(instance->GetWireHandle(), std::make_unique<EventManager>());
+    mEventManagers.emplace(instance->GetWireHandle(this),
+                           std::make_unique<EventManager>(timedWaitAnyMaxCount));
 
     ReservedInstance result;
-    result.handle = instance->GetWireHandle();
+    result.handle = instance->GetWireHandle(this);
     result.instance = ReturnToAPI(std::move(instance));
     return result;
 }
@@ -151,7 +174,7 @@ EventManager& Client::GetEventManager(const ObjectHandle& instance) {
 
 void Client::Disconnect() {
     mDisconnected = true;
-    mSerializer = ChunkedCommandSerializer(NoopCommandSerializer::GetInstance());
+    mSerializer.SetCommandSerializerForDisconnect(NoopCommandSerializer::GetInstance());
 
     // Transition all event managers to ClientDropped state.
     for (auto& [_, eventManager] : mEventManagers) {
@@ -183,14 +206,14 @@ bool Client::IsDisconnected() const {
 void Client::Unregister(ObjectBase* obj, ObjectType type) {
     UnregisterObjectCmd cmd;
     cmd.objectType = type;
-    cmd.objectId = obj->GetWireId();
+    cmd.objectId = obj->GetWireHandle(this).id;
     SerializeCommand(cmd);
 
     ReclaimReservation(obj, type);
 }
 
 void Client::ReclaimReservation(ObjectBase* obj, ObjectType type) {
-    mObjects[type].Remove(obj);
+    mObjects[type].Remove(obj, this);
 }
 
 }  // namespace dawn::wire::client

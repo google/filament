@@ -83,7 +83,7 @@ class ConstantArrayCount final : public Castable<ConstantArrayCount, ArrayCount>
     uint32_t value;
 };
 
-/// The variant of an ArrayCount when the array is is runtime-sized.
+/// The variant of an ArrayCount when the array is runtime-sized.
 /// Example:
 /// ```
 /// type arr = array<i32>

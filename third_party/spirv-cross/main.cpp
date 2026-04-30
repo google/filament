@@ -47,7 +47,7 @@
 #include "gitversion.h"
 #endif
 
-using namespace spv;
+using namespace SPIRV_CROSS_SPV_HEADER_NAMESPACE;
 using namespace SPIRV_CROSS_NAMESPACE;
 using namespace std;
 
@@ -285,7 +285,7 @@ static bool write_string_to_file(const char *path, const char *string)
 #pragma warning(pop)
 #endif
 
-static void print_resources(const Compiler &compiler, spv::StorageClass storage,
+static void print_resources(const Compiler &compiler, StorageClass storage,
                             const SmallVector<BuiltInResource> &resources)
 {
 	fprintf(stderr, "%s\n", storage == StorageClassInput ? "builtin inputs" : "builtin outputs");
@@ -326,12 +326,12 @@ static void print_resources(const Compiler &compiler, spv::StorageClass storage,
 		string builtin_str;
 		switch (res.builtin)
 		{
-		case spv::BuiltInPosition: builtin_str = "Position"; break;
-		case spv::BuiltInPointSize: builtin_str = "PointSize"; break;
-		case spv::BuiltInCullDistance: builtin_str = "CullDistance"; break;
-		case spv::BuiltInClipDistance: builtin_str = "ClipDistance"; break;
-		case spv::BuiltInTessLevelInner: builtin_str = "TessLevelInner"; break;
-		case spv::BuiltInTessLevelOuter: builtin_str = "TessLevelOuter"; break;
+		case BuiltInPosition: builtin_str = "Position"; break;
+		case BuiltInPointSize: builtin_str = "PointSize"; break;
+		case BuiltInCullDistance: builtin_str = "CullDistance"; break;
+		case BuiltInClipDistance: builtin_str = "ClipDistance"; break;
+		case BuiltInTessLevelInner: builtin_str = "TessLevelInner"; break;
+		case BuiltInTessLevelOuter: builtin_str = "TessLevelOuter"; break;
 		default: builtin_str = string("builtin #") + to_string(res.builtin);
 		}
 
@@ -421,13 +421,13 @@ static void print_resources(const Compiler &compiler, const char *tag, const Sma
 	fprintf(stderr, "=============\n\n");
 }
 
-static const char *execution_model_to_str(spv::ExecutionModel model)
+static const char *execution_model_to_str(ExecutionModel model)
 {
 	switch (model)
 	{
-	case spv::ExecutionModelVertex:
+	case ExecutionModelVertex:
 		return "vertex";
-	case spv::ExecutionModelTessellationControl:
+	case ExecutionModelTessellationControl:
 		return "tessellation control";
 	case ExecutionModelTessellationEvaluation:
 		return "tessellation evaluation";
@@ -538,8 +538,8 @@ static void print_resources(const Compiler &compiler, const ShaderResources &res
 	print_resources(compiler, "acceleration structures", res.acceleration_structures);
 	print_resources(compiler, "tensors", res.tensors);
 	print_resources(compiler, "record buffers", res.shader_record_buffers);
-	print_resources(compiler, spv::StorageClassInput, res.builtin_inputs);
-	print_resources(compiler, spv::StorageClassOutput, res.builtin_outputs);
+	print_resources(compiler, StorageClassInput, res.builtin_inputs);
+	print_resources(compiler, StorageClassOutput, res.builtin_outputs);
 }
 
 static void print_push_constant_resources(const Compiler &compiler, const SmallVector<Resource> &res)
@@ -744,6 +744,7 @@ struct CLIArguments
 	bool hlsl_enable_16bit_types = false;
 	bool hlsl_flatten_matrix_vertex_input_semantics = false;
 	bool hlsl_preserve_structured_buffers = false;
+	bool hlsl_user_semantic = false;
 	HLSLBindingFlags hlsl_binding_flags = 0;
 	bool vulkan_semantics = false;
 	bool flatten_multidimensional_arrays = false;
@@ -852,6 +853,7 @@ static void print_help_hlsl()
 	                "\t[--hlsl-enable-16bit-types]:\n\t\tEnables native use of half/int16_t/uint16_t and ByteAddressBuffer interaction with these types. Requires SM 6.2.\n"
 	                "\t[--hlsl-flatten-matrix-vertex-input-semantics]:\n\t\tEmits matrix vertex inputs with input semantics as if they were independent vectors, e.g. TEXCOORD{2,3,4} rather than matrix form TEXCOORD2_{0,1,2}.\n"
 	                "\t[--hlsl-preserve-structured-buffers]:\n\t\tEmit SturucturedBuffer<T> rather than ByteAddressBuffer. Requires UserTypeGOOGLE to be emitted. Intended for DXC roundtrips.\n"
+	                "\t[--hlsl-user-semantic]:\n\t\tUses UserSemantic decoration to generate vertex input and output semantics.\n"
 	);
 	// clang-format on
 }
@@ -1175,9 +1177,9 @@ static ExecutionModel stage_to_execution_model(const std::string &stage)
 	else if (stage == "rcall")
 		return ExecutionModelCallableKHR;
 	else if (stage == "mesh")
-		return spv::ExecutionModelMeshEXT;
+		return ExecutionModelMeshEXT;
 	else if (stage == "task")
-		return spv::ExecutionModelTaskEXT;
+		return ExecutionModelTaskEXT;
 	else
 		SPIRV_CROSS_THROW("Invalid stage.");
 }
@@ -1471,6 +1473,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		hlsl_opts.enable_16bit_types = args.hlsl_enable_16bit_types;
 		hlsl_opts.flatten_matrix_vertex_input_semantics = args.hlsl_flatten_matrix_vertex_input_semantics;
 		hlsl_opts.preserve_structured_buffers = args.hlsl_preserve_structured_buffers;
+		hlsl_opts.user_semantic = args.hlsl_user_semantic;
 		hlsl->set_hlsl_options(hlsl_opts);
 		hlsl->set_resource_binding_flags(args.hlsl_binding_flags);
 		if (args.hlsl_base_vertex_index_explicit_binding)
@@ -1673,6 +1676,7 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--hlsl-flatten-matrix-vertex-input-semantics",
 	        [&args](CLIParser &) { args.hlsl_flatten_matrix_vertex_input_semantics = true; });
 	cbs.add("--hlsl-preserve-structured-buffers", [&args](CLIParser &) { args.hlsl_preserve_structured_buffers = true; });
+	cbs.add("--hlsl-user-semantic", [&args](CLIParser &) { args.hlsl_user_semantic = true; });
 	cbs.add("--vulkan-semantics", [&args](CLIParser &) { args.vulkan_semantics = true; });
 	cbs.add("-V", [&args](CLIParser &) { args.vulkan_semantics = true; });
 	cbs.add("--flatten-multidimensional-arrays", [&args](CLIParser &) { args.flatten_multidimensional_arrays = true; });

@@ -48,7 +48,7 @@ class ostream;
 /**
  * Types and enums used by filament's driver.
  *
- * Effectively these types are public but should not be used directly. Instead use public classes
+ * Effectively these types are public but should not be used directly. Instead, use public classes
  * internal redeclaration of these types.
  * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
@@ -1141,6 +1141,19 @@ constexpr bool isDepthFormat(TextureFormat format) noexcept {
         case TextureFormat::DEPTH16:
         case TextureFormat::DEPTH32F_STENCIL8:
         case TextureFormat::DEPTH24_STENCIL8:
+            return true;
+        default:
+            return false;
+    }
+}
+
+//! returns whether this format a 32-bit float format
+constexpr bool isFp32ColorFormat(TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::R32F:
+        case TextureFormat::RG32F:
+        case TextureFormat::RGB32F:
+        case TextureFormat::RGBA32F:
             return true;
         default:
             return false;

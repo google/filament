@@ -48,7 +48,6 @@
 #include "SPIRV/GlslangToSpv.h"
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
-#include "SPIRV/SPVRemapper.h"
 #include "glslang/Include/Types.h"
 #include "glslang/Public/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
@@ -378,7 +377,7 @@ public:
 
         glslang::TProgram program;
         program.addShader(&shader);
-        
+
         success &= program.link(controls);
         if (success)
             program.mapIO();
@@ -399,72 +398,6 @@ public:
         } else {
             return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
                     program.getInfoLog(), program.getInfoDebugLog(), true, "", ""};
-        }
-    }
-
-    // This is like compileAndLink but with remapping of the SPV binary
-    // through spirvbin_t::remap().  While technically this could be merged
-    // with compileAndLink() above (with the remap step optionally being a no-op)
-    // it is given separately here for ease of future extraction.
-    GlslangResult compileLinkRemap(
-            const std::string shaderName, const std::string& code,
-            const std::string& entryPointName, EShMessages controls,
-            const unsigned int remapOptions = spv::spirvbin_t::NONE)
-    {
-        const EShLanguage stage = GetShaderStage(GetSuffix(shaderName));
-
-        glslang::TShader shader(stage);
-        shader.setAutoMapBindings(true);
-        shader.setAutoMapLocations(true);
-
-        bool success = compile(&shader, code, entryPointName, controls);
-
-        glslang::TProgram program;
-        program.addShader(&shader);
-        success &= program.link(controls);
-        if (success)
-            program.mapIO();
-
-        if (success && (controls & EShMsgSpvRules)) {
-        spv::SpvBuildLogger logger;
-            std::vector<std::string> whiteListStrings;
-            std::vector<uint32_t> spirv_binary;
-            glslang::GlslangToSpv(*program.getIntermediate(stage),
-                                  spirv_binary, &logger, &options());
-
-            spv::spirvbin_t(0 /*verbosity*/).remap(spirv_binary, whiteListStrings, remapOptions);
-
-            std::ostringstream disassembly_stream;
-            spv::Disassemble(disassembly_stream, spirv_binary);
-            bool validation_result = !options().validate || logger.getAllMessages().empty();
-            return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
-                    program.getInfoLog(), program.getInfoDebugLog(),
-                    validation_result, logger.getAllMessages(), disassembly_stream.str()};
-        } else {
-            return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
-                    program.getInfoLog(), program.getInfoDebugLog(), true, "", ""};
-        }
-    }
-
-    // remap the binary in 'code' with the options in remapOptions
-    GlslangResult remap(
-            const std::string shaderName, const std::vector<uint32_t>& code,
-            EShMessages controls,
-            const unsigned int remapOptions = spv::spirvbin_t::NONE)
-    {
-        if ((controls & EShMsgSpvRules)) {
-            std::vector<uint32_t> spirv_binary(code); // scratch copy
-            std::vector<std::string> whiteListStrings;
-            spv::spirvbin_t(0 /*verbosity*/).remap(spirv_binary, whiteListStrings, remapOptions);
-
-            std::ostringstream disassembly_stream;
-            spv::Disassemble(disassembly_stream, spirv_binary);
-
-            return {{{shaderName, "", ""},},
-                    "", "",
-                    true, "", disassembly_stream.str()};
-        } else {
-            return {{{shaderName, "", ""},}, "", "", true, "", ""};
         }
     }
 
@@ -554,7 +487,7 @@ public:
         EShMessages controls = DeriveOptions(source, semantics, target);
         controls = static_cast<EShMessages>(controls | additionalOptions);
         GlslangResult result = compileAndLink(testName, input, entryPointName, controls, clientTargetVersion,
-            targetLanguageVersion, false, EShTexSampTransKeep, false, automap);
+            targetLanguageVersion, false, EShTexSampTransKeep, false, false, false, automap);
 
         // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
@@ -618,60 +551,6 @@ public:
                                                 baseUboBinding, baseSsboBinding,
                                                 autoMapBindings,
                                                 flattenUniformArrays);
-
-        // Generate the hybrid output in the way of glslang.
-        std::ostringstream stream;
-        outputResultToStream(&stream, result, controls);
-
-        checkEqAndUpdateIfRequested(expectedOutput, stream.str(),
-                                    expectedOutputFname, result.spirvWarningsErrors);
-    }
-
-    void loadFileCompileRemapAndCheck(const std::string& testDir,
-                                      const std::string& testName,
-                                      Source source,
-                                      Semantics semantics,
-                                      Target target,
-                                      const std::string& entryPointName="",
-                                      const unsigned int remapOptions = spv::spirvbin_t::NONE)
-    {
-        const std::string inputFname = testDir + "/" + testName;
-        const std::string expectedOutputFname =
-            testDir + "/baseResults/" + testName + ".out";
-        std::string input, expectedOutput;
-
-        tryLoadFile(inputFname, "input", &input);
-        tryLoadFile(expectedOutputFname, "expected output", &expectedOutput);
-
-        const EShMessages controls = DeriveOptions(source, semantics, target);
-        GlslangResult result = compileLinkRemap(testName, input, entryPointName, controls, remapOptions);
-
-        // Generate the hybrid output in the way of glslang.
-        std::ostringstream stream;
-        outputResultToStream(&stream, result, controls);
-
-        checkEqAndUpdateIfRequested(expectedOutput, stream.str(),
-                                    expectedOutputFname, result.spirvWarningsErrors);
-    }
-
-    void loadFileRemapAndCheck(const std::string& testDir,
-                               const std::string& testName,
-                               Source source,
-                               Semantics semantics,
-                               Target target,
-                               const unsigned int remapOptions = spv::spirvbin_t::NONE)
-    {
-        const std::string inputFname = testDir + "/" + testName;
-        const std::string expectedOutputFname =
-            testDir + "/baseResults/" + testName + ".out";
-        std::vector<std::uint32_t> input;
-        std::string expectedOutput;
-
-        tryLoadSpvFile(inputFname, "input", input);
-        tryLoadFile(expectedOutputFname, "expected output", &expectedOutput);
-
-        const EShMessages controls = DeriveOptions(source, semantics, target);
-        GlslangResult result = remap(testName, input, controls, remapOptions);
 
         // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;

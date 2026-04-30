@@ -49,11 +49,11 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v5.0.1
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@181d5eefc20863364f96762470ba6f862bdef56b # v3.29.2
+      uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v3.29.5
       with:
         languages: ${{ matrix.language }}
     #     If you wish to specify custom queries, you can do so here or in a config file.
@@ -68,9 +68,9 @@ jobs:
     # If this step fails, then you should remove it and run the build manually
     - name: Autobuild
       if: matrix.language == 'python' 
-      uses: github/codeql-action/autobuild@181d5eefc20863364f96762470ba6f862bdef56b # v3.29.2
+      uses: github/codeql-action/autobuild@c10b8064de6f491fea524254123dbe5e09572f13 # v3.29.5
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       if: matrix.language == 'cpp'
       with:
         python-version: '3.11'
@@ -92,6 +92,6 @@ jobs:
       run: cmake --build build
     
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@181d5eefc20863364f96762470ba6f862bdef56b # v3.29.2
+      uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v3.29.5
       with:
         category: "/language:${{matrix.language}}"

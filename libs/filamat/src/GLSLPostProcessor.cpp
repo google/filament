@@ -576,14 +576,15 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     rebindImageSamplerForWGSL(*spirv);
 
     //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
-    const tint::spirv::reader::Options readerOpts{true};
+    const tint::spirv::reader::Options readerOpts{};
 
-    tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
+    auto tintReadResult = tint::spirv::reader::ReadIR(*spirv, readerOpts);
+    tint::SuccessType tintSuccess;
 
-    if (tintRead.Diagnostics().ContainsErrors()) {
+    if (tintReadResult != tintSuccess) {
         //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
 #ifndef FILAMENT_WEBGPU_IGNORE_TNT_READ_ERRORS
-        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
         spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
         spv_text text = nullptr;
         spv_diagnostic diagnostic = nullptr;
@@ -597,14 +598,25 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
                 io::endl;
         spvTextDestroy(text);
-        slog.e << "Tint Reader Error: " << tintRead.Diagnostics().Str() << io::endl;
+        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
         return false;
 #endif
     }
 
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead);
-    /// An instance of SuccessType that can be used to check a tint Result.
-    tint::SuccessType tintSuccess;
+    tint::wgsl::writer::Options writerOptions;
+    // Allow non-uniform derivatives and disable unreachable code warnings.
+    // Dawn/Tint strictly validates uniform control flow (e.g. calling `textureSampleCompare`
+    // or derivatives). Filament materials often use uniform variables (e.g. from UBOs) in
+    // conditionals that Tint's static analyzer currently perceives as potentially divergent.
+    // We bypass these specific generation-time WGSL strictness errors because Filament guarantees
+    // the underlying UBO conditionals are uniform across the draw call.
+    writerOptions.allow_non_uniform_derivatives = true;
+    writerOptions.disable_unreachable_code_warning = true;
+    writerOptions.allowed_features.extensions.insert(tint::wgsl::Extension::kClipDistances);
+    writerOptions.allowed_features.features.insert(
+            tint::wgsl::LanguageFeature::kImmediateAddressSpace);
+    tint::Result<tint::wgsl::writer::Output> wgslOut =
+            tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
 
     if (wgslOut != tintSuccess) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
@@ -752,15 +764,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
     if (internalConfig.glslOutput) {
         if (!mGenerateDebugInfo) {
-            *internalConfig.glslOutput =
-                    internalConfig.minifier.removeWhitespace(
-                            *internalConfig.glslOutput,
-                            mOptimization == MaterialBuilder::Optimization::SIZE);
-
+            *internalConfig.glslOutput = internalConfig.minifier.removeWhitespace( *internalConfig.glslOutput,
+                    mOptimization == MaterialBuilder::Optimization::SIZE);
             // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
             if (mOptimization != MaterialBuilder::Optimization::NONE) {
-                *internalConfig.glslOutput =
-                        internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+                *internalConfig.glslOutput = internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
             }
         }
         if (mPrintShaders) {
@@ -953,6 +961,38 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         size_t const found = str.find(clipDistanceDefinition);
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");
+        }
+
+        // Validate the transpiled ESSL1 shader dynamically before considering it successful.
+        // This proactively catches unsupported SPIR-V -> ESSL1 translation quirks (like textureLod)
+        // at compile-time since we can't easily test all variants on physical GLES 2.0 devices.
+        if (config.featureLevel == 0) {
+            // preampitively forbid spirv-cross from cheating and polyfilling disabled features
+            auto const& exts = glslCompiler.get_required_extensions();
+            for (auto const& ext : exts) {
+                if (ext != "GL_OES_standard_derivatives" &&
+                    ext != "GL_OES_EGL_image_external" &&
+                    ext != "GL_EXT_shader_framebuffer_fetch" &&
+                    ext != "GL_EXT_shader_framebuffer_fetch_non_coherent") {
+                    slog.e << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". " 
+                           << "spirv-cross attempted to unilaterally inject it." << io::endl;
+                    return false;
+                }
+            }
+
+            TShader validateShader(internalConfig.shLang);
+            // The cleaner must be declared after the TShader to manage the glslang memory pool
+            // teardown order correctly and safely destroy the AST.
+            GLSLangCleaner const validateCleaner;
+
+            const char* shaderCString = str.c_str();
+            validateShader.setStrings(&shaderCString, 1);
+
+            bool const validateOk = validateShader.parse(&DefaultTBuiltInResource, glslOptions.version, false, EShMsgDefault);
+            if (!validateOk) {
+                slog.e << "ESSL1 Validation failed:\n" << validateShader.getInfoLog() << io::endl;
+                return false;
+            }
         }
     }
     return true;

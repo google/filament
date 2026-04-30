@@ -166,10 +166,14 @@ class InstructionBuilder {
     for (size_t i = 0; i < operands.size(); i++) {
       ops.push_back({SPV_OPERAND_TYPE_ID, {operands[i]}});
     }
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(new Instruction(
-        GetContext(), opcode, type_id,
-        result != 0 ? result : GetContext()->TakeNextId(), ops));
+    if (result == 0) {
+      result = GetContext()->TakeNextId();
+      if (result == 0) {
+        return nullptr;
+      }
+    }
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), opcode, type_id, result, ops));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -297,9 +301,12 @@ class InstructionBuilder {
   // The id |op1| is the left hand side of the operation.
   // The id |op2| is the right hand side of the operation.
   Instruction* AddIAdd(uint32_t type, uint32_t op1, uint32_t op2) {
-    // TODO(1841): Handle id overflow.
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), spv::Op::OpIAdd, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpIAdd, type, result_id,
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -311,9 +318,12 @@ class InstructionBuilder {
   Instruction* AddULessThan(uint32_t op1, uint32_t op2) {
     analysis::Bool bool_type;
     uint32_t type = GetContext()->get_type_mgr()->GetId(&bool_type);
-    // TODO(1841): Handle id overflow.
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), spv::Op::OpULessThan, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpULessThan, type, result_id,
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -325,9 +335,12 @@ class InstructionBuilder {
   Instruction* AddSLessThan(uint32_t op1, uint32_t op2) {
     analysis::Bool bool_type;
     uint32_t type = GetContext()->get_type_mgr()->GetId(&bool_type);
-    // TODO(1841): Handle id overflow.
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), spv::Op::OpSLessThan, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpSLessThan, type, result_id,
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -355,9 +368,12 @@ class InstructionBuilder {
   // bool) for |type|.
   Instruction* AddSelect(uint32_t type, uint32_t cond, uint32_t true_value,
                          uint32_t false_value) {
-    // TODO(1841): Handle id overflow.
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
     std::unique_ptr<Instruction> select(new Instruction(
-        GetContext(), spv::Op::OpSelect, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpSelect, type, result_id,
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {cond}},
                                        {SPV_OPERAND_TYPE_ID, {true_value}},
                                        {SPV_OPERAND_TYPE_ID, {false_value}}}));
@@ -381,10 +397,12 @@ class InstructionBuilder {
       ops.emplace_back(SPV_OPERAND_TYPE_ID,
                        std::initializer_list<uint32_t>{id});
     }
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> construct(
-        new Instruction(GetContext(), spv::Op::OpCompositeConstruct, type,
-                        GetContext()->TakeNextId(), ops));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> construct(new Instruction(
+        GetContext(), spv::Op::OpCompositeConstruct, type, result_id, ops));
     return AddInstruction(std::move(construct));
   }
 
@@ -466,10 +484,12 @@ class InstructionBuilder {
       operands.push_back({SPV_OPERAND_TYPE_LITERAL_INTEGER, {index}});
     }
 
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), spv::Op::OpCompositeExtract, type,
-                        GetContext()->TakeNextId(), operands));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> new_inst(new Instruction(
+        GetContext(), spv::Op::OpCompositeExtract, type, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -493,9 +513,12 @@ class InstructionBuilder {
       operands.push_back({SPV_OPERAND_TYPE_ID, {index_id}});
     }
 
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(new Instruction(
-        GetContext(), opcode, type_id, GetContext()->TakeNextId(), operands));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), opcode, type_id, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -521,29 +544,36 @@ class InstructionBuilder {
       operands.push_back({SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER, {alignment}});
     }
 
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), spv::Op::OpLoad, type_id,
-                        GetContext()->TakeNextId(), operands));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> new_inst(new Instruction(
+        GetContext(), spv::Op::OpLoad, type_id, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
   Instruction* AddCopyObject(uint32_t type_id, uint32_t value_id) {
     std::vector<Operand> operands{{SPV_OPERAND_TYPE_ID, {value_id}}};
 
-    // TODO(1841): Handle id overflow.
-    std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), spv::Op::OpCopyObject, type_id,
-                        GetContext()->TakeNextId(), operands));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> new_inst(new Instruction(
+        GetContext(), spv::Op::OpCopyObject, type_id, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
   Instruction* AddVariable(uint32_t type_id, uint32_t storage_class) {
     std::vector<Operand> operands;
     operands.push_back({SPV_OPERAND_TYPE_STORAGE_CLASS, {storage_class}});
-    std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), spv::Op::OpVariable, type_id,
-                        GetContext()->TakeNextId(), operands));
+    uint32_t result_id = GetContext()->TakeNextId();
+    if (result_id == 0) {
+      return nullptr;
+    }
+    std::unique_ptr<Instruction> new_inst(new Instruction(
+        GetContext(), spv::Op::OpVariable, type_id, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 

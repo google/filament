@@ -25,12 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/tests/white_box/GPUTimestampCalibrationTests.h"
+
 #include <vector>
 
 #include "dawn/native/Buffer.h"
 #include "dawn/native/CommandEncoder.h"
 #include "dawn/tests/DawnTest.h"
-#include "dawn/tests/white_box/GPUTimestampCalibrationTests.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 

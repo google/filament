@@ -63,6 +63,10 @@ function _preferred_os_filename() {
 
 function download_vulkan_installer() {
   local os=$(_get_os)
+  if [[ "$os" == "linux" ]]; then
+    echo "Linux uses apt to install vulkan dependencies, skipping tarball download." >&2
+    return 0
+  fi
   local dl_filename=$(_os_filename ${VULKAN_SDK_VERSION})
   local filename=$(_preferred_os_filename)
   local url=https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VERSION/$os/$dl_filename?Human=true
@@ -79,15 +83,22 @@ function download_vulkan_installer() {
 
 function unpack_vulkan_installer() {
   local os=$(_get_os)
+  if [[ "$os" == "linux" ]]; then
+    install_${os}
+    return 0
+  fi
   local filename=$(_preferred_os_filename $os)
   test -f $filename
   install_${os}
 }
 
 function install_linux() {
-  test -d $VULKAN_SDK_DIR && test -f vulkan_sdk.tar.gz
-  echo "extract just the SDK's prebuilt binaries ($VULKAN_SDK_VERSION/x86_64) from vulkan_sdk.tar.gz into $VULKAN_SDK" >&2
-  tar -C "$VULKAN_SDK_DIR" --strip-components 2 -xf vulkan_sdk.tar.gz $VULKAN_SDK_VERSION/x86_64
+  echo "Installing Vulkan dependencies via apt for Linux..." >&2
+  sudo apt-get update -y
+  sudo apt-get install -y libvulkan-dev vulkan-validationlayers glslang-tools spirv-tools
+
+  # Create a dummy SDK dir to satisfy scripts expecting a VulkanSDK folder structure
+  mkdir -p ~/VulkanSDK/${VULKAN_SDK_VERSION}
 }
 
 function install_mac() {

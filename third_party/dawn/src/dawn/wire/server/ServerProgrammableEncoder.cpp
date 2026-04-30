@@ -32,33 +32,32 @@
 
 namespace dawn::wire::server {
 
-WireResult Server::DoRenderPassEncoderSetImmediateData(
-    Known<WGPURenderPassEncoder> renderPassEncoder,
-    uint32_t immediateDataRangeOffsetBytes,
-    const uint8_t* data,
-    size_t size) {
-    mProcs.renderPassEncoderSetImmediateData(renderPassEncoder->handle,
-                                             immediateDataRangeOffsetBytes, data, size);
+WireResult Server::DoRenderPassEncoderSetImmediates(Known<WGPURenderPassEncoder> renderPassEncoder,
+                                                    uint32_t immediateDataRangeOffsetBytes,
+                                                    const uint8_t* data,
+                                                    size_t size) {
+    mProcs->renderPassEncoderSetImmediates(renderPassEncoder->handle, immediateDataRangeOffsetBytes,
+                                           data, size);
     return WireResult::Success;
 }
 
-WireResult Server::DoRenderBundleEncoderSetImmediateData(
+WireResult Server::DoRenderBundleEncoderSetImmediates(
     Known<WGPURenderBundleEncoder> renderBundleEncoder,
     uint32_t immediateDataRangeOffsetBytes,
     const uint8_t* data,
     size_t size) {
-    mProcs.renderBundleEncoderSetImmediateData(renderBundleEncoder->handle,
-                                               immediateDataRangeOffsetBytes, data, size);
+    mProcs->renderBundleEncoderSetImmediates(renderBundleEncoder->handle,
+                                             immediateDataRangeOffsetBytes, data, size);
     return WireResult::Success;
 }
 
-WireResult Server::DoComputePassEncoderSetImmediateData(
+WireResult Server::DoComputePassEncoderSetImmediates(
     Known<WGPUComputePassEncoder> computePassEncoder,
     uint32_t immediateDataRangeOffsetBytes,
     const uint8_t* data,
     size_t size) {
-    mProcs.computePassEncoderSetImmediateData(computePassEncoder->handle,
-                                              immediateDataRangeOffsetBytes, data, size);
+    mProcs->computePassEncoderSetImmediates(computePassEncoder->handle,
+                                            immediateDataRangeOffsetBytes, data, size);
     return WireResult::Success;
 }
 

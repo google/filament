@@ -34,6 +34,7 @@ from generator_lib import Generator, run_generator, FileRender, GeneratorOutput
 
 
 class ProcName:
+
     def __init__(self, gl_name, proc_name=None):
         assert gl_name.startswith('gl')
         if proc_name == None:
@@ -59,6 +60,7 @@ ProcParam = namedtuple('ProcParam', ['name', 'type'])
 
 
 class Proc:
+
     def __init__(self, element):
         # Type declaration for return values and arguments all have the same
         # (weird) format.
@@ -245,6 +247,7 @@ def compute_params(root, supported_extensions):
 
 
 class OpenGLLoaderGenerator(Generator):
+
     def get_description(self):
         return 'Generates code to load OpenGL function pointers'
 

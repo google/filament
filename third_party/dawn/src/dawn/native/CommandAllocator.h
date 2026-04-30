@@ -68,6 +68,8 @@ namespace dawn::native {
 // Note that you need to extract the commands from the CommandAllocator before destroying it
 // and must tell the CommandIterator when the allocated commands have been processed for
 // deletion.
+// TODO(crbug.com/491867541): Move Ref<T>s out of the commands and onto the CommandEncoder instead,
+// so that we don't need to walk all the commands to free the Refs.
 
 // These are the lists of blocks, should not be used directly, only through CommandAllocator
 // and CommandIterator

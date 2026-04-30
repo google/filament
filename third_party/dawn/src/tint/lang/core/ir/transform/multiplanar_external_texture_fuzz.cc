@@ -25,18 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
-
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
 #include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
 namespace {
 
-Result<SuccessType> MultiplanarExternalTextureFuzzer(
-    Module& ir,
-    const fuzz::ir::Context&,
-    const tint::transform::multiplanar::BindingsMap& multiplanar_map) {
+using BindingsMap =
+    std::unordered_map<BindingPoint, tint::transform::multiplanar::MultiplanarTexture>;
+
+Result<SuccessType> MultiplanarExternalTextureFuzzer(Module& ir,
+                                                     const fuzz::ir::Context&,
+                                                     const BindingsMap& input_map) {
+    tint::transform::multiplanar::BindingsMap multiplanar_map;
+    for (const auto& iter : input_map) {
+        multiplanar_map.emplace(iter.first, iter.second);
+    }
     return MultiplanarExternalTexture(ir, multiplanar_map);
 }
 

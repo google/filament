@@ -167,7 +167,9 @@ DAWN_INSTANTIATE_TEST(ShaderModuleCachingTests,
                       OpenGLESBackend({"blob_cache_hash_validation"}),
                       OpenGLESBackend({}, {"blob_cache_hash_validation"}),
                       VulkanBackend({"blob_cache_hash_validation"}),
-                      VulkanBackend({}, {"blob_cache_hash_validation"}));
+                      VulkanBackend({}, {"blob_cache_hash_validation"}),
+                      WebGPUBackend({"blob_cache_hash_validation"}),
+                      WebGPUBackend({}, {"blob_cache_hash_validation"}));
 
 }  // anonymous namespace
 }  // namespace dawn

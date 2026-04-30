@@ -926,6 +926,7 @@ OpReturn
 OpFunctionEnd
 )";
 
+  ValidatorOptions()->relax_logical_pointer = true;
   SinglePassRunAndMatch<CCPPass>(text, true);
 }
 
@@ -1235,6 +1236,34 @@ TEST_F(CCPTest, CCPNoChangeFailureWithUnfoldableInstr) {
 
   auto result = SinglePassRunAndMatch<CCPPass>(text, true);
   EXPECT_EQ(std::get<1>(result), Pass::Status::SuccessWithChange);
+}
+
+TEST_F(CCPTest, CCPSuccessWithNoCCPOnExtendedInstruction) {
+  // We don't expect to have Constant Propagation on certain
+  // extended instructions with 16 bit integers. This is to
+  // test that this stage doesn't throw errors. If we add support
+  // for 16 bit integers, this test should change.
+
+  const std::string text = R"(OpCapability Shader
+OpCapability Float16
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 140
+OpName %main "main"
+%void = OpTypeVoid
+%half = OpTypeFloat 16
+%half_0x1p_0 = OpConstant %half 0x1p+0
+%6 = OpTypeFunction %void
+%main = OpFunction %void None %6
+%7 = OpLabel
+%8 = OpExtInst %half %1 Cos %half_0x1p_0
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<CCPPass>(text, text, false);
 }
 
 TEST_F(CCPTest, FunctionDeclaration) {

@@ -38,14 +38,12 @@ class Expression;
 class WhileStatement final : public Castable<WhileStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the for loop statement source
     /// @param condition the optional loop condition expression
     /// @param body the loop body
     /// @param attributes the while statement attributes
-    WhileStatement(GenerationID pid,
-                   NodeID nid,
+    WhileStatement(NodeID nid,
                    const Source& source,
                    const Expression* condition,
                    const BlockStatement* body,
@@ -53,12 +51,6 @@ class WhileStatement final : public Castable<WhileStatement, Statement> {
 
     /// Destructor
     ~WhileStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const WhileStatement* Clone(CloneContext& ctx) const override;
 
     /// The condition expression
     const Expression* const condition;

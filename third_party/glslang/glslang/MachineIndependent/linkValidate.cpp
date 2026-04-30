@@ -524,7 +524,8 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     numErrors += unit.getNumErrors();
     // Only one push_constant is allowed, mergeLinkerObjects() will ensure the push_constant
     // is the same for all units.
-    if (numPushConstants > 1 || unit.numPushConstants > 1)
+    if (!IsRequestedExtension(glslang::E_GL_NV_push_constant_bank) &&
+        (numPushConstants > 1 || unit.numPushConstants > 1))
         error(infoSink, "Only one push_constant block is allowed per stage");
     numPushConstants = std::min(numPushConstants + unit.numPushConstants, 1);
 
@@ -535,6 +536,9 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
             error(infoSink, "number of invocations must match between compilation units");
     }
 
+    // The GLSL specification requires that at least one compilation unit
+    // must declare the vertices layout, but not all units need to do so.
+    // However, all declarations must match.
     if (vertices == TQualifier::layoutNotSet)
         vertices = unit.vertices;
     else if (unit.vertices != TQualifier::layoutNotSet && vertices != unit.vertices) {
@@ -545,20 +549,30 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
         else
             assert(0);
     }
+
+    // The mesh shader extension requires that at least one compilation unit
+    // must declare the max_primitives layout, but not all units need to do so.
+    // However, all declarations must match.
     if (primitives == TQualifier::layoutNotSet)
         primitives = unit.primitives;
-    else if (primitives != unit.primitives) {
+    else if (unit.primitives != TQualifier::layoutNotSet && primitives != unit.primitives) {
         if (language == EShLangMesh)
             error(infoSink, "Contradictory layout max_primitives values");
         else
             assert(0);
     }
 
+    // The GLSL specification requires that at least one compilation unit
+    // must declare the input primitive layout, but not all units need to do so.
+    // However, all declarations must match.
     if (inputPrimitive == ElgNone)
         inputPrimitive = unit.inputPrimitive;
     else if (unit.inputPrimitive != ElgNone && inputPrimitive != unit.inputPrimitive)
         error(infoSink, "Contradictory input layout primitives");
 
+    // The GLSL specification requires that at least one compilation unit
+    // must declare the output primitive layout, but not all units need to do so.
+    // However, all declarations must match.
     if (outputPrimitive == ElgNone)
         outputPrimitive = unit.outputPrimitive;
     else if (unit.outputPrimitive != ElgNone && outputPrimitive != unit.outputPrimitive)
@@ -567,19 +581,27 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     if (originUpperLeft != unit.originUpperLeft || pixelCenterInteger != unit.pixelCenterInteger)
         error(infoSink, "gl_FragCoord redeclarations must match across shaders");
 
+    // The GLSL specification requires that at least one compilation unit
+    // must declare the vertex spacing layout, but not all units need to do so.
+    // However, all declarations must match.
     if (vertexSpacing == EvsNone)
         vertexSpacing = unit.vertexSpacing;
-    else if (vertexSpacing != unit.vertexSpacing)
+    else if (unit.vertexSpacing != EvsNone && vertexSpacing != unit.vertexSpacing)
         error(infoSink, "Contradictory input vertex spacing");
 
+    // The GLSL specification requires that at least one compilation unit
+    // must declare the triangle ordering layout, but not all units need to do so.
+    // However, all declarations must match.
     if (vertexOrder == EvoNone)
         vertexOrder = unit.vertexOrder;
-    else if (vertexOrder != unit.vertexOrder)
+    else if (unit.vertexOrder != EvoNone && vertexOrder != unit.vertexOrder)
         error(infoSink, "Contradictory triangle ordering");
 
     MERGE_TRUE(pointMode);
 
     for (int i = 0; i < 3; ++i) {
+        // The GLSL specification requires that all workgroup size declarations must match
+        // but not all units have to declare the layout.
         if (unit.localSizeNotDefault[i]) {
             if (!localSizeNotDefault[i]) {
                 localSize[i] = unit.localSize[i];
@@ -589,9 +611,11 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
                 error(infoSink, "Contradictory local size");
         }
 
+        // The GLSL specification requires that all workgroup size specialization
+        // ids declarations must match, but not all units have to declare the layout.
         if (localSizeSpecId[i] == TQualifier::layoutNotSet)
             localSizeSpecId[i] = unit.localSizeSpecId[i];
-        else if (localSizeSpecId[i] != unit.localSizeSpecId[i])
+        else if (unit.localSizeSpecId[i] != TQualifier::layoutNotSet && localSizeSpecId[i] != unit.localSizeSpecId[i])
             error(infoSink, "Contradictory local size specialization ids");
     }
 
@@ -602,9 +626,11 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     MERGE_TRUE(nonCoherentStencilAttachmentReadEXT);
     MERGE_TRUE(nonCoherentTileAttachmentReadQCOM);
 
+    // The GLSL specification requires that all depth layout redeclarations must match,
+    // but not all units have to declare the layout.
     if (depthLayout == EldNone)
         depthLayout = unit.depthLayout;
-    else if (depthLayout != unit.depthLayout)
+    else if (unit.depthLayout != EldNone && depthLayout != unit.depthLayout)
         error(infoSink, "Contradictory depth layouts");
 
     MERGE_TRUE(depthReplacing);
@@ -615,9 +641,11 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     MERGE_TRUE(xfbMode);
 
     for (size_t b = 0; b < xfbBuffers.size(); ++b) {
+        // The GLSL specification requires that all xfb_stride declarations for
+        // the same buffer must match, but not all units have to declare the layout.
         if (xfbBuffers[b].stride == TQualifier::layoutXfbStrideEnd)
             xfbBuffers[b].stride = unit.xfbBuffers[b].stride;
-        else if (xfbBuffers[b].stride != unit.xfbBuffers[b].stride)
+        else if (unit.xfbBuffers[b].stride != TQualifier::layoutXfbStrideEnd && xfbBuffers[b].stride != unit.xfbBuffers[b].stride)
             error(infoSink, "Contradictory xfb_stride");
         xfbBuffers[b].implicitStride = std::max(xfbBuffers[b].implicitStride, unit.xfbBuffers[b].implicitStride);
         if (unit.xfbBuffers[b].contains64BitType)
@@ -1098,7 +1126,8 @@ void TIntermediate::mergeLinkerObjects(TInfoSink& infoSink, TIntermSequence& lin
                 mergeErrorCheck(infoSink, *symbol, *unitSymbol);
             }
             // If different symbols, verify they arn't push_constant since there can only be one per stage
-            else if (symbol->getQualifier().isPushConstant() && unitSymbol->getQualifier().isPushConstant() && getStage() == unitStage)
+            else if (!IsRequestedExtension(glslang::E_GL_NV_push_constant_bank) &&
+                (symbol->getQualifier().isPushConstant() && unitSymbol->getQualifier().isPushConstant() && getStage() == unitStage))
                 error(infoSink, "Only one push_constant block is allowed per stage");
         }
 
@@ -1563,7 +1592,7 @@ void TIntermediate::finalCheck(TInfoSink& infoSink, bool keepUncalled)
     // overlap/alias/missing I/O, etc.
     inOutLocationCheck(infoSink);
 
-    if (getNumPushConstants() > 1)
+    if (!IsRequestedExtension(glslang::E_GL_NV_push_constant_bank) && (getNumPushConstants() > 1))
         error(infoSink, "Only one push_constant block is allowed per stage");
 
     // invocations
@@ -1959,6 +1988,8 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
         set = 1;
     else if (qualifier.isHitObjectAttrNV())
         set = 2;
+    else if (qualifier.isHitObjectAttrEXT())
+        set = 2;
     else
         return -1;
 
@@ -1997,7 +2028,7 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
     // For raytracing IO (payloads and callabledata) each declaration occupies a single
     // slot irrespective of type.
     int collision = -1; // no collision
-    if (qualifier.isAnyPayload() || qualifier.isAnyCallable() || qualifier.isHitObjectAttrNV()) {
+    if (qualifier.isAnyPayload() || qualifier.isAnyCallable() || qualifier.isHitObjectAttrNV() || qualifier.isHitObjectAttrEXT()) {
         TRange range(qualifier.layoutLocation, qualifier.layoutLocation);
         collision = checkLocationRT(set, qualifier.layoutLocation);
         if (collision < 0)
@@ -2544,6 +2575,22 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, T
         }
     }
 
+    // rules 2 and 3
+    if (type.isLongVector()) {
+        int scalarAlign = getBaseAlignmentScalar(type, size);
+        uint32_t vectorSize = type.getTypeParameters()->arraySizes->getDimSize(0);
+        switch (vectorSize) {
+        case 1: // HLSL has this, GLSL does not
+            return scalarAlign;
+        case 2:
+            size *= 2;
+            return 2 * scalarAlign;
+        default:
+            size *= vectorSize;
+            return 4 * scalarAlign;
+        }
+    }
+
     // rules 5 and 7
     if (type.isMatrix()) {
         // rule 5: deref to row, not to column, meaning the size of vector is num columns instead of num rows
@@ -2621,6 +2668,14 @@ int TIntermediate::getScalarAlignment(const TType& type, int& size, int& stride,
         int scalarAlign = getBaseAlignmentScalar(type, size);
 
         size *= type.getVectorSize();
+        return scalarAlign;
+    }
+
+    if (type.isLongVector()) {
+        int scalarAlign = getBaseAlignmentScalar(type, size);
+
+        uint32_t vectorSize = type.getTypeParameters()->arraySizes->getDimSize(0);
+        size *= vectorSize;
         return scalarAlign;
     }
 

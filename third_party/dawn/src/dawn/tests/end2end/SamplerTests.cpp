@@ -29,10 +29,9 @@
 #include <cmath>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-
 #include "dawn/common/Assert.h"
 #include "dawn/common/Constants.h"
+#include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -259,7 +258,8 @@ DAWN_INSTANTIATE_TEST(SamplerTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class StaticSamplerTest : public SamplerTest {
   protected:
@@ -317,6 +317,11 @@ class StaticSamplerTest : public SamplerTest {
 // modes.
 TEST_P(StaticSamplerTest, AddressMode) {
     DAWN_SUPPRESS_TEST_IF(IsWARP());
+    // TODO(crbug.com/465184301): Fix static sampler feature.
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
+    // TODO(crbug.com/459848481): Fails on Win/Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
 
     for (auto u : addressModes) {
         for (auto v : addressModes) {
@@ -336,6 +341,11 @@ TEST_P(StaticSamplerTest, AddressMode) {
 // correctly.
 TEST_P(StaticSamplerTest, PassThroughUserFunctionParameters) {
     DAWN_SUPPRESS_TEST_IF(IsWARP());
+    // TODO(crbug.com/465184301): Fix static sampler feature.
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
+    // TODO(crbug.com/459848481): Fails on Win/Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
 
     for (auto u : addressModes) {
         for (auto v : addressModes) {
@@ -357,7 +367,8 @@ DAWN_INSTANTIATE_TEST(StaticSamplerTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

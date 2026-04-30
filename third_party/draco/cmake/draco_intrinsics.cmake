@@ -1,3 +1,17 @@
+# Copyright 2021 The Draco Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 if(DRACO_CMAKE_DRACO_INTRINSICS_CMAKE_)
   return()
 endif() # DRACO_CMAKE_DRACO_INTRINSICS_CMAKE_
@@ -61,17 +75,15 @@ macro(draco_process_intrinsics_sources)
     unset(sse4_sources)
     list(APPEND sse4_sources ${arg_SOURCES})
 
-    list(FILTER sse4_sources INCLUDE REGEX
-         "${draco_sse4_source_file_suffix}$")
+    list(FILTER sse4_sources INCLUDE REGEX "${draco_sse4_source_file_suffix}$")
 
     if(sse4_sources)
       unset(sse4_flags)
-      draco_get_intrinsics_flag_for_suffix(SUFFIX
-                                             ${draco_sse4_source_file_suffix}
-                                             VARIABLE sse4_flags)
+      draco_get_intrinsics_flag_for_suffix(
+        SUFFIX ${draco_sse4_source_file_suffix} VARIABLE sse4_flags)
       if(sse4_flags)
         draco_set_compiler_flags_for_sources(SOURCES ${sse4_sources} FLAGS
-                                               ${sse4_flags})
+                                             ${sse4_flags})
       endif()
     endif()
   endif()
@@ -79,17 +91,15 @@ macro(draco_process_intrinsics_sources)
   if(DRACO_ENABLE_NEON AND draco_have_neon)
     unset(neon_sources)
     list(APPEND neon_sources ${arg_SOURCES})
-    list(FILTER neon_sources INCLUDE REGEX
-         "${draco_neon_source_file_suffix}$")
+    list(FILTER neon_sources INCLUDE REGEX "${draco_neon_source_file_suffix}$")
 
     if(neon_sources AND DRACO_NEON_INTRINSICS_FLAG)
       unset(neon_flags)
-      draco_get_intrinsics_flag_for_suffix(SUFFIX
-                                             ${draco_neon_source_file_suffix}
-                                             VARIABLE neon_flags)
+      draco_get_intrinsics_flag_for_suffix(
+        SUFFIX ${draco_neon_source_file_suffix} VARIABLE neon_flags)
       if(neon_flags)
         draco_set_compiler_flags_for_sources(SOURCES ${neon_sources} FLAGS
-                                               ${neon_flags})
+                                             ${neon_flags})
       endif()
     endif()
   endif()

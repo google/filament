@@ -177,7 +177,6 @@ class MeshEdgebreakerEncoderImpl : public MeshEdgebreakerEncoderImplInterface {
   uint32_t num_split_symbols_;
 
   // Struct holding data used for encoding each non-position attribute.
-  // TODO(ostava): This should be probably renamed to something better.
   struct AttributeData {
     AttributeData() : attribute_index(-1), is_connectivity_used(true) {}
     int attribute_index;

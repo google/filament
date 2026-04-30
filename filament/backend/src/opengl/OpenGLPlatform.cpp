@@ -52,6 +52,8 @@ utils::CString OpenGLPlatform::getDeviceInfo(DeviceInfoType infoType,
             return getRendererString(driver);
         case DeviceInfoType::OPENGL_VENDOR:
             return getVendorString(driver);
+        case DeviceInfoType::OPENGL_VERSION:
+            return getVersionString(driver);
         default:
             FILAMENT_CHECK_POSTCONDITION(false) << "Unsupported DeviceInfoType for OpenGLPlatform";
             return {};
@@ -74,6 +76,15 @@ utils::CString OpenGLPlatform::getRendererString(Driver const* driver) {
             << "Driver* has not been allocated with OpenGLPlatform";
 #endif
     return p->getRendererString();
+}
+
+utils::CString OpenGLPlatform::getVersionString(Driver const* driver) {
+    auto const p = static_cast<OpenGLDriverBase const*>(driver);
+#if UTILS_HAS_RTTI
+    FILAMENT_CHECK_POSTCONDITION(dynamic_cast<OpenGLDriverBase const*>(driver))
+            << "Driver* has not been allocated with OpenGLPlatform";
+#endif
+    return p->getVersionString();
 }
 
 void OpenGLPlatform::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,

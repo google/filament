@@ -27,9 +27,8 @@
 
 #include "dawn/native/SpirvValidation.h"
 
-#include <spirv-tools/libspirv.hpp>
-
 #include <memory>
+#include <spirv-tools/libspirv.hpp>
 #include <sstream>
 #include <string>
 

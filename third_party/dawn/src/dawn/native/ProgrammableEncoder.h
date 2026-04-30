@@ -35,9 +35,8 @@
 #include "dawn/native/Forward.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/ObjectBase.h"
-#include "partition_alloc/pointers/raw_ptr.h"
-
 #include "dawn/native/dawn_platform.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native {
 
@@ -51,11 +50,13 @@ class ProgrammableEncoder : public ApiObjectBase {
     void APIInsertDebugMarker(StringView groupLabel);
     void APIPopDebugGroup();
     void APIPushDebugGroup(StringView groupLabel);
-    void APISetImmediateData(uint32_t offset, const void* data, size_t size);
 
   protected:
     bool IsValidationEnabled() const;
+    bool NeedsIndirectGPUValidation() const;
     MaybeError ValidateProgrammableEncoderEnd() const;
+
+    MaybeError ValidateSetImmediates(uint32_t offset, size_t size) const;
 
     // Compute and render passes do different things on SetBindGroup. These are helper functions
     // for the logic they have in common.
@@ -75,6 +76,9 @@ class ProgrammableEncoder : public ApiObjectBase {
                         ErrorTag errorTag,
                         StringView label);
 
+    // Called by APISetResourceTable in child classes
+    MaybeError SetResourceTable(ResourceTableBase* table, CommandAllocator* allocator);
+
     raw_ptr<EncodingContext> mEncodingContext = nullptr;
 
     uint64_t mDebugGroupStackSize = 0;
@@ -83,6 +87,7 @@ class ProgrammableEncoder : public ApiObjectBase {
 
   private:
     const bool mValidationEnabled;
+    const bool mNeedsIndirectGPUValidation;
 };
 
 }  // namespace dawn::native

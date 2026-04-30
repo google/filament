@@ -202,36 +202,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
     }
 
-    // During compilation and optimization, __VERSION__ reflects the shader language version of the
-    // intermediate code, not the version of the final code. spirv-cross automatically adapts
-    // certain language features (e.g. fragment output) but leaves others untouched (e.g. sampler
-    // functions, bit shift operations). Client code may have to make decisions based on this
-    // information, so define a FILAMENT_EFFECTIVE_VERSION constant.
-    const char *effective_version;
-    if (mTargetLanguage == TargetLanguage::GLSL) {
-        effective_version = "__VERSION__";
-    } else {
-        switch (mShaderModel) {
-            case ShaderModel::MOBILE:
-                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
-                    effective_version = "300";
-                } else {
-                    effective_version = "100";
-                }
-                break;
-            case ShaderModel::DESKTOP:
-                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
-                    effective_version = "450";
-                } else {
-                    effective_version = "410";
-                }
-                break;
-            default:
-                assert(false);
-        }
-    }
-    generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
-
     switch (material.stereoscopicType) {
     case StereoscopicType::INSTANCED:
         generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
@@ -253,17 +223,11 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH", material.userMaterialHasCustomDepth);
     }
 
-    if (mTargetLanguage == TargetLanguage::SPIRV ||
-        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
-        if (stage == ShaderStage::VERTEX) {
-            generateDefine(out, "VARYING", "out");
-            generateDefine(out, "ATTRIBUTE", "in");
-        } else if (stage == ShaderStage::FRAGMENT) {
-            generateDefine(out, "VARYING", "in");
-        }
-    } else {
-        generateDefine(out, "VARYING", "varying");
-        generateDefine(out, "ATTRIBUTE", "attribute");
+    if (stage == ShaderStage::VERTEX) {
+        generateDefine(out, "VARYING", "out");
+        generateDefine(out, "ATTRIBUTE", "in");
+    } else if (stage == ShaderStage::FRAGMENT) {
+        generateDefine(out, "VARYING", "in");
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -360,31 +324,6 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
-
-    if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
-            (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
-                    || mTargetLanguage == TargetLanguage::SPIRV)) {
-        // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
-
-        // This is the minimum required value according to the OpenGL ES Shading Language Version
-        // 1.00 document. glslang forbids defining symbols beginning with gl_ as const, hence the
-        // #define.
-        generateDefine(out, "gl_MaxVaryingVectors", "8");
-
-        generateDefine(out, "texture2D", "texture");
-        generateDefine(out, "texture2DProj", "textureProj");
-        generateDefine(out, "texture3D", "texture");
-        generateDefine(out, "texture3DProj", "textureProj");
-        generateDefine(out, "textureCube", "texture");
-
-        if (stage == ShaderStage::VERTEX) {
-            generateDefine(out, "texture2DLod", "textureLod");
-            generateDefine(out, "texture2DProjLod", "textureProjLod");
-            generateDefine(out, "texture3DLod", "textureLod");
-            generateDefine(out, "texture3DProjLod", "textureProjLod");
-            generateDefine(out, "textureCubeLod", "textureLod");
-        }
-    }
 
     // Api level enforcement.
     generateDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
@@ -984,28 +923,6 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
                 return "float";
         }
     };
-    // This is a workaround for WebGPU not supporting push constants for skinning.
-    // We replace the push constant with a regular constant struct initialized to 0.
-    if (mTargetApi == TargetApi::WEBGPU) {
-        assert_invariant(
-                pushConstants.size() == 1 &&
-                "The current workaround for WebGPU push constants assumes for now that only 1");
-        assert_invariant(pushConstants[0].name == CString("morphingBufferOffset") &&
-                         "The current workaround for WebGPU push constants assumes only the "
-                         "morphingBufferOffset constant is present.");
-        assert_invariant(pushConstants[0].type == ConstantType::INT &&
-                         "The current workaround for WebGPU push constants assumes "
-                         "morphingBufferOffset is an integer type.");
-        out << "struct " << STRUCT_NAME << " {\n";
-        for (auto const& constant: pushConstants) {
-            out << "    " << getType(constant.type) << " " << constant.name.c_str() << ";\n";
-        }
-        out << "};\n";
-        out << "const " << STRUCT_NAME << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << " = "
-            << STRUCT_NAME << "(0);\n";
-        return out;
-    }
-
     bool const outputSpirv =
             mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {
@@ -1303,6 +1220,14 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
         case MaterialBuilder::OutputType::FLOAT2: return "vec2";
         case MaterialBuilder::OutputType::FLOAT3: return "vec3";
         case MaterialBuilder::OutputType::FLOAT4: return "vec4";
+        case MaterialBuilder::OutputType::INT:    return "int";
+        case MaterialBuilder::OutputType::INT2:   return "ivec2";
+        case MaterialBuilder::OutputType::INT3:   return "ivec3";
+        case MaterialBuilder::OutputType::INT4:   return "ivec4";
+        case MaterialBuilder::OutputType::UINT:   return "uint";
+        case MaterialBuilder::OutputType::UINT2:  return "uvec2";
+        case MaterialBuilder::OutputType::UINT3:  return "uvec3";
+        case MaterialBuilder::OutputType::UINT4:  return "uvec4";
     }
 }
 

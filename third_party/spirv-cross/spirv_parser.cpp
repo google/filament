@@ -22,10 +22,11 @@
  */
 
 #include "spirv_parser.hpp"
+#include "NonSemanticShaderDebugInfo100.h"
 #include <assert.h>
 
 using namespace std;
-using namespace spv;
+using namespace SPIRV_CROSS_SPV_HEADER_NAMESPACE;
 
 namespace SPIRV_CROSS_NAMESPACE
 {
@@ -43,7 +44,7 @@ static bool decoration_is_string(Decoration decoration)
 {
 	switch (decoration)
 	{
-	case DecorationHlslSemanticGOOGLE:
+	case DecorationUserSemantic:
 		return true;
 
 	default:
@@ -137,6 +138,15 @@ void Parser::parse()
 	}
 	forward_pointer_fixups.clear();
 
+	for (auto &source : ir.sources)
+	{
+		auto cmp = [](const ParsedIR::Source::Marker &a, const ParsedIR::Source::Marker &b) {
+			return a.line < b.line;
+		};
+
+		std::sort(source.line_markers.begin(), source.line_markers.end(), cmp);
+	}
+
 	if (current_function)
 		SPIRV_CROSS_THROW("Function was not terminated.");
 	if (current_block)
@@ -194,7 +204,6 @@ void Parser::parse(const Instruction &instruction)
 
 	switch (op)
 	{
-	case OpSourceContinued:
 	case OpSourceExtension:
 	case OpNop:
 	case OpModuleProcessed:
@@ -213,37 +222,52 @@ void Parser::parse(const Instruction &instruction)
 
 	case OpSource:
 	{
-		auto lang = static_cast<SourceLanguage>(ops[0]);
-		switch (lang)
+		ir.sources.emplace_back();
+		auto &source = ir.sources.back();
+		source.lang = static_cast<SourceLanguage>(ops[0]);
+
+		switch (source.lang)
 		{
 		case SourceLanguageESSL:
-			ir.source.es = true;
-			ir.source.version = ops[1];
-			ir.source.known = true;
-			ir.source.hlsl = false;
+			source.es = true;
+			source.version = ops[1];
+			source.known = true;
+			source.hlsl = false;
 			break;
 
 		case SourceLanguageGLSL:
-			ir.source.es = false;
-			ir.source.version = ops[1];
-			ir.source.known = true;
-			ir.source.hlsl = false;
+			source.es = false;
+			source.version = ops[1];
+			source.known = true;
+			source.hlsl = false;
 			break;
 
 		case SourceLanguageHLSL:
 			// For purposes of cross-compiling, this is GLSL 450.
-			ir.source.es = false;
-			ir.source.version = 450;
-			ir.source.known = true;
-			ir.source.hlsl = true;
+			source.es = false;
+			source.version = 450;
+			source.known = true;
+			source.hlsl = true;
 			break;
 
 		default:
-			ir.source.known = false;
+			source.known = false;
 			break;
 		}
+
+		if (length >= 3)
+			source.file_id = ops[2];
+
+		if (length >= 4)
+			source.source = extract_string(ir.spirv, instruction.offset + 3);
+
 		break;
 	}
+
+	case OpSourceContinued:
+		if (!ir.sources.empty())
+			ir.sources.back().source += extract_string(ir.spirv, instruction.offset);
+		break;
 
 	case OpUndef:
 	{
@@ -318,6 +342,72 @@ void Parser::parse(const Instruction &instruction)
 					ir.load_type_width.insert({ ops[1], type->width });
 			}
 		}
+
+		if (op == OpExtInst && length > 4)
+		{
+			// Don't want to deal with ForwardRefs here.
+			auto &ext = get<SPIRExtension>(ops[2]);
+			if (ext.ext == SPIRExtension::NonSemanticShaderDebugInfo)
+			{
+				const auto instr = ops[3];
+				if (instr == NonSemanticShaderDebugInfo100DebugSource)
+				{
+					set<SPIRString>(ops[1], get<SPIRString>(ops[4]).str);
+
+					ir.sources.emplace_back();
+					auto &source = ir.sources.back();
+					source.file_id = ops[4];
+					source.define_id = ops[1];
+					if (length >= 6)
+						source.source = ir.get<SPIRString>(ops[5]).str;
+				}
+				else if (instr == NonSemanticShaderDebugInfo100DebugSourceContinued)
+				{
+					if (length < 5)
+						SPIRV_CROSS_THROW("Invalid arguments for ShaderDebugInfo100DebugSourceContinued");
+					if (!ir.sources.empty())
+						ir.sources.back().source += ir.get<SPIRString>(ops[4]).str;
+				}
+				else if (instr == NonSemanticShaderDebugInfo100DebugLine)
+				{
+					if (length < 9)
+						SPIRV_CROSS_THROW("Invalid arguments for ShaderDebugInfo100DebugLine");
+					auto source_id = ops[4];
+					auto line_start = ir.get<SPIRConstant>(ops[5]).scalar_i32();
+					auto col_start = ir.get<SPIRConstant>(ops[7]).scalar_i32();
+
+					for (auto &source : ir.sources)
+					{
+						if (source.define_id != source_id)
+							continue;
+
+						source.line_markers.emplace_back();
+						auto &marker = source.line_markers.back();
+						marker.line = line_start;
+						marker.col = col_start;
+						marker.offset = instruction.offset - 1;
+						marker.function_id = current_function ? current_function->self : ID(0);
+						marker.block_id = current_block ? current_block->self : ID(0);
+						break;
+					}
+				}
+				else if (instr == NonSemanticShaderDebugInfo100DebugLocalVariable)
+				{
+					if (length < 11)
+						SPIRV_CROSS_THROW("Invalid arguments for ShaderDebugInfo100DebugLocalVariable");
+					auto &lvar = set<SPIRDebugLocalVariable>(ops[1]);
+					lvar.name_id = ops[4];
+				}
+				else if (instr == NonSemanticShaderDebugInfo100DebugDeclare)
+				{
+					if (length < 7)
+						SPIRV_CROSS_THROW("Invalid arguments for ShaderDebugInfo100DebugDeclare");
+					auto &lvar = get<SPIRDebugLocalVariable>(ops[4]);
+					auto &var = get<SPIRVariable>(ops[5]);
+					var.debug_local_variables.push_back(lvar.self);
+				}
+			}
+		}
 		break;
 	}
 
@@ -367,6 +457,30 @@ void Parser::parse(const Instruction &instruction)
 
 		case ExecutionModeOutputPrimitivesEXT:
 			execution.output_primitives = ops[2];
+			break;
+
+		case ExecutionModeSignedZeroInfNanPreserve:
+			switch (ops[2])
+			{
+			case 8:
+				execution.signed_zero_inf_nan_preserve_8 = true;
+				break;
+
+			case 16:
+				execution.signed_zero_inf_nan_preserve_16 = true;
+				break;
+
+			case 32:
+				execution.signed_zero_inf_nan_preserve_32 = true;
+				break;
+
+			case 64:
+				execution.signed_zero_inf_nan_preserve_64 = true;
+				break;
+
+			default:
+				SPIRV_CROSS_THROW("Invalid bit-width for SignedZeroInfNanPreserve.");
+			}
 			break;
 
 		default:
@@ -557,7 +671,7 @@ void Parser::parse(const Instruction &instruction)
 		{
 			if (length > 2)
 			{
-				if (ops[2] == spv::FPEncodingBFloat16KHR)
+				if (ops[2] == FPEncodingBFloat16KHR)
 					type.basetype = SPIRType::BFloat16;
 				else
 					SPIRV_CROSS_THROW("Unrecognized encoding for OpTypeFloat 16.");
@@ -569,9 +683,9 @@ void Parser::parse(const Instruction &instruction)
 		{
 			if (length < 2)
 				SPIRV_CROSS_THROW("Missing encoding for OpTypeFloat 8.");
-			else if (ops[2] == spv::FPEncodingFloat8E4M3EXT)
+			else if (ops[2] == FPEncodingFloat8E4M3EXT)
 				type.basetype = SPIRType::FloatE4M3;
-			else if (ops[2] == spv::FPEncodingFloat8E5M2EXT)
+			else if (ops[2] == FPEncodingFloat8E5M2EXT)
 				type.basetype = SPIRType::FloatE5M2;
 			else
 				SPIRV_CROSS_THROW("Invalid encoding for OpTypeFloat 8.");
@@ -633,12 +747,30 @@ void Parser::parse(const Instruction &instruction)
 		auto &matrixbase = set<SPIRType>(id, base);
 
 		matrixbase.op = op;
-		matrixbase.cooperative.scope_id = ops[2];
-		matrixbase.cooperative.rows_id = ops[3];
-		matrixbase.cooperative.columns_id = ops[4];
-		matrixbase.cooperative.use_id = ops[5];
+		matrixbase.ext.cooperative.scope_id = ops[2];
+		matrixbase.ext.cooperative.rows_id = ops[3];
+		matrixbase.ext.cooperative.columns_id = ops[4];
+		matrixbase.ext.cooperative.use_id = ops[5];
 		matrixbase.self = id;
 		matrixbase.parent_type = ops[1];
+		break;
+	}
+
+	case OpTypeCooperativeVectorNV:
+	{
+		uint32_t id = ops[0];
+		auto &type = set<SPIRType>(id, op);
+
+		type.basetype = SPIRType::CoopVecNV;
+		type.op = op;
+		type.ext.coopVecNV.component_type_id = ops[1];
+		type.ext.coopVecNV.component_count_id = ops[2];
+		type.parent_type = ops[1];
+
+		// CoopVec-Nv can be used with integer operations like SMax where
+		// where spirv-opt does explicit checks on integer bitwidth
+		auto component_type = get<SPIRType>(type.ext.coopVecNV.component_type_id);
+		type.width = component_type.width;
 		break;
 	}
 
@@ -844,11 +976,12 @@ void Parser::parse(const Instruction &instruction)
 		uint32_t id = ops[0];
 		auto &type = set<SPIRType>(id, op);
 		type.basetype = SPIRType::Tensor;
-		type.tensor.type = ops[1];
+		type.ext.tensor = {};
+		type.ext.tensor.type = ops[1];
 		if (length >= 3)
-			type.tensor.rank = ops[2];
+			type.ext.tensor.rank = ops[2];
 		if (length >= 4)
-			type.tensor.shape = ops[3];
+			type.ext.tensor.shape = ops[3];
 		break;
 	}
 
@@ -888,7 +1021,7 @@ void Parser::parse(const Instruction &instruction)
 		uint32_t id = ops[1];
 
 		// Instead of a temporary, create a new function-wide temporary with this ID instead.
-		auto &var = set<SPIRVariable>(id, result_type, spv::StorageClassFunction);
+		auto &var = set<SPIRVariable>(id, result_type, StorageClassFunction);
 		var.phi_variable = true;
 
 		current_function->add_local_variable(id);
@@ -1322,6 +1455,24 @@ void Parser::parse(const Instruction &instruction)
 				current_function->entry_line.line_literal = ops[1];
 			}
 		}
+
+		uint32_t file = ops[0];
+		uint32_t line = ops[1];
+
+		for (auto &source : ir.sources)
+		{
+			if (source.file_id == file)
+			{
+				source.line_markers.emplace_back();
+				auto &marker = source.line_markers.back();
+				marker.line = line;
+				marker.offset = instruction.offset - 1;
+				marker.function_id = current_function ? current_function->self : ID(0);
+				marker.block_id = current_block ? current_block->self : ID(0);
+				break;
+			}
+		}
+
 		break;
 	}
 

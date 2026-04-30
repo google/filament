@@ -46,8 +46,10 @@ cc_library(
     "bitcast.h",
     "block_allocator.h",
     "bump_allocator.h",
+    "copy.h",
   ],
   deps = [
+    "//src/tint/utils/ice",
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
     "//src/utils",

@@ -5,8 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://developers.google.com/open-source/licenses/bsd
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 fn main() {
     cc::Build::new()
         .flag("-std=c99")
@@ -19,7 +17,4 @@ fn main() {
         .file("libupb/third_party/utf8_range/utf8_range.c")
         .define("UPB_BUILD_API", Some("1"))
         .compile("libupb");
-    let path = std::path::Path::new("libupb");
-    println!("cargo:include={}", path.canonicalize().unwrap().display());
-    println!("cargo:version={}", VERSION);
 }

@@ -53,8 +53,7 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthGreater) {
                 return;
             }
 
-            [[maybe_unused]] auto res =
-                Parse(Slice(binary.Get().data(), binary.Get().size()), options);
+            [[maybe_unused]] auto res = Parse(binary.Get(), options);
         },
         "ExecutionMode DepthGreater is not supported");
 }
@@ -82,8 +81,7 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthLess) {
                 return;
             }
 
-            [[maybe_unused]] auto res =
-                Parse(Slice(binary.Get().data(), binary.Get().size()), options);
+            [[maybe_unused]] auto res = Parse(binary.Get(), options);
         },
         "ExecutionMode DepthLess is not supported");
 }
@@ -111,8 +109,7 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_DepthUnchanged) {
                 return;
             }
 
-            [[maybe_unused]] auto res =
-                Parse(Slice(binary.Get().data(), binary.Get().size()), options);
+            [[maybe_unused]] auto res = Parse(binary.Get(), options);
         },
         "ExecutionMode DepthUnchanged is not supported");
 }
@@ -140,8 +137,7 @@ TEST_F(SpirvParserDeathTest, ExecutionMode_EarlyFragmentTest) {
                 return;
             }
 
-            [[maybe_unused]] auto res =
-                Parse(Slice(binary.Get().data(), binary.Get().size()), options);
+            [[maybe_unused]] auto res = Parse(binary.Get(), options);
         },
         "ExecutionMode EarlyFragmentTests is not supported");
 }

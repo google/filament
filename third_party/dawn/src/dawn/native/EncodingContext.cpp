@@ -87,12 +87,12 @@ void EncodingContext::HandleError(std::unique_ptr<ErrorData> error) {
         error->AppendDebugGroup(*iter);
     }
 
-    if (mDevice->IsImmediateErrorHandlingEnabled() || mStatus == Status::Finished) {
-        // EncodingContext is unprotected from multiple threads by default, but this code will
-        // modify Device's internal states so we need to lock the device now.
-        auto deviceGuard = mDevice->GetGuard();
-        mDevice->HandleError(std::move(error));
-    } else {
+    bool deferErrors = mStatus != Status::Finished;
+    if (mDevice->IsImmediateErrorHandlingEnabled()) {
+        deferErrors = false;
+    }
+
+    if (deferErrors) {
         // TODO(crbug.com/42240579): ASSERT that encoding only generates validation errors.
 
         // If the encoding context is not finished, errors are deferred until
@@ -100,6 +100,11 @@ void EncodingContext::HandleError(std::unique_ptr<ErrorData> error) {
         if (mError == nullptr) {
             mError = std::move(error);
         }
+    } else {
+        // EncodingContext is unprotected from multiple threads by default, but this code will
+        // modify Device's internal states so we need to lock the device now.
+        auto deviceGuard = mDevice->GetGuard();
+        mDevice->HandleEncoderError(std::move(error));
     }
 
     CloseWithStatus(Status::ErrorInRecording);

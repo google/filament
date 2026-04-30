@@ -34,8 +34,6 @@
 #                       Do not modify this file directly
 ################################################################################
 
-include(lang/msl/ir/transform/BUILD.cmake)
-
 ################################################################################
 # Target:    tint_lang_msl_ir
 # Kind:      lib

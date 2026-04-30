@@ -29,9 +29,7 @@
 #define SRC_DAWN_NATIVE_OPENGL_COMPUTEPIPELINEGL_H_
 
 #include "dawn/native/ComputePipeline.h"
-
 #include "dawn/native/opengl/PipelineGL.h"
-
 #include "dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native::opengl {
@@ -44,14 +42,17 @@ class ComputePipeline final : public ComputePipelineBase, public PipelineGL {
         Device* device,
         const UnpackedPtr<ComputePipelineDescriptor>& descriptor);
 
-    MaybeError ApplyNow();
+    MaybeError ApplyNow(const OpenGLFunctions& gl);
 
-    MaybeError InitializeImpl() override;
+    GLuint GetProgramHandle() const;
+
+  protected:
+    void DestroyImpl(DestroyReason reason) override;
 
   private:
     using ComputePipelineBase::ComputePipelineBase;
     ~ComputePipeline() override;
-    void DestroyImpl() override;
+    ResultOrError<Extent3D> InitializeImpl() override;
 };
 
 }  // namespace dawn::native::opengl

@@ -5,7 +5,7 @@
 
 #include "draco/core/draco_test_base.h"
 
-using draco::Vector3f;
+namespace draco {
 
 TEST(MathUtils, Mod) { EXPECT_EQ(DRACO_INCREMENT_MOD(1, 1 << 1), 0); }
 
@@ -20,3 +20,5 @@ TEST(MathUtils, IntSqrt) {
     ASSERT_EQ(IntSqrt(number), static_cast<uint64_t>(floor(std::sqrt(number))));
   }
 }
+
+}  // namespace draco

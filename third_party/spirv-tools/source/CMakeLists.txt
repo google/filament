@@ -32,6 +32,7 @@ set(EI_ns_debuginfo "${GRAMMAR_DIR}/extinst.nonsemantic.shader.debuginfo.100.gra
 set(EI_ns_clspvreflect "${GRAMMAR_DIR}/extinst.nonsemantic.clspvreflection.grammar.json")
 set(EI_ns_vkspreflect "${GRAMMAR_DIR}/extinst.nonsemantic.vkspreflection.grammar.json")
 set(EI_tosa_001000_1 "${GRAMMAR_DIR}/extinst.tosa.001000.1.grammar.json")
+set(EI_arm_motion_engine_100 "${GRAMMAR_DIR}/extinst.arm.motion-engine.100.grammar.json")
 
 set(CORE_TABLES_BODY_INC_FILE ${spirv-tools_BINARY_DIR}/core_tables_body.inc)
 set(CORE_TABLES_HEADER_INC_FILE ${spirv-tools_BINARY_DIR}/core_tables_header.inc)
@@ -52,6 +53,7 @@ add_custom_command(OUTPUT ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_
       --extinst=,${EI_ns_clspvreflect}
       --extinst=,${EI_ns_vkspreflect}
       --extinst=TOSA_,${EI_tosa_001000_1}
+      --extinst=,${EI_arm_motion_engine_100}
     DEPENDS ${GGT_SCRIPT}
             ${SPIRV_CORE_GRAMMAR_JSON_FILE}
 	    ${EI_glsl}
@@ -65,7 +67,8 @@ add_custom_command(OUTPUT ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_
 	    ${EI_debuginfo}
 	    ${EI_ns_clspvreflect}
 	    ${EI_ns_vkspreflect}
-            ${EI_tosa_001000_1}
+	    ${EI_tosa_001000_1}
+	    ${EI_arm_motion_engine_100}
     COMMENT "Generate grammar tables")
 add_custom_target(spirv-tools-tables DEPENDS ${CORE_TABLES_BODY_INC_FILE} ${CORE_TABLES_HEADER_INC_FILE})
 
@@ -124,9 +127,8 @@ list(APPEND OPCODE_CPP_DEPENDS ${GENERATOR_INC_FILE})
 # We need to wrap the .inc files with a custom target to avoid problems when
 # multiple targets depend on the same custom command.
 add_custom_target(core_tables
-	DEPENDS ${OPCODE_CPP_DEPENDS}
-	        ${CORE_TABLES_BODY_INC_FILE}
-		${CORE_TABLES_HEADER_INC_FILE})
+  DEPENDS ${OPCODE_CPP_DEPENDS}
+          spirv-tools-tables)
 add_custom_target(extinst_tables
   DEPENDS ${EXTINST_CPP_DEPENDS})
 
@@ -261,6 +263,7 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_extensions.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_execution_limitations.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_function.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_graph.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_id.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_interfaces.cpp
@@ -268,6 +271,7 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_layout.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_literals.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_logicals.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_logical_pointers.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_memory.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_memory_semantics.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_mesh_shading.cpp
@@ -342,6 +346,9 @@ endfunction()
 
 if(SPIRV_TOOLS_BUILD_STATIC)
   add_library(${SPIRV_TOOLS}-static STATIC ${SPIRV_SOURCES})
+  if (SPIRV_TOOLS_USE_MIMALLOC AND SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD)
+    target_link_libraries(${SPIRV_TOOLS}-shared PRIVATE mimalloc-static)
+  endif()
   spirv_tools_default_target_options(${SPIRV_TOOLS}-static)
   # The static target does not have the '-static' suffix.
   set_target_properties(${SPIRV_TOOLS}-static PROPERTIES OUTPUT_NAME "${SPIRV_TOOLS}")
@@ -374,7 +381,7 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 endif()
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
-  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  if (SPIRV_TOOLS_USE_MIMALLOC AND (NOT SPIRV_TOOLS_BUILD_STATIC OR SPIRV_TOOLS_USE_MIMALLOC_IN_STATIC_BUILD))
     list(APPEND SPIRV_TOOLS_TARGETS mimalloc-static)
   endif()
   install(TARGETS ${SPIRV_TOOLS_TARGETS} EXPORT ${SPIRV_TOOLS}Targets)
@@ -392,8 +399,3 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
     "endif()\n")
   install(FILES ${CMAKE_BINARY_DIR}/${SPIRV_TOOLS}Config.cmake DESTINATION ${PACKAGE_DIR})
 endif(ENABLE_SPIRV_TOOLS_INSTALL)
-
-if(MSVC AND (NOT ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")))
-  # Enable parallel builds across four cores for this lib
-  add_definitions(/MP4)
-endif()

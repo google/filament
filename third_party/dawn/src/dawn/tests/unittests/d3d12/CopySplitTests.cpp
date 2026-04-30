@@ -58,8 +58,8 @@ struct TextureSpec {
 };
 
 struct BufferSpec {
-    uint64_t offset;        // byte offset into buffer to copy to/from
-    uint32_t bytesPerRow;   // bytes per block row (multiples of 256), aka row pitch
+    uint64_t offset;          // byte offset into buffer to copy to/from
+    uint32_t bytesPerRow;     // bytes per block row (multiples of 256), aka row pitch
     BlockCount rowsPerImage;  // bock rows per image slice (user-defined)
 };
 

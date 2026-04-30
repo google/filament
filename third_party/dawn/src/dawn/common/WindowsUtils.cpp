@@ -27,9 +27,9 @@
 
 #include "dawn/common/WindowsUtils.h"
 
-#include <memory>
-
 #include "dawn/common/windows_with_undefs.h"
+
+#include <memory>
 
 namespace dawn {
 

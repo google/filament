@@ -21,6 +21,7 @@
 #include "draco/attributes/geometry_indices.h"
 #include "draco/core/draco_index_type_vector.h"
 #include "draco/core/macros.h"
+#include "draco/draco_features.h"
 #include "draco/mesh/valence_cache.h"
 
 namespace draco {

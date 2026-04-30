@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: Apache-2.0
 cmake_minimum_required(VERSION 3.22.1)
 
-project(VUL LANGUAGES CXX)
+# The VERSION field is generated with the "--generated-version" flag in the generate_source.py script
+project(VUL VERSION 1.4.349 LANGUAGES CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON) # Remove when min is 3.26, see CMP0143
 
@@ -23,7 +24,7 @@ set(API_TYPE "vulkan")
 
 add_subdirectory(scripts)
 
-find_package(VulkanHeaders CONFIG)
+find_package(VulkanHeaders ${PROJECT_VERSION} CONFIG)
 
 option(VUL_ENABLE_ASAN "Use address sanitization")
 if (VUL_ENABLE_ASAN)
@@ -84,7 +85,7 @@ if (VUL_ENABLE_INSTALL)
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/VulkanUtilityLibrariesConfig.cmake.in" [=[
         include(CMakeFindDependencyMacro)
         # NOTE: Because VulkanHeaders is a PUBLIC dependency it needs to be found prior to VulkanUtilityLibraries
-        find_dependency(VulkanHeaders REQUIRED)
+        find_dependency(VulkanHeaders @PROJECT_VERSION@ REQUIRED)
 
         @PACKAGE_INIT@
 
@@ -100,7 +101,22 @@ if (VUL_ENABLE_INSTALL)
         NO_CHECK_REQUIRED_COMPONENTS_MACRO
     )
 
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/VulkanUtilityLibrariesConfig.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VulkanUtilityLibraries
+    write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/VulkanUtilityLibrariesConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion)
+
+    install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/VulkanUtilityLibrariesConfig.cmake
+            ${CMAKE_CURRENT_BINARY_DIR}/VulkanUtilityLibrariesConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VulkanUtilityLibraries)
+endif()
+
+option(VUL_CODEGEN "Enable Vulkan-Utility-Libraries code generation")
+if(VUL_CODEGEN)
+    find_package(Python3 REQUIRED)
+    add_custom_target(vul_codegen
+        COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/scripts/generate_source.py
+            "${VULKAN_HEADERS_INSTALL_DIR}/${CMAKE_INSTALL_DATADIR}/vulkan/registry"
+            --generated-version ${VulkanHeaders_VERSION} --api ${API_TYPE}
     )
 endif()

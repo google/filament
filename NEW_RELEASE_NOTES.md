@@ -7,4 +7,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- engine: add `MaterialInstance::setConstant()` and `MaterialInstance::getConstant()` methods. These allow for per-material instance specialization constant overrides.
+- iOS: add Apple silicon (`arm64`) iOS Simulator support. The sample Xcode projects now require Xcode 16+ (CI is pinned to Xcode 16.2).
+- WEBGL_PTHREADS renamed to WASM_PTHREADS in CMakeLists.txt

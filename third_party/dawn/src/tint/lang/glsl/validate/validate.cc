@@ -31,6 +31,7 @@
 
 #include "glslang/Public/ResourceLimits.h"
 
+// This header is in an external dependency, so warnings cannot be fixed without upstream changes.
 TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 #include "glslang/Public/ShaderLang.h"
 TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

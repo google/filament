@@ -27,12 +27,12 @@
 
 #include "dawn/native/metal/SwapChainMTL.h"
 
+#import <QuartzCore/CAMetalLayer.h>
+
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Surface.h"
 #include "dawn/native/metal/DeviceMTL.h"
 #include "dawn/native/metal/TextureMTL.h"
-
-#import <QuartzCore/CAMetalLayer.h>
 
 namespace dawn::native::metal {
 

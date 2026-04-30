@@ -143,14 +143,10 @@ class UniformBufferUpdatePerf : public DawnPerfTestWithParams<UniformBufferUpdat
     UniformBufferUpdatePerf() : DawnPerfTestWithParams(kNumIterations, 1) {}
     ~UniformBufferUpdatePerf() override = default;
 
-    void SetUp() override;
+  protected:
+    void SetUpPerfTest() override;
 
   private:
-    // Data needed for buffer returning.
-    struct CallbackData {
-        UniformBufferUpdatePerf* self;
-        wgpu::Buffer buffer;
-    };
     void Step() override;
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override;
 
@@ -234,12 +230,18 @@ void UniformBufferUpdatePerf::ReturnStagingBuffer(wgpu::Buffer buffer) {
     mMultipleStagingBuffers->push(buffer);
 }
 
-void UniformBufferUpdatePerf::SetUp() {
-    DawnPerfTestWithParams<UniformBufferUpdateParams>::SetUp();
-
+void UniformBufferUpdatePerf::SetUpPerfTest() {
     // Skip all tests if the BufferMapExtendedUsages feature is not supported.
     DAWN_TEST_UNSUPPORTED_IF(GetParam().uploadMethod == UploadMethod::MapWithExtendedUsages &&
                              !device.HasFeature(wgpu::FeatureName::BufferMapExtendedUsages));
+
+    // TODO(crbug.com/468353718): Flakily calls a pure virtual function on Mac/AMD.
+    DAWN_SUPPRESS_TEST_IF(IsMacOS() && IsAMD() &&
+                          GetParam().uploadMethod == UploadMethod::MultipleStagingBuffer);
+    // TODO(crbug.com/468353718): Same as above, but on the integrated GPU of
+    // the AMD laptops.
+    DAWN_SUPPRESS_TEST_IF(IsMacOS() && IsIntel() && GetParam().uploadSize == UploadSize::Full &&
+                          GetParam().uniformBuffer == UniformBuffer::Multiple);
 
     // Create the color / depth stencil attachments.
     wgpu::TextureDescriptor descriptor = {};

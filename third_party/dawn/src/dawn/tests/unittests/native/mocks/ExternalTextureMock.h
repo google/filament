@@ -28,10 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_EXTERNALTEXTUREMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_EXTERNALTEXTUREMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/ExternalTexture.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -43,7 +42,7 @@ class ExternalTextureMock : public ExternalTextureBase {
 
     ~ExternalTextureMock() override;
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 
   protected:
     ExternalTextureMock(DeviceMock* device, const ExternalTextureDescriptor* descriptor);

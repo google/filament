@@ -49,7 +49,7 @@ libtint_source_set("helpers") {
     "substitute_overrides_config.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -72,7 +72,7 @@ if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [ "substitute_overrides_config_test.cc" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/cmd/fuzz/ir/helpers",
@@ -80,7 +80,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/intrinsic",
       "${tint_src_dir}/lang/core/ir",
-      "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",

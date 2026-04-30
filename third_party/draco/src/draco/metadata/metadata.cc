@@ -122,6 +122,14 @@ const Metadata *Metadata::GetSubMetadata(const std::string &name) const {
   return sub_ptr->second.get();
 }
 
+Metadata *Metadata::sub_metadata(const std::string &name) {
+  auto sub_ptr = sub_metadatas_.find(name);
+  if (sub_ptr == sub_metadatas_.end()) {
+    return nullptr;
+  }
+  return sub_ptr->second.get();
+}
+
 void Metadata::RemoveEntry(const std::string &name) {
   // Actually just remove "name", no need to check if it exists.
   auto entry_ptr = entries_.find(name);

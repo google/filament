@@ -73,13 +73,14 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
 
     // now we have the sample, compute AO
     highp vec3 v = p - origin;  // sample vector
-    float vv = dot(v, v);       // squared distance
-    float vn = dot(v, normal);  // distance * cos(v, normal)
+    highp float vv = dot(v, v);       // squared distance
+    highp float vn = dot(v, normal);  // distance * cos(v, normal)
 
     // discard samples that are outside of the radius, preventing distant geometry to
     // cast shadows -- there are many functions that work and choosing one is an artistic
     // decision.
-    float w = sq(max(0.0, 1.0 - vv * materialParams.invRadiusSquared));
+    // Need to be highp to avoid imprecision on certain hardware (e.g. PowerVR)
+    highp float w = sq(max(0.0, 1.0 - vv * materialParams.invRadiusSquared));
 
     // discard samples that are too close to the horizon to reduce shadows cast by geometry
     // not sufficently tessellated. The goal is to discard samples that form an angle 'beta'

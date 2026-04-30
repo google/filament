@@ -125,8 +125,8 @@ bool RAnsSymbolEncoder<unique_symbols_bit_length_t>::Create(
     for (int i = 0; i < num_symbols; ++i) {
       sorted_probabilities[i] = i;
     }
-    std::sort(sorted_probabilities.begin(), sorted_probabilities.end(),
-              ProbabilityLess(&probability_table_));
+    std::stable_sort(sorted_probabilities.begin(), sorted_probabilities.end(),
+                     ProbabilityLess(&probability_table_));
     if (total_rans_prob < rans_precision_) {
       // This happens rather infrequently, just add the extra needed precision
       // to the most frequent symbol.

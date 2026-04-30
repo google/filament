@@ -29,6 +29,7 @@
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Constants.h"
+#include "dawn/common/ExternalTextureParams.h"
 #include "dawn/common/Math.h"
 #include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/TestUtils.h"
@@ -72,11 +73,11 @@ wgpu::ExternalTexture CreateExternalTexture(wgpu::Device device, uint32_t width,
 
     // Create an ExternalTextureDescriptor from the texture view
     wgpu::ExternalTextureDescriptor externalDesc;
-    utils::ColorSpaceConversionInfo info = utils::GetYUVBT709ToRGBSRGBColorSpaceConversionInfo();
-    externalDesc.yuvToRgbConversionMatrix = info.yuvToRgbConversionMatrix.data();
-    externalDesc.gamutConversionMatrix = info.gamutConversionMatrix.data();
-    externalDesc.srcTransferFunctionParameters = info.srcTransferFunctionParameters.data();
-    externalDesc.dstTransferFunctionParameters = info.dstTransferFunctionParameters.data();
+    ExternalTextureColorSpaceParams params = GetNoopColorSpaceParams();
+    externalDesc.yuvToRgbConversionMatrix = params.yuvToRgbConversionMatrix.data();
+    externalDesc.gamutConversionMatrix = params.gamutConversionMatrix.data();
+    externalDesc.srcTransferFunctionParameters = params.srcTransferFunction.data();
+    externalDesc.dstTransferFunctionParameters = params.dstTransferFunction.data();
 
     externalDesc.plane0 = view;
 

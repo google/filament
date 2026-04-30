@@ -41,6 +41,26 @@ async function fetchFrameGraph(fgid) {
     return fgInfo;
 }
 
+async function fetchMonitoredResources() {
+    return await _fetchJson(`api/monitor`);
+}
+
+async function clearMonitoredResources() {
+    const response = await fetch(`api/monitor/clear`, {
+        method: "POST"
+    });
+    return await response.json();
+}
+
+async function toggleMonitor(fgid, id, name, enabled) {
+    const response = await fetch(`api/monitor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fgid: fgid, id: id, name: name, enabled: enabled })
+    });
+    return await response.json();
+}
+
 const STATUS_LOOP_TIMEOUT = 3000;
 
 const STATUS_CONNECTED = 1;
@@ -55,9 +75,9 @@ async function statusLoop(isConnected, onStatus) {
         const fgid = await _fetchText("api/status" + (isConnected() ? '' : '?firstTime'));
         // A first-time request returned successfully
         if (fgid === '0') {
-            onStatus(STATUS_CONNECTED);
+            await onStatus(STATUS_CONNECTED);
         } else if (fgid !== '1') {
-            onStatus(STATUS_FRAMEGRAPH_UPDATED, fgid);
+            await onStatus(STATUS_FRAMEGRAPH_UPDATED, fgid);
         } // fgid == '1' is no-op, just loop again
         statusLoop(isConnected, onStatus);
     } catch {

@@ -27,10 +27,10 @@
 
 #include <string>
 
+#include "src/tint/api/helpers/generate_bindings.h"
 #include "src/tint/cmd/bench/bench.h"
-#include "src/tint/lang/msl/ir/transform/flatten_bindings.h"
-#include "src/tint/lang/msl/writer/helpers/generate_bindings.h"
 #include "src/tint/lang/msl/writer/writer.h"
+#include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
@@ -40,9 +40,13 @@ namespace {
 
 void GenerateMSL(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
-    if (res != Success) {
-        state.SkipWithError(res.Failure().reason);
-        return;
+    TINT_ASSERT(res == Success) << res.Failure().reason;
+
+    std::vector<std::string> names;
+    for (auto* func : res->program.AST().Functions()) {
+        if (func->IsEntryPoint()) {
+            names.push_back(func->name->symbol.Name());
+        }
     }
 
     tint::msl::writer::Options gen_options = {};
@@ -64,42 +68,18 @@ void GenerateMSL(benchmark::State& state, std::string input_name) {
         tint::BindingPoint{0, 6}, 6);
     gen_options.array_length_from_constants.bindpoint_to_size_index.emplace(
         tint::BindingPoint{0, 7}, 7);
-    {
-        // Convert the AST program to an IR module, so that we can generating bindings data.
-        auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
-        if (ir != Success) {
-            state.SkipWithError(ir.Failure().reason);
-            return;
-        }
-
-        // Remap resource numbers to a flat namespace.
-        auto fb_res = tint::msl::ir::transform::FlattenBindings(ir.Get());
-        if (fb_res != tint::Success) {
-            state.SkipWithError(fb_res.Failure().reason);
-            return;
-        }
-
-        gen_options.bindings = tint::msl::writer::GenerateBindings(ir.Get(), false);
-    }
 
     for (auto _ : state) {
-        // Convert the AST program to an IR module.
-        auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
-        if (ir != Success) {
-            state.SkipWithError(ir.Failure().reason);
-            return;
-        }
+        for (auto& name : names) {
+            // Convert the AST program to an IR module.
+            auto ir = tint::wgsl::reader::ProgramToLoweredIR(res->program);
+            TINT_ASSERT(ir == Success) << ir.Failure().reason;
 
-        // Remap resource numbers to a flat namespace.
-        auto fb_res = tint::msl::ir::transform::FlattenBindings(ir.Get());
-        if (fb_res != tint::Success) {
-            state.SkipWithError(fb_res.Failure().reason);
-            return;
-        }
+            gen_options.bindings = tint::GenerateBindings(ir.Get(), name, true, true);
+            gen_options.entry_point_name = name;
 
-        auto gen_res = Generate(ir.Get(), gen_options);
-        if (gen_res != Success) {
-            state.SkipWithError(gen_res.Failure().reason);
+            auto gen_res = Generate(ir.Get(), gen_options);
+            TINT_ASSERT(gen_res == Success) << gen_res.Failure().reason;
         }
     }
 }

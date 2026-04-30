@@ -46,8 +46,8 @@ TEST_F(IfStatementTest, Creation) {
 }
 
 TEST_F(IfStatementTest, Creation_WithAttributes) {
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* cond = Expr("cond");
     auto* stmt = If(cond, Block(), ElseStmt(), tint::Vector{attr1, attr2});
 
@@ -82,36 +82,6 @@ TEST_F(IfStatementDeathTest, Assert_InvalidElse) {
         {
             ProgramBuilder b;
             b.If(b.Expr(true), b.Block(), b.Else(b.CallStmt(b.Call("foo"))));
-        },
-        "internal compiler error");
-}
-
-TEST_F(IfStatementDeathTest, Assert_DifferentGenerationID_Cond) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.If(b2.Expr(true), b1.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(IfStatementDeathTest, Assert_DifferentGenerationID_Body) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.If(b1.Expr(true), b2.Block());
-        },
-        "internal compiler error");
-}
-
-TEST_F(IfStatementDeathTest, Assert_DifferentGenerationID_ElseStatement) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.If(b1.Expr(true), b1.Block(), b2.Else(b2.If(b2.Expr("ident"), b2.Block())));
         },
         "internal compiler error");
 }

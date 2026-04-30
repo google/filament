@@ -316,6 +316,9 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
+    if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
+        return false;
+    }
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
     bool const renderFrame = mFrameSkipper.shouldRenderFrame(driver);
@@ -365,9 +368,15 @@ bool FRenderer::shouldRenderFrame() const noexcept {
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
-    assert_invariant(swapChain);
+    FILAMENT_CHECK_PRECONDITION(swapChain) << "swapChain cannot be null.";
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT, "frameId", (mFrameId + 1));
+
+    if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
+        return false;
+    }
+
+    mEngine.propagateBackendException();
 
     if (!vsyncSteadyClockTimeNano) {
         vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
@@ -468,6 +477,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
 void FRenderer::endFrame() {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    mEngine.propagateBackendException();
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         mBeginFrameInternal();
@@ -636,6 +647,8 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
 void FRenderer::render(FView const* view) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    mEngine.propagateBackendException();
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         // This is unlikely to happen, the user should not call render() if we returned false from
@@ -884,6 +897,13 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
      */
     FrameGraph fg(*mResourceAllocator,
         isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
+
+#if FILAMENT_ENABLE_FGVIEWER
+    if (UTILS_LIKELY(engine.debug.fgviewer)) {
+        fg.setFgviewerData(engine.debug.fgviewer, &view);
+    }
+#endif
+
     auto& blackboard = fg.getBlackboard();
 
     PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
@@ -1550,17 +1570,9 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
     fg.forwardResource(fgViewRenderTarget, input);
-
     fg.present(fgViewRenderTarget);
 
     fg.compile();
-
-#if FILAMENT_ENABLE_FGVIEWER
-    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
-    if (UTILS_LIKELY(fgviewerServer)) {
-        fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
-    }
-#endif
 
     //utils::io::sstream graphviz;
     //fg.export_graphviz(graphviz, view.getName());

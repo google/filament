@@ -56,6 +56,8 @@ static_library("wgpu_utils") {
     "ComboRenderBundleEncoderDescriptor.h",
     "ComboRenderPipelineDescriptor.cpp",
     "ComboRenderPipelineDescriptor.h",
+    "ScopedIgnoreValidationErrors.cpp",
+    "ScopedIgnoreValidationErrors.h",
     "TextureUtils.cpp",
     "TextureUtils.h",
     "WGPUHelpers.cpp",
@@ -63,7 +65,7 @@ static_library("wgpu_utils") {
   ]
 
   public_deps = [
-    ":abseil",
+    "${dawn_root}:abseil",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn/common",
   ]
@@ -85,14 +87,14 @@ static_library("test_utils") {
   ]
 
   public_deps = [
-    ":abseil",
     ":wgpu_utils",
+    "${dawn_root}:abseil",
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn:proc",
     "${dawn_root}/src/dawn/common",
     "${dawn_root}/src/dawn/native:headers",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
-    "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/dawn/wire:static",
   ]
 }
 
@@ -103,13 +105,15 @@ static_library("system_utils") {
     "CommandLineParser.cpp",
     "CommandLineParser.h",
     "PlatformDebugLogger.h",
+    "SystemHandle.cpp",
+    "SystemHandle.h",
     "SystemUtils.cpp",
     "SystemUtils.h",
     "Timer.h",
   ]
 
   public_deps = [
-    ":abseil",
+    "${dawn_root}:abseil",
     "${dawn_root}/src/dawn/common",
   ]
 
@@ -138,23 +142,5 @@ static_library("system_utils") {
     }
   } else {
     sources += [ "PosixTimer.cpp" ]
-  }
-}
-
-group("abseil") {
-  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
-  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
-  # including it as a dependency in other projects (such as Skia).
-  if (build_with_chromium || build_with_angle) {
-    public_deps = [ "$dawn_abseil_dir:absl" ]
-  } else {
-    public_deps = [
-      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
-      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
-      "${dawn_root}/third_party/gn/abseil-cpp:span",
-      "${dawn_root}/third_party/gn/abseil-cpp:str_format",
-      "${dawn_root}/third_party/gn/abseil-cpp:string_view",
-      "${dawn_root}/third_party/gn/abseil-cpp:strings",
-    ]
   }
 }

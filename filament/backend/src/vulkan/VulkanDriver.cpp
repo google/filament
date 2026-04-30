@@ -260,7 +260,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mPipelineCache(*this, mPlatform->getDevice(), mContext),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(mContext, mResourceManager, mAllocator),
-      mFramebufferCache(mPlatform->getDevice()),
+      mFramebufferCache(mPlatform->getDevice(),
+              mPlatform->getCustomization().timeBeforeEvictionFbo),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
@@ -943,28 +944,23 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         }
     }
 
-    VulkanAttachment depthStencil[2] = {};
-    if (depth.handle) {
-        depthStencil[0] = {
-            .texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, depth.handle),
-            .level = depth.level,
-            .layerCount = layerCount,
-            .layer = (uint8_t) depth.layer,
-        };
-        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[0].getExtent2D();
-        tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
-        tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
-        attachmentCount++;
-    }
+    VulkanAttachment depthStencil;
+    // In VK you can only have one depth/stencil attachment on a RT.
+    // This can be a depth only, stencil only or depth and stencil combined.
+    // You cannot have separate depth and stencil attachment (unless you use Dynamic Rendering)
+    if (depth.handle || stencil.handle) {
+        assert_invariant(!depth.handle || !stencil.handle || (depth.handle == stencil.handle));
+        // We assume that we have depth only attachment or that depth and stencil come in the depth attachment
+        // Except in the case there is a stencil only attachment
+        TargetBufferInfo depthStencilBuffer = depth.handle ? depth : stencil;
 
-    if (stencil.handle) {
-        depthStencil[1] = {
-            .texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, stencil.handle),
-            .level = stencil.level,
+        depthStencil = {
+            .texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, depthStencilBuffer.handle),
+            .level = depthStencilBuffer.level,
             .layerCount = layerCount,
-            .layer = (uint8_t) stencil.layer,
+            .layer = (uint8_t) depthStencilBuffer.layer,
         };
-        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
+        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil.getExtent2D();
         tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
         tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
         attachmentCount++;
@@ -1007,7 +1003,9 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
     // it with appropriate VulkanCmdFence, which is associated with the current, recording command
     // buffer.
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->setFence(cmdbuf->getFenceStatus());
+    signalFence([&] {
+        fence->setFence(cmdbuf->getFenceStatus());
+    });
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
@@ -1458,7 +1456,9 @@ void VulkanDriver::fenceCancel(FenceHandle const fh) {
     // Even though this is a synchronous call, the fence handle must be (and stay) valid
     assert_invariant(fh);
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->cancel();
+    signalFence([&] {
+        fence->cancel();
+    });
 }
 
 FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
@@ -1485,7 +1485,22 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    auto const [cmdfence, canceled] = fence->wait(until);
+    std::shared_ptr<VulkanCmdFence> cmdfence;
+    bool canceled = false;
+    FenceStatus status = waitForFence([&] {
+        auto fstatus = fence->getStatus();
+        if (bool(fstatus.first) || fstatus.second) {
+            cmdfence = fstatus.first;
+            canceled = fstatus.second;
+            return true;
+        }
+        return false;
+    }, until);
+
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
+
     if (!cmdfence || canceled) {
         return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
@@ -1545,6 +1560,16 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
         default:
             return isRenderTargetFormatSupported(format);
     }
+}
+
+bool VulkanDriver::isTextureFormatFilterable(TextureFormat format) {
+    VkFormat vkformat = fvkutils::getVkFormat(format);
+    if (vkformat == VK_FORMAT_UNDEFINED) {
+        return false;
+    }
+    VkFormatProperties info;
+    vkGetPhysicalDeviceFormatProperties(mPlatform->getPhysicalDevice(), vkformat, &info);
+    return (info.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0;
 }
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
@@ -1939,9 +1964,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
-    if (rt->hasDepth()) {
-        auto depth = rt->getDepth();
-        depth.texture->print();
+    if (rt->hasDepthStencil()) {
+        auto depthStencil = rt->getDepthStencil();
+        depthStencil.texture->print();
     }
 #endif
 
@@ -1956,15 +1981,19 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkRect2D const scissor{ .offset = { 0, 0 }, .extent = extent };
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 
-    VulkanLayout currentDepthLayout = VulkanLayout::UNDEFINED;
+    VulkanLayout currentDepthStencilLayout = VulkanLayout::UNDEFINED;
     TargetBufferFlags clearVal = params.flags.clear;
     TargetBufferFlags discardEndVal = params.flags.discardEnd;
-    if (rt->hasDepth()) {
+    if (rt->hasDepthStencil()) {
         if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
             discardEndVal &= ~TargetBufferFlags::DEPTH;
             clearVal &= ~TargetBufferFlags::DEPTH;
         }
-        currentDepthLayout = VulkanLayout::DEPTH_ATTACHMENT;
+        if (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) {
+            discardEndVal &= ~TargetBufferFlags::STENCIL;
+            clearVal &= ~TargetBufferFlags::STENCIL;
+        }
+        currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
 
@@ -1974,7 +2003,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.clear = clearVal;
     rpkey.discardStart = discardStart;
     rpkey.discardEnd = discardEndVal;
-    rpkey.initialDepthLayout = currentDepthLayout;
+    rpkey.initialDepthStencilLayout = currentDepthStencilLayout;
     rpkey.subpassMask = uint8_t(params.subpassMask);
 
     fvkmemory::resource_ptr<VulkanRenderPass> renderPass =
@@ -2040,9 +2069,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 renderPassInfo.clearValueCount++;
             }
         }
-        if (fbkey.depth) {
+        if (fbkey.depthStencil) {
             VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
-            clearValue.depthStencil = {(float) params.clearDepth, 0};
+            clearValue.depthStencil = {(float) params.clearDepth, params.clearStencil};
         }
         renderPassInfo.pClearValues = &clearValues[0];
     }

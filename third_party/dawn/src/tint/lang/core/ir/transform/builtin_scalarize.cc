@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/transform/builtin_scalarize.h"
+
 #include <cstdint>
 #include <utility>
 
@@ -108,11 +109,11 @@ struct State {
                 for (auto& e : builtin->Args()) {
                     if (auto* vec = e->Type()->As<core::type::Vector>()) {
                         // It would be an error to scalarize over different sized vectors.
-                        TINT_ASSERT(common_vec_width == vec->Width());
+                        TINT_IR_ASSERT(ir, common_vec_width == vec->Width());
                         auto* access_arg = b.Access(vec->DeepestElement(), e, u32(i));
                         scalar_args.Push(access_arg->Result());
                     } else {
-                        TINT_ASSERT(e->Type()->IsScalar());
+                        TINT_IR_ASSERT(ir, e->Type()->IsScalar());
                         // This code generalizes for vector functions that additionally take scalar
                         // inputs. And example of this is the second and third parameters of
                         // 'extract_bits'.
@@ -134,11 +135,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BuiltinScalarize(Module& ir, const BuiltinScalarizeConfig& config) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.BuiltinScalarize", kBuiltinScalarizeCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kBuiltinScalarizeCapabilities, "before core.BuiltinScalarize");
 
     State{config, ir}.Process();
 

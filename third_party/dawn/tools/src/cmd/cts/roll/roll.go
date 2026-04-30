@@ -32,7 +32,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -104,11 +104,11 @@ type cmd struct {
 	flags rollerFlags
 }
 
-func (cmd) Name() string {
+func (c *cmd) Name() string {
 	return "roll"
 }
 
-func (cmd) Desc() string {
+func (c *cmd) Desc() string {
 	return "roll CTS and re-generate expectations"
 }
 
@@ -138,9 +138,13 @@ func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, e
 	return nil, nil
 }
 
+// TODO(crbug.com/460178080): Add unittest coverage or revise this comment once
+// Gerrit interactions support dependency injection. There are other network
+// interactions in this function that also need dependency injection, so
+// unittest coverage is blocked until all support that.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	// Validate command line arguments
-	auth, err := c.flags.auth.Options()
+	options, err := c.flags.auth.Options()
 	if err != nil {
 		return fmt.Errorf("failed to obtain authentication options: %w", err)
 	}
@@ -153,18 +157,18 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 		{name: "npm", path: c.flags.npmPath},
 		{name: "node", path: c.flags.nodePath},
 	} {
-		if _, err := os.Stat(tool.path); err != nil {
+		if _, err := cfg.OsWrapper.Stat(tool.path); err != nil {
 			return fmt.Errorf("failed to find path to %v: %v. %v", tool.name, err, tool.hint)
 		}
 	}
 
 	// Create the various service clients and ensure required permissions are
 	// available.
-	git, err := git.New(c.flags.gitPath)
+	gitInstance, err := git.New(c.flags.gitPath, cfg.OsWrapper)
 	if err != nil {
 		return fmt.Errorf("failed to obtain authentication options: %w", err)
 	}
-	gerrit, err := gerrit.New(ctx, auth, cfg.Gerrit.Host)
+	gerritInstance, err := gerrit.New(ctx, options, cfg.Gerrit.Host)
 	if err != nil {
 		return err
 	}
@@ -172,7 +176,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if err != nil {
 		return err
 	}
-	bb, err := buildbucket.New(ctx, auth)
+	bb, err := buildbucket.New(ctx, options)
 	if err != nil {
 		return err
 	}
@@ -180,37 +184,37 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if err != nil {
 		return err
 	}
+	cfg.Querier = client
 
-	// TODO(crbug.com/349798588): Re-enable this check once we figure out why the
-	// roller is reporting that it cannot upload to Gerrit.
-	/* credCheckInput := common.CredCheckInputs{
-		GerritConfig:  gerrit,
+	credCheckInput := common.CredCheckInputs{
+		// TODO(crbug.com/349798588): Re-enable this check once we figure out why
+		// the roller is reporting that it cannot upload to Gerrit.
+		GerritConfig:  nil,
 		GitilesConfig: dawn,
 		Querier:       client,
 	}
 	err = common.CheckAllRequiredCredentials(ctx, credCheckInput)
 	if err != nil {
 		return err
-	} */
+	}
 
 	// Create a temporary directory for local checkouts
-	tmpDir, err := os.MkdirTemp("", "dawn-cts-roll")
+	tmpDir, err := cfg.OsWrapper.MkdirTemp("", "dawn-cts-roll")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer cfg.OsWrapper.RemoveAll(tmpDir)
 	ctsDir := filepath.Join(tmpDir, "cts")
 
 	// Construct the roller, and roll
 	r := roller{
 		cfg:                 cfg,
 		flags:               c.flags,
-		auth:                auth,
+		auth:                options,
 		bb:                  bb,
 		parentSwarmingRunID: c.flags.parentSwarmingRunID,
-		client:              client,
-		git:                 git,
-		gerrit:              gerrit,
+		git:                 gitInstance,
+		gerrit:              gerritInstance,
 		gitiles:             gitilesRepos{dawn: dawn},
 		ctsDir:              ctsDir,
 	}
@@ -227,7 +231,6 @@ type roller struct {
 	auth                auth.Options
 	bb                  *buildbucket.Buildbucket
 	parentSwarmingRunID string
-	client              *resultsdb.BigQueryClient
 	git                 *git.Git
 	gerrit              *gerrit.Gerrit
 	gitiles             gitilesRepos
@@ -490,7 +493,7 @@ func (r *roller) roll(ctx context.Context) error {
 
 		// Gather the build results
 		log.Println("gathering results...")
-		psResultsByExecutionMode, err = common.CacheUnsuppressedFailingResults(ctx, r.cfg, ps, r.flags.cacheDir, r.client, builds)
+		psResultsByExecutionMode, err = common.CacheUnsuppressedFailingResults(ctx, r.cfg, ps, r.flags.cacheDir, builds)
 		if err != nil {
 			return err
 		}
@@ -542,7 +545,7 @@ func (r *roller) roll(ctx context.Context) error {
 		}
 		defer resp.Body.Close()
 
-		jsonResponse, err := ioutil.ReadAll(resp.Body)
+		jsonResponse, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
@@ -686,6 +689,8 @@ func (r *roller) rollCommitMessage(
 	return msg.String()
 }
 
+// TODO(crbug.com/460178080): Add unittests for this once Gerrit interactions
+// support dependency injection.
 // findExistingRolls looks for all existing open CTS rolls by this user
 func (r *roller) findExistingRolls() ([]gerrit.ChangeInfo, error) {
 	// Look for an existing gerrit change to update
@@ -699,6 +704,8 @@ func (r *roller) findExistingRolls() ([]gerrit.ChangeInfo, error) {
 	return changes, nil
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage for this once the repo
+// exec uses are handled via dependency injection.
 // checkout performs a git checkout of the repo at host to dir at the given hash
 func (r *roller) checkout(project, dir, host, hash string) (*git.Repository, error) {
 	log.Printf("cloning %v to '%v'...", project, dir)
@@ -718,6 +725,8 @@ func (r *roller) checkout(project, dir, host, hash string) (*git.Repository, err
 	return repo, nil
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage for this once InstallCTSDeps
+// supports dependency injection.
 // Call 'npm ci' in the CTS directory, and generates a map of project-relative
 // file path to file content for the CTS roll's change. This includes:
 // * type-script source files
@@ -788,6 +797,8 @@ func (r *roller) generateFiles(ctx context.Context, fsReader oswrapper.Filesyste
 	return files, nil
 }
 
+// TODO(crbug.com/416731783): Add unittest coverage for this once gitiles
+// network interactions can be mocked out via dependency injection.
 // updateDEPS fetches and updates the Dawn DEPS file at 'dawnRef' so that all CTS hashes are changed to newCTSHash
 func (r *roller) updateDEPS(ctx context.Context, dawnRef, newCTSHash string) (newDEPS, oldCTSHash string, err error) {
 	deps, err := r.gitiles.dawn.DownloadFile(ctx, dawnRef, depsRelPath)
@@ -802,6 +813,8 @@ func (r *roller) updateDEPS(ctx context.Context, dawnRef, newCTSHash string) (ne
 	return newDEPS, oldCTSHash, nil
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec calls are handled
+// via dependency injection.
 // genTSDepList returns a list of source files, for the CTS checkout at r.ctsDir
 // This list can be used to populate the ts_sources.txt file.
 // Requires tsc to be found at './node_modules/.bin/tsc' in the CTS directory
@@ -838,6 +851,8 @@ func (r *roller) genTSDepList(
 	return strings.Join(deps, "\n") + "\n", nil
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once GetnTestList supports
+// dependency injection for exec calls.
 // genTestList returns the newline delimited list of test names, for the CTS checkout at r.ctsDir
 func (r *roller) genTestList(
 	ctx context.Context, fsReader oswrapper.FilesystemReader) (string, error) {
@@ -890,6 +905,9 @@ func (r *roller) genWebTestSources(ctx context.Context, fsReader oswrapper.Files
 
 			// Find the index after the starting html tag.
 			i := strings.Index(contents, "<html")
+			if i < 0 {
+				return fmt.Errorf("Unable to find starting HTML tag in %s", path)
+			}
 			i = i + strings.Index(contents[i:], ">")
 			i = i + 1
 

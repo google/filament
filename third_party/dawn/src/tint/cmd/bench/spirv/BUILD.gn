@@ -47,7 +47,7 @@ if (tint_build_benchmarks) {
     tint_benchmarks_source_set("bench") {
       sources = [ "writer_bench.cc" ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:google_benchmark",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
@@ -79,7 +79,7 @@ if (tint_build_benchmarks) {
 
       if (tint_build_wgsl_reader) {
         deps += [
-          "${tint_src_dir}/cmd/bench:bench",
+          "${tint_src_dir}/cmd/bench",
           "${tint_src_dir}/lang/wgsl/reader",
         ]
       }

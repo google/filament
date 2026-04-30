@@ -60,9 +60,15 @@ TEST_F(PointCloudBuilderTest, IndividualTest_NoDedup) {
     builder.SetAttributeValueForPoint(intensity_att_id, i,
                                       intensity_data_.data() + i.value());
   }
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  builder.SetAttributeName(pos_att_id, "Bob");
+#endif
   std::unique_ptr<PointCloud> res = builder.Finalize(false);
   ASSERT_TRUE(res != nullptr);
   ASSERT_EQ(res->num_points(), 10);
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  EXPECT_EQ(res->attribute(pos_att_id)->name(), "Bob");
+#endif
 }
 
 TEST_F(PointCloudBuilderTest, IndividualTest_Dedup) {
@@ -166,6 +172,27 @@ TEST_F(PointCloudBuilderTest, MultiUse) {
       ASSERT_EQ(intensity_data_[i.value() + offset], int_val);
     }
   }
+}
+
+TEST_F(PointCloudBuilderTest, PropagatesAttributeUniqueIds) {
+  // This test verifies that PointCloudBuilder correctly applies unique IDs to
+  // attributes.
+  PointCloudBuilder builder;
+  builder.Start(10);
+  const int pos_att_id =
+      builder.AddAttribute(GeometryAttribute::POSITION, 3, DT_FLOAT32);
+  const int intensity_att_id =
+      builder.AddAttribute(GeometryAttribute::GENERIC, 1, DT_INT16);
+  for (PointIndex i(0); i < 10; ++i) {
+    builder.SetAttributeValueForPoint(pos_att_id, i,
+                                      pos_data_.data() + 3 * i.value());
+    builder.SetAttributeValueForPoint(intensity_att_id, i,
+                                      intensity_data_.data() + i.value());
+  }
+  builder.SetAttributeUniqueId(pos_att_id, 1234);
+  std::unique_ptr<PointCloud> res = builder.Finalize(false);
+  ASSERT_TRUE(res != nullptr);
+  ASSERT_EQ(res->GetAttributeByUniqueId(1234), res->attribute(pos_att_id));
 }
 
 }  // namespace draco

@@ -242,7 +242,7 @@ MaybeError Queue::InitializePendingContext() {
     return {};
 }
 
-void Queue::DestroyImpl() {
+void Queue::DestroyImpl(DestroyReason reason) {
     // Release the shared fence here to prevent a ref-cycle with the device, but do not destroy the
     // underlying native fence so that we can return a SharedFence on EndAccess after destruction.
     mSharedFence = nullptr;
@@ -265,22 +265,40 @@ ResultOrError<Ref<d3d::SharedFence>> Queue::GetOrCreateSharedFence() {
     return mSharedFence;
 }
 
-ScopedCommandRecordingContext Queue::GetScopedPendingCommandContext(SubmitMode submitMode) {
-    return mPendingCommands.Use([&](auto commands) {
-        if (submitMode == SubmitMode::Normal) {
-            mPendingCommandsNeedSubmit.store(true, std::memory_order_release);
-        }
-        return ScopedCommandRecordingContext(std::move(commands));
+template <typename ScopedContextType, typename... Args>
+ScopedContextType Queue::CreateScopedCommandContext(SubmitMode submitMode,
+                                                    CommandRecordingContext::Guard&& commands,
+                                                    Args&&... args) {
+    if (submitMode == SubmitMode::Normal) {
+        mPendingCommandsNeedSubmit.store(true, std::memory_order_release);
+    }
+    return ScopedContextType(std::move(commands), std::forward<Args>(args)...);
+}
+
+ScopedCommandRecordingContext Queue::GetScopedPendingCommandContext(SubmitMode submitMode,
+                                                                    bool lockD3D11Scope) {
+    return mPendingCommands.Use([&](auto commands) -> ScopedCommandRecordingContext {
+        return CreateScopedCommandContext<ScopedCommandRecordingContext>(
+            submitMode, std::move(commands), lockD3D11Scope);
     });
+}
+
+std::optional<ScopedCommandRecordingContext> Queue::TryGetScopedPendingCommandContext(
+    SubmitMode submitMode,
+    bool lockD3D11Scope) {
+    std::optional<CommandRecordingContext::Guard> guard = mPendingCommands.TryUse();
+    if (!guard) {
+        return std::nullopt;
+    }
+    return CreateScopedCommandContext<ScopedCommandRecordingContext>(submitMode, std::move(*guard),
+                                                                     lockD3D11Scope);
 }
 
 ScopedSwapStateCommandRecordingContext Queue::GetScopedSwapStatePendingCommandContext(
     SubmitMode submitMode) {
     return mPendingCommands.Use([&](auto commands) {
-        if (submitMode == SubmitMode::Normal) {
-            mPendingCommandsNeedSubmit.store(true, std::memory_order_release);
-        }
-        return ScopedSwapStateCommandRecordingContext(std::move(commands));
+        return CreateScopedCommandContext<ScopedSwapStateCommandRecordingContext>(
+            submitMode, std::move(commands));
     });
 }
 
@@ -328,25 +346,73 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
     DAWN_TRY_ASSIGN(completedSerial, CheckCompletedSerialsImpl());
 
     // Finalize Mapping on ready buffers.
-    DAWN_TRY(CheckAndMapReadyBuffers(completedSerial));
+    DAWN_TRY(CheckScheduledBufferMappings(completedSerial));
 
     return completedSerial;
 }
 
-MaybeError Queue::CheckAndMapReadyBuffers(ExecutionSerial completedSerial) {
+MaybeError Queue::CheckScheduledBufferMappings(ExecutionSerial completedSerial) {
     auto commandContext = GetScopedPendingCommandContext(QueueBase::SubmitMode::Passive);
-    for (const auto& bufferEntry : mPendingMapBuffers.IterateUpTo(completedSerial)) {
-        DAWN_TRY(
-            bufferEntry.buffer->FinalizeMap(&commandContext, completedSerial, bufferEntry.mode));
-    }
-    mPendingMapBuffers.ClearUpTo(completedSerial);
-    return {};
+    return mPendingMapBuffers.Use([&](auto pendingMapBuffers) -> MaybeError {
+        auto& serialQueue = pendingMapBuffers->serialQueue;
+        auto& requestMap = pendingMapBuffers->requestMap;
+
+        // Process all serials up to and including completedSerial
+        auto it = serialQueue.begin();
+        while (it != serialQueue.end() && it->first <= completedSerial) {
+            LinkedList<BufferMapRequest>& list = it->second;
+
+            // Process all buffers in this serial's list
+            while (!list.empty()) {
+                LinkNode<BufferMapRequest>* node = list.head();
+                BufferMapRequest* request = node->value();
+                Buffer* buffer = request->buffer;
+
+                DAWN_ASSERT(buffer);
+                DAWN_TRY(buffer->TryMapNow(&commandContext, completedSerial, request->mode));
+
+                request->RemoveFromList();
+                requestMap.erase(buffer);
+            }
+
+            // Erase this serial's entry and advance iterator
+            it = serialQueue.erase(it);
+        }
+
+        return {};
+    });
 }
 
-void Queue::TrackPendingMapBuffer(Ref<Buffer>&& buffer,
-                                  wgpu::MapMode mode,
-                                  ExecutionSerial readySerial) {
-    mPendingMapBuffers.Enqueue({buffer, mode}, readySerial);
+void Queue::ScheduleBufferMapping(BufferMapRequest* request, ExecutionSerial readySerial) {
+    DAWN_ASSERT(request->buffer != nullptr);
+    mPendingMapBuffers.Use([&](auto pendingMapBuffers) {
+        auto& serialQueue = pendingMapBuffers->serialQueue;
+        auto& requestMap = pendingMapBuffers->requestMap;
+
+        auto& storedRequest = requestMap[request->buffer];
+        // Cancel old schedule if any. This is because we only allow one schedule per buffer.
+        // Any new schedule will overwrite the old one.
+        if (storedRequest) {
+            storedRequest->RemoveFromList();
+        }
+        storedRequest = request;
+
+        DAWN_ASSERT(!request->IsInList());
+        serialQueue[readySerial].Append(request);
+    });
+}
+
+void Queue::CancelScheduledBufferMapping(Buffer* buffer) {
+    mPendingMapBuffers.Use([&](auto pendingMapBuffers) {
+        auto& requestMap = pendingMapBuffers->requestMap;
+
+        auto it = requestMap.find(buffer);
+        if (it != requestMap.end()) {
+            BufferMapRequest* entry = it->second;
+            entry->RemoveFromList();
+            requestMap.erase(it);
+        }
+    });
 }
 
 MaybeError Queue::WriteBufferImpl(BufferBase* buffer,
@@ -392,9 +458,11 @@ bool Queue::HasPendingCommands() const {
     return mPendingCommandsNeedSubmit.load(std::memory_order_acquire);
 }
 
-void Queue::ForceEventualFlushOfCommands() {}
+void Queue::ForceEventualFlushOfCommands() {
+    mPendingCommandsNeedSubmit.store(true, std::memory_order_release);
+}
 
-MaybeError Queue::WaitForIdleForDestruction() {
+MaybeError Queue::WaitForIdleForDestructionImpl() {
     if (!mPendingCommands->IsValid()) {
         return {};
     }
@@ -702,7 +770,13 @@ ResultOrError<ExecutionSerial> DelayFlushQueue::WaitForQueueSerialImpl(Execution
             uint64_t(waitSerial), uint64_t(GetLastSubmittedCommandSerial()));
     }
 
-    auto commandContext = GetScopedPendingCommandContext(SubmitMode::Passive);
+    // A coarse-grained D3D11 scope lock is unnecessary here. When D3D11 multithread protection is
+    // enabled, calls to ID3D11DeviceContext::GetData() are already implicitly lock-protected. This
+    // function polls for completion by repeatedly calling GetData(). Holding a scope lock for the
+    // entire polling duration would be inefficient and could lead to deadlocks if the driver
+    // attempts to acquire the same lock internally.
+    auto commandContext =
+        GetScopedPendingCommandContext(SubmitMode::Passive, /*lockD3D11Scope=*/false);
 
     if (mPendingQueries.empty() || waitSerial < mPendingQueries.front().Serial()) {
         // Empty list must mean the serial have already completed.

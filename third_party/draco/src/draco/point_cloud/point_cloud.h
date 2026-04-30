@@ -21,6 +21,10 @@
 #include "draco/draco_features.h"
 #include "draco/metadata/geometry_metadata.h"
 
+#ifdef DRACO_TRANSCODER_SUPPORTED
+#include "draco/compression/draco_compression_options.h"
+#endif
+
 namespace draco {
 
 // PointCloud is a collection of n-dimensional points that are described by a
@@ -30,6 +34,11 @@ class PointCloud {
  public:
   PointCloud();
   virtual ~PointCloud() = default;
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Copies all data from the |src| point cloud.
+  void Copy(const PointCloud &src);
+#endif
 
   // Returns the number of named attributes of a given type.
   int32_t NumNamedAttributes(GeometryAttribute::Type type) const;
@@ -56,6 +65,12 @@ class PointCloud {
   // Returns the attribute of a given unique id.
   const PointAttribute *GetAttributeByUniqueId(uint32_t id) const;
   int32_t GetAttributeIdByUniqueId(uint32_t unique_id) const;
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Returns the named attribute with a given name.
+  const PointAttribute *GetNamedAttributeByName(GeometryAttribute::Type type,
+                                                const std::string &name) const;
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
   int32_t num_attributes() const {
     return static_cast<int32_t>(attributes_.size());
@@ -184,7 +199,30 @@ class PointCloud {
   // cloud.
   void set_num_points(PointIndex::ValueType num) { num_points_ = num; }
 
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Enables or disables Draco geometry compression for this mesh.
+  void SetCompressionEnabled(bool enabled) { compression_enabled_ = enabled; }
+  bool IsCompressionEnabled() const { return compression_enabled_; }
+
+  // Sets |options| that configure Draco geometry compression. This does not
+  // enable or disable compression.
+  void SetCompressionOptions(const DracoCompressionOptions &options) {
+    compression_options_ = options;
+  }
+  const DracoCompressionOptions &GetCompressionOptions() const {
+    return compression_options_;
+  }
+  DracoCompressionOptions &GetCompressionOptions() {
+    return compression_options_;
+  }
+#endif  // DRACO_TRANSCODER_SUPPORTED
+
  protected:
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Copies metadata from the |src| point cloud.
+  void CopyMetadata(const PointCloud &src);
+#endif
+
 #ifdef DRACO_ATTRIBUTE_INDICES_DEDUPLICATION_SUPPORTED
   // Applies id mapping of deduplicated points (called by DeduplicatePointIds).
   virtual void ApplyPointIdDeduplication(
@@ -206,6 +244,13 @@ class PointCloud {
   // The number of n-dimensional points. All point attribute values are stored
   // in corresponding PointAttribute instances in the |attributes_| array.
   PointIndex::ValueType num_points_;
+
+#ifdef DRACO_TRANSCODER_SUPPORTED
+  // Compression options for this geometry.
+  // TODO(vytyaz): Store encoded bitstream that this geometry compresses into.
+  bool compression_enabled_ = false;
+  DracoCompressionOptions compression_options_;
+#endif  // DRACO_TRANSCODER_SUPPORTED
 
   friend struct PointCloudHasher;
 };

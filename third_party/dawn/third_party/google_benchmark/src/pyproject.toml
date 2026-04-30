@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools<73"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "google_benchmark"
 description = "A library to benchmark code snippets."
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
 keywords = ["benchmark"]
 
 authors = [{ name = "Google", email = "benchmark-discuss@googlegroups.com" }]
@@ -15,19 +15,17 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
     "Topic :: System :: Benchmark",
 ]
 
 dynamic = ["readme", "version"]
 
-dependencies = ["absl-py>=0.7.1"]
-
-[project.optional-dependencies]
+[dependency-groups]
 dev = ["pre-commit>=3.3.3"]
 
 [project.urls]
@@ -68,9 +66,10 @@ target-version = "py311"
 
 [tool.ruff.lint]
 # Enable pycodestyle (`E`, `W`), Pyflakes (`F`), and isort (`I`) codes by default.
-select = ["E", "F", "I", "W"]
+select = ["ASYNC", "B", "C4", "C90", "E", "F", "I", "PERF", "PIE", "PT018", "RUF", "SIM", "UP", "W"]
 ignore = [
-    "E501", # line too long
+    "PLW2901",  # redefined-loop-name
+    "UP031",    # printf-string-formatting
 ]
 
 [tool.ruff.lint.isort]

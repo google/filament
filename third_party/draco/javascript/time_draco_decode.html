@@ -51,7 +51,7 @@ function createDecoderModule() {
 
   // draco_decoder.js or draco_wasm_wrapper.js must be loaded before
   // DracoModule is created.
-  DracoDecoderModule({}).then((module) => {
+  DracoDecoderModule(dracoDecoderType).then((module) => {
     decoderModule = module;
     enableButtons();
   });

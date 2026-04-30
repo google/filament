@@ -104,7 +104,7 @@ uint16_t Float32ToFloat16(float fp32) {
 float Float16ToFloat32(uint16_t fp16) {
     uint32_t tmp = (fp16 & 0x7fff) << 13 | (fp16 & 0x8000) << 16;
     float tmp2 = *reinterpret_cast<float*>(&tmp);
-    return pow(2, 127 - 15) * tmp2;
+    return powf(2.0f, 127.0f - 15.0f) * tmp2;
 }
 
 bool IsFloat16NaN(uint16_t fp16) {
@@ -129,7 +129,6 @@ float SRGBToLinear(float srgb) {
 
 uint64_t RoundUp(uint64_t n, uint64_t m) {
     DAWN_ASSERT(m > 0);
-    DAWN_ASSERT(n > 0);
     DAWN_ASSERT(m <= std::numeric_limits<uint64_t>::max() - n);
     return ((n + m - 1) / m) * m;
 }

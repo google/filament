@@ -28,13 +28,14 @@
 
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/sstream.h>
 
-#include <string>
 #include <string_view>
 
 #ifdef __EXCEPTIONS
 #   define UTILS_EXCEPTIONS 1
+#   include <exception>
 #else
 #   ifdef UTILS_EXCEPTIONS
 #       error  UTILS_EXCEPTIONS is already defined!
@@ -262,7 +263,11 @@ namespace utils {
  * The Panic class provides the std::exception protocol, it is the base exception object
  * used for all thrown exceptions.
  */
-class UTILS_PUBLIC Panic {
+class UTILS_PUBLIC Panic
+#ifdef __EXCEPTIONS
+    : public std::exception
+#endif
+{
 public:
 
     using PanicHandlerCallback = void(*)(void* user, Panic const& panic);
@@ -394,14 +399,14 @@ public:
      * @param file the file where the above function in implemented
      * @param line the line in the above file where the error was detected
      * @param literal a literal version of the error message
-     * @param reason std::string describing the error
+     * @param reason CString describing the error
      * @see ASSERT_PRECONDITION, ASSERT_POSTCONDITION, ASSERT_ARITHMETIC
      * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
      * @see setMode()
      */
     static void panic(
             char const* function, char const* file, int line, char const* literal,
-            std::string reason) UTILS_NORETURN;
+            CString reason) UTILS_NORETURN;
 
 private:
     /**
@@ -413,7 +418,7 @@ private:
      * @param reason a description of the cause of the error
      */
     TPanic(char const* function, char const* file, int line, char const* literal,
-            std::string reason);
+            CString reason);
 
     friend class PreconditionPanic;
     friend class PostconditionPanic;
@@ -426,9 +431,9 @@ private:
     char const* const mFile = nullptr;      // file where the panic happened
     char const* const mFunction = nullptr;  // function where the panic happened
     int const mLine = -1;                   // line where the panic happened
-    std::string mLiteral;                   // reason for the panic, built only from literals
-    std::string mReason;                    // reason for the panic
-    mutable std::string mWhat;              // fully formatted reason
+    CString mLiteral;                       // reason for the panic, built only from literals
+    CString mReason;                        // reason for the panic
+    mutable CString mWhat;                  // fully formatted reason
     CallStack mCallstack;
 };
 
@@ -525,7 +530,7 @@ public:
     PanicStream& operator<<(const char* value) noexcept;
     PanicStream& operator<<(const unsigned char* value) noexcept;
 
-    PanicStream& operator<<(std::string const& value) noexcept;
+    PanicStream& operator<<(CString const& value) noexcept;
     PanicStream& operator<<(std::string_view const& value) noexcept;
 
 protected:
@@ -541,7 +546,7 @@ class TPanicStream : public PanicStream {
 public:
     using PanicStream::PanicStream;
     ~TPanicStream() noexcept(false) UTILS_NORETURN {
-        T::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+        T::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
     }
 };
 
@@ -554,7 +559,7 @@ public:
           mEnablePanic(enable) {}
     ~FlagGuardedStream() noexcept(false) {
         if (mEnablePanic) {
-            PanicType::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+            PanicType::panic(mFunction, mFile, mLine, mLiteral, "%s", mStream.c_str());
         } else {
             logWarning();
         }

@@ -29,7 +29,6 @@
 #define SRC_DAWN_NODE_BINDING_ASYNCRUNNER_H_
 
 #include <stdint.h>
-
 #include <webgpu/webgpu_cpp.h>
 
 #include <memory>

@@ -41,8 +41,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 class MslWriter_ArgumentBuffersTest : public core::ir::transform::TransformTest {
   public:
     void SetUp() override {
-        capabilities.Add(core::ir::Capability::kAllowPointersAndHandlesInStructures,
-                         core::ir::Capability::kAllowPrivateVarsInFunctions,
+        capabilities.Add(core::ir::Capability::kMslAllowEntryPointInterface,
                          core::ir::Capability::kAllowAnyLetType);
     }
 };
@@ -83,7 +82,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, Private_NoChange) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_a, b.Add<i32>(load_a, load_b));
+        b.Store(var_a, b.Add(load_a, load_b));
         b.Return(func);
     });
 
@@ -137,7 +136,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, Workgroup_NoChange) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_a, b.Add<i32>(load_a, load_b));
+        b.Store(var_a, b.Add(load_a, load_b));
         b.Return(func);
     });
 
@@ -199,7 +198,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, Storage) {
         auto* load_c = b.Load(var_c);
         auto* conv_b = b.Convert(ty.i32(), load_b);
         auto* conv_c = b.Convert(ty.i32(), load_c);
-        auto* add = b.Add<i32>(b.Add<i32>(load_a, conv_b), conv_c);
+        auto* add = b.Add(b.Add(load_a, conv_b), conv_c);
         auto* conv = b.Convert(ty.u32(), add);
         b.Store(var_b, conv);
         b.Return(func);
@@ -288,7 +287,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, Uniform) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Add<i32>(load_a, load_b);
+        b.Add(load_a, load_b);
         b.Return(func);
     });
 
@@ -420,7 +419,7 @@ tint_arg_buffer_struct_3 = struct @align(1), @core.explicit_layout {
 TEST_F(MslWriter_ArgumentBuffersTest, HandleTypes_BindingArray) {
     auto* texture_type = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     auto* var_t = b.Var("t", ty.ptr<handle>(ty.binding_array(texture_type, 3u)));
-    auto* var_s = b.Var("s", ty.ptr<handle>(ty.binding_array(ty.sampler(), 3u)));
+    auto* var_s = b.Var("s", ty.ptr<handle>(ty.sampler()));
     var_t->SetBindingPoint(1, 2);
     var_s->SetBindingPoint(3, 4);
     mod.root_block->Append(var_t);
@@ -429,7 +428,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, HandleTypes_BindingArray) {
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {
         auto* load_t = b.Load(b.Access(ty.ptr<handle>(texture_type), var_t, 0_i));
-        auto* load_s = b.Load(b.Access(ty.ptr<handle>(ty.sampler()), var_s, 0_i));
+        auto* load_s = b.Load(var_s);
         b.Call<vec4<f32>>(core::BuiltinFn::kTextureSample, load_t, load_s, b.Splat<vec2<f32>>(0_f));
         b.Return(func);
     });
@@ -437,16 +436,15 @@ TEST_F(MslWriter_ArgumentBuffersTest, HandleTypes_BindingArray) {
     auto* src = R"(
 $B1: {  # root
   %t:ptr<handle, binding_array<texture_2d<f32>, 3>, read> = var undef @binding_point(1, 2)
-  %s:ptr<handle, binding_array<sampler, 3>, read> = var undef @binding_point(3, 4)
+  %s:ptr<handle, sampler, read> = var undef @binding_point(3, 4)
 }
 
 %foo = @fragment func():void {
   $B2: {
     %4:ptr<handle, texture_2d<f32>, read> = access %t, 0i
     %5:texture_2d<f32> = load %4
-    %6:ptr<handle, sampler, read> = access %s, 0i
-    %7:sampler = load %6
-    %8:vec4<f32> = textureSample %5, %7, vec2<f32>(0.0f)
+    %6:sampler = load %s
+    %7:vec4<f32> = textureSample %5, %6, vec2<f32>(0.0f)
     ret
   }
 }
@@ -459,7 +457,7 @@ tint_arg_buffer_struct_1 = struct @align(1), @core.explicit_layout {
 }
 
 tint_arg_buffer_struct_3 = struct @align(1), @core.explicit_layout {
-  s:binding_array<sampler, 3> @offset(0), @binding_point(3, 4)
+  s:sampler @offset(0), @binding_point(3, 4)
 }
 
 %foo = @fragment func(%tint_arg_buffer_1:ptr<uniform, tint_arg_buffer_struct_1, read> [@binding_point(0, 20)], %tint_arg_buffer_3:ptr<uniform, tint_arg_buffer_struct_3, read> [@binding_point(0, 30)]):void {
@@ -468,9 +466,8 @@ tint_arg_buffer_struct_3 = struct @align(1), @core.explicit_layout {
     %5:tint_arg_buffer_struct_1 = load %tint_arg_buffer_1
     %6:binding_array<texture_2d<f32>, 3> = access %5, 0u
     %7:texture_2d<f32> = access %6, 0i
-    %8:binding_array<sampler, 3> = access %4, 0u
-    %9:sampler = access %8, 0i
-    %10:vec4<f32> = textureSample %7, %9, vec2<f32>(0.0f)
+    %8:sampler = access %4, 0u
+    %9:vec4<f32> = textureSample %7, %8, vec2<f32>(0.0f)
     ret
   }
 }
@@ -506,7 +503,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, MultipleAddressSpaces) {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
         auto* load_c = b.Load(var_c);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, load_c)));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, load_c)));
         b.Return(func);
     });
 
@@ -593,7 +590,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, EntryPointHasExistingParameters) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, param)));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, param)));
         b.Return(func);
     });
 
@@ -669,7 +666,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_NoArgs) {
     b.Append(foo->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, load_b));
+        b.Store(var_b, b.Add(load_a, load_b));
         b.Return(foo);
     });
 
@@ -762,7 +759,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_WithExistingParam
     b.Append(foo->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, param)));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, param)));
         b.Return(foo);
     });
 
@@ -852,7 +849,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_HandleTypes) {
     mod.root_block->Append(var_t);
     mod.root_block->Append(var_s);
 
-    auto* foo = b.Function("foo", ty.vec4<f32>());
+    auto* foo = b.Function("foo", ty.vec4f());
     auto* param = b.FunctionParam<i32>("param");
     foo->SetParams({param});
     b.Append(foo->Block(), [&] {
@@ -937,18 +934,18 @@ tint_arg_buffer_struct_3 = struct @align(1), @core.explicit_layout {
 TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_HandleTypes_BindingArray) {
     auto* texture_type = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
     auto* var_t = b.Var("t", ty.ptr<handle>(ty.binding_array(texture_type, 3u)));
-    auto* var_s = b.Var("s", ty.ptr<handle>(ty.binding_array(ty.sampler(), 3u)));
+    auto* var_s = b.Var("s", ty.ptr<handle>(ty.sampler()));
     var_t->SetBindingPoint(1, 2);
     var_s->SetBindingPoint(3, 4);
     mod.root_block->Append(var_t);
     mod.root_block->Append(var_s);
 
-    auto* foo = b.Function("foo", ty.vec4<f32>());
+    auto* foo = b.Function("foo", ty.vec4f());
     auto* param = b.FunctionParam<i32>("param");
     foo->SetParams({param});
     b.Append(foo->Block(), [&] {
         auto* load_t = b.Load(b.Access(ty.ptr<handle>(texture_type), var_t, 0_i));
-        auto* load_s = b.Load(b.Access(ty.ptr<handle>(ty.sampler()), var_s, 0_i));
+        auto* load_s = b.Load(var_s);
         auto* result = b.Call<vec4<f32>>(core::BuiltinFn::kTextureSample, load_t, load_s,
                                          b.Splat<vec2<f32>>(0_f));
         b.Return(foo, result);
@@ -963,22 +960,21 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_HandleTypes_Bindi
     auto* src = R"(
 $B1: {  # root
   %t:ptr<handle, binding_array<texture_2d<f32>, 3>, read> = var undef @binding_point(1, 2)
-  %s:ptr<handle, binding_array<sampler, 3>, read> = var undef @binding_point(3, 4)
+  %s:ptr<handle, sampler, read> = var undef @binding_point(3, 4)
 }
 
 %foo = func(%param:i32):vec4<f32> {
   $B2: {
     %5:ptr<handle, texture_2d<f32>, read> = access %t, 0i
     %6:texture_2d<f32> = load %5
-    %7:ptr<handle, sampler, read> = access %s, 0i
-    %8:sampler = load %7
-    %9:vec4<f32> = textureSample %6, %8, vec2<f32>(0.0f)
-    ret %9
+    %7:sampler = load %s
+    %8:vec4<f32> = textureSample %6, %7, vec2<f32>(0.0f)
+    ret %8
   }
 }
 %main = @fragment func():void {
   $B3: {
-    %11:vec4<f32> = call %foo, 42i
+    %10:vec4<f32> = call %foo, 42i
     ret
   }
 }
@@ -991,24 +987,23 @@ tint_arg_buffer_struct_1 = struct @align(1), @core.explicit_layout {
 }
 
 tint_arg_buffer_struct_3 = struct @align(1), @core.explicit_layout {
-  s:binding_array<sampler, 3> @offset(0), @binding_point(3, 4)
+  s:sampler @offset(0), @binding_point(3, 4)
 }
 
-%foo = func(%param:i32, %t:binding_array<texture_2d<f32>, 3>, %s:binding_array<sampler, 3>):vec4<f32> {
+%foo = func(%param:i32, %t:binding_array<texture_2d<f32>, 3>, %s:sampler):vec4<f32> {
   $B1: {
     %5:texture_2d<f32> = access %t, 0i
-    %6:sampler = access %s, 0i
-    %7:vec4<f32> = textureSample %5, %6, vec2<f32>(0.0f)
-    ret %7
+    %6:vec4<f32> = textureSample %5, %s, vec2<f32>(0.0f)
+    ret %6
   }
 }
 %main = @fragment func(%tint_arg_buffer_1:ptr<uniform, tint_arg_buffer_struct_1, read> [@binding_point(0, 20)], %tint_arg_buffer_3:ptr<uniform, tint_arg_buffer_struct_3, read> [@binding_point(0, 30)]):void {
   $B2: {
-    %11:tint_arg_buffer_struct_3 = load %tint_arg_buffer_3
-    %12:tint_arg_buffer_struct_1 = load %tint_arg_buffer_1
-    %13:binding_array<texture_2d<f32>, 3> = access %12, 0u
-    %14:binding_array<sampler, 3> = access %11, 0u
-    %15:vec4<f32> = call %foo, 42i, %13, %14
+    %10:tint_arg_buffer_struct_3 = load %tint_arg_buffer_3
+    %11:tint_arg_buffer_struct_1 = load %tint_arg_buffer_1
+    %12:binding_array<texture_2d<f32>, 3> = access %11, 0u
+    %13:sampler = access %10, 0u
+    %14:vec4<f32> = call %foo, 42i, %12, %13
     ret
   }
 }
@@ -1043,7 +1038,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatUsesVars_OutOfOrder) {
     b.Append(foo->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, load_b));
+        b.Store(var_b, b.Add(load_a, load_b));
         b.Return(foo);
     });
 
@@ -1139,7 +1134,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionThatDoesNotUseVars) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, b.Call(foo))));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, b.Call(foo))));
         b.Return(func);
     });
 
@@ -1238,7 +1233,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionWithOnlyTransitiveUses) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, b.Call(foo))));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, b.Call(foo))));
         b.Return(func);
     });
 
@@ -1354,7 +1349,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, CallFunctionWithOnlyTransitiveUses_OutOfOr
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, b.Call(foo))));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, b.Call(foo))));
         b.Return(func);
     });
 
@@ -1470,7 +1465,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, VarsWithNoNames) {
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
         auto* load_b = b.Load(var_b);
-        b.Store(var_b, b.Add<i32>(load_a, b.Add<i32>(load_b, b.Call(foo))));
+        b.Store(var_b, b.Add(load_a, b.Add(load_b, b.Call(foo))));
         b.Return(func);
     });
 
@@ -1584,7 +1579,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, SkipBuffers) {
         auto* load_c = b.Load(var_c);
         auto* conv_b = b.Convert(ty.i32(), load_b);
         auto* conv_c = b.Convert(ty.i32(), load_c);
-        auto* add = b.Add<i32>(b.Add<i32>(load_a, conv_b), conv_c);
+        auto* add = b.Add(b.Add(load_a, conv_b), conv_c);
         auto* conv = b.Convert(ty.u32(), add);
         b.Store(var_b, conv);
         b.Return(func);
@@ -1672,7 +1667,7 @@ TEST_F(MslWriter_ArgumentBuffersTest, DynamicOffset) {
     auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {
         auto* load_a = b.Load(var_a);
-        auto* add = b.Add<i32>(load_a, load_a);
+        auto* add = b.Add(load_a, load_a);
         b.Store(var_a, add);
         b.Return(func);
     });
@@ -1728,6 +1723,112 @@ tint_arg_buffer_struct_1 = struct @align(1), @core.explicit_layout {
     Run(ArgumentBuffers, cfg);
 
     EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ArgumentBuffersTest, NoDynamicOffset) {
+    auto* var_a = b.Var("a", ty.ptr<storage, i32, core::Access::kReadWrite>());
+    var_a->SetBindingPoint(1, 2);
+    mod.root_block->Append(var_a);
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    b.Append(func->Block(), [&] {
+        auto* load_a = b.Load(var_a);
+        auto* add = b.Add(load_a, load_a);
+        b.Store(var_a, add);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %a:ptr<storage, i32, read_write> = var undef @binding_point(1, 2)
+}
+
+%foo = @fragment func():void {
+  $B2: {
+    %3:i32 = load %a
+    %4:i32 = add %3, %3
+    store %a, %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+tint_arg_buffer_struct_1 = struct @align(1), @core.explicit_layout {
+  a:ptr<storage, i32, read_write> @offset(0), @binding_point(1, 2)
+}
+
+%foo = @fragment func(%tint_arg_buffer_1:ptr<uniform, tint_arg_buffer_struct_1, read> [@binding_point(0, 2)]):void {
+  $B1: {
+    %3:tint_arg_buffer_struct_1 = load %tint_arg_buffer_1
+    %4:ptr<storage, i32, read_write> = access %3, 0u
+    %5:i32 = load %4
+    %6:i32 = add %5, %5
+    %7:ptr<storage, i32, read_write> = access %3, 0u
+    store %7, %6
+    ret
+  }
+}
+)";
+
+    ArgumentBufferInfo info{
+        .id = 2,
+    };
+
+    ArgumentBuffersConfig cfg{};
+    cfg.group_to_argument_buffer_info.insert({1, info});
+    Run(ArgumentBuffers, cfg);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(MslWriter_ArgumentBuffersTest, DynamicOffsetOnNonBufferType) {
+    auto* var_a = b.Var("a", ty.ptr<storage, f32, core::Access::kReadWrite>());
+    var_a->SetBindingPoint(1, 2);
+    mod.root_block->Append(var_a);
+
+    auto* texture_ty = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
+    auto* var_b = b.Var("b", ty.ptr(handle, texture_ty));
+    var_b->SetBindingPoint(1, 3);
+    mod.root_block->Append(var_b);
+
+    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    b.Append(func->Block(), [&] {
+        auto* load_b = b.Load(var_b);
+        auto* tex_load = b.Call<vec4f>(core::BuiltinFn::kTextureLoad, load_b, b.Zero<vec2u>(), 0_u);
+        b.Store(var_a, b.Access<f32>(tex_load, 0_u));
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %a:ptr<storage, f32, read_write> = var undef @binding_point(1, 2)
+  %b:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(1, 3)
+}
+
+%foo = @fragment func():void {
+  $B2: {
+    %4:texture_2d<f32> = load %b
+    %5:vec4<f32> = textureLoad %4, vec2<u32>(0u), 0u
+    %6:f32 = access %5, 0u
+    store %a, %6
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    ArgumentBufferInfo info{
+        .id = 2,
+        .dynamic_buffer_id = 3,
+        .binding_info_to_offset_index = {{3, 4}},
+    };
+    ArgumentBuffersConfig cfg{};
+    cfg.group_to_argument_buffer_info.insert({1, info});
+    auto result = ArgumentBuffers(mod, cfg);
+    EXPECT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, "dynamic offset supplied for non-buffer type");
 }
 
 }  // namespace

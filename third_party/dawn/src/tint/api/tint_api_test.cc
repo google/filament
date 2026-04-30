@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT of THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/api/tint.h"
-
 #include <gtest/gtest.h>
+
+#include "src/tint/api/tint.h"
 
 #if TINT_BUILD_SPV_READER
 #include "spirv-tools/libspirv.hpp"

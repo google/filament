@@ -37,11 +37,9 @@
 #include "src/tint/lang/core/ir/instruction.h"
 #include "src/tint/lang/core/ir/value.h"
 #include "src/tint/lang/core/type/manager.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 #include "src/tint/utils/containers/filtered_iterator.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/diagnostic/source.h"
-#include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/memory/block_allocator.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 
@@ -55,9 +53,6 @@ namespace tint::core::ir {
 
 /// Main module class for the IR.
 class Module {
-    /// Program Id required to create other components
-    GenerationID prog_id_;
-
     /// Map of value to name
     Hashmap<const Value*, Symbol, 32> value_to_name_;
 
@@ -195,16 +190,22 @@ class Module {
     core::constant::Manager constant_values;
 
     /// List of functions in the module.
-    Vector<ConstPropagatingPtr<Function>, 8> functions;
+    Vector<Function*, 8> functions;
 
     /// The block containing module level declarations, if any exist.
-    ConstPropagatingPtr<Block> root_block;
+    Block* root_block = nullptr;
 
     /// The symbol table for the module
-    SymbolTable symbols{prog_id_};
+    SymbolTable symbols{};
 
     /// The map of core::constant::Value to their ir::Constant.
     Hashmap<const core::constant::Value*, ir::Constant*, 16> constants;
+
+    /// If true, the AssertValid*() methods will perform validation.
+    bool enable_validation_asserts = false;
+
+    /// If true, dump the IR whenever validation is performed.
+    bool dump_ir_when_validating = false;
 
     /// An optional callback to receive an ICE generated while processing this module.
     InternalCompilerErrorCallback ice_callback;

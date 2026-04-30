@@ -206,6 +206,15 @@ public class Engine {
     };
 
     /**
+     * Three-state feature state.
+     */
+    public enum FeatureState {
+        FALSE,
+        TRUE,
+        INDETERMINATE
+    }
+
+    /**
      * Constructs <code>Engine</code> objects using a builder pattern.
      */
     public static class Builder {
@@ -312,8 +321,7 @@ public class Engine {
          *         be initialized, for instance if it doesn't support the right version of OpenGL or
          *         OpenGL ES.
          *
-         * @exception IllegalStateException can be thrown if there isn't enough memory to
-         * allocate the command buffer.
+         * @throws Error if there isn't enough memory to allocate the command buffer.
          */
         public Engine build() {
             long nativeEngine = nBuilderBuild(mNativeBuilder);
@@ -619,6 +627,35 @@ public class Engine {
     }
 
     /**
+     * Asynchronously ensures that the variants of the specified Material required to render it
+     * in the provided View are compiled. This determines the necessary permutations of 
+     * feature flags based on the supplied View, and compiles the corresponding shader variants.
+     *
+     * See {@link Material#compile(Material.CompilerPriorityQueue, int, Object, Runnable)} for 
+     * important details about the compilation process, callback scheduling, priorities, and flushing the engine.
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material whose variants will be compiled.
+     * @param view           The View in which the material will be rendered.
+     * @param shadowReceiver Indicates whether to compile variants where the material receives shadows.
+     *                       Use FeatureState.INDETERMINATE to compile both permutations.
+     * @param skinning       Indicates whether to compile variants with skinning.
+     *                       Use FeatureState.INDETERMINATE to compile both permutations.
+     * @param handler        An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback       callback called on the main thread when the compilation is done
+     *                       by backend.
+     */
+    public void compile(@NonNull Material.CompilerPriorityQueue priority,
+                        @NonNull Material material,
+                        @NonNull View view,
+                        @NonNull FeatureState shadowReceiver,
+                        @NonNull FeatureState skinning,
+                        @Nullable Object handler,
+                        @Nullable Runnable callback) {
+        nCompile(getNativeObject(), priority.ordinal(), material.getNativeObject(), view.getNativeObject(), shadowReceiver.ordinal(), skinning.ordinal(), handler, callback);
+    }
+
+    /**
      * Destroy the <code>Engine</code> instance and all associated resources.
      * <p>
      * This method is one of the few thread-safe methods.
@@ -691,6 +728,8 @@ public class Engine {
      *
      * @return the active feature level.
      *
+     * @throws RuntimeException if the feature level cannot be set.
+     *
      * @see Builder#featureLevel
      * @see #getSupportedFeatureLevel
      * @see #getActiveFeatureLevel
@@ -735,6 +774,15 @@ public class Engine {
      */
     public boolean isAutomaticInstancingEnabled() {
         return nIsAutomaticInstancingEnabled(getNativeObject());
+    }
+
+    /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    public boolean hasUnrecoverableFailure() {
+        return nHasUnrecoverableFailure(getNativeObject());
     }
 
     /**
@@ -1223,9 +1271,10 @@ public class Engine {
      * Destroys a {@link Material} and frees all its associated resources.
      * <p>
      * All {@link MaterialInstance} of the specified {@link Material} must be destroyed before
-     * destroying it; if some {@link MaterialInstance} remain, this method fails silently.
+     * destroying it.
      *
      * @param material the {@link Material} to destroy
+     * @throws RuntimeException if some MaterialInstances remain.
      */
     public void destroyMaterial(@NonNull Material material) {
         assertDestroy(nDestroyMaterial(getNativeObject(), material.getNativeObject()));
@@ -1531,6 +1580,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native boolean nFlushAndWait(long nativeEngine, long timeout);
     private static native void nFlush(long nativeEngine);
+    private static native void nCompile(long nativeEngine, int priority, long nativeMaterial, long nativeView, int shadowReceiver, int skinning, Object handler, Runnable callback);
     private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native void nUnprotected(long nativeEngine);
@@ -1541,6 +1591,7 @@ public class Engine {
     private static native long nGetEntityManager(long nativeEngine);
     private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
     private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native boolean nHasUnrecoverableFailure(long nativeEngine);
     private static native long nGetMaxStereoscopicEyes(long nativeEngine);
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);

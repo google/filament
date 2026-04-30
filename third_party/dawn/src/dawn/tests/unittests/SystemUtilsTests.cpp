@@ -70,7 +70,9 @@ TEST(SystemUtilsTests, ScopedEnvironmentVar) {
     SetEnvironmentVar("ScopedEnvironmentVarForTest", "original");
 
     // Test empty environment variable doesn't crash
-    { ScopedEnvironmentVar var; }
+    {
+        ScopedEnvironmentVar var;
+    }
 
     // Test setting empty environment variable
     {

@@ -93,13 +93,13 @@ func Parse(s string) (Run, error) {
 	type Parser = func(s string) (Run, error)
 	for _, parser := range []Parser{parseConsole, parseJSON} {
 		r, err := parser(s)
-		switch err {
-		case nil:
-			return r, nil
-		case errWrongFormat:
-		default:
+		if err != nil {
+			if errors.Is(err, errWrongFormat) {
+				continue
+			}
 			return Run{}, err
 		}
+		return r, nil
 	}
 
 	return Run{}, errors.New("Unrecognised file format")
@@ -318,21 +318,21 @@ func (diffs Diffs) Format(f DiffFormat) string {
 	// Draw table
 	b := &strings.Builder{}
 
-	horizontal_bar := func() {
+	horizontalBar := func() {
 		for i := range header {
 			fmt.Fprintf(b, "+%v", strings.Repeat("-", 2+widths[i]))
 		}
 		fmt.Fprintln(b, "+")
 	}
 
-	horizontal_bar()
+	horizontalBar()
 
 	for i, h := range header {
 		fmt.Fprintf(b, "| %v ", pad(h, widths[i]))
 	}
 	fmt.Fprintln(b, "|")
 
-	horizontal_bar()
+	horizontalBar()
 
 	for _, row := range columns {
 		for i, cell := range row {
@@ -341,7 +341,7 @@ func (diffs Diffs) Format(f DiffFormat) string {
 		fmt.Fprintln(b, "|")
 	}
 
-	horizontal_bar()
+	horizontalBar()
 
 	return b.String()
 }

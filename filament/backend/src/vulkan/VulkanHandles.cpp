@@ -16,8 +16,6 @@
 
 #include "VulkanHandles.h"
 
-#include "VulkanConstants.h"
-
 // TODO: remove this by moving DebugUtils out of VulkanDriver
 #include "VulkanDriver.h"
 
@@ -26,7 +24,6 @@
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/Image.h"
-#include "vulkan/utils/Spirv.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -83,17 +80,6 @@ inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t
     }
     if ((bool) (stage & ShaderStageFlags::FRAGMENT)) {
         mask.set(binding + fvkutils::getFragmentStageShift<Bitmask>());
-    }
-}
-
-inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
-    switch(stage) {
-        case backend::ShaderStage::VERTEX:
-            return VK_SHADER_STAGE_VERTEX_BIT;
-        case backend::ShaderStage::FRAGMENT:
-            return VK_SHADER_STAGE_FRAGMENT_BIT;
-        case backend::ShaderStage::COMPUTE:
-            PANIC_POSTCONDITION("Unsupported stage");
     }
 }
 
@@ -264,139 +250,6 @@ void VulkanDescriptorSet::addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycle
     mSets.push_back({ vkSet, std::move(onRecycleFn) });
 }
 
-PushConstantDescription::PushConstantDescription(backend::Program const& program) {
-    mRangeCount = 0;
-    uint32_t offset = 0;
-
-    // The range is laid out so that the vertex constants are defined as the first set of bytes,
-    // followed by fragment and compute. This means we need to keep track of the offset for each
-    // stage. We do the bookeeping in mDescriptions.
-    for (auto stage: { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
-        auto const& constants = program.getPushConstants(stage);
-        if (constants.empty()) {
-            continue;
-        }
-
-        auto& description = mDescriptions[(uint8_t) stage];
-        // We store the type of the constant for type-checking when writing.
-        description.types.reserve(constants.size());
-        std::for_each(constants.cbegin(), constants.cend(),
-                [&description](Program::PushConstant t) { description.types.push_back(t.type); });
-
-        uint32_t const constantsSize = (uint32_t) constants.size() * ENTRY_SIZE;
-        mRanges[mRangeCount++] = {
-            .stageFlags = getVkStage(stage),
-            .offset = offset,
-            .size = constantsSize,
-        };
-        description.offset = offset;
-        offset += constantsSize;
-    }
-}
-
-void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
-        backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-
-    uint32_t binaryValue = 0;
-    auto const& description = mDescriptions[(uint8_t) stage];
-    UTILS_UNUSED_IN_RELEASE auto const& types = description.types;
-    uint32_t const offset = description.offset;
-
-    if (std::holds_alternative<bool>(value)) {
-        assert_invariant(types[index] == ConstantType::BOOL);
-        bool const bval = std::get<bool>(value);
-        binaryValue = static_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
-    } else if (std::holds_alternative<float>(value)) {
-        assert_invariant(types[index] == ConstantType::FLOAT);
-        float const fval = std::get<float>(value);
-        binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
-    } else {
-        assert_invariant(types[index] == ConstantType::INT);
-        int const ival = std::get<int>(value);
-        binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
-    }
-
-    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), offset + index * ENTRY_SIZE, ENTRY_SIZE,
-            &binaryValue);
-}
-
-VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
-    : HwProgram(builder.getName()),
-      mInfo(new(std::nothrow) PipelineInfo(builder)),
-      mDevice(device) {
-
-    Program::ShaderSource const& blobs = builder.getShadersSource();
-    auto& modules = mInfo->shaders;
-    auto const& specializationConstants = builder.getSpecializationConstants();
-    std::vector<uint32_t> shader;
-
-    static_assert(static_cast<ShaderStage>(0) == ShaderStage::VERTEX &&
-            static_cast<ShaderStage>(1) == ShaderStage::FRAGMENT &&
-            MAX_SHADER_MODULES == 2);
-
-    for (size_t i = 0; i < MAX_SHADER_MODULES; i++) {
-        Program::ShaderBlob const& blob = blobs[i];
-
-        uint32_t* data = (uint32_t*) blob.data();
-        size_t dataSize = blob.size();
-
-        if (!specializationConstants.empty()) {
-            fvkutils::workaroundSpecConstant(blob, specializationConstants, shader);
-            data = (uint32_t*) shader.data();
-            dataSize = shader.size() * 4;
-        }
-
-        VkShaderModule& module = modules[i];
-        VkShaderModuleCreateInfo moduleInfo = {
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = dataSize,
-            .pCode = data,
-        };
-        VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create shader module."
-                << " error=" << static_cast<int32_t>(result);
-
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-        utils::CString name{ builder.getName().c_str(), builder.getName().size() };
-        switch (static_cast<ShaderStage>(i)) {
-            case ShaderStage::VERTEX:
-                name += "_vs";
-                break;
-            case ShaderStage::FRAGMENT:
-                name += "_fs";
-                break;
-            default:
-                PANIC_POSTCONDITION("Unexpected stage");
-                break;
-        }
-        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
-                reinterpret_cast<uint64_t>(module), name.c_str());
-#endif
-    }
-
-#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-    FVK_LOGD << "Created VulkanProgram " << builder << ", shaders = (" << modules[0]
-             << ", " << modules[1] << ")";
-#endif
-}
-
-VulkanProgram::~VulkanProgram() {
-    for (auto shader: mInfo->shaders) {
-        vkDestroyShaderModule(mDevice, shader, VKALLOC);
-    }
-    delete mInfo;
-}
-
-void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
-    // At this point, we really ought to have a VkPipelineLayout.
-    assert_invariant(layout != VK_NULL_HANDLE);
-    for (const auto& c : mQueuedPushConstants) {
-        mInfo->pushConstantDescription.write(c.cmdbuf, layout, c.stage, c.index, c.value);
-    }
-    mQueuedPushConstants.clear();
-}
-
 // Creates a special "default" render target (i.e. associated with the swap chain)
 VulkanRenderTarget::VulkanRenderTarget()
     : HwRenderTarget(0, 0),
@@ -434,13 +287,13 @@ void VulkanRenderTarget::bindSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> 
     if (swapchain->getDepth()) {
         VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
         mInfo->attachments.push_back(depth);
-        mInfo->depthIndex = 1;
+        mInfo->depthStencilIndex = 1;
 
-        rpkey.depthFormat = depth.getFormat();
-        fbkey.depth = depth.getImageView();
+        rpkey.depthStencilFormat = depth.getFormat();
+        fbkey.depthStencil = depth.getImageView();
     } else {
-        rpkey.depthFormat = VK_FORMAT_UNDEFINED;
-        fbkey.depth = VK_NULL_HANDLE;
+        rpkey.depthStencilFormat = VK_FORMAT_UNDEFINED;
+        fbkey.depthStencil = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
 }
@@ -454,12 +307,11 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
         VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
         uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
+        VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       mOffscreen(true),
       mProtected(false),
       mInfo(std::make_unique<Auxiliary>()) {
-    auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
@@ -469,7 +321,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     auto& rpkey = mInfo->rpkey;
     rpkey.samples = samples;
-    rpkey.depthFormat = depth.getFormat();
+    rpkey.depthStencilFormat = depthStencil.getFormat();
     rpkey.viewCount = layerCount;
 
     auto& fbkey = mInfo->fbkey;
@@ -530,27 +382,27 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         attachments.insert(attachments.end(), msaaAttachments.begin(), msaaAttachments.end());
     }
 
-    if (depth.texture) {
-        auto depthTexture = depth.texture;
-        mInfo->depthIndex = (uint8_t) attachments.size();
-        attachments.push_back(depth);
-        fbkey.depth = depth.getImageView();
+    if (depthStencil.texture) {
+        auto depthStencilTexture = depthStencil.texture;
+        mInfo->depthStencilIndex = (uint8_t) attachments.size();
+        attachments.push_back(depthStencil);
+        fbkey.depthStencil = depthStencil.getImageView();
         if (samples > 1) {
-            mInfo->msaaDepthIndex = mInfo->depthIndex;
-            if (depthTexture->samples == 1) {
+            mInfo->msaaDepthStencilIndex = mInfo->depthStencilIndex;
+            if (depthStencilTexture->samples == 1) {
                 // MSAA depth texture must have the mipmap count of 1
                 uint8_t const msLevel = 1;
                 // Create sidecar MSAA texture for the depth attachment if it does not already
                 // exist.
-                auto msaaTexture = initMsaaTexture(depthTexture, device, physicalDevice, context,
+                auto msaaTexture = initMsaaTexture(depthStencilTexture, device, physicalDevice, context,
                         allocator, commands, resourceManager, msLevel, samples, stagePool);
-                mInfo->msaaDepthIndex = (uint8_t) attachments.size();
+                mInfo->msaaDepthStencilIndex = (uint8_t) attachments.size();
                 VulkanAttachment msaaAttachment = {
                     .texture = msaaTexture,
                     .layerCount = layerCount,
                 };
                 attachments.push_back(msaaAttachment);
-                fbkey.depth = msaaAttachment.getImageView();
+                fbkey.depthStencil = msaaAttachment.getImageView();
             }
         }
     }
@@ -607,11 +459,11 @@ void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& comman
             barrier(attachments[i], VulkanLayout::COLOR_ATTACHMENT);
         }
     }
-    if (mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->depthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->depthStencilIndex], VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
     }
-    if (mInfo->msaaDepthIndex != Auxiliary::UNDEFINED_INDEX) {
-        barrier(attachments[mInfo->msaaDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    if (mInfo->msaaDepthStencilIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->msaaDepthStencilIndex], VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
     }
 }
 
@@ -625,7 +477,7 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
         bool const isDepth = attachment.isDepth();
         auto texture = attachment.texture;
         if (isDepth) {
-            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_ATTACHMENT_LAYOUT);
+            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT);
             if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }

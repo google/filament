@@ -78,7 +78,7 @@ struct State {
         //   idx.y -= u32(idx.x == UINT32_MAX);
 
         // Declare a new index variable at the top of the loop initializer.
-        auto* idx = b.Var<function>("tint_loop_idx", b.Splat<vec2<u32>>(u32::Highest()));
+        auto* idx = b.Var<function>("tint_loop_idx", b.Splat<vec2u>(u32::Highest()));
         if (loop->Initializer()->IsEmpty()) {
             loop->Initializer()->Append(b.NextIteration(loop));
         }
@@ -86,8 +86,8 @@ struct State {
 
         // Insert the new exit condition at the top of the loop body.
         b.InsertBefore(loop->Body()->Front(), [&] {
-            auto* ifelse = b.If(b.Call<bool>(
-                BuiltinFn::kAll, b.Equal<vec2<bool>>(b.Load(idx), b.Splat<vec2<u32>>(0_u))));
+            auto* ifelse = b.If(
+                b.Call<bool>(BuiltinFn::kAll, b.Equal(b.Load(idx)->Result(), b.Splat<vec2u>(0_u))));
             b.Append(ifelse->True(), [&] {
                 // If the loop produces result values, just use `undef` as this exit condition
                 // should never actually be hit.
@@ -102,13 +102,13 @@ struct State {
             loop->Continuing()->Append(b.NextIteration(loop));
         }
         b.InsertBefore(loop->Continuing()->Front(), [&] {
-            auto* low_inc = b.Subtract<u32>(b.LoadVectorElement(idx, 0_u), 1_u);
+            auto* low_inc = b.Subtract(b.LoadVectorElement(idx, 0_u), 1_u);
             ir.SetName(low_inc->Result(), ir.symbols.New("tint_low_inc"));
             b.StoreVectorElement(idx, 0_u, low_inc);
 
-            auto* carry = b.Convert<u32>(b.Equal<bool>(low_inc, u32::Highest()));
+            auto* carry = b.Convert<u32>(b.Equal(low_inc, u32::Highest()));
             ir.SetName(carry->Result(), ir.symbols.New("tint_carry"));
-            b.StoreVectorElement(idx, 1_u, b.Subtract<u32>(b.LoadVectorElement(idx, 1_u), carry));
+            b.StoreVectorElement(idx, 1_u, b.Subtract(b.LoadVectorElement(idx, 1_u), carry));
         });
     }
 };
@@ -116,11 +116,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PreventInfiniteLoops(Module& ir) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.PreventInfiniteLoops", kPreventInfiniteLoopsCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kPreventInfiniteLoopsCapabilities,
+                          "before core.PreventInfiniteLoops");
 
     State{ir}.Process();
 

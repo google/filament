@@ -60,8 +60,12 @@ type Patchset struct {
 	Patchset int
 }
 
-// ChangeInfo is an alias to gerrit.ChangeInfo
+// Aliases for gerrit.* types
 type ChangeInfo = gerrit.ChangeInfo
+type AccountInfo = gerrit.AccountInfo
+type RevisionInfo = gerrit.RevisionInfo
+type ChangeMessageInfo = gerrit.ChangeMessageInfo
+type Timestamp = gerrit.Timestamp
 
 // LatestPatchset returns the latest Patchset from the ChangeInfo
 func LatestPatchset(change *ChangeInfo) Patchset {
