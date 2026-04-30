@@ -26,7 +26,7 @@ jobs:
           cd build/web && printf "y" | ./build.sh release
       - name: Deploy to npm
         run: |
-          cd out/cmake-webgl-release/web/filament-js
+          cd out/cmake-wasm-release/web/filament-js
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -8,7 +8,7 @@
 [![Web Build Status](https://github.com/google/filament/actions/workflows/status-web.yml/badge.svg)](https://github.com/google/filament/actions/workflows/status-web.yml)
 
 Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
-and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
+and WASM. It is designed to be as small as possible and as efficient as possible on Android.
 
 ## Download
 

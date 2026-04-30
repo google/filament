@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <TargetConditionals.h>
 #include "backend/PresentCallable.h"
 #include "private/backend/CommandStream.h"
 #include "CommandStreamDispatcher.h"
@@ -160,9 +161,11 @@ MetalDriver::MetalDriver(
     }
 
     mContext->supportsDepthClamp = false;
+#if !TARGET_OS_SIMULATOR
     if (@available(macOS 10.11, iOS 11.0, *)) {
         mContext->supportsDepthClamp = true;
     }
+#endif
 
     // In order to support resolve store action on depth attachment, the GPU needs to support it.
     // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
