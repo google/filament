@@ -43,7 +43,7 @@
 
 namespace utils {
 
-class JobSystem {
+class UTILS_PUBLIC JobSystem {
     static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
     static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
     static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
