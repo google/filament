@@ -3,7 +3,7 @@ set -e
 
 # Host tools required by Android, WASM, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen filamesh uberz"
-WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
+WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh glslminifier"
 
 function print_help {
     local self_name=$(basename "$0")

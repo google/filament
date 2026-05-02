@@ -20,6 +20,7 @@
 #include <utils/Panic.h>
 #include <utils/ThreadUtils.h>
 
+#include <algorithm>
 #include <dlfcn.h>
 #include <memory>
 
@@ -203,6 +204,7 @@ void PlatformOSMesa::createContext(bool shared) {
 void PlatformOSMesa::releaseContext() noexcept {
     std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
     OSMesaContext context = nullptr;
+    std::unique_ptr<uint8_t[]> buffer;
 
     {
         std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
@@ -212,16 +214,15 @@ void PlatformOSMesa::releaseContext() noexcept {
             return;
         }
         context = it->second.context;
+        buffer = std::move(it->second.buffer);
+        mAdditionalContexts.erase(it);
     }
 
     OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
-    // Passing NULL as the context is the standard way to unbind in OSMesa.
-    api->fOSMesaMakeCurrent(NULL, NULL, 0, 0, 0);
-    api->fOSMesaDestroyContext(context);
-
-    {
-        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
-        mAdditionalContexts.erase(currentThreadId);
+    if (api) {
+        // Passing NULL as the context is the standard way to unbind in OSMesa.
+        api->fOSMesaMakeCurrent(NULL, NULL, 0, 0, 0);
+        api->fOSMesaDestroyContext(context);
     }
 }
 
