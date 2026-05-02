@@ -134,7 +134,23 @@ pushd .
 cd ${MESA_DIR}
 
 # Need >= 24 to have llvmpipe for swrast.  llvmpipe is needed for GL >= 4.1.
-git checkout mesa-${MESA_VERSION}
+git checkout -f mesa-${MESA_VERSION}
+
+# Apply custom patch to fix a double-free in OSMesa
+git apply << 'EOF'
+diff --git a/src/mesa/program/program.c b/src/mesa/program/program.c
+index 74bd6a6c33b..a70814e53a1 100644
+--- a/src/mesa/program/program.c
++++ b/src/mesa/program/program.c
+@@ -130,6 +130,7 @@ _mesa_free_program_data(struct gl_context *ctx)
+       ctx->ATIFragmentShader.Current->RefCount--;
+       if (ctx->ATIFragmentShader.Current->RefCount <= 0) {
+          free(ctx->ATIFragmentShader.Current);
++         ctx->ATIFragmentShader.Current = NULL;
+       }
+    }
+ 
+EOF
 
 mkdir -p out
 
