@@ -83,6 +83,8 @@ BackendTest::~BackendTest() {
     driver->terminate();
     delete driver;
     recordFailedImages();
+
+    delete mPlatform;
 }
 
 void BackendTest::initializeDriver() {

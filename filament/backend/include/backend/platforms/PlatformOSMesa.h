@@ -75,7 +75,8 @@ private:
         OSMesaContext context;
         std::unique_ptr<uint8_t[]> buffer;
     };
-    std::unordered_map<std::thread::id, ContextInfo> mAdditionalContexts;
+    using ContextMap = std::unordered_map<std::thread::id, ContextInfo>;
+    ContextMap mAdditionalContexts;
     mutable std::shared_mutex mAdditionalContextsLock;
 };
 
