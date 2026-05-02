@@ -32,3 +32,13 @@ This folder previously last updated as follows:
     rsync -r abseil_new/ abseil/ --delete --exclude tnt
     rm -rf master.zip abseil_new
     git add abseil ; git status
+
+## Custom Changes
+
+A custom patch has been applied to fix compilation on ARM architectures when AddressSanitizer (ASAN) is enabled (specifically regarding `ABSL_HAVE_INTRINSIC_INT128`).
+
+If you update the `abseil` folder, you may need to re-apply the patch. You can do so by running the following command from the repository root:
+
+```shell
+git apply third_party/abseil/tnt/asan_arm_int128.diff
+```

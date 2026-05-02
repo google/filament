@@ -403,6 +403,9 @@ void OpenGLDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
+    // wait for the GPU again because JobWorker might have queued more work.
+    glFinish();
+
     if constexpr (UTILS_HAS_THREADING) {
         stopServiceThread();
     }
