@@ -804,10 +804,23 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
         builder.morphing(morphTargetBuffer);
 
+        // The Primitive structs in mMeshCache are shared across all instances of the same
+        // mesh. Only the first call should populate morphTargetBuffer in the shared Primitive
+        // and write into the existing BufferSlots (which were allocated by createPrimitive).
+        // Subsequent instances must append NEW BufferSlots so that ResourceLoader uploads
+        // morph data to every instance's MorphTargetBuffer independently.
+        //
+        // NOTE: This fix covers morph position data only. Morph tangent recomputation in
+        // ResourceLoader::computeTangents() reads MorphTargetBuffer from the shared Primitive,
+        // so additional instances with lit morph targets may have incorrect tangent frames.
+        const bool isFirstMorphSetup = (prims.data()->morphTargetBuffer == nullptr);
+
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
         for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
-            outputPrim->morphTargetBuffer = morphTargetBuffer;
+            if (isFirstMorphSetup) {
+                outputPrim->morphTargetBuffer = morphTargetBuffer;
+            }
 
             UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
             for (int tindex = 0; tindex < numMorphTargets; ++tindex) {
@@ -821,23 +834,42 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
                         assert_invariant(!previous || previous->type == accessor->type);
                         previous = accessor;
 
-                        assert_invariant(outputPrim->morphTargetBuffer);
-
                         if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
                                 fAsset->mResourceInfo)) {
                             using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
                             auto& slots = std::get<FFilamentAsset::ResourceInfo>(
                                     fAsset->mResourceInfo).mBufferSlots;
-                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
 
-                            assert_invariant(!slot.vertexBuffer);
-                            assert_invariant(!slot.indexBuffer);
+                            if (isFirstMorphSetup) {
+                                // First instance: write into the pre-allocated slot.
+                                BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
 
-                            slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
-                            slot.morphTargetOffset = outputPrim->morphTargetOffset;
-                            slot.morphTargetCount = outputPrim->vertices->getVertexCount();
-                            slot.bufferIndex = tindex;
+                                assert_invariant(!slot.vertexBuffer);
+                                assert_invariant(!slot.indexBuffer);
+
+                                slot.morphTargetBuffer = morphTargetBuffer;
+                                slot.morphTargetOffset = outputPrim->morphTargetOffset;
+                                slot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                                slot.bufferIndex = tindex;
+                            } else {
+                                // Additional instances: append a new slot so that
+                                // ResourceLoader uploads morph data to this instance's
+                                // MorphTargetBuffer without overwriting the original.
+                                BufferSlot newSlot = {};
+                                newSlot.accessor = accessor;
+                                newSlot.morphTargetBuffer = morphTargetBuffer;
+                                newSlot.morphTargetOffset = outputPrim->morphTargetOffset;
+                                newSlot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                                newSlot.bufferIndex = tindex;
+                                slots.push_back(newSlot);
+                            }
                         }
+                        // NOTE: The ResourceInfoExtended path is not handled here for
+                        // additional instances because it requires CPU-side geometry
+                        // processing (targetData.positions, targetData.tbn) that is only
+                        // performed in AssetLoaderExtended::createPrimitive(). The extended
+                        // path is currently limited to desktop platforms and does not support
+                        // multi-instance morph targets.
                         else if (std::holds_alternative<FFilamentAsset::ResourceInfoExtended>(
                                 fAsset->mResourceInfo))
                         {
@@ -845,15 +877,19 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
                             auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
                                     fAsset->mResourceInfo).slots;
 
-                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+                            if (isFirstMorphSetup) {
+                                BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
 
-                            assert_invariant(slot.slot == tindex);
-                            assert_invariant(!slot.vertices);
-                            assert_invariant(!slot.indices);
+                                assert_invariant(slot.slot == tindex);
+                                assert_invariant(!slot.vertices);
+                                assert_invariant(!slot.indices);
 
-                            slot.target = outputPrim->morphTargetBuffer;
-                            slot.offset = outputPrim->morphTargetOffset;
-                            slot.count = outputPrim->vertices->getVertexCount();
+                                slot.target = morphTargetBuffer;
+                                slot.offset = outputPrim->morphTargetOffset;
+                                slot.count = outputPrim->vertices->getVertexCount();
+                            }
+                            // Additional instances: skip. The extended loader requires
+                            // targetData that is not available at createRenderable() time.
                         }
 
                         break;
