@@ -25,18 +25,31 @@ const ibl_url = 'default_env/default_env_ibl.ktx';
 const sky_url = 'default_env/default_env_skybox.ktx';
 const mesh_url = 'FlightHelmet.gltf';
 
+const initFilament = (backend) => () => {
 Filament.init([mesh_url, ibl_url, sky_url], () => {
     window.gltfio = Filament.gltfio;
     window.Fov = Filament.Camera$Fov;
     window.LightType = Filament.LightManager$Type;
     window.IndirectLight = Filament.IndirectLight;
-    window.app = new App(document.getElementsByTagName('canvas')[0]);
+    let options = {};
+    if (backend == 'webgpu') {
+        options = {backend: Filament.Backend.WEBGPU};
+    }
+    window.app = new App(document.getElementsByTagName('canvas')[0], options);
 });
+};
+
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
+
 
 class App {
-    constructor(canvas) {
+    constructor(canvas, options) {
         this.canvas = canvas;
-        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const engine = this.engine = Filament.Engine.create(this.canvas, options);
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 

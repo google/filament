@@ -21,16 +21,28 @@ const mesh_url = "AnimatedMorphCube.glb";
 const ibl_url = "default_env/default_env_ibl.ktx";
 const sky_url = "default_env/default_env_skybox.ktx";
 
-Filament.init([mesh_url, ibl_url, sky_url], () => {
-    window.gltfio = Filament.gltfio;
-    window.Fov = Filament.Camera$Fov;
-    window.app = new App(document.querySelector("canvas"));
-});
+const initFilament = (backend) => () => {
+    Filament.init([mesh_url, ibl_url, sky_url], () => {
+        window.gltfio = Filament.gltfio;
+        window.Fov = Filament.Camera$Fov;
+        let options = {};
+        if (backend == 'webgpu') {
+            options = {backend: Filament.Backend.WEBGPU};
+        }
+        window.app = new App(document.querySelector("canvas"), options);
+    });
+};
+
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
 
 class App {
-    constructor(canvas) {
+    constructor(canvas, options) {
         this.canvas = canvas;
-        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const engine = this.engine = Filament.Engine.create(this.canvas, options);
         const scene = this.scene = engine.createScene();
 
         const sunlight = Filament.EntityManager.get().create();
