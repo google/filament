@@ -20,6 +20,8 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
+#include "common/CallbackUtils.h"
+
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
@@ -253,6 +255,69 @@ Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray(JNIEnv
 
     env->ReleaseFloatArrayElements(v_, v, 0);
 
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantBool(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jboolean result = instance->getConstant<bool>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantFloat(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jfloat result = instance->getConstant<float>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantInt(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jint result = instance->getConstant<int32_t>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantBool(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jboolean x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<bool>(name, x);
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantFloat(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jfloat x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<float>(name, x);
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantInt(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jint x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<int32_t>(name, x);
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -591,4 +656,18 @@ Java_com_google_android_filament_MaterialInstance_nGetTransparencyMode(JNIEnv*, 
         jlong nativeMaterialInstance) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     return (jint) instance->getTransparencyMode();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nCompile(JNIEnv *env, jclass clazz,
+        jlong nativeMaterialInstance, jint priority, jint variants, jobject handler, jobject runnable) {
+    MaterialInstance* materialInstance = (MaterialInstance*) nativeMaterialInstance;
+    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+    materialInstance->compile(
+            (MaterialInstance::CompilerPriorityQueue) priority,
+            (UserVariantFilterBit) variants,
+            jniCallback->getHandler(), [jniCallback](MaterialInstance*){
+                JniCallback::postToJavaAndDestroy(jniCallback);
+            });
 }

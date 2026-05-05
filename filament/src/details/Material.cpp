@@ -170,8 +170,6 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
 
     DriverApi& driver = engine.getDriverApi();
 
-    mIsStereoSupported = driver.isStereoSupported();
-    mIsParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
     mDepthPrecacheDisabled =
             driver.isWorkaroundNeeded(Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL);
     mDefaultMaterial = engine.getDefaultMaterial();
@@ -240,44 +238,33 @@ filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) const noexcept {
-    DriverApi& driver = mEngine.getDriverApi();
-
-    // Turn off the STE variant if stereo is not supported.
-    if (!mIsStereoSupported) {
-        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
+        Invocable<void(Material*)>&& callback) noexcept {
+    FMaterialInstance* mi = getDefaultInstance();
+    if (callback) {
+        mi->compile(priority, variantSpec, handler,
+                [this, callback = std::move(callback)](MaterialInstance*) {
+                    callback(this);
+                });
+    } else {
+        mi->compile(priority, variantSpec, handler, {});
     }
-
-    UserVariantFilterMask const variantFilter = ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
-    ShaderModel const shaderModel = mEngine.getShaderModel();
-    bool const isStereoSupported = mEngine.getDriverApi().isStereoSupported();
-
-    if (UTILS_LIKELY(mIsParallelShaderCompileSupported)) {
-        for (auto const variant: mDefinition.getVariants()) {
-            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                    prepareProgram(driver, variant, priority);
-                }
-            }
-        }
-    }
-
-    compileAllPrograms(priority, handler, std::move(callback));
 }
 
 void FMaterial::compile(CompilerPriorityQueue const priority,
         FixedCapacityVector<Variant> const& variants,
         CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) const noexcept {
+        Invocable<void(Material*)>&& callback) noexcept {
     DriverApi& driver = mEngine.getDriverApi();
+    FMaterialInstance* mi = getDefaultInstance();
 
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = driver.isStereoSupported();
+    bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
 
-    if (UTILS_LIKELY(mIsParallelShaderCompileSupported)) {
+    if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                prepareProgram(driver, variant, priority);
+                mi->prepareProgram(driver, variant, priority);
             }
         }
     }
@@ -287,7 +274,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
 void FMaterial::compileAllPrograms(CompilerPriorityQueue const priority,
         CallbackHandler* handler,
-        Invocable<void(Material*)>&& callback) const noexcept {
+        Invocable<void(Material*)>&& callback) noexcept {
     DriverApi& driver = mEngine.getDriverApi();
 
     if (callback) {

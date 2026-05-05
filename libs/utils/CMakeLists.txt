@@ -39,6 +39,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PagedArenaBitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Panic.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
@@ -92,6 +93,7 @@ set(SRCS
         src/string.cpp
         src/ThreadUtils.cpp
         src/Status.cpp
+        src/PagedArenaBitset.cpp
 )
 
 if (WIN32)
@@ -181,6 +183,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_algorithm.cpp
             test/test_Allocators.cpp
             test/test_bitset.cpp
+            test/test_EntitySet.cpp
             test/test_tribool.cpp
             test/test_CountDownLatch.cpp
             test/test_CString.cpp
@@ -242,7 +245,8 @@ if (FILAMENT_BUILD_TESTING AND NOT WASM)
             benchmark/benchmark_calls.cpp
             benchmark/benchmark_JobSystem.cpp
             benchmark/benchmark_mutex.cpp
-            benchmark/benchmark_memcpy.cpp)
+            benchmark/benchmark_memcpy.cpp
+            benchmark/benchmark_EntitySet.cpp)
 
 
     add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})

@@ -51,7 +51,7 @@ public:
         virtual ~Listener() noexcept;
     };
 
-    using ChangeCallback = std::function<void(utils::Slice<const Entity>)>;
+    using ChangeCallback = std::function<void(Slice<const Entity>)>;
 
     /**
      * Registers a callback to be triggered when entities are destroyed.
@@ -105,10 +105,7 @@ public:
 
     // Return whether the given Entity has been destroyed (false) or not (true).
     // Thread safe.
-    bool isAlive(Entity const e) const noexcept {
-        assert(getIndex(e) < RAW_INDEX_COUNT);
-        return (!e.isNull()) && (getGeneration(e) == mGens[getIndex(e)]);
-    }
+    bool isAlive(Entity e) const noexcept;
 
     // Registers a listener to be called when an entity is destroyed. Thread safe.
     // If the listener is already registered, this method has no effect.
@@ -118,12 +115,8 @@ public:
     void unregisterListener(Listener* l) noexcept;
 
 
-    /* no user serviceable parts below */
 
-    // current generation of the given index. Use for debugging and testing.
-    uint8_t getGenerationForIndex(size_t const index) const noexcept {
-        return mGens[index];
-    }
+    /* no user serviceable parts below */
 
     // singleton, can't be copied
     EntityManager(const EntityManager& rhs) = delete;
@@ -157,9 +150,6 @@ private:
     static Entity::Type makeIdentity(Entity::Type const g, Entity::Type const i) noexcept {
         return (g << GENERATION_SHIFT) | (i & INDEX_MASK);
     }
-
-    // stores the generation of each index.
-    uint8_t* const mGens;
 };
 
 } // namespace utils
