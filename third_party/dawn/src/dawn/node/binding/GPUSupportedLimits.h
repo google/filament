@@ -78,6 +78,7 @@ class GPUSupportedLimits final : public interop::GPUSupportedLimits {
     uint32_t getMaxStorageTexturesInFragmentStage(Napi::Env) override;
     uint32_t getMaxStorageBuffersInVertexStage(Napi::Env) override;
     uint32_t getMaxStorageTexturesInVertexStage(Napi::Env) override;
+    uint32_t getMaxImmediateSize(Napi::Env) override;
 
   private:
     dawn::utils::ComboLimits limits_;

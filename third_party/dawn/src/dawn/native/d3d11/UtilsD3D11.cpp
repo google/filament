@@ -27,12 +27,83 @@
 
 #include "dawn/native/d3d11/UtilsD3D11.h"
 
+#include <sstream>
+
 #include "dawn/common/Assert.h"
 #include "dawn/native/Format.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d11/DeviceD3D11.h"
 
 namespace dawn::native::d3d11 {
+
+std::string SRVCreationStr(ID3D11Resource* resource,
+                           const D3D11_SHADER_RESOURCE_VIEW_DESC1& srvDesc) {
+    std::ostringstream ss;
+    ss << "CreateShaderResourceView1, " << resource;
+    ss << ", Format: " << srvDesc.Format;
+    ss << ", ViewDimension: " << srvDesc.ViewDimension;
+
+    switch (srvDesc.ViewDimension) {
+        case D3D11_SRV_DIMENSION_BUFFER:
+            ss << ", Buffer.FirstElement: " << srvDesc.Buffer.FirstElement;
+            ss << ", Buffer.NumElements: " << srvDesc.Buffer.NumElements;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE1D:
+            ss << ", Texture1D.MipLevels: " << srvDesc.Texture1D.MipLevels;
+            ss << ", Texture1D.MostDetailedMip: " << srvDesc.Texture1D.MostDetailedMip;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE1DARRAY:
+            ss << ", Texture1DArray.ArraySize: " << srvDesc.Texture1DArray.ArraySize;
+            ss << ", Texture1DArray.FirstArraySlice: " << srvDesc.Texture1DArray.FirstArraySlice;
+            ss << ", Texture1DArray.MipLevels: " << srvDesc.Texture1DArray.MipLevels;
+            ss << ", Texture1DArray.MostDetailedMip: " << srvDesc.Texture1DArray.MostDetailedMip;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE2D:
+            ss << ", Texture2D.MipLevels: " << srvDesc.Texture2D.MipLevels;
+            ss << ", Texture2D.MostDetailedMip: " << srvDesc.Texture2D.MostDetailedMip;
+            ss << ", Texture2D.PlaneSlice: " << srvDesc.Texture2D.PlaneSlice;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE2DARRAY:
+            ss << ", Texture2DArray.ArraySize: " << srvDesc.Texture2DArray.ArraySize;
+            ss << ", Texture2DArray.FirstArraySlice: " << srvDesc.Texture2DArray.FirstArraySlice;
+            ss << ", Texture2DArray.MipLevels: " << srvDesc.Texture2DArray.MipLevels;
+            ss << ", Texture2DArray.MostDetailedMip: " << srvDesc.Texture2DArray.MostDetailedMip;
+            ss << ", Texture2DArray.PlaneSlice: " << srvDesc.Texture2DArray.PlaneSlice;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE2DMS:
+            // This structure is empty.
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY:
+            ss << ", Texture2DMSArray.ArraySize: " << srvDesc.Texture2DMSArray.ArraySize;
+            ss << ", Texture2DMSArray.FirstArraySlice: "
+               << srvDesc.Texture2DMSArray.FirstArraySlice;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURE3D:
+            ss << ", Texture3D.MipLevels: " << srvDesc.Texture3D.MipLevels;
+            ss << ", Texture3D.MostDetailedMip: " << srvDesc.Texture3D.MostDetailedMip;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURECUBE:
+            ss << ", TextureCube.MipLevels: " << srvDesc.TextureCube.MipLevels;
+            ss << ", TextureCube.MostDetailedMip: " << srvDesc.TextureCube.MostDetailedMip;
+            break;
+        case D3D11_SRV_DIMENSION_TEXTURECUBEARRAY:
+            ss << ", TextureCubeArray.First2DArrayFace: "
+               << srvDesc.TextureCubeArray.First2DArrayFace;
+            ss << ", TextureCubeArray.NumCubes: " << srvDesc.TextureCubeArray.NumCubes;
+            ss << ", TextureCubeArray.MipLevels: " << srvDesc.TextureCubeArray.MipLevels;
+            ss << ", TextureCubeArray.MostDetailedMip: "
+               << srvDesc.TextureCubeArray.MostDetailedMip;
+            break;
+        case D3D11_SRV_DIMENSION_BUFFEREX:
+            ss << ", BufferEx.FirstElement: " << srvDesc.BufferEx.FirstElement;
+            ss << ", BufferEx.NumElements: " << srvDesc.BufferEx.NumElements;
+            ss << ", BufferEx.Flags: " << srvDesc.BufferEx.Flags;
+            break;
+        default:
+            break;
+    }
+    return ss.str();
+}
 
 D3D11_COMPARISON_FUNC ToD3D11ComparisonFunc(wgpu::CompareFunction func) {
     switch (func) {

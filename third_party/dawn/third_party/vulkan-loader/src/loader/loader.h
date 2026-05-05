@@ -36,6 +36,9 @@
 LOADER_PLATFORM_THREAD_ONCE_EXTERN_DEFINITION(once_init)
 
 static inline VkPhysicalDevice loader_unwrap_physical_device(VkPhysicalDevice physicalDevice) {
+    if (VK_NULL_HANDLE == physicalDevice) {
+        return VK_NULL_HANDLE;
+    }
     struct loader_physical_device_tramp *phys_dev = (struct loader_physical_device_tramp *)physicalDevice;
     if (PHYS_TRAMP_MAGIC_NUMBER != phys_dev->magic) {
         return VK_NULL_HANDLE;
@@ -82,7 +85,6 @@ static inline void loader_init_dispatch(void *obj, const void *data) {
 extern struct loader_struct loader;
 extern loader_platform_thread_mutex loader_lock;
 extern loader_platform_thread_mutex loader_preload_icd_lock;
-extern loader_platform_thread_mutex loader_global_instance_list_lock;
 
 bool compare_vk_extension_properties(const VkExtensionProperties *op1, const VkExtensionProperties *op2);
 
@@ -228,14 +230,27 @@ VkStringErrorFlags vk_string_validate(const int max_length, const char *char_arr
 char *loader_get_next_path(char *path);
 VkResult add_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
 VkResult prepend_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
-VkResult add_data_files(const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files,
-                        bool use_first_found_manifest);
+VkResult add_data_files(const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files);
 
 loader_api_version loader_make_version(uint32_t version);
 loader_api_version loader_combine_version(uint32_t major, uint32_t minor, uint32_t patch);
 
 // Helper macros for determining if a version is valid or not
 bool loader_check_version_meets_required(loader_api_version required, loader_api_version version);
+
+VkResult loader_filter_enumerated_physical_device(const struct loader_instance *inst,
+                                                  const struct loader_envvar_id_filter *device_id_filter,
+                                                  const struct loader_envvar_id_filter *vendor_id_filter,
+                                                  const struct loader_envvar_id_filter *driver_id_filter,
+                                                  const uint32_t in_PhysicalDeviceCount,
+                                                  const VkPhysicalDevice *in_pPhysicalDevices, uint32_t *out_pPhysicalDeviceCount,
+                                                  VkPhysicalDevice *out_pPhysicalDevices);
+
+VkResult loader_filter_enumerated_physical_device_groups(
+    const struct loader_instance *inst, const struct loader_envvar_id_filter *device_id_filter,
+    const struct loader_envvar_id_filter *vendor_id_filter, const struct loader_envvar_id_filter *driver_id_filter,
+    const uint32_t in_PhysicalDeviceGroupCount, const VkPhysicalDeviceGroupProperties *in_pPhysicalDeviceGroupProperties,
+    uint32_t *out_PhysicalDeviceGroupCount, VkPhysicalDeviceGroupProperties *out_pPhysicalDeviceGroupProperties);
 
 // Convenience macros for common versions
 #if !defined(LOADER_VERSION_1_0_0)

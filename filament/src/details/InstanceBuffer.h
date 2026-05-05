@@ -49,7 +49,7 @@ public:
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
-    math::mat4f const& getLocalTransform(size_t index) const noexcept;
+    math::mat4f const& getLocalTransform(size_t index) const;
 
     void prepare(
             PerRenderableData* buffer, uint32_t index, uint32_t count,

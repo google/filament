@@ -279,7 +279,7 @@ struct State {
         const core::type::Matrix* mat_ty = nullptr;
         auto indices = access->Indices();
         int32_t matrix_index = -1;
-        for (uint32_t i = 0; i < indices.Length(); ++i) {
+        for (uint32_t i = 0; i < indices.size(); ++i) {
             auto* idx = indices[i];
 
             if (auto* struct_ty = cur_ty->As<core::type::Struct>()) {
@@ -326,9 +326,11 @@ struct State {
             return;
         }
 
-        // If we didn't find a matrix, then something is weird, we should have never tried to
-        // replace the access.
-        TINT_ASSERT(matrix_index != -1);
+        // If we don't have a matrix index we need to update, then we've updated the `var` type
+        // we're accessing but we're accessing another member of the struct, so we're done.
+        if (matrix_index == -1) {
+            return;
+        }
 
         // Not accessing through a matrix, nothing to do.
         if (!indexed_through_row_major) {
@@ -343,15 +345,16 @@ struct State {
         // This isn't a pointer access, so we'll just split the access in half, transpose the
         // matrix itself and then access that matrix with the rest of the expression.
 
-        Vector<core::ir::Value*, 4> mat_indices = indices.Truncate(size_t(matrix_index) + 1);
+        auto mat_indices =
+            Vector<core::ir::Value*, 4>{indices.subspan(0, static_cast<size_t>(matrix_index) + 1)};
 
         b.InsertBefore(access, [&] {
             auto* m = b.Access(mat_ty, access->Object(), mat_indices);
             auto* t = b.Call(RewriteType(mat_ty, true), core::BuiltinFn::kTranspose, m)->Result();
 
-            if (uint32_t(matrix_index) != indices.Length() - 1) {
-                Vector<core::ir::Value*, 4> access_indices =
-                    indices.Offset(size_t(matrix_index) + 1);
+            if (static_cast<uint32_t>(matrix_index) != indices.size() - 1) {
+                auto access_indices = Vector<core::ir::Value*, 4>{
+                    indices.subspan(static_cast<size_t>(matrix_index) + 1)};
                 b.AccessWithResult(access->DetachResult(), t, access_indices)->Result();
             } else {
                 access->Result()->ReplaceAllUsesWith(t);
@@ -584,7 +587,7 @@ struct State {
 
             b.Append(fn->Block(), [&] {
                 auto* res = b.Var(ty.ptr(function, to_ty));
-                b.LoopRange(ty, u32(0), u32(*count), u32(1), [&](core::ir::Value* idx) {
+                b.LoopRange(u32(0), u32(*count), u32(1), [&](core::ir::Value* idx) {
                     core::ir::Value* transposed = nullptr;
                     auto* cur = b.Access(from_ty->ElemType(), in, idx);
                     if (auto* nested = outer_ty->ElemType()->As<core::type::Array>()) {
@@ -638,12 +641,11 @@ struct State {
         // The element type is the only thing that will change. That does not affect the stride of
         // the array itself, which may either be the natural stride or an larger stride in the case
         // of an explicitly laid out array.
-        if (arr->Is<spirv::type::ExplicitLayoutArray>()) {
-            return ty.Get<spirv::type::ExplicitLayoutArray>(elem_ty, arr->Count(), arr->Align(),
-                                                            arr->Size(), arr->Stride());
+        if (auto* ex = arr->As<spirv::type::ExplicitLayoutArray>()) {
+            return ty.Get<spirv::type::ExplicitLayoutArray>(elem_ty, arr->Count(), arr->Size(),
+                                                            ex->Stride());
         }
-        return ty.Get<core::type::Array>(elem_ty, arr->Count(), arr->Align(), arr->Size(),
-                                         arr->Stride(), arr->Stride());
+        return ty.Get<core::type::Array>(elem_ty, arr->Count(), arr->Size());
     }
 
     const core::type::Type* RewriteStruct(const core::type::Struct* old_struct) {
@@ -754,16 +756,15 @@ struct State {
 }  // namespace
 
 Result<SuccessType> TransposeRowMajor(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.TransposeRowMajor",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowStructMatrixDecorations,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                              core::ir::Capability::kAllowOverrides,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllowMultipleEntryPoints,
+                    core::ir::Capability::kAllowStructMatrixDecorations,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                    core::ir::Capability::kAllowOverrides,
+                    core::ir::Capability::kAllowPointerToHandle,
+                },
+                "before spirv.TransposeRowMajor");
 
     State{ir}.Process();
 

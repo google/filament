@@ -587,6 +587,7 @@ public class RenderableManager {
          *
          * @param engine reference to the <code>Engine</code> to associate this renderable with
          * @param entity entity to add the renderable component to
+         * @throws RuntimeException if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid.
          */
         public void build(@NonNull Engine engine, @Entity int entity) {
             if (!nBuilderBuild(mNativeBuilder, engine.getNativeObject(), entity)) {

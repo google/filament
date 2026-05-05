@@ -65,7 +65,7 @@ jobject toByteBuffer(JNIEnv *env, const void* address, jlong size) {
 }
 
 {% macro render_method(method, object) %}
-    {% set ObjectName = object.name.CamelCase() if object else "FunctionsKt" %}
+    {% set ObjectName = kotlin_name(object) if object else "GPU" %}
     {% set FunctionSuffix = ObjectName + "_" +  method.name.camelCase() %}
     {% set KotlinRecord = FunctionSuffix + "KotlinRecord" %}
     {% set ArgsStruct = FunctionSuffix + "ArgsStruct" %}
@@ -81,6 +81,7 @@ jobject toByteBuffer(JNIEnv *env, const void* address, jlong size) {
             {{ as_annotated_cType(arg) }};
         {% endfor %}
     };
+
     {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, ArgsStruct, method.arguments)}}
 
     {% set _kotlin_return = kotlin_return(method) %}
@@ -159,15 +160,26 @@ jobject toByteBuffer(JNIEnv *env, const void* address, jlong size) {
         }
         {% if method.returns and method.returns.type.name.canonical_case() == 'status' %}
             if (result != WGPUStatus_Success) {
-                //* TODO(b/344805524): custom exception for Dawn.
-                env->ThrowNew(env->FindClass("java/lang/Error"), "Method failed");
-                return{{ ' 0' if method.returns }};
+                jclass exClass = env->FindClass("androidx/webgpu/WebGpuException");
+                jmethodID exConstructor =
+                    env->GetMethodID(exClass, "<init>", "(Ljava/lang/String;I)V");
+                std::string message = "Method GPU{% if object %}{{ object.name.CamelCase() + "." }}{% endif %}{{ method.name.camelCase() }} failed.";
+                jstring jmessage = env->NewStringUTF(message.c_str());
+                jobject exception = env->NewObject(exClass, exConstructor, jmessage, result);
+                env->Throw(static_cast<jthrowable>(exception));
+                return{{ ' 0' if _kotlin_return }};
             }
         {% endif %}
     {% endif %}
     {% if _kotlin_return %}
         {% if _kotlin_return.type.name.get() in ['void const *', 'void *'] %}
             size_t size = args.size;
+            {% if object and as_cType(object.name) == 'WGPUBuffer' %}
+                if (args.size == WGPU_WHOLE_MAP_SIZE) {
+                  uint64_t totalBufferSize = wgpuBufferGetSize(handle);
+                  size = static_cast<size_t>(totalBufferSize) - args.offset;
+                }
+            {% endif %}
         {% endif %}
         {{ convert_to_kotlin("args." + as_varName(_kotlin_return.name) if _kotlin_return.annotation == '*' else 'result',
                              'result_kt',
@@ -178,14 +190,14 @@ jobject toByteBuffer(JNIEnv *env, const void* address, jlong size) {
 } {% endmacro %}
 
 {% for obj in by_category['object'] %}
-    {% for method in obj.methods if include_method(method) %}
+    {% for method in obj.methods if include_method(obj, method) %}
         {{ render_method(method, obj) }}
     {% endfor %}
 
     //* Every object gets a Release method, to supply a Kotlin AutoCloseable.
     extern "C"
     JNIEXPORT void JNICALL
-    Java_{{ kotlin_package.replace('.', '_') }}_{{ obj.name.CamelCase() }}_close(
+    Java_{{ kotlin_package.replace('.', '_') }}_{{ kotlin_name(obj) }}_close(
             JNIEnv *env, jobject obj) {
         JNIClasses* classes = JNIClasses::getInstance(env);
         jclass clz = classes->{{ obj.name.camelCase() }};
@@ -196,7 +208,7 @@ jobject toByteBuffer(JNIEnv *env, const void* address, jlong size) {
 {% endfor %}
 
 //* Global functions don't have an associated class.
-{% for function in by_category['function'] if include_method(function) %}
+{% for function in by_category['function'] if include_method(None, function) %}
     {{ render_method(function, None) }}
 {% endfor %}
 

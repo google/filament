@@ -29,7 +29,6 @@
 #define SRC_DAWN_NATIVE_D3D12_PHYSICALDEVICED3D12_H_
 
 #include "dawn/native/PhysicalDevice.h"
-
 #include "dawn/native/d3d/PhysicalDeviceD3D.h"
 #include "dawn/native/d3d12/D3D12Info.h"
 #include "dawn/native/d3d12/d3d12_platform.h"
@@ -84,10 +83,13 @@ class PhysicalDevice : public d3d::PhysicalDevice {
         wgpu::FeatureName feature,
         const TogglesState& toggles) const override;
 
+    MaybeError ValidateUseOfD3D12() const;
+
     MaybeError InitializeDebugLayerFilters();
     void CleanUpDebugLayerFilters();
 
-    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                   const TogglesState& adapterToggles) const override;
 
     ComPtr<ID3D12Device> mD3d12Device;
 

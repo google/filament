@@ -45,7 +45,7 @@ class List;
 
 namespace dawn::native {
 
-ResultOrError<uint64_t> CountUTF16CodeUnitsFromUTF8String(const std::string_view& utf8String);
+uint64_t CountUTF16CodeUnitsFromUTF8String(const std::string_view& utf8String);
 
 // CompilationMessageContent is serializable and holds the content of each compilation message.
 #define COMPILATION_MESSAGE_CONTENT_MEMBER(X) \
@@ -76,13 +76,13 @@ DAWN_SERIALIZABLE(struct, ParsedCompilationMessages, PARSED_COMPILATION_MESSAGES
         std::string_view message,
         wgpu::CompilationMessageType type = wgpu::CompilationMessageType::Info,
         uint64_t lineNum = 0, uint64_t linePos = 0, uint64_t offset = 0, uint64_t length = 0);
-    MaybeError AddMessages(const tint::diag::List& diagnostics);
+    void AddMessages(const tint::diag::List& diagnostics);
 
     const CompilationInfo* GetCompilationInfo();
     const std::vector<std::string>& GetFormattedTintMessages() const;
 
   private:
-    MaybeError AddMessage(const tint::diag::Diagnostic& diagnostic);
+    void AddMessage(const tint::diag::Diagnostic& diagnostic);
     void AddMessage(CompilationMessageContent && message);
     void AddFormattedTintMessages(const tint::diag::List& diagnostics);
 };

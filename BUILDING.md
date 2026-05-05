@@ -5,7 +5,7 @@
 To build Filament, you must first install the following tools:
 
 - CMake 3.22.1 (or more recent)
-- clang 16.0 (or more recent) (Required for Linux and macOS; see [Windows](#windows) section for MSVC support)
+- clang 17.0 (or more recent) (Required for Linux and macOS; see [Windows](#windows) section for MSVC support)
 - [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate
@@ -79,6 +79,10 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
 - `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
 - `FILAMENT_SKIP_SAMPLES`:         Don't build sample apps
+- `FILAMENT_ENABLE_EXCEPTIONS`:    Enable C++ exceptions (default: ON, OFF for iOS). Required for JNI bindings.
+- `FILAMENT_ENABLE_RTTI`:          Enable C++ RTTI (default: OFF).
+
+Note: If you intend to use the JNI library (Android/Java build), you need to have `FILAMENT_ENABLE_EXCEPTIONS` enabled. If you are using Filament on Android as a pure native library and want to save space, you can disable it (e.g., using `./build.sh -E`).
 
 To turn an option on or off:
 
@@ -93,17 +97,17 @@ Options can also be set with the CMake GUI.
 
 Make sure you've installed the following dependencies:
 
-- `clang-16` or higher
+- `clang-17` or higher
 - `libglu1-mesa-dev`
-- `libc++-16-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
-- `libc++abi-16-dev` (`libcxxabi-static` on Fedora) or higher
+- `libc++-17-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
+- `libc++abi-17-dev` (`libcxxabi-static` on Fedora) or higher
 - `ninja-build`
 - `libxi-dev`
 - `libxcomposite-dev` (`libXcomposite-devel` on Fedora)
 - `libxxf86vm-dev` (`libXxf86vm-devel` on Fedora)
 
 ```shell
-sudo apt install clang-16 libglu1-mesa-dev libc++-16-dev libc++abi-16-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
+sudo apt install clang-17 libglu1-mesa-dev libc++-17-dev libc++abi-17-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
 ```
 
 After dependencies have been installed, we highly recommend using the [easy build](#easy-build)
@@ -124,7 +128,7 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 ```shell
 mkdir out/cmake-release
 cd out/cmake-release
-# Or use a specific version of clang, for instance /usr/bin/clang-16
+# Or use a specific version of clang, for instance /usr/bin/clang-17
 CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
   cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
@@ -134,8 +138,8 @@ solution is to use `update-alternatives` to both change the default compiler, an
 specific version of clang:
 
 ```shell
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
-update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
 update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
 update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 ```
@@ -408,7 +412,7 @@ same version that our continuous builds use.
 
 ```shell
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.60.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/5.0.4.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 python ./emsdk.py install latest
 python ./emsdk.py activate latest

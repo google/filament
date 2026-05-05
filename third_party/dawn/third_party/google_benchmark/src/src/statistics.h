@@ -18,7 +18,8 @@
 
 #include <vector>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/export.h"
+#include "benchmark/reporter.h"
 
 namespace benchmark {
 

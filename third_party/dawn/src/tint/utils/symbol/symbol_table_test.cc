@@ -36,25 +36,22 @@ using SymbolTableTest = testing::Test;
 using SymbolTableDeathTest = SymbolTableTest;
 
 TEST_F(SymbolTableTest, GeneratesSymbolForName) {
-    auto generation_id = GenerationID::New();
-    SymbolTable s{generation_id};
-    EXPECT_EQ(Symbol(1, generation_id, "name"), s.Register("name"));
-    EXPECT_EQ(Symbol(2, generation_id, "another_name"), s.Register("another_name"));
+    SymbolTable s{};
+    EXPECT_EQ(Symbol(1, s.GenIDForTesting(), "name"), s.Register("name"));
+    EXPECT_EQ(Symbol(2, s.GenIDForTesting(), "another_name"), s.Register("another_name"));
 }
 
 TEST_F(SymbolTableTest, DeduplicatesNames) {
-    auto generation_id = GenerationID::New();
-    SymbolTable s{generation_id};
-    EXPECT_EQ(Symbol(1, generation_id, "name"), s.Register("name"));
-    EXPECT_EQ(Symbol(2, generation_id, "another_name"), s.Register("another_name"));
-    EXPECT_EQ(Symbol(1, generation_id, "name"), s.Register("name"));
+    SymbolTable s{};
+    EXPECT_EQ(Symbol(1, s.GenIDForTesting(), "name"), s.Register("name"));
+    EXPECT_EQ(Symbol(2, s.GenIDForTesting(), "another_name"), s.Register("another_name"));
+    EXPECT_EQ(Symbol(1, s.GenIDForTesting(), "name"), s.Register("name"));
 }
 
 TEST_F(SymbolTableDeathTest, AssertsForBlankString) {
     EXPECT_DEATH_IF_SUPPORTED(
         {
-            auto generation_id = GenerationID::New();
-            SymbolTable s{generation_id};
+            SymbolTable s{};
             s.Register("");
         },
         "internal compiler error");

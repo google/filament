@@ -734,7 +734,9 @@ TEST_F(WriteTextureTest_CompressedTextureFormats, ImageExtent) {
         wgpu::Extent3D smallestValidExtent3D = {blockWidth, blockHeight, 1};
 
         // Valid usages of ImageExtent in WriteTexture with compressed texture formats.
-        { TestWriteTexture(512, 0, 256, 4, texture, 0, {0, 0, 0}, smallestValidExtent3D); }
+        {
+            TestWriteTexture(512, 0, 256, 4, texture, 0, {0, 0, 0}, smallestValidExtent3D);
+        }
 
         // Valid usages of ImageExtent in WriteTexture with compressed texture formats
         // and non-zero mipmap levels.

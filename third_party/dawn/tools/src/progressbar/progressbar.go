@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// Package progressbar provides functions for drawing unicode progress bars to
+// Package progressbar provides functions for drawing Unicode progress bars to
 // the terminal
 package progressbar
 
@@ -36,6 +36,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"dawn.googlesource.com/dawn/tools/src/term"
 )
 
 // Defaults for the Config
@@ -80,19 +82,34 @@ type Status struct {
 	Segments []Segment
 }
 
-// ProgressBar returns a string with an ANSI-colored progress bar, providing
-// realtime information about the status of the CTS run.
-// Note: We'll want to skip this if !isatty or if we're running on windows.
-type ProgressBar struct {
-	Config
-	out io.Writer
-	c   chan Status
+// ProgressBar is an interface for progress bars.
+type ProgressBar interface {
+	// Update updates the ProgressBar with the given status
+	Update(s Status)
+	// Stop stops drawing the progress bar.
+	// Once called, the ProgressBar must not be used.
+	Stop()
 }
 
+type Build func(out io.Writer, cfg *Config) ProgressBar
+
 // New returns a new ProgressBar that streams output to out.
+// Selects between realProgressBar and StubProgressBar automatically depending
+// on if the output will be displayed in the terminal correctly.
 // Call ProgressBar.Stop() once finished.
-func New(out io.Writer, cfg *Config) *ProgressBar {
-	p := &ProgressBar{out: out, c: make(chan Status, 64)}
+func New(out io.Writer, cfg *Config) ProgressBar {
+	if !term.CanUseAnsiEscapeSequences() {
+		return NewStubProgressBar(out, cfg)
+	}
+
+	return newRealProgressBar(out, cfg)
+}
+
+// NewRealProgressBar constructs and returns a realProgressBar.
+// Does not check if the terminal supports the needed escape characters, which
+// is why it is not exposed outside the package, use New() instead.
+func newRealProgressBar(out io.Writer, cfg *Config) ProgressBar {
+	p := &realProgressBar{out: out, c: make(chan Status, 64)}
 	if cfg != nil {
 		p.Config = *cfg
 	} else {
@@ -125,14 +142,36 @@ func New(out io.Writer, cfg *Config) *ProgressBar {
 	return p
 }
 
-// Update updates the ProgressBar with the given status
-func (p *ProgressBar) Update(s Status) {
+// NewStubProgressBar returns a new StubProgressBar, used in tests to guarantee
+// the type of ProgressBar returned.
+// Note: In production code, use New() instead.
+func NewStubProgressBar(_ io.Writer, _ *Config) ProgressBar {
+	return &StubProgressBar{}
+}
+
+// StubProgressBar is a ProgressBar that does nothing, used in environments that
+// don't support the control characters needed or when testing to avoid spamming
+// output.
+type StubProgressBar struct{}
+
+func (p *StubProgressBar) Update(s Status) {}
+
+func (p *StubProgressBar) Stop() {}
+
+// realProgressBar writes out a string with an ANSI-colored progress bar,
+// providing realtime information about the status of the CTS run.
+// Note: Does not work if !isatty or if running on windows.
+type realProgressBar struct {
+	Config
+	out io.Writer
+	c   chan Status
+}
+
+func (p *realProgressBar) Update(s Status) {
 	p.c <- s
 }
 
-// Stop stops drawing the progress bar.
-// Once called, the ProgressBar must not be used.
-func (p *ProgressBar) Stop() {
+func (p *realProgressBar) Stop() {
 	close(p.c)
 }
 

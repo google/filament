@@ -35,7 +35,7 @@
         "Each vendor must have an `id` field, which is it's PCI Vendor ID, and may optionally ",
         "have a `devices` field which defines device -> architecture mappings which will be ",
         "when populating the GPUAdapterInfo. Keys that begin with an `_` (like this one) denote ",
-        "commnents, and will be ignored by the parser."
+        "comments, and will be ignored by the parser."
       ],
 
       "id": "0xDEAD",
@@ -94,16 +94,24 @@
       "devices": [{
         "mask": "0xFFF0",
         "architecture": {
+          "TeraScale 2": ["0x6730", "0x6740", "0x6750", "0x6780"],
           "GCN 1": ["0x1300", "0x1310", "0x6600", "0x6610", "0x6660", "0x6790", "0x6800", "0x6810", "0x6820", "0x6830"],
           "GCN 2": ["0x6640", "0x6650", "0x67A0", "0x67B0", "0x9830", "0x9850"],
           "GCN 3": ["0x6900", "0x6920", "0x6930", "0x7300", "0x9870", "0x98E0"],
-          "GCN 4": ["0x67C0", "0x67D0", "0x67E0", "0x67F0", "0x6980", "0x6990", "0x6FD0", "0x9920"],
-          "GCN 5": ["0x66A0", "0x6860", "0x6870", "0x6940", "0x69A0", "0x15D0", "0x1630"],
+          "GCN 4": ["0x67C0", "0x67D0", "0x67E0", "0x67F0", "0x6980", "0x6990", "0x6FD0", "0x9920", "0x6940" ],
+          "GCN 5": ["0x66A0", "0x6860", "0x6870", "0x69A0", "0x15D0"],
           "RDNA 1": ["0x7310", "0x7340", "0x7360"],
-          "RDNA 2": ["0x73A0", "0x73B0", "0x73D0", "0x73E0", "0x73F0", "0x7400", "0x7420", "0x7430", "0x1430", "0x1500", "0x15E0", "0x1640", "0x1680", "0x13c0", "0x13f0"],
-          "RDNA 3": ["0x7440", "0x7470", "0x7480", "0x15B0", "0x7450", "0x1900", "0x1580", "0x1110"],
+          "RDNA 2": ["0x73A0", "0x73B0", "0x73D0", "0x73E0", "0x73F0", "0x7400", "0x7420", "0x7430", "0x1430", "0x15E0", "0x1640", "0x1680", "0x13c0", "0x13f0"],
+          "RDNA 3": ["0x7440", "0x7470", "0x7480", "0x1500", "0x15B0", "0x15C0", "0x7450", "0x1900", "0x1580", "0x1110"],
           "RDNA 4": ["0x7550", "0x7590"],
           "CDNA 1": ["0x7380"]
+        }
+      }, {
+        "_comment": "Devices that need splitting on exact PCI IDs.",
+        "mask": "0xFFFF",
+        "architecture": {
+          "GCN 5": ["0x1636", "0x1638"],
+          "RDNA 2": ["0x163F"]
         }
       }]
     },
@@ -135,7 +143,7 @@
           "Midgard": ["0x00000000"],
           "Bifrost": ["0x60000000", "0x70000000"],
           "Valhall": ["0x90000000", "0xA0000000", "0xB0000000"],
-          "Gen 5": ["0xC0000000", "0xD0000000"]
+          "Gen 5": ["0xC0000000", "0xD0000000", "0xE0000000"]
         }
       }]
     },
@@ -176,7 +184,8 @@
         "architecture": {
           "Rogue": ["0x00000000", "0x22000000", "0x24000000"],
           "Furian": ["0x1b000000"],
-          "Albiorix": ["0x35000000", "0x36000000"]
+          "B Series": ["0x35000000", "0x36000000"],
+          "D Series": ["0x71000000"]
         }
       }]
     },
@@ -185,12 +194,13 @@
       "id": "0x8086",
 
       "devices": [{
+        "_comment": "Reference https://dgpu-docs.intel.com/devices/hardware-table.html",
         "mask": "0xFF00",
         "architecture": {
-          "Gen 7": ["0x0100", "0x0400", "0x0A00", "0x0D00", "0x0F00"],
+          "Gen 7": ["0x0100", "0x0400", "0x0A00", "0x0C00", "0x0D00", "0x0F00"],
           "Gen 8": ["0x1600", "0x2200"],
           "Gen 9": ["0x1900", "0x3100", "0x3E00", "0x5A00", "0x5900", "0x8700", "0x9B00"],
-          "Gen 11": ["0x8A00", "0x4E00", "0x9800"],
+          "Gen 11": ["0x8A00", "0x4500", "0x4E00", "0x9800"],
           "Gen 12 LP": ["0x4600", "0x4C00", "0x4900", "0x9A00", "0xA700"],
           "Gen 12 HP": ["0x4F00", "0x5600"],
           "Xe LPG": ["0x7D00", "0xB600"],
@@ -249,7 +259,7 @@
       }]
     },
 
-    "Qualcomm_PCI": {
+    "QualcommPCI": {
       "name_override": "Qualcomm",
       "id": "0x5143",
 
@@ -265,14 +275,16 @@
       }]
     },
 
-    "Qualcomm_ACPI": {
+    "QualcommACPI": {
       "name_override": "Qualcomm",
       "id": "0x4D4F4351",
 
       "devices": [{
-        "mask": "0xFF000000",
+        "mask": "0xFFFFFF00",
         "architecture": {
-          "Adreno 8xx": ["0x36000000"]
+          "Adreno 6xx": ["0x41333800", "0x36334100", "0x41333400", "0x36333600"],
+          "Adreno 7xx": ["0x37314400", "0x36334300"],
+          "Adreno 8xx": ["0x35464600", "0x36334600"]
         }
       }]
 
@@ -282,14 +294,10 @@
       "id": "0x144d",
 
       "devices": [{
-        "_comment": [
-          "Haven't seen enough of these to determine a good masking pattern, so just using full",
-          "device IDs of known devices in the meantime."
-        ],
-        "mask": "0xFFFFFFFF",
+        "mask": "0xFFFF0000",
         "architecture": {
-          "RDNA 2": ["0x000073A0", "0x01300100"],
-          "RDNA 3": ["0x02600200"]
+          "RDNA 2": ["0x00000000", "0x01300000", "0x01700000", "0x02300000"],
+          "RDNA 3": ["0x02600000", "0x03600000"]
         }
       }]
     },
@@ -298,13 +306,19 @@
       "id": "0x19e5",
 
       "devices": [{
-        "_comment": [
-          "Add device ids in the future when they are available."
-        ],
-        "mask": "0xFFFFFFFF",
+        "mask": "0xF0000000",
         "architecture": {
+          "Maleoon": ["0x10000000", "0x20000000"]
         }
       }]
+    },
+
+    "VeriSilicon": {
+      "id": "0x10002",
+
+      "_comment": [
+        "Details on these are sparse, not sure how to group them."
+      ]
     }
 
   }

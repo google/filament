@@ -322,7 +322,6 @@ TEST_F(WGSLParserTest, TypeDecl_Array_ExpressionSize) {
 
     auto* arr = t->expr->identifier->As<ast::TemplatedIdentifier>();
     EXPECT_EQ(arr->symbol.Name(), "array");
-    EXPECT_TRUE(arr->attributes.IsEmpty());
 
     ASSERT_EQ(arr->arguments.Length(), 2u);
 
@@ -463,6 +462,70 @@ TEST_F(WGSLParserTest, TypeDecl_Sampler) {
     EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 8u}}));
 }
 
+TEST_F(WGSLParserTest, TypeDecl_Sampler_Nonfiltering) {
+    auto p = parser("sampler<non_filtering>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr) << p->error();
+
+    ast::CheckIdentifier(t.value, ast::Template("sampler", "non_filtering"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 23u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Sampler_Filtering) {
+    auto p = parser("sampler<filtering>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr) << p->error();
+
+    ast::CheckIdentifier(t.value, ast::Template("sampler", "filtering"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 19u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Sampler_Filtering_TrailingComma) {
+    auto p = parser("sampler<filtering,>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr) << p->error();
+
+    auto* samp = t->expr->identifier->As<ast::TemplatedIdentifier>();
+    EXPECT_EQ(samp->symbol.Name(), "sampler");
+
+    ASSERT_EQ(samp->arguments.Length(), 1u);
+
+    auto* ty = As<ast::IdentifierExpression>(samp->arguments[0]);
+    ASSERT_NE(ty, nullptr);
+    EXPECT_EQ(ty->identifier->symbol.Name(), "filtering");
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Sampler_EmptyTemplate) {
+    auto p = parser("sampler<>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.errored);
+    EXPECT_FALSE(t.matched);
+    ASSERT_EQ(t.value, nullptr);
+    ASSERT_TRUE(p->has_error());
+    EXPECT_EQ(p->error(), "1:9: expected expression for type template argument list");
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Sampler_LeadingComma) {
+    auto p = parser("sampler<,filtering>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.errored);
+    EXPECT_FALSE(t.matched);
+    ASSERT_EQ(t.value, nullptr);
+    ASSERT_TRUE(p->has_error());
+    EXPECT_EQ(p->error(), "1:9: expected expression for type template argument list");
+}
+
 TEST_F(WGSLParserTest, TypeDecl_Texture) {
     auto p = parser("texture_cube<f32>");
 
@@ -473,6 +536,54 @@ TEST_F(WGSLParserTest, TypeDecl_Texture) {
 
     ast::CheckIdentifier(t.value, ast::Template("texture_cube", "f32"));
     EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 18u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Texture_Filterable) {
+    auto p = parser("texture_cube<f32, filterable>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr);
+
+    ast::CheckIdentifier(t.value, ast::Template("texture_cube", "f32", "filterable"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 30u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Texture_Unfilterable) {
+    auto p = parser("texture_cube<f32, unfilterable>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr);
+
+    ast::CheckIdentifier(t.value, ast::Template("texture_cube", "f32", "unfilterable"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 32u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Texture_Filterable_TrailingComma) {
+    auto p = parser("texture_cube<f32, filterable,>");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr);
+
+    ast::CheckIdentifier(t.value, ast::Template("texture_cube", "f32", "filterable"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 31u}}));
+}
+
+TEST_F(WGSLParserTest, TypeDecl_Texture_TrailingComma) {
+    auto p = parser("texture_cube<f32, >");
+
+    auto t = p->type_specifier();
+    EXPECT_TRUE(t.matched);
+    EXPECT_FALSE(t.errored);
+    ASSERT_NE(t.value, nullptr);
+
+    ast::CheckIdentifier(t.value, ast::Template("texture_cube", "f32"));
+    EXPECT_EQ(t.value->source.range, (Source::Range{{1u, 1u}, {1u, 20u}}));
 }
 
 }  // namespace

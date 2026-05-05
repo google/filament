@@ -48,12 +48,14 @@ dawn_add_library(
     "${DAWN_UTILS_GEN_HEADERS}"
     "ComboRenderBundleEncoderDescriptor.h"
     "ComboRenderPipelineDescriptor.h"
+    "ScopedIgnoreValidationErrors.h"
     "TextureUtils.h"
     "WGPUHelpers.h"
   SOURCES
     "${DAWN_UTILS_GEN_SOURCES}"
     "ComboRenderBundleEncoderDescriptor.cpp"
     "ComboRenderPipelineDescriptor.cpp"
+    "ScopedIgnoreValidationErrors.cpp"
     "TextureUtils.cpp"
     "WGPUHelpers.cpp"
   DEPENDS
@@ -103,11 +105,13 @@ dawn_add_library(
 set(private_system_headers
     "CommandLineParser.h"
     "PlatformDebugLogger.h"
+    "SystemHandle.h"
     "SystemUtils.h"
     "Timer.h"
 )
 set(system_sources
     "CommandLineParser.cpp"
+    "SystemHandle.cpp"
     "SystemUtils.cpp"
 )
 set(private_system_depends)

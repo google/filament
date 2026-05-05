@@ -130,20 +130,40 @@ std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t 
     if (size > mCapacity) {
         return { [mDevice newBufferWithLength:size options:MTLStorageModeShared], 0 };
     }
-    assert_invariant(mCurrentUploadBuffer);
 
-    // Align the head to a 4-byte boundary.
-    mHead = (mHead + 3) & ~3;
+    // TODO: We could optimize performance in the future by using thread-local staging areas or
+    // bump allocators per thread. For now, we use a mutex to ensure thread-safety.
 
-    if (UTILS_LIKELY(mHead + size <= mCapacity)) {
-        const size_t oldHead = mHead;
-        mHead += size;
-        return { mCurrentUploadBuffer.get(), oldHead };
+    // Try to allocate from the current buffer first
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        assert_invariant(mCurrentUploadBuffer);
+
+        // Align the head to a 4-byte boundary.
+        size_t alignedHead = (mHead + 3) & ~3;
+
+        if (UTILS_LIKELY(alignedHead + size <= mCapacity)) {
+            mHead = alignedHead + size;
+            return { mCurrentUploadBuffer.get(), alignedHead };
+        }
     }
 
-    // We're finished with the current allocation.
-    mCurrentUploadBuffer = { [mDevice newBufferWithLength:mCapacity options:MTLStorageModeShared],
-        TrackedMetalBuffer::Type::STAGING };
+    // We're finished with the current allocation or there wasn't enough space.
+    // Create a new buffer outside the lock.
+    id<MTLBuffer> newBuffer = [mDevice newBufferWithLength:mCapacity options:MTLStorageModeShared];
+
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    // We need to re-check if another thread already reset the buffer while we were allocating.
+    size_t alignedHead = (mHead + 3) & ~3;
+
+    if (alignedHead + size <= mCapacity) {
+        mHead = alignedHead + size;
+        // newBuffer will be released as it goes out of scope.
+        return { mCurrentUploadBuffer.get(), alignedHead };
+    }
+
+    mCurrentUploadBuffer = { newBuffer, TrackedMetalBuffer::Type::STAGING };
     mHead = size;
 
     return { mCurrentUploadBuffer.get(), 0 };

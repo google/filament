@@ -28,11 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_METAL_PHYSICALDEVICEMTL_H_
 #define SRC_DAWN_NATIVE_METAL_PHYSICALDEVICEMTL_H_
 
-#include "dawn/native/PhysicalDevice.h"
+#import <Metal/Metal.h>
 
 #include "dawn/common/NSRef.h"
-
-#import <Metal/Metal.h>
+#include "dawn/native/PhysicalDevice.h"
 
 namespace dawn::native::metal {
 
@@ -72,7 +71,8 @@ class PhysicalDevice : public PhysicalDeviceBase {
     FeatureValidationResult ValidateFeatureSupportedWithTogglesImpl(
         wgpu::FeatureName feature,
         const TogglesState& toggles) const override;
-    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                   const TogglesState& adapterToggles) const override;
 
     NSPRef<id<MTLDevice>> mDevice;
     const bool mMetalValidationEnabled;

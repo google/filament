@@ -39,11 +39,12 @@ import (
 	"time"
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/template"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(oswrapper.GetRealOSWrapper()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -55,7 +56,9 @@ type Range struct {
 	to   int
 }
 
-func run() error {
+// TODO(crbug.com/344014313): Add unittest coverage once writeWGSLFile is
+// converted to use dependency injection.
+func run(osWrapper oswrapper.OSWrapper) error {
 	alphaRange := Range{}
 
 	iterations := 0
@@ -83,12 +86,12 @@ Searches in order: absolute, relative to CWD, then relative to `+fileutils.ThisD
 		return fmt.Errorf("missing template path")
 	}
 
-	tmpl, err := template.FromFile(tmplPath)
+	tmpl, err := template.FromFile(tmplPath, osWrapper)
 	if err != nil {
 		if !filepath.IsAbs(tmplPath) {
 			// Try relative to this .go file
 			tmplPath = filepath.Join(fileutils.ThisDir(), tmplPath)
-			tmpl, err = template.FromFile(tmplPath)
+			tmpl, err = template.FromFile(tmplPath, osWrapper)
 		}
 	}
 	if err != nil {

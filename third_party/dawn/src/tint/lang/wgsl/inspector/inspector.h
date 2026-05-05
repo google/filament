@@ -28,6 +28,8 @@
 #ifndef SRC_TINT_LANG_WGSL_INSPECTOR_INSPECTOR_H_
 #define SRC_TINT_LANG_WGSL_INSPECTOR_INSPECTOR_H_
 
+#include <array>
+#include <bitset>
 #include <map>
 #include <string>
 #include <tuple>
@@ -36,7 +38,7 @@
 #include <vector>
 
 #include "src/tint/api/common/override_id.h"
-
+#include "src/tint/api/common/resource_type.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/inspector/entry_point.h"
 #include "src/tint/lang/wgsl/inspector/resource_binding.h"
@@ -47,6 +49,13 @@ namespace tint::inspector {
 
 /// A temporary alias to sem::SamplerTexturePair. [DEPRECATED]
 using SamplerTexturePair = sem::SamplerTexturePair;
+
+/// The maximum size of the immediate buffer in bytes.
+constexpr size_t kMaxImmediateSize = 64;
+/// The size of a single slot in the immediate buffer in bytes.
+constexpr size_t kImmediateSlotSize = 4;
+/// The number of slots in the immediate buffer.
+constexpr size_t kImmediateSlotCount = kMaxImmediateSize / kImmediateSlotSize;
 
 /// Extracts information from a program
 class Inspector {
@@ -77,6 +86,10 @@ class Inspector {
     std::vector<Override> Overrides();
 
     /// @param entry_point name of the entry point to get information about.
+    /// @returns vector of all types returned from any resource table calls.
+    std::unordered_set<ResourceType> GetResourceTableInfo(const std::string& entry_point);
+
+    /// @param entry_point name of the entry point to get information about.
     /// @returns vector of all of the resource bindings.
     std::vector<ResourceBinding> GetResourceBindings(const std::string& entry_point);
 
@@ -94,6 +107,12 @@ class Inspector {
     std::vector<SamplerTexturePair> GetSamplerAndNonSamplerTextureUses(
         const std::string& entry_point,
         const BindingPoint& non_sampler_placeholder);
+
+    /// @param entry_point name of the entry point to get information about
+    /// @returns a bitset where the nth bit is true if the nth 4-byte slot of the immediate block
+    /// may be used by the entry point. Returns an empty bitset if the immediate block is not
+    /// referenced.
+    std::bitset<kImmediateSlotCount> GetImmediateBlockInfo(const std::string& entry_point);
 
     /// @returns vector of all valid extension names used by the program. There
     /// will be no duplicated names in the returned vector even if an extension
@@ -195,10 +214,6 @@ class Inspector {
     /// @returns the interpolation type and sampling modes for the value
     std::tuple<InterpolationType, InterpolationSampling> CalculateInterpolationData(
         VectorRef<const ast::Attribute*> attributes) const;
-
-    /// @param func the root function of the callgraph to consider for the computation.
-    /// @returns the total size in bytes of all Workgroup storage-class storage accessed via func.
-    uint32_t ComputeWorkgroupStorageSize(const ast::Function* func) const;
 
     /// @param func the root function of the callgraph to consider for the computation.
     /// @returns the total size in bytes of all immediate data variables accessed via func.

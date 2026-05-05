@@ -43,6 +43,7 @@ namespace dawn::native::metal {
 // does have a global queue of graphics operations, but the command buffers are inserted there
 // when they are "scheduled". Submitting other operations before the command buffer is
 // scheduled could lead to races in who gets scheduled first and incorrect rendering.
+// TODO(crbug.com/444702048): Remove after migrating Chromium to commands scheduled futures.
 DAWN_NATIVE_EXPORT void WaitForCommandsToBeScheduled(WGPUDevice device);
 
 #if defined(__OBJC__)

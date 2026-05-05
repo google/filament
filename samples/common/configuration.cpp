@@ -31,7 +31,6 @@ std::unordered_map<filament::Engine::Backend, FilterVector> gFilters;
 
 // TODO: This is not necessary once we can support these variants in webgpu.
 char const* WEBGPU_VARIANT_FILTERS[] = {
-    "skinning",
     "stereo",
 };
 

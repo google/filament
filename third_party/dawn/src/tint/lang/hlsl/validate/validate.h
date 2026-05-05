@@ -35,16 +35,16 @@
 namespace tint::hlsl::validate {
 
 /// Name of the FXC compiler DLL
-static constexpr const char kFxcDLLName[] = "d3dcompiler_47.dll";
+inline constexpr const char kFxcDLLName[] = "d3dcompiler_47.dll";
 
 #if TINT_BUILD_IS_WIN
-static constexpr const char* kDxcDLLName = "dxcompiler.dll";
+inline constexpr const char* kDxcDLLName = "dxcompiler.dll";
 #elif TINT_BUILD_IS_LINUX
-static constexpr const char* kDxcDLLName = "libdxcompiler.so";
+inline constexpr const char* kDxcDLLName = "libdxcompiler.so";
 #elif TINT_BUILD_IS_MAC
-static constexpr const char* kDxcDLLName = "libdxcompiler.dylib";
+inline constexpr const char* kDxcDLLName = "libdxcompiler.dylib";
 #else
-static constexpr const char* kDxcDLLName = "Invalid";
+inline constexpr const char* kDxcDLLName = "Invalid";
 #endif
 
 /// The return structure of Validate()

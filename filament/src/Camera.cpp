@@ -81,12 +81,12 @@ void Camera::setProjection(Projection const projection, double const left, doubl
     downcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
 
-void Camera::setCustomProjection(mat4 const& projection, double const near, double const far) noexcept {
+void Camera::setCustomProjection(mat4 const& projection, double const near, double const far) {
     downcast(this)->setCustomProjection(projection, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, mat4 const& projectionForCulling,
-        double const near, double const far) noexcept {
+        double const near, double const far) {
     downcast(this)->setCustomProjection(projection, projectionForCulling, near, far);
 }
 

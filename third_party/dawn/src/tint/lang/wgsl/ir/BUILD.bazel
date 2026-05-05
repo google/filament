@@ -39,10 +39,12 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "ir",
   srcs = [
+    "atomic_vec2u_to_from_u64.cc",
     "builtin_call.cc",
     "unary.cc",
   ],
   hdrs = [
+    "atomic_vec2u_to_from_u64.h",
     "builtin_call.h",
     "unary.h",
   ],
@@ -74,6 +76,8 @@ cc_library(
   name = "test",
   alwayslink = True,
   srcs = [
+    "atomic_vec2u_to_from_u64_test.cc",
+    "builtin_call_test.cc",
   ] + select({
     "//conditions:default": [],
   }) + select({
@@ -92,11 +96,15 @@ cc_library(
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/ir/transform:test",
+    "//src/tint/lang/core/ir:test",
     "//src/tint/lang/core/type",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
+    "//src/tint/lang/wgsl/intrinsic",
+    "//src/tint/lang/wgsl/ir",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/lang/wgsl/writer/ir_to_program",
     "//src/tint/lang/wgsl/writer/raise",
     "//src/tint/utils",

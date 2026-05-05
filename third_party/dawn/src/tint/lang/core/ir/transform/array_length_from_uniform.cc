@@ -144,11 +144,11 @@ struct State {
                     ptr = let->Value();
                     continue;
                 }
-                TINT_UNREACHABLE() << "unhandled source of a storage buffer pointer: "
-                                   << result->Instruction()->TypeInfo().name;
+                TINT_IR_UNREACHABLE(ir) << "unhandled source of a storage buffer pointer: "
+                                        << result->Instruction()->TypeInfo().name;
             }
-            TINT_UNREACHABLE() << "unhandled source of a storage buffer pointer: "
-                               << ptr->TypeInfo().name;
+            TINT_IR_UNREACHABLE(ir)
+                << "unhandled source of a storage buffer pointer: " << ptr->TypeInfo().name;
         }
     }
 
@@ -190,7 +190,7 @@ struct State {
             if (func->IsEntryPoint()) {
                 // Create a placeholder construct instruction for the lengths structure that will be
                 // filled in later when we know all of the structure members.
-                TINT_ASSERT(lengths_constructor == nullptr);
+                TINT_IR_ASSERT(ir, lengths_constructor == nullptr);
                 lengths_constructor = b.ConstructWithResult(ir.CreateValue<InstructionResult>());
                 lengths_constructor->InsertBefore(func->Block()->Front());
                 return lengths_constructor->Result();
@@ -223,7 +223,7 @@ struct State {
     /// @returns the length of the array, or nullptr if the original builtin should be used
     Value* ComputeArrayLength(Var* var, Instruction* insertion_point) {
         auto binding = var->BindingPoint();
-        TINT_ASSERT(binding);
+        TINT_IR_ASSERT(ir, binding);
 
         auto idx_it = bindpoint_to_size_index.find(*binding);
         if (idx_it == bindpoint_to_size_index.end()) {
@@ -274,7 +274,7 @@ struct State {
         uint32_t num_elements = (max_index / 4) + 1;
         b.Append(ir.root_block, [&] {
             buffer_sizes_var = b.Var("tint_storage_buffer_sizes",
-                                     ty.ptr<uniform>(ty.array(ty.vec4<u32>(), num_elements)));
+                                     ty.ptr<uniform>(ty.array(ty.vec4u(), num_elements)));
         });
         buffer_sizes_var->SetBindingPoint(ubo_binding.group, ubo_binding.binding);
         return buffer_sizes_var->Result();
@@ -306,8 +306,8 @@ struct State {
         b.InsertBefore(lengths_constructor->Block()->Front(), [&] {
             Vector<Value*, 8> constructor_values;
             for (auto info : ordered_bindpoints) {
-                TINT_ASSERT(bindpoint_to_size_index.contains(info.binding_point));
-                TINT_ASSERT(bindpoint_to_length_member_index.Contains(info.binding_point));
+                TINT_IR_ASSERT(ir, bindpoint_to_size_index.contains(info.binding_point));
+                TINT_IR_ASSERT(ir, bindpoint_to_length_member_index.Contains(info.binding_point));
 
                 // Load the total storage buffer size from the uniform buffer.
                 // The sizes are packed into vec4s to satisfy the 16-byte alignment requirement for
@@ -316,7 +316,7 @@ struct State {
                 const uint32_t size_index = bindpoint_to_size_index.at(info.binding_point);
                 const uint32_t array_index = size_index / 4;
                 const uint32_t vec_index = size_index % 4;
-                auto* vec_ptr = b.Access<ptr<uniform, vec4<u32>>>(BufferSizes(), u32(array_index));
+                auto* vec_ptr = b.Access<ptr<uniform, vec4u>>(BufferSizes(), u32(array_index));
                 auto* total_buffer_size = b.LoadVectorElement(vec_ptr, u32(vec_index))->Result();
 
                 // Calculate actual array length:
@@ -329,14 +329,13 @@ struct State {
                     // The variable is a struct, so subtract the byte offset of the array member.
                     auto* member = str->Members().Back();
                     array_type = member->Type()->As<core::type::Array>();
-                    array_size =
-                        b.Subtract<u32>(total_buffer_size, u32(member->Offset()))->Result();
+                    array_size = b.Subtract(total_buffer_size, u32(member->Offset()))->Result();
                 } else {
                     array_type = info.store_type->As<core::type::Array>();
                 }
-                TINT_ASSERT(array_type);
+                TINT_IR_ASSERT(ir, array_type);
 
-                auto* length = b.Divide<u32>(array_size, u32(array_type->Stride()))->Result();
+                auto* length = b.Divide(array_size, u32(array_type->ImplicitStride()))->Result();
                 constructor_values.Push(length);
             }
             lengths_constructor->SetOperands(std::move(constructor_values));
@@ -362,11 +361,8 @@ Result<ArrayLengthFromUniformResult> ArrayLengthFromUniform(
     Module& ir,
     BindingPoint ubo_binding,
     const std::unordered_map<BindingPoint, uint32_t>& bindpoint_to_size_index) {
-    auto validated = ValidateAndDumpIfNeeded(ir, "core.ArrayLengthFromUniform",
-                                             kArrayLengthFromUniformCapabilities);
-    if (validated != Success) {
-        return validated.Failure();
-    }
+    core::ir::AssertValid(ir, kArrayLengthFromUniformCapabilities,
+                          "before core.ArrayLengthFromUniform");
 
     State state{ir, ubo_binding, bindpoint_to_size_index};
     state.Process();

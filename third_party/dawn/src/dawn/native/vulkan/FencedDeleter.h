@@ -28,36 +28,57 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_FENCEDDELETER_H_
 #define SRC_DAWN_NATIVE_VULKAN_FENCEDDELETER_H_
 
+#include <atomic>
+
+#include "dawn/common/MutexProtected.h"
 #include "dawn/common/SerialQueue.h"
 #include "dawn/common/vulkan_platform.h"
+#include "dawn/native/ExecutionQueue.h"
 #include "dawn/native/IntegerTypes.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native::vulkan {
 
+// Types supported by the FencedDeleter must provide:
+//   Type name, Destroy function, whether the type is deleted with the device or instance.
+//
+// Types are listed in order of deletion.
+//  - Buffers and images must be deleted before memories because it is invalid to free memory
+// that still have resources bound to it.
+//  - Vulkan swapchains must be destroyed before their corresponding VkSurface
+#define FENCED_DELETER_TYPES(X)                                        \
+    X(VkBufferView, DestroyBufferView, device)                         \
+    X(VkBuffer, DestroyBuffer, device)                                 \
+    X(VkImage, DestroyImage, device)                                   \
+    X(VkDeviceMemory, FreeMemory, device)                              \
+    X(VkPipelineLayout, DestroyPipelineLayout, device)                 \
+    X(VkRenderPass, DestroyRenderPass, device)                         \
+    X(VkFence, DestroyFence, device)                                   \
+    X(VkFramebuffer, DestroyFramebuffer, device)                       \
+    X(VkImageView, DestroyImageView, device)                           \
+    X(VkPipeline, DestroyPipeline, device)                             \
+    X(VkSwapchainKHR, DestroySwapchainKHR, device)                     \
+    X(VkSurfaceKHR, DestroySurfaceKHR, instance)                       \
+    X(VkSemaphore, DestroySemaphore, device)                           \
+    X(VkDescriptorPool, DestroyDescriptorPool, device)                 \
+    X(VkQueryPool, DestroyQueryPool, device)                           \
+    X(VkSamplerYcbcrConversion, DestroySamplerYcbcrConversion, device) \
+    X(VkSampler, DestroySampler, device)
+
 class Device;
 
-class FencedDeleter {
+class FencedDeleter final : public ExecutionQueueBase::SerialProcessor {
   public:
     explicit FencedDeleter(Device* device);
-    ~FencedDeleter();
+    ~FencedDeleter() override;
 
-    void DeleteWhenUnused(VkBuffer buffer);
-    void DeleteWhenUnused(VkDescriptorPool pool);
-    void DeleteWhenUnused(VkDeviceMemory memory);
-    void DeleteWhenUnused(VkFence fence);
-    void DeleteWhenUnused(VkFramebuffer framebuffer);
-    void DeleteWhenUnused(VkImage image);
-    void DeleteWhenUnused(VkImageView view);
-    void DeleteWhenUnused(VkPipelineLayout layout);
-    void DeleteWhenUnused(VkRenderPass renderPass);
-    void DeleteWhenUnused(VkPipeline pipeline);
-    void DeleteWhenUnused(VkQueryPool querypool);
-    void DeleteWhenUnused(VkSamplerYcbcrConversion samplerYcbcrConversion);
-    void DeleteWhenUnused(VkSampler sampler);
-    void DeleteWhenUnused(VkSemaphore semaphore);
-    void DeleteWhenUnused(VkSurfaceKHR surface);
-    void DeleteWhenUnused(VkSwapchainKHR swapChain);
+#define X(Type, ...) void DeleteWhenUnused(Type handle);
+    FENCED_DELETER_TYPES(X)
+#undef X
+
+    // SerialProcessor API.
+    void UpdateCompletedSerialTo(ExecutionSerial completedSerial) override;
+    void AssumeCommandsComplete() override;
 
     // Returns the last serial that an object is pending deletion after or
     // kBeginningOfGPUTime if no objects are pending deletion.
@@ -65,26 +86,18 @@ class FencedDeleter {
     // Returns the serial used for deleting the resources.
     ExecutionSerial GetCurrentDeletionSerial();
 
-    void Tick(ExecutionSerial completedSerial);
-
   private:
     raw_ptr<Device> mDevice = nullptr;
-    SerialQueue<ExecutionSerial, VkBuffer> mBuffersToDelete;
-    SerialQueue<ExecutionSerial, VkDescriptorPool> mDescriptorPoolsToDelete;
-    SerialQueue<ExecutionSerial, VkDeviceMemory> mMemoriesToDelete;
-    SerialQueue<ExecutionSerial, VkFence> mFencesToDelete;
-    SerialQueue<ExecutionSerial, VkFramebuffer> mFramebuffersToDelete;
-    SerialQueue<ExecutionSerial, VkImage> mImagesToDelete;
-    SerialQueue<ExecutionSerial, VkImageView> mImageViewsToDelete;
-    SerialQueue<ExecutionSerial, VkPipeline> mPipelinesToDelete;
-    SerialQueue<ExecutionSerial, VkPipelineLayout> mPipelineLayoutsToDelete;
-    SerialQueue<ExecutionSerial, VkQueryPool> mQueryPoolsToDelete;
-    SerialQueue<ExecutionSerial, VkRenderPass> mRenderPassesToDelete;
-    SerialQueue<ExecutionSerial, VkSamplerYcbcrConversion> mSamplerYcbcrConversionsToDelete;
-    SerialQueue<ExecutionSerial, VkSampler> mSamplersToDelete;
-    SerialQueue<ExecutionSerial, VkSemaphore> mSemaphoresToDelete;
-    SerialQueue<ExecutionSerial, VkSurfaceKHR> mSurfacesToDelete;
-    SerialQueue<ExecutionSerial, VkSwapchainKHR> mSwapChainsToDelete;
+
+    struct PendingDeletions {
+#define X(Type, ...) SerialQueue<ExecutionSerial, Type> m##Type;
+        FENCED_DELETER_TYPES(X)
+#undef X
+        bool mAssumeCompleted = false;
+    };
+    MutexProtected<PendingDeletions> mPendingDeletions;
+
+    std::atomic<ExecutionSerial> mLastTaskSerial = kBeginningOfGPUTime;
 };
 
 }  // namespace dawn::native::vulkan

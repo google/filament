@@ -36,7 +36,6 @@
 #include "src/tint/lang/core/constant/splat.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/ir/access.h"
-#include "src/tint/lang/core/ir/bitcast.h"
 #include "src/tint/lang/core/ir/break_if.h"
 #include "src/tint/lang/core/ir/construct.h"
 #include "src/tint/lang/core/ir/continue.h"
@@ -83,6 +82,7 @@
 #include "src/tint/lang/core/type/sampler.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/u64.h"
 #include "src/tint/lang/core/type/u8.h"
 #include "src/tint/lang/core/type/void.h"
 #include "src/tint/utils/internal_limits.h"
@@ -150,6 +150,9 @@ struct Encoder {
             wg_size_out.set_y(Value((*wg_size_in)[1]));
             wg_size_out.set_z(Value((*wg_size_in)[2]));
         }
+        if (auto subgroup_size_in = fn_in->SubgroupSize()) {
+            fn_out->set_subgroup_size(Value(*subgroup_size_in));
+        }
         for (auto* param_in : fn_in->Params()) {
             fn_out->add_parameters(Value(param_in));
         }
@@ -214,7 +217,6 @@ struct Encoder {
         tint::Switch(
             inst_in,  //
             [&](const ir::Access* i) { InstructionAccess(*inst_out.mutable_access(), i); },
-            [&](const ir::Bitcast* i) { InstructionBitcast(*inst_out.mutable_bitcast(), i); },
             [&](const ir::BreakIf* i) { InstructionBreakIf(*inst_out.mutable_break_if(), i); },
             [&](const ir::CoreBinary* i) { InstructionBinary(*inst_out.mutable_binary(), i); },
             [&](const ir::CoreBuiltinCall* i) {
@@ -267,10 +269,8 @@ struct Encoder {
         binary_out.set_op(BinaryOp(binary_in->Op()));
     }
 
-    void InstructionBitcast(pb::InstructionBitcast&, const ir::Bitcast*) {}
-
     void InstructionBreakIf(pb::InstructionBreakIf& breakif_out, const ir::BreakIf* breakif_in) {
-        auto num_next_iter_values = static_cast<uint32_t>(breakif_in->NextIterValues().Length());
+        auto num_next_iter_values = static_cast<uint32_t>(breakif_in->NextIterValues().size());
         breakif_out.set_num_next_iter_values(num_next_iter_values);
     }
 
@@ -384,6 +384,7 @@ struct Encoder {
                 [&](const core::type::U32*) { type_out.set_basic(pb::TypeBasic::u32); },
                 [&](const core::type::F32*) { type_out.set_basic(pb::TypeBasic::f32); },
                 [&](const core::type::F16*) { type_out.set_basic(pb::TypeBasic::f16); },
+                [&](const core::type::U64*) { type_out.set_basic(pb::TypeBasic::u64); },
                 [&](const core::type::I8*) { type_out.set_basic((pb::TypeBasic::i8)); },
                 [&](const core::type::U8*) { type_out.set_basic((pb::TypeBasic::u8)); },
                 [&](const core::type::Vector* v) { TypeVector(*type_out.mutable_vector(), v); },
@@ -435,6 +436,7 @@ struct Encoder {
                             TINT_ICE() << "invalid subgroup matrix kind: " << ToString(s->Kind());
                     }
                 },
+                [&](const core::type::Buffer* b) { TypeBuffer(*type_out.mutable_buffer(), b); },
                 TINT_ICE_ON_NO_MATCH);
 
             mod_out_.mutable_types()->Add(std::move(type_out));
@@ -497,7 +499,6 @@ struct Encoder {
 
     void TypeArray(pb::TypeArray& array_out, const core::type::Array* array_in) {
         array_out.set_element(Type(array_in->ElemType()));
-        array_out.set_stride(array_in->Stride());
         tint::Switch(
             array_in->Count(),  //
             [&](const core::type::ConstantArrayCount* c) {
@@ -534,6 +535,7 @@ struct Encoder {
     void TypeSampledTexture(pb::TypeSampledTexture& texture_out,
                             const core::type::SampledTexture* texture_in) {
         texture_out.set_dimension(TextureDimension(texture_in->Dim()));
+        texture_out.set_filterable(pb::TextureFilterable(texture_in->Filterable()));
         texture_out.set_sub_type(Type(texture_in->Type()));
     }
 
@@ -562,6 +564,7 @@ struct Encoder {
     }
 
     void TypeExternalTexture(pb::TypeExternalTexture&, const core::type::ExternalTexture*) {}
+
     void TypeInputAttachment(pb::TypeInputAttachment& input_attachment_out,
                              const core::type::InputAttachment* input_attachment_in) {
         input_attachment_out.set_sub_type(Type(input_attachment_in->Type()));
@@ -569,6 +572,7 @@ struct Encoder {
 
     void TypeSampler(pb::TypeSampler& sampler_out, const core::type::Sampler* sampler_in) {
         sampler_out.set_kind(SamplerKind(sampler_in->Kind()));
+        sampler_out.set_filtering(pb::SamplerFiltering(sampler_in->Filtering()));
     }
 
     void TypeSubgroupMatrix(pb::TypeSubgroupMatrix& subgroup_matrix_out,
@@ -576,6 +580,20 @@ struct Encoder {
         subgroup_matrix_out.set_sub_type(Type(subgroup_matrix_in->Type()));
         subgroup_matrix_out.set_columns(subgroup_matrix_in->Columns());
         subgroup_matrix_out.set_rows(subgroup_matrix_in->Rows());
+    }
+
+    void TypeBuffer(pb::TypeBuffer& buffer_out, const core::type::Buffer* buffer_in) {
+        tint::Switch(
+            buffer_in->Count(),  //
+            [&](const core::type::ConstantArrayCount* c) {
+                buffer_out.set_count(c->value);
+                if (c->value >= internal_limits::kMaxArrayElementCount) {
+                    err_ << "array count (" << c->value << ") must be less than "
+                         << internal_limits::kMaxArrayElementCount << "\n";
+                }
+            },
+            [&](const core::type::RuntimeArrayCount*) { buffer_out.set_count(0); },
+            TINT_ICE_ON_NO_MATCH);
     }
 
     [[maybe_unused]] void TypeBuitinStruct(pb::Type& builtin_struct_out,
@@ -1055,6 +1073,8 @@ struct Encoder {
                 return pb::BuiltinValue::front_facing;
             case core::BuiltinValue::kGlobalInvocationId:
                 return pb::BuiltinValue::global_invocation_id;
+            case core::BuiltinValue::kGlobalInvocationIndex:
+                return pb::BuiltinValue::global_invocation_index;
             case core::BuiltinValue::kInstanceIndex:
                 return pb::BuiltinValue::instance_index;
             case core::BuiltinValue::kLocalInvocationId:
@@ -1075,14 +1095,18 @@ struct Encoder {
                 return pb::BuiltinValue::subgroup_invocation_id;
             case core::BuiltinValue::kSubgroupSize:
                 return pb::BuiltinValue::subgroup_size;
+            case core::BuiltinValue::kNumSubgroups:
+                return pb::BuiltinValue::num_subgroups;
             case core::BuiltinValue::kVertexIndex:
                 return pb::BuiltinValue::vertex_index;
             case core::BuiltinValue::kWorkgroupId:
                 return pb::BuiltinValue::workgroup_id;
+            case core::BuiltinValue::kWorkgroupIndex:
+                return pb::BuiltinValue::workgroup_index;
             case core::BuiltinValue::kClipDistances:
                 return pb::BuiltinValue::clip_distances;
-            case core::BuiltinValue::kPrimitiveId:
-                return pb::BuiltinValue::primitive_id;
+            case core::BuiltinValue::kPrimitiveIndex:
+                return pb::BuiltinValue::primitive_index;
             case core::BuiltinValue::kBarycentricCoord:
                 return pb::BuiltinValue::barycentric_coord;
             case core::BuiltinValue::kUndefined:
@@ -1115,6 +1139,8 @@ struct Encoder {
                 return pb::BuiltinFn::atan2;
             case core::BuiltinFn::kAtanh:
                 return pb::BuiltinFn::atanh;
+            case core::BuiltinFn::kBitcast:
+                return pb::BuiltinFn::bitcast;
             case core::BuiltinFn::kCeil:
                 return pb::BuiltinFn::ceil;
             case core::BuiltinFn::kClamp:
@@ -1331,6 +1357,10 @@ struct Encoder {
                 return pb::BuiltinFn::atomic_exchange;
             case core::BuiltinFn::kAtomicCompareExchangeWeak:
                 return pb::BuiltinFn::atomic_compare_exchange_weak;
+            case core::BuiltinFn::kAtomicStoreMin:
+                return pb::BuiltinFn::atomic_store_min;
+            case core::BuiltinFn::kAtomicStoreMax:
+                return pb::BuiltinFn::atomic_store_max;
             case core::BuiltinFn::kSubgroupBallot:
                 return pb::BuiltinFn::subgroup_ballot;
             case core::BuiltinFn::kSubgroupElect:
@@ -1391,8 +1421,24 @@ struct Encoder {
                 return pb::BuiltinFn::subgroup_matrix_multiply;
             case core::BuiltinFn::kSubgroupMatrixMultiplyAccumulate:
                 return pb::BuiltinFn::subgroup_matrix_multiply_accumulate;
+            case core::BuiltinFn::kSubgroupMatrixScalarAdd:
+                return pb::BuiltinFn::subgroup_matrix_scalar_add;
+            case core::BuiltinFn::kSubgroupMatrixScalarSubtract:
+                return pb::BuiltinFn::subgroup_matrix_scalar_subtract;
+            case core::BuiltinFn::kSubgroupMatrixScalarMultiply:
+                return pb::BuiltinFn::subgroup_matrix_scalar_multiply;
             case core::BuiltinFn::kPrint:
                 return pb::BuiltinFn::print;
+            case core::BuiltinFn::kHasResource:
+                return pb::BuiltinFn::has_resource;
+            case core::BuiltinFn::kGetResource:
+                return pb::BuiltinFn::get_resource;
+            case core::BuiltinFn::kBufferView:
+                return pb::BuiltinFn::buffer_view;
+            case core::BuiltinFn::kBufferLength:
+                return pb::BuiltinFn::buffer_length;
+            case core::BuiltinFn::kBufferArrayView:
+                return pb::BuiltinFn::buffer_array_view;
             case core::BuiltinFn::kNone:
                 break;
         }
@@ -1406,25 +1452,19 @@ Result<std::unique_ptr<pb::Module>> EncodeToProto(const Module& mod_in) {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     pb::Module mod_out;
-    auto res = Encoder{mod_in, mod_out}.Encode();
-    if (res != Success) {
-        return res.Failure();
-    }
+    TINT_CHECK_RESULT((Encoder{mod_in, mod_out}.Encode()));
 
     return std::make_unique<pb::Module>(mod_out);
 }
 
 Result<Vector<std::byte, 0>> EncodeToBinary(const Module& mod_in) {
-    auto mod_out = EncodeToProto(mod_in);
-    if (mod_out != Success) {
-        return mod_out.Failure();
-    }
+    TINT_CHECK_RESULT_UNWRAP(mod_out, EncodeToProto(mod_in));
 
     Vector<std::byte, 0> buffer;
-    size_t len = mod_out.Get()->ByteSizeLong();
+    size_t len = mod_out->ByteSizeLong();
     buffer.Resize(len);
     if (len > 0) {
-        if (!mod_out.Get()->SerializeToArray(&buffer[0], static_cast<int>(len))) {
+        if (!mod_out->SerializeToArray(&buffer[0], static_cast<int>(len))) {
             return Failure{"failed to serialize protobuf"};
         }
     }

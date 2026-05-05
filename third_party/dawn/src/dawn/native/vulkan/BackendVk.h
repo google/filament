@@ -32,18 +32,24 @@
 #include <string>
 #include <vector>
 
-#include "dawn/native/BackendConnection.h"
-
 #include "absl/container/flat_hash_map.h"
 #include "dawn/common/DynamicLib.h"
 #include "dawn/common/Ref.h"
 #include "dawn/common/RefCounted.h"
 #include "dawn/common/ityp_array.h"
+#include "dawn/native/BackendConnection.h"
 #include "dawn/native/vulkan/PhysicalDeviceVk.h"
 #include "dawn/native/vulkan/VulkanFunctions.h"
 #include "dawn/native/vulkan/VulkanInfo.h"
 
 namespace dawn::native::vulkan {
+
+// The required version of Vulkan the driver must support in order for Dawn to use the Vulkan
+// backend. If this value is updated ensure that appropriate adjustments are made to
+// VulkanExtensions.h/cpp and VulkanFunctions.h/cpp.
+// Vulkan 1.1 is required due to poor quality of some Vulkan 1.0 drivers.
+// See crbug.com/850881, crbug.com/863086, crbug.com/1465064, crbug.com/346990068
+inline constexpr uint32_t kRequiredVulkanVersion = VK_API_VERSION_1_1;
 
 enum class ICD {
     None,

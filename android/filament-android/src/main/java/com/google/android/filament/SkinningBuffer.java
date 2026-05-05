@@ -78,6 +78,8 @@ public class SkinningBuffer {
          * @return the newly created <code>SkinningBuffer</code> object
          *
          * @exception IllegalStateException if the SkinningBuffer could not be created
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          *
          * @see #setBonesAsMatrices
          * @see #setBonesAsQuaternions

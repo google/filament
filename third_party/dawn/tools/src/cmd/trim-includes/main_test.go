@@ -175,7 +175,7 @@ func TestFileSave(t *testing.T) {
 				path:  testCase.path,
 				lines: testCase.lines,
 			}
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			err := f.save(testCase.lineMap, wrapper)
 			if testCase.wantErr {
 				require.ErrorContains(t, err, testCase.wantErrMsg)

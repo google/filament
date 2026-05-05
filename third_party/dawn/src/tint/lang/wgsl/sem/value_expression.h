@@ -50,14 +50,12 @@ class ValueExpression : public Castable<ValueExpression, Expression> {
     /// @param stage the earliest evaluation stage for the expression
     /// @param statement the statement that owns this expression
     /// @param constant the constant value of the expression. May be null
-    /// @param has_side_effects true if this expression may have side-effects
     /// @param root_ident the (optional) root identifier for this expression
     ValueExpression(const ast::Expression* declaration,
                     const core::type::Type* type,
                     core::EvaluationStage stage,
                     const Statement* statement,
                     const core::constant::Value* constant,
-                    bool has_side_effects,
                     const Variable* root_ident = nullptr);
 
     /// Destructor
@@ -79,15 +77,6 @@ class ValueExpression : public Castable<ValueExpression, Expression> {
     /// @return the root identifier of this expression, or nullptr
     const Variable* RootIdentifier() const { return root_identifier_; }
 
-    /// @return the behaviors of this statement
-    const sem::Behaviors& Behaviors() const { return behaviors_; }
-
-    /// @return the behaviors of this statement
-    sem::Behaviors& Behaviors() { return behaviors_; }
-
-    /// @return true of this expression may have side effects
-    bool HasSideEffects() const { return has_side_effects_; }
-
     /// @return the inner expression node if this is a Materialize, otherwise this.
     const ValueExpression* UnwrapMaterialize() const;
 
@@ -105,8 +94,6 @@ class ValueExpression : public Castable<ValueExpression, Expression> {
     const core::type::Type* const type_;
     const core::EvaluationStage stage_;
     const core::constant::Value* const constant_;
-    sem::Behaviors behaviors_{sem::Behavior::kNext};
-    const bool has_side_effects_;
 };
 
 }  // namespace tint::sem

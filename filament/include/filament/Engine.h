@@ -783,6 +783,17 @@ public:
     bool isAsynchronousModeEnabled() const noexcept;
 
     /**
+     * Returns whether the engine has encountered an unrecoverable failure.
+     *
+     * If this returns true, the engine is in an unrecoverable state and further calls to
+     * rendering methods will fail or be ignored. Apps can use this to check for fatal
+     * errors instead of relying on exceptions.
+     *
+     * @return true if an unrecoverable failure has occurred, false otherwise.
+     */
+    bool hasUnrecoverableFailure() const noexcept;
+
+    /**
      * Retrieves the configuration settings of this Engine.
      *
      * This method returns the configuration object that was supplied to the Engine's
@@ -1099,6 +1110,8 @@ public:
      * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
      * timely fashion, such as when responding to Android's
      * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
      */
     void flushAndWait();
 
@@ -1118,6 +1131,8 @@ public:
      * @param timeout A timeout in nanoseconds
      * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
      * might still be executing on both the CPU and GPU sides.
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op and returns false.
      */
     bool flushAndWait(uint64_t timeout);
 
@@ -1127,7 +1142,9 @@ public:
      *
      * <p>This is typically used after creating a lot of objects to start draining the command
      * queue which has a limited size.</p>
-      */
+     *
+     * @note If the backend thread has encountered an unrecoverable error, this function becomes a no-op.
+     */
     void flush();
 
     /**

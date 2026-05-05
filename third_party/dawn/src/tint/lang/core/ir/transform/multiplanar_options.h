@@ -35,8 +35,8 @@
 namespace tint::transform::multiplanar {
 
 /// This struct identifies the binding groups and locations for new bindings to
-/// use when transforming a texture_external instance.
-struct BindingPoints {
+/// use when transforming a multiplanar texture_external instance.
+struct MultiplanarTexture {
     /// The desired binding location of the texture_2d representing plane #1 when
     /// a texture_external binding is expanded.
     BindingPoint plane_1;
@@ -45,13 +45,27 @@ struct BindingPoints {
     BindingPoint params;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
-    TINT_REFLECT(BindingPoints, plane_1, params);
+    TINT_REFLECT(MultiplanarTexture, plane_1, params);
+};
+
+/// This struct identifies the binding groups and locations for new bindings to
+/// use when transforming a YCBcr texture_external instance.
+struct YCBCRTexture {
+    /// The desired binding location of the sampler when a texture_external binding is expanded.
+    BindingPoint sampler;
+    /// The desired binding location of the ExternalTextureParams uniform when a
+    /// texture_external binding is expanded.
+    BindingPoint params;
+
+    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
+    TINT_REFLECT(YCBCRTexture, sampler, params);
 };
 
 /// BindingsMap is a map where the key is the binding location of a
 /// texture_external and the value is a struct containing the desired
 /// locations for new bindings expanded from the texture_external instance.
-using BindingsMap = std::unordered_map<BindingPoint, BindingPoints>;
+using BindingsMap =
+    std::unordered_map<BindingPoint, std::variant<MultiplanarTexture, YCBCRTexture>>;
 
 }  // namespace tint::transform::multiplanar
 

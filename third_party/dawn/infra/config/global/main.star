@@ -52,6 +52,8 @@ lucicfg.config(
         "luci/luci-scheduler.cfg",
         "luci/project.cfg",
         "luci/realms.cfg",
+        # No current need for other generated files such as mixins.pyl.
+        "testing/gn_isolate_map.pyl",
     ],
     fail_on_warnings = True,
 )
@@ -131,7 +133,7 @@ chromium_luci.configure_try(
 chromium_luci.configure_builders(
     os_dimension_overrides = {
         os.LINUX_DEFAULT: os.LINUX_JAMMY,
-        os.MAC_DEFAULT: os.MAC_15,
+        os.MAC_DEFAULT: "Mac-15|Mac-26",
         os.WINDOWS_DEFAULT: os.WINDOWS_10,
     },
 )
@@ -144,6 +146,10 @@ chromium_luci.configure_recipe_experiments(
     # This can be removed once all builders use the chromium-luci wrappers for
     # creating builders instead of directly calling luci.builder().
     require_builder_wrappers = False,
+)
+
+chromium_luci.configure_targets(
+    generate_pyl_files = chromium_luci.pyl_generation_configuration(),
 )
 
 luci.logdog(gs_bucket = "chromium-luci-logdog")
@@ -161,6 +167,15 @@ luci.bucket(
             acl.BUILDBUCKET_TRIGGERER,
         ),
     ],
+    bindings = [
+        # Allow CI builders to create invocations in their own builds.
+        luci.binding(
+            roles = "role/resultdb.invocationCreator",
+            users = [
+                "dawn-ci-builder@chops-service-accounts.iam.gserviceaccount.com",
+            ],
+        ),
+    ],
 )
 
 luci.bucket(
@@ -171,6 +186,38 @@ luci.bucket(
             groups = [
                 "project-dawn-tryjob-access",
                 "service-account-cq",
+            ],
+        ),
+    ],
+    bindings = [
+        # Allow try builders to create invocations in their own builds.
+        luci.binding(
+            roles = "role/resultdb.invocationCreator",
+            groups = [
+                "project-dawn-tryjob-access",
+            ],
+            users = [
+                "dawn-try-builder@chops-service-accounts.iam.gserviceaccount.com",
+            ],
+        ),
+    ],
+)
+
+# Allows builders to write baselines and query ResultDB for new tests.
+luci.realm(
+    name = "@project",
+    bindings = [
+        luci.binding(
+            roles = "role/resultdb.baselineWriter",
+            users = [
+                "dawn-ci-builder@chops-service-accounts.iam.gserviceaccount.com",
+                "dawn-try-builder@chops-service-accounts.iam.gserviceaccount.com",
+            ],
+        ),
+        luci.binding(
+            roles = "role/resultdb.baselineReader",
+            users = [
+                "dawn-try-builder@chops-service-accounts.iam.gserviceaccount.com",
             ],
         ),
     ],
@@ -291,10 +338,20 @@ consoles.list_view(
 )
 
 # Run other non-builder setup.
-exec("//recipes.star")
+exec("@chromium-targets//mixins.star")
+exec("//binaries.star")
+exec("//bundles.star")
+exec("//compile_targets.star")
 exec("//gn_args.star")
+exec("//mixins.star")
+exec("//recipes.star")
+exec("//tests.star")
 
 # Handle any other builders defined in other files.
+exec("//chromium_try.star")
+exec("//cmake_ci.star")
+exec("//cmake_try.star")
 exec("//legacy_builders.star")
 exec("//gn_standalone_ci.star")
 exec("//gn_standalone_try.star")
+exec("//trusted_robots.star")

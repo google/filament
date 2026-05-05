@@ -44,11 +44,10 @@ namespace tint::ast {
 class Enable final : public Castable<Enable, Node> {
   public:
     /// Create a extension
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param exts the extensions being enabled by this directive
-    Enable(GenerationID pid, NodeID nid, const Source& src, VectorRef<const Extension*> exts);
+    Enable(NodeID nid, const Source& src, VectorRef<const Extension*> exts);
 
     /// Destructor
     ~Enable() override;
@@ -56,11 +55,6 @@ class Enable final : public Castable<Enable, Node> {
     /// @param ext the extension to search for
     /// @returns true if this Enable lists the given extension
     bool HasExtension(wgsl::Extension ext) const;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext` `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Enable* Clone(CloneContext& ctx) const override;
 
     /// The extensions being enabled by this directive
     const tint::Vector<const Extension*, 4> extensions;

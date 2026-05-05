@@ -153,6 +153,19 @@ void GPURenderPassEncoder::setBindGroup(
                       dynamicOffsetsData.Data() + dynamicOffsetsDataStart);
 }
 
+void GPURenderPassEncoder::setImmediates(Napi::Env env,
+                                         interop::GPUSize32 rangeOffset,
+                                         interop::AllowSharedBufferSource data,
+                                         interop::GPUSize64 dataOffsetElements,
+                                         std::optional<interop::GPUSize64> sizeElements) {
+    std::span<const uint8_t> dataSpan;
+    if (!ConvertDataElementsToSpan(env, &dataSpan, data, dataOffsetElements, sizeElements)) {
+        return;
+    }
+
+    enc_.SetImmediates(rangeOffset, dataSpan.data(), dataSpan.size());
+}
+
 void GPURenderPassEncoder::pushDebugGroup(Napi::Env, std::string groupLabel) {
     enc_.PushDebugGroup(groupLabel.c_str());
 }

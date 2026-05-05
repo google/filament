@@ -56,7 +56,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader_parser lib
   tint_lang_spirv_intrinsic
   tint_lang_spirv_ir
   tint_lang_spirv_type
-  tint_lang_wgsl
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -84,6 +83,7 @@ if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
     tint_lang_spirv_validate
   )
   tint_target_add_external_dependencies(tint_lang_spirv_reader_parser lib
+    "spirv-headers"
     "spirv-opt-internal"
     "spirv-tools"
   )
@@ -128,7 +128,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader_parser_test test
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_type
-  tint_lang_wgsl
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

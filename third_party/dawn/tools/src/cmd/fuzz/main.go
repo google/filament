@@ -35,17 +35,16 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
 
+	"dawn.googlesource.com/dawn/tools/src/execwrapper"
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
 	"dawn.googlesource.com/dawn/tools/src/glob"
 	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/progressbar"
-	"dawn.googlesource.com/dawn/tools/src/term"
 	"dawn.googlesource.com/dawn/tools/src/transform"
 	"dawn.googlesource.com/dawn/tools/src/utils"
 )
@@ -73,16 +72,18 @@ const (
 )
 
 type cmdConfig struct {
-	verbose      bool
-	dump         bool
-	fuzzMode     FuzzMode
-	cmdMode      TaskMode // meta-task being requested by the user, may require running multiple tasks internally
-	filter       string
-	inputs       string
-	build        string
-	out          string
-	numProcesses int
-	osWrapper    oswrapper.OSWrapper
+	verbose         bool
+	dump            bool
+	fuzzMode        FuzzMode
+	cmdMode         TaskMode // meta-task being requested by the user, may require running multiple tasks internally
+	filter          string
+	inputs          string
+	build           string
+	out             string
+	numProcesses    int
+	osWrapper       oswrapper.OSWrapper
+	execWrapper     execwrapper.ExecWrapper
+	progressBuilder progressbar.Build
 }
 
 func showUsage() {
@@ -104,6 +105,8 @@ usage:
 func main() {
 	c := cmdConfig{}
 	c.osWrapper = oswrapper.GetRealOSWrapper()
+	c.execWrapper = execwrapper.CreateRealExecWrapper()
+	c.progressBuilder = progressbar.New
 
 	flag.Usage = showUsage
 
@@ -175,6 +178,11 @@ func run(c *cmdConfig) error {
 			defer c.osWrapper.RemoveAll(tmp)
 			c.out = tmp
 		} else {
+			return err
+		}
+	} else {
+		err := c.osWrapper.MkdirAll(c.out, os.ModePerm)
+		if err != nil {
 			return err
 		}
 	}
@@ -306,26 +314,21 @@ func checkFuzzer(t *taskConfig) error {
 
 	remaining := transform.SliceToChan(files)
 
-	var pb *progressbar.ProgressBar
-	if term.CanUseAnsiEscapeSequences() {
-		pb = progressbar.New(os.Stdout, nil)
-		defer pb.Stop()
-	}
+	pb := t.progressBuilder(os.Stdout, nil)
+	defer pb.Stop()
 	var numDone uint32
 
 	routine := func() error {
 		for file := range remaining {
 			atomic.AddUint32(&numDone, 1)
-			if pb != nil {
-				pb.Update(progressbar.Status{
-					Total: len(files),
-					Segments: []progressbar.Segment{
-						{Count: int(atomic.LoadUint32(&numDone))},
-					},
-				})
-			}
+			pb.Update(progressbar.Status{
+				Total: len(files),
+				Segments: []progressbar.Segment{
+					{Count: int(atomic.LoadUint32(&numDone))},
+				},
+			})
 
-			if out, err := exec.Command(t.fuzzer, file).CombinedOutput(); err != nil {
+			if out, err := t.execWrapper.Command(t.fuzzer, file).RunWithCombinedOutput(); err != nil {
 				_, fuzzer := filepath.Split(t.fuzzer)
 				return fmt.Errorf("fuzzer '%s' failed to process file '%s' with error: %w\nOutput:\n%s", fuzzer, file, err, string(out))
 			}
@@ -360,14 +363,15 @@ func runFuzzer(t *taskConfig) error {
 	errs := make(chan error, t.numProcesses)
 	for i := 0; i < t.numProcesses; i++ {
 		go func() {
-			cmd := exec.CommandContext(ctx, t.fuzzer, args...)
 			out := bytes.Buffer{}
-			cmd.Stdout = &out
-			cmd.Stderr = &out
+			var stdout, stderr io.Writer = &out, &out
 			if t.verbose || t.dump {
-				cmd.Stdout = io.MultiWriter(&out, os.Stdout)
-				cmd.Stderr = io.MultiWriter(&out, os.Stderr)
+				stdout = io.MultiWriter(&out, os.Stdout)
+				stderr = io.MultiWriter(&out, os.Stderr)
 			}
+
+			cmd := t.execWrapper.CommandContext(ctx, t.fuzzer, args...).WithStdout(stdout).WithStderr(stderr)
+
 			if err := cmd.Run(); err != nil {
 				if ctxErr := ctx.Err(); ctxErr != nil {
 					errs <- ctxErr
@@ -452,14 +456,14 @@ func runCorpusGeneratorIr(t *taskConfig) error {
 	}
 	fmt.Println("running assembler")
 
-	cmd := exec.CommandContext(ctx, t.assembler, args...)
 	out := &bytes.Buffer{}
-	cmd.Stdout = out
-	cmd.Stderr = out
+	var stdout, stderr io.Writer = out, out
 	if t.verbose {
-		cmd.Stdout = io.MultiWriter(out, os.Stdout)
-		cmd.Stderr = io.MultiWriter(out, os.Stderr)
+		stdout = io.MultiWriter(out, os.Stdout)
+		stderr = io.MultiWriter(out, os.Stderr)
 	}
+
+	cmd := t.execWrapper.CommandContext(ctx, t.assembler, args...).WithStdout(stdout).WithStderr(stderr)
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run IR corpus assembler.\n  command: %s\n  error: %w\n  output:\n%s", cmdStr, err, out.String())

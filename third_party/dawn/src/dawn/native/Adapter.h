@@ -83,6 +83,9 @@ class AdapterBase : public RefCounted, public WeakRefSupport<AdapterBase> {
     // Get the actual toggles state of the adapter.
     const TogglesState& GetTogglesState() const;
 
+    // Get a vector of used toggle names of the adapter.
+    std::vector<const char*> GetTogglesUsed() const;
+
     // Get the defaulting feature level of the adapter.
     wgpu::FeatureLevel GetFeatureLevel() const;
 

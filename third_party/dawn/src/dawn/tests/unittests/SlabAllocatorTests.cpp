@@ -248,5 +248,17 @@ TEST(SlabAllocatorTests, AllocateDeallocateMany) {
     }
 }
 
+// Regression test for https://issues.chromium.org/489482634 where a slab allocator with objects
+// larger that the totalObjectBytes would allocate space for no objects but still attempt to fulfill
+// requests.
+TEST(SlabAllocatorTests, TotalObjectBytesTooSmall) {
+    SlabAllocator<AlignedFoo> allocator(sizeof(AlignedFoo) - 1);
+
+    AlignedFoo* obj = allocator.Allocate(4);
+    EXPECT_EQ(obj->value, 4);
+
+    allocator.Deallocate(obj);
+}
+
 }  // anonymous namespace
 }  // namespace dawn

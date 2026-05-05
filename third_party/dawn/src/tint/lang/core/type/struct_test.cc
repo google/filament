@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/type/struct.h"
+
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
@@ -45,20 +46,25 @@ using namespace tint::core::number_suffixes;  // NOLINT
 using TypeStructTest = TestHelper;
 
 TEST_F(TypeStructTest, Creation) {
+    SymbolTable st{};
     Manager ty;
-    auto* s = ty.Get<Struct>(Symbol(), tint::Empty, 4u /* align */, 8u /* size */,
-                             16u /* size_no_padding */);
-    EXPECT_EQ(s->Align(), 4u);
+    auto* s = ty.Get<Struct>(
+        st.New("my_struct"),
+        tint::Vector{
+            ty.Get<StructMember>(st.New("b"), ty.vec3f(), 0u, 0u, 16u, 12u, core::IOAttributes{}),
+            ty.Get<StructMember>(st.New("a"), ty.i32(), 1u, 16u, 4u, 4u, core::IOAttributes{})},
+        8u /* size */);
+
+    EXPECT_EQ(s->Align(), 16u);
     EXPECT_EQ(s->Size(), 8u);
-    EXPECT_EQ(s->SizeNoPadding(), 16u);
+    EXPECT_EQ(s->SizeNoPadding(), 20u);
 }
 
 TEST_F(TypeStructTest, Equals) {
     Manager ty;
-    auto* a = ty.Get<Struct>(Symbol(1, GenerationID(), "a"), tint::Empty, 4u /* align */,
-                             4u /* size */, 4u /* size_no_padding */);
-    auto* b = ty.Get<Struct>(Symbol(2, GenerationID(), "b"), tint::Empty, 4u /* align */,
-                             4u /* size */, 4u /* size_no_padding */);
+    SymbolTable st{};
+    auto* a = ty.Get<Struct>(st.New("a"), tint::Empty, 4u /* size */);
+    auto* b = ty.Get<Struct>(st.New("b"), tint::Empty, 4u /* size */);
 
     EXPECT_TRUE(a->Equals(*a));
     EXPECT_FALSE(a->Equals(*b));
@@ -67,21 +73,20 @@ TEST_F(TypeStructTest, Equals) {
 
 TEST_F(TypeStructTest, FriendlyName) {
     Manager ty;
-    auto* s = ty.Get<Struct>(Symbol(1, GenerationID(), "my_struct"), tint::Empty, 4u /* align */,
-                             4u /* size */, 4u /* size_no_padding */);
+    SymbolTable st{};
+    auto* s = ty.Get<Struct>(st.New("my_struct"), tint::Empty, 4u /* size */);
     EXPECT_EQ(s->FriendlyName(), "my_struct");
 }
 
 TEST_F(TypeStructTest, Layout) {
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
     auto* inner_st =  //
         ty.Struct(st.New("Inner"), tint::Vector{
                                        Manager::StructMemberDesc{st.New("a"), ty.i32()},
                                        Manager::StructMemberDesc{st.New("b"), ty.u32()},
                                        Manager::StructMemberDesc{st.New("c"), ty.f32()},
-                                       Manager::StructMemberDesc{st.New("d"), ty.vec3<f32>()},
+                                       Manager::StructMemberDesc{st.New("d"), ty.vec3f()},
                                        Manager::StructMemberDesc{st.New("e"), ty.mat4x2<f32>()},
                                    });
 
@@ -111,8 +116,7 @@ TEST_F(TypeStructTest, Layout) {
 }
 
 TEST_F(TypeStructTest, Location) {
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
 
     core::IOAttributes attrs{};
@@ -128,8 +132,7 @@ TEST_F(TypeStructTest, Location) {
 }
 
 TEST_F(TypeStructTest, IsConstructable) {
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
 
     auto* inner =  //
@@ -137,7 +140,7 @@ TEST_F(TypeStructTest, IsConstructable) {
                                        Manager::StructMemberDesc{st.New("a"), ty.i32()},
                                        Manager::StructMemberDesc{st.New("b"), ty.u32()},
                                        Manager::StructMemberDesc{st.New("c"), ty.f32()},
-                                       Manager::StructMemberDesc{st.New("d"), ty.vec3<f32>()},
+                                       Manager::StructMemberDesc{st.New("d"), ty.vec3f()},
                                        Manager::StructMemberDesc{st.New("e"), ty.mat4x2<f32>()},
                                    });
 
@@ -160,15 +163,14 @@ TEST_F(TypeStructTest, IsConstructable) {
 }
 
 TEST_F(TypeStructTest, HasCreationFixedFootprint) {
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
     auto* inner =  //
         ty.Struct(st.New("Inner"), tint::Vector{
                                        Manager::StructMemberDesc{st.New("a"), ty.i32()},
                                        Manager::StructMemberDesc{st.New("b"), ty.u32()},
                                        Manager::StructMemberDesc{st.New("c"), ty.f32()},
-                                       Manager::StructMemberDesc{st.New("d"), ty.vec3<f32>()},
+                                       Manager::StructMemberDesc{st.New("d"), ty.vec3f()},
                                        Manager::StructMemberDesc{st.New("e"), ty.mat4x2<f32>()},
                                        Manager::StructMemberDesc{st.New("f"), ty.array<f32, 32>()},
                                    });
@@ -190,8 +192,7 @@ TEST_F(TypeStructTest, HasCreationFixedFootprint) {
 }
 
 TEST_F(TypeStructTest, HasFixedFootprint) {
-    GenerationID id;
-    SymbolTable st{id};
+    SymbolTable st{};
     Manager ty;
 
     auto* inner =  //
@@ -199,7 +200,7 @@ TEST_F(TypeStructTest, HasFixedFootprint) {
                                        Manager::StructMemberDesc{st.New("a"), ty.i32()},
                                        Manager::StructMemberDesc{st.New("b"), ty.u32()},
                                        Manager::StructMemberDesc{st.New("c"), ty.f32()},
-                                       Manager::StructMemberDesc{st.New("d"), ty.vec3<f32>()},
+                                       Manager::StructMemberDesc{st.New("d"), ty.vec3f()},
                                        Manager::StructMemberDesc{st.New("e"), ty.mat4x2<f32>()},
                                        Manager::StructMemberDesc{st.New("f"), ty.array<f32, 32>()},
                                    });
@@ -221,8 +222,7 @@ TEST_F(TypeStructTest, HasFixedFootprint) {
 }
 
 TEST_F(TypeStructTest, Clone) {
-    auto id = GenerationID::New();
-    SymbolTable syms{id};
+    SymbolTable syms{};
     Manager ty;
     core::IOAttributes attrs_location_2;
     attrs_location_2.location = 2;
@@ -230,12 +230,11 @@ TEST_F(TypeStructTest, Clone) {
     auto* s = ty.Get<Struct>(
         syms.New("my_struct"),
         tint::Vector{
-            ty.Get<StructMember>(syms.New("b"), ty.vec3<f32>(), 0u, 0u, 16u, 12u, attrs_location_2),
+            ty.Get<StructMember>(syms.New("b"), ty.vec3f(), 0u, 0u, 16u, 12u, attrs_location_2),
             ty.Get<StructMember>(syms.New("a"), ty.i32(), 1u, 16u, 4u, 4u, core::IOAttributes{})},
-        4u /* align */, 8u /* size */, 16u /* size_no_padding */);
+        8u /* size */);
 
-    auto new_id = GenerationID::New();
-    SymbolTable new_st{new_id};
+    SymbolTable new_st{};
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{&syms}, {&new_st, &mgr}};
@@ -245,9 +244,9 @@ TEST_F(TypeStructTest, Clone) {
     EXPECT_TRUE(new_st.Get("my_struct").IsValid());
     EXPECT_EQ(st->Name().Name(), "my_struct");
 
-    EXPECT_EQ(st->Align(), 4u);
+    EXPECT_EQ(st->Align(), 16u);
     EXPECT_EQ(st->Size(), 8u);
-    EXPECT_EQ(st->SizeNoPadding(), 16u);
+    EXPECT_EQ(st->SizeNoPadding(), 20u);
 
     auto members = st->Members();
     ASSERT_EQ(members.Length(), 2u);

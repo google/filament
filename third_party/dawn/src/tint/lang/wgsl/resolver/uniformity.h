@@ -44,8 +44,11 @@ constexpr bool kUniformityFailuresAsError = true;
 /// Analyze the uniformity of a program.
 /// @param builder the program to analyze
 /// @param dependency_graph the dependency-ordered module-scope declarations
+/// @param subgroup_uniformity Whether subgroup_uniformity feature is supported
 /// @returns true if there are no uniformity issues, false otherwise
-bool AnalyzeUniformity(ProgramBuilder& builder, const resolver::DependencyGraph& dependency_graph);
+bool AnalyzeUniformity(ProgramBuilder& builder,
+                       const resolver::DependencyGraph& dependency_graph,
+                       bool subgroup_uniformity = false);
 
 }  // namespace tint::resolver
 

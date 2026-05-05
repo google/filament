@@ -27,18 +27,18 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_linux || tint_build_is_mac)
 
-#include "src/tint/utils/command/command.h"
-
 #include <errno.h>
 #include <limits.h>
 #include <sys/poll.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
 #include <array>
 #include <sstream>
 #include <vector>
 
+#include "src/tint/utils/command/command.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/system/executable_path.h"
 
@@ -117,7 +117,7 @@ class Pipe {
 };
 
 bool ExecutableExists(const std::string& path) {
-    struct stat s {};
+    struct stat s{};
     if (stat(path.c_str(), &s) != 0) {
         return false;
     }

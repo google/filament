@@ -52,7 +52,7 @@ ComputePipeline::ComputePipeline(DeviceBase* dev,
 
 ComputePipeline::~ComputePipeline() = default;
 
-MaybeError ComputePipeline::InitializeImpl() {
+ResultOrError<Extent3D> ComputePipeline::InitializeImpl() {
     auto mtlDevice = ToBackend(GetDevice())->GetMTLDevice();
 
     const ProgrammableStage& computeStage = GetStage(SingleShaderStage::Compute);
@@ -60,7 +60,7 @@ MaybeError ComputePipeline::InitializeImpl() {
 
     DAWN_TRY(ToBackend(computeStage.module.Get())
                  ->CreateFunction(SingleShaderStage::Compute, computeStage, ToBackend(GetLayout()),
-                                  &computeData,
+                                  GetImmediateMask(), &computeData,
                                   /* sampleMask */ 0xFFFFFFFF,
                                   /* renderPipeline */ nullptr));
 
@@ -86,12 +86,12 @@ MaybeError ComputePipeline::InitializeImpl() {
     DAWN_ASSERT(mMtlComputePipelineState != nil);
     timer.RecordMicroseconds("Metal.newComputePipelineStateWithDescriptor.CacheMiss");
 
-    // Copy over the local workgroup size as it is passed to dispatch explicitly in Metal
-    mLocalWorkgroupSize = computeData.localWorkgroupSize;
-
     mRequiresStorageBufferLength = computeData.needsStorageBufferLength;
     mWorkgroupAllocations = std::move(computeData.workgroupAllocations);
-    return {};
+
+    return {{uint32_t(computeData.localWorkgroupSize.width),
+             uint32_t(computeData.localWorkgroupSize.height),
+             uint32_t(computeData.localWorkgroupSize.depth)}};
 }
 
 void ComputePipeline::Encode(id<MTLComputeCommandEncoder> encoder) {
@@ -107,7 +107,7 @@ void ComputePipeline::Encode(id<MTLComputeCommandEncoder> encoder) {
 }
 
 MTLSize ComputePipeline::GetLocalWorkGroupSize() const {
-    return mLocalWorkgroupSize;
+    return ToMTLSize(GetWorkgroupSize());
 }
 
 bool ComputePipeline::RequiresStorageBufferLength() const {

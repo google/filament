@@ -49,17 +49,13 @@ if (tint_build_spv_reader) {
       "reader.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/spirv/reader/lower",
-      "${tint_src_dir}/lang/wgsl",
-      "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/program",
-      "${tint_src_dir}/lang/wgsl/sem",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -74,7 +70,6 @@ if (tint_build_spv_reader) {
 
     if (tint_build_spv_reader) {
       deps += [
-        "${tint_src_dir}/lang/spirv/reader/ast_parser",
         "${tint_src_dir}/lang/spirv/reader/common",
         "${tint_src_dir}/lang/spirv/reader/parser",
       ]
@@ -91,17 +86,13 @@ if (tint_build_unittests) {
         "texture_test.cc",
       ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:gmock_and_gtest",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
         "${tint_src_dir}/lang/core/constant",
         "${tint_src_dir}/lang/core/ir",
         "${tint_src_dir}/lang/core/type",
-        "${tint_src_dir}/lang/wgsl",
-        "${tint_src_dir}/lang/wgsl/ast",
-        "${tint_src_dir}/lang/wgsl/program",
-        "${tint_src_dir}/lang/wgsl/sem",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
         "${tint_src_dir}/utils/diagnostic",

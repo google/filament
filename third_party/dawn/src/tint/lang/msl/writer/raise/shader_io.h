@@ -30,6 +30,8 @@
 
 #include <cstdint>
 
+#include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
+#include "src/tint/lang/msl/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -41,10 +43,16 @@ namespace tint::msl::writer::raise {
 
 /// ShaderIOConfig describes the set of configuration options for the ShaderIO transform.
 struct ShaderIOConfig {
+    /// immediate data layout information
+    const core::ir::transform::ImmediateDataLayout& immediate_data_layout;
+
     /// true if a vertex point size builtin output should be added
     bool emit_vertex_point_size = false;
     /// A fixed sample mask to combine into masks produced by fragment shaders.
     uint32_t fixed_sample_mask = UINT32_MAX;
+
+    /// Offsets for clamping frag depth
+    std::optional<Options::RangeOffsets> depth_range_offsets{};
 };
 
 /// ShaderIO is a transform that prepares entry point inputs and outputs for MSL codegen.

@@ -56,6 +56,7 @@ tint_target_add_dependencies(tint_lang_spirv_writer_printer lib
   tint_lang_spirv_intrinsic
   tint_lang_spirv_ir
   tint_lang_spirv_type
+  tint_lang_spirv_writer_analysis
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

@@ -25,10 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/hlsl/validate/validate.h"
+
 #include <string>
 #include <vector>
-
-#include "src/tint/lang/hlsl/validate/validate.h"
 
 #include "src/tint/utils/command/command.h"
 #include "src/tint/utils/file/tmpfile.h"

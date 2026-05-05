@@ -30,7 +30,7 @@
 
     "_doc": "See docs/dawn/codegen.md",
 
-    "kotlin_package": "android.dawn",
+    "kotlin_package": "androidx.webgpu",
 
     "jni_primitives" : {
         "bool": "jboolean",
@@ -58,5 +58,69 @@
         "uint32_t": "I",
         "uint64_t": "J",
         "void *": "J"
+    },
+    "kdocs_blocklist": [
+        "ReturnedWithOwnership",
+        "SurfaceGetCurrentTexture",
+        "Chained in @ref WGPUSurfaceDescriptor",
+        "OutStructChainError",
+        "ImplementationAllocatedStructChain",
+        "NonFiniteFloatValueError",
+        "SentinelValues"
+    ],
+    "kdocs_replacements": {
+        "See @ref SentinelValues.": "",
+        "(See also @ref SentinelValues.)": "",
+        "[defaults](@ref SentinelValues)": "defaults",
+        "color using @ref DoubleAsSupertype": "color using @ref Color",
+        "WGPUCallbackMode_": "CallbackMode.",
+        "See @ref CallbackStatuses": "@see [CallbackStatuses](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Asynchronous%20Operations.md#callback-statuses-callbackstatuses)",
+        "LocalizableHumanReadableMessageString": "[LocalizableHumanReadableMessageString](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Strings.md#output-string-outputstring)",
+        "see @ref CallbackReentrancy": "@see [CallbackReentrancy](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Asynchronous%20Operations.md#callback-reentrancy-callbackreentrancy)",
+        "See @ref ErrorScopes": "@see [ErrorScopes](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Errors.md#error-scopes-errorscopes)",
+        "@ref DeviceError": "@see [DeviceError](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Errors.md#device-error-deviceerror)",
+        "@ref DeviceRelease": "@see [DeviceRelease](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Ownership.md#releasing-a-device-object-devicerelease)",
+        "@ref Asynchronous-Operations": "@see [Asynchronous-Operations](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/Asynchronous%20Operations.md#asynchronous-operations-asynchronous-operations)",
+        "See @ref MappedRangeBehavior": "@see [MappedRangeBehavior](https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/BufferMapping.md#mapped-range-behavior-mappedrangebehavior)",
+        "In Wasm, this is more efficient than copying from a mapped range into a `malloc`'d range.": "",
+        "In Wasm, this is more efficient than copying from a `malloc`'d range into a mapped range.": "",
+        "In Wasm, if `memcpy`ing into this range, prefer using @ref wgpuBufferWriteMappedRange instead for better performance.": "",
+        "In Wasm, if `memcpy`ing from this range, prefer using @ref wgpuBufferReadMappedRange instead for better performance.": ""
+    },
+    "customize_api": {
+        "objects": {
+            "device": {
+                "methods": {
+                    "get lost future": {
+                        "omitted": true
+                    }
+                }
+            },
+            "instance": {
+                "methods": {
+                    "wait any": {
+                        "omitted": true
+                    }
+                }
+            }
+        },
+        "structures": {
+            "future": {
+                "omitted": true
+            },
+            "future wait info": {
+                "omitted": true
+            }
+        },
+        "enums": {
+            "wait status": {
+                "omitted": true
+            }
+        },
+        "function pointer": {
+            "proc": {
+                "omitted": true
+            }
+        }
     }
 }

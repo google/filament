@@ -28,18 +28,26 @@
 #include "src/tint/lang/spirv/writer/writer.h"
 
 #include <string>
-#include <utility>
 
+#include "src/tint/lang/core/ir/analysis/subgroup_matrix.h"
+#include "src/tint/lang/core/ir/core_builtin_call.h"
+#include "src/tint/lang/core/ir/referenced_module_vars.h"
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/var.h"
+#include "src/tint/lang/core/type/f16.h"
 #include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/type/struct.h"
+#include "src/tint/lang/core/type/u16.h"
 #include "src/tint/lang/spirv/writer/common/option_helpers.h"
 #include "src/tint/lang/spirv/writer/printer/printer.h"
 #include "src/tint/lang/spirv/writer/raise/raise.h"
 
 // Included by 'ast_printer.h', included again here for './tools/run gen' track the dependency.
-#include "spirv/unified1/spirv.h"
+#include "spirv/unified1/spirv.h"  // IWYU pragma: export
 
 namespace tint::spirv::writer {
+
+namespace {
 
 Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& options) {
     // The enum is accessible in the API so ensure we have a valid value.
@@ -55,9 +63,15 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     // Check optionally supported types against their required options.
     for (auto* ty : ir.Types()) {
         if (ty->Is<core::type::SubgroupMatrix>()) {
-            if (!options.use_vulkan_memory_model) {
+            if (!options.extensions.use_vulkan_memory_model) {
                 return Failure("using subgroup matrices requires the Vulkan Memory Model");
             }
+        }
+        if (ty->Is<core::type::Buffer>()) {
+            return Failure("buffers are not supported by the SPIR-V backend");
+        }
+        if (ty->Is<core::type::U16>()) {
+            return Failure("16-bit unsigned integers are not supported by the SPIR-V backend");
         }
     }
 
@@ -67,86 +81,91 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         if (options.remapped_entry_point_name.find('\0') != std::string::npos) {
             return Failure("remapped entry point name contains null character");
         }
+    }
 
-        // Check for multiple entry points.
-        // TODO(375388101): Remove this check when SingleEntryPoint is part of the backend.
-        bool has_entry_point = false;
-        for (auto& func : ir.functions) {
-            if (func->IsEntryPoint()) {
-                if (has_entry_point) {
-                    return Failure("module must only contain a single entry point");
-                }
-                has_entry_point = true;
-            }
+    core::ir::Function* ep_func = nullptr;
+    for (auto* f : ir.functions) {
+        if (!f->IsEntryPoint()) {
+            continue;
+        }
+        if (ir.NameOf(f).NameView() == options.entry_point_name) {
+            ep_func = f;
+            break;
         }
     }
 
-    // Check for unsupported module-scope variable address spaces and types.
-    // Also make sure there is at most one user-declared immediate data, and make a note of its
-    // size.
-    uint32_t user_immediate_data_size = 0;
-    for (auto* inst : *ir.root_block) {
-        auto* var = inst->As<core::ir::Var>();
+    // No entrypoint, so no bindings needed
+    if (!ep_func) {
+        return Failure("entry point not found");
+    }
+
+    // Check for unsupported shader IO attributes.
+    auto check_input_attributes = [&](const core::type::Type* ty,
+                                      const core::IOAttributes& attributes) -> Result<SuccessType> {
+        if (attributes.color.has_value() && ty->DeepestElement()->Is<core::type::F16>()) {
+            return Failure(
+                "@color attribute on f16 type is not supported by the Vulkan SPIR-V backend");
+        }
+        return Success;
+    };
+
+    // Check input attributes.
+    for (auto* param : ep_func->Params()) {
+        if (auto* str = param->Type()->As<core::type::Struct>()) {
+            for (auto* member : str->Members()) {
+                TINT_CHECK_RESULT(check_input_attributes(member->Type(), member->Attributes()));
+            }
+        } else {
+            TINT_CHECK_RESULT(check_input_attributes(param->Type(), param->Attributes()));
+        }
+    }
+
+    core::ir::ReferencedModuleVars<const core::ir::Module> referenced_module_vars{ir};
+    auto& refs = referenced_module_vars.TransitiveReferences(ep_func);
+
+    // Check for unsupported module-scope variable address spaces.
+    for (auto* var : refs) {
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         if (ptr->AddressSpace() == core::AddressSpace::kPixelLocal) {
             return Failure("pixel_local address space is not supported by the SPIR-V backend");
         }
+    }
 
-        if (ptr->AddressSpace() == core::AddressSpace::kImmediate) {
-            if (user_immediate_data_size > 0) {
-                // We've already seen a user-declared immediate data.
-                return Failure("module contains multiple user-declared immediate data");
-            }
-            user_immediate_data_size = tint::RoundUp(4u, ptr->StoreType()->Size());
+    // Check for calls to unsupported builtin functions.
+    for (auto* inst : ir.Instructions()) {
+        auto* call = inst->As<core::ir::CoreBuiltinCall>();
+        if (!call) {
+            continue;
+        }
+
+        if (call->Func() == core::BuiltinFn::kPrint) {
+            return Failure("print is not supported by the SPIR-V backend");
         }
     }
 
-    static constexpr uint32_t kMaxOffset = 0x1000;
-    Hashset<uint32_t, 4> immediate_data_word_offsets;
-    auto check_immediate_data_offset = [&](uint32_t offset) {
-        // Excessive values can cause OOM / timeouts when padding structures in the printer.
-        if (offset > kMaxOffset) {
-            return false;
-        }
-        // Offset must be 4-byte aligned.
-        if (offset & 0x3) {
-            return false;
-        }
-        // Offset must not have already been used.
-        if (!immediate_data_word_offsets.Add(offset >> 2)) {
-            return false;
-        }
-        // Offset must be after the user-defined immediate data.
-        if (offset < user_immediate_data_size) {
-            return false;
-        }
-        return true;
-    };
-
-    if (options.depth_range_offsets) {
-        if (!check_immediate_data_offset(options.depth_range_offsets->max) ||
-            !check_immediate_data_offset(options.depth_range_offsets->min)) {
-            return Failure("invalid offsets for depth range immediate data");
-        }
-    }
-
-    {
-        auto res = ValidateBindingOptions(options);
-        if (res != Success) {
-            return res.Failure();
-        }
-    }
+    TINT_CHECK_RESULT(ValidateBindingOptions(options));
 
     return Success;
 }
 
-Result<Output> Generate(core::ir::Module& ir, const Options& options) {
-    // Raise from core-dialect to SPIR-V-dialect.
-    if (auto res = Raise(ir, options); res != Success) {
-        return std::move(res.Failure());
-    }
+}  // namespace
 
-    return Print(ir, options);
+Result<Output> Generate(core::ir::Module& ir, const Options& options) {
+    TINT_CHECK_RESULT(CanGenerate(ir, options));
+
+    // There are currently no plans on supporting override-expressions, so we can pull this
+    // information out before the raise. If we want to support overrides then this either needs to
+    // happen in raise, before the builtins are polyfilled, or the analysis needs to also look for
+    // `*` operations with subgroup matrices.
+    auto sm_info = core::ir::analysis::GatherSubgroupMatrixInfo(ir);
+
+    // Raise from core-dialect to SPIR-V-dialect.
+    TINT_CHECK_RESULT(Raise(ir, options));
+
+    TINT_CHECK_RESULT_UNWRAP(res, Print(ir, options));
+    res.subgroup_matrix_info = sm_info;
+
+    return res;
 }
 
 }  // namespace tint::spirv::writer

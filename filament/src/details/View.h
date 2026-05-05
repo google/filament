@@ -125,6 +125,10 @@ public:
         return mViewport;
     }
 
+    void setGridSize(double size) noexcept { mGridSize = size; }
+    double getGridSize() const noexcept { return mGridSize; }
+    double getEffectiveGridSize() const noexcept { return mEffectiveGridSize; }
+
     bool getClearTargetColor() const noexcept {
         // don't clear the color buffer if we have a skybox
         return !isSkyboxVisible();
@@ -541,6 +545,9 @@ private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
+    math::double3 computeGridOrigin(math::double3 cameraPosition, double currentGridSize, double newGridSize, double hysteresisRatio, bool forceSnap = false) const noexcept;
+    double calculateAutomaticGridSize(const FCamera* camera) const noexcept;
+
     void updateUBOs(backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData,
             utils::Range<uint32_t> visibleRenderables) noexcept;
@@ -583,6 +590,9 @@ private:
     uint32_t mFroxelConfigurationAge = 0;
 
     Viewport mViewport;
+    double mGridSize = 0.0;
+    mutable double mEffectiveGridSize = 0.0;
+    mutable math::double3 mGridOrigin{ 0.0 };
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
     bool mIsTransparentPickingEnabled = false;

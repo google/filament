@@ -32,7 +32,6 @@
 
 #include "src/tint/api/tint.h"
 #include "src/tint/cmd/common/helper.h"
-#include "src/tint/cmd/fuzz/ir/helpers/substitute_overrides_config.h"
 #include "src/tint/lang/core/ir/binary/encode.h"
 #include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/module.h"
@@ -129,7 +128,7 @@ Options:
     auto args = result.Get();
     if (args.Length() != 2) {
         std::cerr << "Expected exactly 2 args, found: "
-                  << tint::Join(Transform(args, tint::Quote), ", ") << "\n";
+                  << tint::Join(Transform(args, tint::cmd::Quote), ", ") << "\n";
         return false;
     }
 
@@ -180,22 +179,11 @@ tint::Result<tint::core::ir::Module> GenerateIrModule(const tint::Program& progr
         return tint::Failure{"Unsupported enable used in shader"};
     }
 
-    auto ir = tint::wgsl::reader::ProgramToLoweredIR(program);
-    if (ir != tint::Success) {
-        return ir.Failure();
-    }
+    TINT_CHECK_RESULT_UNWRAP(ir, tint::wgsl::reader::ProgramToLoweredIR(program));
 
-    auto cfg = tint::fuzz::ir::SubstituteOverridesConfig(ir.Get());
-    auto substituteOverridesResult = tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
-    if (substituteOverridesResult != tint::Success) {
-        return substituteOverridesResult.Failure();
-    }
+    TINT_CHECK_RESULT(tint::core::ir::Validate(ir));
 
-    if (auto val = tint::core::ir::Validate(ir.Get()); val != tint::Success) {
-        return val.Failure();
-    }
-
-    return ir.Move();
+    return ir;
 }
 
 /// @returns a fuzzer test case protobuf for the given program.
@@ -261,8 +249,14 @@ bool ProcessFile(const Options& options) {
     tint::cmd::LoadProgramOptions opts;
     opts.filename = options.input_filename;
     opts.printer = options.printer.get();
+    opts.input_format = tint::cmd::InputFormat::kWgsl;
 
     auto info = tint::cmd::LoadProgramInfo(opts);
+    if (!info.program.IsValid()) {
+        // If the program just fails to load, ignore it as it's probably just a test file added in
+        // anticipation of a new feature.
+        return true;
+    }
 
     if (options.dump_ir) {
         DumpIR(info.program, options);

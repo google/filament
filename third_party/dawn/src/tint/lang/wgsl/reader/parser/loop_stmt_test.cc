@@ -228,5 +228,26 @@ TEST_F(WGSLParserTest, LoopStmt_Continuing_BreakIf_MissingSemicolon) {
     EXPECT_EQ(p->error(), "1:40: expected ';' for `break-if` statement");
 }
 
+TEST_F(WGSLParserTest, LoopStmt_Continuing_BreakIf_PreceedingSemicolons) {
+    auto p = parser(R"(loop {
+  continuing {
+    ;
+    ;
+    ;
+    ;
+    break if 1 + 2 < 5;
+  }
+})");
+    Parser::AttributeList attrs;
+    auto e = p->loop_statement(attrs);
+    EXPECT_TRUE(e.matched);
+    EXPECT_FALSE(e.errored);
+    EXPECT_FALSE(p->has_error()) << p->error();
+    ASSERT_NE(e.value, nullptr);
+    ASSERT_EQ(e->body->statements.Length(), 0u);
+    ASSERT_EQ(e->continuing->statements.Length(), 1u);
+    EXPECT_TRUE(e->continuing->statements[0]->Is<ast::BreakIfStatement>());
+}
+
 }  // namespace
 }  // namespace tint::wgsl::reader

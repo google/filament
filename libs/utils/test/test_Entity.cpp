@@ -176,3 +176,43 @@ TEST(EntityTest, NameComponent) {
 
     cm.gc(em);
 }
+
+TEST(EntityTest, Callback) {
+    EntityManagerImpl em;
+    Entity entities[20];
+    em.create(20, entities);
+    
+    std::vector<Entity> notifiedEntities;
+    auto callback = [&](Slice<const Entity> slice) {
+        for (auto e : slice) {
+            notifiedEntities.push_back(e);
+        }
+    };
+    
+    em.registerChangeCallback(&em, std::move(callback));
+    
+    // Test small batch (<= 16)
+    em.destroy(10, entities);
+    em.flushNotifications();
+    EXPECT_EQ(notifiedEntities.size(), 10);
+    for (int i = 0; i < 10; ++i) {
+        EXPECT_EQ(notifiedEntities[i], entities[i]);
+    }
+    
+    notifiedEntities.clear();
+    
+    // Test large batch (> 16)
+    Entity largeBatch[17];
+    em.create(17, largeBatch);
+    em.destroy(17, largeBatch);
+    em.flushNotifications();
+    EXPECT_EQ(notifiedEntities.size(), 17);
+    for (int i = 0; i < 17; ++i) {
+        EXPECT_EQ(notifiedEntities[i], largeBatch[i]);
+    }
+    
+    em.unregisterChangeCallback(&em);
+    
+    // Cleanup remaining
+    em.destroy(10, entities + 10);
+}

@@ -553,7 +553,7 @@ foo
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if !testCase.skipFileWrite {
 				wrapper.WriteFile(testCase.path, []byte(testCase.contents), 0o700)
 			}

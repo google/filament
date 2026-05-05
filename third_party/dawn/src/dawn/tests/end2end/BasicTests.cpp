@@ -25,6 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <limits>
 #include <unordered_set>
 
 #include "dawn/common/FutureUtils.h"
@@ -80,7 +81,12 @@ TEST_P(BasicTests, GetInstanceLimits) {
     wgpu::InstanceLimits out{};
     auto status = wgpu::GetInstanceLimits(&out);
     EXPECT_EQ(status, wgpu::Status::Success);
-    EXPECT_EQ(out.timedWaitAnyMaxCount, kTimedWaitAnyMaxCountDefault);
+    if (UsesWire()) {
+        // The wire's limit is just the max size value.
+        EXPECT_EQ(out.timedWaitAnyMaxCount, std::numeric_limits<size_t>::max());
+    } else {
+        EXPECT_EQ(out.timedWaitAnyMaxCount, kTimedWaitAnyMaxCountDefault);
+    }
     EXPECT_EQ(out.nextInChain, nullptr);
 
     wgpu::ChainedStructOut chained{};
@@ -102,8 +108,11 @@ TEST_P(BasicTests, GetInstanceFeatures) {
     auto features = std::unordered_set(out.features, out.features + out.featureCount);
 
     if (UsesWire()) {
-        // Wire exposes no features because it doesn't support CreateInstance.
-        EXPECT_EQ(features.size(), 0u);
+        // Wire exposes a subset of features.
+        static const auto kWireFeatures = std::unordered_set{
+            wgpu::InstanceFeatureName::TimedWaitAny,
+        };
+        EXPECT_EQ(features, kWireFeatures);
     } else {
         // Native (currently) exposes all known features.
         EXPECT_EQ(features, kKnownFeatures);

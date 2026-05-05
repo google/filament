@@ -57,7 +57,7 @@ std::string_view getFeatureFlagFromEnvironment(char const* const name, std::arra
 }
 #endif
 
-void overrideFeatureDefaults(utils::Slice<FeatureFlagManager::FeatureFlag> const& features) {
+void overrideFeatureDefaults(Slice<FeatureFlagManager::FeatureFlag> const& features) {
     std::array<char, 128> storage;
     UTILS_NOUNROLL
     for (auto const& feature : features) {
@@ -145,6 +145,9 @@ FeatureFlagManager::FeatureFlagManager() : mFeatures{{
         { "material.enable_fog_as_postprocess",
           "Fog is applied as a separate pass for opaque objects.",
           &features.material.enable_fog_as_postprocess },
+        { "view.enable_grid_based_world_origin",
+          "Enable grid-based world origin snapping to improve precision and avoid per-frame transform updates.",
+          &features.view.enable_grid_based_world_origin },
 }} {
     overrideFeatureDefaults({ mFeatures.data(), mFeatures.size() });
 }

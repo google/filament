@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "dawn/common/Constants.h"
+#include "dawn/common/GPUInfo.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/d3d/D3DError.h"
@@ -152,17 +153,16 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     EnableFeature(Feature::DualSourceBlending);
     EnableFeature(Feature::ClipDistances);
     EnableFeature(Feature::Unorm16TextureFormats);
-    EnableFeature(Feature::Snorm16TextureFormats);
-    EnableFeature(Feature::Norm16TextureFormats);
+    EnableFeature(Feature::Unorm16Filterable);
+    EnableFeature(Feature::Unorm16FormatsForExternalTexture);
     EnableFeature(Feature::AdapterPropertiesMemoryHeaps);
     EnableFeature(Feature::AdapterPropertiesD3D);
-    EnableFeature(Feature::R8UnormStorage);
     EnableFeature(Feature::ShaderModuleCompilationOptions);
     EnableFeature(Feature::DawnLoadResolveTexture);
     EnableFeature(Feature::DawnPartialLoadResolveTexture);
     EnableFeature(Feature::RG11B10UfloatRenderable);
     EnableFeature(Feature::TextureFormatsTier1);
-    EnableFeature(Feature::ChromiumExperimentalPrimitiveId);
+    EnableFeature(Feature::PrimitiveIndex);
 
     if (mDeviceInfo.isUMA && mDeviceInfo.supportsMapNoOverwriteDynamicBuffers) {
         // With UMA we should allow mapping usages on more type of buffers.
@@ -277,13 +277,12 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits)
     // Max number of "constants" where each constant is a 16-byte float4
     limits->v1.maxUniformBufferBindingSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
 
-    if (gpu_info::IsQualcomm_ACPI(GetVendorId())) {
-        // limit of number of texels in a buffer == (1 << 27)
-        // D3D11_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP
-        // This limit doesn't apply to a raw buffer, but only applies to
-        // typed, or structured buffer. so this could be a QC driver bug.
-        limits->v1.maxStorageBufferBindingSize = uint64_t(1)
-                                                 << D3D11_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP;
+    if (gpu_info::IsQualcommACPI(GetVendorId()) &&
+        gpu_info::GetQualcommACPIGen(GetVendorId(), GetDeviceId()) <
+            gpu_info::QualcommACPIGen::Adreno8xx) {
+        // Due to hardware limitation, Raw Buffers can only address 2^28 bytes instead of the
+        // guaranteed 2^31 bytes.
+        limits->v1.maxStorageBufferBindingSize = 1 << 28;
     } else {
         limits->v1.maxStorageBufferBindingSize = kAssumedMaxBufferSize;
     }
@@ -297,10 +296,16 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits)
 
     // D3D11 uses internal uniform buffers to support immediate data. The space is enough for
     // 64 bytes.
-    limits->v1.maxImmediateSize = kMaxSupportedImmediateDataBytes;
+    limits->v1.maxImmediateSize = kMaxImmediateDataBytes;
 
     // The BlitTextureToBuffer helper requires the alignment to be 4.
     limits->texelCopyBufferRowAlignmentLimits.minTexelCopyBufferRowAlignment = 4;
+
+    // D3D11 Debug layer enforces that when creating a RAW Shader Resource View, the offset of the
+    // first element from the start of the buffer must be a multiple of 16 bytes. There is no
+    // official document about it but we have to adhere to the debug layer. So set SSBO alignment
+    // to 16.
+    limits->v1.minStorageBufferOffsetAlignment = 16;
 
     return {};
 }
@@ -332,6 +337,15 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
 
     auto deviceId = GetDeviceId();
     auto vendorId = GetVendorId();
+
+    // Use D3D11's DiscardView for discarding render pass' attachments having StoreOp::Discard.
+    if (gpu_info::IsNvidia(vendorId)) {
+        // TODO(crbug.com/485540062): NVIDIA has performance regressions if DiscardView is used.
+        deviceToggles->Default(Toggle::D3D11UseDiscardView, false);
+    } else {
+        deviceToggles->Default(Toggle::D3D11UseDiscardView, true);
+    }
+
     // D3D11 ClearRenderTargetView() could be buggy with some old driver or GPUs. Intel Gen12+ GPUs
     // don't have the problem.
     // https://crbug.com/329702368
@@ -339,8 +353,19 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
     // The workaround still can't cover lazy clear,
     // TODO(crbug.com/364834368): Move handling of workaround at command submission time instead of
     // recording time.
-    if (gpu_info::IsIntelGen11OrOlder(vendorId, deviceId)) {
+    if (gpu_info::IsIntel(vendorId) &&
+        gpu_info::GetIntelGen(vendorId, deviceId) <= gpu_info::IntelGen::Gen11) {
         deviceToggles->Default(Toggle::ClearColorWithDraw, true);
+    }
+
+    // TODO(crbug.com/458062283): older intel drivers seems to produce buggy shaders. Especially if
+    // they are very complex. Current workaround is disable FXC optimizations.
+    if (gpu_info::IsIntel(vendorId) &&
+        gpu_info::GetIntelGen(vendorId, deviceId) <= gpu_info::IntelGen::Gen9) {
+        const gpu_info::IntelWindowsDriverVersion kKnownGoodDriverVersion = {31, 0, 101, 2121};
+        if (gpu_info::IntelWindowsDriverVersion(GetDriverVersion()) < kKnownGoodDriverVersion) {
+            deviceToggles->Default(Toggle::D3DSkipShaderOptimizations, true);
+        }
     }
 
     // Enable the integer range analysis for shader robustness by default if the corresponding
@@ -370,7 +395,8 @@ MaybeError PhysicalDevice::ResetInternalDeviceForTestingImpl() {
     return {};
 }
 
-void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const {
+void PhysicalDevice::PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                               const TogglesState&) const {
     if (auto* memoryHeapProperties = info.Get<AdapterPropertiesMemoryHeaps>()) {
         // https://microsoft.github.io/DirectX-Specs/d3d/D3D12GPUUploadHeaps.html describes
         // the properties of D3D12 Default/Upload/Readback heaps. The assumption is that these are

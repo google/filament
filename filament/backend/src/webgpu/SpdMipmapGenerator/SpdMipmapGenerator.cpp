@@ -193,7 +193,7 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(const PipelineCacheKey& key) {
 
         std::string shaderCode = MakeShaderCode(key.format, GetFilterCode(key.filter),
                 numMipsForPipeline, key.scalarType);
-        wgpu::ShaderModuleWGSLDescriptor wgslDesc{};
+        wgpu::ShaderSourceWGSL wgslDesc{};
         wgslDesc.code = shaderCode.c_str();
 
         wgpu::ShaderModuleDescriptor shaderModuleDesc{};

@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/transform/binding_remapper.h"
-
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/lang/core/ir/transform/binding_remapper.h"
 #include "src/tint/lang/core/ir/validator.h"
 
 namespace tint::core::ir::transform {
@@ -44,4 +43,6 @@ Result<SuccessType> BindingRemapperFuzzer(
 }  // namespace tint::core::ir::transform
 
 TINT_IR_MODULE_FUZZER(tint::core::ir::transform::BindingRemapperFuzzer,
-                      tint::core::ir::transform::kBindingRemapperCapabilities);
+                      tint::core::ir::transform::kBindingRemapperCapabilities,
+                      tint::core::ir::transform::kBindingRemapperCapabilities +
+                          tint::core::ir::Capability::kAllowDuplicateBindings);

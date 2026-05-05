@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/BindGroupLayout.h"
 #include "dawn/native/Buffer.h"
@@ -52,86 +53,86 @@ static_assert(offsetof(dawn::native::TimestampParams, quantizationMask) == 12);
 static_assert(offsetof(dawn::native::TimestampParams, multiplier) == 16);
 static_assert(offsetof(dawn::native::TimestampParams, rightShift) == 20);
 
-static const char sConvertTimestampsToNanoseconds[] = R"(
-            struct Timestamp {
-                low  : u32,
-                high : u32,
-            }
+static const char sConvertTimestampsToNanoseconds[] = DAWN_MULTILINE(
+    struct Timestamp {
+        low  : u32,
+        high : u32,
+    }
 
-            struct TimestampArr {
-                t : array<Timestamp>
-            }
+    struct TimestampArr {
+        t : array<Timestamp>
+    }
 
-            struct AvailabilityArr {
-                v : array<u32>
-            }
+    struct AvailabilityArr {
+        v : array<u32>
+    }
 
-            struct TimestampParams {
-                first  : u32,
-                count  : u32,
-                offset : u32,
-                quantization_mask : u32,
-                multiplier : u32,
-                right_shift  : u32,
-            }
+    struct TimestampParams {
+        first  : u32,
+        count  : u32,
+        offset : u32,
+        quantization_mask : u32,
+        multiplier : u32,
+        right_shift  : u32,
+    }
 
-            @group(0) @binding(0) var<storage, read_write> timestamps : TimestampArr;
-            @group(0) @binding(1) var<storage, read> availability : AvailabilityArr;
-            @group(0) @binding(2) var<uniform> params : TimestampParams;
+    @group(0) @binding(0) var<storage, read_write> timestamps : TimestampArr;
+    @group(0) @binding(1) var<storage, read> availability : AvailabilityArr;
+    @group(0) @binding(2) var<uniform> params : TimestampParams;
 
-            const sizeofTimestamp : u32 = 8u;
+    const sizeofTimestamp : u32 = 8u;
 
-            @compute @workgroup_size(8, 1, 1)
-            fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3u) {
-                if (GlobalInvocationID.x >= params.count) { return; }
+    @compute @workgroup_size(8, 1, 1)
+    fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3u) {
+        if (GlobalInvocationID.x >= params.count) { return; }
 
-                var index = GlobalInvocationID.x + params.offset / sizeofTimestamp;
+        var index = GlobalInvocationID.x + params.offset / sizeofTimestamp;
 
-                // Return 0 for the unavailable value.
-                if (availability.v[GlobalInvocationID.x + params.first] == 0u) {
-                    timestamps.t[index].low = 0u;
-                    timestamps.t[index].high = 0u;
-                    return;
-                }
+        // Return 0 for the unavailable value.
+        if (availability.v[GlobalInvocationID.x + params.first] == 0u) {
+            timestamps.t[index].low = 0u;
+            timestamps.t[index].high = 0u;
+            return;
+        }
 
-                var timestamp = timestamps.t[index];
+        var timestamp = timestamps.t[index];
 
-                // TODO(dawn:1250): Consider using the umulExtended and uaddCarry intrinsics once
-                // available.
-                var chunks : array<u32, 5>;
-                chunks[0] = timestamp.low & 0xFFFFu;
-                chunks[1] = timestamp.low >> 16u;
-                chunks[2] = timestamp.high & 0xFFFFu;
-                chunks[3] = timestamp.high >> 16u;
-                chunks[4] = 0u;
+        // TODO(dawn:1250): Consider using the umulExtended and uaddCarry intrinsics once
+        // available.
+        var chunks : array<u32, 5>;
+        chunks[0] = timestamp.low & 0xFFFFu;
+        chunks[1] = timestamp.low >> 16u;
+        chunks[2] = timestamp.high & 0xFFFFu;
+        chunks[3] = timestamp.high >> 16u;
+        chunks[4] = 0u;
 
-                // Multiply all the chunks with the integer period.
-                for (var i = 0u; i < 4u; i = i + 1u) {
-                    chunks[i] = chunks[i] * params.multiplier;
-                }
+        // Multiply all the chunks with the integer period.
+        for (var i = 0u; i < 4u; i = i + 1u) {
+            chunks[i] = chunks[i] * params.multiplier;
+        }
 
-                // Propagate the carry
-                var carry = 0u;
-                for (var i = 0u; i < 4u; i = i + 1u) {
-                    var chunk_with_carry = chunks[i] + carry;
-                    carry = chunk_with_carry >> 16u;
-                    chunks[i] = chunk_with_carry & 0xFFFFu;
-                }
-                chunks[4] = carry;
+        // Propagate the carry
+        var carry = 0u;
+        for (var i = 0u; i < 4u; i = i + 1u) {
+            var chunk_with_carry = chunks[i] + carry;
+            carry = chunk_with_carry >> 16u;
+            chunks[i] = chunk_with_carry & 0xFFFFu;
+        }
+        chunks[4] = carry;
 
-                // Apply the right shift.
-                for (var i = 0u; i < 4u; i = i + 1u) {
-                    var low = chunks[i] >> params.right_shift;
-                    var high = (chunks[i + 1u] << (16u - params.right_shift)) & 0xFFFFu;
-                    chunks[i] = low | high;
-                }
+        // Apply the right shift.
+        for (var i = 0u; i < 4u; i = i + 1u) {
+            var low = chunks[i] >> params.right_shift;
+            var high = (chunks[i + 1u] << (16u - params.right_shift)) & 0xFFFFu;
+            chunks[i] = low | high;
+        }
 
-                // Apply quantization mask.
-                var low = chunks[0] | (chunks[1] << 16u);
-                timestamps.t[index].low = low & params.quantization_mask;
-                timestamps.t[index].high = chunks[2] | (chunks[3] << 16u);
-            }
-        )";
+        // Apply quantization mask.
+        var low = chunks[0] | (chunks[1] << 16u);
+        timestamps.t[index].low = low & params.quantization_mask;
+        timestamps.t[index].high = chunks[2] | (chunks[3] << 16u);
+    }
+);
 
 ResultOrError<ComputePipelineBase*> GetOrCreateTimestampComputePipeline(DeviceBase* device) {
     InternalPipelineStore* store = device->GetInternalPipelineStore();
@@ -194,7 +195,7 @@ TimestampParams::TimestampParams(uint32_t first,
     // so we need to keep the multiplier under 2^16. At the same time, the larger the
     // multiplier, the better the precision, so we maximize the value of the right shift while
     // keeping the multiplier under 2 ^ 16
-    uint32_t upperLog2 = ceil(log2(period));
+    uint32_t upperLog2 = uint32_t(ceil(log2(period)));
 
     // Clamp the shift to 16 because we're doing computations in 16bit chunks. The
     // multiplication by the period will overflow the chunks, but timestamps are mostly

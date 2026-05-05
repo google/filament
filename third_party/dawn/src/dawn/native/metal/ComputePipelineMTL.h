@@ -28,14 +28,13 @@
 #ifndef SRC_DAWN_NATIVE_METAL_COMPUTEPIPELINEMTL_H_
 #define SRC_DAWN_NATIVE_METAL_COMPUTEPIPELINEMTL_H_
 
+#import <Metal/Metal.h>
+
 #include <vector>
 
+#include "dawn/common/NSRef.h"
 #include "dawn/native/ComputePipeline.h"
 #include "dawn/native/CreatePipelineAsyncEvent.h"
-
-#include "dawn/common/NSRef.h"
-
-#import <Metal/Metal.h>
 
 namespace dawn::native::metal {
 
@@ -56,10 +55,9 @@ class ComputePipeline final : public ComputePipelineBase {
 
   private:
     using ComputePipelineBase::ComputePipelineBase;
-    MaybeError InitializeImpl() override;
+    ResultOrError<Extent3D> InitializeImpl() override;
 
     NSPRef<id<MTLComputePipelineState>> mMtlComputePipelineState;
-    MTLSize mLocalWorkgroupSize;
     bool mRequiresStorageBufferLength;
     std::vector<uint32_t> mWorkgroupAllocations;
 };

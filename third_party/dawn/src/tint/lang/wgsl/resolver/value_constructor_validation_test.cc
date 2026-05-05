@@ -3213,7 +3213,8 @@ TEST_F(ResolverValueConstructorValidationTest, NonConstructibleType_Atomic) {
 }
 
 TEST_F(ResolverValueConstructorValidationTest, NonConstructibleType_AtomicArray) {
-    WrapInFunction(Assign(Phony(), Call(Source{{12, 34}}, ty.array(ty.atomic(ty.i32()), 4_i))));
+    WrapInFunction(
+        Assign(Phony(), Call(Source{{12, 34}}, ty.array(ty.atomic(ty.i32()), Expr(4_i)))));
 
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: array constructor has non-constructible element type");

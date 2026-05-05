@@ -47,7 +47,6 @@
 #include "details/Skybox.h"
 #include "details/Sync.h"
 
-
 #include <private/filament/EngineEnums.h>
 
 #include <private/backend/CommandBufferQueue.h>
@@ -84,6 +83,7 @@
 #include <string_view>
 #include <random>
 #include <thread>
+#include <mutex>
 #include <type_traits>
 #include <unordered_map>
 
@@ -99,16 +99,8 @@ using MaterialKey = uint32_t;
 } // namespace filament::matdbg
 #endif
 
-#if FILAMENT_ENABLE_FGVIEWER
-#include <fgviewer/DebugServer.h>
-#else
-namespace filament::fgviewer {
-    class DebugServer;
-} // namespace filament::fgviewer
-#endif
-
 namespace filament {
-
+class FgviewerManager;
 class Renderer;
 class MaterialParser;
 class TextureCacheDisposer;
@@ -146,6 +138,22 @@ public:
     using clock = std::chrono::steady_clock;
     using Epoch = clock::time_point;
     using duration = clock::duration;
+
+#ifdef __EXCEPTIONS
+    void propagateBackendException() const {
+        mCommandBufferQueue.propagateBackendException();
+    }
+#else
+    void propagateBackendException() const noexcept {}
+#endif
+
+    bool hasExceptionBeenRethrown() const noexcept {
+        return mCommandBufferQueue.hasExceptionBeenRethrown();
+    }
+
+    bool hasUnrecoverableFailure() const noexcept {
+        return mCommandBufferQueue.hasUnrecoverableError();
+    }
 
 public:
     static Engine* create(Builder const& builder);
@@ -205,6 +213,15 @@ public:
     FeatureLevel getActiveFeatureLevel() const noexcept {
         return mActiveFeatureLevel;
     }
+
+    // Sets the fence unrecoverable error state and notifies all waiters.
+    void setFenceUnrecoverableError() noexcept;
+
+    // Signals a fence and notifies all waiters.
+    void signalFence(FenceSignal& signal, FenceSignal::State s) noexcept;
+
+    // Waits for a fence to be signaled or for a timeout.
+    Fence::FenceStatus waitFence(FenceSignal& signal, uint64_t timeout) noexcept;
 
     size_t getMaxAutomaticInstances() const noexcept {
         return CONFIG_MAX_INSTANCES;
@@ -665,6 +682,10 @@ private:
     utils::Mutex mFenceListLock;
     ResourceList<FFence> mFences{"Fence"};
 
+    mutable utils::Mutex mFenceLock;
+    mutable utils::Condition mFenceCondition;
+    bool mFenceHasUnrecoverableError = false;
+
     // the sync list is accessed from multiple threads, because they are
     // synchronization objects.
     utils::Mutex mSyncListLock;
@@ -771,7 +792,7 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
-        fgviewer::DebugServer* fgviewerServer = nullptr;
+        FgviewerManager* fgviewer = nullptr;
     } debug;
 };
 

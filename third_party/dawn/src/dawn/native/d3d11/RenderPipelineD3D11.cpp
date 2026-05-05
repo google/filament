@@ -44,6 +44,8 @@
 #include "dawn/native/d3d11/PipelineLayoutD3D11.h"
 #include "dawn/native/d3d11/ShaderModuleD3D11.h"
 #include "dawn/native/d3d11/UtilsD3D11.h"
+#include "dawn/platform/DawnPlatform.h"
+#include "dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native::d3d11 {
 namespace {
@@ -449,6 +451,9 @@ MaybeError RenderPipeline::InitializeShaders() {
     if (device->IsToggleEnabled(Toggle::EmitHLSLDebugSymbols)) {
         compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
     }
+    if (device->IsToggleEnabled(Toggle::D3DSkipShaderOptimizations)) {
+        compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+    }
 
     // Tint does matrix multiplication expecting row major matrices
     compileFlags |= D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
@@ -479,9 +484,13 @@ MaybeError RenderPipeline::InitializeShaders() {
                                       ToBackend(GetLayout()), compileFlags | additionalCompileFlags,
                                       GetImmediateMask(), usedInterstageVariables));
         const Blob& shaderBlob = compiledShader[SingleShaderStage::Vertex].shaderBlob;
-        DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreateVertexShader(
-                                  shaderBlob.Data(), shaderBlob.Size(), nullptr, &mVertexShader),
-                              "D3D11 create vertex shader"));
+        {
+            TRACE_EVENT0(device->GetPlatform(), General, "RenderPipelineD3D11::CreateVertexShader");
+            SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(device->GetPlatform(), "D3D11.CreateVertexShaderUs");
+
+            DAWN_TRY_ASSIGN(mVertexShader, device->GetOrCreateVertexShader(
+                                               compiledShader[SingleShaderStage::Vertex]));
+        }
         DAWN_TRY(InitializeInputLayout(shaderBlob));
     }
 
@@ -545,14 +554,23 @@ MaybeError RenderPipeline::InitializeShaders() {
                 ->Compile(programmableStage, SingleShaderStage::Fragment, ToBackend(GetLayout()),
                           compileFlags | additionalCompileFlags, GetImmediateMask(),
                           usedInterstageVariables, pixelLocalOptions));
-        DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreatePixelShader(
-                                  compiledShader[SingleShaderStage::Fragment].shaderBlob.Data(),
-                                  compiledShader[SingleShaderStage::Fragment].shaderBlob.Size(),
-                                  nullptr, &mPixelShader),
-                              "D3D11 create pixel shader"));
+        {
+            TRACE_EVENT0(device->GetPlatform(), General, "RenderPipelineD3D11::CreatePixelShader");
+            SCOPED_DAWN_HISTOGRAM_TIMER_MICROS(device->GetPlatform(), "D3D11.CreatePixelShaderUs");
+            DAWN_TRY_ASSIGN(mPixelShader, device->GetOrCreatePixelShader(
+                                              compiledShader[SingleShaderStage::Fragment]));
+        }
     }
 
     return {};
+}
+
+ID3D11VertexShader* RenderPipeline::GetD3D11VertexShaderForTesting() {
+    return mVertexShader.Get();
+}
+
+ID3D11PixelShader* RenderPipeline::GetD3D11PixelShaderForTesting() {
+    return mPixelShader.Get();
 }
 
 }  // namespace dawn::native::d3d11

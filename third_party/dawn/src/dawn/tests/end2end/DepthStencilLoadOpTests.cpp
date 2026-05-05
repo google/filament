@@ -80,6 +80,9 @@ class DepthStencilLoadOpTests : public DawnTestWithParams<DepthStencilLoadOpTest
 
         DAWN_TEST_UNSUPPORTED_IF(!mIsFormatSupported);
 
+        // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+        DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
         wgpu::TextureDescriptor descriptor;
         descriptor.size = {kRTSize, kRTSize};
         descriptor.format = GetParam().mFormat;
@@ -259,7 +262,7 @@ namespace {
 auto GenerateParam() {
     auto params1 = MakeParamGenerator<DepthStencilLoadOpTestParams>(
         {D3D11Backend(), D3D12Backend(), D3D12Backend({}, {"use_d3d12_render_pass"}),
-         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
         {wgpu::TextureFormat::Depth32Float, wgpu::TextureFormat::Depth16Unorm},
         {Check::CopyDepth, Check::DepthTest, Check::SampleDepth});
 
@@ -268,7 +271,7 @@ auto GenerateParam() {
          MetalBackend(), MetalBackend({"metal_use_combined_depth_stencil_format_for_stencil8"}),
          MetalBackend(
              {"metal_use_both_depth_and_stencil_attachments_for_combined_depth_stencil_formats"}),
-         OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+         OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
         {wgpu::TextureFormat::Depth24PlusStencil8, wgpu::TextureFormat::Depth32FloatStencil8,
          wgpu::TextureFormat::Stencil8},
         {Check::CopyStencil, Check::StencilTest, Check::DepthTest, Check::SampleDepth});
@@ -292,6 +295,9 @@ class StencilClearValueOverflowTest : public DepthStencilLoadOpTests {};
 // stencil clear value in encoder.BeginRenderPass() (currently Dawn only supports 8-bit stencil
 // format).
 TEST_P(StencilClearValueOverflowTest, StencilClearValueOverFlowUint8) {
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     constexpr uint32_t kOverflowedStencilValue = kStencilValues[0] + 0x100;
     renderPassDescriptors[0].cDepthStencilAttachmentInfo.stencilClearValue =
         kOverflowedStencilValue;
@@ -308,6 +314,9 @@ TEST_P(StencilClearValueOverflowTest, StencilClearValueOverFlowUint8) {
 // the stencil clear value in encoder.BeginRenderPass() (currently Dawn only supports 8-bit stencil
 // format).
 TEST_P(StencilClearValueOverflowTest, StencilClearValueOverFlowUint16) {
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     constexpr uint32_t kOverflowedStencilValue = kStencilValues[0] + 0x10000;
     renderPassDescriptors[0].cDepthStencilAttachmentInfo.stencilClearValue =
         kOverflowedStencilValue;
@@ -323,7 +332,7 @@ TEST_P(StencilClearValueOverflowTest, StencilClearValueOverFlowUint16) {
 DAWN_INSTANTIATE_TEST_P(StencilClearValueOverflowTest,
                         {D3D11Backend(), D3D12Backend(),
                          D3D12Backend({}, {"use_d3d12_render_pass"}), MetalBackend(),
-                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {wgpu::TextureFormat::Depth24PlusStencil8,
                          wgpu::TextureFormat::Depth32FloatStencil8, wgpu::TextureFormat::Stencil8},
                         {Check::CopyStencil, Check::StencilTest});
@@ -384,7 +393,10 @@ class DepthTextureClearTwiceTest : public DawnTestWithParams<DepthTextureClearTw
 };
 
 TEST_P(DepthTextureClearTwiceTest, ClearDepthAspectTwice) {
-    DAWN_SUPPRESS_TEST_IF(!mIsFormatSupported);
+    DAWN_TEST_UNSUPPORTED_IF(!mIsFormatSupported);
+
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
     constexpr uint32_t kSize = 64;
     constexpr uint32_t kLevelCount = 5;
@@ -439,15 +451,18 @@ TEST_P(DepthTextureClearTwiceTest, ClearDepthAspectTwice) {
     }
 }
 
-DAWN_INSTANTIATE_TEST_P(DepthTextureClearTwiceTest,
-                        {D3D11Backend(), D3D11Backend({"use_packed_depth24_unorm_stencil8_format"}),
-                         D3D12Backend(), D3D12Backend({"use_packed_depth24_unorm_stencil8_format"}),
-                         MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
-                        {wgpu::TextureFormat::Depth16Unorm, wgpu::TextureFormat::Depth24Plus,
-                         wgpu::TextureFormat::Depth32Float,
-                         wgpu::TextureFormat::Depth32FloatStencil8,
-                         wgpu::TextureFormat::Depth24PlusStencil8},
-                        {true, false});
+DAWN_INSTANTIATE_TEST_P(
+    DepthTextureClearTwiceTest,
+    {D3D11Backend(), D3D11Backend({"use_packed_depth24_unorm_stencil8_format"}), D3D12Backend(),
+     D3D12Backend({"use_packed_depth24_unorm_stencil8_format"}), MetalBackend(), OpenGLBackend(),
+     OpenGLESBackend(), VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+     VulkanBackend({"vulkan_use_create_render_pass_2"}, {"vulkan_use_dynamic_rendering"}),
+     VulkanBackend({}, {"vulkan_use_create_render_pass_2", "vulkan_use_dynamic_rendering"}),
+     WebGPUBackend()},
+    {wgpu::TextureFormat::Depth16Unorm, wgpu::TextureFormat::Depth24Plus,
+     wgpu::TextureFormat::Depth32Float, wgpu::TextureFormat::Depth32FloatStencil8,
+     wgpu::TextureFormat::Depth24PlusStencil8},
+    {true, false});
 
 }  // anonymous namespace
 }  // namespace dawn

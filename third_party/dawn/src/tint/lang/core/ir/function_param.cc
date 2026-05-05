@@ -36,12 +36,12 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::ir::FunctionParam);
 
 namespace tint::core::ir {
 
-FunctionParam::FunctionParam(const core::type::Type* ty) : type_(ty) {}
+FunctionParam::FunctionParam(const core::type::Type* ty) : Base(ty) {}
 
 FunctionParam::~FunctionParam() = default;
 
 FunctionParam* FunctionParam::Clone(CloneContext& ctx) {
-    auto* out = ctx.ir.CreateValue<FunctionParam>(type_);
+    auto* out = ctx.ir.CreateValue<FunctionParam>(Type());
     out->attributes_ = attributes_;
 
     auto name = ctx.ir.NameOf(this);

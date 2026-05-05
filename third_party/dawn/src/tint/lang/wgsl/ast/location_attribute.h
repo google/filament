@@ -39,21 +39,14 @@ namespace tint::ast {
 class LocationAttribute final : public Castable<LocationAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the location expression
-    LocationAttribute(GenerationID pid, NodeID nid, const Source& src, const Expression* expr);
+    LocationAttribute(NodeID nid, const Source& src, const Expression* expr);
     ~LocationAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const LocationAttribute* Clone(CloneContext& ctx) const override;
 
     /// The location expression
     const Expression* const expr;

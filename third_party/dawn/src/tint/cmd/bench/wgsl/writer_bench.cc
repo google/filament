@@ -35,15 +35,10 @@ namespace {
 
 void GenerateWGSL(benchmark::State& state, std::string input_name) {
     auto res = bench::GetWgslProgram(input_name);
-    if (res != Success) {
-        state.SkipWithError(res.Failure().reason);
-        return;
-    }
+    TINT_ASSERT(res == Success) << res.Failure().reason;
     for (auto _ : state) {
         auto gen_res = Generate(res->program);
-        if (gen_res != Success) {
-            state.SkipWithError(gen_res.Failure().reason);
-        }
+        TINT_ASSERT(gen_res == Success) << gen_res.Failure().reason;
     }
 }
 

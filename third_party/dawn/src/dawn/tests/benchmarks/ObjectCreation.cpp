@@ -27,6 +27,7 @@
 
 #include <benchmark/benchmark.h>
 #include <dawn/webgpu_cpp.h>
+
 #include <array>
 #include <vector>
 

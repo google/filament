@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_WGSL_WRITER_WRITER_H_
 #define SRC_TINT_LANG_WGSL_WRITER_WRITER_H_
 
-#include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
+#include "src/tint/lang/wgsl/writer/common/options.h"
 #include "src/tint/lang/wgsl/writer/output.h"
 #include "src/tint/utils/result.h"
 
@@ -45,19 +45,20 @@ namespace tint::wgsl::writer {
 /// Generate WGSL for a program, according to a set of configuration options.
 /// The result will contain the WGSL, or failure.
 /// @param program the program to translate to WGSL
+/// @param options the configuration options to use when printing WGSL
 /// @returns the resulting WGSL, or failure
-Result<Output> Generate(const Program& program);
+Result<Output> Generate(const Program& program, const Options& options = {});
 
 /// Generate WGSL from a core-dialect ir::Module.
 /// @param module the core-dialect ir::Module.
 /// @param options the configuration options to use when generating WGSL
 /// @returns the resulting WGSL, or failure
-Result<Output> WgslFromIR(core::ir::Module& module, const ProgramOptions& options);
+Result<Output> WgslFromIR(core::ir::Module& module, const Options& options);
 
 /// Generate a Program from a core-dialect ir::Module.
 /// @param module the core-dialect ir::Module.
 /// @returns the resulting Program, or failure
-Result<Program> ProgramFromIR(core::ir::Module& module, const ProgramOptions& options);
+Result<Program> ProgramFromIR(core::ir::Module& module, const Options& options);
 
 }  // namespace tint::wgsl::writer
 

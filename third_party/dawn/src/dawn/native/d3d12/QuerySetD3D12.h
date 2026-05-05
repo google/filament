@@ -48,7 +48,7 @@ class QuerySet : public QuerySetBase {
     MaybeError Initialize();
 
     // Dawn API
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
 
     ComPtr<ID3D12QueryHeap> mQueryHeap;

@@ -33,9 +33,8 @@
 
 namespace tint::fuzz::ir {
 
-tint::core::ir::transform::SubstituteOverridesConfig SubstituteOverridesConfig(
-    core::ir::Module& mod) {
-    tint::core::ir::transform::SubstituteOverridesConfig cfg;
+tint::SubstituteOverridesConfig SubstituteOverridesConfig(core::ir::Module& mod) {
+    tint::SubstituteOverridesConfig cfg;
 
     for (auto* inst : *(mod.root_block)) {
         auto* ov = inst->As<core::ir::Override>();

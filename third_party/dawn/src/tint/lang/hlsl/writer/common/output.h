@@ -28,9 +28,11 @@
 #ifndef SRC_TINT_LANG_HLSL_WRITER_COMMON_OUTPUT_H_
 #define SRC_TINT_LANG_HLSL_WRITER_COMMON_OUTPUT_H_
 
+#include <optional>
 #include <string>
 #include <unordered_set>
 
+#include "src/tint/api/common/workgroup_info.h"
 #include "src/tint/lang/core/ir/function.h"
 
 namespace tint::hlsl::writer {
@@ -48,19 +50,6 @@ struct Output {
 
     /// Copy assign
     Output& operator=(const Output&);
-
-    /// Workgroup size information
-    struct WorkgroupInfo {
-        /// The x-component
-        uint32_t x = 0;
-        /// The y-component
-        uint32_t y = 0;
-        /// The z-component
-        uint32_t z = 0;
-
-        /// The needed workgroup storage size
-        size_t storage_size = 0;
-    };
 
     /// The generated HLSL.
     std::string hlsl = "";

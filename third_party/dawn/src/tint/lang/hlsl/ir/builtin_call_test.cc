@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/hlsl/ir/builtin_call.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -52,10 +53,22 @@ TEST_F(IR_HlslBuiltinCallTest, Clone) {
     EXPECT_EQ(BuiltinFn::kF32Tof16, new_b->Func());
 
     auto args = new_b->Args();
-    EXPECT_EQ(1u, args.Length());
+    EXPECT_EQ(1u, args.size());
 
     auto* val0 = args[0]->As<core::ir::Constant>()->Value();
     EXPECT_EQ(0_f, val0->As<core::constant::Scalar<core::f32>>()->ValueAs<core::f32>());
+}
+
+TEST_F(IR_HlslBuiltinCallTest, CloneWithExplicitParams) {
+    auto* builtin = b.Call<BuiltinCall>(mod.Types().u32(), BuiltinFn::kF32Tof16, 0_f);
+    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+
+    auto* new_b = clone_ctx.Clone(builtin);
+    EXPECT_NE(builtin->Result(), new_b->Result());
+    EXPECT_EQ(mod.Types().u32(), new_b->Result()->Type());
+
+    EXPECT_EQ(BuiltinFn::kF32Tof16, new_b->Func());
+    EXPECT_THAT(new_b->ExplicitTemplateParams(), testing::ElementsAre(mod.Types().i32()));
 }
 
 }  // namespace

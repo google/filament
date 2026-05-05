@@ -80,3 +80,10 @@ dawn_json_generator("webgpu_headers_gen") {
 group("proxy_for_jni") {
   deps = [ "${dawn_root}/tools/android" ]
 }
+
+###############################################################################
+# Dawn capture and replay serialization
+###############################################################################
+source_set("serialization") {
+  sources = [ "serialization/Schema.h" ]
+}

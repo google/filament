@@ -29,12 +29,14 @@
 
 namespace dawn::native::opengl {
 
-BindGroupLayout::BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor)
+BindGroupLayout::BindGroupLayout(DeviceBase* device,
+                                 const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor)
     : BindGroupLayoutInternalBase(device, descriptor),
       mBindGroupAllocator(MakeFrontendBindGroupAllocator<BindGroup>(4096)) {}
 
-Ref<BindGroup> BindGroupLayout::AllocateBindGroup(Device* device,
-                                                  const BindGroupDescriptor* descriptor) {
+Ref<BindGroup> BindGroupLayout::AllocateBindGroup(
+    Device* device,
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     return AcquireRef(mBindGroupAllocator->Allocate(device, descriptor));
 }
 

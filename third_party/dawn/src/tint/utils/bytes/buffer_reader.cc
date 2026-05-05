@@ -30,24 +30,21 @@
 #include <algorithm>
 
 #include "src/tint/utils/macros/compiler.h"
+#include "src/tint/utils/memory/copy.h"
 
 namespace tint::bytes {
 
 BufferReader::~BufferReader() = default;
 
-// TODO(408010433): Rewrite internals using span to avoid UBU during read
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 size_t BufferReader::Read(std::byte* out, size_t count) {
-    size_t n = std::min(count, bytes_remaining_);
-    memcpy(out, data_, n);
-    data_ += n;
-    bytes_remaining_ -= n;
+    size_t n = std::min(count, data_.size());
+    tint::Copy(out, count, data_.first(n));
+    data_ = data_.subspan(n);
     return n;
 }
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 bool BufferReader::IsEOF() const {
-    return bytes_remaining_ == 0;
+    return data_.empty();
 }
 
 }  // namespace tint::bytes

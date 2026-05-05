@@ -48,7 +48,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, NoModify_SimpleFiniteLoop) {
             b.NextIteration(loop);
 
             b.Append(loop->Body(), [&] {
-                auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+                auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
                 b.Append(ifelse->True(), [&] {  //
                     b.ExitIf(ifelse);
                 });
@@ -58,7 +58,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, NoModify_SimpleFiniteLoop) {
                 b.Continue(loop);
 
                 b.Append(loop->Continuing(), [&] {  //
-                    b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+                    b.Store(idx, b.Add(b.Load(idx), 1_u));
                     b.NextIteration(loop);
                 });
             });
@@ -116,7 +116,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, InfiniteLoop) {
             b.NextIteration(loop);
 
             b.Append(loop->Body(), [&] {
-                auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+                auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
                 b.Append(ifelse->True(), [&] {  //
                     b.ExitIf(ifelse);
                 });
@@ -127,7 +127,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, InfiniteLoop) {
                 b.Continue(loop);
 
                 b.Append(loop->Continuing(), [&] {  //
-                    b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+                    b.Store(idx, b.Add(b.Load(idx), 1_u));
                     b.NextIteration(loop);
                 });
             });
@@ -321,7 +321,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, EmptyContinuing) {
             b.NextIteration(loop);
 
             b.Append(loop->Body(), [&] {
-                auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+                auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
                 b.Append(ifelse->True(), [&] {  //
                     b.ExitIf(ifelse);
                 });
@@ -432,7 +432,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
             b.NextIteration(loop_outer_1);
 
             b.Append(loop_outer_1->Body(), [&] {
-                auto* ifelse_outer = b.If(b.LessThan<bool>(b.Load(idx_outer_1), 10_u));
+                auto* ifelse_outer = b.If(b.LessThan(b.Load(idx_outer_1), 10_u));
                 b.Append(ifelse_outer->True(), [&] {  //
                     b.ExitLoop(loop_outer_1);
                 });
@@ -443,7 +443,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
                     b.NextIteration(loop_inner_1);
 
                     b.Append(loop_inner_1->Body(), [&] {
-                        auto* ifelse_inner = b.If(b.LessThan<bool>(b.Load(idx_inner_1), 10_u));
+                        auto* ifelse_inner = b.If(b.LessThan(b.Load(idx_inner_1), 10_u));
                         b.Append(ifelse_inner->True(), [&] {  //
                             b.ExitLoop(loop_inner_1);
                         });
@@ -457,7 +457,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
                 b.Continue(loop_outer_1);
             });
             b.Append(loop_outer_1->Continuing(), [&] {  //
-                b.Store(idx_outer_1, b.Add<u32>(b.Load(idx_outer_1), 1_u));
+                b.Store(idx_outer_1, b.Add(b.Load(idx_outer_1), 1_u));
                 b.NextIteration(loop_outer_1);
             });
         });
@@ -468,7 +468,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
             b.NextIteration(loop_outer_2);
 
             b.Append(loop_outer_2->Body(), [&] {
-                auto* ifelse_outer = b.If(b.LessThan<bool>(b.Load(idx_outer_2), 10_u));
+                auto* ifelse_outer = b.If(b.LessThan(b.Load(idx_outer_2), 10_u));
                 b.Append(ifelse_outer->True(), [&] {  //
                     b.ExitLoop(loop_outer_2);
                 });
@@ -479,14 +479,14 @@ TEST_F(IR_PreventInfiniteLoopsTest, MultipleNestedLoops) {
                     b.NextIteration(loop_inner_2);
 
                     b.Append(loop_inner_2->Body(), [&] {
-                        auto* ifelse_inner = b.If(b.LessThan<bool>(b.Load(idx_inner_2), 10_u));
+                        auto* ifelse_inner = b.If(b.LessThan(b.Load(idx_inner_2), 10_u));
                         b.Append(ifelse_inner->True(), [&] {  //
                             b.ExitLoop(loop_inner_2);
                         });
                         b.Continue(loop_inner_2);
                     });
                     b.Append(loop_inner_2->Continuing(), [&] {  //
-                        b.Store(idx_inner_2, b.Add<u32>(b.Load(idx_inner_2), 1_u));
+                        b.Store(idx_inner_2, b.Add(b.Load(idx_inner_2), 1_u));
                         b.NextIteration(loop_inner_2);
                     });
                 });
@@ -736,7 +736,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, LoopResults) {
             b.NextIteration(loop);
 
             b.Append(loop->Body(), [&] {
-                auto* ifelse = b.If(b.LessThan<bool>(b.Load(idx), 10_u));
+                auto* ifelse = b.If(b.LessThan(b.Load(idx), 10_u));
                 b.Append(ifelse->True(), [&] {  //
                     b.ExitIf(ifelse);
                 });
@@ -747,7 +747,7 @@ TEST_F(IR_PreventInfiniteLoopsTest, LoopResults) {
                 b.Continue(loop);
 
                 b.Append(loop->Continuing(), [&] {  //
-                    b.Store(idx, b.Add<u32>(b.Load(idx), 1_u));
+                    b.Store(idx, b.Add(b.Load(idx), 1_u));
                     b.NextIteration(loop);
                 });
             });

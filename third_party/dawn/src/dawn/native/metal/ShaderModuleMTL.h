@@ -28,16 +28,15 @@
 #ifndef SRC_DAWN_NATIVE_METAL_SHADERMODULEMTL_H_
 #define SRC_DAWN_NATIVE_METAL_SHADERMODULEMTL_H_
 
+#import <Metal/Metal.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "dawn/native/ShaderModule.h"
-
 #include "dawn/common/NSRef.h"
 #include "dawn/native/Error.h"
-
-#import <Metal/Metal.h>
+#include "dawn/native/ShaderModule.h"
 
 namespace dawn::native {
 struct ProgrammableStage;
@@ -54,8 +53,7 @@ class ShaderModule final : public ShaderModuleBase {
     static ResultOrError<Ref<ShaderModule>> Create(
         Device* device,
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult);
+        const std::vector<tint::wgsl::Extension>& internalExtensions);
 
     struct MetalFunctionData {
         std::string msl;
@@ -68,6 +66,7 @@ class ShaderModule final : public ShaderModuleBase {
     MaybeError CreateFunction(SingleShaderStage stage,
                               const ProgrammableStage& programmableStage,
                               const PipelineLayout* layout,
+                              const ImmediateConstantMask& pipelineImmediateMask,
                               MetalFunctionData* out,
                               uint32_t sampleMask = 0xFFFFFFFF,
                               const RenderPipeline* renderPipeline = nullptr);
@@ -77,8 +76,6 @@ class ShaderModule final : public ShaderModuleBase {
                  const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
                  std::vector<tint::wgsl::Extension> internalExtensions);
     ~ShaderModule() override;
-
-    MaybeError Initialize(ShaderModuleParseResult* parseResult);
 };
 
 }  // namespace dawn::native::metal

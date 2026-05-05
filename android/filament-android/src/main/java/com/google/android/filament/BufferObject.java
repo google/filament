@@ -91,6 +91,8 @@ public class BufferObject {
          * @return the newly created <code>BufferObject</code> object
          *
          * @exception IllegalStateException if the BufferObject could not be created
+         * @throws RuntimeException if a runtime error occurred, such as running out of
+         *            memory or other resources.
          *
          * @see #setBuffer
          */

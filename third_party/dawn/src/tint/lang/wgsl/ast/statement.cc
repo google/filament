@@ -42,7 +42,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::ast::Statement);
 
 namespace tint::ast {
 
-Statement::Statement(GenerationID pid, NodeID nid, const Source& src) : Base(pid, nid, src) {}
+Statement::Statement(NodeID nid, const Source& src) : Base(nid, src) {}
 
 Statement::~Statement() = default;
 

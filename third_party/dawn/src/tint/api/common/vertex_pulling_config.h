@@ -94,8 +94,9 @@ struct VertexAttributeDescriptor {
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(VertexAttributeDescriptor, format, offset, shader_location);
-    TINT_REFLECT_EQUALS(VertexAttributeDescriptor);
     TINT_REFLECT_HASH_CODE(VertexAttributeDescriptor);
+
+    bool operator==(const VertexAttributeDescriptor&) const = default;
 };
 
 /// Describes a buffer containing multiple vertex attributes
@@ -118,8 +119,9 @@ struct VertexBufferLayoutDescriptor {
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(VertexBufferLayoutDescriptor, array_stride, step_mode, attributes);
-    TINT_REFLECT_EQUALS(VertexBufferLayoutDescriptor);
     TINT_REFLECT_HASH_CODE(VertexBufferLayoutDescriptor);
+
+    bool operator==(const VertexBufferLayoutDescriptor&) const = default;
 };
 
 /// Configuration options that control the vertex pulling transform.
@@ -133,12 +135,13 @@ struct VertexPullingConfig {
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(VertexPullingConfig, vertex_state, pulling_group);
-    TINT_REFLECT_EQUALS(VertexPullingConfig);
     TINT_REFLECT_HASH_CODE(VertexPullingConfig);
+
+    bool operator==(const VertexPullingConfig&) const = default;
 };
 
 /// Reflection for VertexFormat.
-TINT_REFLECT_ENUM_RANGE(tint::VertexFormat, kUint8x2, kUnorm8x4BGRA);
+TINT_REFLECT_ENUM_RANGE(tint::VertexFormat, kUint8, kUnorm8x4BGRA);
 
 /// Reflection for VertexStepMode.
 TINT_REFLECT_ENUM_RANGE(tint::VertexStepMode, kVertex, kInstance);

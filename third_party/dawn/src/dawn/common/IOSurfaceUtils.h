@@ -29,7 +29,6 @@
 #define SRC_DAWN_COMMON_IOSURFACEUTILS_H_
 
 #include <IOSurface/IOSurfaceRef.h>
-
 #include <webgpu/webgpu_cpp.h>
 
 namespace dawn {

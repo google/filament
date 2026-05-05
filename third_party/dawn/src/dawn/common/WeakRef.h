@@ -118,6 +118,8 @@ class WeakRef {
     // Friend is needed so that hashing can access the mData pointer which is always valid.
     template <typename U, typename H>
     friend H AbslHashValue(H h, const WeakRef<U>& v);
+    template <typename U>
+    friend size_t Hash(const WeakRef<U>& v);
 
     // Constructor from data should only be allowed via the GetWeakRef function.
     explicit WeakRef(detail::WeakRefSupportBase* data) : mData(data->mData) {}
@@ -128,6 +130,11 @@ class WeakRef {
 template <typename T, typename H>
 H AbslHashValue(H h, const WeakRef<T>& v) {
     return H::combine(std::move(h), v.mData.Get());
+}
+
+template <typename T>
+size_t Hash(const WeakRef<T>& v) {
+    return Hash(v.mData.Get());
 }
 
 }  // namespace dawn

@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/native/Toggles.h"
+
 #include <array>
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Log.h"
-#include "dawn/native/Toggles.h"
 #include "dawn/native/dawn_platform.h"
 #include "dawn/native/stream/Stream.h"
 
@@ -78,7 +79,7 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
     {Toggle::TurnOffVsync,
      {"turn_off_vsync",
       "Turn off vsync when rendering. In order to do performance test or run perf tests, turn off "
-      "vsync so that the fps can exeed 60.",
+      "vsync so that the fps can exceed 60.",
       "https://crbug.com/dawn/237", ToggleStage::Device}},
     {Toggle::UseTemporaryBufferInCompressedTextureToTextureCopy,
      {"use_temporary_buffer_in_texture_to_texture_copy",
@@ -173,10 +174,6 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
     {Toggle::MetalEnableVertexPulling,
      {"metal_enable_vertex_pulling", "Uses vertex pulling to protect out-of-bounds reads on Metal",
       "https://crbug.com/dawn/480", ToggleStage::Device}},
-    {Toggle::DisableTextureViewBindingUsedAsExternalTexture,
-     {"disable_texture_view_binding_used_as_external_texture",
-      "Disable using a texture view for an externalTexture binding.", "http://crbug.com/398752857",
-      ToggleStage::Device}},
     {Toggle::AllowUnsafeAPIs,
      {"allow_unsafe_apis",
       "Suppresses validation errors on API entry points or parameter combinations that aren't "
@@ -216,6 +213,12 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Dump shaders only on failure. Used for logging purposes. Dumped shaders will be log via "
       "EmitLog, thus printed in Chrome console or consumed by user-defined callback function.",
       "https://crbug.com/dawn/792", ToggleStage::Device}},
+    {Toggle::DumpTintIR,
+     {"dump_tint_ir", "Dump Tint IR for debugging.", "https://crbug.com/496709352",
+      ToggleStage::Device}},
+    {Toggle::EnableTintIRValidationAsserts,
+     {"enable_tint_ir_validation_asserts", "Enable Tint IR validation assertions.",
+      "https://crbug.com/467330780", ToggleStage::Device}},
     {Toggle::DisableWorkgroupInit,
      {"disable_workgroup_init",
       "Disables the workgroup memory zero-initialization for compute shaders.",
@@ -383,6 +386,24 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "subresource are completely initialized, and StoreOp::Discard is always translated as a "
       "Store.",
       "https://crbug.com/dawn/838", ToggleStage::Device}},
+    {Toggle::MetalPolyfillUnpack2x16snorm,
+     {"metal_polyfill_unpack_2x16_snorm",
+      "Polyfill unpack2x16snorm for MSL due to CTS failures on Mac AMD and M3+ devices.",
+      "https://crbug.com/407109055", ToggleStage::Device}},
+    {Toggle::MetalPolyfillUnpack2x16unorm,
+     {"metal_polyfill_unpack_2x16_unorm",
+      "Polyfill unpack2x16unorm for MSL due to CTS failures on Mac M3+ devices.",
+      "https://crbug.com/449576833", ToggleStage::Device}},
+    {Toggle::MetalPolyfillTanhF16,
+     {"metal_polyfill_tanh_f16", "Polyfill tanh with an f16 value for MSL.",
+      "https://crbug.com/42251267", ToggleStage::Device}},
+    {Toggle::VulkanPolyfillF32Negation,
+     {"spirv_polyfill_f32_negation",
+      "Polyfill f32 negation with bit manipulation in SPIR-V writer.",
+      "https://crbug.com/448294721", ToggleStage::Device}},
+    {Toggle::VulkanPolyfillF32Abs,
+     {"spirv_polyfill_f32_abs", "Polyfill f32 abs with bit manipulation in SPIR-V writer.",
+      "https://crbug.com/448294721", ToggleStage::Device}},
     {Toggle::MetalFillEmptyOcclusionQueriesWithZero,
      {"metal_fill_empty_occlusion_queries_with_zero",
       "Apple GPUs leave stale results in the visibility result buffer instead of writing zero if "
@@ -416,6 +437,14 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
      {"use_blit_for_depth16unorm_texture_to_buffer_copy",
       "Use a blit instead of a copy command to copy depth aspect of a texture to a buffer."
       "Workaround for OpenGL and OpenGLES.",
+      "https://crbug.com/dawn/1782", ToggleStage::Device}},
+    {Toggle::UseBlitForDepth24PlusTextureToBufferCopy,
+     {"use_blit_for_depth24plus_texture_to_buffer_copy",
+      "Use a blit instead of a copy command to copy depth aspect of a texture to a buffer. "
+      "Note that it copies depth24 as float. "
+      "This is a workaround for Capture and Replay to be able to capture depth24plus textures. "
+      "It should only be enabled in the inner device of the WebGPU backed as it allows depth24 T2B "
+      "to pass validation.",
       "https://crbug.com/dawn/1782", ToggleStage::Device}},
     {Toggle::UseBlitForDepth32FloatTextureToBufferCopy,
      {"use_blit_for_depth32float_texture_to_buffer_copy",
@@ -543,6 +572,10 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "workaround issues where FXC can miscompile code that depends on special float values (NaN, "
       "INF, etc).",
       "https://crbug.com/tint/976", ToggleStage::Device}},
+    {Toggle::D3DSkipShaderOptimizations,
+     {"d3d_skip_shader_optimizations",
+      "Sets the D3DCOMPILE_SKIP_OPTIMIZATION compilation flag when compiling HLSL code.",
+      "https://crbug.com/439845637", ToggleStage::Device}},
     {Toggle::PolyFillPacked4x8DotProduct,
      {"polyfill_packed_4x8_dot_product",
       "Always use the polyfill version of dot4I8Packed() and dot4U8Packed().",
@@ -552,12 +585,20 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Always use the polyfill version of pack4x8snorm, pack4x8unorm, unpack4x8snorm, "
       "unpack4x8unorm.",
       "https://crbug.com/379551588", ToggleStage::Device}},
+    {Toggle::EnableSubgroupsIntelGen9,
+     {"enable_subgroups_intel_gen9",
+      "Enables subgroups on Intel Gen9 by polyfilling subgroupBroadcast(f16).",
+      "https://crbug.com/42251286", ToggleStage::Adapter}},
     {Toggle::D3D12PolyFillPackUnpack4x8,
      {"d3d12_polyfill_pack_unpack_4x8",
       "Always use the polyfill version of pack4xI8(), pack4xU8(), pack4xI8Clamp(), unpack4xI8() "
       "and unpack4xU8() on D3D12 backends. Note that these functions are always polyfilled on all "
       "other backends right now.",
       "https://crbug.com/tint/1497", ToggleStage::Device}},
+    {Toggle::VulkanPolyfillSwitchWithIf,
+     {"vulkan_polyfill_switch_with_if",
+      "Polyfill switch statements with if/else statements on Vulkan.",
+      "https://crbug.com/443906252", ToggleStage::Device}},
     {Toggle::ExposeWGSLTestingFeatures,
      {"expose_wgsl_testing_features",
       "Make the Instance expose the ChromiumTesting* features for testing of "
@@ -575,10 +616,20 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
     {Toggle::ScalarizeMaxMinClamp,
      {"scalarize_max_min_clamp", "Scalarize max, min, and clamp builtins.",
       "https://crbug.com/422144514", ToggleStage::Device}},
+    {Toggle::SaturateAsMinMaxF16,
+     {"saturate_as_min_max_f16", "Polyfill saturate as min and max for f16.",
+      "https://crbug.com/448873316", ToggleStage::Device}},
+    {Toggle::MetalPolyfillClampFloat,
+     {"metal_polyfill_clamp_float", "Polyfill clamp function for floating point (metal).",
+      "https://crbug.com/407109056", ToggleStage::Device}},
     {Toggle::SubgroupShuffleClamped,
      {"subgroup_shuffle_clamped",
       "Polyfill subgroupShuffle by clamping the id param to within maximum possible subgroup size.",
       "https://crbug.com/dawn/2502", ToggleStage::Device}},
+    {Toggle::VulkanSampleCompareDepthCubeArrayWorkaround,
+     {"vulkan_sample_compare_depth_cube_array_workaround",
+      "Polyfill specific case of TextureSampleCompare(Level) with workaround.",
+      "https://crbug.com/465179684", ToggleStage::Device}},
     {Toggle::MetalDisableModuleConstantF16,
      {"metal_disable_module_constant_f16",
       "Disable module constant hoisting for values that contain f16 types.",
@@ -632,6 +683,11 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Use a monolithic VkPipelineCache per device. The embedder is responsible for calling "
       "PerformIdleTasks() on the device to serialize VkPipelineCache to BlobCache if needed.",
       "crbug.com/370343334", ToggleStage::Device}},
+    {Toggle::VulkanIncompletePipelineCacheWorkaround,
+     {"vulkan_incomplete_pipeline_cache_workaround",
+      "Some drivers encounter corruption when serializing VkPipelineCache data. If VK_INCOMPLETE"
+      "is returned ignore it and skip serializing the pipeline cache again.",
+      "crbug.com/446113735", ToggleStage::Device}},
     {Toggle::MetalSerializeTimestampGenerationAndResolution,
      {"metal_serialize_timestamp_generation_and_resolution",
       "Newer Apple GPUs can race on query set resolution with timestamp writing from earlier "
@@ -679,6 +735,54 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
      {"blob_cache_hash_validation",
       "Enable hash validation when loading/storing from/to the blob cache",
       "https://crbug.com/429938352", ToggleStage::Device}},
+    {Toggle::DecomposeUniformBuffers,
+     {"decompose_uniform_buffers",
+      "Decompose uniform buffers into arrays of vec4<u32> on backends for Vulkan and OpenGL.",
+      "https://crbug.com/448452698", ToggleStage::Adapter}},
+    {Toggle::VulkanEnableF16OnNvidia,
+     {"vulkan_enable_f16_on_nvidia", "Enables F16 on Nvidia GPUs with Vulkan",
+      "https://crbug.com/42251215", ToggleStage::Adapter}},
+    {Toggle::EnableRenderDocProcessInjection,
+     {"enable_renderdoc_process_injection",
+      "Enables RenderDoc process injection. If RenderDoc is used to inject into the GPU process, "
+      "send RenderDoc frame capture info.",
+      "https://crbug.com/449708316", ToggleStage::Device}},
+    {Toggle::VulkanUseDynamicRendering,
+     {"vulkan_use_dynamic_rendering",
+      "Makes use of VK_KHR_dynamic_rendering to implement WebGPU RenderPass.",
+      "https://crbug.com/dawn/463893794", ToggleStage::Adapter}},
+    {Toggle::EnableSpirvValidation,
+     {"enable_spirv_validation", "Enable validation of SPIR-V generated by Tint.",
+      "https://crbug.com/473526415", ToggleStage::Device}},
+    {Toggle::VulkanUseCreateRenderPass2,
+     {"vulkan_use_create_render_pass_2",
+      "Makes use of VK_KHR_create_renderpass2 when creating VkRenderPass objects. Ignored when "
+      "vulkan_use_dynamic_rendering is enabled.",
+      "https://crbug.com/chromium/463893793", ToggleStage::Adapter}},
+    {Toggle::MetalReplaceWorkgroupBoolWithU32,
+     {"metal_replace_workgroup_bool_with_u32",
+      "Replace workgroup bool with u32 for MSL due to CTS failures on Mac AMD and Intel",
+      "https://crbug.com/42241269", ToggleStage::Device}},
+    {Toggle::VulkanCooperativeMatrixStrideIsMatrixElements,
+     {"vulkan_cooperative_matrix_stride_is_matrix_elements",
+      "Treat the stride operand for cooperative matrix load and store instructions as matrix "
+      "elements instead of a source/dest pointee elements.",
+      "https://crbug.com/460209126", ToggleStage::Device}},
+    {Toggle::VulkanUseExtendedDynamicState,
+     {"vulkan_use_extended_dynamic_state",
+      "Makes use of VK_EXT_extended_dynamic_state to improve pipeline caching.",
+      "https://crbug.com/chromium/463893793", ToggleStage::Device}},
+    {Toggle::VulkanForceStaticSamplersForExternalTextures,
+     {"vulkan_force_static_samplers_for_external_textures",
+      "Enables the code path to take static samplers for external textures. While static YCbCr "
+      "samplers are only require to sample YCbCr AHB on Android, this is useful for testing on "
+      "other devices.",
+      "https://crbug.com/468988322", ToggleStage::Device}},
+    {Toggle::WaitIsThreadSafe,
+     {"wait_is_thread_safe",
+      "WaitFor* functions are thread-safe and can be called without the device-lock if implicit "
+      "synchronization is enabled.",
+      "https://crbug.com/412761228", ToggleStage::Device}},
     {Toggle::NoWorkaroundSampleMaskBecomesZeroForAllButLastColorTarget,
      {"no_workaround_sample_mask_becomes_zero_for_all_but_last_color_target",
       "MacOS 12.0+ Intel has a bug where the sample mask is only applied for the last color "
@@ -705,6 +809,10 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "Some chrome tests run with swiftshader, they don't care about the pixel output. This toggle "
       "allows skipping expensive draw operations for them.",
       "https://crbug.com/chromium/331688266", ToggleStage::Device}},
+    {Toggle::D3D11DisableMapOnDefaultBuffers,
+     {"d3d11_disable_map_on_default_buffers",
+      "Disable the D3D11 MapOnDefaultBuffers path even when the device supports it.",
+      "https://crbug.com/chromium/479047477", ToggleStage::Device}},
     {Toggle::D3D11UseUnmonitoredFence,
      {"d3d11_use_unmonitored_fence", "Use d3d11 unmonitored fence.",
       "https://crbug.com/chromium/335553337", ToggleStage::Device}},
@@ -719,11 +827,41 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "use Instance.WaitAny() to wait for a GPU operation to finish. This toggle is intended to "
       "reduce the fixed overhead associated with each flushing.",
       "https://crbug.com/chromium/377716220", ToggleStage::Device}},
+    {Toggle::D3D11UseDiscardView,
+     {"d3d11_use_discard_view",
+      "Use D3D11's DiscardView for discarding render pass' attachments having StoreOp::Discard",
+      "https://crbug.com/479416037", ToggleStage::Device}},
     {Toggle::IgnoreImportedAHardwareBufferVulkanImageSize,
      {"ignore_imported_ahardwarebuffer_vulkan_image_size",
       "Don't validate the required VkImage size against the size of the AHardwareBuffer on import. "
       "Some drivers report the wrong size.",
       "https://crbug.com/333424893", ToggleStage::Device}},
+    {Toggle::GLAllowContextOnMultiThreads,
+     {"gl_allow_context_on_multi_threads",
+      "Allows GL backend to use GL context on multiple threads. This will add certain "
+      "synchronizations' overheads.",
+      "https://crbug.com/dawn/451928481", ToggleStage::Device}},
+    {Toggle::GLDefer,
+     {"gl_defer",
+      "Allows the GL backend to defer GL commands until Queue::Submit is called. This includes "
+      "backend resource creations which will also be deferred.",
+      "https://crbug.com/dawn/451928481", ToggleStage::Device}},
+    {Toggle::ShadowCopyMapWrite,
+     {"shadow_copy_map_write",
+      "By shadowing mapped buffers on the host, this allows the specific "
+      "code sequence of MapAsync(wgpu::MapMode::Write, ...) / WaitAny() "
+      "to be called on any thread, even in deferral mode. "
+      "This may incur a performance penalty due to the host-side copy.",
+      "https://crbug.com/dawn/451928481", ToggleStage::Device}},
+    {Toggle::DisableTransientAttachment,
+     {"disable_transient_attachment", "Disable TextureUsage TransientAttachment usage.",
+      "https://crbug.com/dawn/462620664", ToggleStage::Device}},
+    {Toggle::AutoMapBackendBuffer,
+     {"auto_map_backend_buffer",
+      "Backend will automatically map the buffer when it's not in use by GPU, to allow "
+      "front-end's MapAsync and Unmap calls to become cheap without acquiring any lock internally.",
+      "https://crbug.com/dawn/481158754", ToggleStage::Device}},
+
     // Comment to separate the }} so it is clearer what to copy-paste to add a toggle.
 }};
 
@@ -731,13 +869,13 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
 
 void TogglesSet::Set(Toggle toggle, bool enabled) {
     DAWN_ASSERT(toggle != Toggle::InvalidEnum);
-    const size_t toggleIndex = static_cast<size_t>(toggle);
+    const uint32_t toggleIndex = uint32_t(toggle);
     bitset.set(toggleIndex, enabled);
 }
 
 bool TogglesSet::Has(Toggle toggle) const {
     DAWN_ASSERT(toggle != Toggle::InvalidEnum);
-    const size_t toggleIndex = static_cast<size_t>(toggle);
+    const uint32_t toggleIndex = uint32_t(toggle);
     return bitset.test(toggleIndex);
 }
 

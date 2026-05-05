@@ -56,8 +56,6 @@ include(utils/text_generator/BUILD.cmake)
 # Kind:      lib
 ################################################################################
 tint_add_target(tint_utils lib
-  utils/generation_id.cc
-  utils/generation_id.h
   utils/internal_limits.h
   utils/reflection.cc
   utils/reflection.h

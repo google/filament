@@ -25,72 +25,47 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #ifndef SRC_DAWN_COMMON_ITYP_SPAN_H_
 #define SRC_DAWN_COMMON_ITYP_SPAN_H_
+
+#include <limits>
+#include <span>
 
 #include "dawn/common/TypedInteger.h"
 #include "dawn/common/UnderlyingType.h"
 
 namespace dawn::ityp {
 
-// ityp::span is a helper class that wraps an unowned packed array of type |Value|.
-// It stores the size and pointer to first element. It has the restriction that
-// indices must be a particular type |Index|. This provides a type-safe way to index
-// raw pointers.
+// ityp::span is a helper class that wraps std::span<T, std::dynamic_extent>
+// with the restriction that indices must be a particular type |Index|.
 template <typename Index, typename Value>
-class span {
+class span : private ::std::span<Value> {
     using I = UnderlyingType<Index>;
+    using Base = ::std::span<Value>;
 
   public:
-    constexpr span() : mData(nullptr), mSize(0) {}
-    constexpr span(Value* data, Index size) : mData(data), mSize(size) {}
+    constexpr span() = default;
+    constexpr span(Value* data, Index size) : Base{data, static_cast<I>(size)} {}
 
-    constexpr Value& operator[](Index i) const {
-        DAWN_ASSERT(i < mSize);
-        return mData[static_cast<I>(i)];
+    constexpr Value& operator[](Index i) const { return Base::operator[](static_cast<I>(i)); }
+
+    constexpr Index size() const {
+        DAWN_ASSERT(std::numeric_limits<I>::max() >= Base::size());
+        return Index(static_cast<I>(Base::size()));
     }
 
-    Value* data() noexcept { return mData; }
+    using Base::data;
 
-    const Value* data() const noexcept { return mData; }
+    using Base::begin;
+    using Base::end;
 
-    Value* begin() noexcept { return mData; }
-
-    const Value* begin() const noexcept { return mData; }
-
-    Value* end() noexcept { return mData + static_cast<I>(mSize); }
-
-    const Value* end() const noexcept { return mData + static_cast<I>(mSize); }
-
-    Value& front() {
-        DAWN_ASSERT(mData != nullptr);
-        DAWN_ASSERT(static_cast<I>(mSize) >= 0);
-        return *mData;
-    }
-
-    const Value& front() const {
-        DAWN_ASSERT(mData != nullptr);
-        DAWN_ASSERT(static_cast<I>(mSize) >= 0);
-        return *mData;
-    }
-
-    Value& back() {
-        DAWN_ASSERT(mData != nullptr);
-        DAWN_ASSERT(static_cast<I>(mSize) >= 0);
-        return *(mData + static_cast<I>(mSize) - 1);
-    }
-
-    const Value& back() const {
-        DAWN_ASSERT(mData != nullptr);
-        DAWN_ASSERT(static_cast<I>(mSize) >= 0);
-        return *(mData + static_cast<I>(mSize) - 1);
-    }
-
-    Index size() const { return mSize; }
-
-  private:
-    Value* mData;
-    Index mSize;
+    using Base::back;
+    using Base::front;
 };
 
 // ityp::SpanFromUntyped<Index>(myValues, myValueCount) creates a span<Index, Value> from a C-style

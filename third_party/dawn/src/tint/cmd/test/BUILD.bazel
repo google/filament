@@ -58,21 +58,19 @@ cc_binary(
     "//src/tint/lang/hlsl/type:test",
     "//src/tint/lang/hlsl/writer/common:test",
     "//src/tint/lang/hlsl/writer/raise:test",
-    "//src/tint/lang/msl/ir/transform:test",
     "//src/tint/lang/msl/ir:test",
     "//src/tint/lang/msl/type:test",
     "//src/tint/lang/spirv/ir:test",
     "//src/tint/lang/spirv/reader/lower:test",
     "//src/tint/lang/spirv/type:test",
+    "//src/tint/lang/spirv/writer/analysis:test",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast:test",
-    "//src/tint/lang/wgsl/intrinsic:test",
     "//src/tint/lang/wgsl/ir:test",
     "//src/tint/lang/wgsl/program:test",
     "//src/tint/lang/wgsl/reader/lower:test",
-    "//src/tint/lang/wgsl/resolver:test",
     "//src/tint/lang/wgsl/sem:test",
-    "//src/tint/lang/wgsl/writer/ir_to_program",
+    "//src/tint/lang/wgsl/writer/common",
     "//src/tint/lang/wgsl/writer/ir_to_program:test",
     "//src/tint/lang/wgsl/writer/raise:test",
     "//src/tint/lang/wgsl:test",
@@ -138,16 +136,6 @@ cc_binary(
     ],
     "//conditions:default": [],
   }) + select({
-    ":tint_build_spv_reader_and_tint_build_wgsl_reader_and_tint_build_wgsl_writer": [
-      "//src/tint/lang/spirv/reader/ast_lower:test",
-    ],
-    "//conditions:default": [],
-  }) + select({
-    ":tint_build_spv_reader_and_tint_build_wgsl_writer": [
-      "//src/tint/lang/spirv/reader/ast_parser:test",
-    ],
-    "//conditions:default": [],
-  }) + select({
     ":tint_build_spv_reader_or_tint_build_spv_writer": [
       "//src/tint/lang/spirv/validate:test",
     ],
@@ -167,9 +155,11 @@ cc_binary(
   }) + select({
     ":tint_build_wgsl_reader": [
       "//src/tint/lang/wgsl/inspector:test",
+      "//src/tint/lang/wgsl/intrinsic:test",
       "//src/tint/lang/wgsl/reader/parser:test",
       "//src/tint/lang/wgsl/reader/program_to_ir:test",
       "//src/tint/lang/wgsl/reader:test",
+      "//src/tint/lang/wgsl/resolver:test",
     ],
     "//conditions:default": [],
   }) + select({
@@ -246,21 +236,6 @@ selects.config_setting_group(
     match_all = [
         ":tint_build_glsl_writer",
         ":tint_build_glsl_validator",
-    ],
-)
-selects.config_setting_group(
-    name = "tint_build_spv_reader_and_tint_build_wgsl_reader_and_tint_build_wgsl_writer",
-    match_all = [
-        ":tint_build_spv_reader",
-        ":tint_build_wgsl_reader",
-        ":tint_build_wgsl_writer",
-    ],
-)
-selects.config_setting_group(
-    name = "tint_build_spv_reader_and_tint_build_wgsl_writer",
-    match_all = [
-        ":tint_build_spv_reader",
-        ":tint_build_wgsl_writer",
     ],
 )
 selects.config_setting_group(

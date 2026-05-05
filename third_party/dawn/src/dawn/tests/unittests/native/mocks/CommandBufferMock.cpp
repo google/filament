@@ -39,7 +39,9 @@ CommandBufferMock::CommandBufferMock(DeviceMock* device,
     // directly passed in.
     DAWN_ASSERT(device == encoder->GetDevice());
 
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->CommandBufferBase::DestroyImpl(); });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->CommandBufferBase::DestroyImpl(reason);
+    });
 }
 
 CommandBufferMock::~CommandBufferMock() = default;

@@ -133,7 +133,7 @@ struct State {
                     TINT_ASSERT(stride % mat->ColumnStride() == 0);
                     return ty.Get<spirv::type::ExplicitLayoutArray>(
                         mat->ColumnType(), ty.Get<core::type::ConstantArrayCount>(mat->Columns()),
-                        stride, stride * mat->Columns(), stride);
+                        stride * mat->Columns(), stride);
                 },
                 [&](const core::type::Array* arr) { return RewriteArray(arr, stride); },
                 [&](const core::type::Struct* str) { return RewriteStruct(str); },
@@ -155,12 +155,11 @@ struct State {
         // The element type is the only thing that will change. That does not affect the stride of
         // the array itself, which may either be the natural stride or an larger stride in the case
         // of an explicitly laid out array.
-        if (arr->Is<spirv::type::ExplicitLayoutArray>()) {
-            return ty.Get<spirv::type::ExplicitLayoutArray>(
-                new_element_type, arr->Count(), arr->Align(), arr->Size(), arr->Stride());
+        if (auto* ex = arr->As<spirv::type::ExplicitLayoutArray>()) {
+            return ty.Get<spirv::type::ExplicitLayoutArray>(new_element_type, arr->Count(),
+                                                            arr->Size(), ex->Stride());
         }
-        return ty.Get<core::type::Array>(new_element_type, arr->Count(), arr->Align(), arr->Size(),
-                                         arr->Stride(), arr->Stride());
+        return ty.Get<core::type::Array>(new_element_type, arr->Count(), arr->Size());
     }
 
     /// Rewrite a structure type to replace structure members that have matrix stride attributes.
@@ -363,16 +362,15 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DecomposeStridedMatrix(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.DecomposeStridedMatrix",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowStructMatrixDecorations,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                              core::ir::Capability::kAllowOverrides,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllowMultipleEntryPoints,
+                    core::ir::Capability::kAllowStructMatrixDecorations,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                    core::ir::Capability::kAllowOverrides,
+                    core::ir::Capability::kAllowPointerToHandle,
+                },
+                "before spirv.DecomposeStridedMatrix");
 
     State{ir}.Process();
 

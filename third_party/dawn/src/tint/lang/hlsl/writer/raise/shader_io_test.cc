@@ -25,11 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/hlsl/writer/raise/shader_io.h"
+
 #include <utility>
 
 #include "src/tint/lang/core/ir/transform/helper_test.h"
 #include "src/tint/lang/core/type/struct.h"
-#include "src/tint/lang/hlsl/writer/raise/shader_io.h"
 
 namespace tint::hlsl::writer::raise {
 namespace {
@@ -65,7 +66,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NonStruct) {
     auto* front_facing = b.FunctionParam("front_facing", ty.bool_());
     front_facing->SetBuiltin(core::BuiltinValue::kFrontFacing);
 
-    auto* position = b.FunctionParam("position", ty.vec4<f32>());
+    auto* position = b.FunctionParam("position", ty.vec4f());
     position->SetBuiltin(core::BuiltinValue::kPosition);
     position->SetInvariant(true);
 
@@ -83,7 +84,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NonStruct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -160,7 +161,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Struct) {
                                  },
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -195,10 +196,10 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Struct) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(b.Access(ty.bool_(), str_param, 0_i));
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 1_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 1_i);
             auto* color1 = b.Access(ty.f32(), str_param, 2_i);
             auto* color2 = b.Access(ty.f32(), str_param, 3_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -291,7 +292,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Mixed) {
         ty.Struct(mod.symbols.New("Inputs"), {
                                                  {
                                                      mod.symbols.New("position"),
-                                                     ty.vec4<f32>(),
+                                                     ty.vec4f(),
                                                      core::IOAttributes{
                                                          .builtin = core::BuiltinValue::kPosition,
                                                          .invariant = true,
@@ -322,9 +323,9 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Mixed) {
     b.Append(ep->Block(), [&] {
         auto* ifelse = b.If(front_facing);
         b.Append(ifelse->True(), [&] {
-            auto* position = b.Access(ty.vec4<f32>(), str_param, 0_i);
+            auto* position = b.Access(ty.vec4f(), str_param, 0_i);
             auto* color1 = b.Access(ty.f32(), str_param, 1_i);
-            b.Multiply(ty.vec4<f32>(), position, b.Add(ty.f32(), color1, color2));
+            b.Multiply(position, b.Add(color1, color2));
             b.ExitIf(ifelse);
         });
         b.Return(ep);
@@ -405,11 +406,11 @@ foo_inputs = struct @align(16) {
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOReturnValue_NonStructBuiltin) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
     ep->SetReturnInvariant(true);
 
-    b.Append(ep->Block(), [&] { b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f)); });
+    b.Append(ep->Block(), [&] { b.Return(ep, b.Construct(ty.vec4f(), 0.5_f)); });
 
     auto* src = R"(
 %foo = @vertex func():vec4<f32> [@invariant, @position] {
@@ -449,10 +450,10 @@ foo_outputs = struct @align(16) {
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOReturnValue_NonStructLocation) {
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kFragment);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kFragment);
     ep->SetReturnLocation(1u);
 
-    b.Append(ep->Block(), [&] { b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f)); });
+    b.Append(ep->Block(), [&] { b.Return(ep, b.Construct(ty.vec4f(), 0.5_f)); });
 
     auto* src = R"(
 %foo = @fragment func():vec4<f32> [@location(1)] {
@@ -496,7 +497,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOReturnValue_Struct) {
                              {
                                  {
                                      mod.symbols.New("position"),
-                                     ty.vec4<f32>(),
+                                     ty.vec4f(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kPosition,
                                          .invariant = true,
@@ -526,7 +527,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOReturnValue_Struct) {
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
 
     b.Append(ep->Block(), [&] {
-        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4<f32>(), 0_f), 0.25_f, 0.75_f));
+        b.Return(ep, b.Construct(str_ty, b.Construct(ty.vec4f(), 0_f), 0.25_f, 0.75_f));
     });
 
     auto* src = R"(
@@ -663,14 +664,14 @@ TEST_F(HlslWriterTransformTest, ShaderIOStruct_SharedWithBuffer) {
         ty.Struct(mod.symbols.New("Outputs"), {
                                                   {
                                                       mod.symbols.New("position"),
-                                                      ty.vec4<f32>(),
+                                                      ty.vec4f(),
                                                       core::IOAttributes{
                                                           .builtin = core::BuiltinValue::kPosition,
                                                       },
                                                   },
                                                   {
                                                       mod.symbols.New("color"),
-                                                      ty.vec3<f32>(),
+                                                      ty.vec3f(),
                                                       core::IOAttributes{
                                                           .location = 0u,
                                                       },
@@ -746,7 +747,7 @@ $B1: {  # root
 
 // Test that IO attributes are stripped from structures that are not used for the shader interface.
 TEST_F(HlslWriterTransformTest, ShaderIOStructWithAttributes_NotUsedForInterface) {
-    auto* vec4f = ty.vec4<f32>();
+    auto* vec4f = ty.vec4f();
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"), {
                                                   {
@@ -765,7 +766,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOStructWithAttributes_NotUsedForInterface
                                                   },
                                               });
 
-    auto* var = b.Var(ty.ptr(storage, str_ty, core::Access::kWrite));
+    auto* var = b.Var(ty.ptr(storage, str_ty, core::Access::kReadWrite));
     var->SetBindingPoint(0, 0);
 
     auto* buffer = mod.root_block->Append(var);
@@ -784,7 +785,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read_write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -804,7 +805,7 @@ Outputs = struct @align(16) {
 }
 
 $B1: {  # root
-  %1:ptr<storage, Outputs, write> = var undef @binding_point(0, 0)
+  %1:ptr<storage, Outputs, read_write> = var undef @binding_point(0, 0)
 }
 
 %frag = @fragment func():void {
@@ -824,7 +825,7 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOCompute) {
-    auto* invoc = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invoc = b.FunctionParam("invoc_id", ty.vec3u());
     invoc->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* ep = b.ComputeFunction("cmp");
@@ -883,7 +884,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_NonStruct) {
     ep->SetParams({subgroup_invocation_id, subgroup_size});
 
     b.Append(ep->Block(), [&] {
-        b.Let("x", b.Multiply(ty.u32(), subgroup_invocation_id, subgroup_size));
+        b.Let("x", b.Multiply(subgroup_invocation_id, subgroup_size));
         b.Return(ep);
     });
 
@@ -950,7 +951,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_Struct) {
     b.Append(ep->Block(), [&] {
         auto* subgroup_invocation_id = b.Access(ty.u32(), str_param, 0_i);
         auto* subgroup_size = b.Access(ty.u32(), str_param, 1_i);
-        b.Let("x", b.Multiply(ty.u32(), subgroup_invocation_id, subgroup_size));
+        b.Let("x", b.Multiply(subgroup_invocation_id, subgroup_size));
         b.Return(ep);
     });
 
@@ -1006,7 +1007,7 @@ Inputs = struct @align(4) {
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_WithNonSubgroupParamsFirst) {
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* subgroup_invocation_id = b.FunctionParam("id", ty.u32());
@@ -1019,8 +1020,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_WithNonSubgroupParam
     ep->SetParams({invocation_id, subgroup_invocation_id, subgroup_size});
 
     b.Append(ep->Block(), [&] {
-        auto* x = b.Let("x", b.Multiply(ty.u32(), subgroup_invocation_id, subgroup_size));
-        b.Let("y", b.Add(ty.u32(), x, b.Access(ty.u32(), invocation_id, 0_u)));
+        auto* x = b.Let("x", b.Multiply(subgroup_invocation_id, subgroup_size));
+        b.Let("y", b.Add(x, b.Access(ty.u32(), invocation_id, 0_u)));
         b.Return(ep);
     });
 
@@ -1078,15 +1079,15 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_WithNonSubgroupParam
     auto* subgroup_size = b.FunctionParam("size", ty.u32());
     subgroup_size->SetBuiltin(core::BuiltinValue::kSubgroupSize);
 
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({subgroup_invocation_id, subgroup_size, invocation_id});
 
     b.Append(ep->Block(), [&] {
-        auto* x = b.Let("x", b.Multiply(ty.u32(), subgroup_invocation_id, subgroup_size));
-        b.Let("y", b.Add(ty.u32(), x, b.Access(ty.u32(), invocation_id, 0_u)));
+        auto* x = b.Let("x", b.Multiply(subgroup_invocation_id, subgroup_size));
+        b.Let("y", b.Add(x, b.Access(ty.u32(), invocation_id, 0_u)));
         b.Return(ep);
     });
 
@@ -1141,7 +1142,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_WithNonSubgroupParam
     auto* subgroup_invocation_id = b.FunctionParam("id", ty.u32());
     subgroup_invocation_id->SetBuiltin(core::BuiltinValue::kSubgroupInvocationId);
 
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* subgroup_size = b.FunctionParam("size", ty.u32());
@@ -1151,8 +1152,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Subgroup_WithNonSubgroupParam
     ep->SetParams({subgroup_invocation_id, invocation_id, subgroup_size});
 
     b.Append(ep->Block(), [&] {
-        auto* x = b.Let("x", b.Multiply(ty.u32(), subgroup_invocation_id, subgroup_size));
-        b.Let("y", b.Add(ty.u32(), x, b.Access(ty.u32(), invocation_id, 0_u)));
+        auto* x = b.Let("x", b.Multiply(subgroup_invocation_id, subgroup_size));
+        b.Let("y", b.Add(x, b.Access(ty.u32(), invocation_id, 0_u)));
         b.Return(ep);
     });
 
@@ -1204,14 +1205,14 @@ foo_inputs = struct @align(16) {
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_NonStruct) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1253,14 +1254,14 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_NumWorkgroups_NonStruct) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1303,9 +1304,10 @@ $B1: {  # root
     constexpr uint32_t num_workgroups_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"),
-        ty.vec3(ty.u32()));
+    ASSERT_EQ(
+        prepare_immediate_data_layout_config.AddInternalImmediateData(
+            num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"), ty.vec3u()),
+        Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -1321,7 +1323,7 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_Struct) {
                              {
                                  {
                                      mod.symbols.New("num_wgs"),
-                                     ty.vec3<u32>(),
+                                     ty.vec3u(),
                                      core::IOAttributes{
                                          .builtin = core::BuiltinValue::kNumWorkgroups,
                                      },
@@ -1334,8 +1336,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_Struct) {
     ep->SetParams({str_param});
 
     b.Append(ep->Block(), [&] {
-        auto* num_workgroups = b.Access(ty.vec3<u32>(), str_param, 0_i);
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        auto* num_workgroups = b.Access(ty.vec3u(), str_param, 0_i);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1392,14 +1394,9 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_NumWorkgroups_Struc
                              {
                                  {
                                      mod.symbols.New("num_wgs"),
-                                     ty.vec3<u32>(),
+                                     ty.vec3u(),
                                      core::IOAttributes{
-                                         /* location */ std::nullopt,
-                                         /* blend_src */ std::nullopt,
-                                         /* color */ std::nullopt,
-                                         /* builtin */ core::BuiltinValue::kNumWorkgroups,
-                                         /* interpolation */ std::nullopt,
-                                         /* invariant */ false,
+                                         .builtin = core::BuiltinValue::kNumWorkgroups,
                                      },
                                  },
                              });
@@ -1410,8 +1407,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_NumWorkgroups_Struc
     ep->SetParams({str_param});
 
     b.Append(ep->Block(), [&] {
-        auto* num_workgroups = b.Access(ty.vec3<u32>(), str_param, 0_i);
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        auto* num_workgroups = b.Access(ty.vec3u(), str_param, 0_i);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1465,9 +1462,10 @@ $B1: {  # root
     constexpr uint32_t num_workgroups_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"),
-        ty.vec3(ty.u32()));
+    ASSERT_EQ(
+        prepare_immediate_data_layout_config.AddInternalImmediateData(
+            num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"), ty.vec3u()),
+        Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -1479,14 +1477,14 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_ExplicitBinding) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1529,14 +1527,14 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_AutoBinding) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), num_workgroups, num_workgroups);
+        b.Multiply(num_workgroups, num_workgroups);
         b.Return(ep);
     });
 
@@ -1608,17 +1606,17 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_WithNonWorkgroupParamFirst) {
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({invocation_id, num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
+        b.Multiply(b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
         b.Return(ep);
     });
 
@@ -1668,17 +1666,17 @@ $B1: {  # root
 
 TEST_F(HlslWriterTransformTest,
        ShaderIOParameters_Immediate_NumWorkgroups_WithNonWorkgroupParamFirst) {
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({invocation_id, num_workgroups});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
+        b.Multiply(b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
         b.Return(ep);
     });
 
@@ -1728,9 +1726,10 @@ $B1: {  # root
     constexpr uint32_t num_workgroups_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"),
-        ty.vec3(ty.u32()));
+    ASSERT_EQ(
+        prepare_immediate_data_layout_config.AddInternalImmediateData(
+            num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"), ty.vec3u()),
+        Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -1742,17 +1741,17 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroups_WithNonWorkgroupParamLast) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups, invocation_id});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
+        b.Multiply(b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
         b.Return(ep);
     });
 
@@ -1802,17 +1801,17 @@ $B1: {  # root
 
 TEST_F(HlslWriterTransformTest,
        ShaderIOParameters_Immediate_NumWorkgroups_WithNonWorkgroupParamLast) {
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
     auto* ep = b.ComputeFunction("foo");
     ep->SetParams({num_workgroups, invocation_id});
 
     b.Append(ep->Block(), [&] {
-        b.Multiply(ty.vec3<u32>(), b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
+        b.Multiply(b.Access(ty.u32(), invocation_id, 0_u), num_workgroups);
         b.Return(ep);
     });
 
@@ -1862,9 +1861,10 @@ $B1: {  # root
     constexpr uint32_t num_workgroups_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"),
-        ty.vec3(ty.u32()));
+    ASSERT_EQ(
+        prepare_immediate_data_layout_config.AddInternalImmediateData(
+            num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"), ty.vec3u()),
+        Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -1876,10 +1876,10 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroupsAndSubgroups_Mixed) {
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* invocation_index = b.FunctionParam("invoc_index", ty.u32());
@@ -1888,13 +1888,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumWorkgroupsAndSubgroups_Mix
     auto* subgroup_invocation_id = b.FunctionParam("sg_id", ty.u32());
     subgroup_invocation_id->SetBuiltin(core::BuiltinValue::kSubgroupInvocationId);
 
-    auto* global_invocation_id = b.FunctionParam("glob_id", ty.vec3<u32>());
+    auto* global_invocation_id = b.FunctionParam("glob_id", ty.vec3u());
     global_invocation_id->SetBuiltin(core::BuiltinValue::kGlobalInvocationId);
 
     auto* subgroup_size = b.FunctionParam("sg_size", ty.u32());
     subgroup_size->SetBuiltin(core::BuiltinValue::kSubgroupSize);
 
-    auto* workgroup_id = b.FunctionParam("wg_id", ty.vec3<u32>());
+    auto* workgroup_id = b.FunctionParam("wg_id", ty.vec3u());
     workgroup_id->SetBuiltin(core::BuiltinValue::kWorkgroupId);
 
     auto* ep = b.ComputeFunction("foo");
@@ -1975,10 +1975,10 @@ $B1: {  # root
 }
 
 TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_NumWorkgroupsAndSubgroups_Mixed) {
-    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3<u32>());
+    auto* invocation_id = b.FunctionParam("invoc_id", ty.vec3u());
     invocation_id->SetBuiltin(core::BuiltinValue::kLocalInvocationId);
 
-    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3<u32>());
+    auto* num_workgroups = b.FunctionParam("num_wgs", ty.vec3u());
     num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
 
     auto* invocation_index = b.FunctionParam("invoc_index", ty.u32());
@@ -1987,13 +1987,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_NumWorkgroupsAndSub
     auto* subgroup_invocation_id = b.FunctionParam("sg_id", ty.u32());
     subgroup_invocation_id->SetBuiltin(core::BuiltinValue::kSubgroupInvocationId);
 
-    auto* global_invocation_id = b.FunctionParam("glob_id", ty.vec3<u32>());
+    auto* global_invocation_id = b.FunctionParam("glob_id", ty.vec3u());
     global_invocation_id->SetBuiltin(core::BuiltinValue::kGlobalInvocationId);
 
     auto* subgroup_size = b.FunctionParam("sg_size", ty.u32());
     subgroup_size->SetBuiltin(core::BuiltinValue::kSubgroupSize);
 
-    auto* workgroup_id = b.FunctionParam("wg_id", ty.vec3<u32>());
+    auto* workgroup_id = b.FunctionParam("wg_id", ty.vec3u());
     workgroup_id->SetBuiltin(core::BuiltinValue::kWorkgroupId);
 
     auto* ep = b.ComputeFunction("foo");
@@ -2075,9 +2075,10 @@ $B1: {  # root
     constexpr uint32_t num_workgroups_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"),
-        ty.vec3(ty.u32()));
+    ASSERT_EQ(
+        prepare_immediate_data_layout_config.AddInternalImmediateData(
+            num_workgroups_offset, mod.symbols.New("tint_num_workgroups_start_offset"), ty.vec3u()),
+        Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -2096,12 +2097,12 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_1) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 1>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
         auto* cd = b.Construct(ty.array<f32, 1>(), 0.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
@@ -2154,7 +2155,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2170,13 +2171,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_2) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 2>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 2>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 2>(), 0.0_f, 1.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2189,7 +2190,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 2> = construct 0.0f
+    %3:array<f32, 2> = construct 0.0f, 1.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2211,7 +2212,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 2> = construct 0.0f
+    %3:array<f32, 2> = construct 0.0f, 1.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2230,7 +2231,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2246,13 +2247,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_3) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 3>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 3>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 3>(), 0.0_f, 1.0_f, 2.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2265,7 +2266,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 3> = construct 0.0f
+    %3:array<f32, 3> = construct 0.0f, 1.0f, 2.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2287,7 +2288,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 3> = construct 0.0f
+    %3:array<f32, 3> = construct 0.0f, 1.0f, 2.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2307,7 +2308,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2323,13 +2324,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_4) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 4>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 4>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 4>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2342,7 +2343,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 4> = construct 0.0f
+    %3:array<f32, 4> = construct 0.0f, 1.0f, 2.0f, 3.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2364,7 +2365,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 4> = construct 0.0f
+    %3:array<f32, 4> = construct 0.0f, 1.0f, 2.0f, 3.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2385,7 +2386,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2401,13 +2402,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_5) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 5>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 5>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 5>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f, 4.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2420,7 +2421,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 5> = construct 0.0f
+    %3:array<f32, 5> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2443,7 +2444,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 5> = construct 0.0f
+    %3:array<f32, 5> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2465,7 +2466,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2481,13 +2482,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_6) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 6>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 6>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 6>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f, 4.0_f, 5.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2500,7 +2501,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 6> = construct 0.0f
+    %3:array<f32, 6> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2523,7 +2524,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 6> = construct 0.0f
+    %3:array<f32, 6> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2547,7 +2548,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2563,13 +2564,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_7) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 7>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 7>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 7>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f, 4.0_f, 5.0_f, 6.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2582,7 +2583,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 7> = construct 0.0f
+    %3:array<f32, 7> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2605,7 +2606,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 7> = construct 0.0f
+    %3:array<f32, 7> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2630,7 +2631,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2646,13 +2647,14 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_8) {
     auto* str_ty =
         ty.Struct(mod.symbols.New("Outputs"),
                   {
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                       {mod.symbols.New("clip_distances"), ty.array<f32, 8>(), clip_distances_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* cd = b.Construct(ty.array<f32, 8>(), 0.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* cd =
+            b.Construct(ty.array<f32, 8>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f, 4.0_f, 5.0_f, 6.0_f, 7.0_f);
         b.Return(ep, b.Construct(str_ty, pos, cd));
     });
 
@@ -2665,7 +2667,7 @@ Outputs = struct @align(16) {
 %foo = @vertex func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 8> = construct 0.0f
+    %3:array<f32, 8> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2688,7 +2690,7 @@ foo_outputs = struct @align(16) {
 %foo_inner = func():Outputs {
   $B1: {
     %2:vec4<f32> = construct 0.5f
-    %3:array<f32, 8> = construct 0.0f
+    %3:array<f32, 8> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f
     %4:Outputs = construct %2, %3
     ret %4
   }
@@ -2714,7 +2716,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2731,12 +2733,12 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_ClipDistances_FirstMember) {
         ty.Struct(mod.symbols.New("Outputs"),
                   {
                       {mod.symbols.New("clip_distances"), ty.array<f32, 5>(), clip_distances_attr},
-                      {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                      {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                   });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* cd = b.Construct(ty.array<f32, 5>(), 0.0_f);
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
+        auto* cd = b.Construct(ty.array<f32, 5>(), 0.0_f, 1.0_f, 2.0_f, 3.0_f, 4.0_f);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
         b.Return(ep, b.Construct(str_ty, cd, pos));
     });
 
@@ -2748,7 +2750,7 @@ Outputs = struct @align(16) {
 
 %foo = @vertex func():Outputs {
   $B1: {
-    %2:array<f32, 5> = construct 0.0f
+    %2:array<f32, 5> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
     %3:vec4<f32> = construct 0.5f
     %4:Outputs = construct %2, %3
     ret %4
@@ -2771,7 +2773,7 @@ foo_outputs = struct @align(16) {
 
 %foo_inner = func():Outputs {
   $B1: {
-    %2:array<f32, 5> = construct 0.0f
+    %2:array<f32, 5> = construct 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
     %3:vec4<f32> = construct 0.5f
     %4:Outputs = construct %2, %3
     ret %4
@@ -2794,7 +2796,7 @@ foo_outputs = struct @align(16) {
 }
 )";
 
-    capabilities = core::ir::Capability::kAllowClipDistancesOnF32;
+    capabilities = core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector;
     core::ir::transform::ImmediateDataLayout immediate_data;
     ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
@@ -2806,24 +2808,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Disabled) 
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -2831,8 +2837,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Disabled) 
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -2856,8 +2862,8 @@ Outputs = struct @align(16) {
 
 foo_outputs = struct @align(16) {
   Outputs_loc0:f32 @offset(0), @location(0)
-  Outputs_loc1:i32 @offset(4), @location(1)
-  Outputs_loc2:vec3<i32> @offset(16), @location(2)
+  Outputs_loc1:i32 @offset(4), @location(1), @interpolate(flat)
+  Outputs_loc2:vec3<i32> @offset(16), @location(2), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(32), @builtin(position)
 }
 
@@ -2894,24 +2900,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_None) {
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -2919,8 +2929,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_None) {
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -2944,8 +2954,8 @@ Outputs = struct @align(16) {
 
 foo_outputs = struct @align(16) {
   Outputs_loc0:f32 @offset(0), @location(0)
-  Outputs_loc1:i32 @offset(4), @location(1)
-  Outputs_loc2:vec3<i32> @offset(16), @location(2)
+  Outputs_loc1:i32 @offset(4), @location(1), @interpolate(flat)
+  Outputs_loc2:vec3<i32> @offset(16), @location(2), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(32), @builtin(position)
 }
 
@@ -2985,24 +2995,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_First) {
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -3010,8 +3024,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_First) {
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3034,8 +3048,8 @@ Outputs = struct @align(16) {
 }
 
 foo_outputs = struct @align(16) {
-  Outputs_loc1:i32 @offset(0), @location(1)
-  Outputs_loc2:vec3<i32> @offset(16), @location(2)
+  Outputs_loc1:i32 @offset(0), @location(1), @interpolate(flat)
+  Outputs_loc2:vec3<i32> @offset(16), @location(2), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(32), @builtin(position)
 }
 
@@ -3074,24 +3088,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Middle) {
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -3099,8 +3117,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Middle) {
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3124,7 +3142,7 @@ Outputs = struct @align(16) {
 
 foo_outputs = struct @align(16) {
   Outputs_loc0:f32 @offset(0), @location(0)
-  Outputs_loc2:vec3<i32> @offset(16), @location(2)
+  Outputs_loc2:vec3<i32> @offset(16), @location(2), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(32), @builtin(position)
 }
 
@@ -3163,24 +3181,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Last) {
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -3188,8 +3210,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_Last) {
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3213,7 +3235,7 @@ Outputs = struct @align(16) {
 
 foo_outputs = struct @align(16) {
   Outputs_loc0:f32 @offset(0), @location(0)
-  Outputs_loc1:i32 @offset(4), @location(1)
+  Outputs_loc1:i32 @offset(4), @location(1), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(16), @builtin(position)
 }
 
@@ -3252,24 +3274,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_FirstAndLa
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -3277,8 +3303,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_FirstAndLa
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3301,7 +3327,7 @@ Outputs = struct @align(16) {
 }
 
 foo_outputs = struct @align(16) {
-  Outputs_loc1:i32 @offset(0), @location(1)
+  Outputs_loc1:i32 @offset(0), @location(1), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(16), @builtin(position)
 }
 
@@ -3339,24 +3365,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_All) {
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, pos, 1_f, 2_i, loc2));
     });
 
@@ -3364,8 +3394,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_All) {
 Outputs = struct @align(16) {
   position:vec4<f32> @offset(0), @builtin(position)
   loc0:f32 @offset(16), @location(0)
-  loc1:i32 @offset(20), @location(1)
-  loc2:vec3<i32> @offset(32), @location(2)
+  loc1:i32 @offset(20), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(32), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3424,24 +3454,28 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_NonLocatio
     core::IOAttributes pos_attr;
     pos_attr.builtin = core::BuiltinValue::kPosition;
 
-    core::IOAttributes loc0_attr;
-    loc0_attr.location = 0;
-    core::IOAttributes loc1_attr;
-    loc1_attr.location = 1;
-    core::IOAttributes loc2_attr;
-    loc2_attr.location = 2;
-
+    core::IOAttributes loc0_attr{
+        .location = 0,
+    };
+    core::IOAttributes loc1_attr{
+        .location = 1,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
+    core::IOAttributes loc2_attr{
+        .location = 2,
+        .interpolation = core::Interpolation{core::InterpolationType::kFlat},
+    };
     auto* str_ty = ty.Struct(mod.symbols.New("Outputs"),
                              {
                                  {mod.symbols.New("loc0"), ty.f32(), loc0_attr},
-                                 {mod.symbols.New("position"), ty.vec4<f32>(), pos_attr},
+                                 {mod.symbols.New("position"), ty.vec4f(), pos_attr},
                                  {mod.symbols.New("loc1"), ty.i32(), loc1_attr},
-                                 {mod.symbols.New("loc2"), ty.vec3<i32>(), loc2_attr},
+                                 {mod.symbols.New("loc2"), ty.vec3i(), loc2_attr},
                              });
     auto* ep = b.Function("foo", str_ty, core::ir::Function::PipelineStage::kVertex);
     b.Append(ep->Block(), [&] {
-        auto* pos = b.Construct(ty.vec4<f32>(), 0.5_f);
-        auto* loc2 = b.Construct(ty.vec3<i32>(), 3_i);
+        auto* pos = b.Construct(ty.vec4f(), 0.5_f);
+        auto* loc2 = b.Construct(ty.vec3i(), 3_i);
         b.Return(ep, b.Construct(str_ty, 1_f, pos, 2_i, loc2));
     });
 
@@ -3449,8 +3483,8 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_TruncateInterstage_NonLocatio
 Outputs = struct @align(16) {
   loc0:f32 @offset(0), @location(0)
   position:vec4<f32> @offset(16), @builtin(position)
-  loc1:i32 @offset(32), @location(1)
-  loc2:vec3<i32> @offset(48), @location(2)
+  loc1:i32 @offset(32), @location(1), @interpolate(flat)
+  loc2:vec3<i32> @offset(48), @location(2), @interpolate(flat)
 }
 
 %foo = @vertex func():Outputs {
@@ -3474,7 +3508,7 @@ Outputs = struct @align(16) {
 
 foo_outputs = struct @align(16) {
   Outputs_loc0:f32 @offset(0), @location(0)
-  Outputs_loc2:vec3<i32> @offset(16), @location(2)
+  Outputs_loc2:vec3<i32> @offset(16), @location(2), @interpolate(flat)
   Outputs_position:vec4<f32> @offset(32), @builtin(position)
 }
 
@@ -3513,13 +3547,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_FirstIndexOffset_VertexIndex)
     auto* vert_idx = b.FunctionParam("vert_idx", ty.u32());
     vert_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({vert_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, vert_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, vert_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3583,13 +3617,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_FirstIndexOffset_Ve
     auto* vert_idx = b.FunctionParam("vert_idx", ty.u32());
     vert_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({vert_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, vert_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, vert_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3644,8 +3678,9 @@ $B1: {  # root
     constexpr uint32_t first_index_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32());
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32()),
+              Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -3660,13 +3695,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_FirstIndexOffset_InstanceInde
     auto* inst_idx = b.FunctionParam("inst_idx", ty.u32());
     inst_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({inst_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), inst_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(inst_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3730,13 +3765,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_FirstIndexOffset_In
     auto* inst_idx = b.FunctionParam("inst_idx", ty.u32());
     inst_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({inst_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), inst_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(inst_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3791,8 +3826,9 @@ $B1: {  # root
     constexpr uint32_t first_instance_offset = 0u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32());
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32()),
+              Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -3810,13 +3846,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_FirstIndexOffset_Both) {
     auto* inst_idx = b.FunctionParam("inst_idx", ty.u32());
     inst_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({vert_idx, inst_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3888,13 +3924,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_FirstIndexOffset_Immediate_Bo
     auto* inst_idx = b.FunctionParam("inst_idx", ty.u32());
     inst_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({vert_idx, inst_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -3956,10 +3992,12 @@ $B1: {  # root
     constexpr uint32_t first_instance_offset = 4u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32());
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32());
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32()),
+              Success);
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32()),
+              Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
@@ -3978,13 +4016,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_FirstIndexOffset_BothReorder)
     auto* vert_idx = b.FunctionParam("vert_idx", ty.u32());
     vert_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({inst_idx, vert_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -4056,13 +4094,13 @@ TEST_F(HlslWriterTransformTest, ShaderIOParameters_Immediate_FirstIndexOffset_Bo
     auto* vert_idx = b.FunctionParam("vert_idx", ty.u32());
     vert_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
 
-    auto* ep = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
+    auto* ep = b.Function("foo", ty.vec4f(), core::ir::Function::PipelineStage::kVertex);
     ep->SetParams({inst_idx, vert_idx});
     ep->SetReturnBuiltin(core::BuiltinValue::kPosition);
 
     b.Append(ep->Block(), [&] {
-        b.Add(ty.u32(), vert_idx, inst_idx);
-        b.Return(ep, b.Construct(ty.vec4<f32>(), 0.5_f));
+        b.Add(vert_idx, inst_idx);
+        b.Return(ep, b.Construct(ty.vec4f(), 0.5_f));
     });
 
     auto* src = R"(
@@ -4124,16 +4162,787 @@ $B1: {  # root
     constexpr uint32_t first_instance_offset = 4u;
 
     core::ir::transform::PrepareImmediateDataConfig prepare_immediate_data_layout_config;
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32());
-    prepare_immediate_data_layout_config.AddInternalImmediateData(
-        first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32());
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_index_offset, mod.symbols.New("tint_first_index_offset"), ty.u32()),
+              Success);
+    ASSERT_EQ(prepare_immediate_data_layout_config.AddInternalImmediateData(
+                  first_instance_offset, mod.symbols.New("tint_first_instance_offset"), ty.u32()),
+              Success);
     auto layout =
         core::ir::transform::PrepareImmediateData(mod, prepare_immediate_data_layout_config);
 
     ShaderIOConfig config{layout.Get()};
     config.first_index_offset = first_index_offset;
     config.first_instance_offset = first_instance_offset;
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_SubgroupId_NonLinearWorkgroupSize) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* ep = b.ComputeFunction("foo", 8_u, 8_u, 1_u);
+    ep->SetParams({subgroup_id});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, subgroup_id));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(8u, 8u, 1u) func(%id:u32 [@subgroup_id]):void {
+  $B1: {
+    %3:u32 = mul %id, %id
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_subgroup_id_counter:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%foo_inner = func(%id:u32):void {
+  $B2: {
+    %4:u32 = mul %id, %id
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(8u, 8u, 1u) func():void {
+  $B3: {
+    %7:void = atomicStore %tint_subgroup_id_counter, 0u
+    %8:void = workgroupBarrier
+    %tint_subgroup_id:ptr<function, u32, read_write> = var undef
+    %10:bool = subgroupElect
+    if %10 [t: $B4] {  # if_1
+      $B4: {  # true
+        %11:u32 = atomicAdd %tint_subgroup_id_counter, 1u
+        store %tint_subgroup_id, %11
+        exit_if  # if_1
+      }
+    }
+    %12:u32 = load %tint_subgroup_id
+    %13:u32 = subgroupBroadcastFirst %12
+    %14:void = call %foo_inner, %13
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumSubgroups_NonLinearWorkgroupSize) {
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* ep = b.ComputeFunction("foo", 8_u, 8_u, 1_u);
+    ep->SetParams({num_subgroups});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(num_subgroups, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(8u, 8u, 1u) func(%num:u32 [@num_subgroups]):void {
+  $B1: {
+    %3:u32 = mul %num, %num
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_subgroup_id_counter:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%foo_inner = func(%num:u32):void {
+  $B2: {
+    %4:u32 = mul %num, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(8u, 8u, 1u) func():void {
+  $B3: {
+    %7:void = atomicStore %tint_subgroup_id_counter, 0u
+    %8:void = workgroupBarrier
+    %tint_subgroup_id:ptr<function, u32, read_write> = var undef
+    %10:bool = subgroupElect
+    if %10 [t: $B4] {  # if_1
+      $B4: {  # true
+        %11:u32 = atomicAdd %tint_subgroup_id_counter, 1u
+        store %tint_subgroup_id, %11
+        exit_if  # if_1
+      }
+    }
+    %12:void = workgroupBarrier
+    %13:u32 = atomicLoad %tint_subgroup_id_counter
+    %14:void = call %foo_inner, %13
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_SubgroupId_Then_NumSubgroups_NonLinear) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* ep = b.ComputeFunction("foo", 8_u, 8_u, 1_u);
+    ep->SetParams({subgroup_id, num_subgroups});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(8u, 8u, 1u) func(%id:u32 [@subgroup_id], %num:u32 [@num_subgroups]):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_subgroup_id_counter:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%foo_inner = func(%id:u32, %num:u32):void {
+  $B2: {
+    %5:u32 = mul %id, %num
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(8u, 8u, 1u) func():void {
+  $B3: {
+    %8:void = atomicStore %tint_subgroup_id_counter, 0u
+    %9:void = workgroupBarrier
+    %tint_subgroup_id:ptr<function, u32, read_write> = var undef
+    %11:bool = subgroupElect
+    if %11 [t: $B4] {  # if_1
+      $B4: {  # true
+        %12:u32 = atomicAdd %tint_subgroup_id_counter, 1u
+        store %tint_subgroup_id, %12
+        exit_if  # if_1
+      }
+    }
+    %13:u32 = load %tint_subgroup_id
+    %14:u32 = subgroupBroadcastFirst %13
+    %15:void = workgroupBarrier
+    %16:u32 = atomicLoad %tint_subgroup_id_counter
+    %17:void = call %foo_inner, %14, %16
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_NumSubgroups_Then_SubgroupId_NonLinear) {
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* ep = b.ComputeFunction("foo", 8_u, 8_u, 1_u);
+    ep->SetParams({num_subgroups, subgroup_id});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(8u, 8u, 1u) func(%num:u32 [@num_subgroups], %id:u32 [@subgroup_id]):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %tint_subgroup_id_counter:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%foo_inner = func(%num:u32, %id:u32):void {
+  $B2: {
+    %5:u32 = mul %id, %num
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(8u, 8u, 1u) func():void {
+  $B3: {
+    %8:void = atomicStore %tint_subgroup_id_counter, 0u
+    %9:void = workgroupBarrier
+    %tint_subgroup_id:ptr<function, u32, read_write> = var undef
+    %11:bool = subgroupElect
+    if %11 [t: $B4] {  # if_1
+      $B4: {  # true
+        %12:u32 = atomicAdd %tint_subgroup_id_counter, 1u
+        store %tint_subgroup_id, %12
+        exit_if  # if_1
+      }
+    }
+    %13:void = workgroupBarrier
+    %14:u32 = atomicLoad %tint_subgroup_id_counter
+    %15:u32 = load %tint_subgroup_id
+    %16:u32 = subgroupBroadcastFirst %15
+    %17:void = call %foo_inner, %14, %16
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_SubgroupIdAndNumSubgroups_LinearX) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* ep = b.ComputeFunction("foo", 64_u, 1_u, 1_u);
+    ep->SetParams({subgroup_id, num_subgroups});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(64u, 1u, 1u) func(%id:u32 [@subgroup_id], %num:u32 [@num_subgroups]):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(4) {
+  local_invocation_index:u32 @offset(0), @builtin(local_invocation_index)
+}
+
+%foo_inner = func(%id:u32, %num:u32):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(64u, 1u, 1u) func(%inputs:foo_inputs):void {
+  $B2: {
+    %8:u32 = access %inputs, 0u
+    %9:u32 = hlsl.WaveGetLaneCount
+    %10:u32 = div %8, %9
+    %11:u32 = hlsl.WaveGetLaneCount
+    %12:u32 = add 63u, %11
+    %13:u32 = div %12, %11
+    %14:void = call %foo_inner, %10, %13
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_SubgroupIdAndNumSubgroups_LinearY) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* ep = b.ComputeFunction("foo", 1_u, 64_u, 1_u);
+    ep->SetParams({subgroup_id, num_subgroups});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(1u, 64u, 1u) func(%id:u32 [@subgroup_id], %num:u32 [@num_subgroups]):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(4) {
+  local_invocation_index:u32 @offset(0), @builtin(local_invocation_index)
+}
+
+%foo_inner = func(%id:u32, %num:u32):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 64u, 1u) func(%inputs:foo_inputs):void {
+  $B2: {
+    %8:u32 = access %inputs, 0u
+    %9:u32 = hlsl.WaveGetLaneCount
+    %10:u32 = div %8, %9
+    %11:u32 = hlsl.WaveGetLaneCount
+    %12:u32 = add 63u, %11
+    %13:u32 = div %12, %11
+    %14:void = call %foo_inner, %10, %13
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_SubgroupIdAndNumSubgroups_LinearZ) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* ep = b.ComputeFunction("foo", 1_u, 1_u, 64_u);
+    ep->SetParams({subgroup_id, num_subgroups});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, num_subgroups));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(1u, 1u, 64u) func(%id:u32 [@subgroup_id], %num:u32 [@num_subgroups]):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(4) {
+  local_invocation_index:u32 @offset(0), @builtin(local_invocation_index)
+}
+
+%foo_inner = func(%id:u32, %num:u32):void {
+  $B1: {
+    %4:u32 = mul %id, %num
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(1u, 1u, 64u) func(%inputs:foo_inputs):void {
+  $B2: {
+    %8:u32 = access %inputs, 0u
+    %9:u32 = hlsl.WaveGetLaneCount
+    %10:u32 = div %8, %9
+    %11:u32 = hlsl.WaveGetLaneCount
+    %12:u32 = add 63u, %11
+    %13:u32 = div %12, %11
+    %14:void = call %foo_inner, %10, %13
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest,
+       ShaderIOParameters_SubgroupIdAndNumSubgroups_Linear_UserDeclaredLocalInvocationIndex) {
+    auto* subgroup_id = b.FunctionParam("id", ty.u32());
+    subgroup_id->SetBuiltin(core::BuiltinValue::kSubgroupId);
+
+    auto* num_subgroups = b.FunctionParam("num", ty.u32());
+    num_subgroups->SetBuiltin(core::BuiltinValue::kNumSubgroups);
+
+    auto* local_invocation_index = b.FunctionParam("lid", ty.u32());
+    local_invocation_index->SetBuiltin(core::BuiltinValue::kLocalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 64_u, 1_u, 1_u);
+    ep->SetParams({subgroup_id, num_subgroups, local_invocation_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Multiply(subgroup_id, local_invocation_index));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(64u, 1u, 1u) func(%id:u32 [@subgroup_id], %num:u32 [@num_subgroups], %lid:u32 [@local_invocation_index]):void {
+  $B1: {
+    %5:u32 = mul %id, %lid
+    %x:u32 = let %5
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(4) {
+  lid:u32 @offset(0), @builtin(local_invocation_index)
+}
+
+%foo_inner = func(%id:u32, %num:u32, %lid:u32):void {
+  $B1: {
+    %5:u32 = mul %id, %lid
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(64u, 1u, 1u) func(%inputs:foo_inputs):void {
+  $B2: {
+    %9:u32 = access %inputs, 0u
+    %10:u32 = hlsl.WaveGetLaneCount
+    %11:u32 = div %9, %10
+    %12:u32 = hlsl.WaveGetLaneCount
+    %13:u32 = add 63u, %12
+    %14:u32 = div %13, %12
+    %15:u32 = access %inputs, 0u
+    %16:void = call %foo_inner, %11, %14, %15
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_WorkgroupIndex_ReuseExistingBuiltins) {
+    auto* workgroup_id = b.FunctionParam("wgid", ty.vec3u());
+    workgroup_id->SetBuiltin(core::BuiltinValue::kWorkgroupId);
+
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_id, num_workgroups, workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgid:vec3<u32> [@workgroup_id], %numwgs:vec3<u32> [@num_workgroups], %wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %5:u32 = add %wgindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(16) {
+  wgid:vec3<u32> @offset(0), @builtin(workgroup_id)
+}
+
+$B1: {  # root
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
+}
+
+%foo_inner = func(%wgid:vec3<u32>, %numwgs:vec3<u32>, %wgindex:u32):void {
+  $B2: {
+    %6:u32 = add %wgindex, 0u
+    %x:u32 = let %6
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%inputs:foo_inputs):void {
+  $B3: {
+    %10:vec3<u32> = access %inputs, 0u
+    %11:vec3<u32> = load %tint_num_workgroups
+    %12:vec3<u32> = access %inputs, 0u
+    %13:u32 = access %11, 0u
+    %14:u32 = access %11, 1u
+    %15:u32 = mul %13, %14
+    %16:u32 = access %12, 2u
+    %17:u32 = mul %16, %15
+    %18:u32 = access %12, 1u
+    %19:u32 = mul %18, %13
+    %20:u32 = access %12, 0u
+    %21:u32 = add %20, %19
+    %22:u32 = add %21, %17
+    %23:void = call %foo_inner, %10, %11, %22
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_WorkgroupIndex_AddMissingBuiltins) {
+    auto* workgroup_index = b.FunctionParam("wgindex", ty.u32());
+    workgroup_index->SetBuiltin(core::BuiltinValue::kWorkgroupIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({workgroup_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(workgroup_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%wgindex:u32 [@workgroup_index]):void {
+  $B1: {
+    %3:u32 = add %wgindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(16) {
+  workgroup_id:vec3<u32> @offset(0), @builtin(workgroup_id)
+}
+
+$B1: {  # root
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
+}
+
+%foo_inner = func(%wgindex:u32):void {
+  $B2: {
+    %4:u32 = add %wgindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%inputs:foo_inputs):void {
+  $B3: {
+    %8:vec3<u32> = access %inputs, 0u
+    %9:vec3<u32> = load %tint_num_workgroups
+    %10:u32 = access %9, 0u
+    %11:u32 = access %9, 1u
+    %12:u32 = mul %10, %11
+    %13:u32 = access %8, 2u
+    %14:u32 = mul %13, %12
+    %15:u32 = access %8, 1u
+    %16:u32 = mul %15, %10
+    %17:u32 = access %8, 0u
+    %18:u32 = add %17, %16
+    %19:u32 = add %18, %14
+    %20:void = call %foo_inner, %19
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_GlobalInvocationIndex_ReuseExistingBuiltins) {
+    auto* num_workgroups = b.FunctionParam("numwgs", ty.vec3u());
+    num_workgroups->SetBuiltin(core::BuiltinValue::kNumWorkgroups);
+
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({num_workgroups, global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%numwgs:vec3<u32> [@num_workgroups], %gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %4:u32 = add %gindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(16) {
+  global_invocation_id:vec3<u32> @offset(0), @builtin(global_invocation_id)
+}
+
+$B1: {  # root
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
+}
+
+%foo_inner = func(%numwgs:vec3<u32>, %gindex:u32):void {
+  $B2: {
+    %5:u32 = add %gindex, 0u
+    %x:u32 = let %5
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%inputs:foo_inputs):void {
+  $B3: {
+    %9:vec3<u32> = load %tint_num_workgroups
+    %10:vec3<u32> = access %inputs, 0u
+    %11:u32 = access %10, 0u
+    %12:u32 = access %10, 1u
+    %13:u32 = access %10, 2u
+    %14:u32 = access %9, 0u
+    %15:u32 = access %9, 1u
+    %16:u32 = mul %14, 3u
+    %17:u32 = mul %15, 2u
+    %18:u32 = mul %16, %17
+    %19:u32 = mul %13, %18
+    %20:u32 = mul %12, %16
+    %21:u32 = add %11, %20
+    %22:u32 = add %21, %19
+    %23:void = call %foo_inner, %9, %22
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
+    Run(ShaderIO, config);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterTransformTest, ShaderIOParameters_GlobalInvocationIndex_AddMissingBuiltins) {
+    auto* global_index = b.FunctionParam("gindex", ty.u32());
+    global_index->SetBuiltin(core::BuiltinValue::kGlobalInvocationIndex);
+
+    auto* ep = b.ComputeFunction("foo", 3_u, 2_u, 1_u);
+    ep->SetParams({global_index});
+    b.Append(ep->Block(), [&] {
+        b.Let("x", b.Add(global_index, 0_u));
+        b.Return(ep);
+    });
+
+    auto* src = R"(
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%gindex:u32 [@global_invocation_index]):void {
+  $B1: {
+    %3:u32 = add %gindex, 0u
+    %x:u32 = let %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+foo_inputs = struct @align(16) {
+  global_invocation_id:vec3<u32> @offset(0), @builtin(global_invocation_id)
+}
+
+$B1: {  # root
+  %tint_num_workgroups:ptr<uniform, vec3<u32>, read> = var undef @binding_point(0, 0)
+}
+
+%foo_inner = func(%gindex:u32):void {
+  $B2: {
+    %4:u32 = add %gindex, 0u
+    %x:u32 = let %4
+    ret
+  }
+}
+%foo = @compute @workgroup_size(3u, 2u, 1u) func(%inputs:foo_inputs):void {
+  $B3: {
+    %8:vec3<u32> = load %tint_num_workgroups
+    %9:vec3<u32> = access %inputs, 0u
+    %10:u32 = access %9, 0u
+    %11:u32 = access %9, 1u
+    %12:u32 = access %9, 2u
+    %13:u32 = access %8, 0u
+    %14:u32 = access %8, 1u
+    %15:u32 = mul %13, 3u
+    %16:u32 = mul %14, 2u
+    %17:u32 = mul %15, %16
+    %18:u32 = mul %12, %17
+    %19:u32 = mul %11, %15
+    %20:u32 = add %10, %19
+    %21:u32 = add %20, %18
+    %22:void = call %foo_inner, %21
+    ret
+  }
+}
+)";
+
+    core::ir::transform::ImmediateDataLayout immediate_data;
+    ShaderIOConfig config{immediate_data};
     Run(ShaderIO, config);
 
     EXPECT_EQ(expect, str());

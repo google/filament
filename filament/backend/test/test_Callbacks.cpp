@@ -18,6 +18,7 @@
 
 #include "Lifetimes.h"
 #include "Skip.h"
+#include "../src/DriverBase.h"
 
 using namespace filament;
 using namespace filament::backend;
@@ -139,5 +140,33 @@ TEST_F(BackendTest, FrameCompletedCallback) {
     EXPECT_EQ(callbackCountA, 2);
     EXPECT_EQ(callbackCountB, 1);
 }
+
+#ifdef __EXCEPTIONS
+TEST_F(BackendTest, FenceUnrecoverableErrorInterruption) {
+    DriverBase* driverBase = static_cast<DriverBase*>(&getDriver());
+    
+    std::atomic<bool> waitStarted = false;
+    std::atomic<bool> waitFinished = false;
+    FenceStatus waitResult = FenceStatus::TIMEOUT_EXPIRED;
+
+    std::thread waitingThread([&]() {
+        waitStarted = true;
+        waitResult = driverBase->waitForFence([]() { return false; });
+        waitFinished = true;
+    });
+
+    while (!waitStarted) {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    driverBase->setUnrecoverableError();
+
+    waitingThread.join();
+
+    EXPECT_TRUE(waitFinished);
+    EXPECT_EQ(waitResult, FenceStatus::ERROR);
+}
+#endif
 
 } // namespace test

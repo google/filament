@@ -33,16 +33,18 @@ namespace tint::msl::writer {
 namespace {
 
 TEST_F(MslWriterTest, Return) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         auto* if_ = b.If(true);
         b.Append(if_->True(), [&] { b.Return(func); });
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   if (true) {
     return;
   }
@@ -51,12 +53,14 @@ void foo() {
 }
 
 TEST_F(MslWriterTest, ReturnAtEndOfVoidDropped) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     func->Block()->Append(b.Return(func));
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
 }
 )");
 }
@@ -65,10 +69,22 @@ TEST_F(MslWriterTest, ReturnWithValue) {
     auto* func = b.Function("foo", ty.i32());
     func->Block()->Append(b.Return(func, 123_i));
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
 int foo() {
   return 123;
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
+  int const x = foo();
 }
 )");
 }

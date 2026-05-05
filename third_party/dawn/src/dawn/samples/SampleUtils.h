@@ -34,6 +34,8 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include "partition_alloc/pointers/raw_ptr.h"
+
 bool InitSample(int argc, const char** argv);
 
 class SampleBase {
@@ -66,7 +68,7 @@ class SampleBase {
     wgpu::TextureFormat preferredSurfaceTextureFormat = wgpu::TextureFormat::BGRA8Unorm;
 
 #ifndef __EMSCRIPTEN__
-    GLFWwindow* window = nullptr;
+    raw_ptr<GLFWwindow> window = nullptr;
 #endif  // __EMSCRIPTEN__
 };
 

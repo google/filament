@@ -26,151 +26,153 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/metal/MultiDrawEncoder.h"
+
+#include "dawn/common/Strings.h"
 #include "dawn/native/RenderPipeline.h"
 #include "dawn/native/ToBackend.h"
 #include "dawn/native/metal/BufferMTL.h"
 
-const char* kShaderSource = R"(
-#include <metal_stdlib>
-using namespace metal;
+const char* kShaderSource = "#include <metal_stdlib>\n" DAWN_MULTILINE(
+    using namespace metal;
 
-struct DrawCmd {
-    uint32_t vertexCount;
-    uint32_t instanceCount;
-    uint32_t firstVertex;
-    uint32_t firstInstance;
-};
+    struct DrawCmd {
+        uint32_t vertexCount;
+        uint32_t instanceCount;
+        uint32_t firstVertex;
+        uint32_t firstInstance;
+    };
 
-struct DrawIndexedCmd {
-    uint32_t indexCount;
-    uint32_t instanceCount;
-    uint32_t firstIndex;
-    uint32_t baseVertex;
-    uint32_t firstInstance;
-};
+    struct DrawIndexedCmd {
+        uint32_t indexCount;
+        uint32_t instanceCount;
+        uint32_t firstIndex;
+        uint32_t baseVertex;
+        uint32_t firstInstance;
+    };
 
-struct Constants {
-    uint32_t maxDrawCount;
-    uint32_t numIndexBufferElementsAfterOffsetLow;
-    uint32_t numIndexBufferElementsAfterOffsetHigh;
-    uint8_t flags;
-    uint8_t primitiveType;
-};
+    struct Constants {
+        uint32_t maxDrawCount;
+        uint32_t numIndexBufferElementsAfterOffsetLow;
+        uint32_t numIndexBufferElementsAfterOffsetHigh;
+        uint8_t flags;
+        uint8_t primitiveType;
+    };
 
-// Function constant
-constant bool kValidationEnabled [[function_constant(0)]];
+    // Function constant
+    constant bool kValidationEnabled [[function_constant(0)]];
 
-// Primitive types
-constant uint8_t kPointList = 0;
-constant uint8_t kLineList = 1;
-constant uint8_t kLineStrip = 2;
-constant uint8_t kTriangleList = 3;
-constant uint8_t kTriangleStrip = 4;
+    // Primitive types
+    constant uint8_t kPointList = 0;
+    constant uint8_t kLineList = 1;
+    constant uint8_t kLineStrip = 2;
+    constant uint8_t kTriangleList = 3;
+    constant uint8_t kTriangleStrip = 4;
 
-// Flags
-constant uint8_t kDrawCountBuffer = 4u;
-constant uint8_t kIndexedDraw = 2u;
-constant uint8_t kIndexType16 = 1u;  // bit indicating 16bit index type, else 32bit
+    // Flags
+    constant uint8_t kDrawCountBuffer = 4u;
+    constant uint8_t kIndexedDraw = 2u;
+    constant uint8_t kIndexType16 = 1u;  // bit indicating 16bit index type, else 32bit
 
-struct MultiDrawData {
-    command_buffer commandBuffer [[id(0)]];
-    constant uint32_t* drawCmd [[id(1)]];  // Either DrawCmd or DrawIndexedCmd depending on flags
-    // This can either be a buffer of uint16_t or uint32_t depending on flags
-    constant uint32_t* indexBuffer [[id(2)]];
-    constant uint* countBuffer [[id(3)]];
-};
+    struct MultiDrawData {
+        command_buffer commandBuffer [[id(0)]];
+        constant uint32_t* drawCmd [[id(1)]];  // Either DrawCmd or DrawIndexedCmd depending on flags
+        // This can either be a buffer of uint16_t or uint32_t depending on flags
+        constant uint32_t* indexBuffer [[id(2)]];
+        constant uint* countBuffer [[id(3)]];
+    };
 
-primitive_type getPrimitiveType(uint8_t type) {
-    switch (type) {
-        case kPointList:
-            return primitive_type::point;
-        case kLineList:
-            return primitive_type::line;
-        case kLineStrip:
-            return primitive_type::line_strip;
-        case kTriangleList:
-            return primitive_type::triangle;
-        case kTriangleStrip:
-            return primitive_type::triangle_strip;
+    primitive_type getPrimitiveType(uint8_t type) {
+        switch (type) {
+            case kPointList:
+                return primitive_type::point;
+            case kLineList:
+                return primitive_type::line;
+            case kLineStrip:
+                return primitive_type::line_strip;
+            case kTriangleList:
+                return primitive_type::triangle;
+            case kTriangleStrip:
+                return primitive_type::triangle_strip;
+        }
+        return primitive_type::triangle;
     }
-    return primitive_type::triangle;
-}
 
-bool validateIndexed(constant Constants* constants, thread DrawIndexedCmd* cmd) {
-    // Validation copied over from IndirectDrawValidationEncoder.cpp
+    bool validateIndexed(constant Constants* constants, thread DrawIndexedCmd* cmd) {
+        // Validation copied over from IndirectDrawValidationEncoder.cpp
 
-    if (constants->numIndexBufferElementsAfterOffsetHigh >= 2) {
+        if (constants->numIndexBufferElementsAfterOffsetHigh >= 2) {
+            return true;
+        }
+        if (constants->numIndexBufferElementsAfterOffsetHigh == 0 &&
+            constants->numIndexBufferElementsAfterOffsetLow < cmd->firstIndex) {
+            return false;
+        }
+        uint32_t maxIndexCount = constants->numIndexBufferElementsAfterOffsetLow - cmd->firstIndex;
+        if (cmd->indexCount > maxIndexCount) {
+            return false;
+        }
         return true;
     }
-    if (constants->numIndexBufferElementsAfterOffsetHigh == 0 &&
-        constants->numIndexBufferElementsAfterOffsetLow < cmd->firstIndex) {
-        return false;
-    }
-    uint32_t maxIndexCount = constants->numIndexBufferElementsAfterOffsetLow - cmd->firstIndex;
-    if (cmd->indexCount > maxIndexCount) {
-        return false;
-    }
-    return true;
-}
 
-kernel void convertMultiDrawIndirect(uint2 gid [[thread_position_in_grid]],
-                                     constant MultiDrawData* drawData [[buffer(0)]],
-                                     constant Constants* constants [[buffer(1)]]) {
-    uint32_t drawCount = 0;
+    kernel void convertMultiDrawIndirect(uint2 gid [[thread_position_in_grid]],
+                                        constant MultiDrawData* drawData [[buffer(0)]],
+                                        constant Constants* constants [[buffer(1)]]) {
+        uint32_t drawCount = 0;
 
-    if (constants->flags & kDrawCountBuffer) {
-        drawCount = min(constants->maxDrawCount, *drawData->countBuffer);
-    } else {
-        drawCount = constants->maxDrawCount;
-    }
+        if (constants->flags & kDrawCountBuffer) {
+            drawCount = min(constants->maxDrawCount, *drawData->countBuffer);
+        } else {
+            drawCount = constants->maxDrawCount;
+        }
 
-    // TODO(356461286): May want to measure the performance of 1 thread per draw vs 64 threads
-    // that process multiple draws. 64 threads approach:
-    // https://dawn-review.googlesource.com/c/dawn/+/195494/7/src/dawn/native/metal/MultiDrawEncoder.mm#103
-    const uint cmdIndex = gid.x;
+        // TODO(356461286): May want to measure the performance of 1 thread per draw vs 64 threads
+        // that process multiple draws. 64 threads approach:
+        // https://dawn-review.googlesource.com/c/dawn/+/195494/7/src/dawn/native/metal/MultiDrawEncoder.mm#103
+        const uint cmdIndex = gid.x;
 
-    if (cmdIndex >= drawCount) {
-        return;
-    }
+        if (cmdIndex >= drawCount) {
+            return;
+        }
 
-    if (!(constants->flags & kIndexedDraw)) {  // Not indexed
-        constant DrawCmd* commands = (constant DrawCmd*)(drawData->drawCmd);
+        if (!(constants->flags & kIndexedDraw)) {  // Not indexed
+            constant DrawCmd* commands = (constant DrawCmd*)(drawData->drawCmd);
 
-        DrawCmd cmd = commands[cmdIndex];
-        render_command command(drawData->commandBuffer, cmdIndex);
-        primitive_type topology = getPrimitiveType(constants->primitiveType);
+            DrawCmd cmd = commands[cmdIndex];
+            render_command command(drawData->commandBuffer, cmdIndex);
+            primitive_type topology = getPrimitiveType(constants->primitiveType);
 
-        command.draw_primitives(topology, cmd.firstVertex, cmd.vertexCount,
-                                cmd.instanceCount, cmd.firstInstance);
-    } else {
-        constant DrawIndexedCmd* commands = (constant DrawIndexedCmd*)(drawData->drawCmd);
+            command.draw_primitives(topology, cmd.firstVertex, cmd.vertexCount,
+                                    cmd.instanceCount, cmd.firstInstance);
+        } else {
+            constant DrawIndexedCmd* commands = (constant DrawIndexedCmd*)(drawData->drawCmd);
 
-        DrawIndexedCmd cmd = commands[cmdIndex];
+            DrawIndexedCmd cmd = commands[cmdIndex];
 
-        if (kValidationEnabled) {
-            if (!validateIndexed(constants, &cmd)) {
-                return;
+            if (kValidationEnabled) {
+                if (!validateIndexed(constants, &cmd)) {
+                    return;
+                }
+            }
+
+            render_command command(drawData->commandBuffer, cmdIndex);
+            primitive_type topology = getPrimitiveType(constants->primitiveType);
+
+            if (constants->flags & kIndexType16) {
+                constant uint16_t* offsetteduint16 =
+                    ((constant uint16_t*)drawData->indexBuffer) + cmd.firstIndex;
+                command.draw_indexed_primitives(topology, cmd.indexCount,
+                                                offsetteduint16, cmd.instanceCount, cmd.baseVertex,
+                                                cmd.firstInstance);
+            } else {
+                constant uint32_t* offsetteduint32 =
+                    ((constant uint32_t*)drawData->indexBuffer) + cmd.firstIndex;
+                command.draw_indexed_primitives(topology, cmd.indexCount,
+                                                offsetteduint32, cmd.instanceCount, cmd.baseVertex,
+                                                cmd.firstInstance);
             }
         }
-
-        render_command command(drawData->commandBuffer, cmdIndex);
-        primitive_type topology = getPrimitiveType(constants->primitiveType);
-
-        if (constants->flags & kIndexType16) {
-            constant uint16_t* offsetteduint16 =
-                ((constant uint16_t*)drawData->indexBuffer) + cmd.firstIndex;
-            command.draw_indexed_primitives(topology, cmd.indexCount,
-                                            offsetteduint16, cmd.instanceCount, cmd.baseVertex,
-                                            cmd.firstInstance);
-        } else {
-            constant uint32_t* offsetteduint32 =
-                ((constant uint32_t*)drawData->indexBuffer) + cmd.firstIndex;
-            command.draw_indexed_primitives(topology, cmd.indexCount,
-                                            offsetteduint32, cmd.instanceCount, cmd.baseVertex,
-                                            cmd.firstInstance);
-        }
     }
-})";
+);
 
 // Direct copy of the Metal shader struct
 struct Constants {

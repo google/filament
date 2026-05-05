@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/spirv/writer/common/helper_test.h"
-
 #include "gmock/gmock.h"
+#include "src/tint/lang/spirv/writer/common/helper_test.h"
 
 namespace tint::spirv::writer {
 namespace {
@@ -36,16 +35,24 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(SpirvWriterTest, ModuleHeader) {
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] { b.Return(eb); });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpCapability Shader");
     EXPECT_INST("OpMemoryModel Logical GLSL450");
 }
 
 TEST_F(SpirvWriterTest, ModuleHeader_VulkanMemoryModel) {
     Options opts;
-    opts.use_vulkan_memory_model = true;
+    opts.extensions.use_vulkan_memory_model = true;
 
-    ASSERT_TRUE(Generate(opts)) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] { b.Return(eb); });
+
+    auto result = Generate(opts);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpExtension \"SPV_KHR_vulkan_memory_model\"");
     EXPECT_INST("OpCapability VulkanMemoryModel");
     EXPECT_INST("OpCapability VulkanMemoryModelDeviceScope");
@@ -53,18 +60,27 @@ TEST_F(SpirvWriterTest, ModuleHeader_VulkanMemoryModel) {
 }
 
 TEST_F(SpirvWriterTest, CanGenerate_SubgroupMatrixRequiresVulkanMemoryModel) {
-    mod.root_block->Append(b.Var(ty.ptr<private_>(ty.subgroup_matrix_result(ty.f32(), 8, 8))));
+    core::ir::Var* v = nullptr;
+    b.Append(mod.root_block,
+             [&] { v = b.Var(ty.ptr<private_>(ty.subgroup_matrix_result(ty.f32(), 8, 8))); });
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Let("x", v);
+        b.Return(ep);
+    });
 
     Options options;
-    options.use_vulkan_memory_model = false;
-    auto result = CanGenerate(mod, options);
+    options.extensions.use_vulkan_memory_model = false;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
     ASSERT_NE(result, Success);
     EXPECT_THAT(result.Failure().reason,
                 testing::HasSubstr("using subgroup matrices requires the Vulkan Memory Model"));
 }
 
 TEST_F(SpirvWriterTest, Unreachable) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* loop = b.Loop();
         b.Append(loop->Body(), [&] {
@@ -86,9 +102,10 @@ TEST_F(SpirvWriterTest, Unreachable) {
 
     Options options;
     options.disable_robustness = true;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
-        %foo = OpFunction %void None %3
+       %main = OpFunction %void None %3
           %4 = OpLabel
                OpBranch %7
           %7 = OpLabel
@@ -115,8 +132,10 @@ TEST_F(SpirvWriterTest, Unreachable) {
 // See crbug.com/354748060.
 TEST_F(SpirvWriterTest, TooManyFunctionParameters) {
     Vector<core::ir::FunctionParam*, 256> params;
+    Vector<core::ir::Value*, 256> args;
     for (uint32_t i = 0; i < 256; i++) {
         params.Push(b.FunctionParam(ty.i32()));
+        args.Push(b.Zero(ty.i32()));
     }
     auto* func = b.Function("foo", ty.void_());
     func->SetParams(std::move(params));
@@ -124,8 +143,15 @@ TEST_F(SpirvWriterTest, TooManyFunctionParameters) {
         b.Return(func);
     });
 
-    EXPECT_FALSE(Generate());
-    EXPECT_THAT(Error(),
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Call(func, args);
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
                 testing::HasSubstr(
                     "Function 'foo' has more than 255 parameters after running Tint transforms"));
 }
@@ -138,7 +164,8 @@ TEST_F(SpirvWriterTest, EntryPointName_Remapped) {
 
     Options options;
     options.remapped_entry_point_name = "my_entry_point";
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"my_entry_point\"");
 }
 
@@ -150,7 +177,8 @@ TEST_F(SpirvWriterTest, EntryPointName_NotRemapped) {
 
     Options options;
     options.remapped_entry_point_name = "";
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\"");
 }
 
@@ -163,7 +191,8 @@ TEST_F(SpirvWriterTest, EntryPoint_FunctionVar_Spirv1p3) {
 
     Options options;
     options.remapped_entry_point_name = "";
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
 }
 
@@ -177,7 +206,8 @@ TEST_F(SpirvWriterTest, EntryPoint_FunctionVar_Spirv1p4) {
     Options options;
     options.remapped_entry_point_name = "";
     options.spirv_version = SpvVersion::kSpv14;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
 }
 
@@ -193,7 +223,8 @@ TEST_F(SpirvWriterTest, EntryPoint_StorageVar_Spirv1p3) {
 
     Options options;
     options.remapped_entry_point_name = "";
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
 }
 
@@ -210,7 +241,8 @@ TEST_F(SpirvWriterTest, EntryPoint_StorageVar_Spirv1p4) {
     Options options;
     options.remapped_entry_point_name = "";
     options.spirv_version = SpvVersion::kSpv14;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\" %1");
 }
 
@@ -232,16 +264,17 @@ TEST_F(SpirvWriterTest, EntryPoint_StorageVar_CalledFunction_Spirv1p4) {
     Options options;
     options.remapped_entry_point_name = "";
     options.spirv_version = SpvVersion::kSpv14;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\" %1");
 }
 
 TEST_F(SpirvWriterTest, Spv14_CopyLogical) {
-    auto* ssbo = b.Var("ssbo", core::AddressSpace::kStorage, ty.array(ty.u32(), 4, 4),
+    auto* ssbo = b.Var("ssbo", core::AddressSpace::kStorage, ty.array(ty.u32(), 4),
                        core::Access::kReadWrite);
     mod.root_block->Append(ssbo);
     ssbo->SetBindingPoint(0, 0);
-    auto* wg = b.Var("wg", core::AddressSpace::kWorkgroup, ty.array(ty.u32(), 4, 4),
+    auto* wg = b.Var("wg", core::AddressSpace::kWorkgroup, ty.array(ty.u32(), 4),
                      core::Access::kReadWrite);
     mod.root_block->Append(wg);
     auto* func = b.ComputeFunction("main");
@@ -254,7 +287,8 @@ TEST_F(SpirvWriterTest, Spv14_CopyLogical) {
     Options options;
     options.remapped_entry_point_name = "";
     options.spirv_version = SpvVersion::kSpv14;
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                ; Annotations
                OpDecorate %_arr_uint_uint_4 ArrayStride 4
@@ -286,11 +320,10 @@ TEST_F(SpirvWriterTest, Spv14_CopyLogical) {
 }
 
 TEST_F(SpirvWriterTest, StripAllNames) {
-    auto* str =
-        ty.Struct(mod.symbols.New("MyStruct"), {
-                                                   {mod.symbols.Register("a"), ty.i32()},
-                                                   {mod.symbols.Register("b"), ty.vec4<i32>()},
-                                               });
+    auto* str = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                           {mod.symbols.Register("a"), ty.i32()},
+                                                           {mod.symbols.Register("b"), ty.vec4i()},
+                                                       });
     auto* func = b.ComputeFunction("main");
     auto* idx = b.FunctionParam("idx", ty.u32());
     idx->SetBuiltin(core::BuiltinValue::kLocalInvocationIndex);
@@ -307,7 +340,8 @@ TEST_F(SpirvWriterTest, StripAllNames) {
     Options options;
     options.strip_all_names = true;
     options.remapped_entry_point_name = "tint_entry_point";
-    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
                OpEntryPoint GLCompute %16 "tint_entry_point" %gl_LocalInvocationIndex
                OpExecutionMode %16 LocalSize 1 1 1
@@ -345,6 +379,19 @@ TEST_F(SpirvWriterTest, StripAllNames) {
                OpReturn
                OpFunctionEnd
 )");
+}
+
+TEST_F(SpirvWriterTest, WorkgroupStorageSize_OverflowAfterAlign) {
+    auto* var = mod.root_block->Append(b.Var<workgroup, array<u32, 0x3FFFFFFFu>>("a"));
+    auto* foo = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+    b.Append(foo->Block(), [&] {  //
+        b.Load(b.Access<ptr<workgroup, u32>>(var, 0_u));
+        b.Return(foo);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
+    EXPECT_EQ(workgroup_info.storage_size, 0x100000000ull);
 }
 
 }  // namespace

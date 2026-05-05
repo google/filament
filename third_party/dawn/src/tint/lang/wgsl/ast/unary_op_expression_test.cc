@@ -67,15 +67,5 @@ TEST_F(UnaryOpExpressionDeathTest, Assert_Null_Expression) {
         "internal compiler error");
 }
 
-TEST_F(UnaryOpExpressionDeathTest, Assert_DifferentGenerationID_Expression) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<UnaryOpExpression>(core::UnaryOp::kNot, b2.Expr(true));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

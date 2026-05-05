@@ -50,6 +50,8 @@ void DawnMockTest::SetUp() {
                                mDeviceLostCallback.Callback());
     desc.SetUncapturedErrorCallback(mDeviceErrorCallback.TemplatedCallback(),
                                     mDeviceErrorCallback.TemplatedCallbackUserdata());
+    desc.requiredFeatureCount = mRequiredFeatures.size();
+    desc.requiredFeatures = mRequiredFeatures.data();
     DeviceDescriptor* nativeDesc = reinterpret_cast<DeviceDescriptor*>(&desc);
 
     auto result = ValidateAndUnpack(nativeDesc);
@@ -58,6 +60,7 @@ void DawnMockTest::SetUp() {
 
     Ref<DeviceBase::DeviceLostEvent> lostEvent = DeviceBase::DeviceLostEvent::Create(nativeDesc);
 
+    mDeviceToggles.SetForTesting(Toggle::AllowUnsafeAPIs, true, true);
     auto deviceMock = AcquireRef(new ::testing::NiceMock<DeviceMock>(
         adapters[0].Get(), unpackedDesc, mDeviceToggles, std::move(lostEvent)));
     mDeviceMock = deviceMock.Get();

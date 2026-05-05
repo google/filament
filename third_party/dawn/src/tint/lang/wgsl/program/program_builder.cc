@@ -60,9 +60,7 @@ ProgramBuilder& ProgramBuilder::operator=(ProgramBuilder&& rhs) {
 }
 
 void ProgramBuilder::AssertNotMoved() const {
-    if (DAWN_UNLIKELY(moved_)) {
-        TINT_ICE() << "Attempting to use ProgramBuilder after it has been moved";
-    }
+    TINT_ASSERT(!moved_) << "Attempting to use ProgramBuilder after it has been moved";
 }
 
 const core::type::Type* ProgramBuilder::TypeOf(const ast::Expression* expr) const {

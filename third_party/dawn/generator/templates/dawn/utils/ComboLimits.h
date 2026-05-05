@@ -36,12 +36,18 @@
 namespace dawn::utils {
 
 {% set limits_and_extensions = [types['limits']] + types['limits'].extensions %}
+{% set ns = namespace(member_count=0) %}
+{% for type in limits_and_extensions %}
+    {% set ns.member_count = ns.member_count + (type.members | length) %}
+{% endfor %}
 class ComboLimits : public NonMovable
     {% for type in limits_and_extensions %}
             , private wgpu::{{as_cppType(type.name)}}
     {% endfor %}
     {
   public:
+    static constexpr size_t kMemberCount = {{ ns.member_count }};
+
     ComboLimits();
 
     // This is not copyable or movable to avoid surprises with nextInChain pointers becoming stale

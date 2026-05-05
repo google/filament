@@ -30,7 +30,6 @@
 
 #include "dawn/native/ComputePipeline.h"
 #include "dawn/native/CreatePipelineAsyncEvent.h"
-
 #include "dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
@@ -46,13 +45,15 @@ class ComputePipeline final : public ComputePipelineBase {
 
     void ApplyNow(const ScopedSwapStateCommandRecordingContext* commandContext);
 
-    MaybeError InitializeImpl() override;
+    ID3D11ComputeShader* GetD3D11ComputeShaderForTesting();
 
     bool UsesNumWorkgroups() const;
 
   private:
     using ComputePipelineBase::ComputePipelineBase;
     ~ComputePipeline() override;
+    ResultOrError<Extent3D> InitializeImpl() override;
+
     void SetLabelImpl() override;
 
     ComPtr<ID3D11ComputeShader> mComputeShader;

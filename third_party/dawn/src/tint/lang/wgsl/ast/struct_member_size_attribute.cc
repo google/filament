@@ -30,29 +30,20 @@
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::StructMemberSizeAttribute);
 
 namespace tint::ast {
 
-StructMemberSizeAttribute::StructMemberSizeAttribute(GenerationID pid,
-                                                     NodeID nid,
+StructMemberSizeAttribute::StructMemberSizeAttribute(NodeID nid,
                                                      const Source& src,
                                                      const Expression* exp)
-    : Base(pid, nid, src), expr(exp) {}
+    : Base(nid, src), expr(exp) {}
 
 StructMemberSizeAttribute::~StructMemberSizeAttribute() = default;
 
 std::string StructMemberSizeAttribute::Name() const {
     return "size";
-}
-
-const StructMemberSizeAttribute* StructMemberSizeAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto expr_ = ctx.Clone(expr);
-    return ctx.dst->create<StructMemberSizeAttribute>(src, expr_);
 }
 
 }  // namespace tint::ast

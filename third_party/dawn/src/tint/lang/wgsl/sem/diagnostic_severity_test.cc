@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/sem/helper_test.h"
-
 #include "src/tint/lang/wgsl/sem/module.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -104,7 +103,8 @@ class DiagnosticSeverityTest : public TestHelper {
         auto while_severity = wgsl::DiagnosticSeverity::kError;
         auto while_body_severity = wgsl::DiagnosticSeverity::kWarning;
         auto attr = [&](auto severity) {
-            return tint::Vector{DiagnosticAttribute(severity, "chromium", "unreachable_code")};
+            return tint::Vector{
+                DiagnosticAttribute(severity, DiagnosticRuleName("chromium", "unreachable_code"))};
         };
 
         auto* return_foo_if = Return();
@@ -136,7 +136,8 @@ class DiagnosticSeverityTest : public TestHelper {
                          attr(while_severity));
         auto* block_1 =
             Block(tint::Vector{if_foo, return_foo_block, swtch, fl, l, wl}, attr(block_severity));
-        auto* func_attr = DiagnosticAttribute(func_severity, "chromium", "unreachable_code");
+        auto* func_attr =
+            DiagnosticAttribute(func_severity, DiagnosticRuleName("chromium", "unreachable_code"));
         auto* foo = Func("foo", {}, ty.void_(), tint::Vector{block_1}, tint::Vector{func_attr});
 
         auto* return_bar = Return();
@@ -186,7 +187,8 @@ class DiagnosticSeverityTest : public TestHelper {
 };
 
 TEST_F(DiagnosticSeverityTest, WithDirective) {
-    DiagnosticDirective(wgsl::DiagnosticSeverity::kError, "chromium", "unreachable_code");
+    DiagnosticDirective(wgsl::DiagnosticSeverity::kError,
+                        DiagnosticRuleName("chromium", "unreachable_code"));
     Run(wgsl::DiagnosticSeverity::kError);
 }
 

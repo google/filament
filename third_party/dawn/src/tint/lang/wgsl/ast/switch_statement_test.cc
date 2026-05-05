@@ -59,8 +59,8 @@ TEST_F(SwitchStatementTest, Creation_WithSource) {
 }
 
 TEST_F(SwitchStatementTest, Creation_WithAttributes) {
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* ident = Expr("ident");
     auto* stmt =
         create<SwitchStatement>(ident, tint::Empty, tint::Vector{attr1, attr2}, tint::Empty);
@@ -69,8 +69,8 @@ TEST_F(SwitchStatementTest, Creation_WithAttributes) {
 }
 
 TEST_F(SwitchStatementTest, Creation_WithBodyAttributes) {
-    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "foo");
-    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, "bar");
+    auto* attr1 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("foo"));
+    auto* attr2 = DiagnosticAttribute(wgsl::DiagnosticSeverity::kOff, DiagnosticRuleName("bar"));
     auto* ident = Expr("ident");
     auto* stmt =
         create<SwitchStatement>(ident, tint::Empty, tint::Empty, tint::Vector{attr1, attr2});
@@ -107,42 +107,6 @@ TEST_F(SwitchStatementDeathTest, Assert_Null_CaseStatement) {
             ProgramBuilder b;
             b.create<SwitchStatement>(b.Expr(true), CaseStatementList{nullptr}, tint::Empty,
                                       tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(SwitchStatementDeathTest, Assert_DifferentGenerationID_Condition) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<SwitchStatement>(b2.Expr(true),
-                                       tint::Vector{
-                                           b1.create<CaseStatement>(
-                                               tint::Vector{
-                                                   b1.CaseSelector(b1.Expr(1_i)),
-                                               },
-                                               b1.Block()),
-                                       },
-                                       tint::Empty, tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(SwitchStatementDeathTest, Assert_DifferentGenerationID_CaseStatement) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<SwitchStatement>(b1.Expr(true),
-                                       tint::Vector{
-                                           b2.create<CaseStatement>(
-                                               tint::Vector{
-                                                   b2.CaseSelector(b2.Expr(1_i)),
-                                               },
-                                               b2.Block()),
-                                       },
-                                       tint::Empty, tint::Empty);
         },
         "internal compiler error");
 }

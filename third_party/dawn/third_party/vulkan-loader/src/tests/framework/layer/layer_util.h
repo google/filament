@@ -27,7 +27,9 @@
 
 #pragma once
 
-#include "test_util.h"
+#include "builder_defines.h"
+
+#include "vulkan_object_wrappers.h"
 
 struct LayerDefinition {
     BUILDER_VALUE(std::string, layerName)
@@ -38,10 +40,10 @@ struct LayerDefinition {
 
     VkLayerProperties get() const noexcept {
         VkLayerProperties props{};
-        copy_string_to_char_array(layerName, &props.layerName[0], VK_MAX_EXTENSION_NAME_SIZE);
+        layerName.copy(props.layerName, VK_MAX_EXTENSION_NAME_SIZE);
         props.specVersion = specVersion;
         props.implementationVersion = implementationVersion;
-        copy_string_to_char_array(description, &props.description[0], VK_MAX_DESCRIPTION_SIZE);
+        description.copy(props.description, VK_MAX_DESCRIPTION_SIZE);
         return props;
     }
 };

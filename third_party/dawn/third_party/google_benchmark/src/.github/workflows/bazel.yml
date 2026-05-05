@@ -4,20 +4,25 @@ on:
   push: {}
   pull_request: {}
 
+env:
+  CMAKE_GENERATOR: Ninja
+
+permissions:
+  contents: read
+
 jobs:
   build_and_test_default:
-    name: bazel.${{ matrix.os }}.${{ matrix.bzlmod && 'bzlmod' || 'no_bzlmod' }}
+    name: bazel.${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        bzlmod: [false, true]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: mount bazel cache
-      uses: actions/cache@v4
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       env:
         cache-name: bazel-cache
       with:
@@ -28,8 +33,8 @@ jobs:
 
     - name: build
       run: |
-        bazel build ${{ matrix.bzlmod && '--enable_bzlmod' || '--noenable_bzlmod' }} //:benchmark //:benchmark_main //test/...
+        bazel build //:benchmark //:benchmark_main //test/...
 
     - name: test
       run: |
-        bazel test ${{ matrix.bzlmod && '--enable_bzlmod' || '--noenable_bzlmod' }} --test_output=all //test/...
+        bazel test --test_output=all //test/...

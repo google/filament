@@ -28,13 +28,12 @@
 
 #include <iostream>
 
-#include "src/tint/utils/text/styled_text_printer.h"
-
 #include "src/tint/cmd/common/helper.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/wgsl/inspector/entry_point.h"
 #include "src/tint/utils/command/args.h"
 #include "src/tint/utils/text/string.h"
+#include "src/tint/utils/text/styled_text_printer.h"
 
 namespace {
 
@@ -192,7 +191,7 @@ void EmitJson(const tint::Program& program) {
                       << "\"size\": " << binding.size << ",\n"
                       << "\"resource_type\": \""
                       << tint::cmd::ResourceTypeToString(binding.resource_type) << "\",\n"
-                      << "\"dimemsions\": \"" << tint::cmd::TextureDimensionToString(binding.dim)
+                      << "\"dimensions\": \"" << tint::cmd::TextureDimensionToString(binding.dim)
                       << "\",\n"
                       << "\"sampled_kind\": \""
                       << tint::cmd::SampledKindToString(binding.sampled_kind) << "\",\n"
@@ -313,6 +312,9 @@ int main(int argc, const char** argv) {
 #endif
 
     auto info = tint::cmd::LoadProgramInfo(opts);
+    if (!info.program.IsValid()) {
+        return 1;
+    }
 
     if (options.emit_json) {
         EmitJson(info.program);

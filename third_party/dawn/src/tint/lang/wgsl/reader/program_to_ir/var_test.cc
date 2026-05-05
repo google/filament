@@ -353,19 +353,20 @@ TEST_F(ProgramToIRVarTest, Emit_Var_CompoundAssign_ArrayOfArray_EvalOrder) {
     %6:i32 = call %f, 2i
     %7:i32 = call %f, 3i
     %8:ptr<function, i32, read_write> = access %a, %5, %6, %7
-    %9:i32 = call %f, 4i
-    %10:i32 = call %f, 5i
-    %11:i32 = call %f, 6i
-    %12:ptr<function, i32, read_write> = access %a, %9, %10, %11
-    %13:i32 = load %12
-    %14:i32 = load %8
-    %15:i32 = add %14, %13
+    %9:i32 = load %8
+    %10:i32 = call %f, 4i
+    %11:i32 = call %f, 5i
+    %12:i32 = call %f, 6i
+    %13:ptr<function, i32, read_write> = access %a, %10, %11, %12
+    %14:i32 = load %13
+    %15:i32 = add %9, %14
     store %8, %15
     ret
   }
 }
 )");
 }
+}  // namespace
 
 TEST_F(ProgramToIRVarTest, Emit_Var_CompoundAssign_ArrayOfMatrix_EvalOrder) {
     Func("f", Vector{Param("p", ty.i32())}, ty.i32(), Vector{Return("p")});
@@ -405,13 +406,13 @@ TEST_F(ProgramToIRVarTest, Emit_Var_CompoundAssign_ArrayOfMatrix_EvalOrder) {
     %6:i32 = call %f, 2i
     %7:ptr<function, vec4<f32>, read_write> = access %a, %5, %6
     %8:i32 = call %f, 3i
-    %9:i32 = call %f, 4i
-    %10:i32 = call %f, 5i
-    %11:ptr<function, vec4<f32>, read_write> = access %a, %9, %10
-    %12:i32 = call %f, 6i
-    %13:f32 = load_vector_element %11, %12
-    %14:f32 = load_vector_element %7, %8
-    %15:f32 = add %14, %13
+    %9:f32 = load_vector_element %7, %8
+    %10:i32 = call %f, 4i
+    %11:i32 = call %f, 5i
+    %12:ptr<function, vec4<f32>, read_write> = access %a, %10, %11
+    %13:i32 = call %f, 6i
+    %14:f32 = load_vector_element %12, %13
+    %15:f32 = add %9, %14
     store_vector_element %7, %8, %15
     ret
   }
@@ -419,5 +420,4 @@ TEST_F(ProgramToIRVarTest, Emit_Var_CompoundAssign_ArrayOfMatrix_EvalOrder) {
 )");
 }
 
-}  // namespace
 }  // namespace tint::wgsl::reader

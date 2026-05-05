@@ -35,6 +35,18 @@ namespace tint::wgsl {
 // https://gpuweb.github.io/gpuweb/wgsl.html#reserved-keywords
 bool IsReserved(std::string_view s);
 
+/// @param str the string to check
+/// @returns true if `str` is a keyword in WGSL
+bool IsKeyword(std::string_view str);
+
+/// @param str the string to check
+/// @returns true if `str` is a WGSL enum name.
+bool IsEnumName(std::string_view str);
+
+/// @param str the string to check
+/// @returns true if `str` is a WGSL type name.
+bool IsTypeName(std::string_view str);
+
 }  // namespace tint::wgsl
 
 #endif  // SRC_TINT_LANG_WGSL_RESERVED_WORDS_H_

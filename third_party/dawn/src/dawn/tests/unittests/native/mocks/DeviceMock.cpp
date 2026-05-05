@@ -55,12 +55,12 @@ DeviceMock::DeviceMock(AdapterBase* adapter,
     : DeviceBase(adapter, descriptor, deviceToggles, std::move(lostEvent)) {
     // Set all default creation functions to return nice mock objects.
     ON_CALL(*this, CreateBindGroupImpl)
-        .WillByDefault(WithArgs<0>(
-            [this](const BindGroupDescriptor* descriptor) -> ResultOrError<Ref<BindGroupBase>> {
-                return AcquireRef(new NiceMock<BindGroupMock>(this, descriptor));
-            }));
+        .WillByDefault(WithArgs<0>([this](const UnpackedPtr<BindGroupDescriptor>& descriptor)
+                                       -> ResultOrError<Ref<BindGroupBase>> {
+            return AcquireRef(new NiceMock<BindGroupMock>(this, descriptor));
+        }));
     ON_CALL(*this, CreateBindGroupLayoutImpl)
-        .WillByDefault(WithArgs<0>([this](const BindGroupLayoutDescriptor* descriptor)
+        .WillByDefault(WithArgs<0>([this](const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor)
                                        -> ResultOrError<Ref<BindGroupLayoutInternalBase>> {
             return AcquireRef(new NiceMock<BindGroupLayoutMock>(this, descriptor));
         }));
@@ -126,10 +126,10 @@ DeviceMock::DeviceMock(AdapterBase* adapter,
     ON_CALL(*this, TickImpl).WillByDefault([]() -> MaybeError { return {}; });
 
     // Initialize the device.
-    GetInstance()->GetEventManager()->TrackEvent(mLostEvent);
     QueueDescriptor desc = {};
     EXPECT_FALSE(
         Initialize(descriptor, AcquireRef(new NiceMock<QueueMock>(this, &desc))).IsError());
+    GetInstance()->GetEventManager()->TrackEvent(mLostEvent);
 }
 
 DeviceMock::~DeviceMock() = default;

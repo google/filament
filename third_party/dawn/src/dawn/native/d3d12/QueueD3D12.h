@@ -55,19 +55,21 @@ class Queue final : public d3d::Queue {
     ResultOrError<Ref<d3d::SharedFence>> GetOrCreateSharedFence() override;
     ID3D12SharingContract* GetSharingContract() const;
 
+    const Ref<SharedFence>& GetSharedFence() const { return mSharedFence; }
+
   private:
     using d3d::Queue::Queue;
     ~Queue() override;
 
     MaybeError Initialize();
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     MaybeError SubmitPendingCommandsImpl() override;
     MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
     bool HasPendingCommands() const override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
-    MaybeError WaitForIdleForDestruction() override;
+    MaybeError WaitForIdleForDestructionImpl() override;
 
     void SetEventOnCompletion(ExecutionSerial serial, HANDLE event) override;
 

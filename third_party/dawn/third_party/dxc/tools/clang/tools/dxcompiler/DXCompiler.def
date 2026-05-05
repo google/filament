@@ -1,5 +1,0 @@
-LIBRARY dxcompiler
-
-EXPORTS
-    DxcCreateInstance
-    DxcCreateInstance2

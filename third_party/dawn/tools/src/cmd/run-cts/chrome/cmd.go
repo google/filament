@@ -63,11 +63,11 @@ type cmd struct {
 	query string
 }
 
-func (cmd) Name() string {
+func (c *cmd) Name() string {
 	return "chrome"
 }
 
-func (cmd) Desc() string {
+func (c *cmd) Desc() string {
 	return "runs the CTS with chrome"
 }
 
@@ -118,6 +118,7 @@ func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 
 	results, err := common.StreamResults(ctx,
 		c.flags.Colors,
+		c.flags.FailuresOnly,
 		c.state,
 		c.flags.Verbose,
 		/* coverage */ nil,

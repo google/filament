@@ -8,12 +8,15 @@
 #include "google/protobuf/arenastring.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "absl/log/absl_check.h"
 #include "absl/strings/string_view.h"
@@ -40,7 +43,7 @@ class SingleArena : public testing::TestWithParam<bool> {
  public:
   std::unique_ptr<Arena> GetArena() {
     if (this->GetParam()) return nullptr;
-    return std::unique_ptr<Arena>(new Arena());
+    return std::make_unique<Arena>();
   }
 };
 

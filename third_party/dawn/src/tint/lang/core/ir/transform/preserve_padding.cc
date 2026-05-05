@@ -85,7 +85,7 @@ struct State {
             type,  //
             [&](const type::Array* arr) {
                 auto* elem_ty = arr->ElemType();
-                if (arr->Stride() > elem_ty->Size()) {
+                if (arr->ImplicitStride() > elem_ty->Size()) {
                     return true;
                 }
                 return ContainsPadding(elem_ty);
@@ -132,13 +132,11 @@ struct State {
                 tint::Switch(
                     store_type,  //
                     [&](const type::Array* arr) {
-                        b.LoopRange(
-                            ty, 0_u, u32(arr->ConstantCount().value()), 1_u, [&](Value* idx) {
-                                auto* el_ptr =
-                                    b.Access(ty.ptr(storage, arr->ElemType()), target, idx);
-                                auto* el_value = b.Access(arr->ElemType(), value_param, idx);
-                                MakeStore(el_ptr->Result(), el_value->Result());
-                            });
+                        b.LoopRange(0_u, u32(arr->ConstantCount().value()), 1_u, [&](Value* idx) {
+                            auto* el_ptr = b.Access(ty.ptr(storage, arr->ElemType()), target, idx);
+                            auto* el_value = b.Access(arr->ElemType(), value_param, idx);
+                            MakeStore(el_ptr->Result(), el_value->Result());
+                        });
                     },
                     [&](const type::Matrix* mat) {
                         for (uint32_t i = 0; i < mat->Columns(); i++) {
@@ -171,10 +169,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PreservePadding(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.PreservePadding", kPreservePaddingCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kPreservePaddingCapabilities, "before core.PreservePadding");
 
     State{ir}.Process();
 

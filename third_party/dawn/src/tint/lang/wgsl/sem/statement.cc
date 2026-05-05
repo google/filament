@@ -25,12 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <algorithm>
-
-#include "src/tint/lang/wgsl/ast/block_statement.h"
-#include "src/tint/lang/wgsl/ast/identifier.h"
-#include "src/tint/lang/wgsl/ast/loop_statement.h"
 #include "src/tint/lang/wgsl/ast/statement.h"
+
+#include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/variable.h"
 #include "src/tint/lang/wgsl/sem/block_statement.h"
 #include "src/tint/lang/wgsl/sem/statement.h"

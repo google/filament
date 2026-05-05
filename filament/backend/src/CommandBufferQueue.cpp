@@ -32,6 +32,7 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <exception>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -79,8 +80,28 @@ bool CommandBufferQueue::isExitRequested() const {
 }
 
 
+#ifdef __EXCEPTIONS
+void CommandBufferQueue::propagateBackendException() const {
+    if (UTILS_VERY_UNLIKELY(hasUnrecoverableError())) {
+        if (!mExceptionRethrown.exchange(true, std::memory_order_relaxed)) {
+            std::rethrow_exception(mBackendException);
+        } else {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Engine is in unrecoverable state due to previous backend exception";
+        }
+    }
+}
+#endif
+
 void CommandBufferQueue::flush() {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+#ifdef __EXCEPTIONS
+    if (UTILS_VERY_UNLIKELY(hasUnrecoverableError())) {
+        // Drop the current buffer to avoid filling up the circular buffer
+        mCircularBuffer.getBuffer();
+        propagateBackendException();
+    }
+#endif
 
     CircularBuffer& circularBuffer = mCircularBuffer;
     if (circularBuffer.empty()) {

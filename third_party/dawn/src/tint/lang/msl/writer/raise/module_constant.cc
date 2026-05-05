@@ -31,7 +31,6 @@
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/type/array.h"
-
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/utils/containers/hashmap.h"
 
@@ -107,10 +106,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ModuleConstant(core::ir::Module& ir, const ModuleConstantConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "msl.ModuleConstant", kModuleConstantCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir, kModuleConstantCapabilities, "before msl.ModuleConstant");
 
     State{ir, config}.Process();
 

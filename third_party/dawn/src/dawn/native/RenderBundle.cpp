@@ -56,7 +56,7 @@ RenderBundleBase::RenderBundleBase(RenderBundleEncoder* encoder,
     GetObjectTrackingList()->Track(this);
 }
 
-void RenderBundleBase::DestroyImpl() {
+void RenderBundleBase::DestroyImpl(DestroyReason reason) {
     mIndirectDrawMetadata.ClearIndexedIndirectBufferValidationInfo();
     FreeCommands(&mCommands);
 

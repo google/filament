@@ -118,7 +118,7 @@ inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
         if (any(usage & TextureUsage::SAMPLEABLE)) {
             return VulkanLayout::DEPTH_SAMPLER;
         }
-        return VulkanLayout::DEPTH_ATTACHMENT;
+        return VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {

@@ -28,7 +28,6 @@
 #include "src/tint/utils/reflection.h"
 
 #include "gmock/gmock.h"
-
 #include "src/tint/utils/rtti/castable.h"
 
 namespace tint {

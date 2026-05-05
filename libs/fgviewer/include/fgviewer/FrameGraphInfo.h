@@ -26,6 +26,9 @@
 namespace filament::fgviewer {
 using ResourceId = uint32_t;
 
+constexpr const char READBACK_PASS_NAME[] = "Readback Pass";
+constexpr const char RESOLVED_MONITOR_PASS_NAME[] = "Resolved Monitor";
+
 class FrameGraphInfo {
 public:
     explicit FrameGraphInfo(utils::CString viewName);

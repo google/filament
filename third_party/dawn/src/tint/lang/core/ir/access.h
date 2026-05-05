@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_ACCESS_H_
 #define SRC_TINT_LANG_CORE_IR_ACCESS_H_
 
+#include <span>
 #include <string>
 
 #include "src/tint/lang/core/ir/operand_instruction.h"
@@ -77,11 +78,11 @@ class Access final : public Castable<Access, OperandInstruction<3, 1>> {
     void AddIndex(Value* idx) { AddOperand(operands_.Length(), idx); }
 
     /// @returns the accessor indices
-    tint::Slice<Value* const> Indices() { return operands_.Slice().Offset(kIndicesOperandOffset); }
+    std::span<Value* const> Indices() { return operands_.AsSpan().subspan(kIndicesOperandOffset); }
 
     /// @returns the accessor indices
-    tint::Slice<const Value* const> Indices() const {
-        return operands_.Slice().Offset(kIndicesOperandOffset);
+    std::span<const Value* const> Indices() const {
+        return operands_.AsSpan().subspan(kIndicesOperandOffset);
     }
 
     /// Removes the last index from the access indices

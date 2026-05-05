@@ -28,12 +28,13 @@
 #ifndef SRC_DAWN_NATIVE_D3D_QUEUED3D_H_
 #define SRC_DAWN_NATIVE_D3D_QUEUED3D_H_
 
+#include "dawn/common/windows_with_undefs.h"
+
 #include <span>
 #include <vector>
 
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/SerialMap.h"
-#include "dawn/common/windows_with_undefs.h"
 #include "dawn/native/Queue.h"
 #include "dawn/native/SystemEvent.h"
 

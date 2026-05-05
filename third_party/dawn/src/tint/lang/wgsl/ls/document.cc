@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/ls/server.h"
-
 #include "src/tint/lang/wgsl/reader/reader.h"
 
 namespace lsp = langsvr::lsp;

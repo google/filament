@@ -76,7 +76,7 @@ void SetPrimitiveVariables(
       javaType == JAVATYPE_FLOAT || javaType == JAVATYPE_INT ||
       javaType == JAVATYPE_LONG) {
     std::string capitalized_type = UnderscoresToCamelCase(
-        PrimitiveTypeName(javaType), /*cap_first_letter=*/true);
+        PrimitiveTypeName(javaType), /*cap_next_letter=*/true);
     (*variables)["field_list_type"] =
         absl::StrCat("com.google.protobuf.Internal.", capitalized_type, "List");
     (*variables)["empty_list"] =
@@ -204,7 +204,7 @@ ImmutablePrimitiveFieldGenerator::ImmutablePrimitiveFieldGenerator(
                         name_resolver_, &variables_, context);
 }
 
-ImmutablePrimitiveFieldGenerator::~ImmutablePrimitiveFieldGenerator() {}
+ImmutablePrimitiveFieldGenerator::~ImmutablePrimitiveFieldGenerator() = default;
 
 int ImmutablePrimitiveFieldGenerator::GetMessageBitIndex() const {
   return message_bit_index_;
@@ -494,7 +494,7 @@ ImmutablePrimitiveOneofFieldGenerator::ImmutablePrimitiveOneofFieldGenerator(
 }
 
 ImmutablePrimitiveOneofFieldGenerator::
-    ~ImmutablePrimitiveOneofFieldGenerator() {}
+    ~ImmutablePrimitiveOneofFieldGenerator() = default;
 
 void ImmutablePrimitiveOneofFieldGenerator::GenerateMembers(
     io::Printer* printer) const {
@@ -644,7 +644,7 @@ RepeatedImmutablePrimitiveFieldGenerator::
                                        builder_bit_index, context) {}
 
 RepeatedImmutablePrimitiveFieldGenerator::
-    ~RepeatedImmutablePrimitiveFieldGenerator() {}
+    ~RepeatedImmutablePrimitiveFieldGenerator() = default;
 
 int RepeatedImmutablePrimitiveFieldGenerator::GetNumBitsForMessage() const {
   return 0;

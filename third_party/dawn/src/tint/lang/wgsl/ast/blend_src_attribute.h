@@ -39,21 +39,14 @@ namespace tint::ast {
 class BlendSrcAttribute final : public Castable<BlendSrcAttribute, Attribute> {
   public:
     /// Create a blend_src ttribute.
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the numeric id expression
-    BlendSrcAttribute(GenerationID pid, NodeID nid, const Source& src, const Expression* expr);
+    BlendSrcAttribute(NodeID nid, const Source& src, const Expression* expr);
     ~BlendSrcAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const BlendSrcAttribute* Clone(CloneContext& ctx) const override;
 
     /// The blend_src expression
     const Expression* const expr;

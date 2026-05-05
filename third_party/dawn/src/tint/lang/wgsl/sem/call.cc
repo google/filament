@@ -28,7 +28,6 @@
 #include "src/tint/lang/wgsl/sem/call.h"
 
 #include <utility>
-#include <vector>
 
 TINT_INSTANTIATE_TYPEINFO(tint::sem::Call);
 
@@ -40,8 +39,8 @@ Call::Call(const ast::CallExpression* declaration,
            VectorRef<const sem::ValueExpression*> arguments,
            const Statement* statement,
            const core::constant::Value* constant,
-           bool has_side_effects)
-    : Base(declaration, target->ReturnType(), stage, statement, constant, has_side_effects),
+           const Variable* root_ident)
+    : Base(declaration, target->ReturnType(), stage, statement, constant, root_ident),
       target_(target),
       arguments_(std::move(arguments)) {
     // Check that the stage is no earlier than the target supports

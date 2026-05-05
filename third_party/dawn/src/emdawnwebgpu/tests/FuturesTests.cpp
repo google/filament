@@ -224,10 +224,17 @@ TEST_F(DeviceLevelTests, ValidationError) {
     device.GetQueue().OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
                                           [](wgpu::QueueWorkDoneStatus, wgpu::StringView) {});
     // Wait until the uncaptured error callback runs before dropping the
-    // device, otherwise it probably won't arrive.
-    while (uncapturedErrorCount != 1) {
+    // device, otherwise it probably won't arrive. Wait at most ~5s.
+    bool gotCallbackBeforeTimeout = false;
+    for (int i = 0; i < 10; ++i) {
         emscripten_sleep(50);
+        if (uncapturedErrorCount == 1) {
+            gotCallbackBeforeTimeout = true;
+            break;
+        }
     }
+    // This happens currently in Safari.
+    EXPECT_TRUE(gotCallbackBeforeTimeout);
 }
 
 TEST_F(DeviceLevelTests, PopErrorScope) {
@@ -417,7 +424,7 @@ TEST_F(DeviceLevelTests, GetCompilationInfo) {
                                                           const wgpu::CompilationInfo* info) {
                           ASSERT_EQ(s, wgpu::CompilationInfoRequestStatus::Success);
                           ASSERT_NE(info, nullptr);
-                          ASSERT_EQ(info->messageCount, 1);
+                          ASSERT_EQ(info->messageCount, 1u);
 
                           message = info->messages[0].message;
                           messageType = info->messages[0].type;
@@ -430,7 +437,7 @@ TEST_F(DeviceLevelTests, GetCompilationInfo) {
                               }
                               chainLength++;
                           }
-                          ASSERT_EQ(chainLength, 1);
+                          ASSERT_EQ(chainLength, 1u);
                       }),
                   UINT64_MAX),
               wgpu::WaitStatus::Success);

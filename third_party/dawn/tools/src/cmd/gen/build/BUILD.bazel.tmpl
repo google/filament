@@ -151,6 +151,7 @@ cc_binary(
 {{-   else if eq $.Name "gtest"                          -}}"@gtest",
 {{-   else if eq $.Name "jsoncpp"                        -}}{{/* unsupported */}}
 {{-   else if eq $.Name "langsvr"                        -}}{{/* unsupported */}}
+{{-   else if eq $.Name "mesa"                           -}}{{/* unsupported */}}
 {{-   else if eq $.Name "metal"                          -}}{{/* unsupported */}}
 {{-   else if eq $.Name "spirv-headers"                  -}}"@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",
 {{-   else if eq $.Name "spirv-opt-internal"             -}}"@spirv_tools//:spirv_tools_opt",

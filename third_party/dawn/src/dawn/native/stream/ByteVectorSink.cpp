@@ -28,6 +28,7 @@
 #include "dawn/native/stream/ByteVectorSink.h"
 
 #include <iomanip>
+
 #include "dawn/native/stream/Stream.h"
 
 namespace dawn::native::stream {

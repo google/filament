@@ -61,7 +61,8 @@ std::string ToBufferSyncScopeResourceUsage(wgpu::BufferUsage syncScopeBufferUsag
         std::make_pair(wgpu::BufferUsage::Indirect, "Indirect"),
         std::make_pair(wgpu::BufferUsage::Uniform, "Uniform"),
         std::make_pair(wgpu::BufferUsage::Storage, "Storage(read-write)"),
-        std::make_pair(kReadOnlyStorageBuffer, "Storage(read-only)")};
+        std::make_pair(kReadOnlyStorageBuffer, "Storage(read-only)"),
+        std::make_pair(kReadOnlyTexelBuffer, "TexelBuffer(read-only)")};
 
     std::stringstream stream;
     bool first = true;
@@ -243,30 +244,18 @@ MaybeError ValidateWriteBuffer(const DeviceBase* device,
     return {};
 }
 
-bool IsRangeOverlapped(uint32_t startA, uint32_t startB, uint32_t length) {
-    if (length < 1) {
-        return false;
-    }
-    return RangesOverlap<uint64_t>(
-        static_cast<uint64_t>(startA),
-        static_cast<uint64_t>(startA) + static_cast<uint64_t>(length) - 1,
-        static_cast<uint64_t>(startB),
-        static_cast<uint64_t>(startB) + static_cast<uint64_t>(length) - 1);
-}
-
 ResultOrError<uint64_t> ComputeRequiredBytesInCopy(const TexelBlockInfo& blockInfo,
                                                    const Extent3D& copySize,
                                                    uint32_t bytesPerRow,
                                                    uint32_t rowsPerImage) {
     DAWN_ASSERT(copySize.width % blockInfo.width == 0);
     DAWN_ASSERT(copySize.height % blockInfo.height == 0);
-    uint32_t widthInBlocks = copySize.width / blockInfo.width;
-    uint32_t heightInBlocks = copySize.height / blockInfo.height;
-    uint64_t bytesInLastRow = Safe32x32(widthInBlocks, blockInfo.byteSize);
-
     if (copySize.depthOrArrayLayers == 0) {
         return 0;
     }
+    uint32_t widthInBlocks = copySize.width / blockInfo.width;
+    uint32_t heightInBlocks = copySize.height / blockInfo.height;
+    uint64_t bytesInLastRow = Safe32x32(widthInBlocks, blockInfo.byteSize);
 
     // Check for potential overflows for the rest of the computations. We have the following
     // invariants:
@@ -296,6 +285,33 @@ ResultOrError<uint64_t> ComputeRequiredBytesInCopy(const TexelBlockInfo& blockIn
     if (heightInBlocks > 0) {
         DAWN_ASSERT(heightInBlocks <= 1 || bytesPerRow != wgpu::kCopyStrideUndefined);
         uint64_t bytesInLastImage = Safe32x32(bytesPerRow, heightInBlocks - 1) + bytesInLastRow;
+        requiredBytesInCopy += bytesInLastImage;
+    }
+    return requiredBytesInCopy;
+}
+
+uint64_t ComputeRequiredBytesInCopy(const TypedTexelBlockInfo& blockInfo,
+                                    const BlockExtent3D& copySize,
+                                    BlockCount blocksPerRow,
+                                    BlockCount rowsPerImage) {
+    // See ComputeRequiredBytesInCopy overload as this is mostly the same modulo some validation.
+    if (copySize.depthOrArrayLayers == BlockCount{0}) {
+        return 0;
+    }
+    BlockCount widthInBlocks = copySize.width;
+    BlockCount heightInBlocks = copySize.height;
+    BlockCount blocksInLastRow = widthInBlocks;
+    BlockCount blocksPerImage = blocksPerRow * rowsPerImage;
+    uint64_t bytesPerImage = blockInfo.ToBytes(blocksPerImage);
+    uint64_t maxBytesPerImage =
+        std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(copySize.depthOrArrayLayers);
+    DAWN_ASSERT(bytesPerImage <= maxBytesPerImage);
+    BlockCount blocksToCopy = blocksPerImage * (copySize.depthOrArrayLayers - BlockCount{1});
+    uint64_t requiredBytesInCopy = blockInfo.ToBytes(blocksToCopy);
+    if (heightInBlocks > BlockCount{0}) {
+        BlockCount blocksInLastImage =
+            blocksPerRow * (heightInBlocks - BlockCount{1}) + blocksInLastRow;
+        uint64_t bytesInLastImage = blockInfo.ToBytes(blocksInLastImage);
         requiredBytesInCopy += bytesInLastImage;
     }
     return requiredBytesInCopy;
@@ -447,7 +463,7 @@ MaybeError ValidateTexelCopyTextureInfo(DeviceBase const* device,
             "Copy origin (%s) and size (%s) does not cover the entire subresource (origin: "
             "[x: 0, y: 0], size: %s) of %s. The entire subresource must be copied when the "
             "format (%s) is a depth/stencil format or the sample count (%u) is > 1.",
-            &textureCopy.origin, &copySize, &subresourceSize, texture, texture->GetFormat().format,
+            textureCopy.origin, copySize, subresourceSize, texture, texture->GetFormat().format,
             texture->GetSampleCount());
     }
 
@@ -483,11 +499,11 @@ MaybeError ValidateTextureCopyRange(DeviceBase const* device,
                 static_cast<uint64_t>(mipSize.depthOrArrayLayers),
         "Texture copy range (origin: %s, copySize: %s) touches outside of %s mip level %u "
         "size (%s).",
-        &textureCopy.origin, &copySize, texture, textureCopy.mipLevel, &mipSize);
+        textureCopy.origin, copySize, texture, textureCopy.mipLevel, mipSize);
 
     // Validation for the texel block alignments:
     if (format.isCompressed) {
-        const TexelBlockInfo& blockInfo = format.GetAspectInfo(textureCopy.aspect).block;
+        const TexelBlockInfo& blockInfo = GetBlockInfo(textureCopy);
         DAWN_INVALID_IF(
             textureCopy.origin.x % blockInfo.width != 0,
             "Texture copy origin.x (%u) is not a multiple of compressed texture format block "
@@ -743,7 +759,7 @@ MaybeError ValidatePLSInfo(
     indexForSlot.fill(kSlotNotSet);
     for (size_t i = 0; i < storageAttachments.size(); i++) {
         const Format& format = device->GetValidInternalFormat(storageAttachments[i].format);
-        DAWN_ASSERT(format.supportsStorageAttachment);
+        DAWN_ASSERT(format.SupportsStorageAttachment());
 
         // Validate the slot's offset.
         uint64_t offset = storageAttachments[i].offset;

@@ -43,8 +43,14 @@ cc_library(
   ],
   hdrs = [
     "binding_point.h",
+    "bindings.h",
     "override_id.h",
+    "resource_table_config.h",
+    "resource_type.h",
+    "subgroup_matrix.h",
+    "substitute_overrides_config.h",
     "vertex_pulling_config.h",
+    "workgroup_info.h",
   ],
   deps = [
     "//src/tint/utils",

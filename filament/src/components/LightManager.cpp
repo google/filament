@@ -19,14 +19,12 @@
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
-#include "utils/ostream.h"
 
 #include <filament/LightManager.h>
 
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <math/fast.h>
 #include <math/scalar.h>
@@ -255,6 +253,7 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
+    mManager.notifyChange(getEntity(i));
 }
 
 void FLightManager::setLightChannel(Instance const i, unsigned int const channel, bool const enable) noexcept {
@@ -262,8 +261,12 @@ void FLightManager::setLightChannel(Instance const i, unsigned int const channel
         if (channel < 8) {
             auto& manager = mManager;
             const uint8_t mask = 1u << channel;
-            manager[i].channels &= ~mask;
-            manager[i].channels |= enable ? mask : 0u;
+            uint8_t const currentChannels = manager[i].channels;
+            uint8_t const newChannels = (currentChannels & ~mask) | (enable ? mask : 0u);
+            if (currentChannels != newChannels) {
+                manager[i].channels = newChannels;
+                manager.notifyChange(getEntity(i));
+            }
         }
     }
 }
@@ -282,21 +285,30 @@ bool FLightManager::getLightChannel(Instance const i, unsigned int const channel
 void FLightManager::setLocalPosition(Instance const i, const float3& position) noexcept {
     if (i) {
         auto& manager = mManager;
-        manager[i].position = position;
+        if (manager[i].position != position) {
+            manager[i].position = position;
+            manager.notifyChange(getEntity(i));
+        }
     }
 }
 
 void FLightManager::setLocalDirection(Instance const i, float3 const direction) noexcept {
     if (i) {
         auto& manager = mManager;
-        manager[i].direction = direction;
+        if (manager[i].direction != direction) {
+            manager[i].direction = direction;
+            manager.notifyChange(getEntity(i));
+        }
     }
 }
 
 void FLightManager::setColor(Instance const i, const LinearColor& color) noexcept {
     if (i) {
         auto& manager = mManager;
-        manager[i].color = color;
+        if (manager[i].color != color) {
+            manager[i].color = color;
+            manager.notifyChange(getEntity(i));
+        }
     }
 }
 
@@ -325,7 +337,7 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
                 break;
 
             case Type::FOCUSED_SPOT: {
-                SpotParams& spotParams = manager[i].spotParams;
+                SpotParams const& spotParams = manager[i].spotParams;
                 float const cosOuter = std::sqrt(spotParams.cosOuterSquared);
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
@@ -337,7 +349,6 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
                     // lp = li * (2 * pi * (1 - cos(cone_outer / 2)))
                     luminousPower = luminousIntensity * (f::TAU * (1.0f - cosOuter));
                 }
-                spotParams.luminousPower = luminousPower;
                 break;
             }
             case Type::SPOT:
@@ -351,7 +362,22 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
                 }
                 break;
         }
-        manager[i].intensity = luminousIntensity;
+        
+        bool changed = false;
+        if (manager[i].intensity != luminousIntensity) {
+            manager[i].intensity = luminousIntensity;
+            changed = true;
+        }
+        if (type == Type::FOCUSED_SPOT) {
+            SpotParams& spotParams = manager[i].spotParams;
+            if (spotParams.luminousPower != luminousPower) {
+                spotParams.luminousPower = luminousPower;
+                changed = true;
+            }
+        }
+        if (changed) {
+            manager.notifyChange(getEntity(i));
+        }
     }
 }
 
@@ -359,9 +385,14 @@ void FLightManager::setFalloff(Instance const i, float const falloff) noexcept {
     auto& manager = mManager;
     if (i && !isDirectionalLight(i)) {
         float const sqFalloff = falloff * falloff;
+        float const squaredFallOffInv = sqFalloff > 0.0f ? (1 / sqFalloff) : 0;
         SpotParams& spotParams = manager[i].spotParams;
-        manager[i].squaredFallOffInv = sqFalloff > 0.0f ? (1 / sqFalloff) : 0;
-        spotParams.radius = falloff;
+        
+        if (manager[i].squaredFallOffInv != squaredFallOffInv || spotParams.radius != falloff) {
+            manager[i].squaredFallOffInv = squaredFallOffInv;
+            spotParams.radius = falloff;
+            manager.notifyChange(getEntity(i));
+        }
     }
 }
 
@@ -380,20 +411,27 @@ void FLightManager::setSpotLightCone(Instance const i, float const inner, float 
         float const cosOuterSquared = cosOuter * cosOuter;
         float const scale = 1.0f / std::max(1.0f / 1024.0f, cosInner - cosOuter);
         float const offset = -cosOuter * scale;
+        float2 const scaleOffset = { scale, offset };
 
         SpotParams& spotParams = manager[i].spotParams;
-        spotParams.outerClamped = outerClamped;
-        spotParams.cosOuterSquared = cosOuterSquared;
-        spotParams.sinInverse = 1.0f / std::sin(outerClamped);
-        spotParams.scaleOffset = { scale, offset };
+        if (spotParams.outerClamped != outerClamped ||
+            spotParams.cosOuterSquared != cosOuterSquared ||
+            spotParams.scaleOffset != scaleOffset) {
+            
+            spotParams.outerClamped = outerClamped;
+            spotParams.cosOuterSquared = cosOuterSquared;
+            spotParams.sinInverse = 1.0f / std::sin(outerClamped);
+            spotParams.scaleOffset = { scale, offset };
 
-        // we need to recompute the luminous intensity
-        Type const type = getLightType(i).type;
-        if (type == Type::FOCUSED_SPOT) {
-            // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
-            float const luminousPower = spotParams.luminousPower;
-            float const luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
-            manager[i].intensity = luminousIntensity;
+            // we need to recompute the luminous intensity
+            Type const type = getLightType(i).type;
+            if (type == Type::FOCUSED_SPOT) {
+                // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
+                float const luminousPower = spotParams.luminousPower;
+                float const luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
+                manager[i].intensity = luminousIntensity;
+            }
+            manager.notifyChange(getEntity(i));
         }
     }
 }
@@ -401,26 +439,39 @@ void FLightManager::setSpotLightCone(Instance const i, float const inner, float 
 void FLightManager::setSunAngularRadius(Instance const i, float angularRadius) noexcept {
     if (i && isSunLight(i)) {
         angularRadius = clamp(angularRadius, 0.25f, 20.0f);
-        mManager[i].sunAngularRadius = angularRadius * f::DEG_TO_RAD;
+        float const newRadius = angularRadius * f::DEG_TO_RAD;
+        if (mManager[i].sunAngularRadius != newRadius) {
+            mManager[i].sunAngularRadius = newRadius;
+            mManager.notifyChange(getEntity(i));
+        }
     }
 }
 
 void FLightManager::setSunHaloSize(Instance const i, float const haloSize) noexcept {
     if (i && isSunLight(i)) {
-        mManager[i].sunHaloSize = haloSize;
+        if (mManager[i].sunHaloSize != haloSize) {
+            mManager[i].sunHaloSize = haloSize;
+            mManager.notifyChange(getEntity(i));
+        }
     }
 }
 
 void FLightManager::setSunHaloFalloff(Instance const i, float const haloFalloff) noexcept {
     if (i && isSunLight(i)) {
-        mManager[i].sunHaloFalloff = haloFalloff;
+        if (mManager[i].sunHaloFalloff != haloFalloff) {
+            mManager[i].sunHaloFalloff = haloFalloff;
+            mManager.notifyChange(getEntity(i));
+        }
     }
 }
 
 void FLightManager::setShadowCaster(Instance const i, bool const shadowCaster) noexcept {
     if (i) {
         LightType& lightType = mManager[i].lightType;
-        lightType.shadowCaster = shadowCaster;
+        if (lightType.shadowCaster != shadowCaster) {
+            lightType.shadowCaster = shadowCaster;
+            mManager.notifyChange(getEntity(i));
+        }
     }
 }
 

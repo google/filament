@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/type/sampler.h"
+
 #include "src/tint/lang/core/type/helper_test.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/void.h"
@@ -40,23 +41,36 @@ TEST_F(SamplerTest, Creation) {
     auto* a = ty.sampler();
     auto* b = ty.sampler();
     auto* c = ty.comparison_sampler();
+    auto* d = ty.sampler(SamplerFiltering::kFiltering);
+    auto* e = ty.sampler(SamplerFiltering::kFiltering);
+    auto* f = ty.sampler(SamplerFiltering::kNonFiltering);
 
     EXPECT_EQ(a->Kind(), SamplerKind::kSampler);
+    EXPECT_EQ(a->Filtering(), SamplerFiltering::kUndefined);
+
     EXPECT_EQ(c->Kind(), SamplerKind::kComparisonSampler);
+
+    EXPECT_EQ(d->Filtering(), SamplerFiltering::kFiltering);
+    EXPECT_EQ(f->Filtering(), SamplerFiltering::kNonFiltering);
 
     EXPECT_FALSE(a->IsComparison());
     EXPECT_TRUE(c->IsComparison());
 
     EXPECT_EQ(a, b);
     EXPECT_NE(a, c);
+    EXPECT_NE(a, d);
+    EXPECT_EQ(d, e);
+    EXPECT_NE(d, f);
 }
 
 TEST_F(SamplerTest, Hash) {
     Manager ty;
     auto* a = ty.sampler();
     auto* b = ty.sampler();
+    auto* d = ty.sampler(SamplerFiltering::kFiltering);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
+    EXPECT_NE(a->unique_hash, d->unique_hash);
 }
 
 TEST_F(SamplerTest, Equals) {
@@ -64,15 +78,26 @@ TEST_F(SamplerTest, Equals) {
     auto* a = ty.sampler();
     auto* b = ty.sampler();
     auto* c = ty.comparison_sampler();
+    auto* d = ty.sampler(SamplerFiltering::kFiltering);
+    auto* e = ty.sampler(SamplerFiltering::kFiltering);
+    auto* f = ty.sampler(SamplerFiltering::kNonFiltering);
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
     EXPECT_FALSE(a->Equals(Void{}));
+    EXPECT_FALSE(a->Equals(*d));
+    EXPECT_TRUE(d->Equals(*e));
+    EXPECT_FALSE(d->Equals(*f));
 }
 
 TEST_F(SamplerTest, FriendlyNameSampler) {
     Sampler s{SamplerKind::kSampler};
     EXPECT_EQ(s.FriendlyName(), "sampler");
+}
+
+TEST_F(SamplerTest, FriendlyNameSamplerFiltering) {
+    Sampler s{SamplerKind::kSampler, SamplerFiltering::kFiltering};
+    EXPECT_EQ(s.FriendlyName(), "sampler<filtering>");
 }
 
 TEST_F(SamplerTest, FriendlyNameComparisonSampler) {
@@ -89,6 +114,19 @@ TEST_F(SamplerTest, Clone) {
 
     auto* mt = a->Clone(ctx);
     EXPECT_EQ(mt->Kind(), SamplerKind::kSampler);
+    EXPECT_EQ(mt->Filtering(), SamplerFiltering::kUndefined);
+}
+
+TEST_F(SamplerTest, CloneFiltering) {
+    Manager ty;
+    auto* a = ty.sampler(SamplerFiltering::kNonFiltering);
+
+    core::type::Manager mgr;
+    core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
+
+    auto* mt = a->Clone(ctx);
+    EXPECT_EQ(mt->Kind(), SamplerKind::kSampler);
+    EXPECT_EQ(mt->Filtering(), SamplerFiltering::kNonFiltering);
 }
 
 }  // namespace

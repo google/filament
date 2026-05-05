@@ -28,6 +28,8 @@
 #include <gtest/gtest.h>
 #include <webgpu/webgpu_cpp.h>
 
+#include <vector>
+
 #include "dawn/tests/MockCallback.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -56,6 +58,7 @@ class DawnMockTest : public ::testing::Test {
     testing::StrictMock<testing::MockCppCallback<wgpu::DeviceLostCallback<void>*>>
         mDeviceLostCallback;
 
+    std::vector<wgpu::FeatureName> mRequiredFeatures;
     TogglesState mDeviceToggles;
     raw_ptr<::testing::NiceMock<DeviceMock>> mDeviceMock;
     wgpu::Device device;

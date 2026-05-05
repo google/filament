@@ -35,8 +35,8 @@ namespace {
 using DiagnosticDirectiveTest = TestHelper;
 
 TEST_F(DiagnosticDirectiveTest, Name) {
-    auto* d =
-        DiagnosticDirective(Source{{{10, 5}, {10, 15}}}, wgsl::DiagnosticSeverity::kWarning, "foo");
+    auto* d = DiagnosticDirective(Source{{{10, 5}, {10, 15}}}, wgsl::DiagnosticSeverity::kWarning,
+                                  DiagnosticRuleName("foo"));
     EXPECT_EQ(d->source.range.begin.line, 10u);
     EXPECT_EQ(d->source.range.begin.column, 5u);
     EXPECT_EQ(d->source.range.end.line, 10u);
@@ -48,7 +48,7 @@ TEST_F(DiagnosticDirectiveTest, Name) {
 
 TEST_F(DiagnosticDirectiveTest, CategoryAndName) {
     auto* d = DiagnosticDirective(Source{{{10, 5}, {10, 15}}}, wgsl::DiagnosticSeverity::kWarning,
-                                  "foo", "bar");
+                                  DiagnosticRuleName("foo", "bar"));
     EXPECT_EQ(d->source.range.begin.line, 10u);
     EXPECT_EQ(d->source.range.begin.column, 5u);
     EXPECT_EQ(d->source.range.end.line, 10u);

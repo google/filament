@@ -120,7 +120,7 @@ TEST_P(RangeLengthTest, Test) {
     Source::FileContent fc("X" kLF       // 1
                            "XX" kCR kLF  // 2
                            "X" kCR       // 3
-                               kLS       // 4
+                           kLS           // 4
                            "XX"          // 5
     );
     auto& range = GetParam().first;

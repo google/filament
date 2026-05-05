@@ -43,21 +43,14 @@ namespace tint::ast {
 class ColorAttribute final : public Castable<ColorAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the frame-buffer index value
-    ColorAttribute(GenerationID pid, NodeID nid, const Source& src, const Expression* expr);
+    ColorAttribute(NodeID nid, const Source& src, const Expression* expr);
     ~ColorAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const ColorAttribute* Clone(CloneContext& ctx) const override;
 
     /// The index value expression
     const Expression* const expr;

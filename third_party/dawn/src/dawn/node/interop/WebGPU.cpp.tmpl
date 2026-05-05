@@ -120,8 +120,6 @@ class Wrappers : public Constructors  {
 {{-   end}}
   }
 
-  static Wrappers* instance;
-
 public:
 {{-   range $ := .Declarations}}
 {{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
@@ -129,26 +127,26 @@ public:
 {{-     end}}
 {{-   end}}
 
+  static void Delete(Napi::Env, Wrappers* data) {
+    delete data;
+  }
+
   // Allocates and constructs the Wrappers instance
   static Wrappers* Init(Napi::Env env) {
-    instance = new Wrappers(env);
+    auto instance = new Wrappers(env);
+    env.SetInstanceData<Wrappers, &Wrappers::Delete>(instance);
     return instance;
   }
 
   // Destructs and frees the Wrappers instance
   static void Term(Napi::Env env) {
-    delete instance;
-    instance = nullptr;
+    env.SetInstanceData<Wrappers>(nullptr);
   }
 
   static Constructors* For(Napi::Env env) {
-    // Currently Napi only actually supports a single Env, so there's no point
-    // maintaining a map of Env to Wrapper. Note: This might not always be true.
-    return instance;
+    return env.GetInstanceData<Wrappers>();
   }
 };
-
-Wrappers* Wrappers::instance = nullptr;
 {{- end}}
 
 

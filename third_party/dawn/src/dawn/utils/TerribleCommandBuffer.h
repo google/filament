@@ -48,7 +48,9 @@ class TerribleCommandBuffer : public dawn::wire::CommandSerializer {
 
   private:
     raw_ptr<dawn::wire::CommandHandler> mHandler = nullptr;
+
     size_t mOffset = 0;
+    size_t mLastFlushedOffset = 0;
     char mBuffer[1000000];
 };
 

@@ -30,15 +30,15 @@
 
 #include <IOSurface/IOSurfaceRef.h>
 #import <Metal/Metal.h>
-#include <vector>
 
-#include "dawn/native/Texture.h"
+#include <vector>
 
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/CoreFoundationRef.h"
 #include "dawn/common/NSRef.h"
 #include "dawn/native/DawnNative.h"
 #include "dawn/native/MetalBackend.h"
+#include "dawn/native/Texture.h"
 
 namespace dawn::native::metal {
 
@@ -60,6 +60,9 @@ class Texture final : public TextureBase {
                                        NSPRef<id<MTLTexture>> wrapped);
 
     Texture(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor);
+
+    MTLTextureType GetMTLTextureType() const;
+    MTLTextureUsage GetMTLTextureUsage() const;
 
     id<MTLTexture> GetMTLTexture(Aspect aspect) const;
     IOSurfaceRef GetIOSurface();
@@ -86,7 +89,7 @@ class Texture final : public TextureBase {
     void InitializeAsWrapping(const UnpackedPtr<TextureDescriptor>& descriptor,
                               NSPRef<id<MTLTexture>> wrapped);
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
 
     MaybeError ClearTexture(CommandRecordingContext* commandContext,
@@ -94,9 +97,11 @@ class Texture final : public TextureBase {
                             TextureBase::ClearValue clearValue);
 
     absl::InlinedVector<NSPRef<id<MTLTexture>>, kMaxPlanesPerFormat> mMtlPlaneTextures;
-    MTLPixelFormat mMtlFormat = MTLPixelFormatInvalid;
 
+    MTLPixelFormat mMtlFormat = MTLPixelFormatInvalid;
+    MTLTextureType mMtlTextureType;
     MTLTextureUsage mMtlUsage;
+
     CFRef<IOSurfaceRef> mIOSurface = nullptr;
 };
 
@@ -118,8 +123,10 @@ class TextureView final : public TextureViewBase {
   private:
     using TextureViewBase::TextureViewBase;
     MaybeError Initialize(const UnpackedPtr<TextureViewDescriptor>& descriptor);
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
+
+    std::optional<MTLTextureSwizzleChannels> ComputeMetalSwizzle();
 
     NSPRef<id<MTLTexture>> mMtlTextureView;
 };

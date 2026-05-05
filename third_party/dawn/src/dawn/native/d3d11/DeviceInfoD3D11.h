@@ -49,6 +49,7 @@ struct DeviceInfo {
     size_t sharedSystemMemory;
     bool supportsMonitoredFence;
     bool supportsNonMonitoredFence;
+    bool supportsMapOnDefaultBuffer;
     bool supportsMapNoOverwriteDynamicBuffers;
     bool supportsPartialConstantBufferUpdate;
 };

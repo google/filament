@@ -19,9 +19,6 @@ HPP	 = $(SPEC)/Vulkan-Hpp
 REGISTRY = $(GIT)/registry/vulkan
 
 update: revision-check create-branch update-files push-branch
-	echo "Verify that Vulkan-Headers is on a branch with the new header updates."
-	echo "Then push them to github and create an MR there with:"
-	echo "    make -f Makefile.release REVISION=$(REVISION) push-branch"
 
 # Working branch for the update, and a test if it exists
 BRANCH = update-$(REVISION)
@@ -106,6 +103,16 @@ update-scripts:
 # Once the branch is updated, push it to upstream and create an MR
 # This should be used cautiously after verifying the branch contents are
 # indeed correct and updates.
+#
+# Ideally we could automatically create the github PR.
+# This will require additional software, see e.g.
+#   https://medium.com/@ravipatel.it/creating-a-git-pull-request-using-the-command-line-a-detailed-guide-4ef1ea017fe2
+#   https://gist.github.com/devinschumacher/bc66c162d9c6c167952f1943d0e6419c
+# Gitlab supports this via 'git push' options e.g.
+#   -o merge_request.create -o merge_request.target=main -o merge_request.remove_source_branch \
+#   -o merge_request.title="Update for Vulkan-Docs 1.4.$(REVISION)" \
+#   -o merge_request.assign=oddhack
+# But for github we must manually create a PR after pushing
 push-branch: revision-check
 	git switch $(BRANCH)
 	git add -u
@@ -113,22 +120,13 @@ push-branch: revision-check
 	echo "Adding new files:" `git diff --name-only main`
 	git add `git diff --name-only main`
 	git commit -m "Update for Vulkan-Docs 1.4.$(REVISION)"
-	# Ideally we could automatically create the github PR.
-	# This will require additional software, see e.g.
-	#   https://medium.com/@ravipatel.it/creating-a-git-pull-request-using-the-command-line-a-detailed-guide-4ef1ea017fe2
-	#   https://gist.github.com/devinschumacher/bc66c162d9c6c167952f1943d0e6419c
-	# Gitlab supports this via 'git push' options e.g.
-	#   -o merge_request.create -o merge_request.target=main -o merge_request.remove_source_branch \
-	#   -o merge_request.title="Update for Vulkan-Docs 1.4.$(REVISION)" \
-	#   -o merge_request.assign=oddhack
-	# But for github we must manually create a PR after pushing
 	git push --set-upstream origin $(BRANCH)
 	git switch main
 	git branch -d $(BRANCH)
 	echo "Now create a pull request by going to the URL:"
 	echo "  https://github.com/KhronosGroup/Vulkan-Headers/pull/new/$(BRANCH)"
 	echo "After accepting this PR, continue with:"
-	echo "    make -f Makefile.release REVISION=$(REVISION) tag-branch"
+	echo "    cd $(shell pwd) && make -f Makefile.release REVISION=$(REVISION) tag-branch"
 
 # Tag main for the update after accepting the update PR
 TAG = v1.4.$(REVISION)

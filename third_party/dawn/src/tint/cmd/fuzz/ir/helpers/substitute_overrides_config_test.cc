@@ -28,7 +28,6 @@
 #include "src/tint/cmd/fuzz/ir/helpers/substitute_overrides_config.h"
 
 #include "gtest/gtest.h"
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 
@@ -77,7 +76,7 @@ TEST_F(SubstituteOverridesConfigTest, U32) {
         auto* ob = b.Override("b", 42_u);
         ob->SetOverrideId(OverrideId{20});
 
-        auto* od = b.Override("d", b.Add(ty.u32(), 42_u, 10_u));
+        auto* od = b.Override("d", b.Add(42_u, 10_u));
         od->SetOverrideId(OverrideId{400});
 
         auto* oe = b.Override("e", b.Constant(100_u));
@@ -106,7 +105,7 @@ TEST_F(SubstituteOverridesConfigTest, I32) {
         auto* oc = b.Override("b", 42_i);
         oc->SetOverrideId(OverrideId{300});
 
-        auto* od = b.Override("d", b.Add(ty.i32(), 45_i, 10_i));
+        auto* od = b.Override("d", b.Add(45_i, 10_i));
         od->SetOverrideId(OverrideId{400});
 
         auto* oe = b.Override("e", b.Constant(100_i));
@@ -135,7 +134,7 @@ TEST_F(SubstituteOverridesConfigTest, F32) {
         auto* oc = b.Override("b", 42_f);
         oc->SetOverrideId(OverrideId{300});
 
-        auto* od = b.Override("d", b.Add(ty.f32(), 45_f, 10_f));
+        auto* od = b.Override("d", b.Add(45_f, 10_f));
         od->SetOverrideId(OverrideId{400});
 
         auto* oe = b.Override("e", b.Constant(100_f));
@@ -164,7 +163,7 @@ TEST_F(SubstituteOverridesConfigTest, F16) {
         auto* oc = b.Override("b", 42_h);
         oc->SetOverrideId(OverrideId{300});
 
-        auto* od = b.Override("d", b.Add(ty.f32(), 45_h, 10_h));
+        auto* od = b.Override("d", b.Add(45_h, 10_h));
         od->SetOverrideId(OverrideId{400});
 
         auto* oe = b.Override("e", b.Constant(100_h));

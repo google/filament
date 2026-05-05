@@ -33,6 +33,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -137,22 +138,25 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 		terminalWidth = 0
 	}
 
-	var formatList, ignore, dxcPath, fxcPath, tintPath, xcrunPath string
+	var formatList, ignore, dxcPath, fxcPath, spvDiffPath, tintPath, xcrunPath string
 	var maxTableWidth int
-	var server, useIrReader bool
+	var server bool
 	numCPU := runtime.NumCPU()
-	verbose, generateExpected, generateSkip := false, false, false
+	verbose, generateExpected, generateSkip, updateSkip := false, false, false, false
 	flag.StringVar(&formatList, "format", "all", "comma separated list of formats to emit. Possible values are: all, wgsl, spvasm, msl, hlsl, hlsl-dxc, hlsl-fxc, glsl")
 	flag.StringVar(&ignore, "ignore", "**.expected.*", "files to ignore in globs")
 	flag.StringVar(&dxcPath, "dxcompiler", "", "path to DXC DLL for validating HLSL output")
 	flag.StringVar(&fxcPath, "fxc", "", "path to FXC DLL for validating HLSL output")
+	flag.StringVar(&spvDiffPath, "spirv-diff", "", "path to spirv-diff for diffing spvasm output")
 	flag.StringVar(&tintPath, "tint", defaultTintPath(fsReaderWriter), "path to the tint executable")
 	flag.StringVar(&xcrunPath, "xcrun", "", "path to xcrun executable for validating MSL output")
 	flag.BoolVar(&verbose, "verbose", false, "print all run tests, including rows that all pass")
 	flag.BoolVar(&generateExpected, "generate-expected", false, "create or update all expected outputs")
-	flag.BoolVar(&generateSkip, "generate-skip", false, "create or update all expected outputs that fail with SKIP")
+	flag.BoolVar(&generateSkip, "generate-skip", false, "create new expected outputs that fail with SKIP")
+	flag.BoolVar(&generateSkip, "generate-skips", false, "alias for -generate-skip")
+	flag.BoolVar(&updateSkip, "update-skip", false, "update all expected outputs that fail with SKIP")
+	flag.BoolVar(&updateSkip, "update-skips", false, "alias for -update-skip")
 	flag.BoolVar(&server, "server", true, "run Tint in server mode")
-	flag.BoolVar(&useIrReader, "use-ir-reader", false, "force use of IR SPIR-V Reader")
 	flag.IntVar(&numCPU, "j", numCPU, "maximum number of concurrent threads to run tests")
 	flag.IntVar(&maxTableWidth, "table-width", terminalWidth, "maximum width of the results table")
 	flag.Usage = showUsage
@@ -170,7 +174,7 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 		args = defaultArgs
 	}
 
-	filePredicate := func(s string) bool { return true }
+	var filePredicate func(string) bool
 	if m, err := match.New(ignore); err == nil {
 		filePredicate = func(s string) bool { return !m(s) }
 	} else {
@@ -194,8 +198,8 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 		switch {
 		case fileutils.IsDir(arg, fsReaderWriter):
 			// Argument is to a directory, expand out to N globs
-			for _, glob := range directoryGlobs {
-				globs = append(globs, path.Join(arg, glob))
+			for _, g := range directoryGlobs {
+				globs = append(globs, path.Join(arg, g))
 			}
 		case fileutils.IsFile(arg, fsReaderWriter):
 			// Argument is a file, append to absFiles
@@ -326,12 +330,13 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 		tintPath:         tintPath,
 		dxcPath:          dxcPath,
 		fxcPath:          fxcPath,
+		spvDiffPath:      spvDiffPath,
 		xcrunPath:        xcrunPath,
 		generateExpected: generateExpected,
 		generateSkip:     generateSkip,
+		updateSkip:       updateSkip,
 		validationCache:  validationCache,
 		server:           server,
-		useIrReader:      useIrReader,
 	}
 	for cpu := 0; cpu < numCPU; cpu++ {
 		go func() {
@@ -568,6 +573,7 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	}
 	fmt.Println()
 
+	failed_files := []string{}
 	for _, f := range failures {
 		color.Set(color.FgBlue)
 		fmt.Printf("%s ", f.file)
@@ -577,8 +583,12 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 		fmt.Println("FAIL")
 		color.Unset()
 		fmt.Println(indent(f.err.Error(), 4))
+
+		failed_files = append(failed_files, f.file)
 	}
 	if len(failures) > 0 {
+		fmt.Println("Failed Files")
+		fmt.Println(strings.Join(failed_files, "\n"))
 		fmt.Println()
 	}
 
@@ -667,12 +677,13 @@ type runConfig struct {
 	tintPath         string
 	dxcPath          string
 	fxcPath          string
+	spvDiffPath      string
 	xcrunPath        string
 	generateExpected bool
 	generateSkip     bool
+	updateSkip       bool
 	validationCache  validationCache
 	server           bool
-	useIrReader      bool
 }
 
 type tintServerState struct {
@@ -728,7 +739,7 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 		}
 
 		// If the test is known to fail and we are not regenerating expectations, just skip the test.
-		if isSkipTest && !cfg.generateExpected && !cfg.generateSkip {
+		if isSkipTest && !cfg.generateExpected && !cfg.updateSkip {
 			if isSkipInvalidTest {
 				return status{code: invalid, timeTaken: 0}
 			} else {
@@ -740,7 +751,7 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 
 		outputFormat := strings.Split(string(j.format), "-")[0] // 'hlsl-fxc' -> 'hlsl', etc.
 		if j.format == hlslFXC {
-			// Emit HLSL specifically for FXC
+			// Emit HLSL specifically for FXC.
 			outputFormat += "-fxc"
 		}
 
@@ -748,10 +759,6 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 			j.file,
 			"--format", outputFormat,
 			"--print-hash",
-		}
-
-		if cfg.useIrReader {
-			args = append(args, "--use-ir-reader")
 		}
 
 		// Append any skip-hashes, if they're found.
@@ -834,13 +841,13 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 			matched = true // test passed and matched expectations
 		}
 
-		var skip_str string = "FAILED"
+		skipStr := "FAILED"
 		if isSkipInvalidTest {
-			skip_str = "INVALID"
+			skipStr = "INVALID"
 		}
 
 		if timedOut {
-			skip_str = "TIMEOUT"
+			skipStr = "TIMEOUT"
 		}
 
 		passed := ok && (matched || isSkipTimeoutTest)
@@ -858,8 +865,8 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 			//       --- Below this point the test has failed ---
 		case isSkipTest:
 			// Do not update expected if timeout test actually timed out.
-			if cfg.generateSkip && !(isSkipTimeoutTest && timedOut) {
-				saveExpectedFile(expectedFilePath, "SKIP: "+skip_str+"\n\n"+out)
+			if cfg.updateSkip && !(isSkipTimeoutTest && timedOut) {
+				saveExpectedFile(expectedFilePath, "SKIP: "+skipStr+"\n\n"+out)
 			}
 			if isSkipInvalidTest {
 				return status{code: invalid, timeTaken: timeTaken}
@@ -870,7 +877,7 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 		case !ok:
 			// Compiler returned non-zero exit code
 			if cfg.generateSkip {
-				saveExpectedFile(expectedFilePath, "SKIP: "+skip_str+"\n\n"+out)
+				saveExpectedFile(expectedFilePath, "SKIP: "+skipStr+"\n\n"+out)
 			}
 			err := fmt.Errorf("%s", out)
 			return status{code: fail, err: err, timeTaken: timeTaken}
@@ -878,12 +885,34 @@ func (j job) run(cfg runConfig, fsReaderWriter oswrapper.FilesystemReaderWriter,
 		default:
 			// Compiler returned zero exit code, or output was not as expected
 			if cfg.generateSkip {
-				saveExpectedFile(expectedFilePath, "SKIP: "+skip_str+"\n\n"+out)
+				saveExpectedFile(expectedFilePath, "SKIP: "+skipStr+"\n\n"+out)
 			}
 
-			// Expected output did not match
-			dmp := diffmatchpatch.New()
-			diff := dmp.DiffPrettyText(dmp.DiffMain(expected, out, true))
+			var diff = ""
+			if j.format == spvasm && cfg.spvDiffPath != "" {
+				if f, err := os.CreateTemp("", "diff.*.spvasm"); err == nil {
+					defer os.Remove(f.Name())
+					f.Write([]byte(out))
+
+					args := []string{
+						f.Name(),
+						expectedFilePath,
+					}
+
+					ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+					defer cancel()
+					cmd := exec.CommandContext(ctx, cfg.spvDiffPath, args...)
+					if diffOut, err := cmd.CombinedOutput(); err == nil {
+						diff = string(diffOut)
+					}
+				} else {
+					fmt.Println("temp file creation failed")
+				}
+			} else {
+				// Expected output did not match
+				dmp := diffmatchpatch.New()
+				diff = dmp.DiffPrettyText(dmp.DiffMain(expected, out, true))
+			}
 			err := fmt.Errorf(`Output was not as expected
 
 --------------------------------------------------------------------------------
@@ -917,9 +946,9 @@ func extractValidationHashes(in string) (out string, hashes []string) {
 		return in, nil
 	}
 	out = in
-	for _, match := range matches {
-		out = strings.ReplaceAll(out, match[0], "")
-		hashes = append(hashes, match[1])
+	for _, m := range matches {
+		out = strings.ReplaceAll(out, m[0], "")
+		hashes = append(hashes, m[1])
 	}
 	return out, hashes
 }
@@ -966,21 +995,21 @@ func alignRight(val interface{}, width int) string {
 // maxStringLen returns the maximum number of runes found in all the strings in
 // 'l'
 func maxStringLen(l []string) int {
-	max := 0
+	maxLen := 0
 	for _, s := range l {
-		if c := utf8.RuneCountInString(s); c > max {
-			max = c
+		if c := utf8.RuneCountInString(s); c > maxLen {
+			maxLen = c
 		}
 	}
-	return max
+	return maxLen
 }
 
 // formatWidth returns the width in runes for the outputFormat column 'b'
 func formatWidth(b outputFormat) int {
-	const min = 6
+	const minWidth = 6
 	c := utf8.RuneCountInString(string(b))
-	if c < min {
-		return min
+	if c < minWidth {
+		return minWidth
 	}
 	return c
 }
@@ -1102,7 +1131,7 @@ func invokeWithoutServer(tintPath string, args ...string) (ok bool, output strin
 	out, err := cmd.CombinedOutput()
 	str := string(out)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return false, fmt.Sprintf("test timed out after %v", testTimeout), true
 		}
 		if str != "" {
@@ -1185,16 +1214,16 @@ func parseOutputFormat(s string) ([]outputFormat, error) {
 
 func printDuration(d time.Duration) string {
 	sec := int(d.Seconds())
-	min := int(sec) / 60
-	hour := min / 60
-	sec -= min * 60
-	min -= hour * 60
+	minute := int(sec) / 60
+	hour := minute / 60
+	sec -= minute * 60
+	minute -= hour * 60
 	sb := &strings.Builder{}
 	if hour > 0 {
 		fmt.Fprintf(sb, "%dh", hour)
 	}
-	if min > 0 {
-		fmt.Fprintf(sb, "%dm", min)
+	if minute > 0 {
+		fmt.Fprintf(sb, "%dm", minute)
 	}
 	if sec > 0 {
 		fmt.Fprintf(sb, "%ds", sec)

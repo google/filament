@@ -42,14 +42,12 @@ namespace tint::ast {
 class Struct final : public Castable<Struct, TypeDecl> {
   public:
     /// Create a new struct statement
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node for the import statement
     /// @param name The name of the structure
     /// @param members The struct members
     /// @param attributes The struct attributes
-    Struct(GenerationID pid,
-           NodeID nid,
+    Struct(NodeID nid,
            const Source& src,
            const Identifier* name,
            VectorRef<const StructMember*> members,
@@ -57,12 +55,6 @@ class Struct final : public Castable<Struct, TypeDecl> {
 
     /// Destructor
     ~Struct() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Struct* Clone(CloneContext& ctx) const override;
 
     /// The members
     const tint::Vector<const StructMember*, 8> members;

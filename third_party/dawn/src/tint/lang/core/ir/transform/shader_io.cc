@@ -122,14 +122,16 @@ struct State {
             return;
         }
 
-        // Rename the old function and remove its pipeline stage and workgroup size, as we will be
-        // wrapping it with a new entry point.
+        // Rename the old function and remove its pipeline stage, workgroup size and subgroup size,
+        // as we will be wrapping it with a new entry point.
         auto name = ir.NameOf(ep).Name();
         auto stage = ep->Stage();
         auto wgsize = ep->WorkgroupSize();
+        auto sgsize = ep->SubgroupSize();
         ir.SetName(ep, name + "_inner");
         ep->SetStage(Function::PipelineStage::kUndefined);
         ep->ClearWorkgroupSize();
+        ep->ClearSubgroupSize();
 
         // Create the entry point wrapper function.
         auto* wrapper_ep = b.Function(name, new_ret_ty);
@@ -137,6 +139,9 @@ struct State {
         wrapper_ep->SetStage(stage);
         if (wgsize) {
             wrapper_ep->SetWorkgroupSize((*wgsize)[0], (*wgsize)[1], (*wgsize)[2]);
+        }
+        if (sgsize) {
+            wrapper_ep->SetSubgroupSize(*sgsize);
         }
         auto wrapper = b.Append(wrapper_ep->Block());
 
@@ -147,6 +152,8 @@ struct State {
         if (vertex_point_size_index) {
             backend->SetOutput(wrapper, vertex_point_size_index.value(), b.Constant(1_f));
         }
+
+        backend->SetBackendOutputs(wrapper, inner_result->Result());
 
         // Return the new result.
         wrapper.Return(wrapper_ep, backend->MakeReturnValue(wrapper));
@@ -249,6 +256,83 @@ struct State {
 };
 
 }  // namespace
+
+bool ShaderIOBackendState::HasBuiltinInput(core::BuiltinValue builtin) const {
+    return inputs.Any([builtin](auto& struct_mem_desc) {  //
+        return struct_mem_desc.attributes.builtin == builtin;
+    });
+}
+
+uint32_t ShaderIOBackendState::RequireBuiltinInput(core::BuiltinValue builtin,
+                                                   const core::type::Type* type,
+                                                   std::string_view name) {
+    for (uint32_t i = 0; i < inputs.Length(); i++) {
+        if (inputs[i].attributes.builtin == builtin) {
+            return i;
+        }
+    }
+    return AddInput(ir.symbols.New(name), type, core::IOAttributes{.builtin = builtin});
+}
+
+core::ir::Value* ShaderIOBackendState::PolyfillWorkgroupIndex(Builder& builder,
+                                                              uint32_t workgroup_id_index,
+                                                              uint32_t num_workgroups_index) {
+    if (tint_workgroup_index != nullptr) {
+        return tint_workgroup_index;
+    }
+
+    // workgroup_index = workgroup_id.x +
+    //                   (workgroup_id.y * num_workgroups.x) +
+    //                   (workgroup_id.z * num_workgroups.x * num_workgroups.y)
+    auto* workgroup_id = GetInput(builder, workgroup_id_index);
+    auto* num_workgroups = GetInput(builder, num_workgroups_index);
+
+    auto* num_workgroups_x = builder.Access(ty.u32(), num_workgroups, 0_u);
+    auto* num_workgroups_y = builder.Access(ty.u32(), num_workgroups, 1_u);
+    auto* z_part = builder.Multiply(num_workgroups_x, num_workgroups_y)->Result();
+    z_part = builder.Multiply(builder.Access(ty.u32(), workgroup_id, 2_u), z_part)->Result();
+    auto* y_part =
+        builder.Multiply(builder.Access(ty.u32(), workgroup_id, 1_u), num_workgroups_x)->Result();
+    auto* init = builder.Add(builder.Access(ty.u32(), workgroup_id, 0_u), y_part)->Result();
+    init = builder.Add(init, z_part)->Result();
+    tint_workgroup_index = init;
+    return tint_workgroup_index;
+}
+
+core::ir::Value* ShaderIOBackendState::PolyfillGlobalInvocationIndex(
+    Builder& builder,
+    uint32_t global_invocation_id_index,
+    uint32_t num_workgroups_index) {
+    if (tint_global_invocation_index) {
+        return tint_global_invocation_index;
+    }
+
+    // global_invocation_index =
+    //   global_invocation_id.x +
+    //   (global_invocation_id.y * num_workgroups.x * workgroup_size.x) +
+    //   (global_invocation_id.z * num_workgroups.x * workgroup_size.x * num_workgroups.y *
+    //   workgroup_size.y)
+    auto* num_workgroups = GetInput(builder, num_workgroups_index);
+    auto* global_id = GetInput(builder, global_invocation_id_index);
+
+    auto* global_id_x = builder.Access(ty.u32(), global_id, 0_u);
+    auto* global_id_y = builder.Access(ty.u32(), global_id, 1_u);
+    auto* global_id_z = builder.Access(ty.u32(), global_id, 2_u);
+
+    auto* num_workgroups_x = builder.Access(ty.u32(), num_workgroups, 0_u);
+    auto* num_workgroups_y = builder.Access(ty.u32(), num_workgroups, 1_u);
+
+    auto* x_size = builder.Multiply(num_workgroups_x, u32(workgroup_size->at(0)));
+    auto* y_size = builder.Multiply(num_workgroups_y, u32(workgroup_size->at(1)));
+
+    auto* z_part = builder.Multiply(x_size, y_size);
+    z_part = builder.Multiply(global_id_z, z_part);
+    auto* y_part = builder.Multiply(global_id_y, x_size);
+    auto* value = builder.Add(global_id_x, y_part);
+    value = builder.Add(value, z_part);
+    tint_global_invocation_index = value->Result();
+    return tint_global_invocation_index;
+}
 
 void RunShaderIOBase(Module& module, std::function<MakeBackendStateFunc> make_backend_state) {
     State{make_backend_state, module}.Process();

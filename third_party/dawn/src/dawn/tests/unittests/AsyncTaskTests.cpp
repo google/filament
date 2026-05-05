@@ -40,7 +40,7 @@
 #include "dawn/platform/DawnPlatform.h"
 #include "gtest/gtest.h"
 
-namespace dawn {
+namespace dawn::native {
 namespace {
 
 struct SimpleTaskResult {
@@ -77,19 +77,19 @@ void DoTask(ConcurrentTaskResultQueue* resultQueue, uint32_t id) {
 
 class AsyncTaskTest : public testing::Test {};
 
+// TODO(crbug.com/454672586): Causing flaky fatal errors on multiple platforms.
 // Emulate the basic usage of worker thread pool in Create*PipelineAsync().
-TEST_F(AsyncTaskTest, Basic) {
+TEST_F(AsyncTaskTest, DISABLED_Basic) {
     platform::Platform platform;
     std::unique_ptr<platform::WorkerTaskPool> pool = platform.CreateWorkerTaskPool();
 
-    native::AsyncTaskManager taskManager(pool.get());
+    AsyncTaskManager taskManager(pool.get());
     ConcurrentTaskResultQueue taskResultQueue;
 
     constexpr size_t kTaskCount = 4u;
     std::set<uint32_t> idset;
     for (uint32_t i = 0; i < kTaskCount; ++i) {
-        native::AsyncTask asyncTask([&taskResultQueue, i] { DoTask(&taskResultQueue, i); });
-        taskManager.PostTask(std::move(asyncTask));
+        taskManager.PostTask<AsyncTask>([&taskResultQueue, i] { DoTask(&taskResultQueue, i); });
         idset.insert(i);
     }
 
@@ -103,5 +103,63 @@ TEST_F(AsyncTaskTest, Basic) {
     ASSERT_TRUE(idset.empty());
 }
 
+// Test that the task status is updated based on the task's running state
+TEST_F(AsyncTaskTest, Status) {
+    platform::Platform platform;
+    std::unique_ptr<platform::WorkerTaskPool> pool = platform.CreateWorkerTaskPool();
+
+    AsyncTaskManager taskManager(pool.get());
+    ConcurrentTaskResultQueue taskResultQueue;
+
+    // Use a mutex to force the task to wait on the main thread before completing
+    std::mutex mutex;
+    std::unique_lock lock(mutex);
+
+    auto task = taskManager.PostTask<AsyncTask>(
+        [&mutex]() { std::scoped_lock<std::mutex> taskLock(mutex); });
+
+    ASSERT_FALSE(task->IsCompleted());
+
+    // Allow the task to complete
+    lock.unlock();
+    task->Wait();
+    ASSERT_TRUE(task->IsCompleted());
+}
+
+// Test coverage of the completion callbacks for tasks
+TEST_F(AsyncTaskTest, Callbacks) {
+    platform::Platform platform;
+    std::unique_ptr<platform::WorkerTaskPool> pool = platform.CreateWorkerTaskPool();
+
+    AsyncTaskManager taskManager(pool.get());
+    ConcurrentTaskResultQueue taskResultQueue;
+
+    // Use a mutex to force the task to wait on the main thread before completing
+    std::mutex mutex;
+    std::unique_lock lock(mutex);
+
+    // Use a completion callback that simply counts how many times it's been called
+    std::atomic<uint64_t> completionCallbackCounter = 0;
+    AsyncTaskCompletionCallback completionCallback = [&completionCallbackCounter]() {
+        completionCallbackCounter++;
+    };
+
+    // Spawn a task that waits for the mutex. Add a completion callback and confirm that it's not
+    // called before the task completes
+    auto task = taskManager.PostTask<AsyncTask>(
+        [&mutex]() { std::scoped_lock<std::mutex> taskLock(mutex); });
+    task->AddCompletionCallback(completionCallback);
+    EXPECT_EQ(completionCallbackCounter, 0u);
+
+    // Allow the task to complete and expect that the completion callback has been called
+    lock.unlock();
+    task->Wait();
+    EXPECT_EQ(completionCallbackCounter, 1u);
+
+    // Add another completion callback to the already-completed task and check that it is called
+    // immediately
+    task->AddCompletionCallback(completionCallback);
+    EXPECT_EQ(completionCallbackCounter, 2u);
+}
 }  // anonymous namespace
-}  // namespace dawn
+}  // namespace dawn::native

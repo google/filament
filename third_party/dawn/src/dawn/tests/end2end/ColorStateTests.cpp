@@ -1277,13 +1277,17 @@ TEST_P(ColorStateTest, SrcBlendFactorDstAlphaDstBlendFactorZero) {
                      wgpu::BlendFactor::DstAlpha, wgpu::BlendFactor::Zero, tests);
 }
 
-DAWN_INSTANTIATE_TEST(ColorStateTest,
-                      D3D11Backend(),
-                      D3D12Backend(),
-                      MetalBackend(),
-                      OpenGLBackend(),
-                      OpenGLESBackend(),
-                      VulkanBackend());
+DAWN_INSTANTIATE_TEST(
+    ColorStateTest,
+    D3D11Backend(),
+    D3D12Backend(),
+    MetalBackend(),
+    OpenGLBackend(),
+    OpenGLESBackend(),
+    VulkanBackend({"vulkan_use_dynamic_rendering"}, {}),
+    VulkanBackend({"vulkan_use_create_render_pass_2"}, {"vulkan_use_dynamic_rendering"}),
+    VulkanBackend({}, {"vulkan_use_create_render_pass_2", "vulkan_use_dynamic_rendering"}),
+    WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

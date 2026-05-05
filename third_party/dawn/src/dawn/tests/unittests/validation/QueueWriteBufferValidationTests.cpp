@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/tests/unittests/validation/ValidationTest.h"
-
 #include "dawn/utils/WGPUHelpers.h"
 
 class QueueWriteBufferValidationTest : public ValidationTest {

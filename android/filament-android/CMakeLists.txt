@@ -126,6 +126,7 @@ add_library(filament-jni SHARED
     # Common utils
     ../common/CallbackUtils.cpp
     ../common/NioUtils.cpp
+    ../common/JniUtils.cpp
 )
 
 target_include_directories(filament-jni PRIVATE

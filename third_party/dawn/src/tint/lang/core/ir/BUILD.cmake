@@ -48,8 +48,6 @@ tint_add_target(tint_lang_core_ir lib
   lang/core/ir/access.h
   lang/core/ir/binary.cc
   lang/core/ir/binary.h
-  lang/core/ir/bitcast.cc
-  lang/core/ir/bitcast.h
   lang/core/ir/block.cc
   lang/core/ir/block.h
   lang/core/ir/block_param.cc
@@ -195,7 +193,6 @@ tint_target_add_external_dependencies(tint_lang_core_ir lib
 ################################################################################
 tint_add_target(tint_lang_core_ir_test test
   lang/core/ir/access_test.cc
-  lang/core/ir/bitcast_test.cc
   lang/core/ir/block_param_test.cc
   lang/core/ir/block_test.cc
   lang/core/ir/break_if_test.cc

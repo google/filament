@@ -97,6 +97,9 @@ public:
             bool enable_material_instance_uniform_batching = false;
             bool enable_fog_as_postprocess = false;
         } material;
+        struct {
+            bool enable_grid_based_world_origin = false;
+        } view;
     } features;
 
 public:

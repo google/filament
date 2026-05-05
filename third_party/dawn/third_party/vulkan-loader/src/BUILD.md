@@ -233,7 +233,7 @@ cmake --build . --target loader_codegen
 `clang-format` is run on generated code files so that the generator scripts do
 not need format their output manually.
 If `clang-format` is not available when running code generation, a warning will
-be issued but does not stop code generation from occuring.
+be issued but does not stop code generation from occurring.
 
 ### Build Options
 

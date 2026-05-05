@@ -32,7 +32,6 @@
 
 #include "src/tint/lang/core/ir/instruction.h"
 #include "src/tint/lang/core/ir/terminator.h"
-#include "src/tint/utils/containers/const_propagating_ptr.h"
 #include "src/tint/utils/containers/vector.h"
 
 // Forward declarations
@@ -63,19 +62,19 @@ class Block : public Castable<Block> {
 
     /// @return the terminator instruction for this block, or nullptr if this block does not end in
     /// a terminator.
-    ir::Terminator* Terminator() { return tint::As<ir::Terminator>(instructions_.last.Get()); }
+    ir::Terminator* Terminator() { return tint::As<ir::Terminator>(instructions_.last); }
 
     /// @return the terminator instruction for this block, or nullptr if this block does not end in
     /// a terminator.
     const ir::Terminator* Terminator() const {
-        return tint::As<ir::Terminator>(instructions_.last.Get());
+        return tint::As<ir::Terminator>(instructions_.last);
     }
 
     /// @returns the instructions in the block
-    Instruction* Instructions() { return instructions_.first.Get(); }
+    Instruction* Instructions() { return instructions_.first; }
 
     /// @returns the instructions in the block
-    const Instruction* Instructions() const { return instructions_.first.Get(); }
+    const Instruction* Instructions() const { return instructions_.first; }
 
     /// Iterator for the instructions inside a block
     template <typename T>
@@ -182,12 +181,12 @@ class Block : public Castable<Block> {
   private:
     // The first and last pointers are null if and only if the list is empty.
     struct {
-        ConstPropagatingPtr<Instruction> first;
-        ConstPropagatingPtr<Instruction> last;
+        Instruction* first = nullptr;
+        Instruction* last = nullptr;
         size_t count = 0;
     } instructions_;
 
-    ConstPropagatingPtr<ControlInstruction> parent_;
+    ControlInstruction* parent_ = nullptr;
 };
 
 }  // namespace tint::core::ir

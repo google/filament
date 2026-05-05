@@ -35,6 +35,7 @@
 
 #include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/rtti/traits.h"
+#include "src/utils/compiler.h"
 
 namespace tint {
 
@@ -42,7 +43,7 @@ namespace tint {
 struct SuccessType {};
 
 /// An instance of SuccessType that can be used as a generic success value for a Result.
-static constexpr const SuccessType Success;
+inline constexpr const SuccessType Success;
 
 /// The default Result error type.
 struct Failure {
@@ -235,6 +236,25 @@ auto& operator<<(STREAM& out, const Result<SUCCESS, FAILURE>& res) {
         }
     }
 }
+
+/// Check that @p result is Success and propagate the failure if not.
+#define TINT_CHECK_RESULT(result)                                  \
+    if (auto&& tint_check_result_value = (result);                 \
+        DAWN_UNLIKELY(tint_check_result_value != tint::Success)) { \
+        return tint_check_result_value.Failure();                  \
+    }                                                              \
+    TINT_REQUIRE_SEMICOLON
+
+#define TINT_CHECK_RESULT_UNWRAP_IMPL(to, from, result) \
+    auto from = (result);                               \
+    if (DAWN_UNLIKELY(from != tint::Success)) {         \
+        return from.Failure();                          \
+    }                                                   \
+    auto to = from.Move();                              \
+    TINT_REQUIRE_SEMICOLON
+/// Check that @p result is Success and propagate the failure if not.
+#define TINT_CHECK_RESULT_UNWRAP(to, result) \
+    TINT_CHECK_RESULT_UNWRAP_IMPL(to, TINT_CONCAT(tint_check_result_value, __LINE__), result)
 
 }  // namespace tint
 

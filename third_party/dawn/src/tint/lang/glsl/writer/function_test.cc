@@ -38,8 +38,8 @@ TEST_F(GlslWriterTest, Function_Empty) {
     func->Block()->Append(b.Return(func));
 
     Options opts{};
-    ASSERT_TRUE(Generate(opts, core::ir::Function::PipelineStage::kCompute))
-        << err_ << output_.glsl;
+    auto result = Generate(opts, core::ir::Function::PipelineStage::kCompute);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -55,8 +55,8 @@ TEST_F(GlslWriterTest, Function_ComputeWgSize) {
     func->Block()->Append(b.Return(func));
 
     Options opts{};
-    ASSERT_TRUE(Generate(opts, core::ir::Function::PipelineStage::kCompute))
-        << err_ << output_.glsl;
+    auto result = Generate(opts, core::ir::Function::PipelineStage::kCompute);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 2, local_size_y = 4, local_size_z = 6) in;
 void main() {
@@ -72,12 +72,20 @@ TEST_F(GlslWriterTest, FunctionWithParams) {
     func->SetParams({b.FunctionParam("a", ty.f32()), b.FunctionParam("b", ty.i32())});
     func->Block()->Append(b.Return(func));
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Zero(ty.f32()), b.Zero(ty.i32()));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 void my_func(float a, int b) {
 }
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
+  my_func(0.0f, 0);
 }
 )");
 }
@@ -86,7 +94,8 @@ TEST_F(GlslWriterTest, Function_Fragment_Precision) {
     auto* func = b.Function("main", ty.void_(), core::ir::Function::PipelineStage::kFragment);
     func->Block()->Append(b.Return(func));
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
 
@@ -104,7 +113,8 @@ TEST_F(GlslWriterTest, WorkgroupStorageSizeEmpty) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(0u, output_.workgroup_info.storage_size);
 }
 
@@ -119,7 +129,8 @@ TEST_F(GlslWriterTest, WorkgroupStorageSizeSimple) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(32u, output_.workgroup_info.storage_size);
 }
 
@@ -146,14 +157,15 @@ TEST_F(GlslWriterTest, WorkgroupStorageSizeCompoundTypes) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(96u, output_.workgroup_info.storage_size);
 }
 
 TEST_F(GlslWriterTest, WorkgroupStorageSizeAlignmentPadding) {
     // vec3<f32> has an alignment of 16 but a size of 12. We leverage this to test
     // that our padded size calculation for workgroup storage is accurate.
-    auto* var = mod.root_block->Append(b.Var("var_f32", ty.ptr(workgroup, ty.vec3<f32>())));
+    auto* var = mod.root_block->Append(b.Var("var_f32", ty.ptr(workgroup, ty.vec3f())));
 
     auto* func = b.ComputeFunction("main", 32_u, 4_u, 1_u);
     b.Append(func->Block(), [&] {  //
@@ -161,7 +173,8 @@ TEST_F(GlslWriterTest, WorkgroupStorageSizeAlignmentPadding) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(16u, output_.workgroup_info.storage_size);
 }
 
@@ -183,7 +196,8 @@ TEST_F(GlslWriterTest, WorkgroupStorageSizeStructAlignment) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(1024u, output_.workgroup_info.storage_size);
 }
 

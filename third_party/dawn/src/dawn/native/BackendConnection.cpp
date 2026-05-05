@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/BackendConnection.h"
+
 #include "dawn/native/Instance.h"
 
 namespace dawn::native {

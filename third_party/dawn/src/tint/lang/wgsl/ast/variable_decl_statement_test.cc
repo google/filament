@@ -67,15 +67,5 @@ TEST_F(VariableDeclStatementDeathTest, Assert_Null_Variable) {
         "internal compiler error");
 }
 
-TEST_F(VariableDeclStatementDeathTest, Assert_DifferentGenerationID_Variable) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<VariableDeclStatement>(b2.Var("a", b2.ty.f32()));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

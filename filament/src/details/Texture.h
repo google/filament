@@ -47,8 +47,8 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    backend::Handle<backend::HwTexture> getHwHandle() const noexcept;
-    backend::Handle<backend::HwTexture> getHwHandleForSampling() const noexcept;
+    backend::Handle<backend::HwTexture> getHwHandle() const;
+    backend::Handle<backend::HwTexture> getHwHandleForSampling() const;
 
     size_t getWidth(size_t level = 0) const noexcept;
     size_t getHeight(size_t level = 0) const noexcept;
@@ -73,12 +73,12 @@ public:
             PixelBufferDescriptor&& buffer, backend::CallbackHandler* handler,
             AsyncCompletionCallback callback, void* user) const;
 
-    void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
-    void setExternalImage(FEngine& engine, void* image) noexcept;
-    void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
-    void setExternalStream(FEngine& engine, FStream* stream) noexcept;
+    void setExternalImage(FEngine& engine, ExternalImageHandleRef image);
+    void setExternalImage(FEngine& engine, void* image);
+    void setExternalImage(FEngine& engine, void* image, size_t plane);
+    void setExternalStream(FEngine& engine, FStream* stream);
 
-    void generateMipmaps(FEngine& engine) const noexcept;
+    void generateMipmaps(FEngine& engine) const;
 
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 

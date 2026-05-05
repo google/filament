@@ -46,12 +46,41 @@ BindingInfoType GetBindingInfoType(const BindingInfo& info) {
         [](const StorageTextureBindingInfo&) -> BindingInfoType {
             return BindingInfoType::StorageTexture;
         },
+        [](const TexelBufferBindingInfo&) -> BindingInfoType {
+            return BindingInfoType::TexelBuffer;
+        },
         [](const StaticSamplerBindingInfo&) -> BindingInfoType {
             return BindingInfoType::StaticSampler;
         },
         [](const InputAttachmentBindingInfo&) -> BindingInfoType {
             return BindingInfoType::InputAttachment;
+        },
+        [](const ExternalTextureBindingInfo&) -> BindingInfoType {
+            return BindingInfoType::ExternalTexture;
         });
+}
+
+BindingInfoType GetBindingInfoType(const BindGroupLayoutEntry* entry) {
+    if (entry->buffer.type != wgpu::BufferBindingType::BindingNotUsed) {
+        return BindingInfoType::Buffer;
+    } else if (entry->texture.sampleType != wgpu::TextureSampleType::BindingNotUsed) {
+        return BindingInfoType::Texture;
+    } else if (entry->storageTexture.access != wgpu::StorageTextureAccess::BindingNotUsed) {
+        return BindingInfoType::StorageTexture;
+    } else if (entry->sampler.type != wgpu::SamplerBindingType::BindingNotUsed) {
+        return BindingInfoType::Sampler;
+    }
+
+    UnpackedPtr<BindGroupLayoutEntry> unpacked = Unpack(entry);
+    if (unpacked.Has<TexelBufferBindingLayout>()) {
+        return BindingInfoType::TexelBuffer;
+    } else if (unpacked.Has<ExternalTextureBindingLayout>()) {
+        return BindingInfoType::ExternalTexture;
+    } else if (unpacked.Has<StaticSamplerBindingLayout>()) {
+        return BindingInfoType::StaticSampler;
+    }
+
+    DAWN_UNREACHABLE();
 }
 
 void IncrementBindingCounts(BindingCounts* bindingCounts,
@@ -60,7 +89,7 @@ void IncrementBindingCounts(BindingCounts* bindingCounts,
 
     bindingCounts->totalCount += arraySize;
 
-    uint32_t PerStageBindingCounts::*perStageBindingCountMember = nullptr;
+    uint32_t PerStageBindingCounts::* perStageBindingCountMember = nullptr;
 
     if (entry->buffer.type != wgpu::BufferBindingType::BindingNotUsed) {
         bindingCounts->bufferCount += arraySize;
@@ -105,9 +134,11 @@ void IncrementBindingCounts(BindingCounts* bindingCounts,
         }
     } else if (entry->storageTexture.access != wgpu::StorageTextureAccess::BindingNotUsed) {
         perStageBindingCountMember = &PerStageBindingCounts::storageTextureCount;
-    } else if (entry.Get<ExternalTextureBindingLayout>()) {
+    } else if (entry.Has<TexelBufferBindingLayout>()) {
+        perStageBindingCountMember = &PerStageBindingCounts::texelBufferCount;
+    } else if (entry.Has<ExternalTextureBindingLayout>()) {
         perStageBindingCountMember = &PerStageBindingCounts::externalTextureCount;
-    } else if (entry.Get<StaticSamplerBindingLayout>()) {
+    } else if (entry.Has<StaticSamplerBindingLayout>()) {
         ++bindingCounts->staticSamplerCount;
         perStageBindingCountMember = &PerStageBindingCounts::staticSamplerCount;
     }
@@ -132,6 +163,7 @@ void AccumulateBindingCounts(BindingCounts* bindingCounts, const BindingCounts& 
         bindingCounts->perStage[stage].storageBufferCount += rhs.perStage[stage].storageBufferCount;
         bindingCounts->perStage[stage].storageTextureCount +=
             rhs.perStage[stage].storageTextureCount;
+        bindingCounts->perStage[stage].texelBufferCount += rhs.perStage[stage].texelBufferCount;
         bindingCounts->perStage[stage].uniformBufferCount += rhs.perStage[stage].uniformBufferCount;
         bindingCounts->perStage[stage].externalTextureCount +=
             rhs.perStage[stage].externalTextureCount;
@@ -142,6 +174,14 @@ void AccumulateBindingCounts(BindingCounts* bindingCounts, const BindingCounts& 
 MaybeError ValidateBindingCounts(const CombinedLimits& limits,
                                  const BindingCounts& bindingCounts,
                                  const AdapterBase* adapter) {
+    // Prevent combinations that are not supported (static sampler + external texture).
+    for (SingleShaderStage stage : IterateStages(kAllStages)) {
+        DAWN_INVALID_IF(bindingCounts.staticSamplerCount != 0 &&
+                            bindingCounts.perStage[stage].externalTextureCount != 0,
+                        "Static samplers and external textures are used in the same pipeline.");
+    }
+
+    // Validation against the device limits.
     uint32_t maxDynamicUniformBuffersPerPipelineLayout =
         limits.v1.maxDynamicUniformBuffersPerPipelineLayout;
     DAWN_INVALID_IF(
@@ -320,6 +360,17 @@ TextureBindingInfo TextureBindingInfo::From(const TextureBindingLayout& layout) 
     }};
 }
 
+// TexelBufferBindingInfo
+
+// static
+TexelBufferBindingInfo TexelBufferBindingInfo::From(const TexelBufferBindingLayout& layout) {
+    TexelBufferBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    return {{
+        .format = defaultedLayout.format,
+        .access = defaultedLayout.access,
+    }};
+}
+
 // StorageTextureBindingInfo
 
 // static
@@ -349,8 +400,9 @@ SamplerBindingInfo SamplerBindingInfo::From(const SamplerBindingLayout& layout) 
 StaticSamplerBindingInfo StaticSamplerBindingInfo::From(const StaticSamplerBindingLayout& layout) {
     return {
         .sampler = layout.sampler,
-        .sampledTextureBinding = BindingNumber{layout.sampledTextureBinding},
-        .isUsedForSingleTextureBinding = layout.sampledTextureBinding < WGPU_LIMIT_U32_UNDEFINED,
+        .use = (layout.sampledTextureBinding == WGPU_LIMIT_U32_UNDEFINED)
+                   ? StaticSamplerUse::Freestanding
+                   : StaticSamplerUse::SingleTextureYCbCr,
     };
 }
 

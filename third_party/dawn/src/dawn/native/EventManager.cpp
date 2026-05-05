@@ -43,8 +43,6 @@
 #include "dawn/native/Instance.h"
 #include "dawn/native/IntegerTypes.h"
 #include "dawn/native/Queue.h"
-#include "dawn/native/SystemEvent.h"
-#include "dawn/native/WaitAnySystemEvent.h"
 
 namespace dawn::native {
 namespace {
@@ -101,24 +99,6 @@ class WrappingIterator {
     typename Traits::WrappedIter mWrappedIt;
 };
 
-struct ExtractSystemEventAndReadyStateTraits {
-    using WrappedIter = std::vector<TrackedFutureWaitInfo>::iterator;
-    using value_type = std::pair<const SystemEventReceiver&, bool*>;
-
-    static value_type Deref(const WrappedIter& wrappedIt) {
-        if (auto event = wrappedIt->event->GetIfWaitListEvent()) {
-            return {event->WaitAsync(), &wrappedIt->ready};
-        }
-        DAWN_ASSERT(wrappedIt->event->GetIfSystemEvent());
-        return {
-            wrappedIt->event->GetIfSystemEvent()->GetOrCreateSystemEventReceiver(),
-            &wrappedIt->ready,
-        };
-    }
-};
-
-using SystemEventAndReadyStateIterator = WrappingIterator<ExtractSystemEventAndReadyStateTraits>;
-
 struct ExtractWaitListEventAndReadyStateTraits {
     using WrappedIter = std::vector<TrackedFutureWaitInfo>::iterator;
     using value_type = std::pair<Ref<WaitListEvent>, bool*>;
@@ -161,32 +141,8 @@ void WaitQueueSerials(const QueueWaitSerialsMap& queueWaitSerials, Nanoseconds t
         }
         auto waitSerial = queueAndSerial.second;
 
-        auto* device = queue->GetDevice();
-        [[maybe_unused]] bool error;
-        error = device->ConsumedError(
-            [&]() -> MaybeError {
-                auto deviceGuard = device->GetGuard();
-
-                if (waitSerial > queue->GetLastSubmittedCommandSerial()) {
-                    // Serial has not been submitted yet. Submit it now.
-                    DAWN_TRY(queue->EnsureCommandsFlushed(waitSerial));
-                }
-                // Check the completed serial.
-                if (waitSerial > queue->GetCompletedCommandSerial()) {
-                    if (timeout > Nanoseconds(0)) {
-                        // Wait on the serial if it hasn't passed yet.
-                        [[maybe_unused]] bool waitResult = false;
-                        DAWN_TRY_ASSIGN(waitResult, queue->WaitForQueueSerial(waitSerial, timeout));
-                    }
-                }
-                return {};
-            }(),
-            "waiting for work in %s.", queue.Get());
-
-        // Updating completed serial cannot hold the device-wide lock because it may cause user
-        // callbacks to fire.
-        error = device->ConsumedError(queue->UpdateCompletedSerial(),
-                                      "updating completed serial in %s", queue.Get());
+        [[maybe_unused]] bool hadError = queue->GetDevice()->ConsumedError(
+            queue->WaitForQueueSerial(waitSerial, timeout), "waiting for work in %s.", queue.Get());
     }
 }
 
@@ -194,14 +150,10 @@ void WaitQueueSerials(const QueueWaitSerialsMap& queueWaitSerials, Nanoseconds t
 wgpu::WaitStatus WaitImpl(const InstanceBase* instance,
                           std::vector<TrackedFutureWaitInfo>& futures,
                           Nanoseconds timeout) {
-    bool foundSystemEvent = false;
     bool foundWaitListEvent = false;
 
     QueueWaitSerialsMap queueLowestWaitSerials;
     for (const auto& future : futures) {
-        if (future.event->GetIfSystemEvent()) {
-            foundSystemEvent = true;
-        }
         if (future.event->GetIfWaitListEvent()) {
             foundWaitListEvent = true;
         }
@@ -222,10 +174,10 @@ wgpu::WaitStatus WaitImpl(const InstanceBase* instance,
         return PollFutures(futures) ? wgpu::WaitStatus::Success : wgpu::WaitStatus::TimedOut;
     }
 
-    // We can't have a mix of system/wait-list events and queue-serial events or queue-serial events
+    // We can't have a mix of wait-list events and queue-serial events or queue-serial events
     // from multiple queues with a non-zero timeout.
     if (queueLowestWaitSerials.size() > 1 ||
-        (!queueLowestWaitSerials.empty() && (foundWaitListEvent || foundSystemEvent))) {
+        (!queueLowestWaitSerials.empty() && foundWaitListEvent)) {
         // Multi-source wait is unsupported.
         // TODO(dawn:2062): Implement support for this when the device supports it.
         // It should eventually gather the lowest serial from the queue(s), transform them
@@ -237,11 +189,7 @@ wgpu::WaitStatus WaitImpl(const InstanceBase* instance,
     }
 
     bool success = false;
-    if (foundSystemEvent) {
-        // Can upgrade wait list events to system events.
-        success = WaitAnySystemEvent(SystemEventAndReadyStateIterator{futures.begin()},
-                                     SystemEventAndReadyStateIterator{futures.end()}, timeout);
-    } else if (foundWaitListEvent) {
+    if (foundWaitListEvent) {
         success =
             WaitListEvent::WaitAny(WaitListEventAndReadyStateIterator{futures.begin()},
                                    WaitListEventAndReadyStateIterator{futures.end()}, timeout);
@@ -278,56 +226,28 @@ auto PrepareReadyCallbacks(std::vector<TrackedFutureWaitInfo>& futures) {
     return endOfReady;
 }
 
+struct AlreadyCompletedEvent final : public EventManager::TrackedEvent {
+    explicit AlreadyCompletedEvent(wgpu::CallbackMode callbackMode)
+        : TrackedEvent(callbackMode, TrackedEvent::Completed{}) {}
+    ~AlreadyCompletedEvent() override { EnsureComplete(EventCompletionType::Shutdown); }
+    void Complete(EventCompletionType) override {}
+};
+
 }  // namespace
 
 // EventManager
 
-EventManager::EventManager(InstanceBase* instance) : mInstance(instance) {
-    // Construct the non-movable inner struct.
-    mEvents.Use([&](auto events) { (*events).emplace(); });
-}
+EventManager::EventManager(InstanceBase* instance) : mInstance(instance) {}
 
 EventManager::~EventManager() {
-    DAWN_ASSERT(IsShutDown());
-}
-
-MaybeError EventManager::Initialize(const UnpackedPtr<InstanceDescriptor>& descriptor) {
-    if (descriptor) {
-        for (auto feature :
-             std::span(descriptor->requiredFeatures, descriptor->requiredFeatureCount)) {
-            if (feature == wgpu::InstanceFeatureName::TimedWaitAny) {
-                mTimedWaitAnyEnable = true;
-                break;
-            }
-        }
-        if (descriptor->requiredLimits) {
-            mTimedWaitAnyMaxCount = std::max(kTimedWaitAnyMaxCountDefault,
-                                             descriptor->requiredLimits->timedWaitAnyMaxCount);
-        }
-    }
-    if (mTimedWaitAnyMaxCount > kTimedWaitAnyMaxCountDefault) {
-        // We don't yet support a higher timedWaitAnyMaxCount because it would be complicated
-        // to implement on Windows, and it isn't that useful to implement only on non-Windows.
-        return DAWN_VALIDATION_ERROR("Requested timedWaitAnyMaxCount is not supported");
-    }
-
-    return {};
-}
-
-void EventManager::ShutDown() {
     mEvents.Use([&](auto events) {
         // For all non-spontaneous events, call their callbacks now.
-        for (auto& [futureID, event] : **events) {
+        for (auto& [futureID, event] : *events) {
             if (event->mCallbackMode != wgpu::CallbackMode::AllowSpontaneous) {
                 event->EnsureComplete(EventCompletionType::Shutdown);
             }
         }
-        (*events).reset();
     });
-}
-
-bool EventManager::IsShutDown() const {
-    return mEvents.Use([](auto events) { return !events->has_value(); });
 }
 
 FutureID EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
@@ -351,38 +271,31 @@ FutureID EventManager::TrackEvent(Ref<TrackedEvent>&& event) {
 
     if (const auto* queueAndSerial = event->GetIfQueueAndSerial()) {
         if (auto q = queueAndSerial->queue.Promote()) {
-            q->TrackSerialTask(queueAndSerial->completionSerial, [this, event]() {
-                // If this is executed, we can be sure that the raw pointer to this EventManager is
-                // valid because the Queue is alive and:
-                //   Queue -[refs]->
-                //     Device -[refs]->
-                //       Adapter -[refs]->
-                //         Instance -[owns]->
-                //           EventManager.
-                SetFutureReady(event.Get());
-            });
+            q->TrackSerialTask(QueuePriority::UserVisible, queueAndSerial->completionSerial,
+                               [this, event]() {
+                                   // If this is executed, we can be sure that the raw pointer to
+                                   // this EventManager is valid because the task is ran by the
+                                   // Queue and:
+                                   //   Queue -[refs]->
+                                   //     Device -[refs]->
+                                   //       Adapter -[refs]->
+                                   //         Instance -[owns]->
+                                   //           EventManager.
+                                   SetFutureReady(event.Get());
+                               });
         }
     }
 
     mEvents.Use([&](auto events) {
-        if (!events->has_value()) {
-            // We are shutting down, so if the event isn't spontaneous, call the callback now.
-            if (event->mCallbackMode != wgpu::CallbackMode::AllowSpontaneous) {
-                event->EnsureComplete(EventCompletionType::Shutdown);
-            }
-            // Otherwise, in native, the event manager is not in charge of tracking the event, so
-            // just return early now.
-            return;
-        }
         if (event->mCallbackMode != wgpu::CallbackMode::WaitAnyOnly) {
             FetchMax(mLastProcessEventID, futureID);
         }
-        (*events)->emplace(futureID, std::move(event));
+        events->emplace(futureID, std::move(event));
     });
     return futureID;
 }
 
-void EventManager::SetFutureReady(TrackedEvent* event) {
+void EventManager::SetFutureReady(Ref<TrackedEvent> event) {
     event->SetReadyToComplete();
 
     // Sometimes, events might become ready before they are even tracked. This can happen because
@@ -400,18 +313,11 @@ void EventManager::SetFutureReady(TrackedEvent* event) {
         // the same future. Note that only one thread will actually call the callback since
         // EnsureComplete is thread safe.
         event->EnsureComplete(EventCompletionType::Ready);
-        mEvents.Use([&](auto events) {
-            if (!events->has_value()) {
-                return;
-            }
-            (*events)->erase(event->mFutureID);
-        });
+        mEvents.Use([&](auto events) { events->erase(event->mFutureID); });
     }
 }
 
 bool EventManager::ProcessPollEvents() {
-    DAWN_ASSERT(!IsShutDown());
-
     std::vector<TrackedFutureWaitInfo> futures;
     wgpu::WaitStatus waitStatus;
     bool hasProgressingEvents = false;
@@ -421,8 +327,8 @@ bool EventManager::ProcessPollEvents() {
         // allowed to be completed in the ProcessPoll call. Note that spontaneous events are allowed
         // to trigger anywhere which is why we include them in the call.
         lastProcessEventID = mLastProcessEventID.load(std::memory_order_acquire);
-        futures.reserve((*events)->size());
-        for (auto& [futureID, event] : **events) {
+        futures.reserve(events->size());
+        for (auto& [futureID, event] : *events) {
             if (event->mCallbackMode != wgpu::CallbackMode::WaitAnyOnly) {
                 // Figure out if there are any progressing events. If we only have non-progressing
                 // events, we need to return false to indicate that there isn't any polling work to
@@ -464,7 +370,7 @@ bool EventManager::ProcessPollEvents() {
     // thread safe.
     mEvents.Use([&](auto events) {
         for (auto it = futures.begin(); it != readyEnd; ++it) {
-            (*events)->erase(it->futureID);
+            events->erase(it->futureID);
         }
     });
 
@@ -475,25 +381,7 @@ bool EventManager::ProcessPollEvents() {
 }
 
 wgpu::WaitStatus EventManager::WaitAny(size_t count, FutureWaitInfo* infos, Nanoseconds timeout) {
-    DAWN_ASSERT(!IsShutDown());
-
-    // Validate for feature support.
-    if (timeout > Nanoseconds(0)) {
-        if (!mTimedWaitAnyEnable) {
-            mInstance->EmitLog(WGPULoggingType_Error,
-                               "Timeout waits are either not enabled or not supported.");
-            return wgpu::WaitStatus::Error;
-        }
-        if (count > mTimedWaitAnyMaxCount) {
-            mInstance->EmitLog(
-                WGPULoggingType_Error,
-                absl::StrFormat("Number of futures to wait on (%d) exceeds maximum (%d).", count,
-                                mTimedWaitAnyMaxCount));
-            return wgpu::WaitStatus::Error;
-        }
-        // UnsupportedMixedSources is validated later, in WaitImpl.
-    }
-
+    // Feature support should already be validated for by the Instance.
     if (count == 0) {
         return wgpu::WaitStatus::Success;
     }
@@ -513,8 +401,8 @@ wgpu::WaitStatus EventManager::WaitAny(size_t count, FutureWaitInfo* infos, Nano
 
             // Try to find the event, if we don't find it, we can assume that it has already been
             // completed.
-            auto it = (*events)->find(futureID);
-            if (it == (*events)->end()) {
+            auto it = events->find(futureID);
+            if (it == events->end()) {
                 infos[i].completed = true;
                 anyCompleted = true;
             } else {
@@ -553,7 +441,7 @@ wgpu::WaitStatus EventManager::WaitAny(size_t count, FutureWaitInfo* infos, Nano
     // thread safe.
     mEvents.Use([&](auto events) {
         for (auto it = futures.begin(); it != readyEnd; ++it) {
-            (*events)->erase(it->futureID);
+            events->erase(it->futureID);
         }
     });
 
@@ -574,12 +462,16 @@ ExecutionSerial QueueAndSerial::GetCompletedSerial() const {
 
 // EventManager::TrackedEvent
 
-EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode,
-                                         Ref<WaitListEvent> completionEvent)
-    : mCallbackMode(callbackMode), mCompletionData(std::move(completionEvent)) {}
+Ref<EventManager::TrackedEvent> EventManager::TrackedEvent::CreateAlreadyCompletedEvent(
+    EventManager* eventManager,
+    wgpu::CallbackMode callbackMode) {
+    Ref<TrackedEvent> event = AcquireRef(new AlreadyCompletedEvent(callbackMode));
+    eventManager->TrackEvent(Ref<TrackedEvent>(event));
+    return event;
+}
 
 EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode,
-                                         Ref<SystemEvent> completionEvent)
+                                         Ref<WaitListEvent> completionEvent)
     : mCallbackMode(callbackMode), mCompletionData(std::move(completionEvent)) {}
 
 EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode,
@@ -600,7 +492,9 @@ EventManager::TrackedEvent::TrackedEvent(wgpu::CallbackMode callbackMode, NonPro
 
 EventManager::TrackedEvent::~TrackedEvent() {
     DAWN_ASSERT(mFutureID != kNullFutureID);
-    DAWN_ASSERT(mCompleted.Use([](auto completed) { return *completed; }));
+#if defined(DAWN_ENABLE_ASSERTS)
+    std::call_once(mFlag, []() { DAWN_ASSERT(false); });
+#endif
 }
 
 Future EventManager::TrackedEvent::GetFuture() const {
@@ -609,9 +503,6 @@ Future EventManager::TrackedEvent::GetFuture() const {
 
 bool EventManager::TrackedEvent::IsReadyToComplete() const {
     bool isReady = false;
-    if (auto event = GetIfSystemEvent()) {
-        isReady = event->IsSignaled();
-    }
     if (auto event = GetIfWaitListEvent()) {
         isReady = event->IsSignaled();
     }
@@ -622,9 +513,6 @@ bool EventManager::TrackedEvent::IsReadyToComplete() const {
 }
 
 void EventManager::TrackedEvent::SetReadyToComplete() {
-    if (auto event = GetIfSystemEvent()) {
-        event->Signal();
-    }
     if (auto event = GetIfWaitListEvent()) {
         event->Signal();
     }
@@ -638,12 +526,7 @@ void EventManager::TrackedEvent::SetReadyToComplete() {
 }
 
 void EventManager::TrackedEvent::EnsureComplete(EventCompletionType completionType) {
-    mCompleted.Use([&](auto completed) {
-        if (!*completed) {
-            Complete(completionType);
-            *completed = true;
-        }
-    });
+    std::call_once(mFlag, [&]() { Complete(completionType); });
 }
 
 }  // namespace dawn::native

@@ -36,10 +36,13 @@
 #include <utility>
 #include <vector>
 
+#include "absl/cleanup/cleanup.h"
 #include "dawn/common/Constants.h"
+#include "dawn/common/Enumerator.h"
 #include "dawn/common/FutureUtils.h"
 #include "dawn/common/StringViewUtils.h"
 #include "dawn/common/ityp_span.h"
+#include "dawn/native/BindGroup.h"
 #include "dawn/native/BlitBufferToDepthStencil.h"
 #include "dawn/native/Buffer.h"
 #include "dawn/native/CommandBuffer.h"
@@ -56,6 +59,7 @@
 #include "dawn/native/QuerySet.h"
 #include "dawn/native/RenderPassEncoder.h"
 #include "dawn/native/RenderPipeline.h"
+#include "dawn/native/ResourceTable.h"
 #include "dawn/native/Texture.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "dawn/platform/tracing/TraceEvent.h"
@@ -117,7 +121,7 @@ class ErrorQueue : public QueueBase {
                                                           Nanoseconds timeout) override {
         DAWN_UNREACHABLE();
     }
-    MaybeError WaitForIdleForDestruction() override { DAWN_UNREACHABLE(); }
+    MaybeError WaitForIdleForDestructionImpl() override { DAWN_UNREACHABLE(); }
 };
 
 }  // namespace
@@ -131,18 +135,18 @@ void TrackTaskCallback::SetFinishedSerial(ExecutionSerial serial) {
 // QueueBase
 
 QueueBase::QueueBase(DeviceBase* device, const QueueDescriptor* descriptor)
-    : ApiObjectBase(device, descriptor->label) {
+    : ExecutionQueueBase(device, descriptor->label) {
     GetObjectTrackingList()->Track(this);
 }
 
 QueueBase::QueueBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label)
-    : ApiObjectBase(device, tag, label) {}
+    : ExecutionQueueBase(device, tag, label) {}
 
 QueueBase::~QueueBase() {
     DAWN_ASSERT(mTasksInFlight->Empty());
 }
 
-void QueueBase::DestroyImpl() {}
+void QueueBase::DestroyImpl(DestroyReason reason) {}
 
 // static
 Ref<QueueBase> QueueBase::MakeError(DeviceBase* device, StringView label) {
@@ -312,10 +316,13 @@ void QueueBase::APIWriteBuffer(BufferBase* buffer,
                                uint64_t bufferOffset,
                                const void* data,
                                size_t size) {
-    [[maybe_unused]] bool hadError =
-        GetDevice()->ConsumedError(WriteBuffer(buffer, bufferOffset, data, size),
-                                   "calling %s.WriteBuffer(%s, (%d bytes), data, (%d bytes))", this,
-                                   buffer, bufferOffset, size);
+    auto writeBuffer = [&]() -> MaybeError {
+        DAWN_TRY(WriteBuffer(buffer, bufferOffset, data, size));
+        return GetDevice()->GetDynamicUploader()->MaybeSubmitPendingCommands();
+    };
+    [[maybe_unused]] bool hadError = GetDevice()->ConsumedError(
+        writeBuffer(), "calling %s.WriteBuffer(%s, (%d bytes), data, (%d bytes))", this, buffer,
+        bufferOffset, size);
 }
 
 MaybeError QueueBase::WriteBuffer(BufferBase* buffer,
@@ -325,7 +332,8 @@ MaybeError QueueBase::WriteBuffer(BufferBase* buffer,
     DAWN_TRY(GetDevice()->ValidateIsAlive());
     DAWN_TRY(GetDevice()->ValidateObject(this));
     DAWN_TRY(ValidateWriteBuffer(GetDevice(), buffer, bufferOffset, size));
-    DAWN_TRY(buffer->ValidateCanUseOnQueueNow());
+    BufferBase::ScopedUseBuffer scopedUseBuffer;
+    DAWN_TRY_ASSIGN(scopedUseBuffer, buffer->ValidateCanUseOnQueueNow());
     return WriteBufferImpl(buffer, bufferOffset, data, size);
 }
 
@@ -341,10 +349,13 @@ void QueueBase::APIWriteTexture(const TexelCopyTextureInfo* destination,
                                 size_t dataSize,
                                 const TexelCopyBufferLayout* dataLayout,
                                 const Extent3D* writeSize) {
+    auto writeTexture = [&]() -> MaybeError {
+        DAWN_TRY(WriteTextureInternal(destination, data, dataSize, *dataLayout, writeSize));
+        return GetDevice()->GetDynamicUploader()->MaybeSubmitPendingCommands();
+    };
     [[maybe_unused]] bool hadError = GetDevice()->ConsumedError(
-        WriteTextureInternal(destination, data, dataSize, *dataLayout, writeSize),
-        "calling %s.WriteTexture(%s, (%u bytes), %s, %s)", this, destination, dataSize, dataLayout,
-        writeSize);
+        writeTexture(), "calling %s.WriteTexture(%s, (%u bytes), %s, %s)", this, destination,
+        dataSize, dataLayout, writeSize);
 }
 
 MaybeError QueueBase::WriteTextureInternal(const TexelCopyTextureInfo* destinationOrig,
@@ -360,8 +371,7 @@ MaybeError QueueBase::WriteTextureInternal(const TexelCopyTextureInfo* destinati
         return {};
     }
 
-    const TexelBlockInfo& blockInfo =
-        destination.texture->GetFormat().GetAspectInfo(destination.aspect).block;
+    const TexelBlockInfo& blockInfo = GetBlockInfo(destination);
     TexelCopyBufferLayout layout = dataLayout;
     ApplyDefaultTexelCopyBufferLayoutOptions(&layout, blockInfo, *writeSize);
     return WriteTextureImpl(destination, data, dataSize, layout, *writeSize);
@@ -372,21 +382,19 @@ MaybeError QueueBase::WriteTextureImpl(const TexelCopyTextureInfo& destination,
                                        size_t dataSize,
                                        const TexelCopyBufferLayout& dataLayout,
                                        const Extent3D& writeSizePixel) {
-    const Format& format = destination.texture->GetFormat();
-    const TexelBlockInfo& blockInfo = format.GetAspectInfo(destination.aspect).block;
+    const TypedTexelBlockInfo& blockInfo = GetBlockInfo(destination);
+    BlockExtent3D writeSize = blockInfo.ToBlock(writeSizePixel);
 
     // We are only copying the part of the data that will appear in the texture.
     // Note that validating texture copy range ensures that writeSizePixel->width and
     // writeSizePixel->height are multiples of blockWidth and blockHeight respectively.
-    DAWN_ASSERT(writeSizePixel.width % blockInfo.width == 0);
-    DAWN_ASSERT(writeSizePixel.height % blockInfo.height == 0);
-    uint32_t rowsPerImage = writeSizePixel.height / blockInfo.height;
-    uint32_t bytesPerRow = writeSizePixel.width / blockInfo.width * blockInfo.byteSize;
+    BlockCount rowsPerImage = writeSize.height;
+    uint32_t bytesPerRow = uint32_t(blockInfo.ToBytes(writeSize.width));
     uint32_t alignedBytesPerRow = Align(bytesPerRow, GetDevice()->GetOptimalBytesPerRowAlignment());
+    BlockCount alignedBlocksPerRow = blockInfo.BytesToBlocks(alignedBytesPerRow);
 
-    uint64_t packedDataSize;
-    DAWN_TRY_ASSIGN(packedDataSize, ComputeRequiredBytesInCopy(blockInfo, writeSizePixel,
-                                                               alignedBytesPerRow, rowsPerImage));
+    uint64_t packedDataSize =
+        ComputeRequiredBytesInCopy(blockInfo, writeSize, alignedBlocksPerRow, rowsPerImage);
 
     // We need the offset to be aligned to both the optimal offset for that device and
     // blockByteSize, since both of them are powers of two, we only need to align to the max value.
@@ -396,6 +404,7 @@ MaybeError QueueBase::WriteTextureImpl(const TexelCopyTextureInfo& destination,
         uint64_t(blockInfo.byteSize), GetDevice()->GetOptimalBufferToTextureCopyOffsetAlignment());
 
     // Buffer offset alignments must follow additional restrictions for depth stencil formats.
+    const Format& format = destination.texture->GetFormat();
     if (format.HasDepthOrStencil()) {
         offsetAlignment =
             std::max(offsetAlignment, GetDevice()->GetBufferCopyOffsetAlignmentForDepthStencil());
@@ -404,15 +413,15 @@ MaybeError QueueBase::WriteTextureImpl(const TexelCopyTextureInfo& destination,
     return GetDevice()->GetDynamicUploader()->WithUploadReservation(
         packedDataSize, offsetAlignment, [&](UploadReservation reservation) -> MaybeError {
             const uint8_t* srcPointer = reinterpret_cast<const uint8_t*>(data) + dataLayout.offset;
-            uint8_t* dstPointer = reinterpret_cast<uint8_t*>(reservation.mappedPointer);
-            CopyTextureData(dstPointer, srcPointer, writeSizePixel.depthOrArrayLayers, rowsPerImage,
-                            dataLayout.rowsPerImage, bytesPerRow, alignedBytesPerRow,
-                            dataLayout.bytesPerRow);
+            uint8_t* dstPointer = reinterpret_cast<uint8_t*>(reservation.mappedPointer.get());
+            CopyTextureData(dstPointer, srcPointer, writeSizePixel.depthOrArrayLayers,
+                            static_cast<uint32_t>(rowsPerImage), dataLayout.rowsPerImage,
+                            bytesPerRow, alignedBytesPerRow, dataLayout.bytesPerRow);
 
             TexelCopyBufferLayout passDataLayout = dataLayout;
             passDataLayout.offset = reservation.offsetInBuffer;
             passDataLayout.bytesPerRow = alignedBytesPerRow;
-            passDataLayout.rowsPerImage = rowsPerImage;
+            passDataLayout.rowsPerImage = static_cast<uint32_t>(rowsPerImage);
 
             TextureCopy textureCopy;
             textureCopy.texture = destination.texture;
@@ -475,7 +484,8 @@ MaybeError QueueBase::CopyExternalTextureForBrowserInternal(
 }
 
 MaybeError QueueBase::ValidateSubmit(uint32_t commandCount,
-                                     CommandBufferBase* const* commands) const {
+                                     CommandBufferBase* const* commands,
+                                     BufferSet& buffersFromCommands) const {
     TRACE_EVENT0(GetDevice()->GetPlatform(), Validation, "Queue::ValidateSubmit");
     DAWN_TRY(GetDevice()->ValidateObject(this));
 
@@ -490,28 +500,36 @@ MaybeError QueueBase::ValidateSubmit(uint32_t commandCount,
 
         const CommandBufferResourceUsage& usages = commands[i]->GetResourceUsages();
 
-        for (const BufferBase* buffer : usages.topLevelBuffers) {
-            DAWN_TRY(buffer->ValidateCanUseOnQueueNow());
-        }
+        auto ValidateBuffer = [&buffersFromCommands](BufferBase* buffer) -> MaybeError {
+            if (auto [iter, inserted] = buffersFromCommands.insert(buffer); inserted) {
+                BufferBase::ScopedUseBuffer use;
+                DAWN_TRY_ASSIGN_WITH_CLEANUP(use, buffer->ValidateCanUseOnQueueNow(),
+                                             { buffersFromCommands.erase(iter); });
+                // FinishUse() will be called on the buffers in `buffersFromCommands` explicitly.
+                use.Release();
+            }
+            return {};
+        };
 
         // Maybe track last usage for other resources, and use it to release resources earlier?
         for (const SyncScopeResourceUsage& scope : usages.renderPasses) {
-            for (const BufferBase* buffer : scope.buffers) {
-                DAWN_TRY(buffer->ValidateCanUseOnQueueNow());
+            for (BufferBase* buffer : scope.buffers) {
+                DAWN_TRY(ValidateBuffer(buffer));
             }
-
             for (const TextureBase* texture : scope.textures) {
                 DAWN_TRY(texture->ValidateCanUseInSubmitNow());
             }
-
             for (const ExternalTextureBase* externalTexture : scope.externalTextures) {
                 DAWN_TRY(externalTexture->ValidateCanUseInSubmitNow());
+            }
+            for (const ResourceTableBase* resourceTable : scope.usedResourceTables) {
+                DAWN_TRY(resourceTable->ValidateCanUseInSubmitNow());
             }
         }
 
         for (const ComputePassResourceUsage& pass : usages.computePasses) {
-            for (const BufferBase* buffer : pass.referencedBuffers) {
-                DAWN_TRY(buffer->ValidateCanUseOnQueueNow());
+            for (BufferBase* buffer : pass.referencedBuffers) {
+                DAWN_TRY(ValidateBuffer(buffer));
             }
             for (const TextureBase* texture : pass.referencedTextures) {
                 DAWN_TRY(texture->ValidateCanUseInSubmitNow());
@@ -519,13 +537,67 @@ MaybeError QueueBase::ValidateSubmit(uint32_t commandCount,
             for (const ExternalTextureBase* externalTexture : pass.referencedExternalTextures) {
                 DAWN_TRY(externalTexture->ValidateCanUseInSubmitNow());
             }
+            for (const ResourceTableBase* resourceTable : pass.referencedResourceTables) {
+                DAWN_TRY(resourceTable->ValidateCanUseInSubmitNow());
+            }
         }
 
+        for (BufferBase* buffer : usages.topLevelBuffers) {
+            DAWN_TRY(ValidateBuffer(buffer));
+        }
         for (const TextureBase* texture : usages.topLevelTextures) {
             DAWN_TRY(texture->ValidateCanUseInSubmitNow());
         }
         for (const QuerySetBase* querySet : usages.usedQuerySets) {
             DAWN_TRY(querySet->ValidateCanUseInSubmitNow());
+        }
+
+        // Validate that pinned textures are only used with their pinned usage. This is done in a
+        // separate pass to avoid adding validation overhead to non-bindless while prototyping
+        // bindless.
+        // TODO(https://crbug.com/435317394): Merge this validation with the validation that
+        // textures are not destroyed by turning the sets of resources in the PassUsageTracker into
+        // maps of resources to usages, and doing a single bitmask check to know if there's an error
+        // before finding out the reason why there is an error.
+        if (GetDevice()->HasFeature(Feature::ChromiumExperimentalSamplingResourceTable)) {
+            for (const TextureBase* texture : usages.topLevelTextures) {
+                DAWN_INVALID_IF(texture->HasPinnedUsage(),
+                                "%s is pinned to %s while used in a CommandEncoder command.",
+                                texture, texture->GetPinnedUsage());
+            }
+            for (const SyncScopeResourceUsage& scope : usages.renderPasses) {
+                for (auto [j, texture] : Enumerate(scope.textures)) {
+                    if (!texture->HasPinnedUsage()) {
+                        continue;
+                    }
+
+                    DAWN_TRY(scope.textureSyncInfos[j].Iterate(
+                        [&](const SubresourceRange&, const TextureSyncInfo& info) -> MaybeError {
+                            DAWN_INVALID_IF(info.usage != texture->GetPinnedUsage(),
+                                            "%s is used as %s while pinned to %s.", texture,
+                                            info.usage, texture->GetPinnedUsage());
+                            return {};
+                        }));
+                }
+            }
+            for (const ComputePassResourceUsage& compute : usages.computePasses) {
+                for (const SyncScopeResourceUsage& scope : compute.dispatchUsages) {
+                    for (auto [j, texture] : Enumerate(scope.textures)) {
+                        if (!texture->HasPinnedUsage()) {
+                            continue;
+                        }
+
+                        DAWN_TRY(scope.textureSyncInfos[j].Iterate(
+                            [&](const SubresourceRange&,
+                                const TextureSyncInfo& info) -> MaybeError {
+                                DAWN_INVALID_IF(info.usage != texture->GetPinnedUsage(),
+                                                "%s is used as %s while pinned to %s.", texture,
+                                                info.usage, texture->GetPinnedUsage());
+                                return {};
+                            }));
+                    }
+                }
+            }
         }
     }
 
@@ -554,6 +626,8 @@ MaybeError QueueBase::ValidateWriteTexture(const TexelCopyTextureInfo* destinati
     DAWN_INVALID_IF(!(destination->texture->GetUsage() & wgpu::TextureUsage::CopyDst),
                     "Usage (%s) of %s does not include %s.", destination->texture->GetUsage(),
                     destination->texture, wgpu::TextureUsage::CopyDst);
+    DAWN_INVALID_IF(destination->texture->HasPinnedUsage(), "%s is pinned to %s.",
+                    destination->texture, destination->texture->GetPinnedUsage());
 
     DAWN_INVALID_IF(destination->texture->GetSampleCount() > 1, "Sample count (%u) of %s is not 1",
                     destination->texture->GetSampleCount(), destination->texture);
@@ -565,8 +639,7 @@ MaybeError QueueBase::ValidateWriteTexture(const TexelCopyTextureInfo* destinati
     // checked in validating texture copy range.
     DAWN_TRY(ValidateTextureCopyRange(GetDevice(), *destination, *writeSize));
 
-    const TexelBlockInfo& blockInfo =
-        destination->texture->GetFormat().GetAspectInfo(destination->aspect).block;
+    const TexelBlockInfo& blockInfo = GetBlockInfo(*destination);
 
     DAWN_TRY(ValidateLinearTextureData(dataLayout, dataSize, blockInfo, *writeSize));
 
@@ -582,14 +655,24 @@ MaybeError QueueBase::SubmitInternal(uint32_t commandCount, CommandBufferBase* c
     DAWN_TRY(device->ValidateIsAlive());
 
     TRACE_EVENT0(device->GetPlatform(), General, "Queue::Submit");
+
+    BufferSet buffersUsedInSubmit;
+    absl::Cleanup finishUseBuffers = [&buffersUsedInSubmit]() {
+        for (BufferBase* buffer : buffersUsedInSubmit) {
+            buffer->FinishUse();
+        }
+    };
     if (device->IsValidationEnabled()) {
-        DAWN_TRY(ValidateSubmit(commandCount, commands));
+        // TODO(crbug.com/425472913): Keep a rolling average of set size so this can reserve a
+        // sufficiently large set for max of last N submits.
+        DAWN_TRY(ValidateSubmit(commandCount, commands, buffersUsedInSubmit));
     }
     DAWN_ASSERT(!IsError());
 
-    mInSubmit = true;
     DAWN_TRY(SubmitImpl(commandCount, commands));
-    mInSubmit = false;
+
+    // Switch the buffer state back to unmapped before Tick().
+    std::move(finishUseBuffers).Invoke();
 
     // Call Tick() to flush pending work.
     DAWN_TRY(device->Tick());

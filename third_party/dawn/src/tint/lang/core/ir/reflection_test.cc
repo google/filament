@@ -43,7 +43,8 @@ using IR_ReflectionTest = IRTestHelper;
 
 TEST_F(IR_ReflectionTest, GetWorkgroupInfoBasic) {
     auto* var_a = mod.root_block->Append(b.Var<workgroup, u32>("a"));
-    auto* foo = b.ComputeFunction("foo", 3_u, 5_u, 7_u);
+    auto* foo = b.ComputeFunction("foo", 8_u, 6_u, 4_u);
+    foo->SetSubgroupSize(b.Constant(32_u));
     b.Append(foo->Block(), [&] {  //
         b.Load(var_a);
         b.Return(foo);
@@ -54,7 +55,7 @@ $B1: {  # root
   %a:ptr<workgroup, u32, read_write> = var undef
 }
 
-%foo = @compute @workgroup_size(3u, 5u, 7u) func():void {
+%foo = @compute @workgroup_size(8u, 6u, 4u) @subgroup_size(32u) func():void {
   $B2: {
     %3:u32 = load %a
     ret
@@ -65,10 +66,11 @@ $B1: {  # root
 
     auto res = GetWorkgroupInfo(mod);
     EXPECT_TRUE(res == tint::Success);
-    EXPECT_EQ(res->x, 3u);
-    EXPECT_EQ(res->y, 5u);
-    EXPECT_EQ(res->z, 7u);
+    EXPECT_EQ(res->x, 8u);
+    EXPECT_EQ(res->y, 6u);
+    EXPECT_EQ(res->z, 4u);
     EXPECT_EQ(res->storage_size, 16u);
+    EXPECT_EQ(res->subgroup_size, 32u);
 }
 
 TEST_F(IR_ReflectionTest, GetWorkgroupInfoMultiVar) {
@@ -164,6 +166,34 @@ $B1: {  # root
 
     auto* failure_msg = R"(IR GetWorkgroupInfo: Could not find workgroup size)";
     EXPECT_EQ(failure_msg, res.Failure().reason);
+}
+
+TEST_F(IR_ReflectionTest, GetWorkgroupInfo_StorageSizeOverflowAfterAlign) {
+    auto* var = mod.root_block->Append(b.Var<workgroup, array<u32, 0x3FFFFFFFu>>("a"));
+    auto* foo = b.ComputeFunction("foo", 64_u, 1_u, 1_u);
+    b.Append(foo->Block(), [&] {  //
+        b.Load(b.Access<ptr<workgroup, u32>>(var, 0_u));
+        b.Return(foo);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %a:ptr<workgroup, array<u32, 1073741823>, read_write> = var undef
+}
+
+%foo = @compute @workgroup_size(64u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<workgroup, u32, read_write> = access %a, 0u
+    %4:u32 = load %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto res = GetWorkgroupInfo(mod);
+    EXPECT_EQ(res, tint::Success);
+    EXPECT_EQ(res->storage_size, 0x100000000ull);
 }
 
 }  // namespace

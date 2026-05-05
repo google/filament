@@ -35,78 +35,58 @@
 #include <vector>
 
 #include "src/tint/api/common/binding_point.h"
+#include "src/tint/api/common/bindings.h"
+#include "src/tint/api/common/resource_table_config.h"
+#include "src/tint/api/common/substitute_overrides_config.h"
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/utils/math/hash.h"
 #include "src/tint/utils/reflection.h"
 
 namespace tint::hlsl::writer {
 
-/// An external texture
-struct ExternalTexture {
-    /// Metadata
-    BindingPoint metadata{};
-    /// Plane0 binding data
-    BindingPoint plane0{};
-    /// Plane1 binding data;
-    BindingPoint plane1{};
-
-    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
-    TINT_REFLECT(ExternalTexture, metadata, plane0, plane1);
-};
-
-using BindingMap = std::unordered_map<BindingPoint, BindingPoint>;
-using ExternalTextureBindings = std::unordered_map<BindingPoint, ExternalTexture>;
-
-/// Binding information
-struct Bindings {
-    /// Uniform bindings
-    BindingMap uniform{};
-    /// Storage bindings
-    BindingMap storage{};
-    /// Texture bindings
-    BindingMap texture{};
-    /// Storage texture bindings
-    BindingMap storage_texture{};
-    /// Sampler bindings
-    BindingMap sampler{};
-    /// External bindings
-    ExternalTextureBindings external_texture{};
-    /// Mapping of BindingPoint to new Access
-    std::unordered_map<BindingPoint, tint::core::Access> access_controls;
-    /// The binding points that will be ignored by the rebustness transform.
-    std::vector<BindingPoint> ignored_by_robustness_transform;
-
-    bool operator==(const Bindings& other) const = default;
-
-    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
-    TINT_REFLECT(Bindings,
-                 uniform,
-                 storage,
-                 texture,
-                 storage_texture,
-                 sampler,
-                 external_texture,
-                 access_controls,
-                 ignored_by_robustness_transform);
-};
-
 /// kMaxInterStageLocations == D3D11_PS_INPUT_REGISTER_COUNT - 2
 /// D3D11_PS_INPUT_REGISTER_COUNT == D3D12_PS_INPUT_REGISTER_COUNT
 constexpr uint32_t kMaxInterStageLocations = 30;
 
 /// Options used to specify a mapping of binding points to indices into a UBO
-/// from which to load buffer sizes.
+/// from which to load buffer sizes, or to load them from immediate blocks.
+/// TODO(crbug.com/366291600): Remove ubo_binding after switch to immediates.
 struct ArrayLengthFromUniformOptions {
     /// The HLSL binding point to use to generate a uniform buffer from which to read buffer sizes.
     BindingPoint ubo_binding;
+    /// The offset in immediate block for buffer sizes.
+    std::optional<uint32_t> buffer_sizes_offset{};
     /// The mapping from the storage buffer binding points in WGSL binding-point space to the index
     /// into the uniform buffer where the length of the buffer is stored.
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_size_index;
 
-    bool operator==(const ArrayLengthFromUniformOptions& other) const = default;
+    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
+    TINT_REFLECT(ArrayLengthFromUniformOptions,
+                 ubo_binding,
+                 buffer_sizes_offset,
+                 bindpoint_to_size_index);
+    bool operator==(const ArrayLengthFromUniformOptions&) const = default;
+};
+
+/// Options used to specify a mapping of binding points to indices into a UBO
+/// from which to load buffer offsets, or to load them from immediate blocks.
+/// TODO(crbug.com/366291600): Remove ubo_binding after switch to immediates.
+struct ArrayOffsetFromUniformOptions {
+    /// The HLSL binding point to use to generate a uniform buffer from which to read buffer
+    /// offsets.
+    BindingPoint ubo_binding;
+    /// The offset in immediate block for buffer offsets.
+    std::optional<uint32_t> buffer_offsets_offset{};
+    /// The mapping from the storage buffer binding points in WGSL binding-point space to the index
+    /// into the uniform buffer where the offset into the buffer is stored.
+    std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
-    TINT_REFLECT(ArrayLengthFromUniformOptions, ubo_binding, bindpoint_to_size_index);
+    TINT_REFLECT(ArrayOffsetFromUniformOptions,
+                 ubo_binding,
+                 buffer_offsets_offset,
+                 bindpoint_to_offset_index);
+    bool operator==(const ArrayOffsetFromUniformOptions&) const = default;
 };
 
 /// Data for a single pixel local attachment
@@ -127,6 +107,7 @@ struct PixelLocalAttachment {
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(PixelLocalAttachment, index, format);
+    bool operator==(const PixelLocalAttachment&) const = default;
 };
 
 /// Data used to specify pixel local mappings
@@ -137,10 +118,9 @@ struct PixelLocalOptions {
     /// The bind group index of all pixel local storage attachments
     uint32_t group_index = 0;
 
-    bool operator==(const PixelLocalOptions& other) const = default;
-
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(PixelLocalOptions, attachments, group_index);
+    bool operator==(const PixelLocalOptions&) const = default;
 };
 
 /// Configuration options used for generating HLSL.
@@ -149,6 +129,47 @@ struct Options {
     enum class Compiler : uint8_t {
         kFXC,
         kDXC,
+    };
+
+    /// The set of options to work around driver issues
+    struct Workarounds {
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // NOTE: When adding a new option here, it should also be added to the FuzzedOptions     //
+        // structure in writer_fuzz.cc.                                                          //
+        ///////////////////////////////////////////////////////////////////////////////////////////
+
+        /// Set to `true` to scalarize max, min, and clamp builtins.
+        bool scalarize_max_min_clamp = false;
+
+        /// Set to `true` to generate polyfill for `reflect` builtin for vec2<f32>
+        bool polyfill_reflect_vec2_f32 = false;
+
+        /// Set to `true` to generate polyfill for `subgroupBroadcast(f16)`
+        bool polyfill_subgroup_broadcast_f16 = false;
+
+        TINT_REFLECT(Workarounds,
+                     scalarize_max_min_clamp,
+                     polyfill_reflect_vec2_f32,
+                     polyfill_subgroup_broadcast_f16);
+        bool operator==(const Workarounds&) const = default;
+    };
+
+    /// The set of options for things which are only available in certain shader models
+    struct Extensions {
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // NOTE: When adding a new option here, it should also be added to the FuzzedOptions     //
+        // structure in writer_fuzz.cc.                                                          //
+        ///////////////////////////////////////////////////////////////////////////////////////////
+
+        /// Set to `true` to generate polyfill for `dot4I8Packed` and `dot4U8Packed` builtins
+        bool polyfill_dot_4x8_packed = false;
+
+        /// Set to `true` to generate polyfill for `pack4xI8`, `pack4xU8`, `pack4xI8Clamp`,
+        /// `unpack4xI8` and `unpack4xU8` builtins
+        bool polyfill_pack_unpack_4x8 = false;
+
+        TINT_REFLECT(Extensions, polyfill_dot_4x8_packed, polyfill_pack_unpack_4x8);
+        bool operator==(const Extensions&) const = default;
     };
 
     /// Constructor
@@ -161,6 +182,14 @@ struct Options {
     /// @returns this Options
     Options& operator=(const Options&);
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    // NOTE: When adding a new option here, it should also be added to the FuzzedOptions     //
+    // structure in writer_fuzz.cc (if fuzzing is desired).                                  //
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    /// The entry point to emit
+    std::string entry_point_name = {};
+
     /// An optional remapped name to use when emitting the entry point.
     std::string remapped_entry_point_name = {};
 
@@ -171,29 +200,22 @@ struct Options {
     bool disable_robustness = false;
 
     /// Set to `true` to enable integer range analysis in robustness transform.
-    bool enable_integer_range_analysis = false;
+    bool disable_integer_range_analysis = false;
 
     /// Set to `true` to disable workgroup memory zero initialization
     bool disable_workgroup_init = false;
 
-    /// Set to `true` to run the TruncateInterstageVariables transform.
+    /// Set to `true` to run truncate interstage variables during the shader IO transform.
     bool truncate_interstage_variables = false;
-
-    /// Set to `true` to generate polyfill for `reflect` builtin for vec2<f32>
-    bool polyfill_reflect_vec2_f32 = false;
-
-    /// Set to `true` to generate polyfill for `dot4I8Packed` and `dot4U8Packed` builtins
-    bool polyfill_dot_4x8_packed = false;
 
     /// Set to `true` to disable the polyfills on integer division and modulo.
     bool disable_polyfill_integer_div_mod = false;
 
-    /// Set to `true` to scalarize max, min, and clamp builtins.
-    bool scalarize_max_min_clamp = false;
+    /// Any enabled workarounds
+    Workarounds workarounds{};
 
-    /// Set to `true` to generate polyfill for `pack4xI8`, `pack4xU8`, `pack4xI8Clamp`,
-    /// `unpack4xI8` and `unpack4xU8` builtins
-    bool polyfill_pack_unpack_4x8 = false;
+    /// Any enabled extensions
+    Extensions extensions{};
 
     /// The downstream compiler which will be used
     Compiler compiler = Compiler::kDXC;
@@ -201,6 +223,10 @@ struct Options {
     /// Options used to specify a mapping of binding points to indices into a UBO
     /// from which to load buffer sizes.
     ArrayLengthFromUniformOptions array_length_from_uniform = {};
+
+    /// Options used to specify a mapping of binding points to indices into a UBO
+    /// from which to load buffer offsets.
+    ArrayOffsetFromUniformOptions array_offset_from_uniform = {};
 
     /// Interstage locations actually used as inputs in the next stage of the pipeline.
     /// This is potentially used for truncating unused interstage outputs at current shader stage.
@@ -224,26 +250,33 @@ struct Options {
     /// The bindings
     Bindings bindings;
 
+    /// The binding points that will be ignored by the rebustness transform.
+    std::vector<BindingPoint> ignored_by_robustness_transform;
+
     /// Pixel local configuration
     PixelLocalOptions pixel_local;
 
-    bool operator==(const Options& other) const = default;
+    /// Resource table information
+    std::optional<ResourceTableConfig> resource_table;
+
+    // Configuration for substitute overrides
+    SubstituteOverridesConfig substitute_overrides_config = {};
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(Options,
+                 entry_point_name,
                  remapped_entry_point_name,
                  strip_all_names,
                  disable_robustness,
-                 enable_integer_range_analysis,
+                 disable_integer_range_analysis,
                  disable_workgroup_init,
                  truncate_interstage_variables,
-                 polyfill_reflect_vec2_f32,
-                 polyfill_dot_4x8_packed,
                  disable_polyfill_integer_div_mod,
-                 scalarize_max_min_clamp,
-                 polyfill_pack_unpack_4x8,
+                 workarounds,
+                 extensions,
                  compiler,
                  array_length_from_uniform,
+                 array_offset_from_uniform,
                  interstage_locations,
                  root_constant_binding_point,
                  immediate_binding_point,
@@ -251,7 +284,11 @@ struct Options {
                  first_instance_offset,
                  num_workgroups_start_offset,
                  bindings,
-                 pixel_local);
+                 ignored_by_robustness_transform,
+                 pixel_local,
+                 resource_table,
+                 substitute_overrides_config);
+    bool operator==(const Options&) const = default;
 };
 
 }  // namespace tint::hlsl::writer

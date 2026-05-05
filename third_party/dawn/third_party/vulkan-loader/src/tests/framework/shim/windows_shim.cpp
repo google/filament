@@ -31,12 +31,19 @@
 #include <ntstatus.h>
 #endif
 
+#include <iostream>
+
+#include <assert.h>
+
 #include <windows.h>
 #include <debugapi.h>
 
 #include "shim.h"
 
 #include "detours.h"
+
+#include "util/dynamic_library_wrapper.h"
+#include "util/wide_char_handling.h"
 
 static PlatformShim platform_shim;
 
@@ -512,8 +519,5 @@ BOOL WINAPI DllMain([[maybe_unused]] HINSTANCE hinst, DWORD dwReason, [[maybe_un
     }
     return TRUE;
 }
-FRAMEWORK_EXPORT PlatformShim *get_platform_shim(GetFoldersFunc get_folders_by_name_function) {
-    platform_shim = PlatformShim(get_folders_by_name_function);
-    return &platform_shim;
-}
+FRAMEWORK_EXPORT PlatformShim *get_platform_shim() { return &platform_shim; }
 }

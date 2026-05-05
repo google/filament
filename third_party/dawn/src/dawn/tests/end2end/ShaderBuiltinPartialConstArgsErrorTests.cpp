@@ -182,6 +182,9 @@ TEST_P(ShaderBuiltinPartialConstLowHighTest, All) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = shader;
         if (expect_pipeline_error) {
+            // TODO(crbug.com/462151326): Fix pipeline creation error of the inner layer to surface
+            // up properly in WebGPUBackend.
+            DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
             ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&desc));
         } else {
             device.CreateComputePipeline(&desc);
@@ -191,7 +194,7 @@ TEST_P(ShaderBuiltinPartialConstLowHighTest, All) {
 
 DAWN_INSTANTIATE_TEST_P(ShaderBuiltinPartialConstLowHighTest,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), NullBackend(),
-                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {"clamp", "smoothstep"},                             // mBuiltin
                         {Phase::kConst, Phase::kOverride, Phase::kRuntime},  // mLowPhase
                         {Phase::kConst, Phase::kOverride, Phase::kRuntime},  // mHighPhase
@@ -280,6 +283,9 @@ TEST_P(ShaderBuiltinPartialConstOffsetCountTest, All) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = shader;
         if (expect_pipeline_error) {
+            // TODO(crbug.com/462151326): Fix pipeline creation error of the inner layer to surface
+            // up properly in WebGPUBackend.
+            DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
             ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&desc));
         } else {
             device.CreateComputePipeline(&desc);
@@ -289,7 +295,7 @@ TEST_P(ShaderBuiltinPartialConstOffsetCountTest, All) {
 
 DAWN_INSTANTIATE_TEST_P(ShaderBuiltinPartialConstOffsetCountTest,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), NullBackend(),
-                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
+                         OpenGLBackend(), OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {"insertBits", "extractBits"},                       // mBuiltin
                         {Phase::kConst, Phase::kOverride, Phase::kRuntime},  // mOffsetPhase
                         {Phase::kConst, Phase::kOverride, Phase::kRuntime},  // mCountPhase
@@ -427,6 +433,9 @@ TEST_P(ShaderBuiltinPartialConstExponentTest, All) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = shader;
         if (expect_pipeline_error) {
+            // TODO(crbug.com/462151326): Fix pipeline creation error of the inner layer to surface
+            // up properly in WebGPUBackend.
+            DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
             ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&desc));
         } else {
             device.CreateComputePipeline(&desc);
@@ -435,7 +444,7 @@ TEST_P(ShaderBuiltinPartialConstExponentTest, All) {
 }
 
 DAWN_INSTANTIATE_TEST_P(ShaderBuiltinPartialConstExponentTest,
-                        {D3D12Backend(), MetalBackend(), VulkanBackend()},
+                        {D3D12Backend(), MetalBackend(), VulkanBackend(), WebGPUBackend()},
                         {FloatType::f16, FloatType::f32},                    // mFloatType
                         {Phase::kConst, Phase::kOverride, Phase::kRuntime},  // mCountPhase
                         {true, false},                                       // mExponentTooBig

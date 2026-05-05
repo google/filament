@@ -725,5 +725,41 @@ TEST_F(SpirvParserTest, Constant_Struct_Nested) {
 )");
 }
 
+TEST_F(SpirvParserTest, Bug42252062) {
+    EXPECT_IR(R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+    %int_200 = OpConstant %int 200
+ %_struct_18 = OpTypeStruct %int %int
+         %23 = OpUndef %int
+
+         %24 = OpConstantComposite %_struct_18 %23 %int_200
+
+          %2 = OpFunction %void None %10
+         %26 = OpLabel
+         %31 = OpCompositeExtract %int %24 1
+               OpReturn
+               OpFunctionEnd
+)",
+              R"(
+tint_symbol_2 = struct @align(4) {
+  tint_symbol:i32 @offset(0)
+  tint_symbol_1:i32 @offset(4)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = access tint_symbol_2(0i, 200i), 1u
+    ret
+  }
+}
+)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::reader

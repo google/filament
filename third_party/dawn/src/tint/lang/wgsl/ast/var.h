@@ -55,7 +55,6 @@ namespace tint::ast {
 class Var final : public Castable<Var, Variable> {
   public:
     /// Create a 'var' variable
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the variable source
     /// @param name the variable name
@@ -64,8 +63,7 @@ class Var final : public Castable<Var, Variable> {
     /// @param declared_access the declared access control
     /// @param initializer the initializer expression
     /// @param attributes the variable attributes
-    Var(GenerationID pid,
-        NodeID nid,
+    Var(NodeID nid,
         const Source& source,
         const Identifier* name,
         Type type,
@@ -79,12 +77,6 @@ class Var final : public Castable<Var, Variable> {
 
     /// @returns "var"
     const char* Kind() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Var* Clone(CloneContext& ctx) const override;
 
     /// The declared address space
     const Expression* const declared_address_space = nullptr;

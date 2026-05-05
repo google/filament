@@ -65,9 +65,9 @@ func TestDefaultPaths_PathDoesNotExist(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper, err := fileutils.CreateMemMapOSWrapperWithFakeDawnRoot()
+			wrapper, err := fileutils.CreateFSTestOSWrapperWithFakeDawnRoot()
 			require.NoErrorf(t, err, "Error creating fake Dawn root: %v", err)
-			require.Equal(t, testCase.f(wrapper), "")
+			require.Equal(t, "", testCase.f(wrapper))
 		})
 	}
 }
@@ -107,10 +107,10 @@ func TestDefaultPaths_PathExists(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper, err := CreateMemMapOSWrapperWithFakeDefaultPaths()
+			wrapper, err := CreateFSTestOSWrapperWithFakeDefaultPaths()
 			require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 			expectationsPath := testCase.f(wrapper)
-			require.NotEqual(t, expectationsPath, "")
+			require.NotEqual(t, "", expectationsPath)
 			require.True(t, strings.HasPrefix(expectationsPath, fileutils.DawnRoot(wrapper)))
 			require.True(t, strings.HasSuffix(expectationsPath, testCase.expectedSuffix))
 		})
@@ -118,17 +118,17 @@ func TestDefaultPaths_PathExists(t *testing.T) {
 }
 
 func TestDefaultExpectationsPaths_PathDoesNotExist(t *testing.T) {
-	wrapper, err := fileutils.CreateMemMapOSWrapperWithFakeDawnRoot()
+	wrapper, err := fileutils.CreateFSTestOSWrapperWithFakeDawnRoot()
 	require.NoErrorf(t, err, "Error creating fake Dawn root: %v", err)
-	require.Equal(t, DefaultExpectationsPaths(wrapper), []string{"", ""})
+	require.Equal(t, []string{"", ""}, DefaultExpectationsPaths(wrapper))
 }
 
 func TestDefaultExpectationsPaths_PathExists(t *testing.T) {
-	wrapper, err := CreateMemMapOSWrapperWithFakeDefaultPaths()
+	wrapper, err := CreateFSTestOSWrapperWithFakeDefaultPaths()
 	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	expectationsPaths := DefaultExpectationsPaths(wrapper)
-	require.NotEqual(t, expectationsPaths, []string{"", ""})
-	require.Equal(t, len(expectationsPaths), 2)
+	require.NotEqual(t, []string{"", ""}, expectationsPaths)
+	require.Len(t, expectationsPaths, 2)
 	require.True(t, strings.HasPrefix(expectationsPaths[0], fileutils.DawnRoot(wrapper)))
 	require.True(t, strings.HasPrefix(expectationsPaths[1], fileutils.DawnRoot(wrapper)))
 	require.True(t, strings.HasSuffix(expectationsPaths[0], RelativeExpectationsPath))

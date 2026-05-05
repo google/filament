@@ -21,7 +21,8 @@
 #include <string>
 #include <vector>
 
-#include "benchmark/benchmark.h"
+#include "benchmark/reporter.h"
+#include "benchmark/statistics.h"
 
 namespace benchmark {
 

@@ -70,56 +70,30 @@ const char* const Array::kErrExpectedConstantCount =
     "array size is an override-expression, when expected a constant-expression.\n"
     "Was the SubstituteOverride transform run?";
 
-Array::Array(const Type* element,
-             const ArrayCount* count,
-             uint32_t align,
-             uint32_t size,
-             uint32_t stride,
-             uint32_t implicit_stride)
-    : Base(Hash(tint::TypeCode::Of<Array>().bits, count, align, size, stride),
-           FlagsFrom(element, count)),
+Array::Array(const Type* element, const ArrayCount* count, uint32_t size)
+    : Base(Hash(tint::TypeCode::Of<Array>().bits, count, size), FlagsFrom(element, count)),
       element_(element),
       count_(count),
-      align_(align),
-      size_(size),
-      stride_(stride),
-      implicit_stride_(implicit_stride) {
+      size_(size) {
     TINT_ASSERT(count_);
     TINT_ASSERT(element_);
 }
 
-Array::Array(size_t hash,
-             const Type* element,
-             const ArrayCount* count,
-             uint32_t align,
-             uint32_t size,
-             uint32_t stride)
-    : Base(hash, FlagsFrom(element, count)),
-      element_(element),
-      count_(count),
-      align_(align),
-      size_(size),
-      stride_(stride),
-      implicit_stride_(tint::RoundUp(element->Align(), element->Size())) {
+Array::Array(size_t hash, const Type* element, const ArrayCount* count, uint32_t size)
+    : Base(hash, FlagsFrom(element, count)), element_(element), count_(count), size_(size) {
     TINT_ASSERT(count_);
     TINT_ASSERT(element_);
 }
 
 bool Array::Equals(const UniqueNode& other) const {
     if (auto* o = other.As<Array>()) {
-        // Note: implicit_stride is not part of the type_name string as this is
-        // derived from the element type
-        return o->element_ == element_ && o->count_ == count_ && o->align_ == align_ &&
-               o->size_ == size_ && o->stride_ == stride_;
+        return o->element_ == element_ && o->count_ == count_ && o->size_ == size_;
     }
     return false;
 }
 
 std::string Array::FriendlyName() const {
     StringStream out;
-    if (!IsStrideImplicit()) {
-        out << "@stride(" << stride_ << ") ";
-    }
     out << "array<" << element_->FriendlyName();
 
     auto count_str = count_->FriendlyName();
@@ -129,10 +103,6 @@ std::string Array::FriendlyName() const {
 
     out << ">";
     return out.str();
-}
-
-uint32_t Array::Align() const {
-    return align_;
 }
 
 uint32_t Array::Size() const {
@@ -159,7 +129,7 @@ Array* Array::Clone(CloneContext& ctx) const {
     auto* elem_ty = element_->Clone(ctx);
     auto* count = count_->Clone(ctx);
 
-    return ctx.dst.mgr->Get<Array>(elem_ty, count, align_, size_, stride_, implicit_stride_);
+    return ctx.dst.mgr->Get<Array>(elem_ty, count, size_);
 }
 
 }  // namespace tint::core::type

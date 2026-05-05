@@ -5,24 +5,31 @@
 // license that can be found in the LICENSE file or at
 // https://developers.google.com/open-source/licenses/bsd
 
-#include "google/protobuf/hpb/extension.h"
+#include "hpb/extension.h"
 
 #include <cstdint>
 #include <type_traits>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "google/protobuf/compiler/hpb/tests/child_model.upb.proto.h"
-#include "google/protobuf/compiler/hpb/tests/test_extension.upb.proto.h"
-#include "google/protobuf/compiler/hpb/tests/test_model.upb.proto.h"
-#include "google/protobuf/hpb/requires.h"
+#include "absl/status/status_matchers.h"
+#include "absl/strings/string_view.h"
+#include "hpb_generator/tests/child_model.hpb.h"
+#include "hpb_generator/tests/test_extension.hpb.h"
+#include "hpb_generator/tests/test_model.hpb.h"
+#include "hpb/arena.h"
+#include "hpb/backend/upb/interop.h"
+#include "hpb/hpb.h"
+#include "hpb/options.h"
+#include "hpb/requires.h"
+#include "hpb/status.h"
+#include "upb/mem/arena.h"
 
 namespace {
 using ::hpb::internal::Requires;
 
 using ::hpb_unittest::protos::container_ext;
 using ::hpb_unittest::protos::ContainerExtension;
-using ::hpb_unittest::protos::other_ext;
 using ::hpb_unittest::protos::TestModel;
 using ::hpb_unittest::protos::theme;
 using ::hpb_unittest::protos::ThemeExtension;
@@ -34,10 +41,12 @@ using ::hpb_unittest::someotherpackage::protos::int64_ext;
 using ::hpb_unittest::someotherpackage::protos::repeated_int32_ext;
 using ::hpb_unittest::someotherpackage::protos::repeated_int64_ext;
 using ::hpb_unittest::someotherpackage::protos::repeated_string_ext;
+using ::hpb_unittest::someotherpackage::protos::string_escape_ext;
+using ::hpb_unittest::someotherpackage::protos::string_ext;
 using ::hpb_unittest::someotherpackage::protos::uint32_ext;
 using ::hpb_unittest::someotherpackage::protos::uint64_ext;
 
-using ::testing::status::IsOkAndHolds;
+using absl_testing::IsOkAndHolds;
 
 TEST(CppGeneratedCode, HasExtension) {
   TestModel model;
@@ -123,6 +132,15 @@ TEST(CppGeneratedCode, GetSetExtensionBool) {
   auto x = hpb::SetExtension(&model, bool_ext, true);
   EXPECT_EQ(true, hpb::HasExtension(&model, bool_ext));
   EXPECT_THAT(hpb::GetExtension(&model, bool_ext), IsOkAndHolds(true));
+}
+
+TEST(CppGeneratedCode, GetSetExtensionString) {
+  TestModel model;
+  EXPECT_EQ(false, hpb::HasExtension(&model, string_ext));
+  absl::string_view val = "Hello World";
+  auto x = hpb::SetExtension(&model, string_ext, val);
+  EXPECT_EQ(true, hpb::HasExtension(&model, string_ext));
+  EXPECT_THAT(hpb::GetExtension(&model, string_ext), IsOkAndHolds(val));
 }
 
 TEST(CppGeneratedCode, SetExtension) {
@@ -215,8 +233,8 @@ TEST(CppGeneratedCode, SetExtensionFusingFailureShouldCopy) {
 
   ThemeExtension extension1;
   extension1.set_ext_name("Hello World");
-  ASSERT_FALSE(
-      upb_Arena_Fuse(arena.ptr(), hpb::interop::upb::GetArena(&extension1)));
+  ASSERT_FALSE(upb_Arena_Fuse(hpb::interop::upb::UnwrapArena(arena),
+                              hpb::interop::upb::GetArena(&extension1)));
   EXPECT_FALSE(::hpb::HasExtension(model, theme));
   auto status = ::hpb::SetExtension(model, theme, std::move(extension1));
   EXPECT_TRUE(status.ok());
@@ -261,6 +279,56 @@ TEST(CppGeneratedCode, SetExtensionOnMutableChild) {
                       .ok());
   EXPECT_EQ(true, ::hpb::HasExtension(model.mutable_recursive_child(), theme));
 }
+
+TEST(CppGeneratedCode, SetAliasExtensionOnMutableChild) {
+  hpb::Arena arena;
+  hpb::Ptr<TestModel> model = hpb::CreateMessage<TestModel>(arena);
+  hpb::Ptr<ThemeExtension> extension1 =
+      hpb::CreateMessage<ThemeExtension>(arena);
+  extension1->set_ext_name("Hello World");
+  EXPECT_EQ(false,
+            ::hpb::HasExtension(model->mutable_recursive_child(), theme));
+  ::hpb::SetAliasExtension(model->mutable_recursive_child(), theme, extension1);
+  EXPECT_EQ(true, ::hpb::HasExtension(model->mutable_recursive_child(), theme));
+}
+
+TEST(CppGeneratedCode, SetAliasExtensionOnTwoParents) {
+  hpb::Arena arena;
+  hpb::Ptr<TestModel> model1 = hpb::CreateMessage<TestModel>(arena);
+  hpb::Ptr<TestModel> model2 = hpb::CreateMessage<TestModel>(arena);
+  hpb::Ptr<ThemeExtension> extension1 =
+      hpb::CreateMessage<ThemeExtension>(arena);
+  extension1->set_ext_name("Hello World");
+  ::hpb::SetAliasExtension(model1->mutable_recursive_child(), theme,
+                           extension1);
+  ::hpb::SetAliasExtension(model2->mutable_recursive_child(), theme,
+                           extension1);
+  extension1->set_ext_name("Goodbye");
+  EXPECT_EQ("Goodbye",
+            hpb::GetExtension(model1->mutable_recursive_child(), theme)
+                .value()
+                ->ext_name());
+  EXPECT_EQ("Goodbye",
+            hpb::GetExtension(model2->mutable_recursive_child(), theme)
+                .value()
+                ->ext_name());
+}
+
+#ifndef NDEBUG
+
+TEST(CppGeneratedCode, SetAliasExtensionOnDifferentArenaShouldCrash) {
+  hpb::Arena arena1;
+  hpb::Arena arena2;
+  hpb::Ptr<TestModel> model = hpb::CreateMessage<TestModel>(arena1);
+  hpb::Ptr<ThemeExtension> extension1 =
+      hpb::CreateMessage<ThemeExtension>(arena2);
+  extension1->set_ext_name("Hello World");
+  EXPECT_DEATH(::hpb::SetAliasExtension(model->mutable_recursive_child(), theme,
+                                        extension1),
+               "");
+}
+
+#endif  // NDEBUG
 
 TEST(CppGeneratedCode, GetExtension) {
   TestModel model;
@@ -319,6 +387,20 @@ TEST(CppGeneratedCode, GetExtensionBoolWithDefault) {
   EXPECT_THAT(res, IsOkAndHolds(true));
 }
 
+TEST(CppGeneratedCode, GetExtensionStringWithDefault) {
+  TestModel model;
+  auto res = hpb::GetExtension(&model, string_ext);
+  EXPECT_TRUE(res.ok());
+  EXPECT_THAT(res, IsOkAndHolds("mishpacha"));
+}
+
+TEST(CppGeneratedCode, GetExtensionStringWithDefaultAndTestEscaping) {
+  TestModel model;
+  auto res = hpb::GetExtension(&model, string_escape_ext);
+  EXPECT_TRUE(res.ok());
+  EXPECT_THAT(res, IsOkAndHolds("bseder\"bseder"));
+}
+
 TEST(CppGeneratedCode, GetExtensionOnMutableChild) {
   TestModel model;
   ThemeExtension extension1;
@@ -355,10 +437,12 @@ TEST(CppGeneratedCode, Parse) {
   ThemeExtension extension1;
   extension1.set_ext_name("Hello World");
   EXPECT_EQ(true, ::hpb::SetExtension(&model, theme, extension1).ok());
-  ::upb::Arena arena;
-  auto bytes = ::hpb::Serialize(&model, arena);
+  hpb::Arena arena;
+  auto bytes = hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
-  TestModel parsed_model = ::hpb::Parse<TestModel>(bytes.value()).value();
+  TestModel parsed_model =
+      ::hpb::Parse<TestModel>(bytes.value(), hpb::ParseOptionsDefault())
+          .value();
   EXPECT_EQ("Test123", parsed_model.str1());
   EXPECT_EQ(true, hpb::GetExtension(&parsed_model, theme).ok());
 }
@@ -369,7 +453,7 @@ TEST(CppGeneratedCode, ParseIntoPtrToModel) {
   ThemeExtension extension1;
   extension1.set_ext_name("Hello World");
   EXPECT_EQ(true, ::hpb::SetExtension(&model, theme, extension1).ok());
-  ::upb::Arena arena;
+  hpb::Arena arena;
   auto bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
   ::hpb::Ptr<TestModel> parsed_model = ::hpb::CreateMessage<TestModel>(arena);
@@ -389,13 +473,12 @@ TEST(CppGeneratedCode, ParseWithExtensionRegistry) {
   EXPECT_EQ(true, ::hpb::SetExtension(&model, ThemeExtension::theme_extension,
                                       extension1)
                       .ok());
-  ::upb::Arena arena;
+  hpb::Arena arena;
   auto bytes = ::hpb::Serialize(&model, arena);
   EXPECT_EQ(true, bytes.ok());
 
   TestModel parsed_model =
-      ::hpb::Parse<TestModel>(bytes.value(),
-                              hpb::ExtensionRegistry::generated_registry())
+      ::hpb::Parse<TestModel>(bytes.value(), hpb::ParseOptionsDefault())
           .value();
   EXPECT_EQ("Test123", parsed_model.str1());
   EXPECT_EQ(true, hpb::GetExtension(&parsed_model, theme).ok());
@@ -406,6 +489,30 @@ TEST(CppGeneratedCode, ParseWithExtensionRegistry) {
             hpb::GetExtension(&parsed_model, ThemeExtension::theme_extension)
                 .value()
                 ->ext_name());
+}
+
+TEST(CppGeneratedCode, HpbStatusGeneratedRegistry) {
+  TestModel model;
+  ThemeExtension extension1;
+  extension1.set_ext_name("Hello World");
+  EXPECT_EQ(true, ::hpb::SetExtension(&model, ThemeExtension::theme_extension,
+                                      extension1)
+                      .ok());
+  hpb::Arena arena;
+  auto bytes = ::hpb::Serialize(&model, arena);
+  EXPECT_EQ(true, bytes.ok());
+
+  // By default, hpb::ParseOptionsDefault uses the generated registry.
+  hpb::StatusOr<TestModel> parsed_model =
+      ::hpb::Parse<TestModel>(bytes.value(), hpb::ParseOptionsDefault());
+  EXPECT_EQ(true, parsed_model.ok());
+  EXPECT_EQ(true, hpb::GetExtension(&parsed_model.value(),
+                                    ThemeExtension::theme_extension)
+                      .ok());
+  EXPECT_EQ("Hello World", hpb::GetExtension(&parsed_model.value(),
+                                             ThemeExtension::theme_extension)
+                               .value()
+                               ->ext_name());
 }
 
 TEST(CppGeneratedCode, ClearSubMessage) {
@@ -480,9 +587,7 @@ TEST(CppGeneratedCode, HasExtensionAndRegistry) {
 
   // Test with ExtensionRegistry
   TestModel parsed_model =
-      ::hpb::Parse<TestModel>(data,
-                              hpb::ExtensionRegistry::generated_registry())
-          .value();
+      ::hpb::Parse<TestModel>(data, hpb::ParseOptionsDefault()).value();
   EXPECT_TRUE(::hpb::HasExtension(&parsed_model, theme));
 }
 
@@ -492,13 +597,14 @@ TEST(CppGeneratedCode, ExtensionFieldNumberConstant) {
 
 TEST(CppGeneratedCode, GetExtensionRepeatedi32) {
   TestModel model;
-  upb::Arena arena;
+  hpb::Arena arena;
   hpb::ExtensionRegistry extensions(arena);
   extensions.AddExtension(repeated_int32_ext);
+  hpb::ParseOptions options{.extension_registry = extensions};
   // These bytes are the serialized form of a repeated int32 field
   // with two elements: [2, 3] @index 13004
   auto bytes = "\342\254\006\002\002\003";
-  auto parsed_model = hpb::Parse<TestModel>(bytes, extensions).value();
+  auto parsed_model = hpb::Parse<TestModel>(bytes, options).value();
   auto res = hpb::GetExtension(&parsed_model, repeated_int32_ext);
   EXPECT_EQ(true, res.ok());
   EXPECT_EQ(res->size(), 2);
@@ -508,32 +614,52 @@ TEST(CppGeneratedCode, GetExtensionRepeatedi32) {
 
 TEST(CppGeneratedCode, GetExtensionRepeatedi64) {
   TestModel model;
-  upb::Arena arena;
+  hpb::Arena arena;
   hpb::ExtensionRegistry extensions(arena);
   extensions.AddExtension(repeated_int64_ext);
+  hpb::ParseOptions options{.extension_registry = extensions};
   // These bytes represent a repeated int64 field with one element: [322].
   auto bytes = "\352\254\006\002\302\002";
-  auto parsed_model = hpb::Parse<TestModel>(bytes, extensions).value();
+  auto parsed_model = hpb::Parse<TestModel>(bytes, options).value();
   auto res = hpb::GetExtension(&parsed_model, repeated_int64_ext);
   EXPECT_EQ(true, res.ok());
   EXPECT_EQ(res->size(), 1);
   EXPECT_EQ((*res)[0], 322);
 }
 
+TEST(CppGeneratedCode, GetExtensionSingularString) {
+  TestModel model;
+  hpb::Arena arena;
+  hpb::ExtensionRegistry extensions(arena);
+  extensions.AddExtension(string_ext);
+  hpb::ParseOptions options{.extension_registry = extensions};
+  // These bytes represent a singular string field: "todaraba" @index 13012.
+  auto bytes = "\242\255\006\010todaraba";
+  auto parsed_model = hpb::Parse<TestModel>(bytes, options).value();
+  auto res = hpb::GetExtension(&parsed_model, string_ext);
+  EXPECT_THAT(res, IsOkAndHolds("todaraba"));
+}
+
 TEST(CppGeneratedCode, GetExtensionRepeatedString) {
   TestModel model;
-  upb::Arena arena;
+  hpb::Arena arena;
   hpb::ExtensionRegistry extensions(arena);
   extensions.AddExtension(repeated_string_ext);
+  hpb::ParseOptions options{.extension_registry = extensions};
   // These bytes represent a repeated string field with two elements:
   // ["hello", "world"] @index 13006.
   auto bytes = "\362\254\006\005hello\362\254\006\005world";
-  auto parsed_model = hpb::Parse<TestModel>(bytes, extensions).value();
+  auto parsed_model = hpb::Parse<TestModel>(bytes, options).value();
   auto res = hpb::GetExtension(&parsed_model, repeated_string_ext);
   EXPECT_EQ(true, res.ok());
   EXPECT_EQ(res->size(), 2);
   EXPECT_EQ((*res)[0], "hello");
   EXPECT_EQ((*res)[1], "world");
+}
+
+TEST(CppGeneratedCode, ConstExprExtensionNumber) {
+  constexpr auto ext_num = hpb::ExtensionNumber(int32_ext);
+  EXPECT_EQ(ext_num, 13002);
 }
 
 }  // namespace

@@ -68,11 +68,18 @@ struct ImmediateDataLayout {
     }
 };
 
-/// The set of polyfills that should be applied.
+/// The internally created immediate data members.
 struct PrepareImmediateDataConfig {
     /// Add an internal immediate data to the map.
-    void AddInternalImmediateData(uint32_t offset, Symbol name, const core::type::Type* type) {
-        internal_immediate_data.emplace(offset, InternalImmediateData{name, type});
+    Result<SuccessType> AddInternalImmediateData(uint32_t offset,
+                                                 Symbol name,
+                                                 const core::type::Type* type) {
+        auto res = internal_immediate_data.emplace(offset, InternalImmediateData{name, type});
+        if (!res.second) {
+            return Failure("mutiple internal immediates created at offset " +
+                           std::to_string(offset));
+        }
+        return Success;
     }
 
     /// The ordered map from offset to internally used constant descriptor.

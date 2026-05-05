@@ -121,8 +121,8 @@ TEST_P(ClipDistancesTest, UseClipDistances) {
 }
 
 DAWN_INSTANTIATE_TEST_P(ClipDistancesTest,
-                        {D3D11Backend(), D3D12Backend(), MetalBackend(), VulkanBackend(),
-                         OpenGLBackend(), OpenGLESBackend()},
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {1, 2, 3, 4, 5, 6, 7, 8});
 
 }  // anonymous namespace

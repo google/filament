@@ -22,9 +22,11 @@
 #include <utils/Entity.h>
 
 #include <math/mat4.h>
+#include <common/JniUtils.h>
 
 using namespace utils;
 using namespace filament;
+using namespace filament::android;
 
 static_assert(sizeof(jint) == sizeof(Entity), "jint and Entity are not compatible!!");
 
@@ -45,12 +47,14 @@ Java_com_google_android_filament_TransformManager_nGetInstance(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TransformManager_nCreate(JNIEnv*, jclass,
+Java_com_google_android_filament_TransformManager_nCreate(JNIEnv* env, jclass,
         jlong nativeTransformManager, jint entity_) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
-    Entity& entity = *reinterpret_cast<Entity*>(&entity_);
-    tm->create(entity);
-    return tm->getInstance(entity);
+    return wrapJni<jint>(env, [=]() {
+        Entity entity = *reinterpret_cast<const Entity*>(&entity_);
+        tm->create(entity);
+        return tm->getInstance(entity);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -58,16 +62,18 @@ Java_com_google_android_filament_TransformManager_nCreateArray(JNIEnv* env,
         jclass, jlong nativeTransformManager, jint entity_, jint parent,
         jfloatArray localTransform_) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
-    Entity& entity = *reinterpret_cast<Entity*>(&entity_);
-    if (localTransform_) {
-        jfloat *localTransform = env->GetFloatArrayElements(localTransform_, NULL);
-        tm->create(entity, (TransformManager::Instance) parent,
-                *reinterpret_cast<const filament::math::mat4f *>(localTransform));
-        env->ReleaseFloatArrayElements(localTransform_, localTransform, JNI_ABORT);
-    } else {
-        tm->create(entity, (TransformManager::Instance) parent);
-    }
-    return tm->getInstance(entity);
+    return wrapJni<jint>(env, [=]() {
+        Entity entity = *reinterpret_cast<const Entity*>(&entity_);
+        if (localTransform_) {
+            jfloat *localTransform = env->GetFloatArrayElements(localTransform_, NULL);
+            tm->create(entity, (TransformManager::Instance) parent,    
+                    *reinterpret_cast<const filament::math::mat4f *>(localTransform));
+            env->ReleaseFloatArrayElements(localTransform_, localTransform, JNI_ABORT);
+        } else {
+            tm->create(entity, (TransformManager::Instance) parent);
+        }
+        return tm->getInstance(entity);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -75,16 +81,18 @@ Java_com_google_android_filament_TransformManager_nCreateArrayFp64(JNIEnv* env,
         jclass, jlong nativeTransformManager, jint entity_, jint parent,
         jdoubleArray localTransform_) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
-    Entity& entity = *reinterpret_cast<Entity*>(&entity_);
-    if (localTransform_) {
-        jdouble *localTransform = env->GetDoubleArrayElements(localTransform_, NULL);
-        tm->create(entity, (TransformManager::Instance) parent,
-                *reinterpret_cast<const filament::math::mat4 *>(localTransform));
-        env->ReleaseDoubleArrayElements(localTransform_, localTransform, JNI_ABORT);
-    } else {
-        tm->create(entity, (TransformManager::Instance) parent);
-    }
-    return tm->getInstance(entity);
+    return wrapJni<jint>(env, [=]() {
+        Entity entity = *reinterpret_cast<const Entity*>(&entity_);
+        if (localTransform_) {
+            jdouble *localTransform = env->GetDoubleArrayElements(localTransform_, NULL);
+            tm->create(entity, (TransformManager::Instance) parent,    
+                    *reinterpret_cast<const filament::math::mat4 *>(localTransform));
+            env->ReleaseDoubleArrayElements(localTransform_, localTransform, JNI_ABORT);
+        } else {
+            tm->create(entity, (TransformManager::Instance) parent);
+        }
+        return tm->getInstance(entity);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL

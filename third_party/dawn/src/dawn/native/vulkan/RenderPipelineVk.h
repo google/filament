@@ -28,35 +28,68 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_RENDERPIPELINEVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_RENDERPIPELINEVK_H_
 
-#include "dawn/native/RenderPipeline.h"
-
 #include "dawn/common/vulkan_platform.h"
 #include "dawn/native/Error.h"
+#include "dawn/native/RenderPipeline.h"
+#include "dawn/native/vulkan/PipelineLayoutVk.h"
 #include "dawn/native/vulkan/PipelineVk.h"
+#include "dawn/native/vulkan/RefCountedVkHandle.h"
 
 namespace dawn::native::vulkan {
 
 class Device;
 struct VkPipelineLayoutObject;
 
-class RenderPipeline final : public RenderPipelineBase, public PipelineVk {
+class RenderPipeline final : public RenderPipelineBase {
   public:
     static Ref<RenderPipeline> CreateUninitialized(
         Device* device,
         const UnpackedPtr<RenderPipelineDescriptor>& descriptor);
 
-    VkPipeline GetHandle() const;
+    // Specializations used to JIT pipelines.
+    using Specialization = CommonPipelineSpecialization;
+    ResultOrError<PipelineHandles> GetOrCreateSpecializedHandle(Specialization&& specialization);
+    bool RequiresSpecialization() const;
 
-    MaybeError InitializeImpl() override;
+    VkPipeline GetHandle() const;
+    VkPipelineLayout GetVkLayout() const;
+
+    void ApplyDynamicState(VkCommandBuffer& commands, const RenderPipeline* prevPipeline) const;
 
     // Dawn API
     void SetLabelImpl() override;
 
   private:
-    ~RenderPipeline() override;
-    void DestroyImpl() override;
-    using RenderPipelineBase::RenderPipelineBase;
+    struct DynamicState {
+        VkPrimitiveTopology primitiveTopology;
+        VkCullModeFlags cullMode;
+        VkFrontFace frontFace;
+        VkBool32 depthTestEnable;
+        VkBool32 depthWriteEnable;
+        VkCompareOp depthCompareOp;
+        VkBool32 stencilTestEnable;
+        uint16_t packedFrontStencil;
+        uint16_t packedBackStencil;
+    };
 
+    ~RenderPipeline() override;
+
+    void DestroyImpl(DestroyReason reason) override;
+    using RenderPipelineBase::RenderPipelineBase;
+    MaybeError InitializeImpl() override;
+
+    bool NeedsPixelCenterPolyfill() const;
+
+    // Initializes a pipeline for the specialization and stores it in mSpecializations.
+    struct SpecializationResult {
+        Ref<RefCountedVkHandle<VkPipeline>> pipeline;
+        Ref<RefCountedVkHandle<VkPipelineLayout>> layout;
+    };
+    ResultOrError<SpecializationResult> InitializeSpecialization(
+        const Specialization& specialization,
+        bool buildCacheKey);
+
+    // Helpers used while building the VkPipelineCreateInfo.
     struct PipelineVertexInputStateCreateInfoTemporaryAllocations {
         std::array<VkVertexInputBindingDescription, kMaxVertexBuffers> bindings;
         std::array<VkVertexInputAttributeDescription, kMaxVertexAttributes> attributes;
@@ -65,7 +98,16 @@ class RenderPipeline final : public RenderPipelineBase, public PipelineVk {
         PipelineVertexInputStateCreateInfoTemporaryAllocations* temporaryAllocations);
     VkPipelineDepthStencilStateCreateInfo ComputeDepthStencilDesc();
 
-    VkPipeline mHandle = VK_NULL_HANDLE;
+    // The handles are owned by a ref in mSpecializations.
+    PipelineHandles mHandles = {};
+
+    // Caches the specializations as we are most likely to reuse the overtime. Note that noop
+    // specialization has mHandle cached directly but mHandle is also kept separately for
+    // efficiency.
+    bool mRequiresSpecialization = false;
+    absl::flat_hash_map<Specialization, SpecializationResult> mSpecializations;
+
+    DynamicState mDynamicState = {};
 
     // Whether the pipeline has any input attachment being used in the frag shader.
     bool mHasInputAttachment = false;

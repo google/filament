@@ -23,6 +23,7 @@
 
 #include "common/NioUtils.h"
 #include "common/CallbackUtils.h"
+#include <common/JniUtils.h>
 
 #ifdef __ANDROID__
 
@@ -113,11 +114,13 @@ Java_com_google_android_filament_Stream_nBuilderHeight(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Stream_nBuilderBuild(JNIEnv*, jclass,
+Java_com_google_android_filament_Stream_nBuilderBuild(JNIEnv* env, jclass,
         jlong nativeStreamBuilder, jlong nativeEngine) {
     StreamBuilder* builder = (StreamBuilder*) nativeStreamBuilder;
     Engine* engine = (Engine*) nativeEngine;
-    return (jlong) builder->builder()->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->builder()->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL

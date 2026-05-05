@@ -237,6 +237,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     // BufferBase::MapAtCreation().
     if (GetDevice()->IsToggleEnabled(Toggle::NonzeroClearResourcesOnCreationForTesting) &&
         !mappedAtCreation) {
+        auto scopedUseDuringCreation = UseInternal();
         CommandRecordingContext* commandRecordingContext =
             ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext();
         DAWN_TRY(ClearBuffer(commandRecordingContext, uint8_t(1u)));
@@ -246,6 +247,7 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
     if (GetDevice()->IsToggleEnabled(Toggle::LazyClearResourceOnFirstUse) && !mappedAtCreation) {
         uint64_t paddingBytes = GetAllocatedSize() - GetSize();
         if (paddingBytes > 0) {
+            auto scopedUseDuringCreation = UseInternal();
             CommandRecordingContext* commandRecordingContext =
                 ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext();
 
@@ -472,7 +474,9 @@ MaybeError Buffer::MapInternal(bool isWrite, size_t offset, size_t size, const c
     //   pReadRange.
     //
     // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12resource-map
-    DAWN_TRY(CheckHRESULT(GetD3D12Resource()->Map(0, &range, &mMappedData), contextInfo));
+    void* mappedData = nullptr;
+    DAWN_TRY(CheckHRESULT(GetD3D12Resource()->Map(0, &range, &mappedData), contextInfo));
+    mMappedData = mappedData;
 
     if (isWrite) {
         mWrittenMappedRange = range;
@@ -495,6 +499,8 @@ MaybeError Buffer::MapAtCreationImpl() {
 }
 
 MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) {
+    auto deviceGuard = GetDevice()->GetGuard();
+
     // GetPendingCommandContext() call might create a new commandList. Dawn will handle
     // it in Tick() by execute the commandList and signal a fence for it even it is empty.
     // Skip the unnecessary GetPendingCommandContext() call saves an extra fence.
@@ -507,7 +513,11 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
     return MapInternal(mode & wgpu::MapMode::Write, offset, size, "D3D12 map async");
 }
 
-void Buffer::UnmapImpl() {
+MaybeError Buffer::FinalizeMapImpl(BufferState newState) {
+    return {};
+}
+
+void Buffer::UnmapImpl(BufferState oldState, BufferState newState) {
     GetD3D12Resource()->Unmap(0, &mWrittenMappedRange);
     mMappedData = nullptr;
     mWrittenMappedRange = {0, 0};
@@ -515,6 +525,7 @@ void Buffer::UnmapImpl() {
     // When buffers are mapped, they are locked to keep them in resident memory. We must unlock
     // them when they are unmapped.
     if (mResourceAllocation.GetInfo().mMethod != AllocationMethod::kExternal) {
+        auto deviceGuard = GetDevice()->GetGuard();
         Heap* heap = ToBackend(mResourceAllocation.GetResourceHeap());
         ToBackend(GetDevice())->GetResidencyManager()->UnlockAllocation(heap);
     }
@@ -526,7 +537,7 @@ void* Buffer::GetMappedPointerImpl() {
     return mMappedData;
 }
 
-void Buffer::DestroyImpl() {
+void Buffer::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the buffer is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other
@@ -540,7 +551,7 @@ void Buffer::DestroyImpl() {
         // which parts to flush, so we set it to an empty range to prevent flushes.
         mWrittenMappedRange = {0, 0};
     }
-    BufferBase::DestroyImpl();
+    BufferBase::DestroyImpl(reason);
 
     ToBackend(GetDevice())->DeallocateMemory(mResourceAllocation);
 
@@ -637,11 +648,11 @@ MaybeError Buffer::SynchronizeBufferBeforeMapping() {
         SharedBufferMemoryBase::PendingFenceList fences;
         contents->AcquirePendingFences(&fences);
         for (const auto& fence : fences) {
-            HANDLE fenceEvent = 0;
             ComPtr<ID3D12Fence> d3dFence = ToBackend(fence.object)->GetD3DFence();
             if (d3dFence->GetCompletedValue() < fence.signaledValue) {
-                d3dFence->SetEventOnCompletion(fence.signaledValue, fenceEvent);
-                WaitForSingleObject(fenceEvent, INFINITE);
+                // If hEvent is NULL, SetEventOnCompletion will return when fence reaches
+                // fence.signaledValue.
+                d3dFence->SetEventOnCompletion(fence.signaledValue, NULL);
             }
         }
     }
@@ -660,15 +671,21 @@ MaybeError Buffer::SynchronizeBufferBeforeUseOnGPU() {
         contents->AcquirePendingFences(&fences);
 
         ID3D12CommandQueue* commandQueue = queue->GetCommandQueue();
+        const auto& queueFence = ToBackend(device->GetQueue())->GetSharedFence();
+        const ExecutionSerial queueSubmittedSerial = queue->GetLastSubmittedCommandSerial();
         for (const auto& fence : fences) {
-            DAWN_TRY(CheckHRESULT(commandQueue->Wait(ToBackend(fence.object)->GetD3DFence(),
-                                                     fence.signaledValue),
+            auto d3dFence = ToBackend(fence.object);
+            if (d3dFence.Get() == queueFence.Get()) {
+                // We don't need to wait on the fence that we signaled (self-wait).
+                DAWN_CHECK(ExecutionSerial(fence.signaledValue) <= queueSubmittedSerial);
+                continue;
+            }
+
+            DAWN_TRY(CheckHRESULT(commandQueue->Wait(d3dFence->GetD3DFence(), fence.signaledValue),
                                   "D3D12 fence wait"););
             // Keep D3D12 fence alive until commands complete.
-            device->ReferenceUntilUnused(ToBackend(fence.object)->GetD3DFence());
+            device->ReferenceUntilUnused(d3dFence->GetD3DFence());
         }
-
-        mLastUsageSerial = queue->GetPendingCommandSerial();
     }
 
     return {};
@@ -702,7 +719,7 @@ MaybeError Buffer::ClearBuffer(CommandRecordingContext* commandContext,
         DAWN_TRY(MapInternal(true, static_cast<size_t>(offset), static_cast<size_t>(size),
                              "D3D12 map at clear buffer"));
         memset(mMappedData, clearValue, size);
-        UnmapImpl();
+        UnmapImpl(GetState(), BufferState::Unmapped);
     } else if (clearValue == 0u) {
         DAWN_TRY(device->ClearBufferToZero(commandContext, this, offset, size));
     } else {

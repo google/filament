@@ -141,15 +141,6 @@ class PROTOBUF_EXPORT WireFormat {
   static bool SkipMessage(io::CodedInputStream* input,
                           UnknownFieldSet* unknown_fields);
 
-  // Read a packed enum field. If the is_valid function is not nullptr, values
-  // for which is_valid(value) returns false are appended to
-  // unknown_fields_stream.
-  static bool ReadPackedEnumPreserveUnknowns(io::CodedInputStream* input,
-                                             uint32_t field_number,
-                                             bool (*is_valid)(int),
-                                             UnknownFieldSet* unknown_fields,
-                                             RepeatedField<int>* values);
-
   // Write the contents of an UnknownFieldSet to the output.
   static void SerializeUnknownFields(const UnknownFieldSet& unknown_fields,
                                      io::CodedOutputStream* output) {
@@ -173,20 +164,13 @@ class PROTOBUF_EXPORT WireFormat {
       const UnknownFieldSet& unknown_fields, uint8_t* target,
       io::EpsCopyOutputStream* stream);
 
+
   // Same thing except for messages that have the message_set_wire_format
   // option.
-  static void SerializeUnknownMessageSetItems(
-      const UnknownFieldSet& unknown_fields, io::CodedOutputStream* output) {
-    output->SetCur(InternalSerializeUnknownMessageSetItemsToArray(
-        unknown_fields, output->Cur(), output->EpsCopy()));
-  }
-  // Same as above, except writing directly to the provided buffer.
   // Requires that the buffer have sufficient capacity for
   // ComputeUnknownMessageSetItemsSize(unknown_fields).
   //
   // Returns a pointer past the last written byte.
-  static uint8_t* SerializeUnknownMessageSetItemsToArray(
-      const UnknownFieldSet& unknown_fields, uint8_t* target);
   static uint8_t* InternalSerializeUnknownMessageSetItemsToArray(
       const UnknownFieldSet& unknown_fields, uint8_t* target,
       io::EpsCopyOutputStream* stream);
@@ -234,12 +218,6 @@ class PROTOBUF_EXPORT WireFormat {
   // option message_set_wire_format = true.
   static bool ParseAndMergeMessageSetItem(io::CodedInputStream* input,
                                           Message* message);
-  static void SerializeMessageSetItemWithCachedSizes(
-      const FieldDescriptor* field, const Message& message,
-      io::CodedOutputStream* output) {
-    output->SetCur(InternalSerializeMessageSetItem(
-        field, message, output->Cur(), output->EpsCopy()));
-  }
   static uint8_t* InternalSerializeMessageSetItem(
       const FieldDescriptor* field, const Message& message, uint8_t* target,
       io::EpsCopyOutputStream* stream);
@@ -262,9 +240,11 @@ class PROTOBUF_EXPORT WireFormat {
   // Verifies that a string field is valid UTF8, logging an error if not.
   // This function will not be called by newly generated protobuf code
   // but remains present to support existing code.
+  ABSL_DEPRECATE_AND_INLINE()
   static void VerifyUTF8String(const char* data, int size, Operation op);
   // The NamedField variant takes a field name in order to produce an
   // informative error message if verification fails.
+  ABSL_DEPRECATE_AND_INLINE()
   static void VerifyUTF8StringNamedField(const char* data, int size,
                                          Operation op,
                                          absl::string_view field_name);
@@ -338,34 +318,12 @@ inline size_t WireFormat::TagSize(int field_number,
       static_cast<WireFormatLite::FieldType>(absl::implicit_cast<int>(type)));
 }
 
-inline void WireFormat::VerifyUTF8String(const char* data, int size,
-                                         WireFormat::Operation op) {
-#ifdef GOOGLE_PROTOBUF_UTF8_VALIDATION_ENABLED
-  WireFormatLite::VerifyUtf8String(data, size,
-                                   static_cast<WireFormatLite::Operation>(op),
-                                   /* field_name = */ "");
-#else
-  // Avoid the compiler warning about unused variables.
-  (void)data;
-  (void)size;
-  (void)op;
-#endif
-}
+inline void WireFormat::VerifyUTF8String(const char*, int,
+                                         WireFormat::Operation) {}
 
-inline void WireFormat::VerifyUTF8StringNamedField(
-    const char* data, int size, WireFormat::Operation op,
-    const absl::string_view field_name) {
-#ifdef GOOGLE_PROTOBUF_UTF8_VALIDATION_ENABLED
-  WireFormatLite::VerifyUtf8String(
-      data, size, static_cast<WireFormatLite::Operation>(op), field_name);
-#else
-  // Avoid the compiler warning about unused variables.
-  (void)data;
-  (void)size;
-  (void)op;
-  (void)field_name;
-#endif
-}
+inline void WireFormat::VerifyUTF8StringNamedField(const char*, int,
+                                                   WireFormat::Operation,
+                                                   const absl::string_view) {}
 
 
 inline uint8_t* InternalSerializeUnknownMessageSetItemsToArray(

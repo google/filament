@@ -51,10 +51,12 @@ DynamicLib::~DynamicLib() {
 
 DynamicLib::DynamicLib(DynamicLib&& other) {
     std::swap(mHandle, other.mHandle);
+    mNeedsClose = other.mNeedsClose;
 }
 
 DynamicLib& DynamicLib::operator=(DynamicLib&& other) {
     std::swap(mHandle, other.mHandle);
+    mNeedsClose = other.mNeedsClose;
     return *this;
 }
 
@@ -64,17 +66,23 @@ bool DynamicLib::Valid() const {
 
 #if DAWN_PLATFORM_IS(WINDOWS) && !DAWN_PLATFORM_IS(WINUWP)
 bool DynamicLib::OpenSystemLibrary(std::wstring_view filename, std::string* error) {
+    DAWN_ASSERT(mHandle == nullptr);
+
     // Force LOAD_LIBRARY_SEARCH_SYSTEM32 for system libraries to avoid DLL search path
     // attacks.
     mHandle = ::LoadLibraryExW(filename.data(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (mHandle == nullptr && error != nullptr) {
         *error = "Windows Error: " + std::to_string(GetLastError());
     }
-    return mHandle != nullptr;
+
+    mNeedsClose = mHandle != nullptr;
+    return mNeedsClose;
 }
 #endif
 
 bool DynamicLib::Open(const std::string& filename, std::string* error) {
+    DAWN_ASSERT(mHandle == nullptr);
+
 #if DAWN_PLATFORM_IS(WINDOWS)
 #if DAWN_PLATFORM_IS(WINUWP)
     mHandle = LoadPackagedLibrary(UTF8ToWStr(filename.c_str()).c_str(), 0);
@@ -102,6 +110,32 @@ bool DynamicLib::Open(const std::string& filename, std::string* error) {
 #error "Unsupported platform for DynamicLib"
 #endif
 
+    mNeedsClose = mHandle != nullptr;
+    return mNeedsClose;
+}
+
+// Opens a dynamic library that has already been loaded into the process.
+bool DynamicLib::OpenLoaded(const std::string& filename, std::string* error) {
+    DAWN_ASSERT(mHandle == nullptr);
+
+#if DAWN_PLATFORM_IS(WINDOWS)
+    mHandle = GetModuleHandleA(filename.c_str());
+    if (mHandle == nullptr && error != nullptr) {
+        *error = "DynamicLib.OpenLoaded: " + filename +
+                 " Windows Error: " + std::to_string(GetLastError());
+    }
+#elif DAWN_PLATFORM_IS(POSIX)
+    mHandle = dlopen(filename.c_str(), RTLD_NOW | RTLD_NOLOAD);
+
+    if (mHandle == nullptr && error != nullptr) {
+        *error = dlerror();
+    }
+#else
+#error "Unsupported platform for DynamicLib"
+#endif
+
+    mNeedsClose = false;
+
     return mHandle != nullptr;
 }
 
@@ -122,19 +156,23 @@ void DynamicLib::Close() {
         return;
     }
 
+    // If the dynamic library was opened with OpenLoaded don't attempt to close it.
+    if (mNeedsClose) {
 #if DAWN_PLATFORM_IS(WINDOWS)
 #if !DAWN_ASAN_ENABLED()
-    // Freeing and reloading a DLL on Windows causes ASAN to detect ODR violations.
-    // https://github.com/google/sanitizers/issues/89
-    // In ASAN builds, we have to leak the DLL instead in case it gets loaded again later.
-    FreeLibrary(static_cast<HMODULE>(mHandle));
+        // Freeing and reloading a DLL on Windows causes ASAN to detect ODR violations.
+        // https://github.com/google/sanitizers/issues/89
+        // In ASAN builds, we have to leak the DLL instead in case it gets loaded again later.
+        FreeLibrary(static_cast<HMODULE>(mHandle));
 #endif
 #elif DAWN_PLATFORM_IS(POSIX)
-    dlclose(mHandle);
+        dlclose(mHandle);
 #else
 #error "Unsupported platform for DynamicLib"
 #endif
+    }
 
+    mNeedsClose = false;
     mHandle = nullptr;
 }
 

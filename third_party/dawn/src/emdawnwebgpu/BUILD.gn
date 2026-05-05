@@ -39,11 +39,20 @@ dawn_json_generator("emdawnwebgpu_headers_gen") {
   ]
 }
 
+copy("emdawnwebgpu_headers_copy") {
+  sources = [ "../../include/webgpu/webgpu_enum_class_bitmasks.h" ]
+  outputs = [ "$target_gen_dir/include/webgpu/webgpu_enum_class_bitmasks.h" ]
+}
+
 source_set("emdawnwebgpu_headers") {
   all_dependent_configs = [ "${dawn_root}/include/dawn:public" ]
-  public_deps = [ ":emdawnwebgpu_headers_gen" ]
+  public_deps = [
+    ":emdawnwebgpu_headers_copy",
+    ":emdawnwebgpu_headers_gen",
+  ]
 
-  sources = get_target_outputs(":emdawnwebgpu_headers_gen")
+  sources = get_target_outputs(":emdawnwebgpu_headers_gen") +
+            get_target_outputs(":emdawnwebgpu_headers_copy")
 }
 
 dawn_json_generator("emdawnwebgpu_js_gen") {
@@ -79,6 +88,7 @@ if (is_wasm) {
       forward_variables_from(invoker, "*")
 
       deps = [
+        ":emdawnwebgpu_headers_copy",  # for webgpu_enum_class_bitmasks.h
         ":emdawnwebgpu_headers_gen",  # for webgpu.h
         ":emdawnwebgpu_js_gen",  # for struct_info_webgpu.json
       ]
@@ -144,6 +154,10 @@ if (is_wasm) {
       # directory which also has these files (at an older revision).
       "${target_gen_dir}/include",
     ]
+    cflags = [
+      # Allow using $0 etc. in EM_ASM.
+      "-Wno-dollar-in-identifier-extension",
+    ]
     ldflags = [
       # These will be processed in order; library_webgpu.js must come after
       # the generated files, because it depends on them.
@@ -178,15 +192,115 @@ if (is_wasm) {
   source_set("emdawnwebgpu") {
     public_configs = [ ":emdawnwebgpu_config" ]
     deps = [
+      ":emdawnwebgpu_headers_copy",
       ":emdawnwebgpu_headers_gen",
       ":emdawnwebgpu_js_gen",
       ":library_webgpu_generated_struct_info",
     ]
     sources = get_target_outputs(":emdawnwebgpu_headers_gen") +
+              get_target_outputs(":emdawnwebgpu_headers_copy") +
               [ "../../third_party/emdawnwebgpu/pkg/webgpu/src/webgpu.cpp" ]
     inputs = [
       # TODO(crbug.com/371024051): Changing these files doesn't seem to trigger a relink. Why?
       "../../third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js",
     ]
+  }
+
+  # Tests
+
+  group("tests") {
+    testonly = true
+    deps = [
+      ":emdawnwebgpu",
+      ":emdawnwebgpu_link_test",
+      ":emdawnwebgpu_tests_asyncify",
+      ":emdawnwebgpu_tests_jspi",
+    ]
+  }
+
+  config("emdawnwebgpu_base_test_config") {
+    cflags = []
+    ldflags = [ "-Wno-limited-postlink-optimizations" ]
+
+    # If possible, always build with Closure, even in debug, for its static
+    # analysis checks and to test the externs. On Mac, first check whether
+    # Closure Compiler works, as it requires either Rosetta 2 or Java to be
+    # installed. Dawn bots don't have either of those.
+    use_closure = true
+    if (host_os == "mac") {
+      use_closure = exec_script("../../third_party/gn/emsdk/can-use-closure.py",
+                                [],
+                                "value")
+    }
+    if (use_closure) {
+      ldflags += [ "--closure=1" ]
+    } else {
+      print("WARNING: building without Closure Compiler")
+    }
+
+    # is_asan and is_ubsan are never true when using the Emscripten toolchain,
+    # so force enable them for all builds. (If this is fixed in sanitizers.gni,
+    # then remove this, but turn on -sSAFE_HEAP for non-ASAN debug builds.)
+    # Note this makes GN builds unsuitable for testing code size.
+    cflags += [
+      "-fsanitize=address",
+      "-fsanitize=undefined",
+    ]
+    ldflags += [
+      "-fsanitize=address",
+      "-fsanitize=undefined",
+    ]
+  }
+
+  source_set("emdawnwebgpu_tests") {
+    testonly = true
+    public_configs = [ ":emdawnwebgpu_base_test_config" ]
+    public_deps = [
+      ":emdawnwebgpu",
+      "../dawn/tests:gmock_main",
+      "../dawn/utils:wgpu_utils",
+    ]
+    sources = [
+      "tests/FuturesTests.cpp",
+      "tests/SpotTests.cpp",
+    ]
+  }
+
+  executable("emdawnwebgpu_tests_asyncify") {
+    testonly = true
+    deps = [ ":emdawnwebgpu_tests" ]
+    ldflags = [
+      "-sASYNCIFY=1",
+      "-sASYNCIFY_STACK_SIZE=10000",  # Needed when building with ASAN.
+    ]
+  }
+
+  executable("emdawnwebgpu_tests_jspi") {
+    testonly = true
+    deps = [ ":emdawnwebgpu_tests" ]
+    ldflags = [
+      "-Wno-experimental",  # -sJSPI is experimental.
+      "-sJSPI",
+    ]
+  }
+
+  # A "sample" that makes real (bogus) API calls to serve as a basic code size test.
+  dawn_json_generator("emdawnwebgpu_link_test_cpp_gen") {
+    target = "emdawnwebgpu_link_test_cpp"
+    outputs = [ "src/emdawnwebgpu/LinkTest.cpp" ]
+  }
+  executable("emdawnwebgpu_link_test") {
+    # The test is just that this links, not that it runs (it will just
+    # crash), so just build to .js. Since it has a main() function, this is
+    # the same as building to .html, but skipping the .html file.
+    output_extension = "js"
+
+    testonly = true
+    configs += [ ":emdawnwebgpu_base_test_config" ]
+    deps = [
+      ":emdawnwebgpu",
+      ":emdawnwebgpu_link_test_cpp_gen",
+    ]
+    sources = get_target_outputs(":emdawnwebgpu_link_test_cpp_gen")
   }
 }

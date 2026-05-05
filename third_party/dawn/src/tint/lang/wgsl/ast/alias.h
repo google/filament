@@ -39,20 +39,14 @@ namespace tint::ast {
 class Alias final : public Castable<Alias, TypeDecl> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param name the symbol for the alias
     /// @param subtype the alias'd type
-    Alias(GenerationID pid, NodeID nid, const Source& src, const Identifier* name, Type subtype);
+    Alias(NodeID nid, const Source& src, const Identifier* name, Type subtype);
 
     /// Destructor
     ~Alias() override;
-
-    /// Clones this type and all transitive types using the `CloneContext` `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned type
-    const Alias* Clone(CloneContext& ctx) const override;
 
     /// the alias type
     const Type type;

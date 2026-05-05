@@ -103,10 +103,8 @@ func TestExpandHome(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
-			wrapper.Environment = map[string]string{
-				"HOME": "/home",
-			}
+			wrapper := oswrapper.CreateFSTestOSWrapper()
+			wrapper.Setenv("HOME", "/home")
 
 			expandedPath := fileutils.ExpandHome(testCase.input, wrapper)
 			require.Equal(t, testCase.want, expandedPath)
@@ -117,12 +115,12 @@ func TestExpandHome(t *testing.T) {
 func TestBuildPath(t *testing.T) {
 	tests := []struct {
 		name    string
-		setupFS func(fs oswrapper.MemMapOSWrapper) (expectedPath string) // Sets up FS and returns expected path
+		setupFS func(fs oswrapper.FSTestOSWrapper) (expectedPath string) // Sets up FS and returns expected path
 		want    string
 	}{
 		{
 			name: "out/active exists",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) string {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) string {
 				require.NoError(t, fileutils.SetUpFakeDawnRoot(fs))
 				fakeDawnRoot := fileutils.DawnRoot(fs)
 				require.NotEmpty(t, fakeDawnRoot, "Failed to find fake Dawn root")
@@ -134,14 +132,14 @@ func TestBuildPath(t *testing.T) {
 		},
 		{
 			name: "out/active does not exist",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) string {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) string {
 				require.NoError(t, fileutils.SetUpFakeDawnRoot(fs))
 				return "" // Expect empty string as out/active won't be found.
 			},
 		},
 		{
 			name: "dawn root does not exist",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) string {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) string {
 				return "" // Expect empty string as dawn root won't be found.
 			},
 		},
@@ -149,7 +147,7 @@ func TestBuildPath(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			expectedPath := tc.setupFS(wrapper)
 
 			got := fileutils.BuildPath(wrapper)
@@ -185,13 +183,13 @@ func TestIsDir(t *testing.T) {
 	tests := []struct {
 		name    string
 		path    string
-		setupFS func(fs oswrapper.MemMapOSWrapper) // Sets up the filesystem
+		setupFS func(fs oswrapper.FSTestOSWrapper) // Sets up the filesystem
 		want    bool
 	}{
 		{
 			name: "Is a directory",
 			path: "/a/b/c",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/a/b/c", 0777))
 			},
 			want: true,
@@ -199,7 +197,7 @@ func TestIsDir(t *testing.T) {
 		{
 			name: "Is a file",
 			path: "/a/b/file.txt",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/a/b", 0777))
 				require.NoError(t, fs.WriteFile("/a/b/file.txt", []byte("hello"), 0666))
 			},
@@ -212,16 +210,17 @@ func TestIsDir(t *testing.T) {
 			want:    false,
 		},
 		{
+			// Empty path is treated as the CWD.
 			name:    "Empty path",
 			path:    "",
 			setupFS: nil,
-			want:    false,
+			want:    true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(wrapper)
 			}
@@ -236,13 +235,13 @@ func TestIsFile(t *testing.T) {
 	tests := []struct {
 		name    string
 		path    string
-		setupFS func(fs oswrapper.MemMapOSWrapper) // Sets up the filesystem
+		setupFS func(fs oswrapper.FSTestOSWrapper) // Sets up the filesystem
 		want    bool
 	}{
 		{
 			name: "Is a file",
 			path: "/a/b/file.txt",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/a/b", 0777))
 				require.NoError(t, fs.WriteFile("/a/b/file.txt", []byte("hello"), 0666))
 			},
@@ -251,7 +250,7 @@ func TestIsFile(t *testing.T) {
 		{
 			name: "Is a directory",
 			path: "/a/b/c",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/a/b/c", 0777))
 			},
 			want: false,
@@ -272,7 +271,7 @@ func TestIsFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(wrapper)
 			}
@@ -287,7 +286,7 @@ func TestIsEmptyDir(t *testing.T) {
 	tests := []struct {
 		name    string
 		path    string
-		setupFS func(fs oswrapper.MemMapOSWrapper)
+		setupFS func(fs oswrapper.FSTestOSWrapper)
 		want    bool
 		wantErr bool
 	}{
@@ -300,7 +299,7 @@ func TestIsEmptyDir(t *testing.T) {
 		{
 			name: "Path is a file",
 			path: "/myfile.txt",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.WriteFile("/myfile.txt", []byte("content"), 0666))
 			},
 			wantErr: true,
@@ -308,7 +307,7 @@ func TestIsEmptyDir(t *testing.T) {
 		{
 			name: "Directory is empty",
 			path: "/mydir",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/mydir", 0777))
 			},
 			want:    true,
@@ -317,7 +316,7 @@ func TestIsEmptyDir(t *testing.T) {
 		{
 			name: "Directory with a file",
 			path: "/mydir",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll("/mydir", 0777))
 				require.NoError(t, fs.WriteFile(filepath.Join("/mydir", "file.txt"), []byte("content"), 0666))
 			},
@@ -327,7 +326,7 @@ func TestIsEmptyDir(t *testing.T) {
 		{
 			name: "Directory with a subdirectory",
 			path: "/mydir",
-			setupFS: func(fs oswrapper.MemMapOSWrapper) {
+			setupFS: func(fs oswrapper.FSTestOSWrapper) {
 				require.NoError(t, fs.MkdirAll(filepath.Join("/mydir", "subdir"), 0777))
 			},
 			want:    false,
@@ -337,7 +336,7 @@ func TestIsEmptyDir(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if tc.setupFS != nil {
 				tc.setupFS(wrapper)
 			}

@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
-
 #include "dawn/native/dawn_platform.h"
+#include "dawn/tests/DawnTest.h"
 
 namespace dawn {
 namespace {

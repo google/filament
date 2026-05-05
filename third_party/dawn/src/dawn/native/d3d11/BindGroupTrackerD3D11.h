@@ -45,7 +45,7 @@ class ScopedSwapStateCommandRecordingContext;
 // - RTVs from the first register (r0)
 // - UAVs in bind groups
 // - Pixel Local Storage UAVs
-class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/true, uint64_t> {
+class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/true> {
   public:
     explicit BindGroupTracker(const ScopedSwapStateCommandRecordingContext* commandContext);
     virtual ~BindGroupTracker();
@@ -86,7 +86,7 @@ class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/tr
         BindGroupBase* group,
         BindingIndex bindingIndex,
         const BufferBindingInfo& layout,
-        const ityp::span<BindingIndex, uint64_t>& dynamicOffsets);
+        const ityp::span<BindingIndex, uint32_t>& dynamicOffsets);
 
     template <typename T>
     ResultOrError<ComPtr<T>> GetTextureD3DView(BindGroupBase* group, BindingIndex bindingIndex);
@@ -104,7 +104,7 @@ class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/tr
         BindGroupBase* group,
         BindingIndex bindingIndex,
         const BufferBindingInfo& layout,
-        const ityp::span<BindingIndex, uint64_t>& dynamicOffsets);
+        const ityp::span<BindingIndex, uint32_t>& dynamicOffsets);
 
     ResultOrError<ComPtr<ID3D11ShaderResourceView>> GetTextureShaderResourceView(
         BindGroupBase* group,

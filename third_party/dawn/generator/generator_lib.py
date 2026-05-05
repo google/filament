@@ -77,8 +77,10 @@ FileRender = namedtuple('FileRender', ['template', 'output', 'params_dicts'])
 GeneratorOutput = namedtuple('GeneratorOutput',
                              ['renders', 'imported_templates'])
 
+
 # The interface that must be implemented by generators.
 class Generator:
+
     def get_description(self):
         """Return generator description for --help."""
         return ""

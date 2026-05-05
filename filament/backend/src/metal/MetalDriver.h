@@ -22,6 +22,7 @@
 #include "DriverBase.h"
 
 #include "private/backend/HandleAllocator.h"
+#include "JobQueue.h"
 
 #include <backend/SamplerDescriptor.h>
 
@@ -63,6 +64,9 @@ public:
 
     MetalContext* getContext() { return mContext; }
 
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
+
     using DriverBase::scheduleDestroy;
 
 private:
@@ -78,7 +82,7 @@ private:
             ShaderLanguage preferredLanguage) const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
-    void execute(std::function<void(void)> const& fn) noexcept final;
+    void execute(std::function<void(void)> const& fn) final;
 
     /*
      * Tasks run regularly on the driver thread.
@@ -167,6 +171,9 @@ private:
 
     backend::StereoscopicType const mStereoscopicType;
     backend::AsynchronousMode const mAsynchronousMode;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 };
 
 } // namespace backend

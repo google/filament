@@ -43,9 +43,10 @@ tint_executable("tint") {
   output_name = "tint"
   sources = [ "main.cc" ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api",
     "${tint_src_dir}/api/common",
+    "${tint_src_dir}/api/helpers",
     "${tint_src_dir}/cmd/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -53,14 +54,12 @@ tint_executable("tint") {
     "${tint_src_dir}/lang/core/ir/transform",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/lang/hlsl/writer/common",
-    "${tint_src_dir}/lang/hlsl/writer/helpers",
-    "${tint_src_dir}/lang/msl/ir/transform",
     "${tint_src_dir}/lang/wgsl",
     "${tint_src_dir}/lang/wgsl/ast",
     "${tint_src_dir}/lang/wgsl/inspector",
     "${tint_src_dir}/lang/wgsl/program",
     "${tint_src_dir}/lang/wgsl/sem",
-    "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
+    "${tint_src_dir}/lang/wgsl/writer/common",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/command",
     "${tint_src_dir}/utils/containers",
@@ -99,7 +98,6 @@ tint_executable("tint") {
       "${tint_src_dir}/lang/msl/validate",
       "${tint_src_dir}/lang/msl/writer",
       "${tint_src_dir}/lang/msl/writer/common",
-      "${tint_src_dir}/lang/msl/writer/helpers",
     ]
   }
 
@@ -118,7 +116,6 @@ tint_executable("tint") {
     deps += [
       "${tint_src_dir}/lang/spirv/writer",
       "${tint_src_dir}/lang/spirv/writer/common",
-      "${tint_src_dir}/lang/spirv/writer/helpers",
     ]
   }
 

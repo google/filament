@@ -236,6 +236,11 @@ class CopyTextureForBrowserTests : public Parent {
 
     void SetUp() override {
         Parent::SetUp();
+
+        // TODO(crbug.com/40238674): Fails on Pixel 10 gles on compilation so it must be skipped at
+        // this level.
+        DAWN_SUPPRESS_TEST_IF(this->IsImgTec() && this->IsOpenGLES());
+
         pipeline = MakeTestPipeline();
 
         uint32_t uniformBufferData[] = {
@@ -383,14 +388,25 @@ class CopyTextureForBrowserTests : public Parent {
             case wgpu::TextureFormat::RGB10A2Unorm:
             case wgpu::TextureFormat::RGBA16Float:
             case wgpu::TextureFormat::RGBA32Float:
+            case wgpu::TextureFormat::RGBA16Unorm:
+            case wgpu::TextureFormat::RGBA16Snorm:
+            case wgpu::TextureFormat::RGBA8Snorm:
                 return 4;
+            case wgpu::TextureFormat::RG11B10Ufloat:
+                return 3;
             case wgpu::TextureFormat::RG8Unorm:
             case wgpu::TextureFormat::RG16Float:
             case wgpu::TextureFormat::RG32Float:
+            case wgpu::TextureFormat::RG16Unorm:
+            case wgpu::TextureFormat::RG16Snorm:
+            case wgpu::TextureFormat::RG8Snorm:
                 return 2;
             case wgpu::TextureFormat::R8Unorm:
             case wgpu::TextureFormat::R16Float:
             case wgpu::TextureFormat::R32Float:
+            case wgpu::TextureFormat::R16Unorm:
+            case wgpu::TextureFormat::R16Snorm:
+            case wgpu::TextureFormat::R8Snorm:
                 return 1;
             default:
                 DAWN_UNREACHABLE();
@@ -588,6 +604,14 @@ class CopyTextureForBrowser_Basic : public CopyTextureForBrowserTests<DawnTest> 
 class CopyTextureForBrowser_Formats
     : public CopyTextureForBrowserTests<DawnTestWithParams<FormatTestParams>> {
   protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        std::vector<wgpu::FeatureName> requiredFeatures = {};
+        if (SupportsFeatures({wgpu::FeatureName::TextureFormatsTier1})) {
+            requiredFeatures.push_back(wgpu::FeatureName::TextureFormatsTier1);
+        }
+        return requiredFeatures;
+    }
+
     bool IsDstFormatSrgbFormats() {
         return GetParam().mDstFormat == wgpu::TextureFormat::RGBA8UnormSrgb ||
                GetParam().mDstFormat == wgpu::TextureFormat::BGRA8UnormSrgb;
@@ -698,6 +722,7 @@ class CopyTextureForBrowser_Formats
 
         TextureSpec dstTextureSpec;
         dstTextureSpec.format = GetParam().mDstFormat;
+        DAWN_TEST_UNSUPPORTED_IF(!utils::IsRenderableFormat(device, dstTextureSpec.format));
 
         wgpu::Extent3D copySize = {kDefaultTextureWidth, kDefaultTextureHeight};
         wgpu::CopyTextureForBrowserOptions options = {};
@@ -1089,30 +1114,40 @@ class CopyTextureForBrowser_ColorSpace
 // Verify CopyTextureForBrowserTests works with internal pipeline.
 // The case do copy without any transform.
 TEST_P(CopyTextureForBrowser_Basic, PassthroughCopy) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     DoBasicCopyTest({10, 1});
 }
 
 TEST_P(CopyTextureForBrowser_Basic, VerifyCopyOnXDirection) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     DoBasicCopyTest({1000, 1});
 }
 
 TEST_P(CopyTextureForBrowser_Basic, VerifyCopyOnYDirection) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     DoBasicCopyTest({1, 1000});
 }
 
 TEST_P(CopyTextureForBrowser_Basic, VerifyCopyFromLargeTexture) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     DoBasicCopyTest({899, 999});
 }
 
 TEST_P(CopyTextureForBrowser_Basic, VerifyFlipY) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     wgpu::CopyTextureForBrowserOptions options = {};
@@ -1122,6 +1157,8 @@ TEST_P(CopyTextureForBrowser_Basic, VerifyFlipY) {
 }
 
 TEST_P(CopyTextureForBrowser_Basic, VerifyFlipYInSlimTexture) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     wgpu::CopyTextureForBrowserOptions options = {};
@@ -1136,11 +1173,14 @@ DAWN_INSTANTIATE_TEST(CopyTextureForBrowser_Basic,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 // Verify |CopyTextureForBrowser| doing color conversion correctly when
 // the source texture is RGBA8Unorm format.
 TEST_P(CopyTextureForBrowser_Formats, ColorConversion) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     // BGRA8UnormSrgb is unsupported in Compatibility mode.
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode() &&
                              GetParam().mDstFormat == wgpu::TextureFormat::BGRA8UnormSrgb);
@@ -1154,25 +1194,33 @@ TEST_P(CopyTextureForBrowser_Formats, ColorConversion) {
     DoColorConversionTest();
 }
 
-DAWN_INSTANTIATE_TEST_P(
-    CopyTextureForBrowser_Formats,
-    {D3D12Backend(), MetalBackend(), OpenGLBackend(), OpenGLESBackend(), VulkanBackend()},
-    std::vector<wgpu::TextureFormat>({wgpu::TextureFormat::RGBA8Unorm,
-                                      wgpu::TextureFormat::BGRA8Unorm,
-                                      wgpu::TextureFormat::RGBA16Float}),
-    std::vector<wgpu::TextureFormat>(
-        {wgpu::TextureFormat::R8Unorm, wgpu::TextureFormat::R16Float, wgpu::TextureFormat::R32Float,
-         wgpu::TextureFormat::RG8Unorm, wgpu::TextureFormat::RG16Float,
-         wgpu::TextureFormat::RG32Float, wgpu::TextureFormat::RGBA8Unorm,
-         wgpu::TextureFormat::RGBA8UnormSrgb, wgpu::TextureFormat::BGRA8Unorm,
-         wgpu::TextureFormat::BGRA8UnormSrgb, wgpu::TextureFormat::RGB10A2Unorm,
-         wgpu::TextureFormat::RGBA16Float, wgpu::TextureFormat::RGBA32Float}));
+DAWN_INSTANTIATE_TEST_P(CopyTextureForBrowser_Formats,
+                        {D3D12Backend(), MetalBackend(), OpenGLBackend(), OpenGLESBackend(),
+                         VulkanBackend()},
+                        std::vector<wgpu::TextureFormat>({wgpu::TextureFormat::RGBA8Unorm,
+                                                          wgpu::TextureFormat::BGRA8Unorm,
+                                                          wgpu::TextureFormat::RGBA16Float}),
+                        std::vector<wgpu::TextureFormat>(
+                            {wgpu::TextureFormat::R8Unorm,      wgpu::TextureFormat::R16Float,
+                             wgpu::TextureFormat::R32Float,     wgpu::TextureFormat::RG8Unorm,
+                             wgpu::TextureFormat::RG16Float,    wgpu::TextureFormat::RG32Float,
+                             wgpu::TextureFormat::RGBA8Unorm,   wgpu::TextureFormat::RGBA8UnormSrgb,
+                             wgpu::TextureFormat::BGRA8Unorm,   wgpu::TextureFormat::BGRA8UnormSrgb,
+                             wgpu::TextureFormat::RGB10A2Unorm, wgpu::TextureFormat::RGBA16Float,
+                             wgpu::TextureFormat::RGBA32Float,  wgpu::TextureFormat::R16Unorm,
+                             wgpu::TextureFormat::RG16Unorm,    wgpu::TextureFormat::RGBA16Unorm,
+                             wgpu::TextureFormat::R16Snorm,     wgpu::TextureFormat::RG16Snorm,
+                             wgpu::TextureFormat::RGBA16Snorm,  wgpu::TextureFormat::R8Snorm,
+                             wgpu::TextureFormat::RG8Snorm,     wgpu::TextureFormat::RGBA8Snorm,
+                             wgpu::TextureFormat::RG11B10Ufloat}));
 
 // Verify |CopyTextureForBrowser| doing subrect copy.
 // Source texture is a full red texture and dst texture is a full
 // green texture originally. After the subrect copy, affected part
 // in dst texture should be red and other part should remain green.
 TEST_P(CopyTextureForBrowser_SubRects, CopySubRect) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     // Tests skip due to crbug.com/dawn/592.
@@ -1195,6 +1243,8 @@ DAWN_INSTANTIATE_TEST_P(CopyTextureForBrowser_SubRects,
 // Verify |CopyTextureForBrowser| doing alpha changes.
 // Test srcAlphaMode and dstAlphaMode: Premultiplied, Unpremultiplied.
 TEST_P(CopyTextureForBrowser_AlphaMode, alphaMode) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     // Tests skip due to crbug.com/dawn/1104.
@@ -1214,6 +1264,8 @@ DAWN_INSTANTIATE_TEST_P(
 
 // Verify |CopyTextureForBrowser| doing color space conversion.
 TEST_P(CopyTextureForBrowser_ColorSpace, colorSpaceConversion) {
+    // TODO(crbug.com/40238674): Fails on Pixel 10 gles.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
     // Tests skip due to crbug.com/dawn/1104.

@@ -33,7 +33,7 @@ namespace tint::spirv::writer {
 namespace {
 
 TEST_F(SpirvWriterTest, Switch_Basic) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* swtch = b.Switch(42_i);
 
@@ -45,7 +45,8 @@ TEST_F(SpirvWriterTest, Switch_Basic) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %8 None
@@ -59,7 +60,7 @@ TEST_F(SpirvWriterTest, Switch_Basic) {
 }
 
 TEST_F(SpirvWriterTest, Switch_MultipleCases) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* swtch = b.Switch(42_i);
 
@@ -81,7 +82,8 @@ TEST_F(SpirvWriterTest, Switch_MultipleCases) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %10 None
@@ -99,7 +101,7 @@ TEST_F(SpirvWriterTest, Switch_MultipleCases) {
 }
 
 TEST_F(SpirvWriterTest, Switch_MultipleSelectorsPerCase) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("main");
     b.Append(func->Block(), [&] {
         auto* swtch = b.Switch(42_i);
 
@@ -121,7 +123,8 @@ TEST_F(SpirvWriterTest, Switch_MultipleSelectorsPerCase) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %10 None
@@ -161,7 +164,14 @@ TEST_F(SpirvWriterTest, Switch_AllCasesReturn) {
         b.Unreachable();
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %10 None
@@ -204,7 +214,14 @@ TEST_F(SpirvWriterTest, Switch_ConditionalBreak) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %9 None
@@ -242,7 +259,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_SingleValue) {
         b.Return(func, s);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %8 None
@@ -276,7 +300,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_SingleValue_CaseReturn) {
         b.Return(func, s);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
 %return_value = OpVariable %_ptr_Function_int Function %7
@@ -323,7 +354,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_MultipleValue_0) {
         b.Return(func, s->Result(0));
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %8 None
@@ -358,7 +396,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_MultipleValue_1) {
         b.Return(func, s->Result(1));
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %9 None
@@ -402,7 +447,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_NestedIf) {
         b.Return(func, s);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %8 None
@@ -450,7 +502,14 @@ TEST_F(SpirvWriterTest, Switch_Phi_NestedSwitch) {
         b.Return(func, outer);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Let("x", b.Call(func));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
           %4 = OpLabel
                OpSelectionMerge %8 None

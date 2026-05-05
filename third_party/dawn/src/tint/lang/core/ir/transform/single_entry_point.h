@@ -42,6 +42,8 @@ namespace tint::core::ir::transform {
 const Capabilities kSingleEntryPointCapabilities{
     Capability::kAllowMultipleEntryPoints,
     Capability::kAllowOverrides,
+    Capability::kAllow8BitIntegers,
+    Capability::kAllow16BitIntegers,
 };
 
 /// Strip a module down to a single entry point, removing any unused functions and module-scope

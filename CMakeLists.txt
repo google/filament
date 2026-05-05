@@ -19,12 +19,33 @@ endif()
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
-project(TNT)
+set(EXTRA_LANGS)
+
+# This is only needed for the webgpu on MacOS build.
+if (APPLE AND NOT IOS)
+    set(EXTRA_LANGS OBJC OBJCXX)
+endif()
+
+project(TNT C CXX ${EXTRA_LANGS})
 
 # ==================================================================================================
 # Options
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
+
+# Note: If you intend to use the JNI library (Android/Java build), you need to have
+# exceptions enabled (the default). If you are using Filament on Android as a pure
+# native library and want to save space, you can disable them.
+# We disable exceptions on iOS by default. This fixes an availability error we see when using
+# std::visit and std::get, which are not supported on iOS 11.0 when exceptions are enabled.
+if (IOS)
+    set(FILAMENT_ENABLE_EXCEPTIONS_DEFAULT OFF)
+else()
+    set(FILAMENT_ENABLE_EXCEPTIONS_DEFAULT ON)
+endif()
+option(FILAMENT_ENABLE_EXCEPTIONS "Enable C++ exceptions" ${FILAMENT_ENABLE_EXCEPTIONS_DEFAULT})
+
+option(FILAMENT_ENABLE_RTTI "Enable C++ RTTI" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -99,6 +120,15 @@ set(FILAMENT_OSMESA_PATH "" CACHE STRING
 
 # Enable exceptions by default in spirv-cross.
 set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF)
+
+if (NOT FILAMENT_ENABLE_EXCEPTIONS)
+    add_compile_options(-fno-exceptions)
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
+endif()
+
+if (NOT FILAMENT_ENABLE_RTTI)
+    add_compile_options(-fno-rtti)
+endif()
 
 # ==================================================================================================
 # CMake policies
@@ -337,6 +367,14 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
+
+# This is only needed for the webgpu on MacOS build.
+# Don't enable for iOS because we need to support ios min target 11.0
+if (APPLE AND NOT IOS)
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
+
 set(CXX_STANDARD "-std=c++20")
 if (WIN32)
     set(CXX_STANDARD "/std:c++20")
@@ -353,6 +391,7 @@ else()
     endif()
     if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-extension")
+        set(CMAKE_OBJCXX_FLAGS "${CMAKE_CXX_FLAGS}")
     endif()
 endif()
 
@@ -400,8 +439,7 @@ if (ANDROID)
 endif()
 
 if (CYGWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (MSVC)
@@ -435,30 +473,17 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
 endif()
 
-# On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
-# saved by -fno-exception and 10 KiB saved by -fno-rtti).
-if (ANDROID OR IOS OR WEBGL)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
-
-    if (ANDROID OR WEBGL)
-        # Omitting unwind info prevents the generation of readable stack traces in crash reports on iOS
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
-    endif()
+if (ANDROID OR WEBGL)
+    # On Android and WebGL RELEASE builds, we omit unwind info to save space.
+    # (We keep unwind info on iOS to allow readable stack traces in crash reports.)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-unwind-tables -fno-asynchronous-unwind-tables")
 endif()
 
-# Turn off exceptions on iOS debug as well. This fixes an availability error we see when using
-# std::visit, which is not supported on iOS 11.0 when exceptions are enabled.
-if (IOS)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-exceptions")
-    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
-endif()
-
-# With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
+# With WebGL, we disable RTTI because we pass emscripten::val back and forth
 # between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
 # NOTE: This is not documented in emscripten so we should consider a different approach.
 if (WEBGL)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()
 
 if (WEBGL_PTHREADS)
@@ -659,7 +684,6 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
-# With WebGPU, push constants are not supported. Skinning uses them.
 # WebGPU has a proposal to add push constants at https://github.com/gpuweb/gpuweb/blob/main/proposals/push-constants.md
 # With WebGPU, Tint does not support ClipDistance which is used in Stereo.  Mentioned in comment
 # https://github.com/google/dawn/blob/855d17b08abdf02f9142bf5a8f14d0ea088810a4/src/tint/lang/spirv/reader/ast_parser/function.cc#L4434

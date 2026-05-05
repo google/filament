@@ -25,11 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/ls/server.h"
-
 #include "langsvr/lsp/primitives.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
+#include "src/tint/lang/wgsl/ls/server.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 #include "src/tint/lang/wgsl/sem/function.h"
 #include "src/tint/lang/wgsl/sem/function_expression.h"

@@ -28,6 +28,7 @@
 #include "src/tint/cmd/fuzz/wgsl/fuzz.h"
 
 #include <iostream>
+#include <span>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -128,7 +129,7 @@ void Register(const ProgramFuzzer& fuzzer) {
     Fuzzers().Push(fuzzer);
 }
 
-void Run(std::string_view wgsl, const Options& options, Slice<const std::byte> data) {
+void Run(std::string_view wgsl, const Options& options, std::span<const std::byte> data) {
 #if TINT_BUILD_WGSL_WRITER
     // Register the Program printer. This is used for debugging purposes.
     tint::Program::printer = [](const tint::Program& program) {
@@ -154,6 +155,8 @@ void Run(std::string_view wgsl, const Options& options, Slice<const std::byte> d
     // Parse the WGSL program.
     tint::wgsl::reader::Options parse_options;
     parse_options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
+    // buffer_view is not ready for fuzzing yet.
+    parse_options.allowed_features.features.erase(tint::wgsl::LanguageFeature::kBufferView);
     auto program = tint::wgsl::reader::Parse(&file, parse_options);
     if (!program.IsValid()) {
         if (options.verbose) {

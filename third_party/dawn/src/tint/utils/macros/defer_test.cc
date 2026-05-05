@@ -34,7 +34,9 @@ namespace {
 
 TEST(DeferTest, Basic) {
     bool deferCalled = false;
-    { TINT_DEFER(deferCalled = true); }
+    {
+        TINT_DEFER(deferCalled = true);
+    }
     ASSERT_TRUE(deferCalled);
 }
 

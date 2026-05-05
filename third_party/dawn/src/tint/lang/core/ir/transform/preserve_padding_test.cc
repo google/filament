@@ -46,9 +46,9 @@ class IR_PreservePaddingTest : public TransformTest {
     const type::Struct* MakeStructWithoutPadding() {
         auto* structure =
             ty.Struct(mod.symbols.New("MyStruct"), {
-                                                       {mod.symbols.New("a"), ty.vec4<u32>()},
-                                                       {mod.symbols.New("b"), ty.vec4<u32>()},
-                                                       {mod.symbols.New("c"), ty.vec4<u32>()},
+                                                       {mod.symbols.New("a"), ty.vec4u()},
+                                                       {mod.symbols.New("b"), ty.vec4u()},
+                                                       {mod.symbols.New("c"), ty.vec4u()},
                                                    });
         return structure;
     }
@@ -56,7 +56,7 @@ class IR_PreservePaddingTest : public TransformTest {
     const type::Struct* MakeStructWithTrailingPadding() {
         auto* structure =
             ty.Struct(mod.symbols.New("MyStruct"), {
-                                                       {mod.symbols.New("a"), ty.vec4<u32>()},
+                                                       {mod.symbols.New("a"), ty.vec4u()},
                                                        {mod.symbols.New("b"), ty.u32()},
                                                    });
         return structure;
@@ -65,9 +65,9 @@ class IR_PreservePaddingTest : public TransformTest {
     const type::Struct* MakeStructWithInternalPadding() {
         auto* structure =
             ty.Struct(mod.symbols.New("MyStruct"), {
-                                                       {mod.symbols.New("a"), ty.vec4<u32>()},
+                                                       {mod.symbols.New("a"), ty.vec4u()},
                                                        {mod.symbols.New("b"), ty.u32()},
-                                                       {mod.symbols.New("c"), ty.vec4<u32>()},
+                                                       {mod.symbols.New("c"), ty.vec4u()},
                                                    });
         return structure;
     }
@@ -298,11 +298,11 @@ $B1: {  # root
 }
 
 TEST_F(IR_PreservePaddingTest, NoModify_Vec3) {
-    auto* buffer = b.Var("buffer", ty.ptr(storage, ty.vec3<f32>()));
+    auto* buffer = b.Var("buffer", ty.ptr(storage, ty.vec3f()));
     buffer->SetBindingPoint(0, 0);
     mod.root_block->Append(buffer);
 
-    auto* value = b.FunctionParam("value", ty.vec3<f32>());
+    auto* value = b.FunctionParam("value", ty.vec3f());
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({value});
     b.Append(func->Block(), [&] {
@@ -934,7 +934,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_PreservePaddingTest, Vec3_Array) {
-    auto* arr = ty.array(ty.vec3<f32>(), 4);
+    auto* arr = ty.array(ty.vec3f(), 4);
 
     auto* buffer = b.Var("buffer", ty.ptr(storage, arr));
     buffer->SetBindingPoint(0, 0);

@@ -416,6 +416,9 @@ struct loader_icd_term_dispatch {
     PFN_vkDestroyDebugUtilsMessengerEXT DestroyDebugUtilsMessengerEXT;
     PFN_vkSubmitDebugUtilsMessageEXT SubmitDebugUtilsMessageEXT;
 
+    // ---- VK_EXT_descriptor_heap extension commands
+    PFN_vkGetPhysicalDeviceDescriptorSizeEXT GetPhysicalDeviceDescriptorSizeEXT;
+
     // ---- VK_EXT_sample_locations extension commands
     PFN_vkGetPhysicalDeviceMultisamplePropertiesEXT GetPhysicalDeviceMultisamplePropertiesEXT;
 
@@ -490,6 +493,9 @@ struct loader_icd_term_dispatch {
     PFN_vkGetPhysicalDeviceQueueFamilyDataGraphPropertiesARM GetPhysicalDeviceQueueFamilyDataGraphPropertiesARM;
     PFN_vkGetPhysicalDeviceQueueFamilyDataGraphProcessingEnginePropertiesARM GetPhysicalDeviceQueueFamilyDataGraphProcessingEnginePropertiesARM;
 
+    // ---- VK_ARM_data_graph_instruction_set_tosa extension commands
+    PFN_vkGetPhysicalDeviceQueueFamilyDataGraphEngineOperationPropertiesARM GetPhysicalDeviceQueueFamilyDataGraphEngineOperationPropertiesARM;
+
     // ---- VK_OHOS_surface extension commands
 #if defined(VK_USE_PLATFORM_OHOS)
     PFN_vkCreateSurfaceOHOS CreateSurfaceOHOS;
@@ -497,6 +503,23 @@ struct loader_icd_term_dispatch {
 
     // ---- VK_NV_cooperative_matrix2 extension commands
     PFN_vkGetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV GetPhysicalDeviceCooperativeMatrixFlexibleDimensionsPropertiesNV;
+
+    // ---- VK_ARM_performance_counters_by_region extension commands
+    PFN_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM EnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM;
+
+    // ---- VK_ARM_shader_instrumentation extension commands
+    PFN_vkEnumeratePhysicalDeviceShaderInstrumentationMetricsARM EnumeratePhysicalDeviceShaderInstrumentationMetricsARM;
+
+    // ---- VK_ARM_data_graph_optical_flow extension commands
+    PFN_vkGetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM GetPhysicalDeviceQueueFamilyDataGraphOpticalFlowImageFormatsARM;
+
+    // ---- VK_SEC_ubm_surface extension commands
+#if defined(VK_USE_PLATFORM_UBM_SEC)
+    PFN_vkCreateUbmSurfaceSEC CreateUbmSurfaceSEC;
+#endif // VK_USE_PLATFORM_UBM_SEC
+#if defined(VK_USE_PLATFORM_UBM_SEC)
+    PFN_vkGetPhysicalDeviceUbmPresentationSupportSEC GetPhysicalDeviceUbmPresentationSupportSEC;
+#endif // VK_USE_PLATFORM_UBM_SEC
 };
 
 struct loader_instance_extension_enable_list {
@@ -572,6 +595,9 @@ struct loader_instance_extension_enable_list {
 #if defined(VK_USE_PLATFORM_OHOS)
     uint8_t ohos_surface;
 #endif // defined(VK_USE_PLATFORM_OHOS)
+#if defined(VK_USE_PLATFORM_UBM_SEC)
+    uint8_t sec_ubm_surface;
+#endif // defined(VK_USE_PLATFORM_UBM_SEC)
 };
 
 // Functions that required a terminator need to have a separate dispatch table which contains their corresponding

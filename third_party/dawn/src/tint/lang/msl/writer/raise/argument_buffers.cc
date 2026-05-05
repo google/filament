@@ -84,7 +84,7 @@ struct State {
     static constexpr const char* kDynamicOffsetParamName = "tint_dynamic_offset_buffer";
 
     /// Process the module.
-    void Process() {
+    Result<SuccessType> Process() {
         // Seed the block-to-function map with the function entry blocks.
         // This is used to determine the owning function for any given instruction.
         for (auto& func : ir.functions) {
@@ -112,8 +112,19 @@ struct State {
                 continue;
             }
 
-            Vector<core::ir::Instruction*, 16> to_destroy;
             auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
+
+            // Only uniform and storage buffers support dynamic offsets.
+            if (!(ptr->AddressSpace() == core::AddressSpace::kStorage ||
+                  ptr->AddressSpace() == core::AddressSpace::kUniform)) {
+                auto binding_iter =
+                    iter->second.binding_info_to_offset_index.find(var->BindingPoint()->binding);
+                if (binding_iter != iter->second.binding_info_to_offset_index.end()) {
+                    return Failure("dynamic offset supplied for non-buffer type");
+                }
+            }
+
+            Vector<core::ir::Instruction*, 16> to_destroy;
             var->Result()->ForEachUseUnsorted([&](core::ir::Usage use) {  //
                 auto* extracted_variable = GetVariableFromStruct(var, use.instruction);
 
@@ -133,7 +144,7 @@ struct State {
                     // Accesses are replaced with accesses of the extracted variable.
                     [&](core::ir::Access* access) {
                         auto* ba = ptr->StoreType()->As<core::type::BindingArray>();
-                        TINT_ASSERT(ba != nullptr);
+                        TINT_IR_ASSERT(ir, ba != nullptr);
                         auto* elem_type = ba->ElemType();
 
                         access->SetOperand(core::ir::Access::kObjectOperandOffset,
@@ -144,7 +155,7 @@ struct State {
                         // but the new access returns a T. We need to modify all the previous load
                         // through the ptr<T> to direct accesses.
                         access->Result()->ForEachUseUnsorted([&](core::ir::Usage access_use) {
-                            TINT_ASSERT(access_use.instruction->Is<core::ir::Load>());
+                            TINT_IR_ASSERT(ir, access_use.instruction->Is<core::ir::Load>());
                             access_use.instruction->Result()->ReplaceAllUsesWith(access->Result());
                             to_destroy.Push(access_use.instruction);
                         });
@@ -158,6 +169,8 @@ struct State {
                 inst->Destroy();
             }
         }
+
+        return Success;
     }
 
     /// Create the argument buffers. Each bind group will have a separate structure.
@@ -328,7 +341,7 @@ struct State {
             auto binding = var->BindingPoint()->binding;
 
             auto arg_buffer = id_to_arg_buffer.find(group);
-            TINT_ASSERT(arg_buffer != id_to_arg_buffer.end());
+            TINT_IR_ASSERT(ir, arg_buffer != id_to_arg_buffer.end());
 
             auto idx = *var_to_struct_idx.Get(var);
 
@@ -345,10 +358,10 @@ struct State {
                 return access->Result();
             }
 
-            TINT_ASSERT(group_to_dynamic_offset_buffer.Contains(group));
-
             core::ir::Value* offset_buffer = group_to_dynamic_offset_buffer.GetOr(group, nullptr);
-            TINT_ASSERT(offset_buffer);
+            if (!offset_buffer) {
+                return access->Result();
+            }
 
             core::ir::Value* result = nullptr;
             b.InsertAfter(access, [&] {
@@ -379,16 +392,14 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ArgumentBuffers(core::ir::Module& ir, const ArgumentBuffersConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "msl.ArgumentBuffers",
-        tint::core::ir::Capabilities{tint::core::ir::Capability::kAllowDuplicateBindings});
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                tint::core::ir::Capabilities{
+                    tint::core::ir::Capability::kAllowPointSizeBuiltin,
+                    tint::core::ir::Capability::kAllowDuplicateBindings,
+                },
+                "before msl.ArgumentBuffers");
 
-    State{config, ir}.Process();
-
-    return Success;
+    return State{config, ir}.Process();
 }
 
 }  // namespace tint::msl::writer::raise

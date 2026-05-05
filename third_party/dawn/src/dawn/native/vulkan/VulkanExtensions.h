@@ -38,11 +38,6 @@ namespace dawn::native::vulkan {
 // The list of known instance extensions. They must be in dependency order (this is checked
 // inside EnsureDependencies)
 enum class InstanceExt {
-    // Promoted to 1.1
-    GetPhysicalDeviceProperties2,
-    ExternalMemoryCapabilities,
-    ExternalSemaphoreCapabilities,
-
     // Surface extensions
     Surface,
     FuchsiaImagePipeSurface,
@@ -67,9 +62,6 @@ using InstanceExtSet = ityp::bitset<InstanceExt, static_cast<uint32_t>(InstanceE
 struct InstanceExtInfo {
     InstanceExt index;
     const char* name;
-    // The version in which this extension was promoted as built with VK_API_VERSION_1_x,
-    // or NeverPromoted if it was never promoted.
-    uint32_t versionPromoted;
 };
 
 // Returns the information about a known InstanceExt
@@ -77,40 +69,27 @@ const InstanceExtInfo& GetInstanceExtInfo(InstanceExt ext);
 // Returns a map that maps a Vulkan extension name to its InstanceExt.
 absl::flat_hash_map<std::string, InstanceExt> CreateInstanceExtNameMap();
 
-// Sets entries in `extensions` to true if that entry was promoted in Vulkan version `version`
-void MarkPromotedExtensions(InstanceExtSet* extensions, uint32_t version);
 // From a set of extensions advertised as supported by the instance (or promoted), remove all
 // extensions that don't have all their transitive dependencies in advertisedExts.
 InstanceExtSet EnsureDependencies(const InstanceExtSet& advertisedExts);
 
 // The list of known device extensions. They must be in dependency order (this is checked
-// inside EnsureDependencies)
+// inside EnsureDependencies). Remove extensions from this list once kRequiredVulkanVersion
+// is updated to the version they were promoted in.
 enum class DeviceExt {
-    // Promoted to 1.1
-    BindMemory2,
-    Maintenance1,
-    Maintenance2,
-    Maintenance3,
-    StorageBufferStorageClass,
-    GetPhysicalDeviceProperties2,
-    GetMemoryRequirements2,
-    DedicatedAllocation,
-    ExternalMemoryCapabilities,
-    ExternalSemaphoreCapabilities,
-    ExternalMemory,
-    ExternalSemaphore,
-    _16BitStorage,
-    SamplerYCbCrConversion,
-
     // Promoted to 1.2
     DriverProperties,
     ImageFormatList,
     ShaderFloat16Int8,
     ShaderSubgroupExtendedTypes,
+    ShaderBufferInt64Atomics,
     DrawIndirectCount,
     VulkanMemoryModel,
     ShaderFloatControls,
     Spirv14,
+    DescriptorIndexing,
+    CreateRenderPass2,
+    DepthStencilResolve,
 
     // Promoted to 1.3
     ShaderIntegerDotProduct,
@@ -118,6 +97,12 @@ enum class DeviceExt {
     DemoteToHelperInvocation,
     Maintenance4,
     SubgroupSizeControl,
+    DynamicRendering,
+    ExtendedDynamicState,
+
+    // Promoted to 1.4
+    PipelineRobustness,
+    Maintenance5,
 
     // Others
     DepthClipEnable,
@@ -127,6 +112,8 @@ enum class DeviceExt {
     Robustness2,
     DisplayTiming,
     CooperativeMatrix,
+    MultisampledRenderToSingleSampled,
+    PhysicalDeviceDrm,
 
     // External* extensions
     ExternalMemoryAndroidHardwareBuffer,
@@ -147,9 +134,6 @@ using DeviceExtSet = ityp::bitset<DeviceExt, static_cast<uint32_t>(DeviceExt::En
 struct DeviceExtInfo {
     DeviceExt index;
     const char* name;
-    // The version in which this extension was promoted as built with VK_API_VERSION_1_x,
-    // or NeverPromoted if it was never promoted.
-    uint32_t versionPromoted;
 };
 
 // Returns the information about a known DeviceExt
@@ -157,8 +141,6 @@ const DeviceExtInfo& GetDeviceExtInfo(DeviceExt ext);
 // Returns a map that maps a Vulkan extension name to its DeviceExt.
 absl::flat_hash_map<std::string, DeviceExt> CreateDeviceExtNameMap();
 
-// Sets entries in `extensions` to true if that entry was promoted in Vulkan version `version`
-void MarkPromotedExtensions(DeviceExtSet* extensions, uint32_t version);
 // From a set of extensions advertised as supported by the device (or promoted), remove all
 // extensions that don't have all their transitive dependencies in advertisedExts or in
 // instanceExts.

@@ -102,13 +102,17 @@ func NodePath(fsReader oswrapper.FilesystemReader) string {
 			path := ""
 			switch fmt.Sprintf("%v/%v", runtime.GOOS, runtime.GOARCH) { // See `go tool dist list`
 			case "darwin/amd64":
-				path = filepath.Join(node, "node-darwin-x64/bin/node")
+				path = filepath.Join(node, "mac-amd64", "bin", "node")
 			case "darwin/arm64":
-				path = filepath.Join(node, "node-darwin-arm64/bin/node")
+				path = filepath.Join(node, "mac-arm64", "bin", "node")
 			case "linux/amd64":
-				path = filepath.Join(node, "node-linux-x64/bin/node")
+				path = filepath.Join(node, "linux-amd64", "bin", "node")
+			case "linux/arm64":
+				path = filepath.Join(node, "linux-arm64", "bin", "node")
 			case "windows/amd64":
-				path = filepath.Join(node, "node.exe")
+				path = filepath.Join(node, "windows-amd64", "node.exe")
+			case "windows/arm64":
+				path = filepath.Join(node, "windows-arm64", "node.exe")
 			}
 			if _, err := fsReader.Stat(path); err == nil {
 				return path

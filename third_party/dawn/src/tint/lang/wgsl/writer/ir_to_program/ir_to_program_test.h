@@ -33,7 +33,7 @@
 
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/type/reference.h"
-#include "src/tint/lang/wgsl/writer/ir_to_program/program_options.h"
+#include "src/tint/lang/wgsl/writer/common/options.h"
 
 namespace tint::wgsl::writer {
 
@@ -78,6 +78,11 @@ class IRToProgramTest : public core::ir::IRTestHelper {
         return var;
     }
 
+    /// Creates a new `var` declaration with a name and initializer value, using a reference type.
+    /// @param mv the type
+    /// @returns the instruction
+    core::ir::Var* Var(const core::type::MemoryView* mv) { return b.Var(mv); }
+
     /// Creates a new `var` declaration
     /// @tparam SPACE the var's address space
     /// @tparam T the storage pointer's element type
@@ -100,7 +105,7 @@ class IRToProgramTest : public core::ir::IRTestHelper {
     }
 
     /// The options to use when generating WGSL.
-    ProgramOptions options{
+    Options options{
         .allowed_features = AllowedFeatures::Everything(),
     };
 };

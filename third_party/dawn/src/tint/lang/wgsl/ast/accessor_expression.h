@@ -36,14 +36,10 @@ namespace tint::ast {
 class AccessorExpression : public Castable<AccessorExpression, Expression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the member accessor expression source
     /// @param object the object
-    AccessorExpression(GenerationID pid,
-                       NodeID nid,
-                       const Source& source,
-                       const Expression* object);
+    AccessorExpression(NodeID nid, const Source& source, const Expression* object);
 
     /// Destructor
     ~AccessorExpression() override;

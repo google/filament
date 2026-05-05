@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -48,6 +47,8 @@ enum class Def {
     kTexelFormat,
     kTypeAlias,
     kVariable,
+    kTextureFilterable,
+    kSamplerFiltering,
 };
 
 std::ostream& operator<<(std::ostream& out, Def def) {
@@ -72,6 +73,10 @@ std::ostream& operator<<(std::ostream& out, Def def) {
             return out << "Def::kTypeAlias";
         case Def::kVariable:
             return out << "Def::kVariable";
+        case Def::kTextureFilterable:
+            return out << "Def::kTextureFilterable";
+        case Def::kSamplerFiltering:
+            return out << "Def::kSamplerFiltering";
     }
     return out << "<unknown>";
 }
@@ -87,7 +92,9 @@ enum class Use {
     kTexelFormat,
     kValueExpression,
     kVariableType,
-    kUnaryOp
+    kUnaryOp,
+    kTextureFilterable,
+    kSamplerFiltering,
 };
 
 std::ostream& operator<<(std::ostream& out, Use use) {
@@ -114,6 +121,10 @@ std::ostream& operator<<(std::ostream& out, Use use) {
             return out << "Use::kVariableType";
         case Use::kUnaryOp:
             return out << "Use::kUnaryOp";
+        case Use::kTextureFilterable:
+            return out << "Use::kTextureFilterable";
+        case Use::kSamplerFiltering:
+            return out << "Use::kSamplerFiltering";
     }
     return out << "<unknown>";
 }
@@ -252,16 +263,37 @@ TEST_P(ResolverExpressionKindTest, Test) {
             };
             break;
         }
+        case Def::kTextureFilterable: {
+            sym = Sym("filterable");
+            check_expr = [](const sem::Expression* expr) {
+                ASSERT_NE(expr, nullptr);
+                auto* enum_expr = expr->As<sem::BuiltinEnumExpression<core::TextureFilterable>>();
+                ASSERT_NE(enum_expr, nullptr);
+                EXPECT_EQ(enum_expr->Value(), core::TextureFilterable::kFilterable);
+            };
+            break;
+        }
+        case Def::kSamplerFiltering: {
+            sym = Sym("filtering");
+            check_expr = [](const sem::Expression* expr) {
+                ASSERT_NE(expr, nullptr);
+                auto* enum_expr = expr->As<sem::BuiltinEnumExpression<core::SamplerFiltering>>();
+                ASSERT_NE(enum_expr, nullptr);
+                EXPECT_EQ(enum_expr->Value(), core::SamplerFiltering::kFiltering);
+            };
+            break;
+        }
     }
 
     auto* ident = Ident(kUseSource, sym);
     auto* expr = Expr(ident);
     switch (GetParam().use) {
         case Use::kAccess:
-            GlobalVar("v", ty("texture_storage_2d", "rgba8unorm", expr), Group(0_u), Binding(0_u));
+            GlobalVar("v", ty.AsType("texture_storage_2d", "rgba8unorm", expr), Group(0_u),
+                      Binding(0_u));
             break;
         case Use::kAddressSpace:
-            Func(Symbols().New(), Vector{Param("p", ty("ptr", expr, ty.f32()))}, ty.void_(),
+            Func(Symbols().New(), Vector{Param("p", ty.AsType("ptr", expr, ty.f32()))}, ty.void_(),
                  tint::Empty);
             break;
         case Use::kCallExpr:
@@ -274,23 +306,31 @@ TEST_P(ResolverExpressionKindTest, Test) {
             fn_stmts.Push(Decl(Var("v", Mul(1_a, expr))));
             break;
         case Use::kFunctionReturnType:
-            Func(Symbols().New(), tint::Empty, ty(expr), Return(Call(sym)));
+            Func(Symbols().New(), tint::Empty, ty.AsType(expr), Return(Call(sym)));
             break;
         case Use::kMemberType:
-            Structure(Symbols().New(), Vector{Member("m", ty(expr))});
+            Structure(Symbols().New(), Vector{Member("m", ty.AsType(expr))});
             break;
         case Use::kTexelFormat:
-            GlobalVar(Symbols().New(), ty("texture_storage_2d", ty(expr), "write"), Group(0_u),
-                      Binding(0_u));
+            GlobalVar(Symbols().New(), ty.AsType("texture_storage_2d", ty.AsType(expr), "write"),
+                      Group(0_u), Binding(0_u));
             break;
         case Use::kValueExpression:
             fn_stmts.Push(Decl(Var("v", expr)));
             break;
         case Use::kVariableType:
-            fn_stmts.Push(Decl(Var("v", ty(expr))));
+            fn_stmts.Push(Decl(Var("v", ty.AsType(expr))));
             break;
         case Use::kUnaryOp:
             fn_stmts.Push(Assign(Phony(), Negation(expr)));
+            break;
+        case Use::kTextureFilterable:
+            GlobalVar(Symbols().New(), ty.AsType("texture_2d", ty.f32(), ty.AsType(expr)),
+                      Group(0_u), Binding(0_u));
+            break;
+        case Use::kSamplerFiltering:
+            GlobalVar(Symbols().New(), ty.AsType("sampler", ty.AsType(expr)), Group(0_u),
+                      Binding(0_u));
             break;
     }
 
@@ -315,17 +355,28 @@ INSTANTIATE_TEST_SUITE_P(
     testing::ValuesIn(std::vector<Case>{
         {Def::kAccess, Use::kAccess, kPass},
         {Def::kAccess, Use::kAddressSpace,
-         R"(5:6 error: cannot use access 'write' as address space)"},
-        {Def::kAccess, Use::kBinaryOp, R"(5:6 error: cannot use access 'write' as value)"},
-        {Def::kAccess, Use::kCallExpr, R"(5:6 error: cannot use access 'write' as call target)"},
-        {Def::kAccess, Use::kCallStmt, R"(5:6 error: cannot use access 'write' as call target)"},
-        {Def::kAccess, Use::kFunctionReturnType, R"(5:6 error: cannot use access 'write' as type)"},
-        {Def::kAccess, Use::kMemberType, R"(5:6 error: cannot use access 'write' as type)"},
+         R"(5:6 error: cannot use access enumerant 'write' as address space)"},
+        {Def::kAccess, Use::kBinaryOp,
+         R"(5:6 error: cannot use access enumerant 'write' as value)"},
+        {Def::kAccess, Use::kCallExpr,
+         R"(5:6 error: cannot use access enumerant 'write' as call target)"},
+        {Def::kAccess, Use::kCallStmt,
+         R"(5:6 error: cannot use access enumerant 'write' as call target)"},
+        {Def::kAccess, Use::kFunctionReturnType,
+         R"(5:6 error: cannot use access enumerant 'write' as type)"},
+        {Def::kAccess, Use::kMemberType,
+         R"(5:6 error: cannot use access enumerant 'write' as type)"},
         {Def::kAccess, Use::kTexelFormat,
-         R"(5:6 error: cannot use access 'write' as texel format)"},
-        {Def::kAccess, Use::kValueExpression, R"(5:6 error: cannot use access 'write' as value)"},
-        {Def::kAccess, Use::kVariableType, R"(5:6 error: cannot use access 'write' as type)"},
-        {Def::kAccess, Use::kUnaryOp, R"(5:6 error: cannot use access 'write' as value)"},
+         R"(5:6 error: cannot use access enumerant 'write' as texel format)"},
+        {Def::kAccess, Use::kValueExpression,
+         R"(5:6 error: cannot use access enumerant 'write' as value)"},
+        {Def::kAccess, Use::kVariableType,
+         R"(5:6 error: cannot use access enumerant 'write' as type)"},
+        {Def::kAccess, Use::kUnaryOp, R"(5:6 error: cannot use access enumerant 'write' as value)"},
+        {Def::kAccess, Use::kTextureFilterable,
+         R"(5:6 error: cannot use access enumerant 'write' as texture filterable)"},
+        {Def::kAccess, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use access enumerant 'write' as sampler filtering)"},
 
         {Def::kAddressSpace, Use::kAccess,
          R"(5:6 error: cannot use address space 'workgroup' as access)"},
@@ -348,6 +399,10 @@ INSTANTIATE_TEST_SUITE_P(
          R"(5:6 error: cannot use address space 'workgroup' as type)"},
         {Def::kAddressSpace, Use::kUnaryOp,
          R"(5:6 error: cannot use address space 'workgroup' as value)"},
+        {Def::kAddressSpace, Use::kTextureFilterable,
+         R"(5:6 error: cannot use address space 'workgroup' as texture filterable)"},
+        {Def::kAddressSpace, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use address space 'workgroup' as sampler filtering)"},
 
         {Def::kBuiltinFunction, Use::kAccess,
          R"(5:6 error: cannot use builtin function 'workgroupBarrier' as access)"},
@@ -371,6 +426,10 @@ INSTANTIATE_TEST_SUITE_P(
         {Def::kBuiltinFunction, Use::kUnaryOp,
          R"(5:6 error: cannot use builtin function 'workgroupBarrier' as value
 7:8 note: are you missing '()'?)"},
+        {Def::kBuiltinFunction, Use::kTextureFilterable,
+         R"(5:6 error: cannot use builtin function 'workgroupBarrier' as texture filterable)"},
+        {Def::kBuiltinFunction, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use builtin function 'workgroupBarrier' as sampler filtering)"},
 
         {Def::kBuiltinType, Use::kAccess, R"(5:6 error: cannot use type 'vec4<f32>' as access)"},
         {Def::kBuiltinType, Use::kAddressSpace,
@@ -390,6 +449,10 @@ INSTANTIATE_TEST_SUITE_P(
         {Def::kBuiltinType, Use::kUnaryOp,
          R"(5:6 error: cannot use type 'vec4<f32>' as value
 7:8 note: are you missing '()'?)"},
+        {Def::kBuiltinType, Use::kTextureFilterable,
+         R"(5:6 error: cannot use type 'vec4<f32>' as texture filterable)"},
+        {Def::kBuiltinType, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use type 'vec4<f32>' as sampler filtering)"},
 
         {Def::kFunction, Use::kAccess, R"(5:6 error: cannot use function 'FUNCTION' as access
 1:2 note: function 'FUNCTION' declared here)"},
@@ -420,6 +483,12 @@ INSTANTIATE_TEST_SUITE_P(
         {Def::kFunction, Use::kUnaryOp, R"(5:6 error: cannot use function 'FUNCTION' as value
 1:2 note: function 'FUNCTION' declared here
 7:8 note: are you missing '()'?)"},
+        {Def::kFunction, Use::kTextureFilterable,
+         R"(5:6 error: cannot use function 'FUNCTION' as texture filterable
+1:2 note: function 'FUNCTION' declared here)"},
+        {Def::kFunction, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use function 'FUNCTION' as sampler filtering
+1:2 note: function 'FUNCTION' declared here)"},
 
         {Def::kParameter, Use::kBinaryOp, kPass},
         {Def::kParameter, Use::kCallStmt,
@@ -455,6 +524,12 @@ INSTANTIATE_TEST_SUITE_P(
          R"(5:6 error: cannot use type 'STRUCT' as value
 1:2 note: 'struct STRUCT' declared here
 7:8 note: are you missing '()'?)"},
+        {Def::kStruct, Use::kTextureFilterable,
+         R"(5:6 error: cannot use type 'STRUCT' as texture filterable
+1:2 note: 'struct STRUCT' declared here)"},
+        {Def::kStruct, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use type 'STRUCT' as sampler filtering
+1:2 note: 'struct STRUCT' declared here)"},
 
         {Def::kTexelFormat, Use::kAccess,
          R"(5:6 error: cannot use texel format 'rgba8unorm' as access)"},
@@ -477,6 +552,10 @@ INSTANTIATE_TEST_SUITE_P(
          R"(5:6 error: cannot use texel format 'rgba8unorm' as type)"},
         {Def::kTexelFormat, Use::kUnaryOp,
          R"(5:6 error: cannot use texel format 'rgba8unorm' as value)"},
+        {Def::kTexelFormat, Use::kTextureFilterable,
+         R"(5:6 error: cannot use texel format 'rgba8unorm' as texture filterable)"},
+        {Def::kTexelFormat, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use texel format 'rgba8unorm' as sampler filtering)"},
 
         {Def::kTypeAlias, Use::kAccess, R"(5:6 error: cannot use type 'i32' as access)"},
         {Def::kTypeAlias, Use::kAddressSpace,
@@ -495,6 +574,10 @@ INSTANTIATE_TEST_SUITE_P(
         {Def::kTypeAlias, Use::kUnaryOp,
          R"(5:6 error: cannot use type 'i32' as value
 7:8 note: are you missing '()'?)"},
+        {Def::kTypeAlias, Use::kTextureFilterable,
+         R"(5:6 error: cannot use type 'i32' as texture filterable)"},
+        {Def::kTypeAlias, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use type 'i32' as sampler filtering)"},
 
         {Def::kVariable, Use::kAccess, R"(5:6 error: cannot use 'const VARIABLE' as access
 1:2 note: 'const VARIABLE' declared here)"},
@@ -522,6 +605,64 @@ INSTANTIATE_TEST_SUITE_P(
          R"(5:6 error: cannot use 'const VARIABLE' as type
 1:2 note: 'const VARIABLE' declared here)"},
         {Def::kVariable, Use::kUnaryOp, kPass},
+        {Def::kVariable, Use::kTextureFilterable,
+         R"(5:6 error: cannot use 'const VARIABLE' as texture filterable
+1:2 note: 'const VARIABLE' declared here)"},
+        {Def::kVariable, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use 'const VARIABLE' as sampler filtering
+1:2 note: 'const VARIABLE' declared here)"},
+
+        {Def::kTextureFilterable, Use::kAccess,
+         R"(5:6 error: cannot use texture filterable 'filterable' as access)"},
+        {Def::kTextureFilterable, Use::kAddressSpace,
+         R"(5:6 error: cannot use texture filterable 'filterable' as address space)"},
+        {Def::kTextureFilterable, Use::kBinaryOp,
+         R"(5:6 error: cannot use texture filterable 'filterable' as value)"},
+        {Def::kTextureFilterable, Use::kCallStmt,
+         R"(5:6 error: cannot use texture filterable 'filterable' as call target)"},
+        {Def::kTextureFilterable, Use::kCallExpr,
+         R"(5:6 error: cannot use texture filterable 'filterable' as call target)"},
+        {Def::kTextureFilterable, Use::kFunctionReturnType,
+         R"(5:6 error: cannot use texture filterable 'filterable' as type)"},
+        {Def::kTextureFilterable, Use::kMemberType,
+         R"(5:6 error: cannot use texture filterable 'filterable' as type)"},
+        {Def::kTextureFilterable, Use::kTexelFormat,
+         R"(5:6 error: cannot use texture filterable 'filterable' as texel format)"},
+        {Def::kTextureFilterable, Use::kValueExpression,
+         R"(5:6 error: cannot use texture filterable 'filterable' as value)"},
+        {Def::kTextureFilterable, Use::kVariableType,
+         R"(5:6 error: cannot use texture filterable 'filterable' as type)"},
+        {Def::kTextureFilterable, Use::kUnaryOp,
+         R"(5:6 error: cannot use texture filterable 'filterable' as value)"},
+        {Def::kTextureFilterable, Use::kTextureFilterable, kPass},
+        {Def::kTextureFilterable, Use::kSamplerFiltering,
+         R"(5:6 error: cannot use texture filterable 'filterable' as sampler filtering)"},
+
+        {Def::kSamplerFiltering, Use::kAccess,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as access)"},
+        {Def::kSamplerFiltering, Use::kAddressSpace,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as address space)"},
+        {Def::kSamplerFiltering, Use::kBinaryOp,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as value)"},
+        {Def::kSamplerFiltering, Use::kCallStmt,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as call target)"},
+        {Def::kSamplerFiltering, Use::kCallExpr,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as call target)"},
+        {Def::kSamplerFiltering, Use::kFunctionReturnType,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as type)"},
+        {Def::kSamplerFiltering, Use::kMemberType,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as type)"},
+        {Def::kSamplerFiltering, Use::kTexelFormat,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as texel format)"},
+        {Def::kSamplerFiltering, Use::kValueExpression,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as value)"},
+        {Def::kSamplerFiltering, Use::kVariableType,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as type)"},
+        {Def::kSamplerFiltering, Use::kUnaryOp,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as value)"},
+        {Def::kSamplerFiltering, Use::kTextureFilterable,
+         R"(5:6 error: cannot use sampler filtering 'filtering' as texture filterable)"},
+        {Def::kSamplerFiltering, Use::kSamplerFiltering, kPass},
     }));
 
 }  // namespace

@@ -49,7 +49,7 @@ if (tint_build_glsl_writer) {
       "writer.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
@@ -99,7 +99,7 @@ if (tint_build_unittests) {
         "writer_test.cc",
       ]
       deps = [
-        "${dawn_root}/src/utils:utils",
+        "${dawn_root}/src/utils",
         "${tint_src_dir}:gmock_and_gtest",
         "${tint_src_dir}/api/common",
         "${tint_src_dir}/lang/core",
@@ -137,7 +137,7 @@ if (tint_build_glsl_writer) {
   tint_fuzz_source_set("fuzz") {
     sources = [ "writer_fuzz.cc" ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/cmd/fuzz/ir:fuzz",
       "${tint_src_dir}/lang/core",

@@ -87,7 +87,7 @@ template("dawn_component") {
         "@executable_path/",
       ]
     }
-    if ((is_linux || is_chromeos) && dawn_has_build) {
+    if (is_linux || is_chromeos) {
       configs = [ "//build/config/gcc:rpath_for_built_shared_libraries" ]
     }
   }

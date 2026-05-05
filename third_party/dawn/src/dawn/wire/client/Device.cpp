@@ -28,6 +28,7 @@
 #include "dawn/wire/client/Device.h"
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -155,11 +156,6 @@ using CreateRenderPipelineEvent =
                             EventType::CreateRenderPipeline,
                             WGPUCreateRenderPipelineAsyncCallbackInfo>;
 
-static constexpr WGPUUncapturedErrorCallbackInfo kEmptyUncapturedErrorCallbackInfo = {
-    nullptr, nullptr, nullptr, nullptr};
-static constexpr WGPULoggingCallbackInfo kEmptyLoggingCallbackInfo = {nullptr, nullptr, nullptr,
-                                                                      nullptr};
-
 }  // namespace
 
 class Device::DeviceLostEvent : public TrackedEvent {
@@ -192,11 +188,10 @@ class Device::DeviceLostEvent : public TrackedEvent {
             mMessage = "A valid external Instance reference no longer exists.";
         }
 
-        // Some users may use the device lost callback to deallocate resources allocated for the
-        // uncaptured error callback, so reset the uncaptured error callback before calling the
-        // device lost callback.
-        mDevice->mUncapturedErrorCallbackInfo = kEmptyUncapturedErrorCallbackInfo;
-        mDevice->mLoggingCallbackInfo = kEmptyLoggingCallbackInfo;
+        // The uncaptured error and logging callbacks are spontaneous and must not be called
+        // after we call the device lost's |mCallback| below, so we clear them and wait for them to
+        // be no longer referenced before moving forwards.
+        mDevice->mCallbackInfos.Clear();
 
         void* userdata1 = mUserdata1.ExtractAsDangling();
         void* userdata2 = mUserdata2.ExtractAsDangling();
@@ -224,50 +219,10 @@ Device::Device(const ObjectBaseParams& params,
                Adapter* adapter,
                const WGPUDeviceDescriptor* descriptor)
     : RefCountedWithExternalCount<ObjectWithEventsBase>(params, eventManagerHandle),
-      mAdapter(adapter) {
-#if defined(DAWN_ENABLE_ASSERTS)
-    static constexpr WGPUDeviceLostCallbackInfo kDefaultDeviceLostCallbackInfo = {
-        nullptr, WGPUCallbackMode_AllowSpontaneous,
-        [](WGPUDevice const*, WGPUDeviceLostReason, WGPUStringView, void*, void*) {
-            static bool calledOnce = false;
-            if (!calledOnce) {
-                calledOnce = true;
-                dawn::WarningLog() << "No Dawn device lost callback was set. This is probably not "
-                                      "intended. If you really want to ignore device lost "
-                                      "and suppress this message, set the callback explicitly.";
-            }
-        },
-        nullptr, nullptr};
-    static constexpr WGPUUncapturedErrorCallbackInfo kDefaultUncapturedErrorCallbackInfo = {
-        nullptr,
-        [](WGPUDevice const*, WGPUErrorType, WGPUStringView, void*, void*) {
-            static bool calledOnce = false;
-            if (!calledOnce) {
-                calledOnce = true;
-                dawn::WarningLog() << "No Dawn device uncaptured error callback was set. This is "
-                                      "probably not intended. If you really want to ignore errors "
-                                      "and suppress this message, set the callback explicitly.";
-            }
-        },
-        nullptr, nullptr};
-#else
-    static constexpr WGPUDeviceLostCallbackInfo kDefaultDeviceLostCallbackInfo = {
-        nullptr, WGPUCallbackMode_AllowSpontaneous, nullptr, nullptr, nullptr};
-    static constexpr WGPUUncapturedErrorCallbackInfo kDefaultUncapturedErrorCallbackInfo =
-        kEmptyUncapturedErrorCallbackInfo;
-#endif  // DAWN_ENABLE_ASSERTS
-
-    WGPUDeviceLostCallbackInfo deviceLostCallbackInfo = kDefaultDeviceLostCallbackInfo;
-    if (descriptor != nullptr && descriptor->deviceLostCallbackInfo.callback != nullptr) {
-        deviceLostCallbackInfo = descriptor->deviceLostCallbackInfo;
-    }
-    mDeviceLostInfo.event = std::make_unique<DeviceLostEvent>(deviceLostCallbackInfo, this);
-
-    mUncapturedErrorCallbackInfo = kDefaultUncapturedErrorCallbackInfo;
-    if (descriptor != nullptr && descriptor->uncapturedErrorCallbackInfo.callback != nullptr) {
-        mUncapturedErrorCallbackInfo = descriptor->uncapturedErrorCallbackInfo;
-    }
-}
+      mDeviceLostInfo(
+          AcquireRef(new DeviceLostEvent(GetDeviceLostCallbackInfoOrDefault(descriptor), this))),
+      mCallbackInfos(descriptor),
+      mAdapter(adapter) {}
 
 ObjectType Device::GetObjectType() const {
     return ObjectType::Device;
@@ -275,6 +230,27 @@ ObjectType Device::GetObjectType() const {
 
 bool Device::IsAlive() const {
     return mIsAlive;
+}
+
+Queue* Device::GetQueue() {
+    // The queue is lazily created because if a Device is created by Reserve/Inject, we cannot send
+    // the GetQueue message until it has been injected on the Server. It cannot happen immediately
+    // on construction.
+    if (mQueue == nullptr) {
+        // Get the primary queue for this device.
+        Client* client = GetClient();
+        mQueue = client->Make<Queue>(GetEventManagerHandle());
+
+        DeviceGetQueueCmd cmd;
+        cmd.self = ToAPI(this);
+        cmd.result = mQueue->GetWireHandle(client);
+        client->SerializeCommand(cmd);
+    }
+    return mQueue.Get();
+}
+
+const LimitsAndFeatures& Device::GetLimitsAndFeatures() const {
+    return mLimitsAndFeatures;
 }
 
 void Device::WillDropLastExternalRef() {
@@ -302,27 +278,20 @@ WGPUStatus Device::APIGetAdapterInfo(WGPUAdapterInfo* adapterInfo) const {
 }
 
 void Device::SetLimits(const WGPULimits* limits) {
-    return mLimitsAndFeatures.SetLimits(limits);
+    mLimitsAndFeatures.SetLimits(limits);
 }
 
 void Device::SetFeatures(const WGPUFeatureName* features, uint32_t featuresCount) {
-    return mLimitsAndFeatures.SetFeatures(features, featuresCount);
+    mLimitsAndFeatures.SetFeatures(features, featuresCount);
 }
 
 void Device::HandleError(WGPUErrorType errorType, WGPUStringView message) {
-    if (mUncapturedErrorCallbackInfo.callback) {
-        const auto device = ToAPI(this);
-        mUncapturedErrorCallbackInfo.callback(&device, errorType, message,
-                                              mUncapturedErrorCallbackInfo.userdata1,
-                                              mUncapturedErrorCallbackInfo.userdata2);
-    }
+    const auto device = ToAPI(this);
+    mCallbackInfos.CallErrorCallback(&device, errorType, message);
 }
 
 void Device::HandleLogging(WGPULoggingType loggingType, WGPUStringView message) {
-    if (mLoggingCallbackInfo.callback) {
-        mLoggingCallbackInfo.callback(loggingType, message, mLoggingCallbackInfo.userdata1,
-                                      mLoggingCallbackInfo.userdata2);
-    }
+    mCallbackInfos.CallLoggingCallback(loggingType, message);
 }
 
 void Device::HandleDeviceLost(WGPUDeviceLostReason reason, WGPUStringView message) {
@@ -334,17 +303,17 @@ void Device::HandleDeviceLost(WGPUDeviceLostReason reason, WGPUStringView messag
 
 WGPUFuture Device::APIGetLostFuture() {
     // Lazily track the device lost event so that event ordering w.r.t RequestDevice is correct.
-    if (mDeviceLostInfo.event != nullptr) {
-        auto [deviceLostFutureIDInternal, _] =
-            GetEventManager().TrackEvent(std::move(mDeviceLostInfo.event));
-        mDeviceLostInfo.futureID = deviceLostFutureIDInternal;
+    if (const auto* e = std::get_if<Ref<TrackedEvent>>(&mDeviceLostInfo)) {
+        Ref<TrackedEvent> event = *e;
+        auto [futureID, _] = GetEventManager().TrackEvent(std::move(event));
+        mDeviceLostInfo = futureID;
     }
-    return {mDeviceLostInfo.futureID};
+    return {std::get<FutureID>(mDeviceLostInfo)};
 }
 
 void Device::APISetLoggingCallback(const WGPULoggingCallbackInfo& callbackInfo) {
     if (mIsAlive) {
-        mLoggingCallbackInfo = callbackInfo;
+        mCallbackInfos.SetLoggingCallbackInfo(callbackInfo);
     }
 }
 
@@ -358,13 +327,13 @@ WireResult Client::DoDeviceLostCallback(ObjectHandle eventManager,
 WGPUFuture Device::APIPopErrorScope(const WGPUPopErrorScopeCallbackInfo& callbackInfo) {
     Client* client = GetClient();
     auto [futureIDInternal, tracked] =
-        GetEventManager().TrackEvent(std::make_unique<PopErrorScopeEvent>(callbackInfo));
+        GetEventManager().TrackEvent(AcquireRef(new PopErrorScopeEvent(callbackInfo)));
     if (!tracked) {
         return {futureIDInternal};
     }
 
     DevicePopErrorScopeCmd cmd;
-    cmd.deviceId = GetWireId();
+    cmd.deviceId = GetWireHandle(client).id;
     cmd.eventManagerHandle = GetEventManagerHandle();
     cmd.future = {futureIDInternal};
     client->SerializeCommand(cmd);
@@ -395,29 +364,25 @@ WGPUBuffer Device::APICreateErrorBuffer(const WGPUBufferDescriptor* descriptor) 
     return Buffer::CreateError(this, descriptor);
 }
 
+WGPUResourceTable Device::APICreateResourceTable(const WGPUResourceTableDescriptor* descriptor) {
+    return ResourceTable::Create(this, descriptor);
+}
+
+WGPUTexture Device::APICreateTexture(const WGPUTextureDescriptor* descriptor) {
+    return Texture::Create(this, descriptor);
+}
+
+WGPUTexture Device::APICreateErrorTexture(const WGPUTextureDescriptor* descriptor) {
+    return Texture::CreateError(this, descriptor);
+}
+
 WGPUAdapter Device::APIGetAdapter() const {
     Ref<Adapter> adapter = mAdapter;
     return ReturnToAPI(std::move(adapter));
 }
 
 WGPUQueue Device::APIGetQueue() {
-    // The queue is lazily created because if a Device is created by
-    // Reserve/Inject, we cannot send the GetQueue message until
-    // it has been injected on the Server. It cannot happen immediately
-    // on construction.
-    if (mQueue == nullptr) {
-        // Get the primary queue for this device.
-        Client* client = GetClient();
-        mQueue = client->Make<Queue>(GetEventManagerHandle());
-
-        DeviceGetQueueCmd cmd;
-        cmd.self = ToAPI(this);
-        cmd.result = mQueue->GetWireHandle();
-
-        client->SerializeCommand(cmd);
-    }
-
-    Ref<Queue> queue = mQueue;
+    Ref<Queue> queue = GetQueue();
     return ReturnToAPI(std::move(queue));
 }
 
@@ -429,17 +394,17 @@ WGPUFuture Device::CreatePipelineAsync(Descriptor const* descriptor,
     Client* client = GetClient();
     Ref<Pipeline> pipeline = client->Make<Pipeline>();
     auto [futureIDInternal, tracked] =
-        GetEventManager().TrackEvent(std::make_unique<Event>(callbackInfo, pipeline));
+        GetEventManager().TrackEvent(AcquireRef(new Event(callbackInfo, pipeline)));
     if (!tracked) {
         return {futureIDInternal};
     }
 
     Cmd cmd;
-    cmd.deviceId = GetWireId();
+    cmd.deviceId = GetWireHandle(client).id;
     cmd.descriptor = descriptor;
     cmd.eventManagerHandle = GetEventManagerHandle();
     cmd.future = {futureIDInternal};
-    cmd.pipelineObjectHandle = pipeline->GetWireHandle();
+    cmd.pipelineObjectHandle = pipeline->GetWireHandle(client);
 
     client->SerializeCommand(cmd);
     return {futureIDInternal};

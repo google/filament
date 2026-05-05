@@ -27,30 +27,32 @@
 
 #include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
 
-using ::testing::Invoke;
-
 CachingInterfaceMock::CachingInterfaceMock() {
-    ON_CALL(*this, LoadData).WillByDefault(Invoke([this](auto&&... args) {
+    ON_CALL(*this, LoadData).WillByDefault([this](auto&&... args) {
         return LoadDataDefault(args...);
-    }));
-    ON_CALL(*this, StoreData).WillByDefault(Invoke([this](auto&&... args) {
+    });
+    ON_CALL(*this, StoreData).WillByDefault([this](auto&&... args) {
         return StoreDataDefault(args...);
-    }));
+    });
 }
 
 void CachingInterfaceMock::Enable() {
+    std::scoped_lock lock(mMutex);
     mEnabled = true;
 }
 
 void CachingInterfaceMock::Disable() {
+    std::scoped_lock lock(mMutex);
     mEnabled = false;
 }
 
 size_t CachingInterfaceMock::GetHitCount() const {
+    std::scoped_lock lock(mMutex);
     return mHitCount;
 }
 
 size_t CachingInterfaceMock::GetNumEntries() const {
+    std::scoped_lock lock(mMutex);
     return mCache.size();
 }
 
@@ -58,6 +60,7 @@ size_t CachingInterfaceMock::LoadDataDefault(const void* key,
                                              size_t keySize,
                                              void* value,
                                              size_t valueSize) {
+    std::scoped_lock lock(mMutex);
     if (!mEnabled) {
         return 0;
     }
@@ -79,6 +82,7 @@ void CachingInterfaceMock::StoreDataDefault(const void* key,
                                             size_t keySize,
                                             const void* value,
                                             size_t valueSize) {
+    std::scoped_lock lock(mMutex);
     if (!mEnabled) {
         return;
     }

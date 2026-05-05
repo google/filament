@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_CORE_NUMBER_H_
 
 #include <stdint.h>
+
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -291,6 +292,8 @@ using i8 = Number<int8_t>;
 using i32 = Number<int32_t>;
 /// `u8` is a type alias to `Number<uint8_t>`.
 using u8 = Number<uint8_t>;
+/// `u16` is a type alias to `Number<uint16_t>`.
+using u16 = Number<uint16_t>;
 /// `u32` is a type alias to `Number<uint32_t>`.
 using u32 = Number<uint32_t>;
 /// `u64` is a type alias to `Number<uint64_t>`.
@@ -322,6 +325,8 @@ const char* FriendlyName() {
         return "abstract-float";
     } else if constexpr (std::is_same_v<T, i32>) {
         return "i32";
+    } else if constexpr (std::is_same_v<T, u16>) {
+        return "u16";
     } else if constexpr (std::is_same_v<T, u32>) {
         return "u32";
     } else if constexpr (std::is_same_v<T, f32>) {

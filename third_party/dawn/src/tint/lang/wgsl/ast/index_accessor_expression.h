@@ -36,25 +36,17 @@ namespace tint::ast {
 class IndexAccessorExpression final : public Castable<IndexAccessorExpression, AccessorExpression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the index accessor source
     /// @param obj the object
     /// @param idx the index expression
-    IndexAccessorExpression(GenerationID pid,
-                            NodeID nid,
+    IndexAccessorExpression(NodeID nid,
                             const Source& source,
                             const Expression* obj,
                             const Expression* idx);
 
     /// Destructor
     ~IndexAccessorExpression() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const IndexAccessorExpression* Clone(CloneContext& ctx) const override;
 
     /// the index expression
     const Expression* const index;

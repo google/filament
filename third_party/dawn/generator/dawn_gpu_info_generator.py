@@ -39,6 +39,7 @@ def parse_mask(mask):
 
 
 class Name:
+
     def __init__(self, name):
         self.name = name
         self.chunks = name.split(' ')
@@ -78,6 +79,7 @@ class Name:
 
 
 class Architecture:
+
     def __init__(self, name, json_data, mask):
         self.name = Name(name)
         self.devices = []
@@ -98,6 +100,7 @@ class Architecture:
 
 
 class DeviceSet:
+
     def __init__(self, json_data):
         self.mask = None
         self.internal = False
@@ -145,6 +148,7 @@ class DeviceSet:
 
 
 class Vendor:
+
     def __init__(self, name, json_data):
         self.name = Name(name)
         self.name_override = None
@@ -215,6 +219,7 @@ def parse_json(json):
 
 
 class DawnGpuInfoGenerator(Generator):
+
     def get_description(self):
         return "Generates GPU Info Dawn code."
 

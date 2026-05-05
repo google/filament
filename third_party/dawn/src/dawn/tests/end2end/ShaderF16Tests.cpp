@@ -447,14 +447,15 @@ fn FSMain(@location(0) color : vec4f) -> @location(0) vec4f {
 // DawnTestBase::CreateDeviceImpl always enables allow_unsafe_apis toggle.
 DAWN_INSTANTIATE_TEST_P(ShaderF16Tests,
                         {
-                            D3D11Backend(),
-                            D3D12Backend(),
-                            D3D12Backend({"use_dxc"}),
-                            VulkanBackend(),
-                            VulkanBackend({}, {"vulkan_use_storage_input_output_16"}),
-                            MetalBackend(),
-                            OpenGLBackend(),
-                            OpenGLESBackend(),
+                            D3D11Backend(),                                             //
+                            D3D12Backend(),                                             //
+                            D3D12Backend({}, {"use_dxc"}),                              //
+                            VulkanBackend(),                                            //
+                            VulkanBackend({}, {"vulkan_use_storage_input_output_16"}),  //
+                            MetalBackend(),                                             //
+                            OpenGLBackend(),                                            //
+                            OpenGLESBackend(),                                          //
+                            WebGPUBackend()                                             //
                         },
                         {true, false});
 

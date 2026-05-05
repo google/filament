@@ -2356,7 +2356,7 @@ $B1: {  # root
     %4:u32 = spirv.atomic_i_add %wg, 1u, 0u, 0u
     store %wg, 0u
     %5:u32 = load %wg
-    %6:f32 = bitcast %5
+    %6:f32 = bitcast<f32> %5
     store %b, %6
     ret
   }
@@ -2418,7 +2418,7 @@ $B1: {  # root
     store %6, 0u
     %7:ptr<workgroup, u32, read_write> = access %wg, 0u
     %8:u32 = load %7
-    %9:f32 = bitcast %8
+    %9:f32 = bitcast<f32> %8
     store %b, %9
     ret
   }

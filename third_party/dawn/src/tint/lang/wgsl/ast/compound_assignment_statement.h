@@ -38,14 +38,12 @@ namespace tint::ast {
 class CompoundAssignmentStatement final : public Castable<CompoundAssignmentStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the compound assignment statement source
     /// @param lhs the left side of the expression
     /// @param rhs the right side of the expression
     /// @param op the binary operator
-    CompoundAssignmentStatement(GenerationID pid,
-                                NodeID nid,
+    CompoundAssignmentStatement(NodeID nid,
                                 const Source& source,
                                 const Expression* lhs,
                                 const Expression* rhs,
@@ -53,12 +51,6 @@ class CompoundAssignmentStatement final : public Castable<CompoundAssignmentStat
 
     /// Destructor
     ~CompoundAssignmentStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const CompoundAssignmentStatement* Clone(CloneContext& ctx) const override;
 
     /// left side expression
     const Expression* const lhs;

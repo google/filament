@@ -27,6 +27,7 @@
 
 #include "dawn/native/d3d12/SharedBufferMemoryD3D12.h"
 
+#include <memory>
 #include <utility>
 
 #include "dawn/native/Buffer.h"
@@ -36,9 +37,110 @@
 #include "dawn/native/d3d/UtilsD3D.h"
 #include "dawn/native/d3d12/BufferD3D12.h"
 #include "dawn/native/d3d12/DeviceD3D12.h"
+#include "dawn/native/d3d12/HeapD3D12.h"
 #include "dawn/native/d3d12/QueueD3D12.h"
+#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
 
 namespace dawn::native::d3d12 {
+
+namespace {
+
+enum class HeapAccessType {
+    Upload,
+    Readback,
+    GPUQueueAccessible,
+};
+
+ResultOrError<HeapAccessType> MapToHeapAccessType(const D3D12_HEAP_PROPERTIES& heapProperties,
+                                                  const Device* device) {
+    switch (heapProperties.Type) {
+        case D3D12_HEAP_TYPE_UPLOAD:
+            return HeapAccessType::Upload;
+        case D3D12_HEAP_TYPE_READBACK:
+            return HeapAccessType::Readback;
+        case D3D12_HEAP_TYPE_DEFAULT:
+            return HeapAccessType::GPUQueueAccessible;
+        case D3D12_HEAP_TYPE_CUSTOM:
+            if (device->GetDeviceInfo().isUMA) {
+                // On UMA systems, all heaps are always GPU accessible.
+                return HeapAccessType::GPUQueueAccessible;
+            }
+
+            // Map D3D12_HEAP_TYPE_CUSTOM heap to one of the standard heap types if possible.
+            // See:
+            // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-getcustomheapproperties(uint_d3d12_heap_type)
+            if (heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE &&
+                heapProperties.MemoryPoolPreference == D3D12_MEMORY_POOL_L1) {
+                // A CUSTOM heap with no CPU access and in L1 is equivalent to a DEFAULT heap.
+                return HeapAccessType::GPUQueueAccessible;
+            } else if (heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK &&
+                       heapProperties.MemoryPoolPreference == D3D12_MEMORY_POOL_L0) {
+                // A CUSTOM heap with WRITE_BACK + L0 is equivalent to a READBACK heap.
+                return HeapAccessType::Readback;
+            } else if (heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE &&
+                       heapProperties.MemoryPoolPreference == D3D12_MEMORY_POOL_L0) {
+                // A CUSTOM heap with WRITE_COMBINE + L0 is equivalent to a UPLOAD heap.
+                return HeapAccessType::Upload;
+            } else {
+                return DAWN_VALIDATION_ERROR("ID3D12Resources allocated on unsupported heap.");
+            }
+        default:
+            return DAWN_VALIDATION_ERROR("ID3D12Resources allocated on unsupported heap.");
+    }
+}
+
+ResultOrError<SharedBufferMemoryProperties> GetSharedBufferMemoryProperties(
+    Device* device,
+    D3D12_HEAP_PROPERTIES heapProperties,
+    bool allowUAV,
+    uint64_t size) {
+    HeapAccessType heapType;
+    DAWN_TRY_ASSIGN(heapType, MapToHeapAccessType(heapProperties, device));
+
+    wgpu::BufferUsage usages = wgpu::BufferUsage::None;
+
+    switch (heapType) {
+        case HeapAccessType::Upload:
+            usages |= wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc;
+            break;
+        case HeapAccessType::Readback:
+            usages |= wgpu::BufferUsage::MapRead | wgpu::BufferUsage::CopyDst;
+            break;
+        case HeapAccessType::GPUQueueAccessible:
+            // wgpu::BufferUsage::Uniform is not allowed in SharedBufferMemoryBase::CreateBuffer().
+            usages |= wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst |
+                      wgpu::BufferUsage::Vertex | wgpu::BufferUsage::Index |
+                      wgpu::BufferUsage::Indirect | wgpu::BufferUsage::QueryResolve;
+            if (allowUAV) {
+                usages |= wgpu::BufferUsage::Storage;
+            }
+
+            if (device->GetDeviceInfo().isUMA) {
+                // On UMA systems, buffers with WRITE_COMBINE or WRITE_BACK heaps can also be
+                // mapped.
+                if (heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE) {
+                    usages |= wgpu::BufferUsage::MapWrite;
+                } else if (heapProperties.CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK) {
+                    // On cache-coherent UMA systems, writes are immediately visible to the GPU. On
+                    // non-cache-coherent UMA systems, writes are flushed to the GPU when unmapping
+                    // or submitting work to the queue (driver dependent). Since Dawn doesn't
+                    // support submitting work to the queue while the buffer is mapped, it should be
+                    // safe to allow MapWrite on WRITE_BACK heaps. For reads, the data is guaranteed
+                    // to be available to the CPU after Map().
+                    usages |= wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite;
+                }
+            }
+            break;
+    }
+
+    SharedBufferMemoryProperties properties;
+    properties.size = size;
+    properties.usage = usages;
+
+    return properties;
+}
+
+}  // namespace
 
 SharedBufferMemory::SharedBufferMemory(Device* device,
                                        StringView label,
@@ -46,7 +148,16 @@ SharedBufferMemory::SharedBufferMemory(Device* device,
                                        ComPtr<ID3D12Resource> resource)
     : SharedBufferMemoryBase(device, label, properties), mResource(std::move(resource)) {}
 
-void SharedBufferMemory::DestroyImpl() {
+SharedBufferMemory::SharedBufferMemory(Device* device,
+                                       StringView label,
+                                       SharedBufferMemoryProperties properties,
+                                       std::unique_ptr<Heap> heap,
+                                       ComPtr<ID3D12Resource> resource)
+    : SharedBufferMemoryBase(device, label, properties),
+      mHeap(std::move(heap)),
+      mResource(std::move(resource)) {}
+
+void SharedBufferMemory::DestroyImpl(DestroyReason reason) {
     ToBackend(GetDevice())->ReferenceUntilUnused(std::move(mResource));
 }
 
@@ -73,39 +184,88 @@ ResultOrError<Ref<SharedBufferMemory>> SharedBufferMemory::Create(
     D3D12_HEAP_FLAGS heapFlags;
     d3d12Resource->GetHeapProperties(&heapProperties, &heapFlags);
 
-    wgpu::BufferUsage usages = wgpu::BufferUsage::None;
+    bool allowUAV = desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    switch (heapProperties.Type) {
-        case D3D12_HEAP_TYPE_UPLOAD:
-            usages |= wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc;
-            break;
-        case D3D12_HEAP_TYPE_READBACK:
-            usages |= wgpu::BufferUsage::MapRead | wgpu::BufferUsage::CopyDst;
-            break;
-        case D3D12_HEAP_TYPE_DEFAULT:
-            usages |= wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::CopyDst |
-                      wgpu::BufferUsage::Vertex | wgpu::BufferUsage::Index |
-                      wgpu::BufferUsage::Indirect | wgpu::BufferUsage::QueryResolve;
-            if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-                usages |= wgpu::BufferUsage::Storage;
-            }
-            if (IsAligned(desc.Width, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)) {
-                usages |= wgpu::BufferUsage::Uniform;
-            }
-            break;
-        case D3D12_HEAP_TYPE_CUSTOM:
-            return DAWN_VALIDATION_ERROR(
-                "ID3D12Resources allocated on D3D12_HEAP_TYPE_CUSTOM heaps are not supported by "
-                "SharedBufferMemory.");
-        default:
-            DAWN_UNREACHABLE();
-    }
     SharedBufferMemoryProperties properties;
-    properties.size = desc.Width;
-    properties.usage = usages;
+    DAWN_TRY_ASSIGN(properties,
+                    GetSharedBufferMemoryProperties(device, heapProperties, allowUAV, desc.Width));
 
     auto result =
         AcquireRef(new SharedBufferMemory(device, label, properties, std::move(d3d12Resource)));
+    result->Initialize();
+    return result;
+}
+
+// static
+ResultOrError<Ref<SharedBufferMemory>> SharedBufferMemory::Create(
+    Device* device,
+    StringView label,
+    const SharedBufferMemoryD3D12SharedMemoryFileMappingHandleDescriptor* descriptor) {
+    HANDLE sharedMemoryFileHandle = descriptor->handle;
+    DAWN_INVALID_IF(sharedMemoryFileHandle == nullptr, "shared HANDLE is missing.");
+
+    constexpr uint32_t kAlignment = kD3D12SharedBufferMemoryFileMappingHandleSizeAlignment;
+    DAWN_INVALID_IF(descriptor->size % kAlignment != 0,
+                    "shared buffer memory size is not a multiple of (%d).", kAlignment);
+
+    ComPtr<ID3D12Device3> d3d12Device3;
+    DAWN_TRY(CheckHRESULT(device->GetD3D12Device()->QueryInterface(IID_PPV_ARGS(&d3d12Device3)),
+                          "QueryInterface ID3D12Device3"));
+
+    ComPtr<ID3D12Heap> d3d12Heap;
+    DAWN_TRY(CheckOutOfMemoryHRESULT(d3d12Device3->OpenExistingHeapFromFileMapping(
+                                         sharedMemoryFileHandle, IID_PPV_ARGS(&d3d12Heap)),
+                                     "ID3D12Device3::OpenExistingHeapFromFileMapping"));
+
+    D3D12_HEAP_DESC heapDesc = d3d12Heap->GetDesc();
+    D3D12_HEAP_PROPERTIES heapProperties = heapDesc.Properties;
+    SharedBufferMemoryProperties properties;
+    DAWN_TRY_ASSIGN(properties, GetSharedBufferMemoryProperties(device, heapProperties, true,
+                                                                descriptor->size));
+
+    D3D12_RESOURCE_DESC resourceDescriptor;
+    resourceDescriptor.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDescriptor.Alignment = 0;
+    resourceDescriptor.Width = descriptor->size;
+    resourceDescriptor.Height = 1;
+    resourceDescriptor.DepthOrArraySize = 1;
+    resourceDescriptor.MipLevels = 1;
+    resourceDescriptor.Format = DXGI_FORMAT_UNKNOWN;
+    resourceDescriptor.SampleDesc.Count = 1;
+    resourceDescriptor.SampleDesc.Quality = 0;
+    resourceDescriptor.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resourceDescriptor.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+    // D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER must be specified if and only if
+    // D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER is set.
+    if (heapDesc.Flags & D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER) {
+        resourceDescriptor.Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+    }
+
+    D3D12_RESOURCE_ALLOCATION_INFO resourceInfo =
+        device->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDescriptor);
+    DAWN_INVALID_IF(resourceInfo.SizeInBytes > descriptor->size,
+                    "Resource required %u bytes, but heap is %u bytes.", resourceInfo.SizeInBytes,
+                    descriptor->size);
+    auto heap = std::make_unique<Heap>(
+        std::move(d3d12Heap),
+        device->GetDeviceInfo().isUMA ? MemorySegment::Local : MemorySegment::NonLocal,
+        descriptor->size);
+
+    // Consider the imported heap as already resident. Lock it because it is externally
+    // allocated.
+    device->GetResidencyManager()->TrackResidentAllocation(heap.get());
+    DAWN_TRY(device->GetResidencyManager()->LockAllocation(heap.get()));
+
+    ComPtr<ID3D12Resource> placedResource;
+    DAWN_TRY(CheckOutOfMemoryHRESULT(
+        device->GetD3D12Device()->CreatePlacedResource(heap->GetD3D12Heap(), 0, &resourceDescriptor,
+                                                       D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                       IID_PPV_ARGS(&placedResource)),
+        "ID3D12Device::CreatePlacedResource"));
+
+    auto result = AcquireRef(new SharedBufferMemory(device, label, properties, std::move(heap),
+                                                    std::move(placedResource)));
     result->Initialize();
     return result;
 }

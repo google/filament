@@ -213,7 +213,7 @@ TEST_P(RequiredBufferSizeInCopyTests, MinimumBufferSize) {
 
 DAWN_INSTANTIATE_TEST_P(RequiredBufferSizeInCopyTests,
                         {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
-                         OpenGLESBackend(), VulkanBackend()},
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         {Type::T2BCopy, Type::B2TCopy},
                         {wgpu::TextureDimension::e3D, wgpu::TextureDimension::e2D},
                         {2u, 1u},

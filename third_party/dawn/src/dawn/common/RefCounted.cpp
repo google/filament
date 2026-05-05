@@ -38,7 +38,7 @@
 
 namespace dawn {
 
-static constexpr size_t kPayloadBits = 1;
+static constexpr size_t kPayloadBits = 2;
 static constexpr uint64_t kPayloadMask = (uint64_t(1) << kPayloadBits) - 1;
 static constexpr uint64_t kRefCountIncrement = (uint64_t(1) << kPayloadBits);
 
@@ -54,11 +54,26 @@ uint64_t RefCount::GetValueForTesting() const {
 }
 
 uint64_t RefCount::GetPayload() const {
-    // We only care about the payload bits of the refcount. These never change after
-    // initialization so we can use the relaxed memory order. The order doesn't guarantee
-    // anything except the atomicity of the load, which is enough since any past values of the
-    // atomic will have the correct payload bits.
+    // We only care about the payload bits of the refcount. These can change after initialization
+    // but external synchronization must be used so we can use the relaxed memory order. The order
+    // doesn't guarantee anything except the atomicity of the load, which is enough since any past
+    // values of the atomic will have the correct payload bits.
     return kPayloadMask & mRefCount.load(std::memory_order_relaxed);
+}
+
+uint64_t RefCount::PayloadFetchAnd(uint64_t arg) {
+    DAWN_ASSERT((arg & kPayloadMask) == arg);
+
+    // Relaxed memory order is used because modifying the payload does not affect the lifetime of
+    // the object.
+    return kPayloadMask & mRefCount.fetch_and(arg | ~kPayloadMask, std::memory_order_relaxed);
+}
+
+uint64_t RefCount::PayloadFetchOr(uint64_t arg) {
+    DAWN_ASSERT((arg & kPayloadMask) == arg);
+
+    // Same memory order reasoning as ::PayloadFetchAnd
+    return kPayloadMask & mRefCount.fetch_or(arg, std::memory_order_relaxed);
 }
 
 bool RefCount::Increment() {
@@ -67,7 +82,7 @@ bool RefCount::Increment() {
     // don't delete `this`.
     // See the explanation in the Boost documentation:
     //     https://www.boost.org/doc/libs/1_55_0/doc/html/atomic/usage_examples.html
-    uint32_t previousValue = mRefCount.fetch_add(kRefCountIncrement, std::memory_order_relaxed);
+    uint64_t previousValue = mRefCount.fetch_add(kRefCountIncrement, std::memory_order_relaxed);
 
     return (previousValue & ~kPayloadMask) == 0;
 }
@@ -134,6 +149,14 @@ uint64_t RefCounted::GetRefCountForTesting() const {
 
 uint64_t RefCounted::GetRefCountPayload() const {
     return mRefCount.GetPayload();
+}
+
+uint64_t RefCounted::RefCountPayloadFetchAnd(uint64_t arg) {
+    return mRefCount.PayloadFetchAnd(arg);
+}
+
+uint64_t RefCounted::RefCountPayloadFetchOr(uint64_t arg) {
+    return mRefCount.PayloadFetchOr(arg);
 }
 
 void RefCounted::AddRef() {

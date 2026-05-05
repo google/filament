@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/text/string.h"
 
@@ -139,10 +138,6 @@ struct DecodeBase64FromCommentsCase {
     std::string_view wgsl;
     Vector<int, 0> expected;
 };
-
-static std::ostream& operator<<(std::ostream& o, const DecodeBase64FromCommentsCase& c) {
-    return o << "'" << ReplaceAll(c.wgsl, "\n", "␤") << "'";
-}
 
 using DecodeBase64FromCommentsTest = ::testing::TestWithParam<DecodeBase64FromCommentsCase>;
 

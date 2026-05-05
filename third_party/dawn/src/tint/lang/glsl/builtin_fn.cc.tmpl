@@ -12,6 +12,9 @@ See:
 */ -}}
 
 {{- $I := LoadIntrinsics "src/tint/lang/glsl/glsl.def" -}}
+
+// clang-format off
+
 #include "src/tint/lang/glsl/builtin_fn.h"
 
 namespace tint::glsl {
@@ -86,3 +89,5 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
 }
 
 }  // namespace tint::glsl
+
+// clang-format on

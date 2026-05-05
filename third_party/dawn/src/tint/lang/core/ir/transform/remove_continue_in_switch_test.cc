@@ -634,5 +634,71 @@ TEST_F(IR_RemoveContinueInSwitchTest, ContinueInSwitchInsideAnotherSwitch) {
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(IR_RemoveContinueInSwitchTest, SwitchResults) {
+    auto* func = b.Function("func", ty.void_());
+    b.Append(func->Block(), [&] {  //
+        auto* loop = b.Loop();
+        b.Append(loop->Body(), [&] {
+            auto* swtch = b.Switch(42_i);
+            swtch->AddResult(b.InstructionResult<u32>());
+            auto* def_case = b.DefaultCase(swtch);
+            b.Append(def_case, [&] {  //
+                b.Continue(loop);
+            });
+            b.Continue(loop);
+        });
+        b.Return(func);
+    });
+
+    auto* src = R"(
+%func = func():void {
+  $B1: {
+    loop [b: $B2] {  # loop_1
+      $B2: {  # body
+        %2:u32 = switch 42i [c: (default, $B3)] {  # switch_1
+          $B3: {  # case
+            continue  # -> $B4
+          }
+        }
+        continue  # -> $B4
+      }
+    }
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%func = func():void {
+  $B1: {
+    loop [b: $B2] {  # loop_1
+      $B2: {  # body
+        %tint_continue:ptr<function, bool, read_write> = var undef
+        %3:u32 = switch 42i [c: (default, $B3)] {  # switch_1
+          $B3: {  # case
+            store %tint_continue, true
+            exit_switch undef  # switch_1
+          }
+        }
+        %4:bool = load %tint_continue
+        if %4 [t: $B4] {  # if_1
+          $B4: {  # true
+            continue  # -> $B5
+          }
+        }
+        continue  # -> $B5
+      }
+    }
+    ret
+  }
+}
+)";
+
+    Run(RemoveContinueInSwitch);
+
+    EXPECT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::core::ir::transform

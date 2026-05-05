@@ -45,7 +45,7 @@ if (tint_build_spv_writer) {
       "printer.h",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
@@ -56,6 +56,7 @@ if (tint_build_spv_writer) {
       "${tint_src_dir}/lang/spirv/intrinsic",
       "${tint_src_dir}/lang/spirv/ir",
       "${tint_src_dir}/lang/spirv/type",
+      "${tint_src_dir}/lang/spirv/writer/analysis",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",

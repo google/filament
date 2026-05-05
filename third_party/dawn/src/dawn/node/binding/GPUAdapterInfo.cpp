@@ -96,7 +96,7 @@ std::string NormalizeIdentifierString(wgpu::StringView s) {
 
     for (char c : std::string_view(s)) {
         if (std::isalnum(c)) {
-            o << std::tolower(c);
+            o << static_cast<char>(std::tolower(c));
             lastWasDash = false;
             hadAlnum = true;
         } else if (!lastWasDash && hadAlnum) {

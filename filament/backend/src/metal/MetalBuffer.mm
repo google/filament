@@ -64,8 +64,8 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
 
 MetalBuffer::~MetalBuffer() = default;
 
-void MetalBuffer::copyIntoBuffer(
-        void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) {
+void MetalBuffer::copyIntoBuffer(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+        size_t byteOffset, TagResolver&& getHandleTag) {
     if (size <= 0) {
         return;
     }
@@ -79,20 +79,24 @@ void MetalBuffer::copyIntoBuffer(
     FILAMENT_CHECK_PRECONDITION(!(byteOffset & 0x3))
             << "byteOffset must be a multiple of 4, tag=" << getHandleTag();
 
+    id<MTLCommandBuffer> targetCmdBuffer =
+            cmdBuffer ? cmdBuffer : getPendingCommandBuffer(&mContext);
+
     switch (mUploadStrategy) {
         case UploadStrategy::BUMP_ALLOCATOR:
-            uploadWithBumpAllocator(src, size, byteOffset, std::move(getHandleTag));
+            uploadWithBumpAllocator(targetCmdBuffer, src, size, byteOffset,
+                    std::move(getHandleTag));
             break;
         case UploadStrategy::POOL:
-            uploadWithPoolBuffer(src, size, byteOffset, std::move(getHandleTag));
+            uploadWithPoolBuffer(targetCmdBuffer, src, size, byteOffset, std::move(getHandleTag));
             break;
     }
 }
 
-void MetalBuffer::copyIntoBufferUnsynchronized(
-        void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) {
+void MetalBuffer::copyIntoBufferUnsynchronized(id<MTLCommandBuffer> cmdBuffer, void* src,
+        size_t size, size_t byteOffset, TagResolver&& getHandleTag) {
     // TODO: implement the unsynchronized version
-    copyIntoBuffer(src, size, byteOffset, std::move(getHandleTag));
+    copyIntoBuffer(cmdBuffer, src, size, byteOffset, std::move(getHandleTag));
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
@@ -158,8 +162,8 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncod
     }
 }
 
-void MetalBuffer::uploadWithPoolBuffer(
-        void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) const {
+void MetalBuffer::uploadWithPoolBuffer(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+        size_t byteOffset, TagResolver&& getHandleTag) const {
     MetalBufferPool* bufferPool = mContext.bufferPool;
     const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
     FILAMENT_CHECK_POSTCONDITION(staging)
@@ -168,7 +172,6 @@ void MetalBuffer::uploadWithPoolBuffer(
     memcpy(staging->buffer.get().contents, src, size);
 
     // Encode a blit from the staging buffer into the private GPU buffer.
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
     id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
     blitEncoder.label = @"Buffer upload blit - pool buffer";
     [blitEncoder copyFromBuffer:staging->buffer.get()
@@ -182,8 +185,8 @@ void MetalBuffer::uploadWithPoolBuffer(
     }];
 }
 
-void MetalBuffer::uploadWithBumpAllocator(
-        void* src, size_t size, size_t byteOffset, TagResolver&& getHandleTag) const {
+void MetalBuffer::uploadWithBumpAllocator(id<MTLCommandBuffer> cmdBuffer, void* src, size_t size,
+        size_t byteOffset, TagResolver&& getHandleTag) const {
     MetalBumpAllocator& allocator = *mContext.bumpAllocator;
     auto [buffer, offset] = allocator.allocateStagingArea(size);
     FILAMENT_CHECK_POSTCONDITION(buffer)
@@ -196,7 +199,6 @@ void MetalBuffer::uploadWithBumpAllocator(
     memcpy(static_cast<char*>(contents) + offset, src, size);
 
     // Encode a blit from the staging buffer into the private GPU buffer.
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
     id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
     blitEncoder.label = @"Buffer upload blit - bump allocator";
     [blitEncoder copyFromBuffer:buffer

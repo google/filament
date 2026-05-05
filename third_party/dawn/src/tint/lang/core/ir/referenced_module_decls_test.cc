@@ -66,14 +66,14 @@ TEST_F(IR_ReferencedModuleDeclsTest, DirectUse) {
     // Referenced.
     auto* var_a = mod.root_block->Append(b.Var<workgroup, u32>("a"));
     auto* var_b = mod.root_block->Append(b.Var<workgroup, u32>("b"));
-    auto* inst_1 = mod.root_block->Append(b.Add(ty.i32(), 1_i, 2_i));
+    auto* inst_1 = mod.root_block->Append(b.Add(1_i, 2_i));
     auto* over_a = mod.root_block->Append(b.Override("o", inst_1));
     over_a->As<core::ir::Override>()->SetOverrideId(OverrideId{1});
 
     // Not referenced.
     mod.root_block->Append(b.Var<workgroup, u32>("c"));
     mod.root_block->Append(b.Override("p", ty.i32()));
-    mod.root_block->Append(b.Multiply(ty.i32(), 2_i, 4_i));
+    mod.root_block->Append(b.Multiply(2_i, 4_i));
 
     auto* foo = b.Function("foo", ty.void_());
     b.Append(foo->Block(), [&] {  //
@@ -438,7 +438,7 @@ TEST_F(IR_ReferencedModuleDeclsTest, ArrayTypeCount) {
     over_a->As<core::ir::Override>()->SetOverrideId(OverrideId{1});
 
     auto* c1 = ty.Get<core::ir::type::ValueArrayCount>(over_a->Result());
-    auto* a1 = ty.Get<core::type::Array>(ty.i32(), c1, 4u, 4u, 4u, 4u);
+    auto* a1 = ty.Get<core::type::Array>(ty.i32(), c1, 4u);
 
     auto* var_a = mod.root_block->Append(b.Var("a", ty.ptr(workgroup, a1, read_write)));
 

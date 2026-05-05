@@ -85,6 +85,12 @@ TEST_F(TexelBufferTest, Type) {
     EXPECT_TRUE(a->Type()->Is<F32>());
 }
 
+TEST_F(TexelBufferTest, IsHandle) {
+    Manager ty;
+    auto* a = ty.texel_buffer(core::TexelFormat::kRgba32Float, core::Access::kRead);
+    EXPECT_TRUE(a->IsHandle());
+}
+
 TEST_F(TexelBufferTest, Clone) {
     Manager ty;
     auto* a = ty.texel_buffer(core::TexelFormat::kRgba32Float, core::Access::kReadWrite);

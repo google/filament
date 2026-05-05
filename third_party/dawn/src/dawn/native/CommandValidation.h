@@ -32,6 +32,8 @@
 
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/Constants.h"
+#include "dawn/common/Numeric.h"
+#include "dawn/native/BlockInfo.h"
 #include "dawn/native/CommandAllocator.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/Features.h"
@@ -68,10 +70,18 @@ DAWN_FORCE_INLINE uint64_t Safe32x32(A a, B b) {
     return uint64_t(a) * uint64_t(b);
 }
 
+// Overload to be used before/during validation. Handles bytesPerRow and rowPerImage being
+// wgpu::kCopyStrideUndefined.
 ResultOrError<uint64_t> ComputeRequiredBytesInCopy(const TexelBlockInfo& blockInfo,
                                                    const Extent3D& copySize,
                                                    uint32_t bytesPerRow,
                                                    uint32_t rowsPerImage);
+// Overload to be used post validation, e.g. after ValidateLinearTextureData.
+// Inputs are expected to have defined values, e.g. after ApplyDefaultTexelCopyBufferLayoutOptions.
+uint64_t ComputeRequiredBytesInCopy(const TypedTexelBlockInfo& blockInfo,
+                                    const BlockExtent3D& copySize,
+                                    BlockCount blocksPerRow,
+                                    BlockCount rowsPerImage);
 
 void ApplyDefaultTexelCopyBufferLayoutOptions(TexelCopyBufferLayout* layout,
                                               const TexelBlockInfo& blockInfo,
@@ -97,7 +107,17 @@ MaybeError ValidateCopySizeFitsInBuffer(const Ref<BufferBase>& buffer,
                                         uint64_t size,
                                         BufferSizeType checkBufferSizeType = BufferSizeType::Size);
 
-bool IsRangeOverlapped(uint32_t startA, uint32_t startB, uint32_t length);
+// Returns true if [startA, startA + length[ overlaps [startB, startB + length[
+template <typename T>
+bool IsRangeOverlapped(T startA, T startB, T length) {
+    if (length < T{1}) {
+        return false;
+    }
+    return RangesOverlap(static_cast<uint64_t>(startA),
+                         static_cast<uint64_t>(startA) + static_cast<uint64_t>(length) - 1,
+                         static_cast<uint64_t>(startB),
+                         static_cast<uint64_t>(startB) + static_cast<uint64_t>(length) - 1);
+}
 
 MaybeError ValidateTextureToTextureCopyCommonRestrictions(DeviceBase const* device,
                                                           const TexelCopyTextureInfo& src,

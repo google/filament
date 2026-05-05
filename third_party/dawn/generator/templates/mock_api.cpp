@@ -141,9 +141,3 @@ void ProcTableAsClass::CallDeviceUncapturedErrorCallback(WGPUDevice device, WGPU
 MockProcTable::MockProcTable() = default;
 
 MockProcTable::~MockProcTable() = default;
-
-void MockProcTable::IgnoreAllReleaseCalls() {
-    {% for type in by_category["object"] %}
-        EXPECT_CALL(*this, {{as_CppMethodSuffix(type.name, Name("release"))}}(_)).Times(AnyNumber());
-    {% endfor %}
-}

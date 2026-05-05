@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "dawn/common/SlabAllocator.h"
 
 #include <algorithm>
@@ -78,6 +83,7 @@ SlabAllocatorImpl::SlabAllocatorImpl(Index blocksPerSlab,
       mBlockStride(Align(mIndexLinkNodeOffset + u32_sizeof<IndexLinkNode>, objectAlignment)),
       mBlocksPerSlab(blocksPerSlab),
       mTotalAllocationSize(static_cast<size_t>(mSlabBlocksOffset) + mBlocksPerSlab * mBlockStride) {
+    DAWN_ASSERT(blocksPerSlab > 0);
     DAWN_ASSERT(IsPowerOfTwo(mAllocationAlignment));
 }
 

@@ -41,6 +41,8 @@ class Device;
 D3D11_COMPARISON_FUNC ToD3D11ComparisonFunc(wgpu::CompareFunction func);
 void SetDebugName(Device* device, ID3D11DeviceChild* object, const char* prefix, std::string label);
 bool IsDebugLayerEnabled(const ComPtr<ID3D11Device>& d3d11Device);
+std::string SRVCreationStr(ID3D11Resource* resource,
+                           const D3D11_SHADER_RESOURCE_VIEW_DESC1& srvDesc);
 
 }  // namespace dawn::native::d3d11
 

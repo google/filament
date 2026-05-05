@@ -27,12 +27,18 @@
 
 // GEN_BUILD:CONDITION(tint_build_is_win)
 
-#include "src/tint/utils/file/tmpfile.h"
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
 
 #include <fcntl.h>
 #include <io.h>
 #include <stdio.h>
+
 #include <cstdio>
+
+#include "src/tint/utils/file/tmpfile.h"
 
 namespace tint {
 

@@ -476,6 +476,7 @@ public class Material {
          * @return the newly created object
          *
          * @exception IllegalStateException if the material could not be created
+         * @throws RuntimeException if a parameter to a builder function was invalid.
          */
         @NonNull
         public Material build(@NonNull Engine engine) {

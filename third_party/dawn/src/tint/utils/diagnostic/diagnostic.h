@@ -86,8 +86,9 @@ class Diagnostic {
 /// List is a container of Diagnostic messages.
 class List {
   public:
-    /// The iterator type for this List
-    using iterator = VectorIterator<const Diagnostic>;
+    /// The iterator types for this List
+    using iterator = VectorIterator<Diagnostic>;
+    using const_iterator = VectorIterator<const Diagnostic>;
 
     /// Constructs the list with no elements.
     List();
@@ -186,11 +187,6 @@ class List {
         return Add(std::move(error));
     }
 
-    /// Ensures that the diagnostic list can fit an additional @p count diagnostics without
-    /// resizing. This is useful for ensuring that a reference returned by the AddX() methods is not
-    /// invalidated after another Add().
-    void ReserveAdditional(size_t count) { entries_.Reserve(entries_.Length() + count); }
-
     /// @returns true iff the diagnostic list contains errors diagnostics (or of
     /// higher severity).
     bool ContainsErrors() const { return error_count_ > 0; }
@@ -212,9 +208,13 @@ class List {
     /// @returns the number of entries in the list.
     size_t size() const { return entries_.Length(); }
     /// @returns the first diagnostic in the list.
-    iterator begin() const { return entries_.begin(); }
+    const_iterator begin() const { return entries_.begin(); }
     /// @returns the last diagnostic in the list.
-    iterator end() const { return entries_.end(); }
+    const_iterator end() const { return entries_.end(); }
+    /// @returns the first diagnostic in the list.
+    iterator begin() { return entries_.begin(); }
+    /// @returns the last diagnostic in the list.
+    iterator end() { return entries_.end(); }
 
   private:
     Vector<Diagnostic, 0> entries_;

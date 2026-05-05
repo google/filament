@@ -1165,6 +1165,7 @@ void {{CppType}}::SetUncapturedErrorCallback(L callback) {
 }  // namespace {{metadata.namespace}}
 
 namespace wgpu {
+
 {% for type in by_category["bitmask"] %}
     template<>
     struct IsWGPUBitmask<{{metadata.namespace}}::{{as_cppType(type.name)}}> {
@@ -1172,6 +1173,16 @@ namespace wgpu {
     };
 
 {% endfor %}
+
+{% if "texture component swizzle" in types %}
+    inline bool operator==(const TextureComponentSwizzle& s1, const TextureComponentSwizzle& s2) {
+        return s1.r == s2.r && s1.g == s2.g && s1.b == s2.b && s1.a == s2.a;
+    }
+    inline bool operator!=(const TextureComponentSwizzle& s1, const TextureComponentSwizzle& s2) {
+        return !(s1 == s2);
+    }
+{% endif %}
+
 } // namespace wgpu
 
 namespace std {

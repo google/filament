@@ -163,11 +163,16 @@ class SubresourceRenderAttachmentTest : public DawnTest {
 
 // Test rendering into a subresource of a color texture
 TEST_P(SubresourceRenderAttachmentTest, ColorTexture) {
+    // TODO(crbug.com/500793605): Fails on Windows 11/AMD RX 5500 XT w/ D3D11.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D11());
     DoTest(Type::Color);
 }
 
 // Test rendering into a subresource of a depth texture
 TEST_P(SubresourceRenderAttachmentTest, DepthTexture) {
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     DoTest(Type::Depth);
 }
 
@@ -175,7 +180,10 @@ TEST_P(SubresourceRenderAttachmentTest, DepthTexture) {
 TEST_P(SubresourceRenderAttachmentTest, StencilTexture) {
     // TODO(crbug.com/352360580): Investigate failures.
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
+
+    // TODO(crbug.com/473870505): [Capture] support depth/stencil and multi-planar textures.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+
     DoTest(Type::Stencil);
 }
 
@@ -186,7 +194,8 @@ DAWN_INSTANTIATE_TEST(SubresourceRenderAttachmentTest,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

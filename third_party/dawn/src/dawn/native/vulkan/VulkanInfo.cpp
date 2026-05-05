@@ -88,9 +88,9 @@ ResultOrError<VulkanGlobalInfo> GatherGlobalInfo(const VulkanFunctions& vkFuncti
         }
     }
 
-    DAWN_INVALID_IF(info.apiVersion < VK_API_VERSION_1_1,
-                    "Vulkan API version (%x) was not at least VK_API_VERSION_1_1 (%x).",
-                    info.apiVersion, VK_API_VERSION_1_1);
+    DAWN_INVALID_IF(info.apiVersion < kRequiredVulkanVersion,
+                    "Vulkan API version (%s) was not at least %s.",
+                    FormatAPIVersion(info.apiVersion), FormatAPIVersion(kRequiredVulkanVersion));
 
     // Gather the info about the instance layers
     {
@@ -123,14 +123,12 @@ ResultOrError<VulkanGlobalInfo> GatherGlobalInfo(const VulkanFunctions& vkFuncti
         absl::flat_hash_map<std::string, InstanceExt> knownExts = CreateInstanceExtNameMap();
 
         DAWN_TRY_ASSIGN(info.extensions, GatherInstanceExtensions(nullptr, vkFunctions, knownExts));
-        MarkPromotedExtensions(&info.extensions, info.apiVersion);
         info.extensions = EnsureDependencies(info.extensions);
 
         for (VulkanLayer layer : info.layers) {
             DAWN_TRY_ASSIGN(
                 info.layerExtensions[layer],
                 GatherInstanceExtensions(GetVulkanLayerInfo(layer).name, vkFunctions, knownExts));
-            MarkPromotedExtensions(&info.layerExtensions[layer], info.apiVersion);
             info.layerExtensions[layer] = EnsureDependencies(info.layerExtensions[layer]);
         }
     }
@@ -229,135 +227,165 @@ ResultOrError<VulkanDeviceInfo> GatherDeviceInfo(const PhysicalDevice& device) {
             }
         }
 
-        MarkPromotedExtensions(&info.extensions, info.properties.apiVersion);
         info.extensions =
             EnsureDependencies(info.extensions, globalInfo.extensions, info.properties.apiVersion);
     }
 
     // Gather general and extension features and properties
     //
-    // If we have DeviceExt::GetPhysicalDeviceProperties2, use features2 and properties2 so
-    // that features not covered by VkPhysicalDevice{Features,Properties} can be queried.
+    // Dawn requires Vulkan 1.1, so use features2 and properties2 so that features not covered by
+    // VkPhysicalDevice{Features,Properties} can be queried.
     //
     // Note that info.properties has already been filled at the start of this function to get
     // `apiVersion`.
-    DAWN_ASSERT(info.properties.apiVersion != 0);
-    if (info.extensions[DeviceExt::GetPhysicalDeviceProperties2]) {
-        VkPhysicalDeviceFeatures2 features2 = {};
-        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        features2.pNext = nullptr;
-        PNextChainBuilder featuresChain(&features2);
+    DAWN_ASSERT(info.properties.apiVersion >= kRequiredVulkanVersion);
 
-        VkPhysicalDeviceProperties2 properties2 = {};
-        properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = nullptr;
+    PNextChainBuilder featuresChain(&features2);
 
-        PNextChainBuilder propertiesChain(&properties2);
+    VkPhysicalDeviceProperties2 properties2 = {};
+    properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    properties2.pNext = nullptr;
+    PNextChainBuilder propertiesChain(&properties2);
 
-        propertiesChain.Add(&info.propertiesMaintenance3,
-                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES);
+    propertiesChain.Add(&info.propertiesMaintenance3,
+                        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES);
 
-        if (info.extensions[DeviceExt::ShaderFloat16Int8]) {
-            featuresChain.Add(&info.shaderFloat16Int8Features,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR);
-        }
+    featuresChain.Add(&info._16BitStorageFeatures,
+                      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES);
+    featuresChain.Add(&info.samplerYCbCrConversionFeatures,
+                      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES);
+    featuresChain.Add(&info.extendedDynamicStateFeatures,
+                      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT);
 
-        if (info.extensions[DeviceExt::_16BitStorage]) {
-            featuresChain.Add(&info._16BitStorageFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES);
-        }
-
-        if (info.extensions[DeviceExt::SubgroupSizeControl]) {
-            featuresChain.Add(&info.subgroupSizeControlFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT);
-            propertiesChain.Add(
-                &info.subgroupSizeControlProperties,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_PROPERTIES_EXT);
-        }
-
-        if (info.extensions[DeviceExt::DriverProperties]) {
-            propertiesChain.Add(&info.driverProperties,
-                                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES);
-        }
-
-        if (info.extensions[DeviceExt::ShaderIntegerDotProduct]) {
-            featuresChain.Add(
-                &info.shaderIntegerDotProductFeatures,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_FEATURES_KHR);
-
-            propertiesChain.Add(
-                &info.shaderIntegerDotProductProperties,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_PROPERTIES_KHR);
-        }
-
-        if (info.extensions[DeviceExt::DepthClipEnable]) {
-            featuresChain.Add(&info.depthClipEnableFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT);
-        }
-
-        if (info.extensions[DeviceExt::Maintenance4]) {
-            propertiesChain.Add(&info.propertiesMaintenance4,
-                                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES);
-        }
-
-        if (info.extensions[DeviceExt::ZeroInitializeWorkgroupMemory]) {
-            featuresChain.Add(
-                &info.zeroInitializeWorkgroupMemoryFeatures,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ZERO_INITIALIZE_WORKGROUP_MEMORY_FEATURES);
-        }
-
-        if (info.extensions[DeviceExt::DemoteToHelperInvocation]) {
-            featuresChain.Add(
-                &info.demoteToHelperInvocationFeatures,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES_EXT);
-        }
-
-        if (info.extensions[DeviceExt::Robustness2]) {
-            featuresChain.Add(&info.robustness2Features,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT);
-        }
-
-        if (info.extensions[DeviceExt::SamplerYCbCrConversion]) {
-            featuresChain.Add(&info.samplerYCbCrConversionFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES);
-        }
-
-        // Check subgroup features and properties
-        propertiesChain.Add(&info.subgroupProperties,
-                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES);
-        if (info.extensions[DeviceExt::ShaderSubgroupExtendedTypes]) {
-            featuresChain.Add(
-                &info.shaderSubgroupExtendedTypes,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES);
-        }
-
-        if (info.extensions[DeviceExt::ExternalMemoryHost]) {
-            propertiesChain.Add(
-                &info.externalMemoryHostProperties,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT);
-        }
-
-        if (info.extensions[DeviceExt::VulkanMemoryModel]) {
-            featuresChain.Add(&info.vulkanMemoryModelFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES);
-        }
-
-        if (info.extensions[DeviceExt::CooperativeMatrix]) {
-            featuresChain.Add(&info.cooperativeMatrixFeatures,
-                              VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_FEATURES_KHR);
-            propertiesChain.Add(
-                &info.cooperativeMatrixProperties,
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_PROPERTIES_KHR);
-        }
-
-        // Use vkGetPhysicalDevice{Features,Properties}2 if required to gather information about
-        // the extensions. DeviceExt::GetPhysicalDeviceProperties2 is guaranteed to be available
-        // because these extensions (transitively) depend on it in `EnsureDependencies`
-        vkFunctions.GetPhysicalDeviceProperties2(vkPhysicalDevice, &properties2);
-        vkFunctions.GetPhysicalDeviceFeatures2(vkPhysicalDevice, &features2);
-        info.features = features2.features;
-    } else {
-        vkFunctions.GetPhysicalDeviceFeatures(vkPhysicalDevice, &info.features);
+    if (info.extensions[DeviceExt::ShaderFloat16Int8]) {
+        featuresChain.Add(&info.shaderFloat16Int8Features,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR);
     }
+
+    if (info.extensions[DeviceExt::ShaderBufferInt64Atomics]) {
+        featuresChain.Add(&info.shaderAtomicInt64Features,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR);
+    }
+
+    if (info.extensions[DeviceExt::SubgroupSizeControl]) {
+        featuresChain.Add(&info.subgroupSizeControlFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT);
+        propertiesChain.Add(&info.subgroupSizeControlProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_PROPERTIES_EXT);
+    }
+
+    if (info.extensions[DeviceExt::DriverProperties]) {
+        propertiesChain.Add(&info.driverProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES);
+    }
+
+    if (info.extensions[DeviceExt::ShaderIntegerDotProduct]) {
+        featuresChain.Add(
+            &info.shaderIntegerDotProductFeatures,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_FEATURES_KHR);
+
+        propertiesChain.Add(
+            &info.shaderIntegerDotProductProperties,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_PROPERTIES_KHR);
+    }
+
+    if (info.extensions[DeviceExt::DepthClipEnable]) {
+        featuresChain.Add(&info.depthClipEnableFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT);
+    }
+
+    if (info.extensions[DeviceExt::Maintenance4]) {
+        propertiesChain.Add(&info.propertiesMaintenance4,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_PROPERTIES);
+    }
+
+    if (info.extensions[DeviceExt::ZeroInitializeWorkgroupMemory]) {
+        featuresChain.Add(
+            &info.zeroInitializeWorkgroupMemoryFeatures,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ZERO_INITIALIZE_WORKGROUP_MEMORY_FEATURES);
+    }
+
+    if (info.extensions[DeviceExt::DemoteToHelperInvocation]) {
+        featuresChain.Add(
+            &info.demoteToHelperInvocationFeatures,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES_EXT);
+    }
+
+    if (info.extensions[DeviceExt::Robustness2]) {
+        featuresChain.Add(&info.robustness2Features,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT);
+    }
+
+    // Check subgroup features and properties
+    propertiesChain.Add(&info.subgroupProperties,
+                        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES);
+    if (info.extensions[DeviceExt::ShaderSubgroupExtendedTypes]) {
+        featuresChain.Add(
+            &info.shaderSubgroupExtendedTypes,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES);
+    }
+
+    if (info.extensions[DeviceExt::ExternalMemoryHost]) {
+        propertiesChain.Add(&info.externalMemoryHostProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_MEMORY_HOST_PROPERTIES_EXT);
+    }
+
+    if (info.extensions[DeviceExt::VulkanMemoryModel]) {
+        featuresChain.Add(&info.vulkanMemoryModelFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES);
+    }
+
+    if (info.extensions[DeviceExt::CooperativeMatrix]) {
+        featuresChain.Add(&info.cooperativeMatrixFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_FEATURES_KHR);
+        propertiesChain.Add(&info.cooperativeMatrixProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_PROPERTIES_KHR);
+    }
+
+    if (info.extensions[DeviceExt::DescriptorIndexing]) {
+        featuresChain.Add(&info.descriptorIndexingFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES);
+        propertiesChain.Add(&info.descriptorIndexingProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES);
+    }
+
+    if (info.extensions[DeviceExt::PipelineRobustness]) {
+        featuresChain.Add(&info.pipelineRobustnessFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_ROBUSTNESS_FEATURES);
+        propertiesChain.Add(&info.pipelineRobustnessProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_ROBUSTNESS_PROPERTIES);
+    }
+
+    if (info.extensions[DeviceExt::Maintenance5]) {
+        propertiesChain.Add(&info.propertiesMaintenance5,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_PROPERTIES);
+    }
+
+    if (info.extensions[DeviceExt::DynamicRendering]) {
+        featuresChain.Add(&info.dynamicRenderingFeatures,
+                          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR);
+    }
+
+    if (info.extensions[DeviceExt::PhysicalDeviceDrm]) {
+        propertiesChain.Add(&info.drmProperties,
+                            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRM_PROPERTIES_EXT);
+    }
+
+    if (info.extensions[DeviceExt::MultisampledRenderToSingleSampled]) {
+        featuresChain.Add(
+            &info.multisampledRenderToSingleSampledFeatures,
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_FEATURES_EXT);
+    }
+
+    // Use vkGetPhysicalDevice{Features,Properties}2 if required to gather information about
+    // the extensions. DeviceExt::GetPhysicalDeviceProperties2 is guaranteed to be available
+    // because these extensions (transitively) depend on it in `EnsureDependencies`
+    vkFunctions.GetPhysicalDeviceProperties2(vkPhysicalDevice, &properties2);
+    vkFunctions.GetPhysicalDeviceFeatures2(vkPhysicalDevice, &features2);
+    info.features = features2.features;
 
     // A Vulkan loader that doesn't know about the VK_KHR_cooperative_matrix could return a null
     // proc, but still let the device advertise the extension. In that case the extension is

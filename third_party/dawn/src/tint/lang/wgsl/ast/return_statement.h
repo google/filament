@@ -37,26 +37,18 @@ namespace tint::ast {
 class ReturnStatement final : public Castable<ReturnStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    ReturnStatement(GenerationID pid, NodeID nid, const Source& src);
+    ReturnStatement(NodeID nid, const Source& src);
 
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param value the return value
-    ReturnStatement(GenerationID pid, NodeID nid, const Source& src, const Expression* value);
+    ReturnStatement(NodeID nid, const Source& src, const Expression* value);
 
     /// Destructor
     ~ReturnStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const ReturnStatement* Clone(CloneContext& ctx) const override;
 
     /// The value returned. May be null.
     const Expression* const value;

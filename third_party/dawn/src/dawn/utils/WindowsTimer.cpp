@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/common/windows_with_undefs.h"
+
 #include "dawn/utils/Timer.h"
 
 namespace dawn::utils {

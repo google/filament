@@ -64,9 +64,13 @@ struct TexelOrigin3D {
     constexpr TexelOrigin3D(const Origin3D& o) : x(o.x), y(o.y), z(o.z) {}
 
     // Convert to Origin3D
+    // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr Origin3D ToOrigin3D() const {
         return {static_cast<uint32_t>(x), static_cast<uint32_t>(y), static_cast<uint32_t>(z)};
     }
+
+    // Comparison operator
+    constexpr bool operator==(const TexelOrigin3D&) const = default;
 };
 
 // Stores an origin in block space
@@ -81,6 +85,9 @@ struct BlockOrigin3D {
                             BlockCount y = BlockCount{0},
                             BlockCount z = BlockCount{0})
         : x(x), y(y), z(z) {}
+
+    // Comparison operator
+    constexpr bool operator==(const BlockOrigin3D&) const = default;
 };
 
 // Strong type version of Extent3D.
@@ -105,9 +112,19 @@ struct TexelExtent3D {
         : width(e.width), height(e.height), depthOrArrayLayers(e.depthOrArrayLayers) {}
 
     // Convert to Extent3D
+    // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr Extent3D ToExtent3D() const {
         return {static_cast<uint32_t>(width), static_cast<uint32_t>(height),
                 static_cast<uint32_t>(depthOrArrayLayers)};
+    }
+
+    // Comparison operator
+    constexpr bool operator==(const TexelExtent3D&) const = default;
+
+    // Returns true if any extent is zero
+    bool IsEmpty() const {
+        return width == TexelCount{0} || height == TexelCount{0} ||
+               depthOrArrayLayers == TexelCount{0};
     }
 };
 
@@ -126,6 +143,15 @@ struct BlockExtent3D {
                             BlockCount height = BlockCount{1},
                             BlockCount depthOrArrayLayers = BlockCount{1})
         : width(width), height(height), depthOrArrayLayers(depthOrArrayLayers) {}
+
+    // Comparison operator
+    constexpr bool operator==(const BlockExtent3D&) const = default;
+
+    // Returns true if any extent is zero
+    bool IsEmpty() const {
+        return width == BlockCount{0} || height == BlockCount{0} ||
+               depthOrArrayLayers == BlockCount{0};
+    }
 };
 
 // Strong type version of TexelBlockInfo that stores the dimensions of the block
@@ -149,6 +175,7 @@ struct TypedTexelBlockInfo {
         : byteSize(blockInfo.byteSize), width(blockInfo.width), height(blockInfo.height) {}
 
     // Convert to TexelBlockInfo
+    // TODO(crbug.com/424536624): Remove once strong types are used everywhere.
     constexpr TexelBlockInfo ToTexelBlockInfo() const {
         return {byteSize, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
     }

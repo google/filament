@@ -29,13 +29,12 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "dawn/dawn_proc.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/null/DeviceNull.h"
 #include "dawn/utils/TerribleCommandBuffer.h"
 #include "dawn/wire/WireClient.h"
+#include "gtest/gtest.h"
 
 namespace dawn {
 namespace {

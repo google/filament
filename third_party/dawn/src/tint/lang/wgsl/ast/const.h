@@ -46,15 +46,12 @@ namespace tint::ast {
 class Const final : public Castable<Const, Variable> {
   public:
     /// Create a 'const' creation-time value variable.
-    /// @param pid the identifier of the program that owns this node
-    /// @param nid the unique node identifier
     /// @param source the variable source
     /// @param name the variable name
     /// @param type the declared variable type
     /// @param initializer the initializer expression. Must not be nullptr.
     /// @param attributes the variable attributes
-    Const(GenerationID pid,
-          NodeID nid,
+    Const(NodeID nid,
           const Source& source,
           const Identifier* name,
           Type type,
@@ -66,12 +63,6 @@ class Const final : public Castable<Const, Variable> {
 
     /// @returns "const"
     const char* Kind() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const Const* Clone(CloneContext& ctx) const override;
 };
 
 }  // namespace tint::ast

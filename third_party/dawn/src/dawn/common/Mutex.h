@@ -46,12 +46,30 @@ template <typename MutexT>
 class DAWN_MUTEX_CAPABILITY MutexBase : public RefCounted, NonCopyable {
   public:
     template <typename MutexRef>
-    struct DAWN_SCOPED_LOCKABLE AutoLockBase : NonMovable {
+    struct DAWN_SCOPED_LOCKABLE AutoLockBase : NonCopyable {
         AutoLockBase() : mMutex(nullptr) {}
         explicit AutoLockBase(MutexRef mutex) : mMutex(std::move(mutex)) {
             if (mMutex != nullptr) {
                 mMutex->Lock();
             }
+        }
+
+        AutoLockBase(AutoLockBase&& other) : mMutex(std::move(other.mMutex)) {
+            other.mMutex = nullptr;
+        }
+
+        // The move operator conditionally unlocks, and the static thread-safety analysis cannot
+        // currently handle conditional locking, so we turn off the analysis here to avoid spurious
+        // warnings.
+        AutoLockBase& operator=(AutoLockBase&& other) DAWN_NO_THREAD_SAFETY_ANALYSIS {
+            if (this != &other) {
+                if (mMutex != nullptr) {
+                    mMutex->Unlock();
+                }
+                mMutex = std::move(other.mMutex);
+                other.mMutex = nullptr;
+            }
+            return *this;
         }
 
         ~AutoLockBase() {

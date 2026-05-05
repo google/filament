@@ -80,7 +80,7 @@ MaybeError Queue::Initialize() {
     return OpenPendingCommands();
 }
 
-void Queue::DestroyImpl() {
+void Queue::DestroyImpl(DestroyReason reason) {
     // Immediately forget about all pending commands for the case where device is lost on its
     // own and WaitForIdleForDestruction isn't called.
     mPendingCommands.Release();
@@ -197,7 +197,7 @@ void Queue::ForceEventualFlushOfCommands() {
     mPendingCommands.SetNeedsSubmit();
 }
 
-MaybeError Queue::WaitForIdleForDestruction() {
+MaybeError Queue::WaitForIdleForDestructionImpl() {
     // Immediately forget about all pending commands
     mPendingCommands.Release();
 
@@ -237,7 +237,9 @@ MaybeError Queue::OpenPendingCommands() {
         DAWN_TRY(RecycleUnusedCommandLists());
     }
 
-    DAWN_ASSERT(mFreeAllocators.any());
+    // This is a release check to catch a potential issue where allocator recycling didn't seem to
+    // work correctly so we want to get crash reports if it happens again.
+    DAWN_CHECK(mFreeAllocators.any());
     ID3D12Device* d3d12Device = ToBackend(GetDevice())->GetD3D12Device();
 
     // Get the index of the first free allocator from the bitset

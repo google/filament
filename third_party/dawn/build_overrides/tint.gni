@@ -25,11 +25,21 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# True if Tint can access build/, testing/ and other Chrome folders.
-tint_standalone = true
-tint_has_build = true
+# These are variables that are overridable by projects that include
+# Dawn/Tint.
+# The values in this file are the defaults for when we are building
+# from the Dawn/Tint repository.
 
+# Whether we are building from the Dawn/Tint repository.
+# MUST be unset in other projects (will default to false).
+tint_standalone = true
+
+# Defaults for these are set again in tint_overrides_with_defaults.gni so that
+# users of Tint don't have to set dirs if they happen to use the same as Tint.
+
+# The paths to Tint's dependencies
 tint_lpm_dir = "//third_party/libprotobuf-mutator"
 tint_spirv_tools_dir = "//third_party/spirv-tools/src"
 tint_spirv_headers_dir = "//third_party/spirv-headers/src"
 tint_glslang_dir = "//third_party/glslang/src"
+tint_mesa_dir = "//third_party/mesa"

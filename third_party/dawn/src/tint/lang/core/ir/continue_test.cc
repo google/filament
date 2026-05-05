@@ -79,7 +79,7 @@ TEST_F(IR_ContinueTest, Clone) {
 
     EXPECT_NE(cont, new_c);
     EXPECT_EQ(new_loop, new_c->Loop());
-    EXPECT_TRUE(new_c->Args().IsEmpty());
+    EXPECT_TRUE(new_c->Args().empty());
 }
 
 TEST_F(IR_ContinueTest, CloneWithArgs) {
@@ -92,7 +92,7 @@ TEST_F(IR_ContinueTest, CloneWithArgs) {
     auto* new_c = clone_ctx.Clone(cont);
 
     auto args = new_c->Args();
-    EXPECT_EQ(2u, args.Length());
+    EXPECT_EQ(2u, args.size());
 
     auto* val0 = args[0]->As<Constant>()->Value();
     EXPECT_EQ(1_u, val0->As<core::constant::Scalar<u32>>()->ValueAs<u32>());

@@ -1056,7 +1056,7 @@ TEST_F(IR_ZeroInitWorkgroupMemoryTest, NestedStructOfScalarsWithAtomic) {
 
     auto* func = MakeEntryPoint("main", 1, 1, 1);
     b.Append(func->Block(), [&] {  //
-        b.Load(var);
+        b.Load(b.Access<ptr<workgroup, f32>>(var, 0_u));
         b.Return(func);
     });
 
@@ -1078,7 +1078,8 @@ $B1: {  # root
 
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %3:Outer = load %wgvar
+    %3:ptr<workgroup, f32, read_write> = access %wgvar, 0u
+    %4:f32 = load %3
     ret
   }
 }
@@ -1118,7 +1119,8 @@ $B1: {  # root
       }
     }
     %10:void = workgroupBarrier
-    %11:Outer = load %wgvar
+    %11:ptr<workgroup, f32, read_write> = access %wgvar, 0u
+    %12:f32 = load %11
     ret
   }
 }
@@ -1144,7 +1146,7 @@ TEST_F(IR_ZeroInitWorkgroupMemoryTest, ArrayOfStructOfArrayOfStructWithAtomic) {
 
     auto* func = MakeEntryPoint("main", 7, 3, 2);
     b.Append(func->Block(), [&] {  //
-        b.Load(var);
+        b.Load(b.Access<ptr<workgroup, f32>>(var, 0_u, 0_u));
         b.Return(func);
     });
 
@@ -1166,7 +1168,8 @@ $B1: {  # root
 
 %main = @compute @workgroup_size(7u, 3u, 2u) func():void {
   $B2: {
-    %3:array<Outer, 7> = load %wgvar
+    %3:ptr<workgroup, f32, read_write> = access %wgvar, 0u, 0u
+    %4:f32 = load %3
     ret
   }
 }
@@ -1228,7 +1231,8 @@ $B1: {  # root
       }
     }
     %17:void = workgroupBarrier
-    %18:array<Outer, 7> = load %wgvar
+    %18:ptr<workgroup, f32, read_write> = access %wgvar, 0u, 0u
+    %19:f32 = load %18
     ret
   }
 }
@@ -1402,7 +1406,7 @@ TEST_F(IR_ZeroInitWorkgroupMemoryTest, ExistingLocalInvocationIndex) {
     auto* var = MakeVar("wgvar", ty.bool_());
 
     auto* func = MakeEntryPoint("main", 1, 1, 1);
-    auto* global_id = b.FunctionParam("global_id", ty.vec3<u32>());
+    auto* global_id = b.FunctionParam("global_id", ty.vec3u());
     global_id->SetBuiltin(BuiltinValue::kGlobalInvocationId);
     auto* index = b.FunctionParam("index", ty.u32());
     index->SetBuiltin(BuiltinValue::kLocalInvocationIndex);
@@ -1459,7 +1463,7 @@ TEST_F(IR_ZeroInitWorkgroupMemoryTest, ExistingLocalInvocationIndexInStruct) {
                                 {
                                     {
                                         mod.symbols.New("global_id"),
-                                        ty.vec3<u32>(),
+                                        ty.vec3u(),
                                         core::IOAttributes{
                                             .builtin = core::BuiltinValue::kGlobalInvocationId,
                                         },
@@ -1795,6 +1799,423 @@ $B1: {  # root
         exit_if  # if_3
       }
     }
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_EqualToWG_u32) {
+    auto* var = MakeVar("wgvar", ty.buffer(32));
+
+    auto* func = MakeEntryPoint("main", 8, 1, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(8u, 1u, 1u) func():void {
+  $B2: {
+    %3:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(8u, 1u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %4:ptr<workgroup, array<u32, 8>, read_write> = bufferView<array<u32, 8>> %wgvar, 0u
+    %5:bool = lt %tint_local_index, 8u
+    if %5 [t: $B3] {  # if_1
+      $B3: {  # true
+        %6:ptr<workgroup, u32, read_write> = access %4, %tint_local_index
+        store %6, 0u
+        exit_if  # if_1
+      }
+    }
+    %7:void = workgroupBarrier
+    %8:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_EqualToWG_u16) {
+    auto* var = MakeVar("wgvar", ty.buffer(34));
+
+    auto* func = MakeEntryPoint("main", 1, 17, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<34>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 17u, 1u) func():void {
+  $B2: {
+    %3:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<34>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 17u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %4:ptr<workgroup, array<f16, 17>, read_write> = bufferView<array<f16, 17>> %wgvar, 0u
+    %5:bool = lt %tint_local_index, 17u
+    if %5 [t: $B3] {  # if_1
+      $B3: {  # true
+        %6:ptr<workgroup, f16, read_write> = access %4, %tint_local_index
+        store %6, 0.0h
+        exit_if  # if_1
+      }
+    }
+    %7:void = workgroupBarrier
+    %8:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_EqualToWG_u32_MultiVar) {
+    auto* v1 = MakeVar("v1", ty.buffer(32));
+    auto* v2 = MakeVar("v2", ty.buffer(32));
+
+    auto* func = MakeEntryPoint("main", 4, 2, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, v1);
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, v2);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v1:ptr<workgroup, buffer<32>, read_write> = var undef
+  %v2:ptr<workgroup, buffer<32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(4u, 2u, 1u) func():void {
+  $B2: {
+    %4:u32 = bufferLength %v1
+    %5:u32 = bufferLength %v2
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v1:ptr<workgroup, buffer<32>, read_write> = var undef
+  %v2:ptr<workgroup, buffer<32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(4u, 2u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %5:ptr<workgroup, array<u32, 8>, read_write> = bufferView<array<u32, 8>> %v1, 0u
+    %6:ptr<workgroup, array<u32, 8>, read_write> = bufferView<array<u32, 8>> %v2, 0u
+    %7:bool = lt %tint_local_index, 8u
+    if %7 [t: $B3] {  # if_1
+      $B3: {  # true
+        %8:ptr<workgroup, u32, read_write> = access %5, %tint_local_index
+        store %8, 0u
+        %9:ptr<workgroup, u32, read_write> = access %6, %tint_local_index
+        store %9, 0u
+        exit_if  # if_1
+      }
+    }
+    %10:void = workgroupBarrier
+    %11:u32 = bufferLength %v1
+    %12:u32 = bufferLength %v2
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_LessThanWG_u16) {
+    auto* var = MakeVar("wgvar", ty.buffer(34));
+
+    auto* func = MakeEntryPoint("main", 1, 64, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<34>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 64u, 1u) func():void {
+  $B2: {
+    %3:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<34>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 64u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %4:ptr<workgroup, array<f16, 17>, read_write> = bufferView<array<f16, 17>> %wgvar, 0u
+    %5:bool = lt %tint_local_index, 17u
+    if %5 [t: $B3] {  # if_1
+      $B3: {  # true
+        %6:ptr<workgroup, f16, read_write> = access %4, %tint_local_index
+        store %6, 0.0h
+        exit_if  # if_1
+      }
+    }
+    %7:void = workgroupBarrier
+    %8:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_GreaterThanWG_u32) {
+    auto* var = MakeVar("wgvar", ty.buffer(256));
+
+    auto* func = MakeEntryPoint("main", 1, 1, 16);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<256>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 16u) func():void {
+  $B2: {
+    %3:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<256>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 16u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %4:ptr<workgroup, array<u32, 64>, read_write> = bufferView<array<u32, 64>> %wgvar, 0u
+    loop [i: $B3, b: $B4, c: $B5] {  # loop_1
+      $B3: {  # initializer
+        next_iteration %tint_local_index  # -> $B4
+      }
+      $B4 (%idx:u32): {  # body
+        %6:bool = gte %idx, 64u
+        if %6 [t: $B6] {  # if_1
+          $B6: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        %7:ptr<workgroup, u32, read_write> = access %4, %idx
+        store %7, 0u
+        continue  # -> $B5
+      }
+      $B5: {  # continuing
+        %8:u32 = add %idx, 16u
+        next_iteration %8  # -> $B4
+      }
+    }
+    %9:void = workgroupBarrier
+    %10:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_GreaterThanWG_NonMultiple) {
+    auto* var = MakeVar("wgvar", ty.buffer(300));
+
+    auto* func = MakeEntryPoint("main", 7, 1, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, var);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<300>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(7u, 1u, 1u) func():void {
+  $B2: {
+    %3:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %wgvar:ptr<workgroup, buffer<300>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(7u, 1u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %4:ptr<workgroup, array<u32, 75>, read_write> = bufferView<array<u32, 75>> %wgvar, 0u
+    loop [i: $B3, b: $B4, c: $B5] {  # loop_1
+      $B3: {  # initializer
+        next_iteration %tint_local_index  # -> $B4
+      }
+      $B4 (%idx:u32): {  # body
+        %6:bool = gte %idx, 75u
+        if %6 [t: $B6] {  # if_1
+          $B6: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        %7:ptr<workgroup, u32, read_write> = access %4, %idx
+        store %7, 0u
+        continue  # -> $B5
+      }
+      $B5: {  # continuing
+        %8:u32 = add %idx, 7u
+        next_iteration %8  # -> $B4
+      }
+    }
+    %9:void = workgroupBarrier
+    %10:u32 = bufferLength %wgvar
+    ret
+  }
+}
+)";
+
+    Run(ZeroInitWorkgroupMemory);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(IR_ZeroInitWorkgroupMemoryTest, Buffer_DifferentCounts) {
+    auto* v1 = MakeVar("v1", ty.buffer(300));
+    auto* v2 = MakeVar("v2", ty.buffer(6));
+
+    auto* func = MakeEntryPoint("main", 7, 1, 1);
+    b.Append(func->Block(), [&] {
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, v1);
+        b.Call(ty.u32(), core::BuiltinFn::kBufferLength, v2);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %v1:ptr<workgroup, buffer<300>, read_write> = var undef
+  %v2:ptr<workgroup, buffer<6>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(7u, 1u, 1u) func():void {
+  $B2: {
+    %4:u32 = bufferLength %v1
+    %5:u32 = bufferLength %v2
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %v1:ptr<workgroup, buffer<300>, read_write> = var undef
+  %v2:ptr<workgroup, buffer<6>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(7u, 1u, 1u) func(%tint_local_index:u32 [@local_invocation_index]):void {
+  $B2: {
+    %5:ptr<workgroup, array<f16, 3>, read_write> = bufferView<array<f16, 3>> %v2, 0u
+    %6:bool = lt %tint_local_index, 3u
+    if %6 [t: $B3] {  # if_1
+      $B3: {  # true
+        %7:ptr<workgroup, f16, read_write> = access %5, %tint_local_index
+        store %7, 0.0h
+        exit_if  # if_1
+      }
+    }
+    %8:ptr<workgroup, array<u32, 75>, read_write> = bufferView<array<u32, 75>> %v1, 0u
+    loop [i: $B4, b: $B5, c: $B6] {  # loop_1
+      $B4: {  # initializer
+        next_iteration %tint_local_index  # -> $B5
+      }
+      $B5 (%idx:u32): {  # body
+        %10:bool = gte %idx, 75u
+        if %10 [t: $B7] {  # if_2
+          $B7: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        %11:ptr<workgroup, u32, read_write> = access %8, %idx
+        store %11, 0u
+        continue  # -> $B6
+      }
+      $B6: {  # continuing
+        %12:u32 = add %idx, 7u
+        next_iteration %12  # -> $B5
+      }
+    }
+    %13:void = workgroupBarrier
+    %14:u32 = bufferLength %v1
+    %15:u32 = bufferLength %v2
     ret
   }
 }

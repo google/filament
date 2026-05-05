@@ -28,12 +28,8 @@
 #ifndef SRC_TINT_LANG_CORE_IR_ANALYSIS_FOR_LOOP_ANALYSIS_H_
 #define SRC_TINT_LANG_CORE_IR_ANALYSIS_FOR_LOOP_ANALYSIS_H_
 
-#include <memory>
-#include <set>
-
-#include "src/tint/lang/core/ir/if.h"
 #include "src/tint/lang/core/ir/loop.h"
-#include "src/tint/lang/core/ir/var.h"
+#include "src/tint/lang/core/ir/store.h"
 #include "src/tint/utils/ice/ice.h"
 
 namespace tint::core::ir::analysis {
@@ -61,11 +57,15 @@ class ForLoopAnalysis {
         return body_removed_instructions.Contains(inst);
     }
 
+    /// @returns the store in a simple continuing block that can be used as a for-loop update
+    const core::ir::Store* GetContinuingUpdateStore() { return continuing_update_store; }
+
   private:
     void AttemptForLoopDeduction(const Loop* loop);
 
     Hashset<const core::ir::Instruction*, 32> body_removed_instructions;
     const core::ir::Value* for_condition = nullptr;
+    const core::ir::Store* continuing_update_store = nullptr;
 };
 
 }  // namespace tint::core::ir::analysis
