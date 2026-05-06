@@ -154,7 +154,7 @@ public class LazyFieldLite {
    */
   public boolean containsDefaultInstance() {
     return memoizedBytes == ByteString.EMPTY
-        || value == null && (delayedBytes == null || delayedBytes == ByteString.EMPTY);
+        || (value == null && (delayedBytes == null || delayedBytes == ByteString.EMPTY));
   }
 
   /**
@@ -364,6 +364,32 @@ public class LazyFieldLite {
       }
       return memoizedBytes;
     }
+  }
+
+  /**
+   * Compute the number of bytes that would be needed to encode an embedded message stored in lazy
+   * field.
+   */
+  public int computeSizeNoTag() {
+    return CodedOutputStream.computeLengthDelimitedFieldSize(getSerializedSize());
+  }
+
+  /**
+   * Compute the number of bytes that would be needed to encode an embedded message in lazy field,
+   * including tag.
+   */
+  public int computeSize(final int fieldNumber) {
+    return CodedOutputStream.computeTagSize(fieldNumber) + computeSizeNoTag();
+  }
+
+  /**
+   * Compute the number of bytes that would be needed to encode a lazily parsed MessageSet extension
+   * field to the stream. For historical reasons, the wire format differs from normal fields.
+   */
+  public int computeMessageSetExtensionSize(final int fieldNumber) {
+    return CodedOutputStream.computeTagSize(WireFormat.MESSAGE_SET_ITEM) * 2
+        + CodedOutputStream.computeUInt32Size(WireFormat.MESSAGE_SET_TYPE_ID, fieldNumber)
+        + computeSize(WireFormat.MESSAGE_SET_MESSAGE);
   }
 
   /** Writes this lazy field into a {@link Writer}. */

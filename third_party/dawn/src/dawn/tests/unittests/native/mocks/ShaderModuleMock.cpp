@@ -40,7 +40,9 @@ using ::testing::NiceMock;
 ShaderModuleMock::ShaderModuleMock(DeviceMock* device,
                                    const UnpackedPtr<ShaderModuleDescriptor>& descriptor)
     : ShaderModuleBase(device, descriptor, {}) {
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->ShaderModuleBase::DestroyImpl(); });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->ShaderModuleBase::DestroyImpl(reason);
+    });
 
     SetContentHash(ComputeContentHash());
 }
@@ -51,17 +53,9 @@ ShaderModuleMock::~ShaderModuleMock() = default;
 Ref<ShaderModuleMock> ShaderModuleMock::Create(
     DeviceMock* device,
     const UnpackedPtr<ShaderModuleDescriptor>& descriptor) {
-
     Ref<ShaderModuleMock> shaderModule =
         AcquireRef(new NiceMock<ShaderModuleMock>(device, descriptor));
-
-    ShaderModuleParseResult parseResult =
-        ParseShaderModule(BuildShaderModuleParseRequest(device, shaderModule->GetHash(), descriptor,
-                                                        {},
-                                                        /* needReflection*/ true))
-            .AcquireSuccess();
-
-    shaderModule->InitializeBase(&parseResult).AcquireSuccess();
+    shaderModule->Initialize();
     return shaderModule;
 }
 

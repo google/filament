@@ -18,7 +18,7 @@
 # ~~~
 cmake_minimum_required(VERSION 3.22.1)
 
-project(VULKAN_LOADER VERSION 1.4.322 LANGUAGES C)
+project(VULKAN_LOADER VERSION 1.4.349 LANGUAGES C)
 
 option(CODE_COVERAGE "Enable Code Coverage" OFF)
 if (CODE_COVERAGE)
@@ -52,7 +52,10 @@ if(WIN32)
     set(BUILD_DLL_VERSIONINFO "" CACHE STRING "Set the version to be used in the loader.rc file. Default value is the currently generated header version")
 endif()
 
-find_package(VulkanHeaders CONFIG QUIET)
+find_package(VulkanHeaders ${PROJECT_VERSION} CONFIG QUIET)
+if (${VulkanHeaders_VERSION} VERSION_GREATER ${PROJECT_VERSION})
+    message(WARNING "The Vulkan Headers version ${VulkanHeaders_VERSION} is newer than the expected version ${PROJECT_VERSION} used by the Vulkan-Loader. May cause issues.")
+endif()
 
 include(GNUInstallDirs)
 
@@ -108,7 +111,7 @@ elseif(APPLE)
     if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         target_compile_definitions(platform_wsi INTERFACE VK_USE_PLATFORM_MACOS_MVK)
     endif()
-elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|BSD|DragonFly|GNU")
+elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|BSD|DragonFly|GNU|CYGWIN")
     option(BUILD_WSI_XCB_SUPPORT "Build XCB WSI support" ON)
     option(BUILD_WSI_XLIB_SUPPORT "Build Xlib WSI support" ON)
     option(BUILD_WSI_XLIB_XRANDR_SUPPORT "Build X11 Xrandr WSI support" ON)
@@ -125,14 +128,12 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|BSD|DragonFly|GNU")
     endif()
     if(BUILD_WSI_XLIB_SUPPORT)
         pkg_check_modules(X11 REQUIRED QUIET IMPORTED_TARGET x11)
-        pkg_get_variable(XLIB_INCLUDE_DIRS x11 includedir)
         target_compile_definitions(platform_wsi INTERFACE VK_USE_PLATFORM_XLIB_KHR)
-        target_include_directories(platform_wsi INTERFACE ${XLIB_INCLUDE_DIRS})
+        target_include_directories(platform_wsi INTERFACE ${X11_INCLUDE_DIRS})
         if(BUILD_WSI_XLIB_XRANDR_SUPPORT)
             pkg_check_modules(XRANDR REQUIRED QUIET IMPORTED_TARGET xrandr)
-            pkg_get_variable(XLIB_XRANDR_INCLUDE_DIRS xrandr includedir)
             target_compile_definitions(platform_wsi INTERFACE VK_USE_PLATFORM_XLIB_XRANDR_EXT)
-            target_include_directories(platform_wsi INTERFACE ${XLIB_XRANDR_INCLUDE_DIRS})
+            target_include_directories(platform_wsi INTERFACE ${XRANDR_INCLUDE_DIRS})
         endif()
     endif()
     if(BUILD_WSI_WAYLAND_SUPPORT)
@@ -227,10 +228,21 @@ if(CMAKE_C_COMPILER_ID MATCHES "MSVC" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
     # Enable control flow guard
     target_link_options(loader_common_options INTERFACE "LINKER:/guard:cf")
 
+    # Enable CET for 32-bit and 64-bit x86 architectures
+    if (CMAKE_GENERATOR_PLATFORM MATCHES "Win32|x64")
+        target_link_options(loader_common_options INTERFACE "LINKER:/cetcompat")
+    endif()
+
+    # Enable EH Continuation Metadata for 64-bit architectures
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        target_compile_options(loader_common_options INTERFACE $<$<COMPILE_LANGUAGE::CXX,C>:/guard:ehcont>)
+        target_link_options(loader_common_options INTERFACE "LINKER:/guard:ehcont")
+    endif()
+
     # Prevent <windows.h> from polluting the code. guards against things like MIN and MAX
     target_compile_definitions(loader_common_options INTERFACE WIN32_LEAN_AND_MEAN)
 
-    # For some reason Advapi32.lib needs to be explicitely linked to when building for Arm (32 bit) on Windows, but isn't required on any other architecture
+    # For some reason Advapi32.lib needs to be explicitly linked to when building for Arm (32 bit) on Windows, but isn't required on any other architecture
     if (SYSTEM_PROCESSOR MATCHES "arm" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
         target_link_libraries(loader_common_options INTERFACE Advapi32)
     endif()
@@ -241,7 +253,7 @@ endif()
 target_compile_definitions(loader_common_options INTERFACE $<$<CONFIG:DEBUG>:DEBUG;GIT_BRANCH_NAME="${GIT_BRANCH_NAME}";GIT_TAG_INFO="${GIT_TAG_INFO}">)
 
 if (NOT (WIN32 OR APPLE))
-    # Check for the existance of the secure_getenv or __secure_getenv commands
+    # Check for the existence of the secure_getenv or __secure_getenv commands
     include(CheckFunctionExists)
 
     check_function_exists(secure_getenv HAVE_SECURE_GETENV)
@@ -254,7 +266,20 @@ if (NOT (WIN32 OR APPLE))
         target_compile_definitions(loader_common_options INTERFACE HAVE___SECURE_GETENV)
     endif()
     if (NOT (HAVE_SECURE_GETENV OR HAVE___SECURE_GETENV))
-        message(WARNING "Using non-secure environmental lookups. This loader will not properly disable environent variables when run with elevated permissions.")
+        message(WARNING "Using non-secure environmental lookups. This loader will not properly disable environment variables when run with elevated permissions.")
+    endif()
+endif()
+
+if (NOT (WIN32))
+    # Check for the existence of the realpath() command
+    include(CheckFunctionExists)
+
+    check_function_exists(realpath HAVE_REALPATH)
+
+    if (HAVE_REALPATH)
+        target_compile_definitions(loader_common_options INTERFACE HAVE_REALPATH)
+    else()
+        message(INFO "Platform support for realpath() is missing. Using fallback path normalization implementation.")
     endif()
 endif()
 

@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/utils/text/styled_text_theme.h"
+
 #include "src/tint/utils/text/text_style.h"
 
 namespace tint {

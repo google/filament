@@ -29,7 +29,6 @@
 
 #include "langsvr/lsp/lsp.h"
 #include "langsvr/session.h"
-
 #include "src/tint/lang/wgsl/ls/sem_token.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 

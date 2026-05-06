@@ -382,6 +382,43 @@ TEST_P(WorkgroupSizeValidationTest, ValidationAfterOverrideStorageSize) {
     CheckPipelineWithWorkgroupStorage(false, 0, maxMat4Count + 1);
 }
 
+// Test workgroup storage size validation when the array size is overridden such that it causes the
+// total storage size to overflow a uint32_t when rounded up to the alignment of the element type.
+TEST_P(WorkgroupSizeValidationTest, WorkgroupStorageSizeOverflows) {
+    auto CheckPipelineWithWorkgroupStorage = [this](bool success, uint64_t arrayLength) {
+        std::vector<wgpu::ConstantEntry> constants;
+
+        const char* shader = R"(
+override len: u32;
+
+var<workgroup> data: array<u32, len>;
+
+@compute @workgroup_size(1)
+fn main() {
+  data[0] = 42;
+}
+)";
+
+        constants.push_back({nullptr, "len", static_cast<double>(arrayLength)});
+
+        wgpu::ComputePipelineDescriptor desc;
+        desc.compute.module = utils::CreateShaderModule(device, shader);
+        desc.compute.constants = constants.data();
+        desc.compute.constantCount = constants.size();
+
+        if (success) {
+            device.CreateComputePipeline(&desc);
+        } else {
+            ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&desc));
+        }
+    };
+
+    CheckPipelineWithWorkgroupStorage(true, 16);
+    CheckPipelineWithWorkgroupStorage(false, (UINT32_MAX - 3) / 4);
+}
+
+// TODO(crbug.com/462151326): Fix pipeline creation error of the inner layer to surface up properly
+// in WebGPUBackend.
 DAWN_INSTANTIATE_TEST(WorkgroupSizeValidationTest,
                       D3D11Backend(),
                       D3D12Backend(),

@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-# Host tools required by Android, WebGL, and iOS builds
+# Host tools required by Android, WASM, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen filamesh uberz"
-WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
+WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh glslminifier"
 
 function print_help {
     local self_name=$(basename "$0")
@@ -34,7 +34,7 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|webgl|all]."
+    echo "        Where platformN is [desktop|android|ios|wasm|all]."
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
@@ -44,6 +44,8 @@ function print_help {
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
+    echo "    -E"
+    echo "        Disable C++ exceptions."
     echo "    -W"
     echo "        Include WebGPU support for the target platform. (NOT functional atm)."
     echo "    -s"
@@ -51,8 +53,8 @@ function print_help {
     echo "    -e"
     echo "        Enable EGL on Linux support for desktop builds."
     echo "    -l"
-    echo "        Build arm64/x86_64 universal libraries."
-    echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
+    echo "        Build universal libraries/frameworks."
+    echo "        For iOS, this builds XCFrameworks for devices and the simulator (implies -s)."
     echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
     echo "    -k sample1,sample2,..."
     echo "        When building for Android, also build select sample APKs."
@@ -171,7 +173,7 @@ ISSUE_RELEASE_BUILD=false
 ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
-ISSUE_WEBGL_BUILD=false
+ISSUE_WASM_BUILD=false
 
 # Default: all
 ABI_ARMEABI_V7A=true
@@ -275,6 +277,7 @@ function build_tools_for_split_build {
         -DCMAKE_BUILD_TYPE="${build_type_arg}" \
         ${WEBGPU_OPTION} \
         ${architectures} \
+        ${EXCEPTIONS_OPTION} \
         ../..
 
     ${BUILD_COMMAND} ${WEB_HOST_TOOLS}
@@ -318,6 +321,7 @@ function build_desktop_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -352,16 +356,21 @@ function build_desktop {
     fi
 }
 
-function build_webgl_with_target {
+function build_wasm_with_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
-    echo "Building WebGL ${lc_target}..."
-    mkdir -p "out/cmake-webgl-${lc_target}"
-    pushd "out/cmake-webgl-${lc_target}" > /dev/null
+    echo "Building WASM ${lc_target}..."
+    mkdir -p "out/cmake-wasm-${lc_target}"
+    pushd "out/cmake-wasm-${lc_target}" > /dev/null
 
     if [[ ! "${BUILD_TARGETS}" ]]; then
         BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
         ISSUE_CMAKE_ALWAYS=true
+    fi
+
+    if [[ "${WEBGPU_OPTION}" == *"-DFILAMENT_SUPPORTS_WEBGPU=ON"* ]]; then
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_CXX_FLAGS=\"--use-port=emdawnwebgpu\""
+        WEBGPU_OPTION="${WEBGPU_OPTION} -DCMAKE_C_FLAGS=\"--use-port=emdawnwebgpu\""
     fi
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
@@ -374,12 +383,13 @@ function build_webgl_with_target {
             ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_TOOLCHAIN_FILE="${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
             -DCMAKE_BUILD_TYPE="$1" \
-            -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
-            -DWEBGL=1 \
+            -DCMAKE_INSTALL_PREFIX="../wasm-${lc_target}/filament" \
+            -DWASM=1 \
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ../..
-        ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
+        ln -sf "out/cmake-wasm-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
         ${BUILD_COMMAND} ${BUILD_TARGETS}
         )
@@ -411,7 +421,7 @@ function build_webgl_with_target {
     popd > /dev/null
 }
 
-function build_webgl {
+function build_wasm {
     # For the host tools, suppress install and always use Release.
     local old_install_command=${INSTALL_COMMAND}; INSTALL_COMMAND=
     local old_issue_debug_build=${ISSUE_DEBUG_BUILD}; ISSUE_DEBUG_BUILD=false
@@ -424,11 +434,11 @@ function build_webgl {
     ISSUE_RELEASE_BUILD=${old_issue_release_build}
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
-        build_webgl_with_target "Debug"
+        build_wasm_with_target "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
-        build_webgl_with_target "Release"
+        build_wasm_with_target "Release"
     fi
 }
 
@@ -457,6 +467,7 @@ function build_android_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${ENABLE_PERFETTO} \
+            ${EXCEPTIONS_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -679,9 +690,9 @@ function build_ios_target {
     local platform=$3
 
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    mkdir -p "out/cmake-ios-${lc_target}-${arch}-${platform}"
 
-    pushd "out/cmake-ios-${lc_target}-${arch}" > /dev/null
+    pushd "out/cmake-ios-${lc_target}-${arch}-${platform}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -698,6 +709,7 @@ function build_ios_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
+            ${EXCEPTIONS_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -739,37 +751,78 @@ function build_ios {
     # only arm64 devices support OpenGL 3.0 / Metal
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        local out_dir="out/ios-debug/filament"
+        local lib_dir="${out_dir}/lib"
+        
         build_ios_target "Debug" "arm64" "iphoneos"
+        
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Debug" "arm64" "iphonesimulator"
             build_ios_target "Debug" "x86_64" "iphonesimulator"
+            
+            # Create a universal library for the simulator
+            build/ios/create-universal-libs.sh \
+                -o "${lib_dir}/universal" \
+                "${lib_dir}/arm64-iphonesimulator" \
+                "${lib_dir}/x86_64-iphonesimulator"
         fi
 
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-debug/filament/lib/universal \
-                out/ios-debug/filament/lib/arm64 \
-                out/ios-debug/filament/lib/x86_64
-            rm -rf out/ios-debug/filament/lib/arm64
-            rm -rf out/ios-debug/filament/lib/x86_64
+        # Always create XCFrameworks
+        local xcframework_paths=("${lib_dir}/arm64-iphoneos")
+        if [[ -d "${lib_dir}/universal" ]]; then
+            xcframework_paths+=("${lib_dir}/universal")
+        elif [[ -d "${lib_dir}/arm64-iphonesimulator" ]]; then
+            # If we built only one simulator arch but not both
+            xcframework_paths+=("${lib_dir}/arm64-iphonesimulator")
+        elif [[ -d "${lib_dir}/x86_64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/x86_64-iphonesimulator")
         fi
+
+        build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
+
+        rm -rf \
+            "${lib_dir}/arm64-iphoneos" \
+            "${lib_dir}/arm64-iphonesimulator" \
+            "${lib_dir}/x86_64-iphonesimulator" \
+            "${lib_dir}/universal"
 
         archive_ios "Debug"
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        local out_dir="out/ios-release/filament"
+        local lib_dir="${out_dir}/lib"
+
         build_ios_target "Release" "arm64" "iphoneos"
+        
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Release" "arm64" "iphonesimulator"
             build_ios_target "Release" "x86_64" "iphonesimulator"
+            
+            # Create a universal library for the simulator
+            build/ios/create-universal-libs.sh \
+                -o "${lib_dir}/universal" \
+                "${lib_dir}/arm64-iphonesimulator" \
+                "${lib_dir}/x86_64-iphonesimulator"
         fi
 
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
-            build/ios/create-universal-libs.sh \
-                -o out/ios-release/filament/lib/universal \
-                out/ios-release/filament/lib/arm64 \
-                out/ios-release/filament/lib/x86_64
-            rm -rf out/ios-release/filament/lib/arm64
-            rm -rf out/ios-release/filament/lib/x86_64
+        # Always create XCFrameworks
+        local xcframework_paths=("${lib_dir}/arm64-iphoneos")
+        if [[ -d "${lib_dir}/universal" ]]; then
+            xcframework_paths+=("${lib_dir}/universal")
+        elif [[ -d "${lib_dir}/arm64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/arm64-iphonesimulator")
+        elif [[ -d "${lib_dir}/x86_64-iphonesimulator" ]]; then
+            xcframework_paths+=("${lib_dir}/x86_64-iphonesimulator")
         fi
+
+        build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
+
+        rm -rf \
+            "${lib_dir}/arm64-iphoneos" \
+            "${lib_dir}/arm64-iphonesimulator" \
+            "${lib_dir}/x86_64-iphonesimulator" \
+            "${lib_dir}/universal"
 
         archive_ios "Release"
     fi
@@ -802,7 +855,7 @@ function validate_build_command {
         fi
     fi
     # If building a WebAssembly module, ensure we know where Emscripten lives.
-    if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
+    if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
         exit 1
     fi
@@ -828,7 +881,7 @@ function run_test {
 }
 
 function run_tests {
-    if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
+    if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
         if ! echo "TypeScript $(tsc --version)" ; then
             tsc --noEmit \
                 third_party/gl-matrix/gl-matrix.d.ts \
@@ -858,7 +911,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
     case ${opt} in
         h)
             print_help
@@ -913,18 +966,18 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
                     ios)
                         ISSUE_IOS_BUILD=true
                     ;;
-                    webgl)
-                        ISSUE_WEBGL_BUILD=true
+                    wasm)
+                        ISSUE_WASM_BUILD=true
                     ;;
                     all)
                         ISSUE_ANDROID_BUILD=true
                         ISSUE_IOS_BUILD=true
                         ISSUE_DESKTOP_BUILD=true
-                        ISSUE_WEBGL_BUILD=false
+                        ISSUE_WASM_BUILD=false
                     ;;
                     *)
                         echo "Unknown platform ${platform}"
-                        echo "Platform must be one of [desktop|android|ios|webgl|all]"
+                        echo "Platform must be one of [desktop|android|ios|wasm|all]"
                         echo ""
                         exit 1
                     ;;
@@ -979,7 +1032,8 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
             echo "Consider using -c after changing this option to clear the Gradle cache."
             ;;
         W)
-            WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
+            WEBGPU_OPTION='-DFILAMENT_SUPPORTS_WEBGPU=ON'
+
             WEBGPU_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.include-webgpu"
             echo "Enable support for WebGPU(Experimental) in the core Filament library."
             ;;
@@ -1008,6 +1062,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:" opt; do
             ;;
         P)  ENABLE_PERFETTO="-DFILAMENT_ENABLE_PERFETTO=ON"
             echo "Enabled perfetto"
+            ;;
+        E)  EXCEPTIONS_OPTION="-DFILAMENT_ENABLE_EXCEPTIONS=OFF"
+            echo "Disabling exceptions."
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
@@ -1102,8 +1159,8 @@ if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
     check_debug_release_build build_ios
 fi
 
-if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
-    check_debug_release_build build_webgl
+if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
+    check_debug_release_build build_wasm
 fi
 
 if [[ "${RUN_TESTS}" == "true" ]]; then

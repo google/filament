@@ -21,7 +21,7 @@ fi
 
 OS_NAME=$(uname -s)
 LLVM_VERSION=${GITHUB_LLVM_VERSION-17}
-MESA_VERSION=${GITHUB_MESA_VERSION-24.2.1}
+MESA_VERSION=${GITHUB_MESA_VERSION-25.0.6}
 ORIG_DIR=$(pwd)
 MESA_DIR=${MESA_DIR-${ORIG_DIR}/mesa}
 
@@ -87,7 +87,8 @@ if [[ "$OS_NAME" == "Linux" ]]; then
 elif [[ "$OS_NAME" == "Darwin" ]]; then
     if command -v brew > /dev/null 2>&1; then
         HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr \
-                                                        llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+                                                    llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence \
+                                                    glslang
         brew link --overwrite llvm@${LLVM_VERSION}
         # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
         LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
@@ -133,7 +134,23 @@ pushd .
 cd ${MESA_DIR}
 
 # Need >= 24 to have llvmpipe for swrast.  llvmpipe is needed for GL >= 4.1.
-git checkout mesa-${MESA_VERSION}
+git checkout -f mesa-${MESA_VERSION}
+
+# Apply custom patch to fix a double-free in OSMesa
+git apply << 'EOF'
+diff --git a/src/mesa/program/program.c b/src/mesa/program/program.c
+index 74bd6a6c33b..a70814e53a1 100644
+--- a/src/mesa/program/program.c
++++ b/src/mesa/program/program.c
+@@ -130,6 +130,7 @@ _mesa_free_program_data(struct gl_context *ctx)
+       ctx->ATIFragmentShader.Current->RefCount--;
+       if (ctx->ATIFragmentShader.Current->RefCount <= 0) {
+          free(ctx->ATIFragmentShader.Current);
++         ctx->ATIFragmentShader.Current = NULL;
+       }
+    }
+ 
+EOF
 
 mkdir -p out
 

@@ -102,7 +102,7 @@ ResultOrError<UnpackedPtr<SurfaceDescriptor>> ValidateSurfaceDescriptor(
     UnpackedPtr<SurfaceDescriptor> descriptor;
     DAWN_TRY_ASSIGN(descriptor, ValidateAndUnpack(rawDescriptor));
 
-    if (descriptor.Get<SurfaceColorManagement>()) {
+    if (descriptor.Has<SurfaceColorManagement>()) {
         return DAWN_VALIDATION_ERROR("SurfaceColorManagement unsupported.");
     }
 
@@ -455,14 +455,14 @@ void* Surface::GetXDisplay() const {
     DAWN_ASSERT(mType == Type::XlibWindow);
     return mXDisplay;
 }
-uint32_t Surface::GetXWindow() const {
+uint64_t Surface::GetXWindow() const {
     DAWN_ASSERT(!IsError());
     DAWN_ASSERT(mType == Type::XlibWindow);
     return mXWindow;
 }
 
 MaybeError Surface::Configure(const SurfaceConfiguration* configIn) {
-    SurfaceConfiguration config = *configIn;
+    SurfaceConfiguration config = configIn->WithTrivialFrontendDefaults();
     DAWN_CHECK(config.device);
     // Configured-or-not is specified as a client-side state, so it must be
     // maintained even on error surfaces.

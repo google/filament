@@ -46,25 +46,17 @@ namespace tint::ast {
 class CallExpression final : public Castable<CallExpression, Expression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the call expression source
     /// @param target the target of the call
     /// @param args the arguments
-    CallExpression(GenerationID pid,
-                   NodeID nid,
+    CallExpression(NodeID nid,
                    const Source& source,
                    const IdentifierExpression* target,
                    VectorRef<const Expression*> args);
 
     /// Destructor
     ~CallExpression() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const CallExpression* Clone(CloneContext& ctx) const override;
 
     /// The target function or type
     const IdentifierExpression* target;

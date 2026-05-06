@@ -28,11 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_METAL_SAMPLERMTL_H_
 #define SRC_DAWN_NATIVE_METAL_SAMPLERMTL_H_
 
-#include "dawn/native/Sampler.h"
+#import <Metal/Metal.h>
 
 #include "dawn/common/NSRef.h"
-
-#import <Metal/Metal.h>
+#include "dawn/native/Sampler.h"
 
 namespace dawn::native::metal {
 

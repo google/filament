@@ -33,62 +33,136 @@
 
 namespace dawn::native {
 
+AsyncTask::State::State(AsyncTaskFunction task) : task(task) {
+    DAWN_ASSERT(task);
+}
+
+AsyncTask::AsyncTask(AsyncTaskManager* taskManager, AsyncTaskFunction task)
+    : mTaskManager(taskManager), mState(task) {
+    DAWN_ASSERT(mTaskManager);
+}
+
+bool AsyncTask::IsCompleted() const {
+    return mState.Use([](auto state) { return state->state == AsyncTaskState::Completed; });
+}
+
+void AsyncTask::Wait() {
+    mState.Use<NotifyType::None>([](auto state) {
+        state.Wait([](auto& x) { return x.state == AsyncTaskState::Completed; });
+    });
+}
+
+void AsyncTask::AddCompletionCallback(AsyncTaskCompletionCallback completionCallback) {
+    bool completeCallbackNow = false;
+    mState.Use<NotifyType::None>([&](auto state) {
+        if (state->state == AsyncTaskState::Completed) {
+            completeCallbackNow = true;
+            return;
+        }
+        state->completionCallbacks.push_back(completionCallback);
+    });
+
+    // Call callbacks without holding the lock if the task was already complete.
+    if (completeCallbackNow) {
+        completionCallback();
+    }
+}
+
+void AsyncTask::Run() {
+    // To ensure we only run the task once, we synchronize it with the lock, move it out when it
+    // exists, and call it without holding the lock.
+    AsyncTaskFunction task = nullptr;
+    mState.Use<NotifyType::None>([&task](auto state) {
+        task = std::move(state->task);
+        state->task = nullptr;
+    });
+    DAWN_ASSERT(task);
+
+    // Complete the task and update the state of the task manager. Note we need to make sure we
+    // update the state of the task manager before setting the task to Complete to ensure that at
+    // teardown when the task manager is waiting on the tasks, that the tasks no longer have a
+    // reference to the manager anymore.
+    task();
+    mTaskManager.ExtractAsDangling()->mTasks.Use([this](auto tasks) { tasks->erase(this); });
+
+    // Update the state, notify all waiting threads, and grab the completion callbacks to call them
+    // outside the lock scope.
+    std::vector<AsyncTaskCompletionCallback> completionCallbacks;
+    mState.Use<NotifyType::All>([&completionCallbacks](auto state) {
+        state->state = AsyncTaskState::Completed;
+
+        completionCallbacks = std::move(state->completionCallbacks);
+        state->completionCallbacks.clear();
+    });
+    for (auto completionCallback : completionCallbacks) {
+        completionCallback();
+    }
+}
+
+ErrorGeneratingAsyncTask::ErrorGeneratingAsyncTask(AsyncTaskManager* taskManager,
+                                                   std::function<MaybeError()> task)
+    : AsyncTask(taskManager, [this, task] {
+          // Wrap the task which returns a MaybeError in a void function and store the error in a
+          // member.
+          MaybeError taskResult = task();
+          if (taskResult.IsError()) {
+              mErrorData = taskResult.AcquireError();
+          }
+      }) {}
+
+bool ErrorGeneratingAsyncTask::IsSuccess() const {
+    DAWN_ASSERT(IsCompleted());
+    return mErrorData == nullptr;
+}
+
+bool ErrorGeneratingAsyncTask::IsError() const {
+    DAWN_ASSERT(IsCompleted());
+    return mErrorData != nullptr;
+}
+
+InternalErrorType ErrorGeneratingAsyncTask::GetErrorType() const {
+    return mErrorData ? mErrorData->GetType() : InternalErrorType::None;
+}
+
+std::unique_ptr<ErrorData> ErrorGeneratingAsyncTask::AcquireError() {
+    DAWN_ASSERT(IsCompleted());
+    return std::move(mErrorData);
+}
+
 AsyncTaskManager::AsyncTaskManager(dawn::platform::WorkerTaskPool* workerTaskPool)
     : mWorkerTaskPool(workerTaskPool) {}
 
-void AsyncTaskManager::PostTask(AsyncTask asyncTask) {
-    // If these allocations becomes expensive, we can slab-allocate tasks.
-    Ref<WaitableTask> waitableTask = AcquireRef(new WaitableTask());
-    waitableTask->taskManager = this;
-    waitableTask->asyncTask = std::move(asyncTask);
-
-    {
-        // We insert new waitableTask objects into mPendingTasks in main thread (PostTask()),
-        // and we may remove waitableTask objects from mPendingTasks in either main thread
-        // (WaitAllPendingTasks()) or sub-thread (TaskCompleted), so mPendingTasks should be
-        // protected by a mutex.
-        std::lock_guard<std::mutex> lock(mPendingTasksMutex);
-        mPendingTasks.emplace(waitableTask.Get(), waitableTask);
-    }
-
-    // Ref the task since it is accessed inside the worker function.
-    // The worker function will acquire and release the task upon completion.
-    waitableTask->AddRef();
-    waitableTask->waitableEvent =
-        mWorkerTaskPool->PostWorkerTask(DoWaitableTask, waitableTask.Get());
+AsyncTaskManager::~AsyncTaskManager() {
+    // Pending tasks call back into this task manager. Make sure they all finish before destructing.
+    WaitAllPendingTasks();
 }
 
-void AsyncTaskManager::HandleTaskCompletion(WaitableTask* task) {
-    std::lock_guard<std::mutex> lock(mPendingTasksMutex);
-    mPendingTasks.erase(task);
+void AsyncTaskManager::PostConstructedTask(Ref<AsyncTask> asyncTask) {
+    // Insert the new task and send it off to the workpool to have it completed.
+    mTasks.Use([&asyncTask](auto tasks) { tasks->emplace(asyncTask); });
+    mWorkerTaskPool->PostWorkerTask(RunTask, asyncTask.Get());
 }
 
 void AsyncTaskManager::WaitAllPendingTasks() {
-    absl::flat_hash_map<WaitableTask*, Ref<WaitableTask>> allPendingTasks;
+    TaskSet allTasks;
+    mTasks.Use([&allTasks](auto tasks) { allTasks.swap(*tasks); });
 
-    {
-        std::lock_guard<std::mutex> lock(mPendingTasksMutex);
-        allPendingTasks.swap(mPendingTasks);
-    }
-
-    for (auto& [_, task] : allPendingTasks) {
-        task->waitableEvent->Wait();
+    for (auto& task : allTasks) {
+        task->Wait();
     }
 }
 
-bool AsyncTaskManager::HasPendingTasks() {
-    std::lock_guard<std::mutex> lock(mPendingTasksMutex);
-    return !mPendingTasks.empty();
+bool AsyncTaskManager::HasPendingTasks() const {
+    return mTasks.Use([](auto tasks) { return !tasks->empty(); });
 }
 
-void AsyncTaskManager::DoWaitableTask(void* task) {
-    Ref<WaitableTask> waitableTask = AcquireRef(static_cast<WaitableTask*>(task));
-    waitableTask->asyncTask();
-    waitableTask->taskManager->HandleTaskCompletion(waitableTask.Get());
+void AsyncTaskManager::RunTask(void* task) {
+    // Note that we create a new Ref<AsyncTask> here because upon completion, we erase the Ref that
+    // the AsyncTaskManager holds which may result in dropping the last reference before the
+    // completion of this function otherwise. By explicitly creating a Ref here, we ensure that the
+    // last reference is only dropped after the scope of this function.
+    Ref<AsyncTask> asyncTask = static_cast<AsyncTask*>(task);
+    asyncTask->Run();
 }
-
-AsyncTaskManager::WaitableTask::WaitableTask() = default;
-
-AsyncTaskManager::WaitableTask::~WaitableTask() = default;
 
 }  // namespace dawn::native

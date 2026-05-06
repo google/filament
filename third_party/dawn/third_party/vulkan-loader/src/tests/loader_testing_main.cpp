@@ -27,6 +27,8 @@
 
 #include "test_environment.h"
 
+#include "util/test_defines.h"
+
 // Makes any failed assertion throw, allowing for graceful cleanup of resources instead of hard aborts
 class ThrowListener : public testing::EmptyTestEventListener {
     void OnTestPartResult(const testing::TestPartResult& result) override {
@@ -70,14 +72,16 @@ int main(int argc, char** argv) {
     EnvVarWrapper vk_loader_layers_disable_env_var{"VK_LOADER_LAYERS_DISABLE"};
     EnvVarWrapper vk_loader_debug_env_var{"VK_LOADER_DEBUG"};
     EnvVarWrapper vk_loader_disable_inst_ext_filter_env_var{"VK_LOADER_DISABLE_INST_EXT_FILTER"};
+    EnvVarWrapper vk_loader_disable_select_env_var{"VK_LOADER_DISABLE_SELECT"};
 
-#if COMMON_UNIX_PLATFORMS
+    // even though apple shouldn't have XDG env-vars set, the loader looks for them so we have to clear them
+#if TESTING_COMMON_UNIX_PLATFORMS
     // Set only one of the 4 XDG variables to /etc, let everything else be empty
-    EnvVarWrapper xdg_config_home_env_var{"XDG_CONFIG_HOME", ETC_DIR};
+    EnvVarWrapper xdg_config_home_env_var{"XDG_CONFIG_HOME"};
     EnvVarWrapper xdg_config_dirs_env_var{"XDG_CONFIG_DIRS"};
     EnvVarWrapper xdg_data_home_env_var{"XDG_DATA_HOME"};
     EnvVarWrapper xdg_data_dirs_env_var{"XDG_DATA_DIRS"};
-    EnvVarWrapper home_env_var{"HOME", HOME_DIR};
+    EnvVarWrapper home_env_var{"HOME", "/home/test_home_directory"};
 #endif
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::UnitTest::GetInstance()->listeners().Append(new ThrowListener);

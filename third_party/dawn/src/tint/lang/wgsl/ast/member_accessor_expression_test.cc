@@ -73,26 +73,6 @@ TEST_F(MemberAccessorExpressionDeathTest, Assert_Null_Member) {
         "internal compiler error");
 }
 
-TEST_F(MemberAccessorExpressionDeathTest, Assert_DifferentGenerationID_Struct) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<MemberAccessorExpression>(b2.Expr("structure"), b1.Ident("member"));
-        },
-        "internal compiler error");
-}
-
-TEST_F(MemberAccessorExpressionDeathTest, Assert_DifferentGenerationID_Member) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<MemberAccessorExpression>(b1.Expr("structure"), b2.Ident("member"));
-        },
-        "internal compiler error");
-}
-
 TEST_F(MemberAccessorExpressionDeathTest, Assert_MemberNotTemplated) {
     EXPECT_DEATH_IF_SUPPORTED(
         {

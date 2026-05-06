@@ -16,11 +16,11 @@
 
 #include <jni.h>
 
-#include <functional>
 #include <stdlib.h>
 #include <string.h>
 
 #include <filament/IndexBuffer.h>
+#include <common/JniUtils.h>
 
 #include <backend/BufferDescriptor.h>
 
@@ -29,6 +29,7 @@
 
 using namespace filament;
 using namespace backend;
+using namespace filament::android;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndexBuffer_nCreateBuilder(JNIEnv *env, jclass type) {
@@ -63,7 +64,9 @@ Java_com_google_android_filament_IndexBuffer_nBuilderBuild(JNIEnv *env, jclass t
         jlong nativeBuilder, jlong nativeEngine) {
     IndexBuffer::Builder* builder = (IndexBuffer::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -94,7 +97,9 @@ Java_com_google_android_filament_IndexBuffer_nSetBuffer(JNIEnv *env, jclass type
     BufferDescriptor desc(data, sizeInBytes,
             callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    indexBuffer->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
+    wrapJni(env, [&]() {
+        indexBuffer->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
+    });
 
     return 0;
 }

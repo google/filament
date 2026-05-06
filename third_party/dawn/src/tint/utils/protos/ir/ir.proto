@@ -64,7 +64,10 @@ message Type {
         TypeBuiltinStruct builtin_struct = 19;
         TypeBindingArray binding_array = 20;
         TypeTexelBuffer texel_buffer = 21;
+        TypeBuffer buffer = 23;
     }
+    reserved 22;
+    reserved "resource_binding";
 }
 
 // Non-compound types
@@ -77,6 +80,7 @@ enum TypeBasic {
     f16 = 5;
     i8 = 6;
     u8 = 7;
+    u64 = 8;
 }
 
 message TypeVector {
@@ -91,8 +95,9 @@ message TypeMatrix {
 }
 
 message TypeArray {
+    reserved 2;          // TODO(422199551): Remove in v2
+    reserved "stride";   // TODO(422199551): Remove in v2
     uint32 element = 1;  // Module.types
-    uint32 stride = 2;
     uint32 count = 3;
 }
 
@@ -131,6 +136,7 @@ message TypeDepthTexture {
 message TypeSampledTexture {
     TextureDimension dimension = 1;
     uint32 sub_type = 2;  // Module.types
+    TextureFilterable filterable = 3;
 }
 
 message TypeMultisampledTexture {
@@ -148,10 +154,13 @@ message TypeStorageTexture {
     AccessControl access = 3;
 }
 
+message TypeResourceBinding {}
+
 message TypeExternalTexture {}
 
 message TypeSampler {
     SamplerKind kind = 1;
+    SamplerFiltering filtering = 2;
 }
 
 message TypeInputAttachment {
@@ -162,6 +171,10 @@ message TypeSubgroupMatrix {
     uint32 sub_type = 1;  // Module.types
     uint32 rows = 2;
     uint32 columns = 3;
+}
+
+message TypeBuffer {
+    uint32 count = 1;
 }
 
 enum TypeBuiltinStruct {
@@ -265,6 +278,7 @@ message Function {
     optional Interpolation return_interpolation = 8;
     optional BuiltinValue return_builtin = 9;
     bool return_invariant = 10;
+    optional uint32 subgroup_size = 11;
 }
 
 enum PipelineStage {
@@ -301,7 +315,6 @@ message Instruction {
         InstructionDiscard discard = 6;
         InstructionLet let = 7;
         InstructionVar var = 8;
-        InstructionBitcast bitcast = 9;
         InstructionConstruct construct = 10;
         InstructionConvert convert = 11;
         InstructionAccess access = 12;
@@ -323,6 +336,8 @@ message Instruction {
         InstructionBreakIf break_if = 28;
         InstructionUnreachable unreachable = 29;
     }
+    reserved 9;
+    reserved "bitcast";
 }
 
 message InstructionReturn {}
@@ -497,6 +512,12 @@ enum TextureDimension {
     cube_array = 5;
 }
 
+enum TextureFilterable {
+    filterable_undefined = 0;
+    filterable = 1;
+    unfilterable = 2;
+}
+
 enum TexelFormat {
     bgra8_unorm = 0;
     r8_unorm = 1;
@@ -545,6 +566,12 @@ enum SamplerKind {
     comparison = 1;
 }
 
+enum SamplerFiltering {
+    filtering_undefined = 0;
+    filtering = 1;
+    non_filtering = 2;
+}
+
 enum InterpolationType {
     flat = 0;
     linear = 1;
@@ -578,8 +605,11 @@ enum BuiltinValue {
     clip_distances = 15;
     cull_distance = 16;
     subgroup_id = 17;
-    primitive_id = 18;
+    primitive_index = 18;
     barycentric_coord = 19;
+    num_subgroups = 20;
+    global_invocation_index = 21;
+    workgroup_index = 22;
 }
 
 enum BuiltinFn {
@@ -733,4 +763,19 @@ enum BuiltinFn {
     subgroup_matrix_multiply = 147;
     subgroup_matrix_multiply_accumulate = 148;
     print = 149;
+    reserved 150;
+    reserved "has_binding";
+    reserved 151;
+    reserved "get_binding";
+    subgroup_matrix_scalar_add = 152;
+    subgroup_matrix_scalar_multiply = 153;
+    subgroup_matrix_scalar_subtract = 154;
+    has_resource = 155;
+    get_resource = 156;
+    buffer_view = 157;
+    buffer_length = 158;
+    atomic_store_max = 159;
+    atomic_store_min = 160;
+    bitcast = 161;
+    buffer_array_view = 162;
 }

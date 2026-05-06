@@ -217,7 +217,10 @@ The script offers more features described by executing <code>build.sh -h</code>.
 <li><code>FILAMENT_INSTALL_BACKEND_TEST</code>: Install the backend test library so it can be consumed on iOS</li>
 <li><code>FILAMENT_USE_EXTERNAL_GLES3</code>:   Experimental: Compile Filament against OpenGL ES 3</li>
 <li><code>FILAMENT_SKIP_SAMPLES</code>:         Don't build sample apps</li>
+<li><code>FILAMENT_ENABLE_EXCEPTIONS</code>:    Enable C++ exceptions (default: ON, OFF for iOS). Required for JNI bindings.</li>
+<li><code>FILAMENT_ENABLE_RTTI</code>:          Enable C++ RTTI (default: OFF).</li>
 </ul>
+<p>Note: If you intend to use the JNI library (Android/Java build), you need to have <code>FILAMENT_ENABLE_EXCEPTIONS</code> enabled. If you are using Filament on Android as a pure native library and want to save space, you can disable it (e.g., using <code>./build.sh -E</code>).</p>
 <p>To turn an option on or off:</p>
 <pre><code class="language-shell">cd &lt;cmake-build-directory&gt;
 cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF

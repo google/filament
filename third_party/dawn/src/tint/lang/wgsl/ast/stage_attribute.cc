@@ -30,14 +30,13 @@
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::StageAttribute);
 
 namespace tint::ast {
 
-StageAttribute::StageAttribute(GenerationID pid, NodeID nid, const Source& src, PipelineStage s)
-    : Base(pid, nid, src), stage(s) {}
+StageAttribute::StageAttribute(NodeID nid, const Source& src, PipelineStage s)
+    : Base(nid, src), stage(s) {}
 
 StageAttribute::~StageAttribute() = default;
 
@@ -53,12 +52,6 @@ std::string StageAttribute::Name() const {
             break;
     }
     return "stage";
-}
-
-const StageAttribute* StageAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<StageAttribute>(src, stage);
 }
 
 }  // namespace tint::ast

@@ -312,7 +312,7 @@ func TestLoadExternals(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			jsonFilePath := "/foo.json"
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if !testCase.skipWritingFile {
 				err := wrapper.WriteFile(jsonFilePath, []byte(testCase.jsonContent), 0o700)
 				require.NoErrorf(t, err, "Error writing file: %v", err)
@@ -331,7 +331,7 @@ func TestLoadExternals(t *testing.T) {
 			// We can't compare the entire structs to each other since
 			// includePatternMatch will be an anonymous function.
 			require.Equal(t, testCase.want.externalsJsonPath, p.externalsJsonPath)
-			require.Equal(t, len(testCase.want.externals), len(p.externals))
+			require.Len(t, p.externals, len(testCase.want.externals))
 			for k := range p.externals {
 				require.Contains(t, testCase.want.externals, k)
 				require.Equal(t, testCase.want.externals[k].Name, p.externals[k].Name)
@@ -356,7 +356,7 @@ func TestPopulateSourceFiles(t *testing.T) {
 			name:             "Non-existent root",
 			skipFileCreation: true,
 			wantErr:          true,
-			wantErrMsg:       "open /root: file does not exist",
+			wantErrMsg:       "open root: file does not exist",
 		},
 		{ /////////////////////////////////////////////////////////////////////////
 			name: "Success",
@@ -469,7 +469,7 @@ func TestPopulateSourceFiles(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			wrapper := oswrapper.CreateMemMapOSWrapper()
+			wrapper := oswrapper.CreateFSTestOSWrapper()
 			if !testCase.skipFileCreation {
 				parentDirs := []string{"root", "not_root"}
 				childDirs := []string{"a", "b", "fuzzers"}
@@ -896,7 +896,7 @@ func TestCheckInclude(t *testing.T) {
 }
 
 func TestCheckForCycles_EmptyGraph(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	project := &Project{
 		Targets: container.NewMap[TargetName, *Target](),
 	}
@@ -906,7 +906,7 @@ func TestCheckForCycles_EmptyGraph(t *testing.T) {
 }
 
 func TestCheckForCycles_NoCycle(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	project := &Project{}
 	project.Targets = map[TargetName]*Target{
 		"target_1": &Target{
@@ -929,7 +929,7 @@ func TestCheckForCycles_NoCycle(t *testing.T) {
 }
 
 func TestCheckForCycles_Cycle(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	project := &Project{}
 	project.Targets = map[TargetName]*Target{
 		"target_1": &Target{
@@ -958,7 +958,8 @@ func TestCheckForCycles_Cycle(t *testing.T) {
 }
 
 func TestEmitDotFile_Empty(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	wrapper.MkdirAll("/root", 0o700)
 	project := &Project{
 		Targets: container.NewMap[TargetName, *Target](),
 		Root:    "/root",
@@ -983,7 +984,8 @@ func TestEmitDotFile_Empty(t *testing.T) {
 }
 
 func TestEmitDotFile_OnlyMatchingKindIncluded(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper := oswrapper.CreateFSTestOSWrapper()
+	wrapper.MkdirAll("/root", 0o700)
 	project := &Project{
 		Root: "/root",
 	}

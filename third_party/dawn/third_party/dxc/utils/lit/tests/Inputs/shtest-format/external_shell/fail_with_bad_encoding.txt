@@ -1,5 +1,0 @@
-# Run a command that fails with error on stdout.
-#
-# RUN: %S/write-bad-encoding.sh
-# RUN: false
-

@@ -127,6 +127,31 @@ TEST_F(SpirvParserTest, Import_VulkanMemoryModel_IgnoredImport) {
                   SPV_ENV_UNIVERSAL_1_3);
 }
 
+TEST_F(SpirvParserTest, Import_16BitStorage_IgnoredImport) {
+    EXPECT_IR_SPV(R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_16bit_storage"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+
+       %main = OpFunction %void None %void_fn
+ %main_start = OpLabel
+               OpReturn
+               OpFunctionEnd
+)",
+                  R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    ret
+  }
+}
+)",
+                  SPV_ENV_UNIVERSAL_1_0);
+}
+
 TEST_F(SpirvParserTest, Import_NonSemantic_IgnoredExtInsts) {
     // This is the clspv-compiled output of this OpenCL C:
     //    kernel void foo(global int*A) { A=A; }

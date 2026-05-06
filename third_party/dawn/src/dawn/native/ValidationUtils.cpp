@@ -39,7 +39,7 @@ MaybeError ValidateFloat(std::string_view floatName, float f) {
 MaybeError ValidateColor(std::string_view colorName, const Color& color) {
     DAWN_INVALID_IF(!std::isfinite(color.r) || !std::isfinite(color.g) || !std::isfinite(color.b) ||
                         !std::isfinite(color.a),
-                    "Color %s (%s) contains a NaN or Inf.", colorName, &color);
+                    "Color %s (%s) contains a NaN or Inf.", colorName, color);
     return {};
 }
 

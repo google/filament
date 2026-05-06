@@ -68,6 +68,11 @@ class GPUComputePassEncoder final : public interop::GPUComputePassEncoder {
                       interop::Uint32Array dynamicOffsetsData,
                       interop::GPUSize64 dynamicOffsetsDataStart,
                       interop::GPUSize32 dynamicOffsetsDataLength) override;
+    void setImmediates(Napi::Env env,
+                       interop::GPUSize32 rangeOffset,
+                       interop::AllowSharedBufferSource data,
+                       interop::GPUSize64 dataOffsetElements,
+                       std::optional<interop::GPUSize64> sizeElements) override;
     void pushDebugGroup(Napi::Env, std::string groupLabel) override;
     void popDebugGroup(Napi::Env) override;
     void insertDebugMarker(Napi::Env, std::string markerLabel) override;

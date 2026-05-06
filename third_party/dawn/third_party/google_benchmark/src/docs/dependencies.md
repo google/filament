@@ -5,7 +5,7 @@ particular the ["Build Systems" section](https://opensource.google/documentation
 
 ## CMake
 
-The current supported version is CMake 3.10 as of 2023-08-10. Most modern
+The current supported version is CMake 3.13 as of 2024-10-24. Most modern
 distributions include newer versions, for example:
 
 * Ubuntu 20.04 provides CMake 3.16.3

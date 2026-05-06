@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gtest/gtest.h"
 #include "src/utils/chromium_test_compat/chromium_test_compat.h"
 #include "unittests/validation/ValidationTest.h"
-
-#include "gtest/gtest.h"
 
 int main(int argc, char** argv) {
     dawn::SubstituteChromiumArgs(argc, argv);

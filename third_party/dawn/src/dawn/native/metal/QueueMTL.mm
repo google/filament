@@ -27,11 +27,13 @@
 
 #include "dawn/native/metal/QueueMTL.h"
 
+#include "dawn/common/FutureUtils.h"
 #include "dawn/common/Math.h"
 #include "dawn/native/Buffer.h"
 #include "dawn/native/CommandValidation.h"
 #include "dawn/native/Commands.h"
 #include "dawn/native/DynamicUploader.h"
+#include "dawn/native/Instance.h"
 #include "dawn/native/MetalBackend.h"
 #include "dawn/native/PhysicalDevice.h"
 #include "dawn/native/metal/CommandBufferMTL.h"
@@ -40,6 +42,21 @@
 #include "dawn/platform/tracing/TraceEvent.h"
 
 namespace dawn::native::metal {
+
+namespace {
+class CommandsScheduledEvent : public EventManager::TrackedEvent {
+  public:
+    // It's important to use AllowSpontaneous for these events since we don't want to leak them if
+    // the client forgets about the associated future and never calls WaitAny on it.
+    CommandsScheduledEvent()
+        : TrackedEvent(wgpu::CallbackMode::AllowSpontaneous, AcquireRef(new WaitListEvent())) {}
+
+  private:
+    void Complete(EventCompletionType completionType) override {
+        // There's nothing to do here since there are no callbacks associated with this event.
+    }
+};
+}  // namespace
 
 ResultOrError<Ref<Queue>> Queue::Create(Device* device, const QueueDescriptor* descriptor) {
     Ref<Queue> queue = AcquireRef(new Queue(device, descriptor));
@@ -51,13 +68,12 @@ Queue::Queue(Device* device, const QueueDescriptor* descriptor) : QueueBase(devi
 
 Queue::~Queue() = default;
 
-void Queue::DestroyImpl() {
+void Queue::DestroyImpl(DestroyReason reason) {
     // Forget all pending commands.
     mCommandContext.AcquireCommands();
-    UpdateWaitingEvents(kMaxExecutionSerial);
+    UpdateCommandsScheduledEvents(kMaxExecutionSerial);
+    mLastSubmittedCommands->Reset();
     mCommandQueue = nullptr;
-    mLastSubmittedCommands = nullptr;
-
     mSharedFence = nullptr;
     // Don't free `mMtlSharedEvent` because it can be queried after device destruction for
     // synchronization needs. However, we destroy the `mSharedFence` to release its device ref.
@@ -74,7 +90,7 @@ MaybeError Queue::Initialize() {
             // logging callback.
             NSError* error = nil;
             MTLLogStateDescriptor* logStateDesc = [MTLLogStateDescriptor new];
-            logStateDesc.bufferSize = 4096;
+            logStateDesc.bufferSize = 65536;
             logStateDesc.level = MTLLogLevelInfo;
             id<MTLLogState> mtlLogState = [mtlDevice newLogStateWithDescriptor:logStateDesc
                                                                          error:&error];
@@ -112,26 +128,25 @@ MaybeError Queue::Initialize() {
     return mCommandContext.PrepareNextCommandBuffer(*mCommandQueue);
 }
 
-void Queue::UpdateWaitingEvents(ExecutionSerial completedSerial) {
-    mWaitingEvents.Use([&](auto events) {
-        for (auto& s : events->IterateUpTo(completedSerial)) {
-            std::move(s)->Signal();
+void Queue::UpdateCommandsScheduledEvents(ExecutionSerial scheduledSerial) {
+    std::vector<Ref<EventManager::TrackedEvent>> readyEvents;
+    mCommandsScheduledEvents.Use([&](auto events) {
+        for (auto& event : events->IterateUpTo(scheduledSerial)) {
+            readyEvents.emplace_back(std::move(event));
         }
-        events->ClearUpTo(completedSerial);
+        events->ClearUpTo(scheduledSerial);
     });
+    for (auto& event : readyEvents) {
+        GetDevice()->GetInstance()->GetEventManager()->SetFutureReady(event.Get());
+    }
 }
 
-MaybeError Queue::WaitForIdleForDestruction() {
+MaybeError Queue::WaitForIdleForDestructionImpl() {
     // Forget all pending commands.
     mCommandContext.AcquireCommands();
-    DAWN_TRY(CheckPassedSerials());
 
-    // Wait for all commands to be finished so we can free resources
-    while (GetCompletedCommandSerial() != GetLastSubmittedCommandSerial()) {
-        usleep(100);
-        DAWN_TRY(CheckPassedSerials());
-    }
-
+    DAWN_TRY(WaitForQueueSerial(GetLastSubmittedCommandSerial(),
+                                std::numeric_limits<Nanoseconds>::max()));
     return {};
 }
 
@@ -146,12 +161,35 @@ void Queue::WaitForCommandsToBeScheduled() {
     // Only lock the object while we take a reference to it, otherwise we could block further
     // progress if the driver calls the scheduled handler (which also acquires the lock) before
     // finishing the waitUntilScheduled.
-    NSPRef<id<MTLCommandBuffer>> lastSubmittedCommands;
-    {
-        std::lock_guard<std::mutex> lock(mLastSubmittedCommandsMutex);
-        lastSubmittedCommands = mLastSubmittedCommands;
-    }
+    NSPRef<id<MTLCommandBuffer>> lastSubmittedCommands = mLastSubmittedCommands->Get();
     [*lastSubmittedCommands waitUntilScheduled];
+}
+
+FutureID Queue::GetCommandsScheduledFuture() {
+    if (!IsAlive()) {
+        return kNullFutureID;
+    }
+
+    auto commandsScheduledEvent = AcquireRef(new CommandsScheduledEvent());
+    bool alreadyScheduled = false;
+
+    mCommandsScheduledEvents.Use([&](auto events) {
+        // `mLastSubmittedCommands` is set to null when the scheduled handler has run in which case
+        // the commands are already scheduled; otherwise enqueue the event for completion later.
+        // There's no race since `mLastSubmittedCommands` is cleared first in the scheduled handler
+        // and we don't enqueue our new event if that has already happened.
+        if (mLastSubmittedCommands->Get() == nullptr) {
+            alreadyScheduled = true;
+        } else {
+            events->Enqueue(commandsScheduledEvent, GetLastSubmittedCommandSerial());
+        }
+    });
+
+    auto* eventManager = GetDevice()->GetInstance()->GetEventManager();
+    if (alreadyScheduled) {
+        eventManager->SetFutureReady(commandsScheduledEvent.Get());
+    }
+    return eventManager->TrackEvent(std::move(commandsScheduledEvent));
 }
 
 CommandRecordingContext* Queue::GetPendingCommandContext(SubmitMode submitMode) {
@@ -173,34 +211,33 @@ MaybeError Queue::SubmitPendingCommandBuffer() {
     NSPRef<id<MTLCommandBuffer>> pendingCommands = mCommandContext.AcquireCommands();
 
     // Replace mLastSubmittedCommands with the mutex held so we avoid races between the
-    // schedule handler and this code.
-    {
-        std::lock_guard<std::mutex> lock(mLastSubmittedCommandsMutex);
-        mLastSubmittedCommands = pendingCommands;
-    }
+    // scheduled handler and this code.
+    mLastSubmittedCommands.Use(
+        [&](auto lastSubmittedCommands) { *lastSubmittedCommands = pendingCommands; });
 
     // Make a local copy of the pointer to the commands because it's not clear how ObjC blocks
     // handle types with copy / move constructors being referenced in the block.
     id<MTLCommandBuffer> pendingCommandsPointer = pendingCommands.Get();
+
+    // Update the completed serial once the completed handler is fired. Make a local copy of the
+    // pending command serial so it is captured by value.
+    ExecutionSerial pendingSerial = GetPendingCommandSerial();
+
     [*pendingCommands addScheduledHandler:^(id<MTLCommandBuffer>) {
-        // This is DRF because we hold the mutex for mLastSubmittedCommands and pendingCommands
-        // is a local value (and not the member itself).
-        std::lock_guard<std::mutex> lock(mLastSubmittedCommandsMutex);
-        if (this->mLastSubmittedCommands.Get() == pendingCommandsPointer) {
-            this->mLastSubmittedCommands = nullptr;
-        }
+        this->mLastSubmittedCommands.Use([&](auto lastSubmittedCommands) {
+            if (*lastSubmittedCommands == pendingCommandsPointer) {
+                *lastSubmittedCommands = nullptr;
+            }
+        });
+        this->UpdateCommandsScheduledEvents(pendingSerial);
     }];
 
-    // Update the completed serial once the completed handler is fired. Make a local copy of
-    // mLastSubmittedSerial so it is captured by value.
-    ExecutionSerial pendingSerial = GetPendingCommandSerial();
-    // This ObjC block runs on a different thread
+    // This ObjC block runs on a different thread.
     [*pendingCommands addCompletedHandler:^(id<MTLCommandBuffer>) {
         TRACE_EVENT_ASYNC_END0(platform, GPUWork, "DeviceMTL::SubmitPendingCommandBuffer",
                                uint64_t(pendingSerial));
 
-        this->UpdateCompletedSerialTo(pendingSerial);
-        this->UpdateWaitingEvents(pendingSerial);
+        this->UpdateCompletedSerialTo(QueuePriority::Lowest, pendingSerial);
     }];
 
     TRACE_EVENT_ASYNC_BEGIN0(platform, GPUWork, "DeviceMTL::SubmitPendingCommandBuffer",
@@ -263,29 +300,6 @@ void Queue::ForceEventualFlushOfCommands() {
     if (mCommandContext.WasUsed()) {
         mCommandContext.SetNeedsSubmit();
     }
-}
-
-Ref<WaitListEvent> Queue::CreateWorkDoneEvent(ExecutionSerial serial) {
-    Ref<WaitListEvent> completionEvent = AcquireRef(new WaitListEvent());
-    mWaitingEvents.Use([&](auto events) {
-        // Now that we hold the lock, check against completed serial before inserting.
-        // This serial may have just completed. If it did, mark the event complete.
-        // Also check for device loss. Otherwise, we could enqueue the event
-        // after mWaitingEvents has been flushed for device loss, and it'll never get cleaned up.
-        if (GetDevice()->IsLost() || serial <= GetCompletedCommandSerial()) {
-            completionEvent->Signal();
-        } else {
-            // Insert the event into the list which will be signaled inside Metal's queue
-            // completion handler.
-            events->Enqueue(completionEvent, serial);
-        }
-    });
-    return completionEvent;
-}
-
-ResultOrError<ExecutionSerial> Queue::WaitForQueueSerialImpl(ExecutionSerial waitSerial,
-                                                             Nanoseconds timeout) {
-    return CreateWorkDoneEvent(waitSerial)->Wait(timeout) ? waitSerial : kWaitSerialTimeout;
 }
 
 }  // namespace dawn::native::metal

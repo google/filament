@@ -27,11 +27,11 @@
 
 #include "dawn/native/d3d/D3DError.h"
 
+#include "dawn/common/windows_with_undefs.h"
+
 #include <iomanip>
 #include <sstream>
 #include <string>
-
-#include "dawn/common/windows_with_undefs.h"
 
 namespace dawn::native::d3d {
 const char* HRESULTAsString(HRESULT result) {

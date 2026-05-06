@@ -182,7 +182,9 @@ function(dawn_install_target name)
   # When building in debug mode with MSVC, install PDB files together with binaries
   if (MSVC)
     get_target_property(target_type "${name}" TYPE)
-    if ((target_type STREQUAL "STATIC_LIBRARY") OR (target_type STREQUAL "SHARED_LIBRARY") OR (target_type STREQUAL "EXECUTABLE"))
+    # Only shared libraries and executables generate PDB files through the linker
+    # Static libraries are created by the archiver and don't generate PDB files
+    if ((target_type STREQUAL "SHARED_LIBRARY") OR (target_type STREQUAL "EXECUTABLE"))
       install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
     endif()
   endif (MSVC)

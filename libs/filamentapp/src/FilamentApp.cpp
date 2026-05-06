@@ -78,6 +78,10 @@
 #include <memory>
 #include <vector>
 
+#ifdef __EXCEPTIONS
+#include <exception>
+#endif
+
 #include <stdint.h>
 
 #include "generated/resources/filamentapp.h"
@@ -248,6 +252,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     SDL_Window* sdlWindow = window->getSDLWindow();
 
+#ifdef __EXCEPTIONS
+try {
+#endif
     while (!mClosed) {
         if (mWindowTitle != SDL_GetWindowTitle(sdlWindow)) {
             SDL_SetWindowTitle(sdlWindow, mWindowTitle.c_str());
@@ -262,7 +269,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             cameraFocalLength = mCameraFocalLength;
             cameraNear = mCameraNear;
             cameraFar = mCameraFar;
-        }
+            }
 
         if (!UTILS_HAS_THREADING) {
             mEngine->execute();
@@ -371,10 +378,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
-                        case SDL_WINDOWEVENT_RESIZED:
+                    case SDL_WINDOWEVENT_RESIZED:
                             window->resize();
                             break;
-                        default:
+                    default:
                             break;
                     }
                     break;
@@ -562,6 +569,16 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             ++mSkippedFrames;
         }
     }
+#ifdef __EXCEPTIONS
+} catch (Panic const& e) {
+    LOG(ERROR) << "Filament exception (terminate cleanly): " << e.what();
+    LOG(ERROR) << e.getCallStack();
+} catch (std::exception const& e) {
+    LOG(ERROR) << "System exception (terminate cleanly): " << e.what();
+} catch (...) {
+    LOG(ERROR) << "Unknown exception! (terminate cleanly)";
+}
+#endif
 
     if (mImGuiHelper) {
         mImGuiHelper.reset();

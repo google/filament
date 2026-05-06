@@ -46,7 +46,7 @@ class SpirvReader_DecomposeStridedArrayTest : public core::ir::transform::Transf
         }
         return ty.Get<spirv::type::ExplicitLayoutArray>(
             elem_ty, ty.Get<core::type::ConstantArrayCount>(static_cast<uint32_t>(count)),
-            elem_ty->Align(), stride * count, stride);
+            stride * count, stride);
     }
 
     const spirv::type::ExplicitLayoutArray* RuntimeArray(const core::type::Type* elem_ty,
@@ -55,7 +55,7 @@ class SpirvReader_DecomposeStridedArrayTest : public core::ir::transform::Transf
             stride = tint::RoundUp(elem_ty->Align(), elem_ty->Size());
         }
         return ty.Get<spirv::type::ExplicitLayoutArray>(
-            elem_ty, ty.Get<core::type::RuntimeArrayCount>(), elem_ty->Align(), stride, stride);
+            elem_ty, ty.Get<core::type::RuntimeArrayCount>(), stride, stride);
     }
 };
 
@@ -997,7 +997,7 @@ TEST_F(SpirvReader_DecomposeStridedArrayTest, RuntimeArray) {
     b.Append(f->Block(), [&] {
         auto* access = b.Access<ptr<storage, u32, read_write>>(var, 4_u);
         b.Let("value", b.Load(access));
-        b.Store(access, b.Add<u32>(b.Load(access), 1_u));
+        b.Store(access, b.Add(b.Load(access), 1_u));
         b.Return(f);
     });
 
@@ -1061,12 +1061,12 @@ TEST_F(SpirvReader_DecomposeStridedArrayTest, MultipleVariables_DifferentElement
     var_c->SetBindingPoint(0, 2);
     mod.root_block->Append(var_c);
 
-    auto* array_type_d = Array(ty.vec4<f32>(), 1, 16);
+    auto* array_type_d = Array(ty.vec4f(), 1, 16);
     auto* var_d = b.Var("d", ty.ptr(storage, array_type_d, read_write));
     var_d->SetBindingPoint(0, 3);
     mod.root_block->Append(var_d);
 
-    auto* array_type_e = RuntimeArray(ty.vec2<i32>(), 64);
+    auto* array_type_e = RuntimeArray(ty.vec2i(), 64);
     auto* var_e = b.Var("e", ty.ptr(storage, array_type_e, read_write));
     var_e->SetBindingPoint(0, 4);
     mod.root_block->Append(var_e);
@@ -1174,7 +1174,7 @@ TEST_F(SpirvReader_DecomposeStridedArrayTest, NaturalStride) {
     b.Append(f->Block(), [&] {
         auto* access = b.Access<ptr<storage, u32, read_write>>(var, 4_u);
         b.Let("value", b.Load(access));
-        b.Store(access, b.Add<u32>(b.Load(access), 1_u));
+        b.Store(access, b.Add(b.Load(access), 1_u));
         b.Return(f);
     });
 
@@ -1223,7 +1223,7 @@ TEST_F(SpirvReader_DecomposeStridedArrayTest, PreserveIOAttributes) {
     auto* struct_ty = ty.Struct(
         mod.symbols.New("MyStruct"),
         {
-            {mod.symbols.New("a"), ty.vec4<f32>(), {.builtin = core::BuiltinValue::kPosition}},
+            {mod.symbols.New("a"), ty.vec4f(), {.builtin = core::BuiltinValue::kPosition}},
             {mod.symbols.New("b"), array_type, {.builtin = core::BuiltinValue::kClipDistances}},
         });
     auto* var = b.Var("var", ty.ptr(private_, struct_ty));

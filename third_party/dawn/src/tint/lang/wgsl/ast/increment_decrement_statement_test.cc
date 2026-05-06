@@ -66,15 +66,5 @@ TEST_F(IncrementDecrementStatementTest, Decrement) {
     EXPECT_FALSE(i->increment);
 }
 
-TEST_F(IncrementDecrementStatementDeathTest, Assert_DifferentGenerationID_Expr) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<IncrementDecrementStatement>(b2.Expr(true), true);
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

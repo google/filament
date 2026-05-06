@@ -25,14 +25,11 @@
 //* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//* Return command handlers
+// Command handlers & doers
 {% for command in cmd_records["return command"] %}
-    WireResult Handle{{command.name.CamelCase()}}(DeserializeBuffer* deserializeBuffer);
-{% endfor %}
-
-//* Return command doers
-{% for command in cmd_records["return command"] %}
-    WireResult Do{{command.name.CamelCase()}}(
+    {% set Suffix = command.name.CamelCase() %}
+    WireResult Handle{{Suffix}}(DeserializeBuffer* deserializeBuffer);
+    WireResult Do{{Suffix}}(
         {%- for member in command.members -%}
             {%- if member.handle_type -%}
                 {{as_wireType(member.handle_type)}} {{as_varName(member.name)}}
@@ -42,4 +39,5 @@
             {%- if not loop.last -%}, {% endif %}
         {%- endfor -%}
     );
+
 {% endfor %}

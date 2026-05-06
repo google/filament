@@ -42,8 +42,8 @@ enum class VulkanLayout : uint8_t {
     TRANSFER_SRC,
     // For the destination of a copy operation.
     TRANSFER_DST,
-    // For using a depth texture as an attachment.
-    DEPTH_ATTACHMENT,
+    // For using a depth/stencil texture as an attachment.
+    DEPTH_STENCIL_ATTACHMENT,
     // For using a depth texture both as an attachment and as a sampler.
     DEPTH_SAMPLER,
     // For swapchain images that will be presented.
@@ -77,7 +77,7 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
             return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         case VulkanLayout::TRANSFER_DST:
             return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        case VulkanLayout::DEPTH_ATTACHMENT:
+        case VulkanLayout::DEPTH_STENCIL_ATTACHMENT:
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         case VulkanLayout::DEPTH_SAMPLER:
             return VK_IMAGE_LAYOUT_GENERAL;

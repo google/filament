@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 namespace dawn::native {
 
@@ -87,12 +88,14 @@ class BuddyAllocator {
         BlockState mState;
 
         struct FreeLinks {
-            BuddyBlock* pPrev;
-            BuddyBlock* pNext;
+            // RAW_PTR_EXCLUSION: #union
+            RAW_PTR_EXCLUSION BuddyBlock* pPrev;
+            RAW_PTR_EXCLUSION BuddyBlock* pNext;
         };
 
         struct SplitLink {
-            BuddyBlock* pLeft;
+            // RAW_PTR_EXCLUSION: #union
+            RAW_PTR_EXCLUSION BuddyBlock* pLeft;
         };
 
         union {

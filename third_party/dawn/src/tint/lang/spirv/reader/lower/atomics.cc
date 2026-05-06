@@ -319,6 +319,7 @@ struct State {
                     [&](core::ir::Access* a) {
                         CheckForStructForking(a);
                         values_to_convert_.Push(a->Object());
+                        values_to_fix_usages_.Push(a->Result());
                     },
                     [&](core::ir::Let* l) {
                         values_to_convert_.Push(l->Value());
@@ -422,7 +423,7 @@ struct State {
         const auto& args = uc->Args();
 
         Vector<size_t, 2> to_convert;
-        for (size_t i = 0; i < args.Length(); ++i) {
+        for (size_t i = 0; i < args.size(); ++i) {
             if (params[i]->Type() != args[i]->Type()) {
                 to_convert.Push(i);
             }
@@ -553,15 +554,14 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Atomics(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.Atomics",
-                                          core::ir::Capabilities{
-                                              core::ir::Capability::kAllowMultipleEntryPoints,
-                                              core::ir::Capability::kAllowOverrides,
-                                              core::ir::Capability::kAllowNonCoreTypes,
-                                          });
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir,
+                core::ir::Capabilities{
+                    core::ir::Capability::kAllowMultipleEntryPoints,
+                    core::ir::Capability::kAllowOverrides,
+                    core::ir::Capability::kAllowNonCoreTypes,
+                    core::ir::Capability::kAllowPointerToHandle,
+                },
+                "before spirv.Atomics");
 
     State{ir}.Process();
 

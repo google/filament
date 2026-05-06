@@ -37,23 +37,13 @@ namespace tint::ast {
 class VariableDeclStatement final : public Castable<VariableDeclStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param source the variable statement source
     /// @param variable the variable
-    VariableDeclStatement(GenerationID pid,
-                          NodeID nid,
-                          const Source& source,
-                          const Variable* variable);
+    VariableDeclStatement(NodeID nid, const Source& source, const Variable* variable);
 
     /// Destructor
     ~VariableDeclStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const VariableDeclStatement* Clone(CloneContext& ctx) const override;
 
     /// The variable
     const Variable* const variable;

@@ -54,26 +54,6 @@ if (dawn_enable_vulkan) {
       dawn_enable_vulkan_loader && dawn_vulkan_loader_dir != ""
 }
 
-group("abseil") {
-  # When building within Chromium or ANGLE we need to include "//third_party/abseil-cpp:absl" while
-  # it's beneficial to be more specific with standalone Dawn, especially when it comes to
-  # including it as a dependency in other projects (such as Skia).
-  if (build_with_chromium || build_with_angle) {
-    public_deps = [ "$dawn_abseil_dir:absl" ]
-  } else {
-    public_deps = [
-      "${dawn_root}/third_party/gn/abseil-cpp:bits",
-      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
-      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
-      "${dawn_root}/third_party/gn/abseil-cpp:inlined_vector",
-      "${dawn_root}/third_party/gn/abseil-cpp:span",
-      "${dawn_root}/third_party/gn/abseil-cpp:str_format",
-      "${dawn_root}/third_party/gn/abseil-cpp:string_view",
-      "${dawn_root}/third_party/gn/abseil-cpp:strings",
-    ]
-  }
-}
-
 config("internal") {
   configs = [
     "${dawn_root}/src/dawn/common:internal_config",
@@ -164,6 +144,11 @@ source_set("headers") {
   ]
 }
 
+if (dawn_standalone && (dawn_enable_d3d11 || dawn_enable_d3d12)) {
+  # Use ANGLE's target as it's always available in standalone builds
+  _copy_fxc_dll_target = "//third_party/angle:copy_compiler_dll"
+}
+
 # The meat of the compilation for dawn native so that we can cheaply have
 # shared_library / static_library versions of it. It compiles all the files
 # except those that define exported symbols.
@@ -172,13 +157,16 @@ source_set("sources") {
     ":headers",
     ":utils_gen",
     "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/tint/api",
+    "${dawn_root}/src/tint/api/common",
     "${dawn_root}/src/tint/lang/wgsl",
   ]
   defines = []
   libs = []
   data_deps = []
   public_configs = []
+  include_dirs = []
   configs += [
     ":internal",
     "${dawn_root}/src/tint:tint_public_config",
@@ -194,10 +182,14 @@ source_set("sources") {
   # FooBackend.cpp need to be public deps so they are propagated to the
   # dawn native target
   public_deps = [
-    ":abseil",
+    "${dawn_root}:abseil",
     "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
     "${dawn_root}/src/dawn/platform",
   ]
+
+  if (defined(_copy_fxc_dll_target)) {
+    deps += [ _copy_fxc_dll_target ]
+  }
 
   sources = get_target_outputs(":utils_gen")
   sources += [
@@ -324,6 +316,7 @@ source_set("sources") {
     "ObjectBase.h",
     "ObjectContentHasher.cpp",
     "ObjectContentHasher.h",
+    "ObjectLabel.h",
     "PassResourceUsage.h",
     "PassResourceUsageTracker.cpp",
     "PassResourceUsageTracker.h",
@@ -363,6 +356,10 @@ source_set("sources") {
     "ResourceHeapAllocator.h",
     "ResourceMemoryAllocation.cpp",
     "ResourceMemoryAllocation.h",
+    "ResourceTable.cpp",
+    "ResourceTable.h",
+    "ResourceTableDefaultResources.cpp",
+    "ResourceTableDefaultResources.h",
     "RingBufferAllocator.cpp",
     "RingBufferAllocator.h",
     "Sampler.cpp",
@@ -391,8 +388,8 @@ source_set("sources") {
     "SwapChain.h",
     "SystemEvent.cpp",
     "SystemEvent.h",
-    "SystemHandle.cpp",
-    "SystemHandle.h",
+    "TexelBufferView.cpp",
+    "TexelBufferView.h",
     "Texture.cpp",
     "Texture.h",
     "TintUtils.cpp",
@@ -407,6 +404,7 @@ source_set("sources") {
     "WaitAnySystemEvent.h",
     "WaitListEvent.cpp",
     "WaitListEvent.h",
+    "dawn_platform.cpp",
     "dawn_platform.h",
     "stream/BlobSource.cpp",
     "stream/BlobSource.h",
@@ -552,9 +550,9 @@ source_set("sources") {
 
   if (dawn_enable_d3d12) {
     if (dawn_use_built_dxc) {
-      deps += [ "$dawn_root/third_party/gn/dxc:dxcompiler" ]
+      deps += [ "${dawn_dxc_gn_dir}:dxcompiler" ]
       defines += [ "DAWN_USE_BUILT_DXC" ]
-      data_deps += [ "$dawn_root/third_party/gn/dxc:copy_dxil_dll" ]
+      data_deps += [ "${dawn_dxc_gn_dir}:copy_dxil_dll" ]
     }
     libs += [ "dxguid.lib" ]
     sources += [
@@ -608,6 +606,8 @@ source_set("sources") {
       "d3d12/ResourceAllocatorManagerD3D12.h",
       "d3d12/ResourceHeapAllocationD3D12.cpp",
       "d3d12/ResourceHeapAllocationD3D12.h",
+      "d3d12/ResourceTableD3D12.cpp",
+      "d3d12/ResourceTableD3D12.h",
       "d3d12/SamplerD3D12.cpp",
       "d3d12/SamplerD3D12.h",
       "d3d12/SamplerHeapCacheD3D12.cpp",
@@ -714,20 +714,57 @@ source_set("sources") {
     sources += [
       "webgpu/BackendWGPU.cpp",
       "webgpu/BackendWGPU.h",
+      "webgpu/BindGroupLayoutWGPU.cpp",
+      "webgpu/BindGroupLayoutWGPU.h",
+      "webgpu/BindGroupWGPU.cpp",
+      "webgpu/BindGroupWGPU.h",
       "webgpu/BufferWGPU.cpp",
       "webgpu/BufferWGPU.h",
+      "webgpu/CaptureContext.cpp",
+      "webgpu/CaptureContext.h",
+      "webgpu/CommandBufferHelpers.cpp",
+      "webgpu/CommandBufferHelpers.h",
       "webgpu/CommandBufferWGPU.cpp",
       "webgpu/CommandBufferWGPU.h",
+      "webgpu/ComputePipelineWGPU.cpp",
+      "webgpu/ComputePipelineWGPU.h",
       "webgpu/DeviceWGPU.cpp",
       "webgpu/DeviceWGPU.h",
+      "webgpu/ExternalTextureWGPU.cpp",
+      "webgpu/ExternalTextureWGPU.h",
       "webgpu/Forward.h",
       "webgpu/ObjectWGPU.h",
       "webgpu/PhysicalDeviceWGPU.cpp",
       "webgpu/PhysicalDeviceWGPU.h",
+      "webgpu/PipelineLayoutWGPU.cpp",
+      "webgpu/PipelineLayoutWGPU.h",
+      "webgpu/QuerySetWGPU.cpp",
+      "webgpu/QuerySetWGPU.h",
       "webgpu/QueueWGPU.cpp",
       "webgpu/QueueWGPU.h",
+      "webgpu/RecordableObject.cpp",
+      "webgpu/RecordableObject.h",
+      "webgpu/RenderBundleWGPU.cpp",
+      "webgpu/RenderBundleWGPU.h",
+      "webgpu/RenderPipelineWGPU.cpp",
+      "webgpu/RenderPipelineWGPU.h",
+      "webgpu/SamplerWGPU.cpp",
+      "webgpu/SamplerWGPU.h",
+      "webgpu/Serialization.cpp",
+      "webgpu/Serialization.h",
+      "webgpu/ShaderModuleWGPU.cpp",
+      "webgpu/ShaderModuleWGPU.h",
+      "webgpu/SharedFenceWGPU.cpp",
+      "webgpu/SharedFenceWGPU.h",
+      "webgpu/SharedTextureMemoryWGPU.cpp",
+      "webgpu/SharedTextureMemoryWGPU.h",
+      "webgpu/TextureWGPU.cpp",
+      "webgpu/TextureWGPU.h",
+      "webgpu/ToWGPU.cpp",
+      "webgpu/ToWGPU.h",
       "webgpu/WebGPUError.h",
     ]
+    deps += [ "${dawn_root}/src/dawn:serialization" ]
   }
 
   if ((dawn_enable_opengl || dawn_enable_vulkan) &&
@@ -745,8 +782,8 @@ source_set("sources") {
   if (dawn_enable_opengl) {
     public_deps += [
       ":opengl_loader_gen",
-      "${dawn_root}/src/tint/api/common:common",
-      "${dawn_root}/third_party/khronos:khronos_platform",
+      "${dawn_root}/src/tint/api/common",
+      "${dawn_root}/third_party/EGL-Registry:khronos_platform",
     ]
     sources += get_target_outputs(":opengl_loader_gen")
     sources += [
@@ -814,7 +851,7 @@ source_set("sources") {
       "opengl/UtilsGL.h",
       "opengl/opengl_platform.h",
     ]
-    include_dirs = [ "//third_party/khronos" ]
+    include_dirs += [ "//third_party/EGL-Registry" ]
   }
 
   if (dawn_enable_vulkan) {
@@ -846,13 +883,14 @@ source_set("sources") {
       "vulkan/Forward.h",
       "vulkan/FramebufferCache.cpp",
       "vulkan/FramebufferCache.h",
+      "vulkan/MemoryTypeSelector.cpp",
+      "vulkan/MemoryTypeSelector.h",
       "vulkan/PhysicalDeviceVk.cpp",
       "vulkan/PhysicalDeviceVk.h",
       "vulkan/PipelineCacheVk.cpp",
       "vulkan/PipelineCacheVk.h",
       "vulkan/PipelineLayoutVk.cpp",
       "vulkan/PipelineLayoutVk.h",
-      "vulkan/PipelineVk.cpp",
       "vulkan/PipelineVk.h",
       "vulkan/QuerySetVk.cpp",
       "vulkan/QuerySetVk.h",
@@ -869,6 +907,8 @@ source_set("sources") {
       "vulkan/ResourceHeapVk.h",
       "vulkan/ResourceMemoryAllocatorVk.cpp",
       "vulkan/ResourceMemoryAllocatorVk.h",
+      "vulkan/ResourceTableVk.cpp",
+      "vulkan/ResourceTableVk.h",
       "vulkan/SamplerVk.cpp",
       "vulkan/SamplerVk.h",
       "vulkan/ShaderModuleVk.cpp",
@@ -880,6 +920,8 @@ source_set("sources") {
       "vulkan/StreamImplVk.cpp",
       "vulkan/SwapChainVk.cpp",
       "vulkan/SwapChainVk.h",
+      "vulkan/TexelBufferViewVk.cpp",
+      "vulkan/TexelBufferViewVk.h",
       "vulkan/TextureVk.cpp",
       "vulkan/TextureVk.h",
       "vulkan/UniqueVkHandle.h",
@@ -950,6 +992,16 @@ source_set("sources") {
     if (dawn_enable_spirv_validation) {
       defines += [ "DAWN_ENABLE_SPIRV_VALIDATION" ]
     }
+
+    # These backends can make use of RenderDoc's API
+    if (dawn_enable_d3d12 || (dawn_enable_vulkan && !is_fuchsia)) {
+      defines += [ "DAWN_ENABLE_RENDERDOC" ]
+      include_dirs += [ "$dawn_root/third_party/renderdoc" ]
+      sources += [
+        "utils/RenderDoc.cpp",
+        "utils/RenderDoc.h",
+      ]
+    }
   }
 }
 
@@ -1010,14 +1062,6 @@ dawn_json_generator("webgpu_dawn_native_proc_gen") {
   outputs = [ "src/dawn/native/webgpu_dawn_native_proc.cpp" ]
 }
 
-source_set("webgpu_dawn_native_proc_sources") {
-  sources = get_target_outputs(":webgpu_dawn_native_proc_gen")
-  deps = [
-    ":headers",
-    ":webgpu_dawn_native_proc_gen",
-  ]
-}
-
 dawn_component("webgpu_dawn") {
   # For a single library - build `webgpu_dawn_shared` with GN args:
   #   dawn_complete_static_libs = true - to package a single lib
@@ -1035,9 +1079,11 @@ dawn_component("webgpu_dawn") {
   #      It should be built separately.
   DEFINE_PREFIX = "WGPU"
   output_name = "webgpu_dawn"
+  sources = get_target_outputs(":webgpu_dawn_native_proc_gen")
 
   deps = [
+    ":headers",
     ":static",
-    ":webgpu_dawn_native_proc_sources",
+    ":webgpu_dawn_native_proc_gen",
   ]
 }

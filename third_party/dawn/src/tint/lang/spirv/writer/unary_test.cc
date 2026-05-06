@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/spirv/writer/common/helper_test.h"
-
 #include "src/tint/lang/core/ir/unary.h"
+
+#include "src/tint/lang/spirv/writer/common/helper_test.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
@@ -50,31 +50,47 @@ using Arithmetic = SpirvWriterTestWithParam<UnaryTestCase>;
 TEST_P(Arithmetic, Scalar) {
     auto params = GetParam();
 
-    auto* arg = b.FunctionParam("arg", MakeScalarType(params.type));
+    auto* arg_ty = MakeScalarType(params.type);
+    auto* arg = b.FunctionParam("arg", arg_ty);
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({arg});
     b.Append(func->Block(), [&] {
-        auto* result = b.Unary(params.op, MakeScalarType(params.type), arg);
-        b.Return(func);
+        auto* result = b.Unary(params.op, arg);
         mod.SetName(result, "result");
+        b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Call(func, b.Zero(arg_ty));
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = " + params.spirv_inst + " %" + params.spirv_type_name + " %arg");
 }
 TEST_P(Arithmetic, Vector) {
     auto params = GetParam();
 
-    auto* arg = b.FunctionParam("arg", MakeVectorType(params.type));
+    auto* arg_ty = MakeVectorType(params.type);
+    auto* arg = b.FunctionParam("arg", arg_ty);
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({arg});
     b.Append(func->Block(), [&] {
-        auto* result = b.Unary(params.op, MakeVectorType(params.type), arg);
-        b.Return(func);
+        auto* result = b.Unary(params.op, arg);
         mod.SetName(result, "result");
+        b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Call(func, b.Zero(arg_ty));
+        b.Return(ep);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST("%result = " + params.spirv_inst + " %v2" + params.spirv_type_name + " %arg");
 }
 INSTANTIATE_TEST_SUITE_P(
@@ -90,12 +106,19 @@ TEST_F(SpirvWriterTest, Unary_Negate_i32) {
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({arg});
     b.Append(func->Block(), [&] {
-        auto* result = b.Unary(core::UnaryOp::kNegation, MakeVectorType(kI32), arg);
+        auto* result = b.Unary(core::UnaryOp::kNegation, arg);
         b.Return(func);
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Zero(MakeVectorType(kI32)));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
        %void = OpTypeVoid
         %int = OpTypeInt 32 1
@@ -106,6 +129,7 @@ TEST_F(SpirvWriterTest, Unary_Negate_i32) {
      %uint_1 = OpConstant %uint 1
          %13 = OpConstantComposite %v2uint %uint_1 %uint_1
          %17 = OpTypeFunction %void
+         %20 = OpConstantNull %v2int
 
                ; Function foo
         %foo = OpFunction %void None %6
@@ -118,9 +142,10 @@ TEST_F(SpirvWriterTest, Unary_Negate_i32) {
                OpReturn
                OpFunctionEnd
 
-               ; Function unused_entry_point
-%unused_entry_point = OpFunction %void None %17
+               ; Function main
+       %main = OpFunction %void None %17
          %18 = OpLabel
+         %19 = OpFunctionCall %void %foo %20
                OpReturn
                OpFunctionEnd
 )");
@@ -131,12 +156,19 @@ TEST_F(SpirvWriterTest, Unary_Negate_Vector_i32) {
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({arg});
     b.Append(func->Block(), [&] {
-        auto* result = b.Unary(core::UnaryOp::kNegation, MakeScalarType(kI32), arg);
+        auto* result = b.Unary(core::UnaryOp::kNegation, arg);
         b.Return(func);
         mod.SetName(result, "result");
     });
 
-    ASSERT_TRUE(Generate()) << Error() << output_;
+    auto* eb = b.ComputeFunction("main");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Zero(MakeScalarType(kI32)));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_;
     EXPECT_INST(R"(
         %foo = OpFunction %void None %5
         %arg = OpFunctionParameter %int

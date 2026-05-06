@@ -254,7 +254,8 @@ DAWN_INSTANTIATE_TEST(Packed4x8IntegerDotProductTests,
                       D3D12Backend({"d3d12_polyfill_pack_unpack_4x8"}),
                       MetalBackend(),
                       VulkanBackend(),
-                      VulkanBackend({"polyfill_packed_4x8_dot_product"}));
+                      VulkanBackend({"polyfill_packed_4x8_dot_product"}),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

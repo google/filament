@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
-
-#include "gmock/gmock.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
@@ -44,7 +43,7 @@ TEST_P(ResolverBuiltinStructs, Resolve) {
     Enable(wgsl::Extension::kF16);
 
     // var<private> p : NAME;
-    auto* var = GlobalVar("p", ty(GetParam()), core::AddressSpace::kPrivate);
+    auto* var = GlobalVar("p", ty.AsType(ToString(GetParam())), core::AddressSpace::kPrivate);
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
     auto* str = As<core::type::Struct>(TypeOf(var)->UnwrapRef());

@@ -5,16 +5,13 @@
 # license that can be found in the LICENSE file or at
 # https://developers.google.com/open-source/licenses/bsd
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//bazel/toolchains:proto_lang_toolchain.bzl", "proto_lang_toolchain")
 load(
     "//upb/bazel:build_defs.bzl",
     "UPB_DEFAULT_CPPOPTS",
 )
-load(
-    "//upb_generator:bootstrap_compiler.bzl",
-    "bootstrap_cc_binary",
-    "bootstrap_cc_library",
-)
+load("//upb_generator:bootstrap_compiler.bzl", "bootstrap_cc_binary")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -24,7 +21,7 @@ cc_library(
     name = "names",
     srcs = ["names.cc"],
     hdrs = ["names.h"],
-    visibility = ["//src/google/protobuf/compiler/hpb:__pkg__"],
+    visibility = ["//hpb_generator:__pkg__"],
     deps = [
         ":names_internal",
         "@abseil-cpp//absl/container:flat_hash_map",
@@ -44,19 +41,6 @@ cc_library(
 
 bootstrap_cc_binary(
     name = "protoc-gen-upb",
-    bootstrap_deps = [":generator_with_main"],
-    copts = UPB_DEFAULT_CPPOPTS,
-    visibility = [
-        "//editions/codegen_tests:__pkg__",
-        "//net/proto2/contrib/protoc_explorer:__pkg__",
-        "//third_party/prototiller/transformer:__pkg__",
-    ],
-)
-
-# TODO: This wrapper lib is a hack that we need because of how CcInfo works in Bazel 6.
-# In Bazel 7, our cmake dependency scraping works fine with cc_binary.
-bootstrap_cc_library(
-    name = "generator_with_main",
     srcs = ["generator.cc"],
     bootstrap_deps = [
         "//upb_generator:common",
@@ -66,17 +50,19 @@ bootstrap_cc_library(
         "//upb/reflection:reflection",
     ],
     copts = UPB_DEFAULT_CPPOPTS,
-    visibility = ["//pkg:__pkg__"],
+    visibility = [
+        "//pkg:__pkg__",
+    ],
     deps = [
         ":names",
         ":names_internal",
         "//src/google/protobuf/compiler:code_generator",
         "//src/google/protobuf/compiler:plugin",
-        "//upb:base",
-        "//upb:mem",
-        "//upb:mini_table",
-        "//upb:port",
-        "//upb:wire_reader",
+        "//upb/base",
+        "//upb/mem",
+        "//upb/mini_table",
+        "//upb/port",
+        "//upb/wire:reader",
         "//upb_generator/common:names",
         "//upb_generator/minitable:names",
         "//upb_generator/minitable:names_internal",
@@ -98,7 +84,6 @@ proto_lang_toolchain(
     plugin = ":protoc-gen-upb_stage1",
     plugin_format_flag = "--plugin=protoc-gen-upb=%s",
     progress_message = "Generating upb protos",
-    runtime = "//upb:generated_code_support__only_for_generated_code_do_not_use__i_give_permission_to_break_me",
-    # TODO: Restrict to "//bazel:__pkg__" once we are on Bazel >=6.5.
-    visibility = ["//visibility:public"],
+    runtime = "//upb:generated_code_support",
+    visibility = ["//bazel:__pkg__"],
 )

@@ -34,7 +34,9 @@ namespace dawn::native {
 PipelineLayoutMock::PipelineLayoutMock(DeviceMock* device,
                                        const UnpackedPtr<PipelineLayoutDescriptor>& descriptor)
     : PipelineLayoutBase(device, descriptor) {
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->PipelineLayoutBase::DestroyImpl(); });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->PipelineLayoutBase::DestroyImpl(reason);
+    });
 
     SetContentHash(ComputeContentHash());
 }

@@ -16,6 +16,8 @@ See:
 #ifndef SRC_TINT_LANG_WGSL_ENUMS_H_
 #define SRC_TINT_LANG_WGSL_ENUMS_H_
 
+// clang-format off
+
 #include <cstdint>
 #include <string>
 #include <variant>
@@ -34,11 +36,11 @@ namespace tint::wgsl {
 {{ Eval "DeclareEnum" ($I.Sem.Enum "chromium_diagnostic_rule") }}
 
 /// An enumerator of WGSL extensions
-/// @see src/tint/lang/wgsl/intrinsics.def for extension descriptions
+/// @see src/tint/lang/wgsl/wgsl.def for extension descriptions
 {{ Eval "DeclareEnum" $extensions_enum}}
 
 /// All extensions
-static constexpr Extension kAllExtensions[] = {
+inline constexpr Extension kAllExtensions[] = {
 {{-   range $entry := $extensions_enum.Entries }}
     Extension::k{{PascalCase $entry.Name}},
 {{-   end }}
@@ -49,7 +51,7 @@ static constexpr Extension kAllExtensions[] = {
 {{ Eval "DeclareEnum" "Enum" $language_feature_enum "EmitOStream" false}}
 
 /// All features
-static constexpr LanguageFeature kAllLanguageFeatures[] = {
+inline constexpr LanguageFeature kAllLanguageFeatures[] = {
 {{-   range $entry := $language_feature_enum.Entries }}
     LanguageFeature::k{{PascalCase $entry.Name}},
 {{-   end }}
@@ -178,10 +180,13 @@ bool IsSubgroupMatrix(BuiltinFn f);
 /// @returns true if the given `f` is a quadSwap* builtin
 bool IsQuadSwap(BuiltinFn f);
 
-/// Determines if the given `f` may have side-effects (i.e. writes to at least one of its inputs)
-/// @returns true if intrinsic may have side-effects
-bool HasSideEffects(BuiltinFn f);
+/// Determines if the given `f` is a resource table builtin.
+/// @param f the builtin type
+/// @returns true if the given `f` is a resource table builtin
+bool IsResourceTable(BuiltinFn f);
 
 }  // namespace tint::wgsl
+
+// clang-format on
 
 #endif  // SRC_TINT_LANG_WGSL_ENUMS_H_

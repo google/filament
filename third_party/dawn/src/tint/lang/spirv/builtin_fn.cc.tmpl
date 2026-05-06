@@ -12,6 +12,9 @@ See:
 */ -}}
 
 {{- $I := LoadIntrinsics "src/tint/lang/spirv/spirv.def" -}}
+
+// clang-format off
+
 #include "src/tint/lang/spirv/builtin_fn.h"
 
 namespace tint::spirv {
@@ -43,8 +46,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kImageSampleDrefExplicitLod:
         case BuiltinFn::kImageSampleProjDrefImplicitLod:
         case BuiltinFn::kImageSampleProjDrefExplicitLod:
-        case BuiltinFn::kImage:
-        case BuiltinFn::kSampledImage:
+        case BuiltinFn::kOpImage:
+        case BuiltinFn::kOpSampledImage:
         case BuiltinFn::kCooperativeMatrixLoad:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
 
@@ -145,9 +148,13 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kGroupNonUniformQuadSwap:
         case BuiltinFn::kGroupNonUniformSMin:
         case BuiltinFn::kGroupNonUniformSMax:
+        case BuiltinFn::kSConvert:
+        case BuiltinFn::kUConvert:
             break;
     }
     return core::ir::Instruction::Accesses{};
 }
 
 }  // namespace tint::spirv
+
+// clang-format on

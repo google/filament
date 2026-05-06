@@ -28,12 +28,11 @@
 #ifndef SRC_TINT_UTILS_MEMORY_ALIGNED_STORAGE_H_
 #define SRC_TINT_UTILS_MEMORY_ALIGNED_STORAGE_H_
 
+#include <array>
 #include <cstddef>
 
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/memory/bitcast.h"
-
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint {
 
@@ -42,17 +41,15 @@ namespace tint {
 template <typename T>
 struct alignas(alignof(T)) AlignedStorage {
     /// Byte array of length sizeof(T)
-    std::byte data[sizeof(T)];
+    std::array<std::byte, sizeof(T)> data;
 
     /// @returns a pointer to aligned storage, reinterpreted as T&
-    T& Get() { return *Bitcast<T*>(&data[0]); }
+    T& Get() { return *Bitcast<T*>(data.data()); }
 
     /// @returns a pointer to aligned storage, reinterpreted as T&
-    const T& Get() const { return *Bitcast<const T*>(&data[0]); }
+    const T& Get() const { return *Bitcast<const T*>(data.data()); }
 };
 
 }  // namespace tint
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 #endif  // SRC_TINT_UTILS_MEMORY_ALIGNED_STORAGE_H_

@@ -35,7 +35,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "dawn/common/TypedInteger.h"
 #include "dawn/native/BackendConnection.h"
-
 #include "dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d {

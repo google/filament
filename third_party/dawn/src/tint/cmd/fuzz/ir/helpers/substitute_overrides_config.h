@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_CMD_FUZZ_IR_HELPERS_SUBSTITUTE_OVERRIDES_CONFIG_H_
 #define SRC_TINT_CMD_FUZZ_IR_HELPERS_SUBSTITUTE_OVERRIDES_CONFIG_H_
 
-#include "src/tint/lang/core/ir/transform/substitute_overrides.h"
+#include "src/tint/api/common/substitute_overrides_config.h"
 
 // Forward declarations
 namespace tint::core::ir {
@@ -40,7 +40,7 @@ namespace tint::fuzz::ir {
 /// Returns a IR substitute override config which may contain an empty map if there a no overrides
 /// @param mod The IR to find the overrides from
 /// @return An IR substitute override config
-core::ir::transform::SubstituteOverridesConfig SubstituteOverridesConfig(core::ir::Module& mod);
+tint::SubstituteOverridesConfig SubstituteOverridesConfig(core::ir::Module& mod);
 
 }  // namespace tint::fuzz::ir
 

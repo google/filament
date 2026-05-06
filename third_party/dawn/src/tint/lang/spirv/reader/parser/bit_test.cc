@@ -1304,7 +1304,7 @@ TEST_F(SpirvParserTest, Bitcast_Scalar) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:u32 = bitcast 2.0f
+    %2:u32 = bitcast<u32> 2.0f
     ret
   }
 }
@@ -1335,7 +1335,7 @@ TEST_F(SpirvParserTest, Bitcast_Vector) {
               R"(
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B1: {
-    %2:vec2<f32> = bitcast vec2<u32>(8u)
+    %2:vec2<f32> = bitcast<vec2<f32>> vec2<u32>(8u)
     ret
   }
 }

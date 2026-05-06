@@ -18,6 +18,7 @@ package com.google.android.filament;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 import com.google.android.filament.proguard.UsedByNative;
@@ -142,6 +143,28 @@ public class MaterialInstance {
         return mMaterial;
     }
 
+    /**
+     * Asynchronously ensures that a subset of this MaterialInstance's variants are compiled.
+     *
+     * <p>This function behaves identically to {@link Material#compile}, but takes into account
+     * the specific constants overridden by {@link #setConstant}.</p>
+     *
+     * @param priority      Priority of the compile command.
+     * @param variants      Variants to include to the compile command.
+     * @param handler       An {@link java.util.concurrent.Executor Executor}. On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback      callback called on the main thread when the compilation is done on
+     *                      by backend.
+     *
+     * @see Material#compile
+     * @see #setConstant
+     */
+    public void compile(@NonNull Material.CompilerPriorityQueue priority,
+                        int variants,
+                        @Nullable Object handler,
+                        @Nullable Runnable callback) {
+        nCompile(getNativeObject(), priority.ordinal(), variants, handler, callback);
+    }
+
     /** @return the name associated with this instance */
     @NonNull
     public String getName() {
@@ -156,6 +179,7 @@ public class MaterialInstance {
      *
      * @param name the name of the material parameter
      * @param x    the value of the material parameter
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, boolean x) {
         nSetParameterBool(getNativeObject(), name, x);
@@ -166,6 +190,7 @@ public class MaterialInstance {
      *
      * @param name the name of the material parameter
      * @param x    the value of the material parameter
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, float x) {
         nSetParameterFloat(getNativeObject(), name, x);
@@ -176,6 +201,7 @@ public class MaterialInstance {
      *
      * @param name the name of the material parameter
      * @param x    the value of the material parameter
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, int x) {
         nSetParameterInt(getNativeObject(), name, x);
@@ -187,6 +213,7 @@ public class MaterialInstance {
      * @param name the name of the material parameter
      * @param x    the value of the first component
      * @param y    the value of the second component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, boolean x, boolean y) {
         nSetParameterBool2(getNativeObject(), name, x, y);
@@ -198,6 +225,7 @@ public class MaterialInstance {
      * @param name the name of the material parameter
      * @param x    the value of the first component
      * @param y    the value of the second component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, float x, float y) {
         nSetParameterFloat2(getNativeObject(), name, x, y);
@@ -209,6 +237,7 @@ public class MaterialInstance {
      * @param name the name of the material parameter
      * @param x    the value of the first component
      * @param y    the value of the second component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, int x, int y) {
         nSetParameterInt2(getNativeObject(), name, x, y);
@@ -221,6 +250,7 @@ public class MaterialInstance {
      * @param x    the value of the first component
      * @param y    the value of the second component
      * @param z    the value of the third component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, boolean x, boolean y, boolean z) {
         nSetParameterBool3(getNativeObject(), name, x, y, z);
@@ -233,6 +263,7 @@ public class MaterialInstance {
      * @param x    the value of the first component
      * @param y    the value of the second component
      * @param z    the value of the third component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, float x, float y, float z) {
         nSetParameterFloat3(getNativeObject(), name, x, y, z);
@@ -245,6 +276,7 @@ public class MaterialInstance {
      * @param x    the value of the first component
      * @param y    the value of the second component
      * @param z    the value of the third component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, int x, int y, int z) {
         nSetParameterInt3(getNativeObject(), name, x, y, z);
@@ -258,6 +290,7 @@ public class MaterialInstance {
      * @param y    the value of the second component
      * @param z    the value of the third component
      * @param w    the value of the fourth component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, boolean x, boolean y, boolean z, boolean w) {
         nSetParameterBool4(getNativeObject(), name, x, y, z, w);
@@ -271,6 +304,7 @@ public class MaterialInstance {
      * @param y    the value of the second component
      * @param z    the value of the third component
      * @param w    the value of the fourth component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, float x, float y, float z, float w) {
         nSetParameterFloat4(getNativeObject(), name, x, y, z, w);
@@ -284,6 +318,7 @@ public class MaterialInstance {
      * @param y    the value of the second component
      * @param z    the value of the third component
      * @param w    the value of the fourth component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, int x, int y, int z, int w) {
         nSetParameterInt4(getNativeObject(), name, x, y, z, w);
@@ -299,6 +334,7 @@ public class MaterialInstance {
      * @param name The name of the material texture parameter
      * @param texture The texture to set as parameter
      * @param sampler The sampler to be used with this texture
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name,
             @NonNull Texture texture, @NonNull TextureSampler sampler) {
@@ -320,6 +356,7 @@ public class MaterialInstance {
      *     instance.setParameter("param", MaterialInstance.BooleanElement.BOOL4, a, 0, 4);
      * }</pre>
      * </p>
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name,
             @NonNull BooleanElement type, @NonNull boolean[] v,
@@ -342,6 +379,7 @@ public class MaterialInstance {
      *     instance.setParameter("param", MaterialInstance.IntElement.INT4, a, 0, 4);
      * }</pre>
      * </p>
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name,
             @NonNull IntElement type, @NonNull int[] v,
@@ -364,6 +402,7 @@ public class MaterialInstance {
      *     material.setDefaultParameter("param", MaterialInstance.FloatElement.FLOAT4, a, 0, 4);
      * }</pre>
      * </p>
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name,
             @NonNull FloatElement type, @NonNull float[] v,
@@ -379,6 +418,7 @@ public class MaterialInstance {
      * @param r    red component
      * @param g    green component
      * @param b    blue component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, @NonNull Colors.RgbType type,
             float r, float g, float b) {
@@ -395,11 +435,75 @@ public class MaterialInstance {
      * @param g    green component
      * @param b    blue component
      * @param a    alpha component
+     * @throws RuntimeException if name doesn't exist or no-op if exceptions are disabled.
      */
     public void setParameter(@NonNull String name, @NonNull Colors.RgbaType type,
             float r, float g, float b, float a) {
         float[] color = Colors.toLinear(type, r, g, b, a);
         nSetParameterFloat4(getNativeObject(), name, color[0], color[1], color[2], color[3]);
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, boolean value) {
+        nSetConstantBool(getNativeObject(), name, value);
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, float value) {
+        nSetConstantFloat(getNativeObject(), name, value);
+    }
+
+    /**
+     * Overrides a specialization constant of this material instance.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @param value The value of the constant.
+     * @see Material.Builder#constant
+     */
+    public void setConstant(@NonNull String name, int value) {
+        nSetConstantInt(getNativeObject(), name, value);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public boolean getConstantBoolean(@NonNull String name) {
+        return nGetConstantBool(getNativeObject(), name);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public float getConstantFloat(@NonNull String name) {
+        return nGetConstantFloat(getNativeObject(), name);
+    }
+
+    /**
+     * Gets the value of a specialization constant by name.
+     *
+     * @param name  The name of the constant as defined in the material.
+     * @return The value of the constant.
+     */
+    public int getConstantInt(@NonNull String name) {
+        return nGetConstantInt(getNativeObject(), name);
     }
 
     /**
@@ -937,6 +1041,17 @@ public class MaterialInstance {
             @NonNull String name, int element, @NonNull @Size(min = 1) float[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count);
 
+    private static native boolean nGetConstantBool(long nativeMaterialInstance, @NonNull String name);
+    private static native float nGetConstantFloat(long nativeMaterialInstance, @NonNull String name);
+    private static native int nGetConstantInt(long nativeMaterialInstance, @NonNull String name);
+
+    private static native void nSetConstantBool(long nativeMaterialInstance,
+            @NonNull String name, boolean x);
+    private static native void nSetConstantFloat(long nativeMaterialInstance,
+            @NonNull String name, float x);
+    private static native void nSetConstantInt(long nativeMaterialInstance,
+            @NonNull String name, int x);
+
     private static native void nSetParameterTexture(long nativeMaterialInstance,
             @NonNull String name, long nativeTexture, long sampler);
 
@@ -1000,4 +1115,5 @@ public class MaterialInstance {
     private static native int nGetDepthFunc(long nativeMaterialInstance);
     private static native void nSetTransparencyMode(long nativeMaterialInstance, int mode);
     private static native int nGetTransparencyMode(long nativeMaterialInstance);
+    private static native void nCompile(long nativeMaterialInstance, int priority, int variants, Object handler, Runnable callback);
 }

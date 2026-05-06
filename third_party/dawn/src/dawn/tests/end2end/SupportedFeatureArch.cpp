@@ -92,10 +92,7 @@ TEST_P(FeatureArchInfoTest_MaxLimits, WorkgroupSizeMin1024Expected) {
                                      gpu_info::IsNvidia(GetParam().adapterProperties.vendorID);
     DAWN_TEST_UNSUPPORTED_IF(!isWorkgroupSizeGT1k);
 
-    EXPECT_GE(GetAdapterLimits().maxComputeInvocationsPerWorkgroup, 1024u);
-    // Check that the device was created with the requested limit.
-    EXPECT_EQ(GetSupportedLimits().maxComputeInvocationsPerWorkgroup,
-              GetAdapterLimits().maxComputeInvocationsPerWorkgroup);
+    EXPECT_GE(GetSupportedLimits().maxComputeInvocationsPerWorkgroup, 1024u);
 }
 
 class FeatureArchInfoTest_TieredMaxLimits : public FeatureArchInfoTestBase {
@@ -114,7 +111,7 @@ TEST_P(FeatureArchInfoTest_TieredMaxLimits, D3DHighMaxVertexAttributes) {
 
     // High-end windows desktop GPU should report at least 30 even when tiered is enabled
     // See crbug.com/430371785
-    EXPECT_GE(GetAdapterLimits().maxVertexAttributes, 30u);
+    EXPECT_GE(GetSupportedLimits().maxVertexAttributes, 30u);
 }
 
 TEST_P(FeatureArchInfoTest_TieredMaxLimits, AppleMaxTextureDimension2D) {
@@ -123,24 +120,28 @@ TEST_P(FeatureArchInfoTest_TieredMaxLimits, AppleMaxTextureDimension2D) {
 
     // Apple silicon should report > 16k. Most modern devices should support > 16k. Update this when
     // appropriate.
-    EXPECT_GE(GetAdapterLimits().maxTextureDimension2D, 16384u);
+    EXPECT_GE(GetSupportedLimits().maxTextureDimension2D, 16384u);
 }
 
 TEST_P(FeatureArchInfoTest_TieredMaxLimits, MaxUniformBufferBindingSize) {
     // Swiftshader will return a lower limit than any modern device on CQ.
-    DAWN_TEST_UNSUPPORTED_IF(!IsSwiftshader());
-    EXPECT_GE(GetAdapterLimits().maxUniformBufferBindingSize, 65536u);
-    // Check that the device was created with the requested limit.
-    EXPECT_EQ(GetSupportedLimits().maxUniformBufferBindingSize,
-              GetAdapterLimits().maxUniformBufferBindingSize);
+    DAWN_TEST_UNSUPPORTED_IF(IsSwiftshader() || IsANGLESwiftShader());
+    EXPECT_EQ(GetSupportedLimits().maxUniformBufferBindingSize, 65536u);
 }
 
 TEST_P(FeatureArchInfoTest_MaxLimits, MinUniformBufferOffsetAlignment) {
     // All devices on CQ report 256. A value of 32 is commonplace on iOS (note the less than).
-    EXPECT_LE(GetAdapterLimits().minUniformBufferOffsetAlignment, 256u);
-    // Check that the device was created with the requested limit.
-    EXPECT_EQ(GetSupportedLimits().minUniformBufferOffsetAlignment,
-              GetAdapterLimits().minUniformBufferOffsetAlignment);
+    EXPECT_LE(GetSupportedLimits().minUniformBufferOffsetAlignment, 256u);
+}
+
+TEST_P(FeatureArchInfoTest_TieredMaxLimits, D3DHighMaxDynamicUniformBuffersPerPipelineLayout) {
+    const bool isWindowsHighEnd =
+        gpu_info::IsNvidia(GetParam().adapterProperties.vendorID) && (IsD3D11() || IsD3D12());
+    DAWN_TEST_UNSUPPORTED_IF(!isWindowsHighEnd);
+
+    // High-end windows desktop GPU should report at least 10 even when tiered is enabled
+    // See crbug.com/440381283
+    EXPECT_GE(GetSupportedLimits().maxDynamicUniformBuffersPerPipelineLayout, 10u);
 }
 
 DAWN_INSTANTIATE_TEST(FeatureArchInfoTest_MaxLimits,
@@ -149,7 +150,8 @@ DAWN_INSTANTIATE_TEST(FeatureArchInfoTest_MaxLimits,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 DAWN_INSTANTIATE_TEST(FeatureArchInfoTest_TieredMaxLimits,
                       D3D11Backend(),
@@ -157,7 +159,8 @@ DAWN_INSTANTIATE_TEST(FeatureArchInfoTest_TieredMaxLimits,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

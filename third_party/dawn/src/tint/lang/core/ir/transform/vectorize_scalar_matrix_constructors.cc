@@ -94,11 +94,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> VectorizeScalarMatrixConstructors(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.VectorizeScalarMatrixConstructors",
-                                          kVectorizeScalarMatrixConstructorsCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    AssertValid(ir, kVectorizeScalarMatrixConstructorsCapabilities,
+                "before core.VectorizeScalarMatrixConstructors");
 
     State{ir}.Process();
 

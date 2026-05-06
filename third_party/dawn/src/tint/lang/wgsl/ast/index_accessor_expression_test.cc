@@ -78,25 +78,5 @@ TEST_F(IndexAccessorExpressionDeathTest, Assert_Null_Index) {
         "internal compiler error");
 }
 
-TEST_F(IndexAccessorExpressionDeathTest, Assert_DifferentGenerationID_Array) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.IndexAccessor(b2.Expr("arr"), b1.Expr("idx"));
-        },
-        "internal compiler error");
-}
-
-TEST_F(IndexAccessorExpressionDeathTest, Assert_DifferentGenerationID_Index) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.IndexAccessor(b1.Expr("arr"), b2.Expr("idx"));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

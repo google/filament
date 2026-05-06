@@ -25,6 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -93,8 +94,7 @@ class MatrixVectorMultiplyPerf : public DawnPerfTestWithParams<MatrixVectorMulti
         : DawnPerfTestWithParams(kNumDisptaches, /* allow many steps in flight */ 100) {}
     ~MatrixVectorMultiplyPerf() override = default;
 
-    void SetUp() override;
-
+  protected:
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         mUsingF16 = false;
         mUsingSubgroups = false;
@@ -120,11 +120,21 @@ class MatrixVectorMultiplyPerf : public DawnPerfTestWithParams<MatrixVectorMulti
         return requirements;
     }
 
+    uint64_t GetMaxStorageBufferBindingSizeNeeded() {
+        return BytesPerElement() * GetParam().mRows * GetParam().mCols;
+    }
+
     void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
                            dawn::utils::ComboLimits& required) override {
+        // Tests fail if the device can not be created so don't ask for more than the device
+        // supports.
+        uint64_t needed = GetMaxStorageBufferBindingSizeNeeded();
         required.maxStorageBufferBindingSize =
-            BytesPerElement() * GetParam().mRows * GetParam().mCols;
+            std::min(supported.maxStorageBufferBindingSize, needed);
     }
+
+  protected:
+    void SetUpPerfTest() override;
 
   private:
     void Step() override;
@@ -150,13 +160,14 @@ class MatrixVectorMultiplyPerf : public DawnPerfTestWithParams<MatrixVectorMulti
     bool mAllFeaturesSupported;
 };
 
-void MatrixVectorMultiplyPerf::SetUp() {
+void MatrixVectorMultiplyPerf::SetUpPerfTest() {
     // TODO(crbug.com/dawn/2508): Fails due to an OS/driver upgrade on Linux/llvmpipe.
     // This must also be checked before SetUp() since the crash happens in SetUp() itself.
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsMesa("23.2.1") && IsMesaSoftware() &&
                           GetParam().mStoreType == StoreType::F32);
 
-    DawnPerfTestWithParams<MatrixVectorMultiplyParams>::SetUp();
+    DAWN_TEST_UNSUPPORTED_IF(deviceLimits.maxStorageBufferBindingSize <
+                             GetMaxStorageBufferBindingSizeNeeded());
 
     // Unoptimized variant too slow for bots.
     // Unskip locally with flag --run-suppressed-tests.
@@ -168,6 +179,12 @@ void MatrixVectorMultiplyPerf::SetUp() {
     }
 
     DAWN_TEST_UNSUPPORTED_IF(!mAllFeaturesSupported);
+
+    // TODO(crbug.com/501147570): Flakily kills Swarming bots when run on
+    // Windows 11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && (IsD3D12() || IsVulkan()) &&
+                          GetParam().mRows == 32768 && GetParam().mCols == 2048 &&
+                          GetParam().mStoreType == StoreType::U8);
 
     // D3D12 device must be using DXC to support subgroups feature.
     DAWN_ASSERT(!mUsingSubgroups || !IsD3D12() || IsDXC());

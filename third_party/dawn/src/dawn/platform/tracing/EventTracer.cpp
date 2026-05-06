@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/platform/tracing/EventTracer.h"
+
 #include "dawn/common/Assert.h"
 #include "dawn/platform/DawnPlatform.h"
 

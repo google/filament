@@ -39,6 +39,10 @@ namespace tint::core::ir::transform {
 namespace {
 
 Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
+    if (entry_point_name.empty()) {
+        return Failure{"no entry point provided"};
+    }
+
     // Find the entry point.
     ir::Function* entry_point = nullptr;
     for (auto& func : ir.functions) {
@@ -47,7 +51,8 @@ Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
         }
         if (ir.NameOf(func).NameView() == entry_point_name) {
             if (entry_point) {
-                TINT_ICE() << "multiple entry points named '" << entry_point_name << "' were found";
+                TINT_IR_ICE(ir) << "multiple entry points named '" << entry_point_name
+                                << "' were found";
             }
             entry_point = func;
         }
@@ -85,8 +90,9 @@ Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
         if (!referenced_vars.Contains(inst)) {
             // There shouldn't be any remaining references to the variable.
             if (inst->Result()->NumUsages() != 0) {
-                TINT_ICE() << " Unexpected usages remain when applying single entry point IR for  '"
-                           << entry_point_name << "' ";
+                TINT_IR_ICE(ir)
+                    << " Unexpected usages remain when applying single entry point IR for  '"
+                    << entry_point_name << "' ";
             }
             inst->Destroy();
         }
@@ -99,11 +105,7 @@ Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
 }  // namespace
 
 Result<SuccessType> SingleEntryPoint(Module& ir, std::string_view entry_point_name) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.SingleEntryPoint", kSingleEntryPointCapabilities);
-    if (result != Success) {
-        return result.Failure();
-    }
+    AssertValid(ir, kSingleEntryPointCapabilities, "before core.SingleEntryPoint");
 
     return Run(ir, entry_point_name);
 }

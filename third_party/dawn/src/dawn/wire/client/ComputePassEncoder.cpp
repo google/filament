@@ -37,9 +37,9 @@ ObjectType ComputePassEncoder::GetObjectType() const {
     return ObjectType::ComputePassEncoder;
 }
 
-void ComputePassEncoder::APISetImmediateData(uint32_t offset, const void* data, size_t size) {
-    ComputePassEncoderSetImmediateDataCmd cmd;
-    cmd.computePassEncoderId = GetWireId();
+void ComputePassEncoder::APISetImmediates(uint32_t offset, const void* data, size_t size) {
+    ComputePassEncoderSetImmediatesCmd cmd;
+    cmd.computePassEncoderId = GetWireHandle(GetClient()).id;
     cmd.offset = offset;
     cmd.data = static_cast<const uint8_t*>(data);
     cmd.size = size;

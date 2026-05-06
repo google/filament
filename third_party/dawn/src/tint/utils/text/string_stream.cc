@@ -46,6 +46,7 @@ StringStream& StringStream::operator=(const StringStream& other) {
 }
 
 void StringStream::Reset() {
+    sstream_.str("");
     sstream_.clear();
     sstream_.flags(sstream_.flags() | std::ios_base::showpoint | std::ios_base::fixed);
     sstream_.imbue(std::locale::classic());

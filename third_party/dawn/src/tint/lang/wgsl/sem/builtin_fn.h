@@ -76,26 +76,8 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
     /// case, matches the name in the WGSL spec.
     const char* str() const;
 
-    /// @returns true if builtin is a coarse derivative builtin
-    bool IsCoarseDerivative() const;
-
-    /// @returns true if builtin is a fine a derivative builtin
-    bool IsFineDerivative() const;
-
     /// @returns true if builtin is a derivative builtin
     bool IsDerivative() const;
-
-    /// @returns true if builtin is a texture operation builtin
-    bool IsTexture() const;
-
-    /// @returns true if builtin is a image query builtin
-    bool IsImageQuery() const;
-
-    /// @returns true if builtin is a data packing builtin
-    bool IsDataPacking() const;
-
-    /// @returns true if builtin is a data unpacking builtin
-    bool IsDataUnpacking() const;
 
     /// @returns true if builtin is a barrier builtin
     bool IsBarrier() const;
@@ -114,15 +96,11 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
     /// `subgroup_matrix`).
     bool IsSubgroupMatrix() const;
 
-    /// @returns true if builtin is a quadSwap builtin
-    bool IsQuadSwap() const;
-
     /// @returns true if builtin is a texel buffer builtin
     bool IsTexelBuffer() const;
 
-    /// @returns true if intrinsic may have side-effects (i.e. writes to at least
-    /// one of its inputs)
-    bool HasSideEffects() const;
+    /// @returns true if builtin is a resource table builtin
+    bool IsResourceTable() const;
 
     /// @returns the required language feature of this builtin function. Returns
     /// wgsl::LanguageFeature::kUndefined if no language feature is required.
@@ -141,12 +119,6 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
     const PipelineStageSet supported_stages_;
     const core::intrinsic::OverloadInfo& overload_;
 };
-
-/// Constant value used by the degrees() builtin
-static constexpr double kRadToDeg = 57.295779513082322865;
-
-/// Constant value used by the radians() builtin
-static constexpr double kDegToRad = 0.017453292519943295474;
 
 }  // namespace tint::sem
 

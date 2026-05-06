@@ -27,7 +27,12 @@
 
 #include "dawn/native/opengl/ComputePipelineGL.h"
 
+#include <vector>
+
+#include "dawn/native/TintUtils.h"
 #include "dawn/native/opengl/DeviceGL.h"
+#include "dawn/native/opengl/UtilsGL.h"
+#include "tint/tint.h"
 
 namespace dawn::native::opengl {
 
@@ -40,20 +45,68 @@ Ref<ComputePipeline> ComputePipeline::CreateUninitialized(
 
 ComputePipeline::~ComputePipeline() = default;
 
-void ComputePipeline::DestroyImpl() {
-    ComputePipelineBase::DestroyImpl();
-    DeleteProgram(ToBackend(GetDevice())->GetGL());
+void ComputePipeline::DestroyImpl(DestroyReason reason) {
+    ComputePipelineBase::DestroyImpl(reason);
+    IgnoreErrors(
+        ToBackend(GetDevice())
+            ->EnqueueDestroyGL(this, &ComputePipeline::GetProgramHandle, reason,
+                               [](const OpenGLFunctions& gl, GLuint program) -> MaybeError {
+                                   DAWN_GL_TRY_IGNORE_ERRORS(gl, DeleteProgram(program));
+                                   return {};
+                               }));
 }
 
-MaybeError ComputePipeline::InitializeImpl() {
-    return InitializeBase(ToBackend(GetDevice())->GetGL(), ToBackend(GetLayout()), GetAllStages(),
-                          /* usesVertexIndex */ false, /* usesInstanceIndex */ false,
-                          /* usesFragDepth */ false, /* bgraSwizzleAttributes */ {});
+ResultOrError<Extent3D> ComputePipeline::InitializeImpl() {
+    DAWN_TRY(ToBackend(GetDevice())
+                 ->EnqueueGL([self = Ref<ComputePipeline>(this)](
+                                 const OpenGLFunctions& gl) -> MaybeError {
+                     Extent3D workgroupSize;
+                     return self->InitializeBase(gl, ToBackend(self->GetLayout()),
+                                                 self->GetAllStages(), self->mImmediateMask,
+                                                 /* bgraSwizzleAttributes */ {}, &workgroupSize);
+                 }));
+
+    // Shader reflection after the application of overrides is required by the frontend for the
+    // workgroup size. In the case where GL execution is deferred, we need to compute the workgroup
+    // size immediately. (do it in the non-deferred case as well to avoid duplicating paths).
+    // TODO(https://issues.chromium.org/489650416): Move the GLSL translation to happen immediately
+    // here instead of during deferred GL execution, which would remove the need for this.
+    const ProgrammableStage& computeStage = GetStage(SingleShaderStage::Compute);
+
+    tint::null::writer::Options tintOptions;
+    tintOptions.entry_point_name = computeStage.entryPoint;
+    tintOptions.substitute_overrides_config = {
+        .map = BuildSubstituteOverridesTransformConfig(computeStage),
+    };
+
+    // Convert the AST program to an IR module.
+    tint::wgsl::reader::IROptions irOptions{
+        .dump_ir_when_validating = GetDevice()->IsToggleEnabled(Toggle::DumpTintIR),
+        .enable_validation_asserts =
+            GetDevice()->IsToggleEnabled(Toggle::EnableTintIRValidationAsserts),
+    };
+    auto ir = tint::wgsl::reader::ProgramToLoweredIR(computeStage.module->GetTintProgram()->program,
+                                                     irOptions);
+    DAWN_INVALID_IF(ir != tint::Success, "An error occurred while generating Tint IR\n%s",
+                    ir.Failure().reason);
+
+    tint::Result<tint::null::writer::Output> tintResult =
+        tint::null::writer::Generate(ir.Get(), tintOptions);
+
+    DAWN_INVALID_IF(tintResult != tint::Success, "An error occurred while running Null writer\n%s",
+                    tintResult.Failure().reason);
+
+    return {
+        {tintResult->workgroup_info.x, tintResult->workgroup_info.y, tintResult->workgroup_info.z}};
 }
 
-MaybeError ComputePipeline::ApplyNow() {
-    DAWN_TRY(PipelineGL::ApplyNow(ToBackend(GetDevice())->GetGL(), ToBackend(GetLayout())));
+MaybeError ComputePipeline::ApplyNow(const OpenGLFunctions& gl) {
+    DAWN_TRY(PipelineGL::ApplyNow(gl, ToBackend(GetLayout())));
     return {};
+}
+
+GLuint ComputePipeline::GetProgramHandle() const {
+    return mProgram;
 }
 
 }  // namespace dawn::native::opengl

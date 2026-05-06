@@ -1,0 +1,49 @@
+name: gen-docs
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+  pull_request:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Generate and build docs
+  gen-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.21.0'
+      - uses: ssciwr/doxygen-install@v1
+        with:
+          version: '1.10.0'
+      - run: make doc
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc/generated/html
+
+  # Deployment job
+  deploy:
+    if: ${{ success() && github.ref == 'refs/heads/main' }}
+    needs: gen-docs
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

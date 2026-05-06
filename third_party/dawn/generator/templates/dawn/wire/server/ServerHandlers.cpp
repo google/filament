@@ -53,7 +53,7 @@ namespace dawn::wire::server {
                 {% set cType = as_cType(member.handle_type.name) %}
                 {% set name = as_varName(member.name) %}
                 Reserved<{{cType}}> {{name}}Data;
-                WIRE_TRY(Objects<{{cType}}>().Allocate(&{{name}}Data, cmd.{{name}}));
+                WIRE_TRY(Allocate(&{{name}}Data, cmd.{{name}}));
                 {{name}}Data->generation = cmd.{{name}}.generation;
             {%- endfor %}
 
@@ -62,7 +62,7 @@ namespace dawn::wire::server {
                 {% set cType = as_cType(member.id_type.name) %}
                 {% set name = as_varName(member.name) %}
                 Known<{{cType}}> {{name}}Handle;
-                WIRE_TRY(Objects<{{cType}}>().Get(cmd.{{name}}, &{{name}}Handle));
+                WIRE_TRY(Get(cmd.{{name}}, &{{name}}Handle));
             {% endfor %}
 
             //* Do command
@@ -87,26 +87,15 @@ namespace dawn::wire::server {
         }
     {% endfor %}
 
-    const volatile char* Server::HandleCommandsImpl(const volatile char* commands, size_t size) {
+    const volatile char* Server::HandleCommands(const volatile char* commands, size_t size) {
         DeserializeBuffer deserializeBuffer(commands, size);
 
         while (deserializeBuffer.AvailableSize() >= sizeof(CmdHeader) + sizeof(WireCmd)) {
-            // Start by chunked command handling, if it is done, then it means the whole buffer
-            // was consumed by it, so we return a pointer to the end of the commands.
-            switch (HandleChunkedCommands(deserializeBuffer.Buffer(), deserializeBuffer.AvailableSize())) {
-                case ChunkedCommandsResult::Consumed:
-                    return commands + size;
-                case ChunkedCommandsResult::Error:
-                    return nullptr;
-                case ChunkedCommandsResult::Passthrough:
-                    break;
-            }
-
             WireCmd cmdId = *static_cast<const volatile WireCmd*>(static_cast<const volatile void*>(
                 deserializeBuffer.Buffer() + sizeof(CmdHeader)));
             WireResult result;
             switch (cmdId) {
-                {% for command in cmd_records["command"] %}
+                {% for command in cmd_records["special command"] + cmd_records["command"] %}
                     case WireCmd::{{command.name.CamelCase()}}:
                         result = Handle{{command.name.CamelCase()}}(&deserializeBuffer);
                         break;
@@ -124,7 +113,7 @@ namespace dawn::wire::server {
         // After the server handles all the commands from the stream, we additionally run
         // ProcessEvents on all known Instances so that any work done on the server side can be
         // forwarded through to the client.
-        for (auto instance : Objects<WGPUInstance>().GetAllHandles()) {
+        for (auto instance : GetAllInstanceHandles()) {
             if (DoInstanceProcessEvents(instance) != WireResult::Success) {
                 return nullptr;
             }

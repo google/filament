@@ -49,15 +49,49 @@ TEST_F(DeviceAsyncTaskTests, LongAsyncTaskFinishesBeforeDeviceIsDropped) {
     std::atomic_bool done(false);
 
     // Simulate that an async task would take a long time to finish.
-    dawn::native::AsyncTask asyncTask([&done] {
+    AsyncTaskFunction task([&done] {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         done = true;
     });
 
-    mDeviceMock->GetAsyncTaskManager()->PostTask(std::move(asyncTask));
+    mDeviceMock->GetAsyncTaskManager()->PostTask<AsyncTask>(std::move(task));
     DropDevice();
     // Dropping the device should force the async task to finish.
     EXPECT_TRUE(done.load());
+}
+
+// Test that error scope resolution is blocked on AsyncTask completion.
+TEST_F(DeviceAsyncTaskTests, ErrorScopeBlockedOnAsyncTask) {
+    device.PushErrorScope(wgpu::ErrorFilter::Validation);
+
+    // Set up a task that won't complete until the mutex is unlocked
+    std::mutex mutex;
+    std::unique_lock lock(mutex);
+    auto task = mDeviceMock->GetAsyncTaskManager()->PostTask<ErrorGeneratingAsyncTask>(
+        [&mutex]() -> MaybeError {
+            std::scoped_lock<std::mutex> taskLock(mutex);
+            return {};
+        });
+
+    // Register the error generating task with the device so it's associated with the current error
+    // scopes
+    mDeviceMock->HandleErrorGeneratingAsyncTask(task);
+
+    // Set up a simple callback which sets `callbackTriggered`
+    std::atomic_bool callbackTriggered = false;
+    device.PopErrorScope(wgpu::CallbackMode::AllowProcessEvents,
+                         [&callbackTriggered](wgpu::PopErrorScopeStatus, wgpu::ErrorType,
+                                              wgpu::StringView) { callbackTriggered = true; });
+
+    // Expect that the callback is not called yet since the AsyncTask has not completed.
+    ProcessEvents();
+    EXPECT_FALSE(callbackTriggered);
+
+    // Complete the async task and expect that the future resolves and callback is triggered
+    lock.unlock();
+    task->Wait();
+    ProcessEvents();
+    EXPECT_TRUE(callbackTriggered);
 }
 
 }  // anonymous namespace

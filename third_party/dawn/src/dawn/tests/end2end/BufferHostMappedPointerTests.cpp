@@ -93,10 +93,11 @@ TEST_P(BufferHostMappedPointerNoFeatureTests, Creation) {
 DAWN_INSTANTIATE_TEST(BufferHostMappedPointerNoFeatureTests,
                       D3D11Backend(),
                       D3D12Backend(),
-                      VulkanBackend(),
                       MetalBackend(),
                       OpenGLBackend(),
-                      OpenGLESBackend());
+                      OpenGLESBackend(),
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 // Test that memory allocations must be aligned to the required alignment.
 TEST_P(BufferHostMappedPointerTests, Alignment) {

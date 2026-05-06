@@ -28,12 +28,12 @@
 #ifndef SRC_DAWN_NATIVE_METAL_BINDGROUPLAYOUTMTL_H_
 #define SRC_DAWN_NATIVE_METAL_BINDGROUPLAYOUTMTL_H_
 
+#import <Metal/Metal.h>
+
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/NSRef.h"
 #include "dawn/common/SlabAllocator.h"
 #include "dawn/native/BindGroupLayoutInternal.h"
-
-#import <Metal/Metal.h>
 
 namespace dawn::native::metal {
 
@@ -43,16 +43,17 @@ class Device;
 class BindGroupLayout final : public BindGroupLayoutInternalBase {
   public:
     static Ref<BindGroupLayout> Create(DeviceBase* device,
-                                       const BindGroupLayoutDescriptor* descriptor);
+                                       const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
 
-    Ref<BindGroup> AllocateBindGroup(Device* device, const BindGroupDescriptor* descriptor);
+    Ref<BindGroup> AllocateBindGroup(Device* device,
+                                     const UnpackedPtr<BindGroupDescriptor>& descriptor);
     void DeallocateBindGroup(BindGroup* bindGroup);
     void ReduceMemoryUsage() override;
 
     NSPRef<id<MTLArgumentEncoder>> GetArgumentEncoder() const;
 
   private:
-    BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor);
+    BindGroupLayout(DeviceBase* device, const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
     ~BindGroupLayout() override;
 
     MutexProtected<SlabAllocator<BindGroup>> mBindGroupAllocator;

@@ -144,66 +144,6 @@ TEST_F(FunctionDeathTest, Assert_NullParam) {
         "internal compiler error");
 }
 
-TEST_F(FunctionDeathTest, Assert_DifferentGenerationID_Symbol) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Func(b2.Sym("func"), tint::Empty, b1.ty.void_(), tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(FunctionDeathTest, Assert_DifferentGenerationID_Param) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Func("func",
-                    tint::Vector{
-                        b2.Param("var", b2.ty.i32()),
-                    },
-                    b1.ty.void_(), tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(FunctionDeathTest, Assert_DifferentGenerationID_Attr) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Func("func", tint::Empty, b1.ty.void_(), tint::Empty,
-                    tint::Vector{
-                        b2.WorkgroupSize(2_i, 4_i, 6_i),
-                    });
-        },
-        "internal compiler error");
-}
-
-TEST_F(FunctionDeathTest, Assert_DifferentGenerationID_ReturnType) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Func("func", tint::Empty, b2.ty.i32(), tint::Empty);
-        },
-        "internal compiler error");
-}
-
-TEST_F(FunctionDeathTest, Assert_DifferentGenerationID_ReturnAttr) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.Func("func", tint::Empty, b1.ty.void_(), tint::Empty, tint::Empty,
-                    tint::Vector{
-                        b2.WorkgroupSize(2_i, 4_i, 6_i),
-                    });
-        },
-        "internal compiler error");
-}
-
 using FunctionListTest = TestHelper;
 
 TEST_F(FunctionListTest, FindSymbol) {

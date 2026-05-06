@@ -46,12 +46,18 @@ if (tint_build_unittests || tint_build_benchmarks) {
 libtint_source_set("common") {
   sources = [
     "binding_point.h",
+    "bindings.h",
     "override_id.h",
+    "resource_table_config.h",
+    "resource_type.h",
+    "subgroup_matrix.h",
+    "substitute_overrides_config.h",
     "vertex_pulling_config.cc",
     "vertex_pulling_config.h",
+    "workgroup_info.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
     "${tint_src_dir}/utils/ice",
@@ -69,7 +75,7 @@ if (tint_build_unittests) {
       "vertex_pulling_config_test.cc",
     ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/utils",

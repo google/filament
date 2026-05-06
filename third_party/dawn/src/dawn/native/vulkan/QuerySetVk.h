@@ -28,9 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_QUERYSETVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_QUERYSETVK_H_
 
-#include "dawn/native/QuerySet.h"
-
 #include "dawn/common/vulkan_platform.h"
+#include "dawn/native/QuerySet.h"
 
 namespace dawn::native::vulkan {
 
@@ -49,7 +48,7 @@ class QuerySet final : public QuerySetBase {
     MaybeError Initialize();
 
     // Dawn API
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
 
     VkQueryPool mHandle = VK_NULL_HANDLE;

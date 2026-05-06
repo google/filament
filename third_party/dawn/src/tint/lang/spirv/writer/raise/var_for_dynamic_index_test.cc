@@ -141,7 +141,7 @@ TEST_F(SpirvWriter_VarForDynamicIndexTest, NoModify_DynamicIndex_MatrixPointer) 
 }
 
 TEST_F(SpirvWriter_VarForDynamicIndexTest, NoModify_DynamicIndex_VectorValue) {
-    auto* vec = b.FunctionParam(ty.vec4<f32>());
+    auto* vec = b.FunctionParam(ty.vec4f());
     auto* idx = b.FunctionParam(ty.i32());
     auto* func = b.Function("foo", ty.f32());
     func->SetParams({vec, idx});
@@ -193,11 +193,11 @@ TEST_F(SpirvWriter_VarForDynamicIndexTest, DynamicIndex_ArrayValue) {
 TEST_F(SpirvWriter_VarForDynamicIndexTest, DynamicIndex_MatrixValue) {
     auto* mat = b.FunctionParam(ty.mat2x2<f32>());
     auto* idx = b.FunctionParam(ty.i32());
-    auto* func = b.Function("foo", ty.vec2<f32>());
+    auto* func = b.Function("foo", ty.vec2f());
     func->SetParams({mat, idx});
 
     auto* block = func->Block();
-    auto* access = block->Append(b.Access(ty.vec2<f32>(), mat, idx));
+    auto* access = block->Append(b.Access(ty.vec2f(), mat, idx));
     block->Append(b.Return(func, access));
 
     auto* expect = R"(

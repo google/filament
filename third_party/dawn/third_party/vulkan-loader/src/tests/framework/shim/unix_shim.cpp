@@ -27,22 +27,31 @@
 
 #include "shim.h"
 
+#include <cstring>
+
 #include <algorithm>
+#include <iostream>
+#include <mutex>
 
 #if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#include <dlfcn.h>
+
+#include "util/folder_manager.h"
+
+std::recursive_mutex shim_lock;
 PlatformShim platform_shim;
 extern "C" {
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__GNU__) || defined(__QNX__)
-PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function) {
-    platform_shim = PlatformShim(get_folders_by_name_function);
+PlatformShim* get_platform_shim() {
+    platform_shim = PlatformShim();
     return &platform_shim;
 }
 #elif defined(__APPLE__)
-FRAMEWORK_EXPORT PlatformShim* get_platform_shim(GetFoldersFunc get_folders_by_name_function) {
-    platform_shim = PlatformShim(get_folders_by_name_function);
+FRAMEWORK_EXPORT PlatformShim* get_platform_shim() {
+    platform_shim = PlatformShim();
     return &platform_shim;
 }
 #endif
@@ -137,29 +146,35 @@ PFN_FPUTS real_fputs = nullptr;
 PFN_FPUTC real_fputc = nullptr;
 #endif
 
+// It would be nicer to use a lock_guard but due to the interposer, it isn't possible because these functions get called
+// before the shim_lock variable is finished initializing.
+#define LOCK_IF_NOT_IN_SETUP                                      \
+    std::unique_lock<std::recursive_mutex> lock{};                \
+    if (platform_shim.is_finished_setup) {                        \
+        lock = std::unique_lock<std::recursive_mutex>(shim_lock); \
+    }
+
 FRAMEWORK_EXPORT DIR* OPENDIR_FUNC_NAME(const char* path_name) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_opendir) real_opendir = (PFN_OPENDIR)dlsym(RTLD_NEXT, "opendir");
 #endif
-    if (platform_shim.is_during_destruction) {
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
         return real_opendir(path_name);
     }
-    DIR* dir;
-    if (platform_shim.is_fake_path(path_name)) {
-        auto real_path_name = platform_shim.get_real_path_from_fake_path(std::filesystem::path(path_name));
-        dir = real_opendir(real_path_name.c_str());
-        platform_shim.dir_entries.push_back(DirEntry{dir, std::string(path_name), {}, 0, true});
-    } else if (platform_shim.is_known_path(path_name)) {
-        dir = real_opendir(path_name);
-        platform_shim.dir_entries.push_back(DirEntry{dir, std::string(path_name), {}, 0, false});
-    } else {
-        dir = real_opendir(path_name);
+    DIR* dir = nullptr;
+
+    if (auto* folder = platform_shim.file_system_manager->get_folder_for_given_path(path_name); folder != nullptr) {
+        dir = real_opendir(folder->location().c_str());
+        platform_shim.dir_entries.push_back(DirEntry{dir, folder, {}, 0});
     }
+    // Dont pass through as this allows non-test paths to escape containment
 
     return dir;
 }
 
 FRAMEWORK_EXPORT struct dirent* READDIR_FUNC_NAME(DIR* dir_stream) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_readdir) {
         if (sizeof(void*) == 8) {
@@ -171,18 +186,19 @@ FRAMEWORK_EXPORT struct dirent* READDIR_FUNC_NAME(DIR* dir_stream) {
     }
 
 #endif
-    if (platform_shim.is_during_destruction) {
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
         return real_readdir(dir_stream);
     }
     auto it = std::find_if(platform_shim.dir_entries.begin(), platform_shim.dir_entries.end(),
                            [dir_stream](DirEntry const& entry) { return entry.directory == dir_stream; });
 
+    // Folder has not been opened with opendir previously, probably not a loader call so we should ignore it
     if (it == platform_shim.dir_entries.end()) {
         return real_readdir(dir_stream);
     }
     // Folder was found but this is the first file to be read from it
     if (it->current_index == 0) {
-        std::vector<struct dirent*> folder_contents;
+        std::vector<struct dirent*> readdir_contents;
         std::vector<std::string> dirent_filenames;
         while (true) {
             errno = 0;
@@ -198,21 +214,17 @@ FRAMEWORK_EXPORT struct dirent* READDIR_FUNC_NAME(DIR* dir_stream) {
                 (dir_entry->d_name[0] == '.' && dir_entry->d_name[1] == '\0')) {
                 continue;
             }
-            folder_contents.push_back(dir_entry);
+            readdir_contents.push_back(dir_entry);
             dirent_filenames.push_back(&dir_entry->d_name[0]);
         }
-        auto real_path = it->folder_path;
-        if (it->is_fake_path) {
-            real_path = platform_shim.redirection_map.at(it->folder_path);
-        }
-        auto filenames = platform_shim.get_folders_by_name_function(real_path.c_str());
 
-        // Add the dirent structures in the order they appear in the FolderManager
-        // Ignore anything which wasn't in the FolderManager
-        for (auto const& file : filenames) {
+        // Add the dirent structures in the order they appear in the list of files provided by the Folder
+        // Ignore anything which wasn't in the Folder
+        auto folder_contents = it->folder_represented->get_files();
+        for (auto const& file : folder_contents) {
             for (size_t i = 0; i < dirent_filenames.size(); i++) {
                 if (file == dirent_filenames.at(i)) {
-                    it->contents.push_back(folder_contents.at(i));
+                    it->contents.push_back(readdir_contents.at(i));
                     break;
                 }
             }
@@ -223,10 +235,11 @@ FRAMEWORK_EXPORT struct dirent* READDIR_FUNC_NAME(DIR* dir_stream) {
 }
 
 FRAMEWORK_EXPORT int CLOSEDIR_FUNC_NAME(DIR* dir_stream) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_closedir) real_closedir = (PFN_CLOSEDIR)dlsym(RTLD_NEXT, "closedir");
 #endif
-    if (platform_shim.is_during_destruction) {
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
         return real_closedir(dir_stream);
     }
     auto it = std::find_if(platform_shim.dir_entries.begin(), platform_shim.dir_entries.end(),
@@ -240,54 +253,90 @@ FRAMEWORK_EXPORT int CLOSEDIR_FUNC_NAME(DIR* dir_stream) {
 }
 
 FRAMEWORK_EXPORT int ACCESS_FUNC_NAME(const char* in_pathname, int mode) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_access) real_access = (PFN_ACCESS)dlsym(RTLD_NEXT, "access");
 #endif
-    std::filesystem::path path{in_pathname};
-    if (!path.has_parent_path()) {
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
         return real_access(in_pathname, mode);
     }
 
-    if (platform_shim.is_fake_path(path.parent_path())) {
-        std::filesystem::path real_path = platform_shim.get_real_path_from_fake_path(path.parent_path());
+    std::filesystem::path path{in_pathname};
+    if (!path.has_parent_path()) {
+        return real_access(in_pathname, mode);
+    } else if (auto real_path = platform_shim.file_system_manager->get_real_path_of_redirected_path(path.parent_path());
+               !real_path.empty()) {
         real_path /= path.filename();
         return real_access(real_path.c_str(), mode);
+    } else if (platform_shim.file_system_manager->is_folder_path(path.parent_path())) {
+        return real_access(in_pathname, mode);
+    } else {
+        return -1;
     }
-    return real_access(in_pathname, mode);
 }
 
 FRAMEWORK_EXPORT FILE* FOPEN_FUNC_NAME(const char* in_filename, const char* mode) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_fopen) real_fopen = (PFN_FOPEN)dlsym(RTLD_NEXT, "fopen");
 #endif
-    std::filesystem::path path{in_filename};
-    if (!path.has_parent_path()) {
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
         return real_fopen(in_filename, mode);
     }
-
-    FILE* f_ptr;
-    if (platform_shim.is_fake_path(path.parent_path())) {
-        auto real_path = platform_shim.get_real_path_from_fake_path(path.parent_path()) / path.filename();
-        f_ptr = real_fopen(real_path.c_str(), mode);
+    FILE* out_file = nullptr;
+    std::filesystem::path path{in_filename};
+    if (!path.has_parent_path()) {
+        out_file = real_fopen(in_filename, mode);
+    } else if (auto real_path = platform_shim.file_system_manager->get_real_path_of_redirected_path(path.parent_path());
+               !real_path.empty()) {
+        real_path /= path.filename();
+        out_file = real_fopen(real_path.c_str(), mode);
     } else {
-        f_ptr = real_fopen(in_filename, mode);
+        out_file = real_fopen(in_filename, mode);
     }
 
-    return f_ptr;
+    // Fuzz tests have sub files embedded in the input data file. This
+    if (!platform_shim.fuzz_data.empty() && out_file == NULL) {
+        FILE* fp = fopen(path.c_str(), "wb");
+        if (nullptr == fp) {
+            path.replace_filename("callback_file_" + std::to_string(platform_shim.temp_fuzz_files.size()));
+            fp = fopen(path.c_str(), "wb");
+            if (nullptr == fp) {
+                abort();
+            }
+        }
+        fwrite(platform_shim.fuzz_data.data(), platform_shim.fuzz_data.size(), 1, fp);
+        fclose(fp);
+        platform_shim.temp_fuzz_files.emplace_back(path.c_str());
+
+        out_file = fopen(path.c_str(), "rb");
+    }
+    return out_file;
 }
 
 FRAMEWORK_EXPORT void* DLOPEN_FUNC_NAME(const char* in_filename, int flags) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_dlopen) real_dlopen = (PFN_DLOPEN)dlsym(RTLD_NEXT, "dlopen");
 #endif
-
-    if (platform_shim.is_dlopen_redirect_name(in_filename)) {
-        return real_dlopen(platform_shim.dlopen_redirection_map[in_filename].c_str(), flags);
+    if (platform_shim.is_during_destruction || !platform_shim.is_finished_setup) {
+        return real_dlopen(in_filename, flags);
     }
-    return real_dlopen(in_filename, flags);
+
+    std::filesystem::path path{in_filename};
+    if (auto real_path = platform_shim.get_system_library(path); !real_path.empty()) {
+        return real_dlopen(real_path.c_str(), flags);
+    } else if (auto real_path = platform_shim.file_system_manager->get_real_path_of_redirected_path(path.parent_path());
+               !real_path.empty()) {
+        real_path /= path.filename();
+        return real_dlopen(real_path.c_str(), flags);
+    } else {
+        return real_dlopen(in_filename, flags);
+    }
 }
 
 FRAMEWORK_EXPORT uid_t GETEUID_FUNC_NAME(void) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_geteuid) real_geteuid = (PFN_GETEUID)dlsym(RTLD_NEXT, "geteuid");
 #endif
@@ -300,6 +349,7 @@ FRAMEWORK_EXPORT uid_t GETEUID_FUNC_NAME(void) {
 }
 
 FRAMEWORK_EXPORT gid_t GETEGID_FUNC_NAME(void) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_getegid) real_getegid = (PFN_GETEGID)dlsym(RTLD_NEXT, "getegid");
 #endif
@@ -314,6 +364,7 @@ FRAMEWORK_EXPORT gid_t GETEGID_FUNC_NAME(void) {
 #if !defined(TARGET_OS_IPHONE)
 #if defined(HAVE_SECURE_GETENV)
 FRAMEWORK_EXPORT char* SECURE_GETENV_FUNC_NAME(const char* name) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_secure_getenv) real_secure_getenv = (PFN_SEC_GETENV)dlsym(RTLD_NEXT, "secure_getenv");
 #endif
@@ -326,6 +377,7 @@ FRAMEWORK_EXPORT char* SECURE_GETENV_FUNC_NAME(const char* name) {
 #endif
 #if defined(HAVE___SECURE_GETENV)
 FRAMEWORK_EXPORT char* __SECURE_GETENV_FUNC_NAME(const char* name) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real__secure_getenv) real__secure_getenv = (PFN_SEC_GETENV)dlsym(RTLD_NEXT, "__secure_getenv");
 #endif
@@ -340,6 +392,7 @@ FRAMEWORK_EXPORT char* __SECURE_GETENV_FUNC_NAME(const char* name) {
 #endif
 
 FRAMEWORK_EXPORT int FPUTS_FUNC_NAME(const char* str, FILE* stream) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_fputs) real_fputs = (PFN_FPUTS)dlsym(RTLD_NEXT, "fputs");
 #endif
@@ -350,6 +403,7 @@ FRAMEWORK_EXPORT int FPUTS_FUNC_NAME(const char* str, FILE* stream) {
 }
 
 FRAMEWORK_EXPORT int FPUTC_FUNC_NAME(int ch, FILE* stream) {
+    LOCK_IF_NOT_IN_SETUP
 #if !defined(__APPLE__)
     if (!real_fputc) real_fputc = (PFN_FPUTC)dlsym(RTLD_NEXT, "fputc");
 #endif
@@ -361,16 +415,19 @@ FRAMEWORK_EXPORT int FPUTC_FUNC_NAME(int ch, FILE* stream) {
 
 #if defined(__APPLE__)
 FRAMEWORK_EXPORT CFBundleRef my_CFBundleGetMainBundle() {
+    LOCK_IF_NOT_IN_SETUP
     static CFBundleRef global_bundle{};
     return reinterpret_cast<CFBundleRef>(&global_bundle);
 }
 FRAMEWORK_EXPORT CFURLRef my_CFBundleCopyResourcesDirectoryURL([[maybe_unused]] CFBundleRef bundle) {
+    LOCK_IF_NOT_IN_SETUP
     static CFURLRef global_url{};
     return reinterpret_cast<CFURLRef>(&global_url);
 }
 FRAMEWORK_EXPORT Boolean my_CFURLGetFileSystemRepresentation([[maybe_unused]] CFURLRef url,
                                                              [[maybe_unused]] Boolean resolveAgainstBase, UInt8* buffer,
                                                              CFIndex maxBufLen) {
+    LOCK_IF_NOT_IN_SETUP
     if (!platform_shim.bundle_contents.empty()) {
         CFIndex copy_len = (CFIndex)platform_shim.bundle_contents.size();
         if (copy_len > maxBufLen) {

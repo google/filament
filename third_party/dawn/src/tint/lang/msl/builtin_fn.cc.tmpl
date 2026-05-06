@@ -12,6 +12,9 @@ See:
 */ -}}
 
 {{- $I := LoadIntrinsics "src/tint/lang/msl/msl.def" -}}
+
+// clang-format off
+
 #include "src/tint/lang/msl/builtin_fn.h"
 
 namespace tint::msl {
@@ -44,6 +47,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kThreadgroupBarrier:
         case BuiltinFn::kSimdBallot:
         case BuiltinFn::kQuadShuffleXor:
+        case BuiltinFn::kAtomicMaxExplicit:
+        case BuiltinFn::kAtomicMinExplicit:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
 
         case BuiltinFn::kAtomicLoadExplicit:
@@ -76,6 +81,8 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kConvert:
         case BuiltinFn::kSimdgroupMultiply:
         case BuiltinFn::kSimdgroupMultiplyAccumulate:
+        case BuiltinFn::kMakeDiagonalSimdgroupMatrix:
+        case BuiltinFn::kMakeFilledSimdgroupMatrix:
         case BuiltinFn::kOsLog:
         case BuiltinFn::kPointerOffset:
             break;
@@ -84,3 +91,5 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
 }
 
 }  // namespace tint::msl
+
+// clang-format on

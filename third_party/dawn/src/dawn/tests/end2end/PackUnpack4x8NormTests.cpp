@@ -305,7 +305,8 @@ TEST_P(PackUnpack4x8NormTests, Unpack4x8Snorm) {
 // DawnTestBase::CreateDeviceImpl always enables allow_unsafe_apis toggle.
 DAWN_INSTANTIATE_TEST(PackUnpack4x8NormTests,
                       VulkanBackend(),
-                      VulkanBackend({"polyfill_pack_unpack_4x8_norm"}));
+                      VulkanBackend({"polyfill_pack_unpack_4x8_norm"}),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

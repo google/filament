@@ -28,10 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUERYSETMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_QUERYSETMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/QuerySet.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -40,7 +39,7 @@ class QuerySetMock : public QuerySetBase {
     QuerySetMock(DeviceMock* device, const QuerySetDescriptor* descriptor);
     ~QuerySetMock() override;
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 };
 
 }  // namespace dawn::native

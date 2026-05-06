@@ -44,6 +44,7 @@ PipelineLayout::PipelineLayout(Device* device,
                                const UnpackedPtr<PipelineLayoutDescriptor>& descriptor)
     : PipelineLayoutBase(device, descriptor) {
     // Each stage has its own numbering namespace in CompilerMSL.
+    // TODO(crbug.com/363031535): This should become unnecessary once we switch to argument buffers.
     for (auto stage : IterateStages(kAllStages)) {
         uint32_t bufferIndex = 0;
         uint32_t samplerIndex = 0;
@@ -78,13 +79,19 @@ PipelineLayout::PipelineLayout(Device* device,
                         mIndexInfo[stage][group][bindingIndex] = textureIndex;
                         textureIndex++;
                     },
+                    [&](const TexelBufferBindingInfo&) {
+                        // Metal does not support texel buffers.
+                        // TODO(crbug/382544164): Prototype texel buffer feature
+                        DAWN_UNREACHABLE();
+                    },
                     [&](const StaticSamplerBindingInfo&) {
                         // Static samplers are handled in the frontend.
                         // TODO(crbug.com/dawn/2482): Implement static samplers in the
                         // Metal backend.
                         DAWN_UNREACHABLE();
                     },
-                    [](const InputAttachmentBindingInfo&) { DAWN_UNREACHABLE(); });
+                    [](const InputAttachmentBindingInfo&) { DAWN_UNREACHABLE(); },
+                    [](const ExternalTextureBindingInfo&) { DAWN_UNREACHABLE(); });
             }
         }
 

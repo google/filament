@@ -26,6 +26,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <algorithm>
+#include <array>
+#include <functional>
 #include <limits>
 #include <string>
 #include <vector>
@@ -35,6 +37,7 @@
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
+#include "partition_alloc/pointers/raw_ref.h"
 
 namespace dawn {
 namespace {
@@ -123,6 +126,7 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
     // TODO(crbug.com/dawn/1217): Remove this suppression.
     DAWN_SUPPRESS_TEST_IF(IsWindows() && IsVulkan() && IsNvidia());
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsNvidia());
+    DAWN_SUPPRESS_TEST_IF(IsVulkan() && IsWebGPUOnWebGPU());
 
     // TODO(crbug.com/dawn/1705): Use a zero buffer to clear buffers. Otherwise, the test
     // OOMs.
@@ -133,6 +137,9 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
 
     // TODO(crbug.com/dawn/2426): Fails on Pixel 6 devices with Android U.
     DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsVulkan() && IsARM());
+
+    // TODO(crbug.com/474399207): [Capture] Investigate crash.
+    DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled() && IsMetal());
 
     for (wgpu::BufferUsage usage : {wgpu::BufferUsage::Storage, wgpu::BufferUsage::Uniform}) {
         uint64_t maxBufferBindingSize;
@@ -175,7 +182,7 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
                   }
               )";
                 break;
-            case wgpu::BufferUsage::Uniform:
+            case wgpu::BufferUsage::Uniform: {
                 maxBufferBindingSize = GetSupportedLimits().maxUniformBufferBindingSize;
 
                 // Clamp to not exceed the maximum i32 value for the WGSL @size(x) annotation.
@@ -183,12 +190,26 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
                                                 uint64_t(std::numeric_limits<int32_t>::max()) + 8);
                 maxBufferBindingSize = Align(maxBufferBindingSize - 3u, 4);
 
+                const uint64_t kMaxStructMemberU32ArraySize = 65535 * 4;
+                uint64_t paddingNeeded = maxBufferBindingSize - 8;
+                uint64_t numPaddingMembers = (paddingNeeded + kMaxStructMemberU32ArraySize - 1) /
+                                             kMaxStructMemberU32ArraySize;
+                std::string paddingMembers;
+
+                for (uint64_t i = 0; i < numPaddingMembers; ++i) {
+                    uint64_t offset = i * kMaxStructMemberU32ArraySize;
+                    uint64_t remainingSize = paddingNeeded - offset;
+                    uint64_t memberSize = std::min(kMaxStructMemberU32ArraySize, remainingSize);
+                    paddingMembers +=
+                        absl::StrFormat("    padding%v: array<u32, %v>,\n", i, memberSize / 4);
+                }
+
                 shader = R"(
                   struct Buf {
                       value0 : u32,
                       // padding such that value0 and value1 are the first and last bytes of the memory.
-                      @size()" +
-                         std::to_string(maxBufferBindingSize - 8) + R"() padding : u32,
+                      )" +
+                         paddingMembers + R"(
                       value1 : u32,
                   }
 
@@ -207,6 +228,7 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
                   }
               )";
                 break;
+            }
             default:
                 DAWN_UNREACHABLE();
         }
@@ -548,9 +570,6 @@ TEST_P(MaxLimitTests, MaxStorageBuffersPerShaderStage) {
 // used correctly. The test loads a different value from each binding, and writes 1 to a storage
 // buffer if all values are correct.
 TEST_P(MaxLimitTests, ReallyLargeBindGroup) {
-    // TODO(crbug.com/dawn/590): Crashing on ANGLE/D3D11.
-    DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
-
     // TODO(crbug.com/dawn/590): Failing on Pixel4
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
@@ -703,6 +722,9 @@ TEST_P(MaxLimitTests, WriteToMaxFragmentCombinedOutputResources) {
 
     // TODO(http://crbug.com/348199037): VUID-RuntimeSpirv-Location-06428
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsVulkan() && IsNvidia());
+
+    // TODO(crbug.com/40238674): Fails on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsImgTec());
 
     // Compute the number of each resource type (storage buffers and storage textures) such that
     // there is at least one color attachment, and as many of the buffer/textures as possible,
@@ -863,7 +885,8 @@ DAWN_INSTANTIATE_TEST(MaxLimitTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 // Verifies the limits maxInterStageShaderVariables work correctly
 class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
@@ -873,6 +896,9 @@ class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
         bool hasSampleMask;
         bool hasSampleIndex;
         bool hasFrontFacing;
+        bool hasPrimitiveIndex;
+        bool hasSubgroupInvocationId;
+        bool hasSubgroupSize;
         std::optional<uint32_t> clipDistancesSize;
     };
 
@@ -891,10 +917,20 @@ class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
             requiredFeatures.push_back(wgpu::FeatureName::ClipDistances);
             mSupportsClipDistances = true;
         }
+        if (SupportsFeatures({wgpu::FeatureName::PrimitiveIndex})) {
+            requiredFeatures.push_back(wgpu::FeatureName::PrimitiveIndex);
+            mSupportsPrimitiveIndex = true;
+        }
+        if (SupportsFeatures({wgpu::FeatureName::Subgroups})) {
+            requiredFeatures.push_back(wgpu::FeatureName::Subgroups);
+            mSupportsSubgroups = true;
+        }
         return requiredFeatures;
     }
 
     bool mSupportsClipDistances = false;
+    bool mSupportsPrimitiveIndex = false;
+    bool mSupportsSubgroups = false;
 
   private:
     // Allocate the inter-stage shader variables that consume as many inter-stage shader variables
@@ -903,11 +939,15 @@ class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
         const auto& baseLimits = GetAdapterLimits();
 
         uint32_t builtinVariableCount = 0;
-        if (spec.renderPointLists) {
-            ++builtinVariableCount;
-        }
-        if (spec.hasFrontFacing || spec.hasSampleIndex || spec.hasSampleMask) {
-            ++builtinVariableCount;
+        std::reference_wrapper<const bool> usages[] = {
+            spec.renderPointLists, spec.hasSampleMask,     spec.hasSampleIndex,
+            spec.hasFrontFacing,   spec.hasPrimitiveIndex, spec.hasSubgroupInvocationId,
+            spec.hasSubgroupSize,
+        };
+        for (const auto& usage : usages) {
+            if (usage) {
+                ++builtinVariableCount;
+            }
         }
         if (spec.clipDistancesSize.has_value()) {
             builtinVariableCount += RoundUp(*spec.clipDistancesSize, 4) / 4;
@@ -951,6 +991,16 @@ class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
             stream << "enable clip_distances;\n";
         }
 
+        if (spec.hasPrimitiveIndex) {
+            DAWN_ASSERT(mSupportsPrimitiveIndex);
+            stream << "enable primitive_index;\n";
+        }
+
+        if (spec.hasSubgroupInvocationId || spec.hasSubgroupSize) {
+            DAWN_ASSERT(mSupportsSubgroups);
+            stream << "enable subgroups;\n";
+        }
+
         uint32_t interStageVariableCount = GetInterStageVariableCount(spec);
         stream << GetInterStageVariableDeclarations(interStageVariableCount, spec) << "\n"
                << GetVertexShaderForTest(interStageVariableCount) << "\n"
@@ -989,29 +1039,36 @@ class MaxInterStageShaderVariablesLimitTests : public MaxLimitTests {
     std::string GetFragmentShaderForTest(uint32_t interStageVariableCount,
                                          const MaxInterStageLimitTestsSpec& spec) {
         std::stringstream stream;
+        struct BoolTypeName {
+            raw_ref<const bool> value;
+            const char* type;
+            const char* name;
+        };
+        BoolTypeName builtins[] = {
+            {raw_ref(spec.hasFrontFacing), "bool", "front_facing"},
+            {raw_ref(spec.hasSampleIndex), "u32", "sample_index"},
+            {raw_ref(spec.hasSampleMask), "u32", "sample_mask"},
+            {raw_ref(spec.hasPrimitiveIndex), "u32", "primitive_index"},
+            {raw_ref(spec.hasSubgroupInvocationId), "u32", "subgroup_invocation_id"},
+            {raw_ref(spec.hasSubgroupSize), "u32", "subgroup_size"},
+        };
 
         stream << "@fragment fn fs_main(input: FragmentInput";
-        if (spec.hasFrontFacing) {
-            stream << ", @builtin(front_facing) isFront : bool";
-        }
-        if (spec.hasSampleIndex) {
-            stream << ", @builtin(sample_index) sampleIndex : u32";
-        }
-        if (spec.hasSampleMask) {
-            stream << ", @builtin(sample_mask) sampleMask : u32";
+        for (const auto& builtin : builtins) {
+            if (builtin.value.get()) {
+                stream << ",\n  @builtin(" << builtin.name << ") b_" << builtin.name << " : "
+                       << builtin.type;
+            }
         }
         // Ensure every inter-stage shader variable and built-in variable is used instead of being
-        // optimized out.
+        // optimized out..
         stream << ") -> @location(0) vec4f {\nreturn input.pos";
-        if (spec.hasFrontFacing) {
-            stream << " + vec4f(f32(isFront), 0, 0, 1)";
+        for (const auto& builtin : builtins) {
+            if (builtin.value.get()) {
+                stream << "\n   + vec4f(f32(b_" << builtin.name << "), 0, 0, 1)";
+            }
         }
-        if (spec.hasSampleIndex) {
-            stream << " + vec4f(f32(sampleIndex), 0, 0, 1)";
-        }
-        if (spec.hasSampleMask) {
-            stream << " + vec4f(f32(sampleMask), 0, 0, 1)";
-        }
+
         for (uint32_t location = 0; location < interStageVariableCount; ++location) {
             stream << " + input.color" << location;
         }
@@ -1106,6 +1163,30 @@ TEST_P(MaxInterStageShaderVariablesLimitTests, RenderPointList_SampleMask_Sample
     DoTest(spec);
 }
 
+TEST_P(MaxInterStageShaderVariablesLimitTests, PrimitiveIndex) {
+    DAWN_TEST_UNSUPPORTED_IF(!mSupportsPrimitiveIndex);
+
+    MaxInterStageLimitTestsSpec spec = {};
+    spec.hasPrimitiveIndex = true;
+    DoTest(spec);
+}
+
+TEST_P(MaxInterStageShaderVariablesLimitTests, SubgroupInvocationId) {
+    DAWN_TEST_UNSUPPORTED_IF(!mSupportsSubgroups);
+
+    MaxInterStageLimitTestsSpec spec = {};
+    spec.hasSubgroupInvocationId = true;
+    DoTest(spec);
+}
+
+TEST_P(MaxInterStageShaderVariablesLimitTests, SubgroupSize) {
+    DAWN_TEST_UNSUPPORTED_IF(!mSupportsSubgroups);
+
+    MaxInterStageLimitTestsSpec spec = {};
+    spec.hasSubgroupSize = true;
+    DoTest(spec);
+}
+
 // Tests that maxInterStageShaderVariables works for a render pipeline with
 // @builtin(clip_distances).
 TEST_P(MaxInterStageShaderVariablesLimitTests, ClipDistances) {
@@ -1186,12 +1267,13 @@ TEST_P(MaxInterStageShaderVariablesLimitTests, MaxLocation_ClipDistances) {
 
 DAWN_INSTANTIATE_TEST(MaxInterStageShaderVariablesLimitTests,
                       D3D11Backend(),
+                      D3D12Backend(),
                       D3D12Backend({}, {"use_dxc"}),
-                      D3D12Backend({"use_dxc"}),
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 // Verifies the limit maxVertexAttributes work correctly on the creation of render pipelines.
 class MaxVertexAttributesPipelineCreationTests : public MaxLimitTests {
@@ -1334,12 +1416,13 @@ TEST_P(MaxVertexAttributesPipelineCreationTests, VertexIndex_InstanceIndex) {
 
 DAWN_INSTANTIATE_TEST(MaxVertexAttributesPipelineCreationTests,
                       D3D11Backend(),
+                      D3D12Backend(),
                       D3D12Backend({}, {"use_dxc"}),
-                      D3D12Backend({"use_dxc"}),
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -29,6 +29,7 @@
 #define SRC_TINT_UTILS_TEXT_STYLED_TEXT_THEME_H_
 
 #include <stdint.h>
+
 #include <optional>
 
 #include "src/tint/utils/math/hash.h"

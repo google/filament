@@ -63,6 +63,7 @@ class RenderBundleEncoder;
 class RenderPassEncoder;
 class RenderPipelineBase;
 class ResourceHeapBase;
+class ResourceTableBase;
 class SamplerBase;
 class SharedFenceBase;
 class Surface;
@@ -70,6 +71,7 @@ class ShaderModuleBase;
 class SwapChainBase;
 class TextureBase;
 class TextureViewBase;
+class TexelBufferViewBase;
 
 class DeviceBase;
 

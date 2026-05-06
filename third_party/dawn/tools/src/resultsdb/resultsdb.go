@@ -197,7 +197,7 @@ func (bq BigQueryClient) QueryRecentUniqueSuppressedTestResults(
           ARRAY(
             SELECT t
             FROM tr.tags t
-            WHERE key = "typ_tag"
+            WHERE key = "typ_tag" OR key = "gpu_test_class"
           ) as tags,
 					ARRAY(
 						SELECT value
@@ -226,7 +226,8 @@ func (bq BigQueryClient) QueryRecentUniqueSuppressedTestResults(
     GROUP BY testid, tags
 `
 
-	query := fmt.Sprintf(baseQuery, testPrefix)
+	escapedPrefix := strings.ReplaceAll(testPrefix, `\`, `\\`)
+	query := fmt.Sprintf(baseQuery, escapedPrefix)
 
 	return bq.runQuery(ctx, query, f)
 }
@@ -239,7 +240,8 @@ func (bq BigQueryClient) runQueryForBuilds(
 	for _, id := range builds {
 		buildIds = append(buildIds, fmt.Sprintf(`"build-%v"`, id))
 	}
-	query := fmt.Sprintf(baseQuery, strings.Join(buildIds, ","), testPrefix)
+	escapedPrefix := strings.ReplaceAll(testPrefix, `\`, `\\`)
+	query := fmt.Sprintf(baseQuery, strings.Join(buildIds, ","), escapedPrefix)
 
 	return bq.runQuery(ctx, query, f)
 }

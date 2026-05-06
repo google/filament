@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/parser"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/resolver"
 )
@@ -576,10 +577,15 @@ type f32
 implicit(T) fn f<T>()`,
 			`file.txt:1:18 'T' already declared
 First declared here: file.txt:1:10`,
+		}, {
+			`
+type bool
+fn f(@const bool)`,
+			`file.txt:2:13 @const parameters must be named`,
 		},
 	} {
 
-		ast, err := parser.Parse(strings.TrimSpace(string(test.src)), "file.txt")
+		ast, err := parser.Parse(strings.TrimSpace(string(test.src)), "file.txt", oswrapper.CreateFSTestOSWrapper())
 		if err != nil {
 			t.Errorf("While parsing:\n%s\nUnexpected parser error: %v", test.src, err)
 			continue

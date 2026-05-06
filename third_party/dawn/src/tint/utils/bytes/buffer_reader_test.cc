@@ -27,6 +27,9 @@
 
 #include "src/tint/utils/bytes/buffer_reader.h"
 
+#include <array>
+#include <span>
+
 #include "gtest/gtest.h"
 
 namespace tint::bytes {
@@ -40,15 +43,15 @@ auto Data(ARGS... args) {
 TEST(BufferReaderTest, IntegerBigEndian) {
     auto data = Data(0x10, 0x20, 0x30, 0x40);
 
-    BufferReader u32_reader{Slice{data}};
+    BufferReader u32_reader{data};
     EXPECT_FALSE(u32_reader.IsEOF());
-    auto u32 = u32_reader.Int<uint32_t>(Endianness::kBig);
+    auto u32 = u32_reader.Int<uint32_t>(std::endian::big);
     EXPECT_EQ(u32, 0x10203040u);
     EXPECT_TRUE(u32_reader.IsEOF());
 
-    BufferReader i32_reader{Slice{data}};
+    BufferReader i32_reader{data};
     EXPECT_FALSE(i32_reader.IsEOF());
-    auto i32 = i32_reader.Int<int32_t>(Endianness::kBig);
+    auto i32 = i32_reader.Int<int32_t>(std::endian::big);
     EXPECT_EQ(i32, 0x10203040);
     EXPECT_TRUE(i32_reader.IsEOF());
 }
@@ -56,15 +59,15 @@ TEST(BufferReaderTest, IntegerBigEndian) {
 TEST(BufferReaderTest, IntegerBigEndian_TooShort) {
     auto data = Data(0x10, 0x20);
 
-    BufferReader u32_reader{Slice{data}};
+    BufferReader u32_reader{data};
     EXPECT_FALSE(u32_reader.IsEOF());
-    auto u32 = u32_reader.Int<uint32_t>(Endianness::kBig);
+    auto u32 = u32_reader.Int<uint32_t>(std::endian::big);
     EXPECT_NE(u32, Success);
     EXPECT_TRUE(u32_reader.IsEOF());
 
-    BufferReader i32_reader{Slice{data}};
+    BufferReader i32_reader{data};
     EXPECT_FALSE(i32_reader.IsEOF());
-    auto i32 = i32_reader.Int<int32_t>(Endianness::kBig);
+    auto i32 = i32_reader.Int<int32_t>(std::endian::big);
     EXPECT_NE(i32, Success);
     EXPECT_TRUE(i32_reader.IsEOF());
 }
@@ -72,15 +75,15 @@ TEST(BufferReaderTest, IntegerBigEndian_TooShort) {
 TEST(BufferReaderTest, IntegerLittleEndian) {
     auto data = Data(0x10, 0x20, 0x30, 0x40);
 
-    BufferReader u32_reader{Slice{data}};
+    BufferReader u32_reader{data};
     EXPECT_FALSE(u32_reader.IsEOF());
-    auto u32 = u32_reader.Int<uint32_t>(Endianness::kLittle);
+    auto u32 = u32_reader.Int<uint32_t>(std::endian::little);
     EXPECT_EQ(u32, 0x40302010u);
     EXPECT_TRUE(u32_reader.IsEOF());
 
-    BufferReader i32_reader{Slice{data}};
+    BufferReader i32_reader{data};
     EXPECT_FALSE(i32_reader.IsEOF());
-    auto i32 = i32_reader.Int<int32_t>(Endianness::kLittle);
+    auto i32 = i32_reader.Int<int32_t>(std::endian::little);
     EXPECT_EQ(i32, 0x40302010);
     EXPECT_TRUE(i32_reader.IsEOF());
 }
@@ -88,15 +91,15 @@ TEST(BufferReaderTest, IntegerLittleEndian) {
 TEST(BufferReaderTest, IntegerLittleEndian_TooShort) {
     auto data = Data(0x30, 0x40);
 
-    BufferReader u32_reader{Slice{data}};
+    BufferReader u32_reader{data};
     EXPECT_FALSE(u32_reader.IsEOF());
-    auto u32 = u32_reader.Int<uint32_t>(Endianness::kLittle);
+    auto u32 = u32_reader.Int<uint32_t>(std::endian::little);
     EXPECT_NE(u32, Success);
     EXPECT_TRUE(u32_reader.IsEOF());
 
-    BufferReader i32_reader{Slice{data}};
+    BufferReader i32_reader{data};
     EXPECT_FALSE(i32_reader.IsEOF());
-    auto i32 = i32_reader.Int<int32_t>(Endianness::kLittle);
+    auto i32 = i32_reader.Int<int32_t>(std::endian::little);
     EXPECT_NE(i32, Success);
     EXPECT_TRUE(i32_reader.IsEOF());
 }
@@ -104,7 +107,7 @@ TEST(BufferReaderTest, IntegerLittleEndian_TooShort) {
 TEST(BufferReaderTest, Float) {
     auto data = Data(0x00, 0x00, 0x08, 0x41);
 
-    BufferReader f32_reader{Slice{data}};
+    BufferReader f32_reader{data};
     EXPECT_FALSE(f32_reader.IsEOF());
     auto f32 = f32_reader.Float<float>();
     ASSERT_EQ(f32, Success);
@@ -115,7 +118,7 @@ TEST(BufferReaderTest, Float) {
 TEST(BufferReaderTest, Float_TooShort) {
     auto data = Data(0x08, 0x41);
 
-    BufferReader f32_reader{Slice{data}};
+    BufferReader f32_reader{data};
     EXPECT_FALSE(f32_reader.IsEOF());
     auto f32 = f32_reader.Float<float>();
     EXPECT_NE(f32, Success);

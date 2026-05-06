@@ -154,7 +154,7 @@ Device::Device(AdapterBase* adapter,
 
 Device::~Device() {
     StopTrace();
-    Destroy();
+    Destroy(DestroyReason::CppDestructor);
 }
 
 MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
@@ -189,11 +189,11 @@ MaybeError Device::Initialize(const UnpackedPtr<DeviceDescriptor>& descriptor) {
 }
 
 ResultOrError<Ref<BindGroupBase>> Device::CreateBindGroupImpl(
-    const BindGroupDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupDescriptor>& descriptor) {
     return BindGroup::Create(this, descriptor);
 }
 ResultOrError<Ref<BindGroupLayoutInternalBase>> Device::CreateBindGroupLayoutImpl(
-    const BindGroupLayoutDescriptor* descriptor) {
+    const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) {
     return BindGroupLayout::Create(this, descriptor);
 }
 ResultOrError<Ref<BufferBase>> Device::CreateBufferImpl(
@@ -220,14 +220,18 @@ Ref<RenderPipelineBase> Device::CreateUninitializedRenderPipelineImpl(
     const UnpackedPtr<RenderPipelineDescriptor>& descriptor) {
     return RenderPipeline::CreateUninitialized(this, descriptor);
 }
+ResultOrError<Ref<ResourceTableBase>> Device::CreateResourceTableImpl(
+    const ResourceTableDescriptor* descriptor) {
+    // TODO(https://issues.chromium.org/473444514): Implement resource tables in Metal.
+    return DAWN_UNIMPLEMENTED_ERROR("ResourceTable is not implemented on Metal");
+}
 ResultOrError<Ref<SamplerBase>> Device::CreateSamplerImpl(const SamplerDescriptor* descriptor) {
     return Sampler::Create(this, descriptor);
 }
 ResultOrError<Ref<ShaderModuleBase>> Device::CreateShaderModuleImpl(
     const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-    const std::vector<tint::wgsl::Extension>& internalExtensions,
-    ShaderModuleParseResult* parseResult) {
-    return ShaderModule::Create(this, descriptor, internalExtensions, parseResult);
+    const std::vector<tint::wgsl::Extension>& internalExtensions) {
+    return ShaderModule::Create(this, descriptor, internalExtensions);
 }
 ResultOrError<Ref<SwapChainBase>> Device::CreateSwapChainImpl(Surface* surface,
                                                               SwapChainBase* previousSwapChain,
@@ -347,11 +351,12 @@ MaybeError Device::CopyFromStagingToBuffer(BufferBase* source,
 // In Metal we don't write from the CPU to the texture directly which can be done using the
 // replaceRegion function, because the function requires a non-private storage mode and Dawn
 // sets the private storage mode by default for all textures except IOSurfaces on macOS.
-MaybeError Device::CopyFromStagingToTextureImpl(const BufferBase* source,
+MaybeError Device::CopyFromStagingToTextureImpl(BufferBase* source,
                                                 const TexelCopyBufferLayout& dataLayout,
                                                 const TextureCopy& dst,
                                                 const Extent3D& copySizePixels) {
     Texture* texture = ToBackend(dst.texture.Get());
+    const TypedTexelBlockInfo& blockInfo = GetBlockInfo(dst);
     texture->SynchronizeTextureBeforeUse(ToBackend(GetQueue())->GetPendingCommandContext());
     DAWN_TRY(EnsureDestinationTextureInitialized(
         ToBackend(GetQueue())->GetPendingCommandContext(QueueBase::SubmitMode::Passive), texture,
@@ -360,12 +365,13 @@ MaybeError Device::CopyFromStagingToTextureImpl(const BufferBase* source,
     RecordCopyBufferToTexture(
         ToBackend(GetQueue())->GetPendingCommandContext(QueueBase::SubmitMode::Passive),
         ToBackend(source)->GetMTLBuffer(), source->GetSize(), dataLayout.offset,
-        dataLayout.bytesPerRow, dataLayout.rowsPerImage, texture, dst.mipLevel, dst.origin,
-        dst.aspect, copySizePixels);
+        blockInfo.BytesToBlocks(dataLayout.bytesPerRow), BlockCount(dataLayout.rowsPerImage),
+        texture, dst.mipLevel, blockInfo.ToBlock(dst.origin), dst.aspect,
+        blockInfo.ToBlock(TexelExtent3D(copySizePixels)));
     return {};
 }
 
-void Device::DestroyImpl() {
+void Device::DestroyImpl(DestroyReason reason) {
     DAWN_ASSERT(GetState() == State::Disconnected);
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the device is explicitly destroyed with APIDestroy.

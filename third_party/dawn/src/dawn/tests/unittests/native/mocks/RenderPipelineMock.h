@@ -28,10 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_RENDERPIPELINEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_RENDERPIPELINEMOCK_H_
 
-#include "gmock/gmock.h"
-
 #include "dawn/native/RenderPipeline.h"
 #include "dawn/tests/unittests/native/mocks/DeviceMock.h"
+#include "gmock/gmock.h"
 
 namespace dawn::native {
 
@@ -46,7 +45,7 @@ class RenderPipelineMock : public RenderPipelineBase {
     ~RenderPipelineMock() override;
 
     MOCK_METHOD(MaybeError, InitializeImpl, (), (override));
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    MOCK_METHOD(void, DestroyImpl, (DestroyReason), (override));
 
   protected:
     RenderPipelineMock(DeviceMock* device, const UnpackedPtr<RenderPipelineDescriptor>& descriptor);

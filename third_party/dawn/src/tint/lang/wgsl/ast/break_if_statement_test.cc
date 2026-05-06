@@ -57,15 +57,5 @@ TEST_F(BreakIfStatementDeathTest, Assert_Null_Condition) {
         "internal compiler error");
 }
 
-TEST_F(BreakIfStatementDeathTest, Assert_DifferentGenerationID_Cond) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.BreakIf(b2.Expr(true));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

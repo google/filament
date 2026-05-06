@@ -1,0 +1,50 @@
+# THIS IS A GENERATED FILE DO NOT EDIT!!!
+# Instead:
+# 1. Modify //infra/config/targets/binaries.star and/or //infra/config/targets/tests.star (for tests defined using targets.tests.junit_test)
+# 2. Run //infra/config/main.star
+
+{
+  "benchmarks": {
+    "label": "//src/tint:benchmarks",
+    "type": "script",
+    "module_scheme": "single",
+    "script": "//scripts/run_tint_benchmark_test.py",
+  },
+  "dawn_end2end_tests": {
+    "label": "//src/dawn/tests:dawn_end2end_tests",
+    "type": "windowed_test_launcher",
+    "module_scheme": "gtest",
+  },
+  "dawn_node_cts": {
+    "label": "//scripts/dawn_node_cts:dawn_node_cts",
+    "type": "script",
+    "module_scheme": "single",
+    "script": "//scripts/dawn_node_cts/run_dawn_node_cts.py",
+  },
+  "dawn_perf_tests": {
+    "label": "//src/dawn/tests:dawn_perf_tests",
+    "type": "windowed_test_launcher",
+    "module_scheme": "gtest",
+  },
+  "dawn_unittests": {
+    "label": "//src/dawn/tests:dawn_unittests",
+    "type": "windowed_test_launcher",
+    "module_scheme": "gtest",
+  },
+  "default": {
+    "label": "//:default",
+    "type": "additional_compile_target",
+    "module_scheme": "None",
+  },
+  "fuzzer_corpus_tests": {
+    "label": "//src/tint:fuzzer_corpus_tests",
+    "type": "script",
+    "module_scheme": "single",
+    "script": "//scripts/run_tint_fuzzer_corpus_tests.py",
+  },
+  "tint_unittests": {
+    "label": "//src/tint/cmd/test:tint_unittests",
+    "type": "windowed_test_launcher",
+    "module_scheme": "gtest",
+  },
+}

@@ -1450,7 +1450,7 @@ TEST_F(ConstEvalTest, Array_Struct_f32_Zero) {
                        Member("m1", ty.f32()),
                        Member("m2", ty.f32()),
                    });
-    auto* expr = Call(ty.array(ty("S"), 2_u));
+    auto* expr = Call(ty.array(ty.AsType("S"), 2_u));
     WrapInFunction(expr);
 
     EXPECT_TRUE(r()->Resolve()) << r()->error();
@@ -1792,8 +1792,8 @@ TEST_F(ConstEvalTest, Array_Struct_f32_Elements) {
                        Member("m1", ty.f32()),
                        Member("m2", ty.f32()),
                    });
-    auto* expr = Call(ty.array(ty("S"), 2_u),  //
-                      Call("S", 1_f, 2_f),     //
+    auto* expr = Call(ty.array(ty.AsType("S"), 2_u),  //
+                      Call("S", 1_f, 2_f),            //
                       Call("S", 3_f, 4_f));
     WrapInFunction(expr);
 
@@ -2161,8 +2161,8 @@ TEST_F(ConstEvalTest, Struct_Struct_ZeroInit) {
                        });
 
     Structure("Outer", Vector{
-                           Member("m1", ty("Inner")),
-                           Member("m2", ty("Inner")),
+                           Member("m1", ty.AsType("Inner")),
+                           Member("m2", ty.AsType("Inner")),
                        });
     auto* expr = Call("Outer");
     WrapInFunction(expr);
@@ -2344,8 +2344,8 @@ TEST_F(ConstEvalTest, Struct_Struct_Construct) {
                        });
 
     Structure("Outer", Vector{
-                           Member("m1", ty("Inner")),
-                           Member("m2", ty("Inner")),
+                           Member("m1", ty.AsType("Inner")),
+                           Member("m2", ty.AsType("Inner")),
                        });
     auto* expr = Call("Outer",  //
                       Call("Inner", 1_i, 2_u, 3_f), Call("Inner", 4_i, 0_u, 6_f));

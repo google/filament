@@ -52,9 +52,9 @@ class DebugReportTest : public ::testing::Test {
     virtual void SetUp() {
         env = std::unique_ptr<FrameworkEnvironment>(new FrameworkEnvironment());
         for (uint32_t icd = 0; icd < 3; ++icd) {
-            env->add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, VK_API_VERSION_1_0));
-            env->get_test_icd(icd).physical_devices.push_back({});
-            env->get_test_icd(icd).physical_devices.push_back({});
+            env->add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
+            env->get_test_icd(icd).add_physical_device({});
+            env->get_test_icd(icd).add_physical_device({});
         }
         // Initialize the expected output
         allow_any_message = false;
@@ -386,9 +386,9 @@ class DebugUtilTest : public ::testing::Test {
     virtual void SetUp() {
         env = std::unique_ptr<FrameworkEnvironment>(new FrameworkEnvironment());
         for (uint32_t icd = 0; icd < 3; ++icd) {
-            env->add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA, VK_API_VERSION_1_0));
-            env->get_test_icd(icd).physical_devices.push_back({});
-            env->get_test_icd(icd).physical_devices.push_back({});
+            env->add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA);
+            env->get_test_icd(icd).add_physical_device({});
+            env->get_test_icd(icd).add_physical_device({});
         }
         // Initialize the expected output
         allow_any_message = false;
@@ -1041,9 +1041,8 @@ void CheckDeviceFunctions(FrameworkEnvironment& env, bool use_GIPA, bool enable_
 
 TEST(GetProcAddr, DebugFuncsWithTerminator) {
     FrameworkEnvironment env{};
-    auto& driver =
-        env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)).setup_WSI().add_physical_device("physical_device_0");
-    driver.physical_devices.at(0).add_extensions({"VK_KHR_swapchain"});
+    auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA).setup_WSI();
+    auto& phys_dev = driver.add_and_get_physical_device("physical_device_0").add_extensions({"VK_KHR_swapchain"});
     // Hardware doesn't support the debug extensions
 
     // Use getDeviceProcAddr & vary enabling the debug extensions
@@ -1056,7 +1055,7 @@ TEST(GetProcAddr, DebugFuncsWithTerminator) {
 
     // Now set the hardware to support the extensions and run the situations again
     driver.add_instance_extensions({"VK_EXT_debug_utils", "VK_EXT_debug_report"});
-    driver.physical_devices.at(0).add_extensions({"VK_EXT_debug_marker"});
+    phys_dev.add_extensions({"VK_EXT_debug_marker"});
 
     // Use getDeviceProcAddr & vary enabling the debug extensions
     ASSERT_NO_FATAL_FAILURE(CheckDeviceFunctions(env, false, false, true));
@@ -1069,9 +1068,10 @@ TEST(GetProcAddr, DebugFuncsWithTerminator) {
 
 TEST(GetProcAddr, DebugFuncsWithTrampoline) {
     FrameworkEnvironment env{};
-    auto& driver =
-        env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)).setup_WSI().add_physical_device("physical_device_0");
-    driver.physical_devices.at(0).add_extensions({"VK_KHR_swapchain"});
+    auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)
+                       .setup_WSI()
+                       .add_and_get_physical_device("physical_device_0")
+                       .add_extensions({"VK_KHR_swapchain"});
     // Hardware doesn't support the debug extensions
 
     // Use getDeviceProcAddr & vary enabling the debug extensions
@@ -1083,14 +1083,13 @@ TEST(GetProcAddr, DebugFuncsWithTrampoline) {
     ASSERT_NO_FATAL_FAILURE(CheckDeviceFunctions(env, true, true, false));
 
     // Now add a layer that supports the extensions and run the situations again
-    env.add_implicit_layer(ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
-                                                         .set_name("VK_LAYER_test_layer")
-                                                         .set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)
-                                                         .set_disable_environment("DISABLE_ME")
-                                                         .add_instance_extensions({{VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-                                                                                   {VK_EXT_DEBUG_UTILS_EXTENSION_NAME}})
-                                                         .add_device_extension({VK_EXT_DEBUG_MARKER_EXTENSION_NAME})),
-                           "test_layer.json");
+    env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
+                                                             .set_name("VK_LAYER_test_layer")
+                                                             .set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)
+                                                             .set_disable_environment("DISABLE_ME")
+                                                             .add_instance_extensions({{VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
+                                                                                       {VK_EXT_DEBUG_UTILS_EXTENSION_NAME}})
+                                                             .add_device_extension({VK_EXT_DEBUG_MARKER_EXTENSION_NAME})));
 
     // // Use getDeviceProcAddr & vary enabling the debug extensions
     ASSERT_NO_FATAL_FAILURE(CheckDeviceFunctions(env, false, false, true));
@@ -1103,9 +1102,10 @@ TEST(GetProcAddr, DebugFuncsWithTrampoline) {
 
 TEST(GetProcAddr, DebugFuncsWithDebugExtsForceAdded) {
     FrameworkEnvironment env{};
-    auto& driver =
-        env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)).setup_WSI().add_physical_device("physical_device_0");
-    driver.physical_devices.at(0).add_extensions({"VK_KHR_swapchain"});
+    auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2_EXPORT_ICD_GPDPA)
+                       .setup_WSI()
+                       .add_and_get_physical_device("physical_device_0")
+                       .add_extensions({"VK_KHR_swapchain"});
     // Hardware doesn't support the debug extensions
 
     // Use getDeviceProcAddr & vary enabling the debug extensions
@@ -1117,11 +1117,10 @@ TEST(GetProcAddr, DebugFuncsWithDebugExtsForceAdded) {
     ASSERT_NO_FATAL_FAILURE(CheckDeviceFunctions(env, true, true, false));
 
     // Now add a layer that supports the extensions and run the situations again
-    env.add_implicit_layer(ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
-                                                         .set_name("VK_LAYER_test_layer")
-                                                         .set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)
-                                                         .set_disable_environment("DISABLE_ME")),
-                           "test_layer.json");
+    env.add_implicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
+                                                             .set_name("VK_LAYER_test_layer")
+                                                             .set_lib_path(TEST_LAYER_PATH_EXPORT_VERSION_2)
+                                                             .set_disable_environment("DISABLE_ME")));
     env.get_test_layer()
         .add_injected_instance_extensions({{VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, {VK_EXT_DEBUG_UTILS_EXTENSION_NAME}})
         .add_injected_device_extension({VK_EXT_DEBUG_MARKER_EXTENSION_NAME});
@@ -1137,18 +1136,17 @@ TEST(GetProcAddr, DebugFuncsWithDebugExtsForceAdded) {
 
 TEST(DebugUtils, WrappingLayer) {
     FrameworkEnvironment env{};
-    env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2))
+    env.add_icd(TEST_ICD_PATH_VERSION_2)
         .set_min_icd_interface_version(5)
         .add_physical_device(PhysicalDevice{}.add_extension(VK_EXT_DEBUG_MARKER_EXTENSION_NAME).finish())
         .add_instance_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     const char* wrap_objects_name = "VK_LAYER_LUNARG_wrap_objects";
-    env.add_explicit_layer(ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
-                                                         .set_name(wrap_objects_name)
-                                                         .set_lib_path(TEST_LAYER_WRAP_OBJECTS)
-                                                         .set_disable_environment("DISABLE_ME")
-                                                         .add_instance_extension({VK_EXT_DEBUG_UTILS_EXTENSION_NAME})),
-                           "wrap_objects_layer.json");
+    env.add_explicit_layer({}, ManifestLayer{}.add_layer(ManifestLayer::LayerDescription{}
+                                                             .set_name(wrap_objects_name)
+                                                             .set_lib_path(TEST_LAYER_WRAP_OBJECTS)
+                                                             .set_disable_environment("DISABLE_ME")
+                                                             .add_instance_extension({VK_EXT_DEBUG_UTILS_EXTENSION_NAME})));
 
     InstWrapper inst{env.vulkan_functions};
     inst.create_info.add_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

@@ -92,7 +92,7 @@ TEST_F(IR_AccessTest, Clone) {
     EXPECT_EQ(a->Object(), new_a->Object());
 
     auto indices = new_a->Indices();
-    EXPECT_EQ(2u, indices.Length());
+    EXPECT_EQ(2u, indices.size());
 
     auto* val0 = indices[0]->As<Constant>()->Value();
     EXPECT_EQ(1_u, val0->As<core::constant::Scalar<u32>>()->ValueAs<u32>());
@@ -109,7 +109,7 @@ TEST_F(IR_AccessTest, CloneNoIndices) {
     auto* new_a = clone_ctx.Clone(a);
 
     auto indices = new_a->Indices();
-    EXPECT_EQ(0u, indices.Length());
+    EXPECT_EQ(0u, indices.size());
 }
 
 }  // namespace

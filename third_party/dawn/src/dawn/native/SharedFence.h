@@ -54,7 +54,7 @@ class SharedFenceBase : public ApiObjectBase {
                     ObjectBase::ErrorTag tag);
 
   private:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     virtual MaybeError ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const = 0;
 };
 

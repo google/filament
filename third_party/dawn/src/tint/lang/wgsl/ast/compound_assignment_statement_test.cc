@@ -86,27 +86,5 @@ TEST_F(CompoundAssignmentStatementDeathTest, Assert_Null_RHS) {
         "internal compiler error");
 }
 
-TEST_F(CompoundAssignmentStatementDeathTest, Assert_DifferentGenerationID_LHS) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<CompoundAssignmentStatement>(b2.Expr("lhs"), b1.Expr("rhs"),
-                                                   core::BinaryOp::kAdd);
-        },
-        "internal compiler error");
-}
-
-TEST_F(CompoundAssignmentStatementDeathTest, Assert_DifferentGenerationID_RHS) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.create<CompoundAssignmentStatement>(b1.Expr("lhs"), b2.Expr("rhs"),
-                                                   core::BinaryOp::kAdd);
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

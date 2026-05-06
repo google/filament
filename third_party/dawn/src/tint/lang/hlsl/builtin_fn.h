@@ -37,6 +37,8 @@
 #ifndef SRC_TINT_LANG_HLSL_BUILTIN_FN_H_
 #define SRC_TINT_LANG_HLSL_BUILTIN_FN_H_
 
+// clang-format off
+
 #include <cstdint>
 #include <string>
 
@@ -51,6 +53,8 @@ enum class BuiltinFn : uint8_t {
     kAsint,
     kAsuint,
     kAsfloat,
+    kAsuint16,
+    kAsfloat16,
     kDot4AddI8Packed,
     kDot4AddU8Packed,
     kF32Tof16,
@@ -85,6 +89,10 @@ enum class BuiltinFn : uint8_t {
     kLoad2F16,
     kLoad3F16,
     kLoad4F16,
+    kLoadU16,
+    kLoad2U16,
+    kLoad3U16,
+    kLoad4U16,
     kStore,
     kStore2,
     kStore3,
@@ -93,6 +101,10 @@ enum class BuiltinFn : uint8_t {
     kStore2F16,
     kStore3F16,
     kStore4F16,
+    kStoreU16,
+    kStore2U16,
+    kStore3U16,
+    kStore4U16,
     kGatherCmp,
     kGather,
     kGatherAlpha,
@@ -116,7 +128,7 @@ const char* str(BuiltinFn i);
 template <typename STREAM>
     requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, BuiltinFn i) {
-    return o << str(i);
+  return o << str(i);
 }
 
 /// @returns access restrictions for a function
@@ -124,5 +136,7 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn);
 
 }  // namespace tint::hlsl
 // \endcond
+
+// clang-format on
 
 #endif  // SRC_TINT_LANG_HLSL_BUILTIN_FN_H_

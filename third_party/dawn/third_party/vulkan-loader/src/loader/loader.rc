@@ -1,7 +1,7 @@
 //
-// Copyright (c) 2014-2025 The Khronos Group Inc.
-// Copyright (c) 2014-2025 Valve Corporation
-// Copyright (c) 2014-2025 LunarG, Inc.
+// Copyright (c) 2014-2026 The Khronos Group Inc.
+// Copyright (c) 2014-2026 Valve Corporation
+// Copyright (c) 2014-2026 LunarG, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@
 #include "winres.h"
 
 // All set through CMake
-#define VER_FILE_VERSION 1, 4, 322, 0
-#define VER_FILE_DESCRIPTION_STR "1.4.322.Dev Build"
+#define VER_FILE_VERSION 1, 4, 349, 0
+#define VER_FILE_DESCRIPTION_STR "1.4.349.Dev Build"
 #define VER_FILE_VERSION_STR "Vulkan Loader - Dev Build"
-#define VER_COPYRIGHT_STR "Copyright (C) 2015-2025"
+#define VER_COPYRIGHT_STR "Copyright (C) 2015-2026"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION VER_FILE_VERSION

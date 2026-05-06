@@ -36,19 +36,12 @@ namespace tint::ast {
 class BreakStatement final : public Castable<BreakStatement, Statement> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    BreakStatement(GenerationID pid, NodeID nid, const Source& src);
+    BreakStatement(NodeID nid, const Source& src);
 
     /// Destructor
     ~BreakStatement() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const BreakStatement* Clone(CloneContext& ctx) const override;
 };
 
 }  // namespace tint::ast

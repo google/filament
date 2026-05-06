@@ -27,6 +27,7 @@
 
 #include <initializer_list>
 #include <limits>
+
 #include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/WGPUHelpers.h"
 

@@ -28,13 +28,17 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_BINDGROUPLAYOUTVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_BINDGROUPLAYOUTVK_H_
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "dawn/common/MutexProtected.h"
+#include "dawn/common/NonCopyable.h"
 #include "dawn/common/SlabAllocator.h"
 #include "dawn/common/vulkan_platform.h"
 #include "dawn/native/BindGroupLayoutInternal.h"
 #include "dawn/native/vulkan/BindGroupVk.h"
+#include "dawn/native/vulkan/SamplerVk.h"
 
 namespace dawn::native {
 class CacheKey;
@@ -45,57 +49,96 @@ namespace dawn::native::vulkan {
 struct DescriptorSetAllocation;
 class DescriptorSetAllocator;
 class Device;
+class OwnedDescriptorSet;
 
 VkDescriptorType VulkanDescriptorType(const BindingInfo& bindingInfo);
 
-// In Vulkan descriptor pools have to be sized to an exact number of descriptors. This means
-// it's hard to have something where we can mix different types of descriptor sets because
-// we don't know if their vector of number of descriptors will be similar.
-//
-// That's why that in addition to containing the VkDescriptorSetLayout to create
-// VkDescriptorSets for its bindgroups, the layout also acts as an allocator for the descriptor
-// sets.
-//
-// The allocations is done with one pool per descriptor set, which is inefficient, but at least
-// the pools are reused when no longer used. Minimizing the number of descriptor pool allocation
-// is important because creating them can incur GPU memory allocation which is usually an
-// expensive syscall.
-class BindGroupLayout final : public BindGroupLayoutInternalBase {
+// Backend BindGroupLayout implementation for Vulkan. In addition to containing a BindGroupAllocator
+// for the CPU-side tracking data, it has a DescriptorSetAllocator that handles efficient allocation
+// of the corresponding VkDescriptorSets.
+class BindGroupLayout : public BindGroupLayoutInternalBase {
   public:
-    static ResultOrError<Ref<BindGroupLayout>> Create(Device* device,
-                                                      const BindGroupLayoutDescriptor* descriptor);
-
-    BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor);
+    static ResultOrError<Ref<BindGroupLayout>> Create(
+        Device* device,
+        const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
 
     VkDescriptorSetLayout GetHandle() const;
 
-    ResultOrError<Ref<BindGroup>> AllocateBindGroup(Device* device,
-                                                    const BindGroupDescriptor* descriptor);
+    // BindGroupLayouts can be specialized when doing pipeline JITing to return
+    // VkDescriptorSetLayouts that have some parts changed.
+    using StaticSamplerSpecializationMap =
+        absl::flat_hash_map<BindingIndex, StaticSamplerSpecialization>;
+    struct Specialization {
+        // Replaces the static sampler at BindingIndex with a different sampler created from the
+        // StaticSamplerSpecialization.
+        StaticSamplerSpecializationMap staticSamplers;
+
+        template <typename H>
+        friend H AbslHashValue(H h, const Specialization& s) {
+            return H::combine(std::move(h), s.staticSamplers);
+        }
+        bool operator==(const Specialization& other) const = default;
+    };
+    ResultOrError<VkDescriptorSetLayout> GetOrCreateSpecializedHandle(
+        const Specialization& specialization);
+
+    ResultOrError<Ref<BindGroup>> AllocateBindGroup(
+        const UnpackedPtr<BindGroupDescriptor>& descriptor);
     void DeallocateBindGroup(BindGroup* bindGroup);
     void DeallocateDescriptorSet(DescriptorSetAllocation* descriptorSetAllocation);
     void ReduceMemoryUsage() override;
 
-    // If the client specified that the texture at `textureBinding` should be
-    // combined with a static sampler, returns the binding index of the static
-    // sampler that is sampling this texture.
-    std::optional<BindingIndex> GetStaticSamplerIndexForTexture(BindingIndex textureBinding) const;
+    // Returns a VkDescriptorSet corresponding to a BindGroup but with the necessary modifications
+    // for the specialization.
+    // TODO(https://crbug.com/496616832): This returns a unique_ptr because
+    // ResultOrError<SomethingNonCopyable> doesn't compile at the moment, but unique_ptr has a
+    // specialization that works.
+    ResultOrError<std::unique_ptr<OwnedDescriptorSet>> GetSpecializedSetFor(
+        const BindGroup* bg,
+        const Specialization& specialization);
+
+    const TextureToStaticSamplerMap& GetTextureToStaticSamplerMap() const;
+
+  protected:
+    BindGroupLayout(DeviceBase* device, const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
+    ~BindGroupLayout() override;
+
+    MaybeError Initialize();
+    void DestroyImpl(DestroyReason reason) override;
+
+    MutexProtected<SlabAllocator<BindGroup>> mBindGroupAllocator;
 
   private:
-    ~BindGroupLayout() override;
-    MaybeError Initialize();
-    void DestroyImpl() override;
-
     // Dawn API
     void SetLabelImpl() override;
 
-    // Maps from indices of texture entries that are paired with static samplers
-    // to indices of the entries of their respective samplers.
-    absl::flat_hash_map<BindingIndex, BindingIndex> mTextureToStaticSamplerIndices;
-
     VkDescriptorSetLayout mHandle = VK_NULL_HANDLE;
 
-    MutexProtected<SlabAllocator<BindGroup>> mBindGroupAllocator;
+    // Caches VkDescriptorSetLayouts for specializations so that the lifetime guarantees are the
+    // same as for mHandle. Note that the noop specialization has mHandle cached directly, but
+    // mHandle is also kept separate for efficiency when creating BindGroups.
+    MutexProtected<absl::flat_hash_map<Specialization, VkDescriptorSetLayout>> mSpecializations;
+
+    // Maps from indices of texture entries that are paired with static samplers
+    // to indices of the entries of their respective samplers.
+    TextureToStaticSamplerMap mTextureToStaticSampler;
+
     Ref<DescriptorSetAllocator> mDescriptorSetAllocator;
+};
+
+// RAII wrapper around a VkDescriptorSet for use when the VkDescriptorSet is not part of a BindGroup
+// object.
+class OwnedDescriptorSet : public NonCopyable {
+  public:
+    OwnedDescriptorSet() = default;
+    OwnedDescriptorSet(BindGroupLayout* bgl, DescriptorSetAllocation allocation);
+    ~OwnedDescriptorSet();
+
+    VkDescriptorSet GetHandle() const;
+
+  private:
+    DescriptorSetAllocation mAllocation;
+    Ref<BindGroupLayout> mBindGroupLayout = nullptr;
 };
 
 }  // namespace dawn::native::vulkan

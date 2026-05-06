@@ -179,4 +179,8 @@ uint32_t GPUSupportedLimits::getMaxStorageTexturesInVertexStage(Napi::Env) {
     return limits_.maxStorageTexturesInVertexStage;
 }
 
+uint32_t GPUSupportedLimits::getMaxImmediateSize(Napi::Env) {
+    return limits_.maxImmediateSize;
+}
+
 }  // namespace wgpu::binding

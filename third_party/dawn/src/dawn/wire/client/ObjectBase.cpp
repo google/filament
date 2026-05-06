@@ -41,19 +41,14 @@ bool ObjectBase::IsRegistered() const {
     return mClient != nullptr;
 }
 
-const ObjectHandle& ObjectBase::GetWireHandle() const {
+const ObjectHandle& ObjectBase::GetWireHandle(const ClientBase* forClient) const {
     DAWN_ASSERT(IsRegistered());
+    // TODO(crbug.com/440387003): This causes a crash if the client manages to
+    // reuse an object from a different client. This should really be handled
+    // with a proper validation error, but that is much more difficult, and this
+    // should be a rare corner case.
+    DAWN_CHECK(forClient == mClient);
     return mHandle;
-}
-
-ObjectId ObjectBase::GetWireId() const {
-    DAWN_ASSERT(IsRegistered());
-    return mHandle.id;
-}
-
-ObjectGeneration ObjectBase::GetWireGeneration() const {
-    DAWN_ASSERT(IsRegistered());
-    return mHandle.generation;
 }
 
 Client* ObjectBase::GetClient() const {

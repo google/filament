@@ -98,14 +98,15 @@ InstanceBase* AdapterBase::APIGetInstance() const {
 void AdapterBase::UpdateLimits() {
     mLimits = mPhysicalDevice->GetLimits();
 
-    // Disable unsafe limits if needed.
-    if (!mTogglesState.IsEnabled(Toggle::AllowUnsafeAPIs)) {
-        mLimits.v1.maxImmediateSize = 0;
-    }
-
     // Apply the tiered limits if needed.
     if (mUseTieredLimits) {
         ApplyLimitTiers(&mLimits);
+    }
+
+    // If immediates are not enabled, report a maxImmediateSize of 0
+    // TODO(crbug.com/366291600): Remove when immediates are implemented on all backends
+    if (!GetInstance()->HasFeature(wgpu::WGSLLanguageFeatureName::ImmediateAddressSpace)) {
+        mLimits.v1.maxImmediateSize = 0;
     }
 }
 
@@ -144,10 +145,20 @@ wgpu::Status AdapterBase::APIGetInfo(AdapterInfo* info) const {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature AdapterPropertiesVk is not available."));
     }
+    if (unpacked.Has<AdapterPropertiesDrm>() &&
+        !mSupportedFeatures.IsEnabled(wgpu::FeatureName::AdapterPropertiesDrm)) {
+        hadError |= mInstance->ConsumedError(
+            DAWN_VALIDATION_ERROR("Feature AdapterPropertiesDrm is not available."));
+    }
     if (unpacked.Has<AdapterPropertiesSubgroupMatrixConfigs>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::ChromiumExperimentalSubgroupMatrix)) {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature ChromiumExperimentalSubgroupMatrix is not available."));
+    }
+    if (unpacked.Has<AdapterPropertiesExplicitComputeSubgroupSizeConfigs>() &&
+        !mSupportedFeatures.IsEnabled(wgpu::FeatureName::ChromiumExperimentalSubgroupSizeControl)) {
+        hadError |= mInstance->ConsumedError(DAWN_VALIDATION_ERROR(
+            "Feature ChromiumExperimentalExplicitComputeSubgroupSize is not available."));
     }
     if (hadError) {
         return wgpu::Status::Error;
@@ -157,7 +168,12 @@ wgpu::Status AdapterBase::APIGetInfo(AdapterInfo* info) const {
         powerPreferenceDesc->powerPreference = mPowerPreference;
     }
 
-    mPhysicalDevice->PopulateBackendProperties(unpacked);
+    mPhysicalDevice->PopulateBackendProperties(unpacked, mTogglesState);
+    if (auto* explicitSubgroupSizeConfigs =
+            unpacked.Get<AdapterPropertiesExplicitComputeSubgroupSizeConfigs>()) {
+        DAWN_ASSERT(IsPowerOfTwo(explicitSubgroupSizeConfigs->minExplicitComputeSubgroupSize));
+        DAWN_ASSERT(IsPowerOfTwo(explicitSubgroupSizeConfigs->maxExplicitComputeSubgroupSize));
+    }
 
     // Allocate space for all strings.
     size_t allocSize = mPhysicalDevice->GetVendorName().length() +
@@ -190,6 +206,9 @@ wgpu::Status AdapterBase::APIGetInfo(AdapterInfo* info) const {
         mTogglesState.IsEnabled(Toggle::D3D12RelaxMinSubgroupSizeTo8)) {
         info->subgroupMinSize = std::min(info->subgroupMinSize, 8u);
     }
+
+    DAWN_ASSERT(info->subgroupMaxSize == 0 || IsPowerOfTwo(info->subgroupMaxSize));
+    DAWN_ASSERT(info->subgroupMinSize == 0 || IsPowerOfTwo(info->subgroupMinSize));
 
     return wgpu::Status::Success;
 }
@@ -270,6 +289,10 @@ ResultOrError<Ref<DeviceBase>> AdapterBase::CreateDeviceInternal(
     // no longer necessary.
     deviceToggles.Default(Toggle::BlobCacheHashValidation, true);
 
+#if defined(DAWN_ENABLE_ASSERTS)
+    deviceToggles.Default(Toggle::EnableTintIRValidationAsserts, true);
+#endif
+
     // Backend-specific forced and default device toggles
     mPhysicalDevice->SetupBackendDeviceToggles(mInstance->GetPlatform(), &deviceToggles);
 
@@ -345,6 +368,10 @@ AdapterBase::CreateDevice(const DeviceDescriptor* descriptor) {
         // external ref to clean up resources, and drop it, so we acquire it in this scope.
         APIRef<DeviceBase> device;
         device.Acquire(ReturnToAPI(std::move(lostEvent->mDevice)));
+        // Reset the device's lost event to avoid double SetLost during destruction.
+        if (device) {
+            device->ResetLostEvent();
+        }
         return {lostEvent, std::move(error)};
     }
 
@@ -426,7 +453,7 @@ wgpu::Status AdapterBase::APIGetFormatCapabilities(wgpu::TextureFormat format,
         return wgpu::Status::Error;
     }
 
-    if (unpacked.Get<DawnDrmFormatCapabilities>() != nullptr &&
+    if (unpacked.Has<DawnDrmFormatCapabilities>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::DawnDrmFormatCapabilities)) {
         [[maybe_unused]] bool hadError = mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature DawnDrmFormatCapabilities is not available."));
@@ -441,6 +468,10 @@ const TogglesState& AdapterBase::GetTogglesState() const {
     return mTogglesState;
 }
 
+std::vector<const char*> AdapterBase::GetTogglesUsed() const {
+    return mTogglesState.GetEnabledToggleNames();
+}
+
 wgpu::FeatureLevel AdapterBase::GetFeatureLevel() const {
     return mFeatureLevel;
 }
@@ -451,9 +482,14 @@ const std::string& AdapterBase::GetName() const {
 
 std::vector<Ref<AdapterBase>> SortAdapters(std::vector<Ref<AdapterBase>> adapters,
                                            const UnpackedPtr<RequestAdapterOptions>& options) {
+    const bool noPowerPreference = options->powerPreference == wgpu::PowerPreference::Undefined;
     const bool highPerformance = options->powerPreference == wgpu::PowerPreference::HighPerformance;
 
     const auto ComputeAdapterTypeRank = [&](const Ref<AdapterBase>& a) {
+        if (noPowerPreference) {
+            return 0;
+        }
+
         switch (a->GetPhysicalDevice()->GetAdapterType()) {
             case wgpu::AdapterType::DiscreteGPU:
                 return highPerformance ? 0 : 1;
@@ -492,11 +528,11 @@ std::vector<Ref<AdapterBase>> SortAdapters(std::vector<Ref<AdapterBase>> adapter
         DAWN_UNREACHABLE();
     };
 
-    std::sort(adapters.begin(), adapters.end(),
-              [&](const Ref<AdapterBase>& a, const Ref<AdapterBase>& b) -> bool {
-                  return std::tuple(ComputeAdapterTypeRank(a), ComputeBackendTypeRank(a)) <
-                         std::tuple(ComputeAdapterTypeRank(b), ComputeBackendTypeRank(b));
-              });
+    std::stable_sort(adapters.begin(), adapters.end(),
+                     [&](const Ref<AdapterBase>& a, const Ref<AdapterBase>& b) -> bool {
+                         return std::tuple(ComputeAdapterTypeRank(a), ComputeBackendTypeRank(a)) <
+                                std::tuple(ComputeAdapterTypeRank(b), ComputeBackendTypeRank(b));
+                     });
 
     return adapters;
 }

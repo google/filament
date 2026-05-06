@@ -29,6 +29,7 @@
 #define SRC_DAWN_TESTS_WHITE_BOX_SHAREDTEXTUREMEMORYTESTS_H_
 
 #include <gtest/gtest.h>
+
 #include <memory>
 #include <string>
 #include <utility>

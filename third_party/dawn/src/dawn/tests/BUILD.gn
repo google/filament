@@ -85,6 +85,12 @@ if (!build_with_chromium) {
       "${googletest_dir}/googlemock/include",
       "${googletest_dir}/googletest/include",
     ]
+    if (dawn_standalone && is_clang) {
+      cflags = [
+        # gmock emits deprecated-copy-dtor warnings when using ::testing::Combine
+        "-Wno-deprecated-copy-dtor",
+      ]
+    }
   }
 
   static_library("gmock") {
@@ -99,6 +105,12 @@ if (!build_with_chromium) {
       ":gmock",
       ":gtest",
     ]
+  }
+
+  static_library("gmock_main") {
+    testonly = true
+    sources = [ "${googletest_dir}/googlemock/src/gmock_main.cc" ]
+    public_deps = [ ":gmock_and_gtest" ]
   }
 } else {
   # When we are in Chromium we reuse its targets, and also add some deps that
@@ -200,8 +212,8 @@ template("dawn_test") {
           deps = []
         }
         deps += [
-          "$dawn_root/third_party/gn/dxc:copy_dxil_dll",
-          "$dawn_root/third_party/gn/dxc:dxcompiler",
+          "${dawn_dxc_gn_dir}:copy_dxil_dll",
+          "${dawn_dxc_gn_dir}:dxcompiler",
         ]
       } else {
         if (!defined(data_deps)) {
@@ -292,7 +304,8 @@ dawn_test("dawn_unittests") {
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:test_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
-    "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/dawn/wire:sources",
+    "${dawn_root}/src/dawn/wire:static",
     "${dawn_root}/src/utils/chromium_test_compat",
   ]
 
@@ -314,6 +327,8 @@ dawn_test("dawn_unittests") {
     "${dawn_root}/src/dawn/wire/server/ServerMemoryTransferService_mock.h",
     "DawnNativeTest.cpp",
     "DawnNativeTest.h",
+    "unittests/AlgebraTests.cpp",
+    "unittests/AssertTests.cpp",
     "unittests/AsyncTaskTests.cpp",
     "unittests/BitSetRangeIteratorTests.cpp",
     "unittests/BuddyAllocatorTests.cpp",
@@ -334,6 +349,7 @@ dawn_test("dawn_unittests") {
     "unittests/ITypArrayTests.cpp",
     "unittests/ITypBitsetTests.cpp",
     "unittests/ITypSpanTests.cpp",
+    "unittests/ITypStackVecTests.cpp",
     "unittests/ITypVectorTests.cpp",
     "unittests/LRUCacheTests.cpp",
     "unittests/LinkedListTests.cpp",
@@ -354,6 +370,7 @@ dawn_test("dawn_unittests") {
     "unittests/SerialQueueTests.cpp",
     "unittests/Sha3Tests.cpp",
     "unittests/SlabAllocatorTests.cpp",
+    "unittests/StringsTests.cpp",
     "unittests/SubresourceStorageTests.cpp",
     "unittests/SystemUtilsTests.cpp",
     "unittests/ToBackendTests.cpp",
@@ -361,14 +378,17 @@ dawn_test("dawn_unittests") {
     "unittests/TypedIntegerTests.cpp",
     "unittests/UnicodeTests.cpp",
     "unittests/WeakRefTests.cpp",
+    "unittests/WorkerTaskPoolTests.cpp",
     "unittests/native/AllowedErrorTests.cpp",
     "unittests/native/BlobTests.cpp",
+    "unittests/native/BufferBaseTests.cpp",
     "unittests/native/CacheRequestTests.cpp",
     "unittests/native/CommandBufferEncodingTests.cpp",
     "unittests/native/CreatePipelineAsyncEventTests.cpp",
     "unittests/native/DestroyObjectTests.cpp",
     "unittests/native/DeviceAsyncTaskTests.cpp",
     "unittests/native/DeviceCreationTests.cpp",
+    "unittests/native/ErrorMonadTests.cpp",
     "unittests/native/ImmediateConstantsTrackerTests.cpp",
     "unittests/native/LimitsTests.cpp",
     "unittests/native/MemoryInstrumentationTests.cpp",
@@ -409,10 +429,12 @@ dawn_test("dawn_unittests") {
     "unittests/validation/RenderBundleValidationTests.cpp",
     "unittests/validation/RenderPassDescriptorValidationTests.cpp",
     "unittests/validation/RenderPipelineValidationTests.cpp",
+    "unittests/validation/ResourceTableValidationTests.cpp",
     "unittests/validation/ResourceUsageTrackingTests.cpp",
     "unittests/validation/SamplerValidationTests.cpp",
     "unittests/validation/ShaderModuleValidationTests.cpp",
     "unittests/validation/StorageTextureValidationTests.cpp",
+    "unittests/validation/TexelBufferValidationTests.cpp",
     "unittests/validation/TextureSubresourceTests.cpp",
     "unittests/validation/TextureValidationTests.cpp",
     "unittests/validation/TextureViewValidationTests.cpp",
@@ -430,6 +452,7 @@ dawn_test("dawn_unittests") {
     "unittests/wire/WireArgumentTests.cpp",
     "unittests/wire/WireBasicTests.cpp",
     "unittests/wire/WireBufferMappingTests.cpp",
+    "unittests/wire/WireConfusionDeathTests.cpp",
     "unittests/wire/WireCreatePipelineAsyncTests.cpp",
     "unittests/wire/WireDeviceLifetimeTests.cpp",
     "unittests/wire/WireDisconnectTests.cpp",
@@ -446,6 +469,7 @@ dawn_test("dawn_unittests") {
     "unittests/wire/WireOptionalTests.cpp",
     "unittests/wire/WireQueueTests.cpp",
     "unittests/wire/WireShaderModuleTests.cpp",
+    "unittests/wire/WireSpecificCommandTests.cpp",
     "unittests/wire/WireTest.cpp",
     "unittests/wire/WireTest.h",
   ]
@@ -465,9 +489,10 @@ dawn_test("dawn_unittests") {
     sources += [ "unittests/d3d12/CopySplitTests.cpp" ]
   }
 
-  if (dawn_enable_vulkan) {
-    sources += [ "unittests/validation/YCbCrInfoValidationTests.cpp" ]
-  }
+  sources += [
+    "unittests/validation/YCbCrValidationTests.cpp",
+    "unittests/vulkan/MemoryTypeSelectorTests.cpp",
+  ]
 
   if (tint_build_spv_reader) {
     deps += [ "${dawn_spirv_tools_dir}:spvtools_opt" ]
@@ -516,7 +541,6 @@ source_set("test_infra_sources") {
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:test_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
-    "${dawn_root}/src/dawn/wire",
   ]
 
   public = [
@@ -534,6 +558,10 @@ source_set("test_infra_sources") {
 
   if (dawn_supports_glfw_for_windowing) {
     public_deps += [ "${dawn_root}/src/dawn/glfw" ]
+  }
+
+  if (dawn_enable_webgpu_on_webgpu) {
+    public_deps += [ "${dawn_root}/src/dawn/replay" ]
   }
 
   sources = [
@@ -581,7 +609,7 @@ source_set("end2end_tests_sources") {
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:test_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
-    "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/dawn/wire:headers",
   ]
 
   sources = [
@@ -589,12 +617,15 @@ source_set("end2end_tests_sources") {
     "end2end/AdapterEnumerationTests.cpp",
     "end2end/AdapterFormatCapabilitiesVkTests.cpp",
     "end2end/AdapterPropertiesD3DTests.cpp",
+    "end2end/AdapterPropertiesDrmTests.cpp",
     "end2end/AdapterPropertiesVkTests.cpp",
+    "end2end/ArchTierLimitsExhaustive.cpp",
     "end2end/BasicTests.cpp",
     "end2end/BindGroupTests.cpp",
     "end2end/BindingArrayTests.cpp",
     "end2end/BufferHostMappedPointerTests.cpp",
     "end2end/BufferHostMappedPointerTests.h",
+    "end2end/BufferRobustnessTests.cpp",
     "end2end/BufferTests.cpp",
     "end2end/BufferZeroInitTests.cpp",
     "end2end/ClipDistancesTests.cpp",
@@ -611,8 +642,10 @@ source_set("end2end_tests_sources") {
     "end2end/CopyExternalTextureForBrowserTests.cpp",
     "end2end/CopyTests.cpp",
     "end2end/CopyTextureForBrowserTests.cpp",
+    "end2end/CreateDestroyTests.cpp",
     "end2end/CreatePipelineAsyncTests.cpp",
     "end2end/CullingTests.cpp",
+    "end2end/DawnTestInfraTests.cpp",
     "end2end/DebugMarkerTests.cpp",
     "end2end/DepthBiasTests.cpp",
     "end2end/DepthStencilCopyTests.cpp",
@@ -638,6 +671,7 @@ source_set("end2end_tests_sources") {
     "end2end/FramebufferFetchTests.cpp",
     "end2end/GpuMemorySynchronizationTests.cpp",
     "end2end/HistogramTests.cpp",
+    "end2end/ImmediateDataBufferLengthTests.cpp",
     "end2end/ImmediateDataTests.cpp",
     "end2end/IndexFormatTests.cpp",
     "end2end/InfiniteLoopTests.cpp",
@@ -646,6 +680,7 @@ source_set("end2end_tests_sources") {
     "end2end/MemoryHeapPropertiesTests.cpp",
     "end2end/MultiDrawIndexedIndirectTests.cpp",
     "end2end/MultiDrawIndirectTests.cpp",
+    "end2end/MultisampledInterpolationTests.cpp",
     "end2end/MultisampledRenderingTests.cpp",
     "end2end/MultisampledSamplingTests.cpp",
     "end2end/MultithreadTests.cpp",
@@ -658,7 +693,7 @@ source_set("end2end_tests_sources") {
     "end2end/PipelineLayoutTests.cpp",
     "end2end/PixelLocalStorageTests.cpp",
     "end2end/PolyfillBuiltinSimpleTests.cpp",
-    "end2end/PrimitiveIdTests.cpp",
+    "end2end/PrimitiveIndexTests.cpp",
     "end2end/PrimitiveStateTests.cpp",
     "end2end/PrimitiveTopologyTests.cpp",
     "end2end/QueryTests.cpp",
@@ -670,9 +705,11 @@ source_set("end2end_tests_sources") {
     "end2end/RenderPassLoadOpTests.cpp",
     "end2end/RenderPassTests.cpp",
     "end2end/RequiredBufferSizeInCopyTests.cpp",
+    "end2end/ResourceTableTests.cpp",
     "end2end/SamplerFilterAnisotropicTests.cpp",
     "end2end/SamplerTests.cpp",
     "end2end/ScissorTests.cpp",
+    "end2end/SelectNonShortCircuiting.cpp",
     "end2end/ShaderAtomicTests.cpp",
     "end2end/ShaderBuiltinPartialConstArgsErrorTests.cpp",
     "end2end/ShaderF16Tests.cpp",
@@ -685,6 +722,7 @@ source_set("end2end_tests_sources") {
     "end2end/SubgroupsTests.cpp",
     "end2end/SubresourceRenderAttachmentTests.cpp",
     "end2end/SupportedFeatureArch.cpp",
+    "end2end/TexelBufferTests.cpp",
     "end2end/Texture3DTests.cpp",
     "end2end/TextureComponentSwizzleTests.cpp",
     "end2end/TextureCorruptionTests.cpp",
@@ -751,10 +789,11 @@ source_set("end2end_tests_sources") {
   }
 
   if (dawn_enable_vulkan) {
-    sources += [
-      "end2end/AllocatorMemoryInstrumentationTests.cpp",
-      "end2end/YCbCrInfoTests.cpp",
-    ]
+    sources += [ "end2end/AllocatorMemoryInstrumentationTests.cpp" ]
+  }
+
+  if (dawn_enable_webgpu_on_webgpu) {
+    sources += [ "end2end/CaptureAndReplayTests.cpp" ]
   }
 
   if (dawn_enable_d3d11 || dawn_enable_d3d12 ||
@@ -791,7 +830,8 @@ source_set("white_box_tests_sources") {
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:test_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
-    "${dawn_root}/src/dawn/wire",
+    "${dawn_root}/src/dawn/wire:sources",
+    "${dawn_root}/src/dawn/wire:static",
   ]
 
   sources = [
@@ -809,10 +849,14 @@ source_set("white_box_tests_sources") {
     sources += [ "white_box/SharedTextureMemoryTests_apple.mm" ]
   }
 
-  if (is_win) {
+  if (dawn_enable_d3d11) {
+    sources += [ "white_box/SharedTextureMemoryTests_win.cpp" ]
+  }
+
+  if (dawn_enable_d3d12) {
     sources += [
       "white_box/SharedBufferMemoryTests_win.cpp",
-      "white_box/SharedTextureMemoryTests_win.cpp",
+      "white_box/SharedTextureMemoryTests_win_d3d12.cpp",
     ]
   }
 
@@ -836,7 +880,10 @@ source_set("white_box_tests_sources") {
     }
 
     if (is_android) {
-      sources += [ "white_box/SharedTextureMemoryTests_android.cpp" ]
+      sources += [
+        "white_box/SharedTextureMemoryTests_android.cpp",
+        "white_box/SharedTextureMemoryYCbCrAndroidTests.cpp",
+      ]
     }
 
     if (dawn_enable_error_injection) {
@@ -853,7 +900,11 @@ source_set("white_box_tests_sources") {
   ]
 
   if (dawn_enable_d3d11) {
-    sources += [ "white_box/D3D11BufferTests.cpp" ]
+    sources += [
+      "white_box/D3D11BufferTests.cpp",
+      "white_box/D3D11MultithreadTests.cpp",
+      "white_box/D3D11ShaderCachingTests.cpp",
+    ]
   }
 
   if (dawn_enable_d3d12) {
@@ -888,7 +939,7 @@ source_set("white_box_tests_sources") {
       "white_box/EGLImageWrappingTests.cpp",
       "white_box/GLTextureWrappingTests.cpp",
     ]
-    include_dirs = [ "//third_party/khronos" ]
+    include_dirs = [ "//third_party/EGL-Registry" ]
   }
 }
 
@@ -931,7 +982,6 @@ dawn_test("dawn_perf_tests") {
     "${dawn_root}/src/dawn/utils:system_utils",
     "${dawn_root}/src/dawn/utils:test_utils",
     "${dawn_root}/src/dawn/utils:wgpu_utils",
-    "${dawn_root}/src/dawn/wire",
     "${dawn_root}/src/utils/chromium_test_compat",
   ]
 

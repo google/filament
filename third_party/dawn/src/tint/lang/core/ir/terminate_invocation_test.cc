@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/terminate_invocation.h"
+
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 

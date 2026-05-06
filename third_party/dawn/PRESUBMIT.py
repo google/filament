@@ -86,6 +86,7 @@ NONINCLUSIVE_LANGUAGE_REGEXES = [
 
 LINT_FILTERS = []
 
+
 def _NonInclusiveFileFilter(file):
     """Filters files that are exempt from the non-inclusive language check."""
     filter_list = [
@@ -100,6 +101,7 @@ def _NonInclusiveFileFilter(file):
         "infra/kokoro/windows/build.bat",  # External URL
         "src/dawn/common/GPUInfo.cpp",  # External URL
         "src/dawn/common/ThreadLocal.cpp",  # External URL
+        "src/dawn/native/CommandEncoder.cpp",  # External URL
         "src/dawn/native/metal/BackendMTL.mm",  # OSX Constant
         "src/dawn/native/metal/PhysicalDeviceMTL.mm",  # OSX deprecated API
         "src/dawn/native/vulkan/SamplerVk.cpp",  # External URL
@@ -110,7 +112,10 @@ def _NonInclusiveFileFilter(file):
         "src/tint/transform/canonicalize_entry_point_io.cc",  # External URL
         "test/tint/samples/compute_boids.wgsl",  # External URL
         "third_party/gn/dxc/BUILD.gn",  # Third party file
-        "third_party/khronos/EGL-Registry/api/KHR/khrplatform.h",  # Third party file
+        "third_party/directx-shader-compiler/BUILD.gn",  # Third party file
+        "third_party/directx-shader-compiler/LICENSE",  # Third party file
+        "third_party/directx-shader-compiler/build/message_compiler.py",  # Third party file
+        "third_party/EGL-Registry/src/api/KHR/khrplatform.h",  # Third party file
         "tools/roll-all",  # Branch name
         "tools/src/container/key.go",  # External URL
         "go.sum",  # External URL
@@ -150,21 +155,34 @@ def _CalculateEnumeratedEntriesAndTypes(lines):
     """
     push_re = re.compile(r'(\w+) {(.*)')
     value_re = re.compile(r'(\w+) = (\d+);(.*)')
+    reserved_re = re.compile(r'^\s*reserved\s+(.*);(.*)')
+    number_re = re.compile(r'\d+')
     pop_re = re.compile(r'}(.*)')
 
     prefix_stack = []
     prefix_str = ""
     enumerated_entries = {}
+    oneof_scopes = set()
     types = []
     for l in lines:
         l = l.strip().rstrip()
         l = l.split("//", 1)[0]
         while l:
             if match := re.search(push_re, l):
+                if l[:match.start()].strip() == "oneof":
+                    oneof_scopes.add('.'.join(prefix_stack + [match.group(1)]))
                 prefix_stack.append(match.group(1))
                 prefix_str = '.'.join(prefix_stack)
                 types.append(prefix_str)
                 l = match.group(2)
+                continue
+            if match := re.search(reserved_re, l):
+                new_numbers = number_re.findall(match.group(0))
+                reserved_numbers = enumerated_entries.get(
+                    f"{prefix_str}.reserved", [])
+                reserved_numbers.extend(new_numbers)
+                enumerated_entries[f"{prefix_str}.reserved"] = reserved_numbers
+                l = match.group(1)
                 continue
             if match := re.search(value_re, l):
                 enumerated_entries[
@@ -173,12 +191,12 @@ def _CalculateEnumeratedEntriesAndTypes(lines):
                 continue
             if match := re.search(pop_re, l):
                 prefix_stack.pop()
-                prefix_str = '_'.join(prefix_stack)
+                prefix_str = '.'.join(prefix_stack)
                 l = match.group(1)
                 continue
             l = ""
 
-    return enumerated_entries, types
+    return enumerated_entries, types, oneof_scopes
 
 
 def CheckIRBinaryCompatibility(input_api, output_api):
@@ -197,17 +215,31 @@ def CheckIRBinaryCompatibility(input_api, output_api):
                 )
             ]
         proto_file = file.AbsoluteLocalPath()
-        old_entries, old_types = _CalculateEnumeratedEntriesAndTypes(
+        old_entries, old_types, old_oneofs = _CalculateEnumeratedEntriesAndTypes(
             file.OldContents())
-        new_entries, new_types = _CalculateEnumeratedEntriesAndTypes(
+        new_entries, new_types, new_oneofs = _CalculateEnumeratedEntriesAndTypes(
             file.NewContents())
 
     changes = []
+
     for k in old_entries:
         if k not in new_entries:
+            entry_prefix = k.rsplit('.', 1)[0]
+            reserved = new_entries.get(f"{entry_prefix}.reserved", [])
+            if old_entries[k] in reserved:
+                continue
+
+            if entry_prefix in old_oneofs:
+                parent_prefix = entry_prefix.rsplit('.', 1)[0]
+                reserved = new_entries.get(f"{parent_prefix}.reserved", [])
+                if old_entries[k] in reserved:
+                    continue
+
             changes.append(
-                f"entry '{k}' has been removed, old={old_entries[k]}")
+                f"entry '{k}' has been removed without reserving, old={old_entries[k]}"
+            )
             continue
+
         if old_entries[k] != new_entries[k]:
             changes.append(
                 f"entry '{k}' has changed, old={old_entries[k]}, new={new_entries[k]}"
@@ -228,12 +260,13 @@ def CheckIRBinaryCompatibility(input_api, output_api):
 
 def CheckNoStaleGen(input_api, output_api):
     """Checks that Tint generated files are not stale."""
+    sys.path += [input_api.change.RepositoryRoot()]
+
+    import go_presubmit_support
+
     results = []
     try:
-        go = input_api.os_path.join(input_api.change.RepositoryRoot(), "tools",
-                                    "golang", "bin", "go")
-        if input_api.is_windows:
-            go += '.exe'
+        go = go_presubmit_support.go_path(input_api)
         input_api.subprocess.check_call_out(
             [go, "run", "tools/src/cmd/gen/main.go", "--check-stale"],
             stdout=input_api.subprocess.PIPE,
@@ -341,9 +374,7 @@ def CheckChange(input_api, output_api):
     # Check for formatting.
     results.extend(
         input_api.canned_checks.CheckPatchFormatted(
-            input_api,
-            output_api,
-            result_factory=result_factory))
+            input_api, output_api, result_factory=result_factory))
     results.extend(
         input_api.canned_checks.CheckGNFormatted(input_api, output_api))
     results.extend(

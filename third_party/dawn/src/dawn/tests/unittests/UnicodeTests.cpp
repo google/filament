@@ -40,7 +40,7 @@ TEST_F(CountUTF16CodeUnitsFromUTF8StringTest, ValidUnicodeString) {
     };
 
     // Referenced from src/tint/utils/text/unicode_test.cc
-    constexpr std::array<TestCase, 12> kTestCases = {{
+    constexpr std::array<TestCase, 14> kTestCases = {{
         {"", 0},
         {"abc", 3},
         {"\xe4\xbd\xa0\xe5\xa5\xbd\xe4\xb8\x96\xe7\x95\x8c", 4},
@@ -53,38 +53,16 @@ TEST_F(CountUTF16CodeUnitsFromUTF8StringTest, ValidUnicodeString) {
         {"\xef\xbf\xbe", 1},      // CodePoint == 0xFFFF - 1
         {"\xf0\x90\x80\x80", 2},  // CodePoint == 0x10000
         {"\xf0\x90\x80\x81", 2},  // CodePoint == 0x10000 + 1
+
+        // While surrogates are technically invalid, CountUTF16CodeUnitsFromUTF8String supports and
+        // counts them as a single UTF-16 code unit.
+        {"\xed\xa0\x80", 1},  // CodePoint == 0xD7FF + 1
+        {"\xed\xbf\xbf", 1},  // CodePoint == 0xE000 - 1
     }};
 
     for (const TestCase& testCase : kTestCases) {
-        native::ResultOrError<uint64_t> resultOrError =
-            native::CountUTF16CodeUnitsFromUTF8String(std::string_view(testCase.u8String));
-        ASSERT_TRUE(resultOrError.IsSuccess());
-        ASSERT_EQ(testCase.lengthInUTF16, resultOrError.AcquireSuccess());
-    }
-}
-
-TEST_F(CountUTF16CodeUnitsFromUTF8StringTest, InvalidUnicodeString) {
-    // Referenced from src/tint/utils/text/unicode_test.cc
-    constexpr std::array<const char*, 12> kTestCases = {{
-        "\xed\xa0\x80",  // CodePoint == 0xD7FF + 1
-        "\xed\xbf\xbf",  // CodePoint == 0xE000 - 1
-        "ab\xed\xa0\x80",
-        "\xd0",              // 2-bytes, missing second byte
-        "\xe8\x8f",          // 3-bytes, missing third byte
-        "\xf4\x8f\x8f",      // 4-bytes, missing fourth byte
-        "\xd0\x7f",          // 2-bytes, second byte MSB unset
-        "\xe8\x7f\x8f",      // 3-bytes, second byte MSB unset
-        "\xe8\x8f\x7f",      // 3-bytes, third byte MSB unset
-        "\xf4\x7f\x8f\x8f",  // 4-bytes, second byte MSB unset
-        "\xf4\x8f\x7f\x8f",  // 4-bytes, third byte MSB unset
-        "\xf4\x8f\x8f\x7f",  // 4-bytes, fourth byte MSB unset
-    }};
-
-    for (const char* testCase : kTestCases) {
-        native::ResultOrError<uint64_t> resultOrError =
-            native::CountUTF16CodeUnitsFromUTF8String(std::string_view(testCase));
-        ASSERT_TRUE(resultOrError.IsError());
-        [[maybe_unused]] auto err = resultOrError.AcquireError();
+        ASSERT_EQ(testCase.lengthInUTF16,
+                  native::CountUTF16CodeUnitsFromUTF8String(std::string_view(testCase.u8String)));
     }
 }
 

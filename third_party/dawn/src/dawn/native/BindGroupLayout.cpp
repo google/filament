@@ -51,7 +51,8 @@ ObjectType BindGroupLayoutBase::GetType() const {
 }
 
 bool BindGroupLayoutBase::IsEmpty() const {
-    return mInternalLayout == nullptr || mInternalLayout->IsEmpty();
+    DAWN_ASSERT(mInternalLayout != nullptr);
+    return mInternalLayout->IsEmpty();
 }
 
 // static
@@ -72,6 +73,18 @@ bool BindGroupLayoutBase::IsLayoutEqual(const BindGroupLayoutBase* other,
     return GetInternalBindGroupLayout() == other->GetInternalBindGroupLayout();
 }
 
-void BindGroupLayoutBase::DestroyImpl() {}
+void BindGroupLayoutBase::DestroyImpl(DestroyReason reason) {}
+
+void BindGroupLayoutBase::SetLabelImpl() {
+    // Note: Internal BindGroups are deduplicated so if a user
+    // has 2 matching bindgroups one will get the wrong label
+    // TODO(42240220): This can be fixed by keeping a list of labels per
+    // deduplicated object.
+    // There will be no internal BGL if creation was an error.
+    BindGroupLayoutInternalBase* internal = GetInternalBindGroupLayout();
+    if (internal) {
+        internal->SetLabel(GetLabel());
+    }
+}
 
 }  // namespace dawn::native

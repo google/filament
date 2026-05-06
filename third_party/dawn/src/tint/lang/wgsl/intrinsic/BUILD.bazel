@@ -87,7 +87,6 @@ cc_library(
     "//src/tint/lang/wgsl/intrinsic",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/resolver",
-    "//src/tint/lang/wgsl/resolver:test",
     "//src/tint/lang/wgsl/sem",
     "//src/tint/utils",
     "//src/tint/utils/containers",
@@ -101,8 +100,18 @@ cc_library(
     "//src/tint/utils/text",
     "@gtest",
     "//src/utils",
-  ],
+  ] + select({
+    ":tint_build_wgsl_reader": [
+      "//src/tint/lang/wgsl/resolver:test",
+    ],
+    "//conditions:default": [],
+  }),
   copts = COPTS,
   visibility = ["//visibility:public"],
+)
+
+alias(
+  name = "tint_build_wgsl_reader",
+  actual = "//src/tint:tint_build_wgsl_reader_true",
 )
 

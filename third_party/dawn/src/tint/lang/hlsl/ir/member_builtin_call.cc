@@ -57,8 +57,10 @@ MemberBuiltinCall* MemberBuiltinCall::Clone(core::ir::CloneContext& ctx) {
     auto* new_result = ctx.Clone(Result());
     auto* new_object = ctx.Clone(Object());
     auto new_args = ctx.Clone<MemberBuiltinCall::kDefaultNumOperands>(Args());
-    return ctx.ir.CreateInstruction<MemberBuiltinCall>(new_result, func_, new_object,
-                                                       std::move(new_args));
+    auto* cloned = ctx.ir.CreateInstruction<MemberBuiltinCall>(new_result, func_, new_object,
+                                                               std::move(new_args));
+    cloned->SetExplicitTemplateParams(ExplicitTemplateParams());
+    return cloned;
 }
 
 tint::core::ir::Instruction::Accesses MemberBuiltinCall::GetSideEffects() const {

@@ -25,16 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/validator_test.h"
-
 #include <string>
 #include <tuple>
 
 #include "gtest/gtest.h"
-
 #include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/ir/validator_test.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
@@ -51,7 +49,7 @@ using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(IR_ValidatorTest, Access_NoOperands) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -71,7 +69,7 @@ TEST_F(IR_ValidatorTest, Access_NoOperands) {
 
 TEST_F(IR_ValidatorTest, Access_NoIndices) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -90,7 +88,7 @@ TEST_F(IR_ValidatorTest, Access_NoIndices) {
 
 TEST_F(IR_ValidatorTest, Access_NoResults) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -126,7 +124,7 @@ TEST_F(IR_ValidatorTest, Access_NullObject) {
 
 TEST_F(IR_ValidatorTest, Access_NullIndex) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -145,7 +143,7 @@ TEST_F(IR_ValidatorTest, Access_NullIndex) {
 
 TEST_F(IR_ValidatorTest, Access_NegativeIndex) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -367,7 +365,7 @@ TEST_F(IR_ValidatorTest, Access_Incorrect_Type_Ptr_Value) {
 
 TEST_F(IR_ValidatorTest, Access_IndexVectorPtr) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.ptr<private_, vec3<f32>>());
+    auto* obj = b.FunctionParam(ty.ptr<private_, vec3f>());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -386,7 +384,7 @@ TEST_F(IR_ValidatorTest, Access_IndexVectorPtr) {
 
 TEST_F(IR_ValidatorTest, Access_IndexVectorPtr_WithCapability) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.ptr<private_, vec3<f32>>());
+    auto* obj = b.FunctionParam(ty.ptr<private_, vec3f>());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -400,7 +398,7 @@ TEST_F(IR_ValidatorTest, Access_IndexVectorPtr_WithCapability) {
 
 TEST_F(IR_ValidatorTest, Access_IndexVectorPtr_ViaMatrixPtr) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.ptr<private_, mat3x2<f32>>());
+    auto* obj = b.FunctionParam(ty.ptr<private_, mat3x2f>());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -419,7 +417,7 @@ TEST_F(IR_ValidatorTest, Access_IndexVectorPtr_ViaMatrixPtr) {
 
 TEST_F(IR_ValidatorTest, Access_IndexVectorPtr_ViaMatrixPtr_WithCapability) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.ptr<private_, mat3x2<f32>>());
+    auto* obj = b.FunctionParam(ty.ptr<private_, mat3x2f>());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -475,7 +473,7 @@ TEST_F(IR_ValidatorTest, Access_Incorrect_Ptr_Access) {
 
 TEST_F(IR_ValidatorTest, Access_IndexVector) {
     auto* f = b.Function("my_func", ty.void_());
-    auto* obj = b.FunctionParam(ty.vec3<f32>());
+    auto* obj = b.FunctionParam(ty.vec3f());
     f->SetParams({obj});
 
     b.Append(f->Block(), [&] {
@@ -516,7 +514,7 @@ TEST_F(IR_ValidatorTest, Access_ExtractPointerFromStruct) {
         b.Return(f);
     });
 
-    auto res = ir::Validate(mod, Capabilities{Capability::kAllowPointersAndHandlesInStructures});
+    auto res = ir::Validate(mod, Capabilities{Capability::kMslAllowEntryPointInterface});
     ASSERT_EQ(res, Success) << res.Failure();
 }
 
@@ -629,9 +627,78 @@ TEST_F(IR_ValidatorTest, Load_RuntimeSizedArray) {
     auto res = ir::Validate(mod);
     ASSERT_NE(res, Success);
     EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
-                                          R"(:7:21 error: load: cannot load a runtime-sized array
+                                          R"(:7:26 error: load: type 'array<u32>' cannot be loaded
     %3:array<u32> = load %a
-                    ^^^^
+                         ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Load_RuntimeSizedArray_InStruct) {
+    auto* s = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                         {mod.symbols.New("a"), ty.array<u32>()},
+                                                     });
+    auto* a = b.Var("a", ty.ptr<storage>(s));
+    a->SetBindingPoint(0, 0);
+    mod.root_block->Append(a);
+
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        b.Load(a);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
+                                          R"(:11:24 error: load: type 'MyStruct' cannot be loaded
+    %3:MyStruct = load %a
+                       ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Load_Atomic) {
+    auto* a = b.Var("a", ty.ptr<storage, atomic<u32>, read_write>());
+    a->SetBindingPoint(0, 0);
+    mod.root_block->Append(a);
+
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        b.Load(a);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
+                                          R"(:7:27 error: load: type 'atomic<u32>' cannot be loaded
+    %3:atomic<u32> = load %a
+                          ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Load_Atomic_InStruct) {
+    auto* s = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                         {mod.symbols.New("a"), ty.atomic<u32>()},
+                                                     });
+    auto* a = b.Var("a", ty.ptr<storage>(s));
+    a->SetBindingPoint(0, 0);
+    mod.root_block->Append(a);
+
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        b.Load(a);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
+                                          R"(:11:24 error: load: type 'MyStruct' cannot be loaded
+    %3:MyStruct = load %a
+                       ^^
 )")) << res.Failure();
 }
 
@@ -814,7 +881,7 @@ TEST_F(IR_ValidatorTest, LoadVectorElement_NullResult) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         b.Append(
             mod.CreateInstruction<ir::LoadVectorElement>(nullptr, var->Result(), b.Constant(1_i)));
         b.Return(f);
@@ -851,7 +918,7 @@ TEST_F(IR_ValidatorTest, LoadVectorElement_NullIndex) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         b.Append(mod.CreateInstruction<ir::LoadVectorElement>(b.InstructionResult(ty.f32()),
                                                               var->Result(), nullptr));
         b.Return(f);
@@ -870,7 +937,7 @@ TEST_F(IR_ValidatorTest, LoadVectorElement_MissingResult) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         auto* load = b.LoadVectorElement(var, b.Constant(1_i));
         load->ClearResults();
         b.Return(f);
@@ -890,7 +957,7 @@ TEST_F(IR_ValidatorTest, LoadVectorElement_MissingOperands) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         auto* load = b.LoadVectorElement(var, b.Constant(1_i));
         load->ClearOperands();
         b.Return(f);
@@ -903,6 +970,69 @@ TEST_F(IR_ValidatorTest, LoadVectorElement_MissingOperands) {
         testing::HasSubstr(R"(:4:14 error: load_vector_element: expected exactly 2 operands, got 0
     %3:f32 = load_vector_element
              ^^^^^^^^^^^^^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, LoadVectorElement_InvalidIndexType) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* var = b.Var(ty.ptr<function, vec3f>());
+        b.LoadVectorElement(var->Result(), 1_f);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:4:38 error: load_vector_element: load vector element index must be an integer scalar
+    %3:f32 = load_vector_element %2, 1.0f
+                                     ^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, LoadVectorElement_InvalidFromType) {
+    auto* f = b.Function("my_func", ty.void_());
+    auto* p = b.FunctionParam(ty.mat2x3<f32>());
+    f->SetParams({p});
+
+    b.Append(f->Block(), [&] {
+        auto* res = b.InstructionResult(ty.f32());
+        auto* lve = mod.CreateInstruction<ir::LoadVectorElement>(res, p, b.Constant(1_u));
+        b.Append(lve);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:3:34 error: load_vector_element: operand 'mat2x3<f32>' must be a pointer to a vector
+    %3:f32 = load_vector_element %2, 1u
+                                 ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, LoadVectorElement_ConstantIndexOutOfRange) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* var = b.Var(ty.ptr<function, vec4f>());
+        b.LoadVectorElement(var->Result(), 7_u);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:4:38 error: load_vector_element: load vector element index must be in range [0, 3]
+    %3:f32 = load_vector_element %2, 7u
+                                     ^^
 )")) << res.Failure();
 }
 
@@ -928,7 +1058,7 @@ TEST_F(IR_ValidatorTest, StoreVectorElement_NullIndex) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         b.Append(
             mod.CreateInstruction<ir::StoreVectorElement>(var->Result(), nullptr, b.Constant(2_f)));
         b.Return(f);
@@ -947,7 +1077,7 @@ TEST_F(IR_ValidatorTest, StoreVectorElement_NullValue) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         b.Append(
             mod.CreateInstruction<ir::StoreVectorElement>(var->Result(), b.Constant(1_i), nullptr));
         b.Return(f);
@@ -966,7 +1096,7 @@ TEST_F(IR_ValidatorTest, StoreVectorElement_MissingOperands) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         auto* store = b.StoreVectorElement(var, b.Constant(1_i), b.Constant(2_f));
         store->ClearOperands();
         b.Return(f);
@@ -986,7 +1116,7 @@ TEST_F(IR_ValidatorTest, StoreVectorElement_UnexpectedResult) {
     auto* f = b.Function("my_func", ty.void_());
 
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr<function, vec3<f32>>());
+        auto* var = b.Var(ty.ptr<function, vec3f>());
         auto* store = b.StoreVectorElement(var, b.Constant(1_i), b.Constant(2_f));
         store->SetResult(b.InstructionResult(ty.f32()));
         b.Return(f);
@@ -1002,11 +1132,74 @@ TEST_F(IR_ValidatorTest, StoreVectorElement_UnexpectedResult) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, StoreVectorElement_InvalidIndexType) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* var = b.Var(ty.ptr<function, vec3f>());
+        b.StoreVectorElement(var->Result(), 1_f, 1_f);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:4:30 error: store_vector_element: store vector element index must be an integer scalar
+    store_vector_element %2, 1.0f, 1.0f
+                             ^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, StoreVectorElement_InvalidFromType) {
+    auto* f = b.Function("my_func", ty.void_());
+    auto* p = b.FunctionParam(ty.mat2x3<f32>());
+    f->SetParams({p});
+
+    b.Append(f->Block(), [&] {
+        auto* sve =
+            mod.CreateInstruction<ir::StoreVectorElement>(p, b.Constant(1_u), b.Constant(2_u));
+        b.Append(sve);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:3:26 error: store_vector_element: operand 'mat2x3<f32>' must be a pointer to a vector
+    store_vector_element %2, 1u, 2u
+                         ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, StoreVectorElement_ConstantIndexOutOfRange) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* var = b.Var(ty.ptr<function, vec2f>());
+        b.StoreVectorElement(var->Result(), 7_u, 1_f);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(
+            R"(:4:30 error: store_vector_element: store vector element index must be in range [0, 1]
+    store_vector_element %2, 7u, 1.0f
+                             ^^
+)")) << res.Failure();
+}
+
 TEST_F(IR_ValidatorTest, Swizzle_MissingValue) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         swizzle->ClearOperands();
         b.Return(f);
     });
@@ -1023,8 +1216,8 @@ TEST_F(IR_ValidatorTest, Swizzle_MissingValue) {
 TEST_F(IR_ValidatorTest, Swizzle_NullValue) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         swizzle->SetOperand(0, nullptr);
         b.Return(f);
     });
@@ -1038,8 +1231,8 @@ TEST_F(IR_ValidatorTest, Swizzle_NullValue) {
 TEST_F(IR_ValidatorTest, Swizzle_MissingResult) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         swizzle->ClearResults();
         b.Return(f);
     });
@@ -1056,8 +1249,8 @@ TEST_F(IR_ValidatorTest, Swizzle_MissingResult) {
 TEST_F(IR_ValidatorTest, Swizzle_NullResult) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         swizzle->SetResult(nullptr);
         b.Return(f);
     });
@@ -1073,8 +1266,8 @@ TEST_F(IR_ValidatorTest, Swizzle_NullResult) {
 TEST_F(IR_ValidatorTest, Swizzle_NoIndices) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         auto indices = Vector<uint32_t, 0>();
         swizzle->SetIndices(std::move(indices));
         b.Return(f);
@@ -1092,8 +1285,8 @@ TEST_F(IR_ValidatorTest, Swizzle_NoIndices) {
 TEST_F(IR_ValidatorTest, Swizzle_TooManyIndices) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         auto indices = Vector<uint32_t, 5>{1, 1, 1, 1, 1};
         swizzle->SetIndices(std::move(indices));
         b.Return(f);
@@ -1111,8 +1304,8 @@ TEST_F(IR_ValidatorTest, Swizzle_TooManyIndices) {
 TEST_F(IR_ValidatorTest, Swizzle_InvalidIndices) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        auto* swizzle = b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        auto* swizzle = b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         auto indices = Vector<uint32_t, 4>{4, 3, 2, 1};
         swizzle->SetIndices(std::move(indices));
         b.Return(f);
@@ -1131,7 +1324,7 @@ TEST_F(IR_ValidatorTest, Swizzle_NotVector) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
         auto* var = b.Var(ty.ptr(function, ty.f32()));
-        b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2, 1, 0});
+        b.Swizzle(ty.vec4f(), b.Load(var), {3, 2, 1, 0});
         b.Return(f);
     });
 
@@ -1148,8 +1341,8 @@ TEST_F(IR_ValidatorTest, Swizzle_NotVector) {
 TEST_F(IR_ValidatorTest, Swizzle_TooSmallResult) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        b.Swizzle(ty.vec2<f32>(), b.Load(var), {3, 2, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        b.Swizzle(ty.vec2f(), b.Load(var), {3, 2, 1, 0});
         b.Return(f);
     });
 
@@ -1167,8 +1360,8 @@ TEST_F(IR_ValidatorTest, Swizzle_TooSmallResult) {
 TEST_F(IR_ValidatorTest, Swizzle_TooLargeResult) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 2});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        b.Swizzle(ty.vec4f(), b.Load(var), {3, 2});
         b.Return(f);
     });
 
@@ -1186,8 +1379,8 @@ TEST_F(IR_ValidatorTest, Swizzle_TooLargeResult) {
 TEST_F(IR_ValidatorTest, Swizzle_WrongTypeResult) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec4<f32>()));
-        b.Swizzle(ty.vec2<u32>(), b.Load(var), {3, 2});
+        auto* var = b.Var(ty.ptr(function, ty.vec4f()));
+        b.Swizzle(ty.vec2u(), b.Load(var), {3, 2});
         b.Return(f);
     });
 
@@ -1205,8 +1398,8 @@ TEST_F(IR_ValidatorTest, Swizzle_WrongTypeResult) {
 TEST_F(IR_ValidatorTest, Swizzle_OOBIndex) {
     auto* f = b.Function("my_func", ty.void_());
     b.Append(f->Block(), [&] {
-        auto* var = b.Var(ty.ptr(function, ty.vec2<f32>()));
-        b.Swizzle(ty.vec4<f32>(), b.Load(var), {3, 1, 1, 0});
+        auto* var = b.Var(ty.ptr(function, ty.vec2f()));
+        b.Swizzle(ty.vec4f(), b.Load(var), {3, 1, 1, 0});
         b.Return(f);
     });
 

@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "dawn/utils/TestUtils.h"
+
 #include <algorithm>
 #include <memory>
 #include <ostream>
@@ -33,7 +35,6 @@
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Math.h"
-#include "dawn/utils/TestUtils.h"
 #include "dawn/utils/TextureUtils.h"
 #include "dawn/utils/WGPUHelpers.h"
 

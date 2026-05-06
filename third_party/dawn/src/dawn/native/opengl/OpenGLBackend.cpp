@@ -40,6 +40,10 @@ RequestAdapterOptionsGetGLProc::RequestAdapterOptionsGetGLProc() {
     sType = wgpu::SType::RequestAdapterOptionsGetGLProc;
 }
 
+RequestAdapterOptionsAngleVirtualizationGroup::RequestAdapterOptionsAngleVirtualizationGroup() {
+    sType = wgpu::SType::RequestAdapterOptionsAngleVirtualizationGroup;
+}
+
 ExternalImageDescriptorEGLImage::ExternalImageDescriptorEGLImage()
     : ExternalImageDescriptor(ExternalImageType::EGLImage) {}
 

@@ -34,6 +34,8 @@
 //                       Do not modify this file directly
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
+
 #include "src/tint/lang/wgsl/intrinsic/ctor_conv.h"
 
 namespace tint::wgsl::intrinsic {
@@ -81,3 +83,5 @@ const char* str(CtorConv i) {
 }
 
 }  // namespace tint::wgsl::intrinsic
+
+// clang-format on

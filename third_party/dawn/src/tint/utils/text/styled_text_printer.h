@@ -34,11 +34,6 @@
 #include "src/tint/utils/text/styled_text.h"
 #include "src/tint/utils/text/styled_text_theme.h"
 
-/// Forward declarations
-namespace tint {
-class TextStyle;
-}
-
 namespace tint {
 
 /// StyledTextPrinter is the interface for printing text with a style.

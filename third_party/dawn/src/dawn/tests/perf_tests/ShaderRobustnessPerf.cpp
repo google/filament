@@ -454,9 +454,9 @@ class ShaderRobustnessPerf : public DawnPerfTestWithParams<ShaderRobustnessParam
           mDimBOuter(GetParam().mDimBOuter) {}
     ~ShaderRobustnessPerf() override = default;
 
-    void SetUp() override;
-
   protected:
+    void SetUpPerfTest() override;
+
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
         auto requirements = DawnPerfTestWithParams<ShaderRobustnessParams>::GetRequiredFeatures();
         if ((GetParam().mElemType == ElemType::F16) &&
@@ -484,9 +484,7 @@ class ShaderRobustnessPerf : public DawnPerfTestWithParams<ShaderRobustnessParam
     uint32_t mDimBOuter;
 };
 
-void ShaderRobustnessPerf::SetUp() {
-    DawnPerfTestWithParams<ShaderRobustnessParams>::SetUp();
-
+void ShaderRobustnessPerf::SetUpPerfTest() {
     DAWN_TEST_UNSUPPORTED_IF((GetParam().mElemType == ElemType::F16) &&
                              !SupportsFeatures({wgpu::FeatureName::ShaderF16}));
 

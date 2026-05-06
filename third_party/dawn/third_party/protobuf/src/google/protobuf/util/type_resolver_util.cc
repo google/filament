@@ -21,6 +21,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
+#include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/strtod.h"
 #include "google/protobuf/util/type_resolver.h"
 
@@ -219,16 +220,12 @@ void ConvertFieldDescriptor(absl::string_view url_prefix,
                             const FieldDescriptor& descriptor,
                             const FieldDescriptorProto& proto, Field* field) {
   field->set_kind(static_cast<Field::Kind>(descriptor.type()));
-  switch (descriptor.label()) {
-    case FieldDescriptor::LABEL_OPTIONAL:
-      field->set_cardinality(Field::CARDINALITY_OPTIONAL);
-      break;
-    case FieldDescriptor::LABEL_REPEATED:
-      field->set_cardinality(Field::CARDINALITY_REPEATED);
-      break;
-    case FieldDescriptor::LABEL_REQUIRED:
-      field->set_cardinality(Field::CARDINALITY_REQUIRED);
-      break;
+  if (descriptor.is_required()) {
+    field->set_cardinality(Field::CARDINALITY_REQUIRED);
+  } else if (descriptor.is_repeated()) {
+    field->set_cardinality(Field::CARDINALITY_REPEATED);
+  } else {
+    field->set_cardinality(Field::CARDINALITY_OPTIONAL);
   }
   field->set_number(descriptor.number());
   field->set_name(descriptor.name());
@@ -366,6 +363,30 @@ class DescriptorPoolTypeResolver : public TypeResolver {
   const DescriptorPool* pool_;
 };
 
+template <typename DescriptorT, typename DescriptorProtoT>
+void PartiallyResolveFeatures(const FileDescriptorProto& file,
+                              const DescriptorT& descriptor,
+                              DescriptorProtoT& proto) {
+  FeatureSet features = file.options().features();
+  std::vector<FeatureSet> nested_features;
+  const Descriptor* parent = descriptor.containing_type();
+  while (parent != nullptr) {
+    DescriptorProto parent_proto;
+    parent->CopyHeadingTo(&parent_proto);
+    if (parent_proto.options().has_features()) {
+      nested_features.push_back(parent_proto.options().features());
+    }
+    parent = parent->containing_type();
+  }
+  for (int i = nested_features.size() - 1; i >= 0; --i) {
+    features.MergeFrom(nested_features[i]);
+  }
+  if (features.ByteSizeLong() > 0) {
+    features.MergeFrom(proto.options().features());
+    *proto.mutable_options()->mutable_features() = features;
+  }
+}
+
 }  // namespace
 
 TypeResolver* NewTypeResolverForDescriptorPool(absl::string_view url_prefix,
@@ -380,6 +401,7 @@ Type ConvertDescriptorToType(absl::string_view url_prefix,
   FileDescriptorProto proto;
   descriptor.file()->CopyHeadingTo(&proto);
   descriptor.CopyTo(proto.add_message_type());
+  PartiallyResolveFeatures(proto, descriptor, *proto.mutable_message_type(0));
   ConvertDescriptor(url_prefix, descriptor, proto, proto.message_type(0),
                     &type);
   return type;
@@ -391,6 +413,7 @@ Enum ConvertDescriptorToType(const EnumDescriptor& descriptor) {
   FileDescriptorProto proto;
   descriptor.file()->CopyHeadingTo(&proto);
   descriptor.CopyTo(proto.add_enum_type());
+  PartiallyResolveFeatures(proto, descriptor, *proto.mutable_enum_type(0));
   ConvertEnumDescriptor(descriptor, proto, proto.enum_type(0), &enum_type);
   return enum_type;
 }

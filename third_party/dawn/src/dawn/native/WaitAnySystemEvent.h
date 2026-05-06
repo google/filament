@@ -85,8 +85,8 @@ template <typename It>
         handles.push_back((*it).first.mPrimitive.Get());
     }
     DAWN_ASSERT(handles.size() <= MAXIMUM_WAIT_OBJECTS);
-    DWORD status = WaitForMultipleObjects(handles.size(), handles.data(), /*bWaitAll=*/false,
-                                          ToMilliseconds(timeout));
+    DWORD status = WaitForMultipleObjects(DWORD(handles.size()), handles.data(),
+                                          /*bWaitAll=*/false, ToMilliseconds(timeout));
     if (status == WAIT_TIMEOUT) {
         return false;
     }

@@ -83,7 +83,7 @@ struct State {
             }
 
             if (immediate) {
-                TINT_ICE() << "multiple immediate variables";
+                TINT_IR_ICE(ir) << "multiple immediate variables";
             }
 
             immediate = var;
@@ -105,25 +105,39 @@ struct State {
         ReplaceImmediateAddressSpace(immediate);
     }
 
-    /// Replace an output pointer address space to make it `uniform`.
-    /// @param value the output variable
-    void ReplaceImmediateAddressSpace(core::ir::Instruction* value) {
-        Vector<core::ir::Instruction*, 8> to_replace;
-        to_replace.Push(value);
+    /// Replace an immediate variable's pointer address space to make it `uniform`.
+    /// @param var the immediate variable
+    void ReplaceImmediateAddressSpace(core::ir::Var* var) {
+        Vector<core::ir::Value*, 8> to_replace;
+        to_replace.Push(var->Result());
 
         // Update all uses of the module-scope variable.
         while (!to_replace.IsEmpty()) {
-            auto* inst = to_replace.Pop();
-            auto* new_ptr_type =
-                ty.ptr(core::AddressSpace::kUniform, inst->Result()->Type()->UnwrapPtr());
-            inst->Result()->SetType(new_ptr_type);
+            auto* value = to_replace.Pop();
 
-            for (auto usage : inst->Result()->UsagesUnsorted()) {
+            auto* ptr_type = value->Type()->As<type::Pointer>();
+            if (ptr_type->AddressSpace() == AddressSpace::kUniform) {
+                // This value has already been replaced. This can happen for function parameters
+                // when the function is called multiple times.
+                continue;
+            }
+            value->SetType(ty.ptr(core::AddressSpace::kUniform, ptr_type->StoreType()));
+
+            // Add all usages of the value to the queue.
+            for (auto usage : value->UsagesUnsorted()) {
+                if (auto* call = usage->instruction->As<core::ir::UserCall>()) {
+                    // The usage is a function call, so we need to add the target function parameter
+                    // to the queue.
+                    uint32_t param_index = static_cast<uint32_t>(usage->operand_index - 1);
+                    auto* param = call->Target()->Params()[param_index];
+                    to_replace.Push(param);
+                    continue;
+                }
                 if (!usage->instruction->Is<core::ir::Let>() &&
                     !usage->instruction->Is<core::ir::Access>()) {
                     continue;
                 }
-                to_replace.Push(usage->instruction);
+                to_replace.Push(usage->instruction->Result());
             }
         }
     }
@@ -133,18 +147,17 @@ struct State {
 
 Result<SuccessType> ChangeImmediateToUniform(core::ir::Module& ir,
                                              const ChangeImmediateToUniformConfig& config) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.ChangeImmediateToUniform",
-                                core::ir::Capabilities{
-                                    core::ir::Capability::kAllow8BitIntegers,
-                                    core::ir::Capability::kAllowClipDistancesOnF32,
-                                    core::ir::Capability::kAllowDuplicateBindings,
-                                    core::ir::Capability::kAllowNonCoreTypes,
-                                    core::ir::Capability::kAllowPointersAndHandlesInStructures,
-                                });
-    if (result != Success) {
-        return result.Failure();
-    }
+    core::ir::AssertValid(ir,
+                          core::ir::Capabilities{
+                              core::ir::Capability::kAllow8BitIntegers,
+                              core::ir::Capability::kAllow16BitIntegers,
+                              core::ir::Capability::kAllowPointSizeBuiltin,
+                              core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
+                              core::ir::Capability::kAllowDuplicateBindings,
+                              core::ir::Capability::kAllowNonCoreTypes,
+                              core::ir::Capability::kMslAllowEntryPointInterface,
+                          },
+                          "before core.ChangeImmediateToUniform");
 
     State{config, ir}.Process();
 

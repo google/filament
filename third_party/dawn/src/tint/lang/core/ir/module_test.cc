@@ -99,6 +99,10 @@ TEST_F(IR_ModuleTest, DependencyOrderedFunctions) {
     mod.functions.Push(fb);
     mod.functions.Push(fc);
     EXPECT_THAT(mod.DependencyOrderedFunctions(), ElementsAre(fd, fc, fb, fa));
+
+    // Test the const-qualified overload too.
+    const auto& const_mod = mod;
+    EXPECT_THAT(const_mod.DependencyOrderedFunctions(), ElementsAre(fd, fc, fb, fa));
 }
 
 TEST_F(IR_ModuleDeathTest, IR_ASSERT_WithoutCallback) {

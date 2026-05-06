@@ -34,7 +34,6 @@
 #include "dawn/common/Constants.h"
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Error.h"
-
 #include "dawn/native/dawn_platform.h"
 
 namespace dawn::native {
@@ -55,7 +54,7 @@ static_assert(static_cast<uint32_t>(wgpu::ShaderStage::Compute) ==
 ityp::bitset<SingleShaderStage, kNumStages> IterateStages(wgpu::ShaderStage stages);
 wgpu::ShaderStage StageBit(SingleShaderStage stage);
 
-static constexpr wgpu::ShaderStage kAllStages =
+inline constexpr wgpu::ShaderStage kAllStages =
     static_cast<wgpu::ShaderStage>((1 << kNumStages) - 1);
 
 template <typename T>

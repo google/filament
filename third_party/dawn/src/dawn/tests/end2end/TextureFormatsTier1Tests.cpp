@@ -338,8 +338,9 @@ DAWN_INSTANTIATE_TEST(RenderAttachmentFormatsTest,
                       D3D11Backend(),
                       D3D12Backend(),
                       MetalBackend(),
+                      OpenGLBackend(),
                       VulkanBackend(),
-                      OpenGLBackend());
+                      WebGPUBackend());
 
 class BlendableFormatsTest : public TextureFormatsTier1Test {
   protected:
@@ -446,8 +447,9 @@ DAWN_INSTANTIATE_TEST(BlendableFormatsTest,
                       D3D11Backend(),
                       D3D12Backend(),
                       MetalBackend(),
+                      OpenGLBackend(),
                       VulkanBackend(),
-                      OpenGLBackend());
+                      WebGPUBackend());
 
 class MultisampleResolveFormatsTest : public TextureFormatsTier1Test {
   protected:
@@ -517,6 +519,12 @@ class MultisampleResolveFormatsTest : public TextureFormatsTier1Test {
 // Test that r8snorm format has multisample and resolve capability
 // if 'texture-formats-tier1' is enabled.
 TEST_P(MultisampleResolveFormatsTest, R8SnormMultisampleResolve) {
+    // TODO(crbug.com/468047551): Fails on Win11/NVIDIA GTX 1660.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsNvidia() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/468047551): Fails on Win11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     std::vector<float> expectedDrawColor = {1.0f};
     RunMultisampleResolveFormatsTest(wgpu::TextureFormat::R8Snorm, expectedDrawColor);
 }
@@ -524,6 +532,12 @@ TEST_P(MultisampleResolveFormatsTest, R8SnormMultisampleResolve) {
 // Test that rg8snorm format has multisample and resolve capability
 // if 'texture-formats-tier1' is enabled.
 TEST_P(MultisampleResolveFormatsTest, RG8SnormMultisampleResolve) {
+    // TODO(crbug.com/468047551): Fails on Win11/NVIDIA GTX 1660.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsNvidia() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/468047551): Fails on Win11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     std::vector<float> expectedDrawColor = {1.0f, -0.5f};
     RunMultisampleResolveFormatsTest(wgpu::TextureFormat::RG8Snorm, expectedDrawColor);
 }
@@ -531,6 +545,12 @@ TEST_P(MultisampleResolveFormatsTest, RG8SnormMultisampleResolve) {
 // Test that rgba8snorm format has multisample and resolve capability
 // if 'texture-formats-tier1' is enabled.
 TEST_P(MultisampleResolveFormatsTest, RGBA8SnormMultisampleResolve) {
+    // TODO(crbug.com/468047551): Fails on Win11/NVIDIA GTX 1660.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsNvidia() && IsD3D12() && IsBackendValidationEnabled());
+
+    // TODO(crbug.com/468047551): Fails on Win11/AMD RX 5500 XT.
+    DAWN_SUPPRESS_TEST_IF(IsWindows11() && IsAMD() && IsD3D12() && IsBackendValidationEnabled());
+
     std::vector<float> expectedDrawColor = {1.0f, -0.5f, -1.0f, 0.5f};
     RunMultisampleResolveFormatsTest(wgpu::TextureFormat::RGBA8Snorm, expectedDrawColor);
 }
@@ -539,13 +559,22 @@ DAWN_INSTANTIATE_TEST(MultisampleResolveFormatsTest,
                       D3D11Backend(),
                       D3D12Backend(),
                       MetalBackend(),
+                      OpenGLBackend(),
                       VulkanBackend(),
-                      OpenGLBackend());
+                      WebGPUBackend());
 
 class MultisampleFormatsTest : public TextureFormatsTier1Test {
   protected:
     static constexpr uint32_t kSize = 16;
     static constexpr uint32_t kMultisampleCount = 4;
+
+    void SetUp() override {
+        TextureFormatsTier1Test::SetUp();
+        DAWN_SUPPRESS_TEST_IF(!IsCompatibilityMode());
+
+        // TODO(crbug.com/473899151): [Capture] multisampled.
+        DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
+    }
 
     // Fragment shader for the second pass: reading multisample texture and writing verification
     // color. This shader outputs red if all samples match the expected color, else green.
@@ -730,8 +759,9 @@ DAWN_INSTANTIATE_TEST(MultisampleFormatsTest,
                       D3D11Backend(),
                       D3D12Backend(),
                       MetalBackend(),
+                      OpenGLBackend(),
                       VulkanBackend(),
-                      OpenGLBackend());
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

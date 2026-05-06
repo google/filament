@@ -33,7 +33,6 @@
 
 // Forward declarations
 namespace tint::ast {
-class Attribute;
 class Expression;
 }  // namespace tint::ast
 
@@ -43,32 +42,20 @@ namespace tint::ast {
 class TemplatedIdentifier final : public Castable<TemplatedIdentifier, Identifier> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param sym the symbol for the identifier
     /// @param args the template arguments
-    /// @param attrs the identifier attributes
-    TemplatedIdentifier(GenerationID pid,
-                        NodeID nid,
+    TemplatedIdentifier(NodeID nid,
                         const Source& src,
                         const Symbol& sym,
-                        VectorRef<const Expression*> args,
-                        VectorRef<const Attribute*> attrs);
+                        VectorRef<const Expression*> args);
 
     /// Destructor
     ~TemplatedIdentifier() override;
 
-    /// Clones this node and all transitive child nodes using the `CloneContext` `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const TemplatedIdentifier* Clone(CloneContext& ctx) const override;
-
     /// The templated arguments
     const tint::Vector<const Expression*, 3> arguments;
-
-    /// Attributes on the identifier
-    const tint::Vector<const Attribute*, 0> attributes;
 };
 
 }  // namespace tint::ast

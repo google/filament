@@ -28,7 +28,6 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
-
 #include "src/tint/utils/rtti/switch.h"
 
 namespace tint {

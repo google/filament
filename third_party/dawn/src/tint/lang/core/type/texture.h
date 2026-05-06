@@ -46,6 +46,9 @@ class Texture : public Castable<Texture, Type> {
     /// @returns the texture dimension
     TextureDimension Dim() const { return dim_; }
 
+    /// @returns the alignment in bytes of the type.
+    uint32_t Align() const override;
+
   private:
     TextureDimension const dim_;
 };

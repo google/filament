@@ -52,7 +52,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Bitcast) {
 %test_function = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
     %3:f32 = call %my_func
-    %4:f32 = bitcast %3
+    %4:f32 = bitcast<f32> %3
     %tint_symbol:f32 = let %4
     ret
   }

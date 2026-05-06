@@ -1292,10 +1292,10 @@ class MockSpec {
       : function_mocker_(function_mocker), matchers_(matchers) {}
 
   // Adds a new default action spec to the function mocker and returns
-  // the newly created spec.
-  internal::OnCallSpec<F>& InternalDefaultActionSetAt(const char* file,
-                                                      int line, const char* obj,
-                                                      const char* call) {
+  // the newly created spec. .WillByDefault() must be called on the returned
+  // object.
+  [[nodiscard]] internal::OnCallSpec<F>& InternalDefaultActionSetAt(
+      const char* file, int line, const char* obj, const char* call) {
     LogWithLocation(internal::kInfo, file, line,
                     std::string("ON_CALL(") + obj + ", " + call + ") invoked");
     return function_mocker_->AddNewOnCallSpec(file, line, matchers_);
@@ -1530,7 +1530,7 @@ class FunctionMocker<R(Args...)> final : public UntypedFunctionMockerBase {
     UntypedOnCallSpecs specs_to_delete;
     untyped_on_call_specs_.swap(specs_to_delete);
 
-    g_gmock_mutex.Unlock();
+    g_gmock_mutex.unlock();
     for (UntypedOnCallSpecs::const_iterator it = specs_to_delete.begin();
          it != specs_to_delete.end(); ++it) {
       delete static_cast<const OnCallSpec<F>*>(*it);
@@ -1538,7 +1538,7 @@ class FunctionMocker<R(Args...)> final : public UntypedFunctionMockerBase {
 
     // Lock the mutex again, since the caller expects it to be locked when we
     // return.
-    g_gmock_mutex.Lock();
+    g_gmock_mutex.lock();
   }
 
   // Returns the result of invoking this mock function with the given

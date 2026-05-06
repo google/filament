@@ -91,14 +91,17 @@ class PipelineLayoutBase : public ApiObjectBase,
     const BindGroupLayoutBase* GetFrontendBindGroupLayout(BindGroupIndex group) const;
     BindGroupLayoutBase* GetFrontendBindGroupLayout(BindGroupIndex group);
     const BindGroupLayoutInternalBase* GetBindGroupLayout(BindGroupIndex group) const;
+    BindGroupLayoutInternalBase* GetBindGroupLayout(BindGroupIndex group);
     const BindGroupMask& GetBindGroupLayoutsMask() const;
+
     bool HasPixelLocalStorage() const;
     const std::vector<wgpu::TextureFormat>& GetStorageAttachmentSlots() const;
     bool HasAnyStorageAttachments() const;
-    uint32_t GetNumStorageBufferBindingsInVertexStage() const;
-    uint32_t GetNumStorageTextureBindingsInVertexStage() const;
-    uint32_t GetNumStorageBufferBindingsInFragmentStage() const;
-    uint32_t GetNumStorageTextureBindingsInFragmentStage() const;
+
+    bool UsesResourceTable() const;
+
+    bool HasExternalTextures() const;
+    bool HasAPIStaticSamplers() const;
 
     // Utility functions to compute inherited bind groups.
     // Returns the inherited bind groups as a mask.
@@ -119,17 +122,14 @@ class PipelineLayoutBase : public ApiObjectBase,
 
   protected:
     PipelineLayoutBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     PerBindGroup<Ref<BindGroupLayoutBase>> mBindGroupLayouts;
     BindGroupMask mMask;
     bool mHasPLS = false;
-    uint32_t mNumStorageBufferBindingsInVertexStage = 0;
-    uint32_t mNumStorageTextureBindingsInVertexStage = 0;
-    uint32_t mNumStorageBufferBindingsInFragmentStage = 0;
-    uint32_t mNumStorageTextureBindingsInFragmentStage = 0;
     std::vector<wgpu::TextureFormat> mStorageAttachmentSlots;
     uint32_t mImmediateDataRangeByteSize = 0;
+    bool mUsesResourceTable = false;
 };
 
 }  // namespace dawn::native

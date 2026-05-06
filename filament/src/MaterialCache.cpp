@@ -36,7 +36,7 @@ size_t MaterialCache::MaterialKey::Hash::operator()(
 }
 
 bool MaterialCache::MaterialKey::operator==(MaterialKey const& rhs) const noexcept {
-    return parser == rhs.parser;
+    return *parser == *rhs.parser;
 }
 
 MaterialCache::MaterialCache(uint32_t materialCapacity, uint32_t programCapacity)

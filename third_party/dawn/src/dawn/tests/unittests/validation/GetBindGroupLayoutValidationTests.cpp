@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-
 #include "dawn/native/BindGroupLayout.h"
+#include "dawn/tests/unittests/validation/ValidationTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 
@@ -545,6 +544,35 @@ TEST_F(GetBindGroupLayoutTests, ExternalTextureBindingType) {
             @fragment fn main() {
                _ = myExternalTexture;
             })");
+    EXPECT_THAT(device.CreateBindGroupLayout(&desc),
+                BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
+}
+
+// Tests that the texel buffer binding type matches with a texel_buffer declared in the shader.
+TEST_F(GetBindGroupLayoutTests, TexelBufferBindingType) {
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    wgpu::TexelBufferBindingLayout layout = {};
+    layout.access = wgpu::TexelBufferAccess::ReadOnly;
+    layout.format = wgpu::TextureFormat::RGBA8Uint;
+
+    wgpu::BindGroupLayoutEntry entry = {};
+    entry.binding = 0;
+    entry.visibility = wgpu::ShaderStage::Fragment;
+    entry.nextInChain = &layout;
+
+    wgpu::BindGroupLayoutDescriptor desc = {};
+    desc.entryCount = 1;
+    desc.entries = &entry;
+
+    wgpu::RenderPipeline pipeline = RenderPipelineFromFragmentShader(R"(
+            requires texel_buffers;
+            @group(0) @binding(0) var myTexelBuffer: texel_buffer<rgba8uint, read>;
+
+            @fragment fn main() {
+                _ = textureDimensions(myTexelBuffer);
+            })");
+
     EXPECT_THAT(device.CreateBindGroupLayout(&desc),
                 BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
 }
@@ -1425,6 +1453,51 @@ TEST_F(GetBindGroupLayoutTests, NullBGLs) {
     EXPECT_THAT(pipeline.GetBindGroupLayout(2), BindGroupLayoutEq(emptyBGL));
     EXPECT_THAT(pipeline.GetBindGroupLayout(3), BindGroupLayoutEq(emptyBGL));
 }
+
+// Regression test for a revert where the default layout computation of a sampler used with an
+// external texture would mark it unfilterable (when it needs to be filterable).
+TEST_F(GetBindGroupLayoutTests, SamplerUsedWithExternalTexture) {
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+        @vertex fn vs() -> @builtin(position) vec4f {
+            return vec4f(0.0);
+        }
+
+        @group(0) @binding(0) var mySampler: sampler;
+        @group(0) @binding(1) var myTexture: texture_external;
+        @fragment fn main() -> @location(0) vec4f {
+          return textureSampleBaseClampToEdge(myTexture, mySampler, vec2f(0));
+        }
+    )");
+
+    utils::ComboRenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.vertex.module = module;
+    pipelineDesc.cFragment.module = module;
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&pipelineDesc);
+
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {
+                        0,
+                        wgpu::ShaderStage::Fragment,
+                        wgpu::SamplerBindingType::Filtering,
+                    },
+                    {1, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout},
+                });
+    EXPECT_THAT(pipeline.GetBindGroupLayout(0), BindGroupLayoutCacheEq(bgl));
+}
+
+// TODO(https://issues.chromium.org/487593147): Add tests for GetBindGroupLayout with explicit
+// filterability and filteringness annotations. An incomplete test plan is:
+//
+//  - Check that explicit filteringness / filterability is correctly reflected.
+//  - Check that conflicting filteringness / filterability between stages produces an error.
+//  - Check that unknowns get defaulted to the other stage's explicit value (in both orders)
+//  - Check that unknown samplers used with non-filterable textures become unfilterable, and that
+//  the others become filtering.
+//  - Check that unknown textures used with a filtering / unknown sampler become filtering.
+//  - Check what happens on unknown texture/samplers only referenced and not used.
 
 }  // anonymous namespace
 }  // namespace dawn

@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "../src/benchmark_register.h"
-#include "benchmark/benchmark.h"
+#include "benchmark/benchmark_api.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -136,7 +136,7 @@ TEST(AddRangeTest, Simple8) {
 }
 
 TEST(AddCustomContext, Simple) {
-  std::map<std::string, std::string> *&global_context = GetGlobalContext();
+  std::map<std::string, std::string>*& global_context = GetGlobalContext();
   EXPECT_THAT(global_context, nullptr);
 
   AddCustomContext("foo", "bar");
@@ -151,7 +151,7 @@ TEST(AddCustomContext, Simple) {
 }
 
 TEST(AddCustomContext, DuplicateKey) {
-  std::map<std::string, std::string> *&global_context = GetGlobalContext();
+  std::map<std::string, std::string>*& global_context = GetGlobalContext();
   EXPECT_THAT(global_context, nullptr);
 
   AddCustomContext("foo", "bar");

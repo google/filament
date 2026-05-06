@@ -28,6 +28,7 @@
 #ifndef INCLUDE_DAWN_NATIVE_D3D12BACKEND_H_
 #define INCLUDE_DAWN_NATIVE_D3D12BACKEND_H_
 
+#include <d3d11on12.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <wrl/client.h>
@@ -48,6 +49,12 @@ enum MemorySegment {
 
 DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<ID3D12Device> GetD3D12Device(WGPUDevice device);
 
+DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<ID3D11On12Device> GetOrCreateD3D11On12Device(
+    WGPUDevice device);
+
+DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue(
+    WGPUDevice device);
+
 DAWN_NATIVE_EXPORT uint64_t SetExternalMemoryReservation(WGPUDevice device,
                                                          uint64_t requestedReservationSize,
                                                          MemorySegment memorySegment);
@@ -56,6 +63,17 @@ DAWN_NATIVE_EXPORT uint64_t SetExternalMemoryReservation(WGPUDevice device,
 struct DAWN_NATIVE_EXPORT SharedBufferMemoryD3D12ResourceDescriptor : wgpu::ChainedStruct {
     SharedBufferMemoryD3D12ResourceDescriptor() {
         sType = static_cast<wgpu::SType>(WGPUSType_SharedBufferMemoryD3D12ResourceDescriptor);
+    }
+
+    // This ID3D12Resource object must be created from the same ID3D12Device used in the
+    // WGPUDevice.
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
+};
+
+// May be chained on SharedTextureMemoryDescriptor.
+struct DAWN_NATIVE_EXPORT SharedTextureMemoryD3D12ResourceDescriptor : wgpu::ChainedStruct {
+    SharedTextureMemoryD3D12ResourceDescriptor() {
+        sType = static_cast<wgpu::SType>(WGPUSType_SharedTextureMemoryD3D12ResourceDescriptor);
     }
 
     // This ID3D12Resource object must be created from the same ID3D12Device used in the

@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dawn/native/ResourceMemoryAllocation.h"
+
 #include "dawn/common/Assert.h"
 
 namespace dawn::native {

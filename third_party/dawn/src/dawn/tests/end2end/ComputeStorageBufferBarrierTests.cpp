@@ -423,7 +423,8 @@ DAWN_INSTANTIATE_TEST(ComputeStorageBufferBarrierTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

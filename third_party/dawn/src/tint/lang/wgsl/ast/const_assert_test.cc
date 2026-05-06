@@ -68,15 +68,5 @@ TEST_F(ConstAssertDeathTest, Assert_Null_Condition) {
         "internal compiler error");
 }
 
-TEST_F(ConstAssertDeathTest, Assert_DifferentGenerationID_Condition) {
-    EXPECT_DEATH_IF_SUPPORTED(
-        {
-            ProgramBuilder b1;
-            ProgramBuilder b2;
-            b1.ConstAssert(b2.Expr(i32(123)));
-        },
-        "internal compiler error");
-}
-
 }  // namespace
 }  // namespace tint::ast

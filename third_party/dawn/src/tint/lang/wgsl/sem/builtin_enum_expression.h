@@ -30,11 +30,6 @@
 
 #include "src/tint/lang/wgsl/sem/expression.h"
 
-// Forward declarations
-namespace tint::core::type {
-class Type;
-}  // namespace tint::core::type
-
 namespace tint::sem {
 
 /// Base class for BuiltinEnumExpression.

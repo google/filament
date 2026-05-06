@@ -59,8 +59,13 @@ VK_OBJECT_TYPE_GETTER(VkSampler, VK_OBJECT_TYPE_SAMPLER)
 VK_OBJECT_TYPE_GETTER(VkShaderModule, VK_OBJECT_TYPE_SHADER_MODULE)
 VK_OBJECT_TYPE_GETTER(VkImage, VK_OBJECT_TYPE_IMAGE)
 VK_OBJECT_TYPE_GETTER(VkImageView, VK_OBJECT_TYPE_IMAGE_VIEW)
+VK_OBJECT_TYPE_GETTER(VkBufferView, VK_OBJECT_TYPE_BUFFER_VIEW)
 
 #undef VK_OBJECT_TYPE_GETTER
+
+uint32_t ToPushConstantBytes(const ImmediateConstantMask& immediates) {
+    return static_cast<uint32_t>(immediates.count()) * kImmediateConstantElementByteSize;
+}
 
 VkCompareOp ToVulkanCompareOp(wgpu::CompareFunction op) {
     switch (op) {
@@ -135,15 +140,64 @@ VkImageAspectFlags VulkanAspectMask(const Aspect& aspects) {
     return flags;
 }
 
+VkShaderStageFlags VulkanShaderStages(wgpu::ShaderStage stages) {
+    VkShaderStageFlags flags = 0;
+
+    if (stages & wgpu::ShaderStage::Vertex) {
+        flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    }
+    if (stages & wgpu::ShaderStage::Fragment) {
+        flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+    if (stages & wgpu::ShaderStage::Compute) {
+        flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+    return flags;
+}
+
+VkShaderStageFlagBits VulkanShaderStage(SingleShaderStage stage) {
+    return static_cast<VkShaderStageFlagBits>(VulkanShaderStages(StageBit(stage)));
+}
+
+VkAttachmentLoadOp VulkanAttachmentLoadOp(wgpu::LoadOp op) {
+    switch (op) {
+        case wgpu::LoadOp::Load:
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+        case wgpu::LoadOp::Clear:
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        case wgpu::LoadOp::ExpandResolveTexture:
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        case wgpu::LoadOp::Undefined:
+            DAWN_UNREACHABLE();
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+}
+
+VkAttachmentStoreOp VulkanAttachmentStoreOp(wgpu::StoreOp op) {
+    // TODO(crbug.com/dawn/485): return STORE_OP_STORE_NONE_QCOM if the device has required
+    // extension.
+    switch (op) {
+        case wgpu::StoreOp::Store:
+            return VK_ATTACHMENT_STORE_OP_STORE;
+        case wgpu::StoreOp::Discard:
+            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        case wgpu::StoreOp::Undefined:
+            DAWN_UNREACHABLE();
+            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    }
+}
+
 // Vulkan SPEC requires the source/destination region specified by each element of
 // pRegions must be a region that is contained within srcImage/dstImage. Here the size of
 // the image refers to the virtual size, while Dawn validates texture copy extent with the
 // physical size, so we need to re-calculate the texture copy extent to ensure it should fit
 // in the virtual size of the subresource.
-Extent3D ComputeTextureCopyExtent(const TextureCopy& textureCopy, const Extent3D& copySize) {
-    Extent3D validTextureCopyExtent = copySize;
+TexelExtent3D ComputeTextureCopyExtent(const TextureCopy& textureCopy,
+                                       const TexelExtent3D& copySize) {
+    TexelExtent3D validTextureCopyExtent = copySize;
     const TextureBase* texture = textureCopy.texture.Get();
-    Extent3D virtualSizeAtLevel =
+    TexelExtent3D virtualSizeAtLevel =
         texture->GetMipLevelSingleSubresourceVirtualSize(textureCopy.mipLevel, textureCopy.aspect);
     DAWN_ASSERT(textureCopy.origin.x <= virtualSizeAtLevel.width);
     DAWN_ASSERT(textureCopy.origin.y <= virtualSizeAtLevel.height);
@@ -159,29 +213,32 @@ Extent3D ComputeTextureCopyExtent(const TextureCopy& textureCopy, const Extent3D
     return validTextureCopyExtent;
 }
 
-VkBufferImageCopy ComputeBufferImageCopyRegion(const BufferCopy& bufferCopy,
-                                               const TextureCopy& textureCopy,
-                                               const Extent3D& copySize) {
-    TexelCopyBufferLayout passDataLayout;
-    passDataLayout.offset = bufferCopy.offset;
-    passDataLayout.rowsPerImage = bufferCopy.rowsPerImage;
-    passDataLayout.bytesPerRow = bufferCopy.bytesPerRow;
-    return ComputeBufferImageCopyRegion(passDataLayout, textureCopy, copySize);
-}
-
 VkBufferImageCopy ComputeBufferImageCopyRegion(const TexelCopyBufferLayout& dataLayout,
                                                const TextureCopy& textureCopy,
-                                               const Extent3D& copySize) {
-    const Texture* texture = ToBackend(textureCopy.texture.Get());
+                                               const BlockExtent3D& copySize) {
+    const TypedTexelBlockInfo& blockInfo = GetBlockInfo(textureCopy);
 
+    BufferCopy bufferCopy;
+    bufferCopy.offset = dataLayout.offset;
+    bufferCopy.rowsPerImage = BlockCount{dataLayout.rowsPerImage};
+    bufferCopy.blocksPerRow = blockInfo.BytesToBlocks(dataLayout.bytesPerRow);
+
+    return ComputeBufferImageCopyRegion(bufferCopy, textureCopy, copySize);
+}
+
+VkBufferImageCopy ComputeBufferImageCopyRegion(const BufferCopy& bufferCopy,
+                                               const TextureCopy& textureCopy,
+                                               const BlockExtent3D& copySize) {
     VkBufferImageCopy region;
 
-    region.bufferOffset = dataLayout.offset;
-    // In Vulkan the row length is in texels while it is in bytes for Dawn
-    const TexelBlockInfo& blockInfo = texture->GetFormat().GetAspectInfo(textureCopy.aspect).block;
-    DAWN_ASSERT(dataLayout.bytesPerRow % blockInfo.byteSize == 0);
-    region.bufferRowLength = dataLayout.bytesPerRow / blockInfo.byteSize * blockInfo.width;
-    region.bufferImageHeight = dataLayout.rowsPerImage * blockInfo.height;
+    region.bufferOffset = bufferCopy.offset;
+    const TypedTexelBlockInfo& blockInfo = GetBlockInfo(textureCopy);
+    TexelExtent3D copySizeTexels = blockInfo.ToTexel(copySize);
+
+    // In Vulkan the row length is in texels while it is in blocks for Dawn
+    region.bufferRowLength = static_cast<uint32_t>(blockInfo.ToTexelWidth(bufferCopy.blocksPerRow));
+    region.bufferImageHeight =
+        static_cast<uint32_t>(blockInfo.ToTexelHeight(bufferCopy.rowsPerImage));
 
     region.imageSubresource.aspectMask = VulkanAspectMask(textureCopy.aspect);
     region.imageSubresource.mipLevel = textureCopy.mipLevel;
@@ -190,44 +247,48 @@ VkBufferImageCopy ComputeBufferImageCopyRegion(const TexelCopyBufferLayout& data
         case wgpu::TextureDimension::Undefined:
             DAWN_UNREACHABLE();
         case wgpu::TextureDimension::e1D:
-            DAWN_ASSERT(textureCopy.origin.z == 0 && copySize.depthOrArrayLayers == 1);
-            region.imageOffset.x = textureCopy.origin.x;
+            DAWN_ASSERT(textureCopy.origin.z == TexelCount{0} &&
+                        copySizeTexels.depthOrArrayLayers == TexelCount{1});
+            region.imageOffset.x = static_cast<uint32_t>(textureCopy.origin.x);
             region.imageOffset.y = 0;
             region.imageOffset.z = 0;
             region.imageSubresource.baseArrayLayer = 0;
             region.imageSubresource.layerCount = 1;
 
             DAWN_ASSERT(!textureCopy.texture->GetFormat().isCompressed);
-            region.imageExtent.width = copySize.width;
+            region.imageExtent.width = static_cast<uint32_t>(copySizeTexels.width);
             region.imageExtent.height = 1;
             region.imageExtent.depth = 1;
             break;
 
         case wgpu::TextureDimension::e2D: {
-            region.imageOffset.x = textureCopy.origin.x;
-            region.imageOffset.y = textureCopy.origin.y;
+            region.imageOffset.x = static_cast<uint32_t>(textureCopy.origin.x);
+            region.imageOffset.y = static_cast<uint32_t>(textureCopy.origin.y);
             region.imageOffset.z = 0;
-            region.imageSubresource.baseArrayLayer = textureCopy.origin.z;
-            region.imageSubresource.layerCount = copySize.depthOrArrayLayers;
+            region.imageSubresource.baseArrayLayer = static_cast<uint32_t>(textureCopy.origin.z);
+            region.imageSubresource.layerCount =
+                static_cast<uint32_t>(copySizeTexels.depthOrArrayLayers);
 
-            Extent3D imageExtent = ComputeTextureCopyExtent(textureCopy, copySize);
-            region.imageExtent.width = imageExtent.width;
-            region.imageExtent.height = imageExtent.height;
+            TexelExtent3D imageExtent =
+                ComputeTextureCopyExtent(textureCopy, copySizeTexels.ToExtent3D());
+            region.imageExtent.width = static_cast<uint32_t>(imageExtent.width);
+            region.imageExtent.height = static_cast<uint32_t>(imageExtent.height);
             region.imageExtent.depth = 1;
             break;
         }
 
         case wgpu::TextureDimension::e3D: {
-            region.imageOffset.x = textureCopy.origin.x;
-            region.imageOffset.y = textureCopy.origin.y;
-            region.imageOffset.z = textureCopy.origin.z;
+            region.imageOffset.x = static_cast<uint32_t>(textureCopy.origin.x);
+            region.imageOffset.y = static_cast<uint32_t>(textureCopy.origin.y);
+            region.imageOffset.z = static_cast<uint32_t>(textureCopy.origin.z);
             region.imageSubresource.baseArrayLayer = 0;
             region.imageSubresource.layerCount = 1;
 
-            Extent3D imageExtent = ComputeTextureCopyExtent(textureCopy, copySize);
-            region.imageExtent.width = imageExtent.width;
-            region.imageExtent.height = imageExtent.height;
-            region.imageExtent.depth = copySize.depthOrArrayLayers;
+            TexelExtent3D imageExtent =
+                ComputeTextureCopyExtent(textureCopy, copySizeTexels.ToExtent3D());
+            region.imageExtent.width = static_cast<uint32_t>(imageExtent.width);
+            region.imageExtent.height = static_cast<uint32_t>(imageExtent.height);
+            region.imageExtent.depth = static_cast<uint32_t>(copySizeTexels.depthOrArrayLayers);
             break;
         }
     }
@@ -294,6 +355,13 @@ std::string GetDeviceDebugPrefixFromDebugName(const char* debugName) {
     return std::string(debugName, length);
 }
 
+std::string FormatAPIVersion(uint32_t version) {
+    std::ostringstream versionString;
+    versionString << VK_API_VERSION_MAJOR(version) << "." << VK_API_VERSION_MINOR(version) << "."
+                  << VK_API_VERSION_PATCH(version);
+    return versionString.str();
+}
+
 std::vector<VkDrmFormatModifierPropertiesEXT> GetFormatModifierProps(
     const VulkanFunctions& fn,
     VkPhysicalDevice vkPhysicalDevice,
@@ -338,13 +406,12 @@ ResultOrError<VkDrmFormatModifierPropertiesEXT> GetFormatModifierProps(
     return DAWN_VALIDATION_ERROR("DRM format modifier %u not supported.", modifier);
 }
 
-ResultOrError<VkSamplerYcbcrConversion> CreateSamplerYCbCrConversionCreateInfo(
-    YCbCrVkDescriptor yCbCrDescriptor,
-    Device* device) {
+ResultOrError<VkSamplerYcbcrConversion> CreateSamplerYCbCrConversion(
+    const Device* device,
+    const YCbCrVkDescriptor& yCbCrDescriptor) {
     uint64_t externalFormat = yCbCrDescriptor.externalFormat;
     VkFormat vulkanFormat = static_cast<VkFormat>(yCbCrDescriptor.vkFormat);
-    DAWN_INVALID_IF((externalFormat == 0 && vulkanFormat == VK_FORMAT_UNDEFINED),
-                    "Both VkFormat and VkExternalFormatANDROID are undefined.");
+    DAWN_ASSERT(externalFormat != 0 || vulkanFormat != VK_FORMAT_UNDEFINED);
 
     VkComponentMapping vulkanComponent;
     vulkanComponent.r = static_cast<VkComponentSwizzle>(yCbCrDescriptor.vkComponentSwizzleRed);

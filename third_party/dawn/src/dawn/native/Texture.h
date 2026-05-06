@@ -32,24 +32,29 @@
 #include <string>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
 #include "dawn/common/LRUCache.h"
 #include "dawn/common/RefCountedWithExternalCount.h"
 #include "dawn/common/WeakRef.h"
 #include "dawn/common/ityp_array.h"
 #include "dawn/common/ityp_bitset.h"
+#include "dawn/native/BlockInfo.h"
+#include "dawn/native/ChainUtils.h"
+#include "dawn/native/DeviceGuard.h"
 #include "dawn/native/Error.h"
 #include "dawn/native/Format.h"
 #include "dawn/native/Forward.h"
+#include "dawn/native/IntegerTypes.h"
 #include "dawn/native/ObjectBase.h"
 #include "dawn/native/SharedTextureMemory.h"
 #include "dawn/native/Subresource.h"
-#include "partition_alloc/pointers/raw_ref.h"
-
 #include "dawn/native/dawn_platform.h"
+#include "partition_alloc/pointers/raw_ref.h"
 
 namespace dawn::native {
 
 class MemoryDump;
+class ResourceTableBase;
 
 enum class AllowMultiPlanarTextureFormat {
     No,
@@ -71,21 +76,42 @@ ResultOrError<TextureViewDescriptor> GetTextureViewDescriptorWithDefaults(
 
 bool IsValidSampleCount(uint32_t sampleCount);
 
-static constexpr wgpu::TextureUsage kReadOnlyTextureUsages =
+// Computes a swizzle which, when applied, is equivalent to applying `firstSwizzle`
+// then `secondSwizzle`, like the order of WGSL swizzles (`value.rgba.rgba`).
+wgpu::TextureComponentSwizzle ComposeSwizzle(wgpu::TextureComponentSwizzle firstSwizzle,
+                                             wgpu::TextureComponentSwizzle secondSwizzle);
+
+// The default swizzle as defined by the WebGPU specification.
+inline constexpr wgpu::TextureComponentSwizzle kRGBASwizzle = {
+    wgpu::ComponentSwizzle::R,
+    wgpu::ComponentSwizzle::G,
+    wgpu::ComponentSwizzle::B,
+    wgpu::ComponentSwizzle::A,
+};
+
+// The swizzle typically used for depth and stencil textures.
+inline constexpr wgpu::TextureComponentSwizzle kR001Swizzle = {
+    wgpu::ComponentSwizzle::R,
+    wgpu::ComponentSwizzle::Zero,
+    wgpu::ComponentSwizzle::Zero,
+    wgpu::ComponentSwizzle::One,
+};
+
+inline constexpr wgpu::TextureUsage kReadOnlyTextureUsages =
     wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::TextureBinding | kReadOnlyRenderAttachment |
     kReadOnlyStorageTexture;
 
 // Valid texture usages for a resolve texture that are loaded from at the beginning of a render
 // pass.
-static constexpr wgpu::TextureUsage kResolveTextureLoadAndStoreUsages =
+inline constexpr wgpu::TextureUsage kResolveTextureLoadAndStoreUsages =
     kResolveAttachmentLoadingUsage | wgpu::TextureUsage::RenderAttachment;
 
-static constexpr wgpu::TextureUsage kShaderTextureUsages =
+inline constexpr wgpu::TextureUsage kShaderTextureUsages =
     wgpu::TextureUsage::TextureBinding | kReadOnlyStorageTexture |
     wgpu::TextureUsage::StorageBinding | kWriteOnlyStorageTexture;
 
 // Usages that are used to validate operations that act on texture views.
-static constexpr wgpu::TextureUsage kTextureViewOnlyUsages =
+inline constexpr wgpu::TextureUsage kTextureViewOnlyUsages =
     kShaderTextureUsages | kResolveTextureLoadAndStoreUsages |
     wgpu::TextureUsage::TransientAttachment | wgpu::TextureUsage::StorageAttachment;
 
@@ -109,6 +135,8 @@ struct TextureViewQuery {
     wgpu::ComponentSwizzle swizzleGreen = wgpu::ComponentSwizzle::G;
     wgpu::ComponentSwizzle swizzleBlue = wgpu::ComponentSwizzle::B;
     wgpu::ComponentSwizzle swizzleAlpha = wgpu::ComponentSwizzle::A;
+
+    // Doesn't contain Vulkan YCbCr members as these views skip the cache.
 };
 
 static const size_t kDefaultTextureViewCacheCapacity = 4;
@@ -144,6 +172,8 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
     SubresourceRange GetAllSubresources() const;
     uint32_t GetSampleCount() const;
     uint32_t GetSubresourceCount() const;
+    bool HasPinnedUsage() const;
+    wgpu::TextureUsage GetPinnedUsage() const;
 
     // |GetUsage| returns the usage with which the texture was created using the base WebGPU
     // API. The dawn-internal-usages extension may add additional usages. |GetInternalUsage|
@@ -169,29 +199,37 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
     bool IsMultisampledTexture() const;
 
     // Returns true if the size covers the whole subresource.
-    bool CoversFullSubresource(uint32_t mipLevel, Aspect aspect, const Extent3D& size) const;
+    bool CoversFullSubresource(uint32_t mipLevel, Aspect aspect, const TexelExtent3D& size) const;
 
     // For a texture with non-block-compressed texture format, its physical size is always equal
     // to its virtual size. For a texture with block compressed texture format, the physical
     // size is the one with paddings if necessary, which is always a multiple of the block size
     // and used in texture copying. The virtual size is the one without paddings, which is not
     // required to be a multiple of the block size and used in texture sampling.
+    // TODO(crbug.com/424536624): Return BlockExtent3D for these functions.
     Extent3D GetMipLevelSingleSubresourcePhysicalSize(uint32_t level, Aspect aspect) const;
     Extent3D GetMipLevelSingleSubresourceVirtualSize(uint32_t level, Aspect aspect) const;
+    // TODO(https://issues.chromium.org/424536624): Return TexelExtent3D and take typed
+    // origin/extent.
     Extent3D ClampToMipLevelVirtualSize(uint32_t level,
                                         Aspect aspect,
                                         const Origin3D& origin,
                                         const Extent3D& extent) const;
-    // For 2d-array textures, this keeps the array layers in contrast to
-    // GetMipLevelSingleSubresourceVirtualSize.
+    // For 2d-array textures, these 2 functions keeps the array layers in contrast to
+    // GetMipLevelSingleSubresource(Physical/Virtual)Size.
+    // TODO(https://issues.chromium.org/424536624): Return TexelExtent3D.
+    Extent3D GetMipLevelSubresourcePhysicalSize(uint32_t level, Aspect aspect) const;
     Extent3D GetMipLevelSubresourceVirtualSize(uint32_t level, Aspect aspect) const;
+
+    MaybeError Pin(wgpu::TextureUsage usage);
+    void Unpin();
+    void AddResourceTableSlotUse(ResourceTableBase* table, ResourceTableSlot slot);
+    void RemoveResourceTableSlotUse(ResourceTableBase* table, ResourceTableSlot slot);
 
     ResultOrError<Ref<TextureViewBase>> CreateView(
         const TextureViewDescriptor* descriptor = nullptr);
     Ref<TextureViewBase> CreateErrorView(const TextureViewDescriptor* descriptor = nullptr);
     ApiObjectList* GetViewTrackingList();
-
-    bool IsImplicitMSAARenderTextureViewSupported() const;
 
     void DumpMemoryStatistics(dawn::native::MemoryDump* dump, const char* prefix) const;
 
@@ -206,6 +244,8 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
     TextureViewBase* APICreateView(const TextureViewDescriptor* descriptor = nullptr);
     TextureViewBase* APICreateErrorView(const TextureViewDescriptor* descriptor = nullptr);
     void APIDestroy();
+    void APIPin(wgpu::TextureUsage usages);
+    void APIUnpin();
     uint32_t APIGetWidth() const;
     uint32_t APIGetHeight() const;
     uint32_t APIGetDepthOrArrayLayers() const;
@@ -214,16 +254,21 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
     wgpu::TextureDimension APIGetDimension() const;
     wgpu::TextureFormat APIGetFormat() const;
     wgpu::TextureUsage APIGetUsage() const;
+    wgpu::TextureViewDimension APIGetTextureBindingViewDimension() const;
+    void APISetOwnershipForMemoryDump(uint64_t ownerGuid);
 
   protected:
     TextureBase(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor);
     ~TextureBase() override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     void AddInternalUsage(wgpu::TextureUsage usage);
     void SetSharedResourceMemoryContentsForTesting(Ref<SharedResourceMemoryContents> contents);
 
     ExecutionSerial mLastSharedTextureMemoryUsageSerial{kBeginningOfGPUTime};
+
+    virtual MaybeError PinImpl(wgpu::TextureUsage usage);
+    virtual void UnpinImpl();
 
   private:
     struct TextureState {
@@ -241,8 +286,15 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
 
     ResultOrError<Ref<TextureViewBase>> GetOrCreateDefaultView();
 
+    MaybeError ValidatePin(wgpu::TextureUsage usages) const;
+    MaybeError ValidateUnpin() const;
+
     void WillAddFirstExternalRef() override;
     void WillDropLastExternalRef() override;
+
+    // TODO(crbug.com/481211676): Remove this once all backends' DestroyImpl methods are
+    // thread-safe.
+    virtual std::optional<DeviceGuard> UseDeviceGuardForDestroy();
 
     wgpu::TextureDimension mDimension;
     // Only used for compatibility mode
@@ -255,6 +307,7 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
     uint32_t mSampleCount;
     wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
     wgpu::TextureUsage mInternalUsage = wgpu::TextureUsage::None;
+    wgpu::TextureUsage mPinnedUsage = wgpu::TextureUsage::None;  // None if not pinned.
     TextureState mState;
     wgpu::TextureFormat mFormatEnumForReflection;
 
@@ -267,8 +320,27 @@ class TextureBase : public RefCountedWithExternalCount<SharedResource> {
         LRUCache<TextureViewQuery, Ref<TextureViewBase>, TextureViewCacheFuncs>;
     std::unique_ptr<TextureViewCache> mTextureViewCache;
 
+    // Keep a hash set of the places this texture is bound to in ResourceTables.
+    struct ResourceTableSlotUse {
+        WeakRef<ResourceTableBase> table;
+        ResourceTableSlot slot;
+
+        struct HashFuncs {
+            size_t operator()(const ResourceTableSlotUse& query) const;
+            bool operator()(const ResourceTableSlotUse& a, const ResourceTableSlotUse& b) const;
+        };
+    };
+    absl::flat_hash_set<ResourceTableSlotUse,
+                        ResourceTableSlotUse::HashFuncs,
+                        ResourceTableSlotUse::HashFuncs>
+        mResourceTableSlotUses;
+
     // TODO(crbug.com/dawn/845): Use a more optimized data structure to save space
     std::vector<bool> mIsSubresourceContentInitializedAtIndex;
+
+    // Owner GUID for memory dump tracking, non-zero GUID will be reported via
+    // MemoryDump::AddOwnerGUID, and 0 indicates no external ownership for this texture.
+    uint64_t mOwnerGUIDForMemoryDump = 0u;
 };
 
 template <typename CreateFn>
@@ -277,7 +349,9 @@ ResultOrError<Ref<TextureViewBase>> TextureBase::GetOrCreateViewFromCache(
     CreateFn createFn) {
     TextureViewQuery query(desc);
 
-    if (!mTextureViewCache) {
+    // Skip the cache when not present, but also for Vulkan YCbCr textures that don't have all their
+    // info unpacked in the TextureViewQuery.
+    if (!mTextureViewCache || desc.Has<YCbCrVkDescriptor>()) {
         return createFn(query);
     }
 
@@ -315,19 +389,16 @@ class TextureViewBase : public ApiObjectBase {
     wgpu::TextureUsage GetUsage() const;
     wgpu::TextureUsage GetInternalUsage() const;
 
-    wgpu::ComponentSwizzle GetSwizzleRed() const;
-    wgpu::ComponentSwizzle GetSwizzleGreen() const;
-    wgpu::ComponentSwizzle GetSwizzleBlue() const;
-    wgpu::ComponentSwizzle GetSwizzleAlpha() const;
-    bool UsesNonDefaultSwizzle() const;
-    wgpu::TextureComponentSwizzle ComposeSwizzle(wgpu::TextureComponentSwizzle swizzle) const;
+    wgpu::TextureComponentSwizzle GetSwizzle() const;
+    bool IsSwizzleIdentity() const;
 
-    virtual bool IsYCbCr() const;
+    bool IsYCbCr() const;
     // Valid to call only if `IsYCbCr()` is true.
-    virtual YCbCrVkDescriptor GetYCbCrVkDescriptor() const;
+    bool HasYCbCrDescriptor() const;
+    virtual bool IsYCbCrFilterable() const;
 
   protected:
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
   private:
     TextureViewBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
@@ -345,6 +416,8 @@ class TextureViewBase : public ApiObjectBase {
     wgpu::ComponentSwizzle mSwizzleGreen = wgpu::ComponentSwizzle::G;
     wgpu::ComponentSwizzle mSwizzleBlue = wgpu::ComponentSwizzle::B;
     wgpu::ComponentSwizzle mSwizzleAlpha = wgpu::ComponentSwizzle::A;
+    bool mIsSwizzleIdentity = false;
+    bool mHasYCbCrDescriptor = false;
 };
 
 }  // namespace dawn::native

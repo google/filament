@@ -34,8 +34,8 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
-func CreateMemMapOSWrapperWithFakeDefaultPaths() (oswrapper.MemMapOSWrapper, error) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+func CreateFSTestOSWrapperWithFakeDefaultPaths() (oswrapper.FSTestOSWrapper, error) {
+	wrapper := oswrapper.CreateFSTestOSWrapper()
 	err := SetUpFakeDefaultPaths(wrapper)
 	if err != nil {
 		return wrapper, err
@@ -43,7 +43,7 @@ func CreateMemMapOSWrapperWithFakeDefaultPaths() (oswrapper.MemMapOSWrapper, err
 	return wrapper, nil
 }
 
-func SetUpFakeDefaultPaths(fsWriter oswrapper.MemMapOSWrapper) error {
+func SetUpFakeDefaultPaths(fsWriter oswrapper.FSTestOSWrapper) error {
 	err := fileutils.SetUpFakeDawnRoot(fsWriter)
 	if err != nil {
 		return err

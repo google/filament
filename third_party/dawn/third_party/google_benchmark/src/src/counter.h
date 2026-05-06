@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BENCHMARK_COUNTER_H_
-#define BENCHMARK_COUNTER_H_
+#ifndef BENCHMARK_SRC_COUNTER_H_
+#define BENCHMARK_SRC_COUNTER_H_
 
-#include "benchmark/benchmark.h"
+#include "benchmark/counter.h"
+#include "benchmark/export.h"
+#include "benchmark/types.h"
 
 namespace benchmark {
 
-// these counter-related functions are hidden to reduce API surface.
 namespace internal {
 void Finish(UserCounters* l, IterationCount iterations, double time,
             double num_threads);
@@ -29,4 +30,4 @@ bool SameNames(UserCounters const& l, UserCounters const& r);
 
 }  // end namespace benchmark
 
-#endif  // BENCHMARK_COUNTER_H_
+#endif  // BENCHMARK_SRC_COUNTER_H_

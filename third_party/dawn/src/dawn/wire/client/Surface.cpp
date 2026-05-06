@@ -25,6 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#ifdef UNSAFE_BUFFERS_BUILD
+// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
+#pragma allow_unsafe_buffers
+#endif
+
 #include "dawn/wire/client/Surface.h"
 
 #include <algorithm>
@@ -148,12 +153,12 @@ void Surface::APIGetCurrentTexture(WGPUSurfaceTexture* surfaceTexture) {
 
     // Assume texture creation will work in the server and return a new texture proxy.
     Client* wireClient = GetClient();
-    Ref<Texture> texture = wireClient->Make<Texture>(&mTextureDescriptor);
+    Ref<Texture> texture = wireClient->Make<Texture>(mConfiguredDevice.Get(), &mTextureDescriptor);
 
     SurfaceGetCurrentTextureCmd cmd;
-    cmd.surfaceId = GetWireId();
-    cmd.textureHandle = texture->GetWireHandle();
-    cmd.configuredDeviceId = mConfiguredDevice->GetWireId();
+    cmd.surfaceId = GetWireHandle(wireClient).id;
+    cmd.textureHandle = texture->GetWireHandle(wireClient);
+    cmd.configuredDeviceId = mConfiguredDevice->GetWireHandle(wireClient).id;
     wireClient->SerializeCommand(cmd);
 
     surfaceTexture->status = WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal;

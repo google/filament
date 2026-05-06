@@ -67,8 +67,11 @@ typedef struct loader_settings_driver_configuration {
 } loader_settings_driver_configuration;
 
 typedef struct loader_settings_device_configuration {
-    char deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
     uint8_t deviceUUID[VK_UUID_SIZE];
+    uint8_t driverUUID[VK_UUID_SIZE];
+    uint32_t driverVersion;
+    char deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    char driverName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 } loader_settings_device_configuration;
 
 typedef struct loader_settings {
@@ -76,6 +79,7 @@ typedef struct loader_settings {
     bool has_unordered_layer_location;
     enum vulkan_loader_debug_flags debug_level;
 
+    bool layer_configurations_active;
     uint32_t layer_configuration_count;
     loader_settings_layer_configuration* layer_configurations;
 
@@ -83,6 +87,7 @@ typedef struct loader_settings {
     uint32_t additional_driver_count;
     loader_settings_driver_configuration* additional_drivers;
 
+    bool device_configurations_active;
     uint32_t device_configuration_count;
     loader_settings_device_configuration* device_configurations;
 

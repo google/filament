@@ -126,7 +126,6 @@ public:
 
 TEST_F(BasicStencilBufferTest, StencilBuffer) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(Backend::VULKAN, "b/453776821");
 
     auto& api = getDriverApi();
 
@@ -152,7 +151,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
 TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(Backend::VULKAN, "b/453776965");
+
     auto& api = getDriverApi();
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.

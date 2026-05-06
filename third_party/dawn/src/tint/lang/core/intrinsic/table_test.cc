@@ -63,8 +63,7 @@ using ::testing::HasSubstr;
 
 class CoreIntrinsicTableTest : public testing::Test {
   public:
-    GenerationID id = GenerationID::New();
-    SymbolTable syms{id};
+    SymbolTable syms{};
     type::Manager ty;
     Table<Dialect> table{ty, syms};
 };
@@ -86,9 +85,8 @@ TEST_F(CoreIntrinsicTableTest, MismatchF32) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchU32) {
-    auto* f32 = ty.f32();
     auto* u32 = ty.u32();
-    auto* vec2f = ty.vec2(f32);
+    auto* vec2f = ty.vec2f();
     auto result =
         table.Lookup(BuiltinFn::kUnpack2X16Float, Empty, Vector{u32}, EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -108,7 +106,7 @@ TEST_F(CoreIntrinsicTableTest, MismatchU32) {
 TEST_F(CoreIntrinsicTableTest, MatchI32) {
     auto* f32 = ty.f32();
     auto* i32 = ty.i32();
-    auto* vec4f = ty.vec4(ty.f32());
+    auto* vec4f = ty.vec4f();
     auto* tex = ty.sampled_texture(type::TextureDimension::k1d, f32);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, i32, i32},
                                EvaluationStage::kConstant);
@@ -269,8 +267,8 @@ TEST_F(CoreIntrinsicTableTest, MismatchArray) {
 
 TEST_F(CoreIntrinsicTableTest, MatchSampler) {
     auto* f32 = ty.f32();
-    auto* vec2f = ty.vec2(f32);
-    auto* vec4f = ty.vec4(f32);
+    auto* vec2f = ty.vec2f();
+    auto* vec4f = ty.vec4f();
     auto* tex = ty.sampled_texture(type::TextureDimension::k2d, f32);
     auto* sampler = ty.sampler();
     auto result = table.Lookup(BuiltinFn::kTextureSample, Empty, Vector{tex, sampler, vec2f},
@@ -288,7 +286,7 @@ TEST_F(CoreIntrinsicTableTest, MatchSampler) {
 
 TEST_F(CoreIntrinsicTableTest, MismatchSampler) {
     auto* f32 = ty.f32();
-    auto* vec2f = ty.vec2(f32);
+    auto* vec2f = ty.vec2f();
     auto* tex = ty.sampled_texture(type::TextureDimension::k2d, f32);
     auto result = table.Lookup(BuiltinFn::kTextureSample, Empty, Vector{tex, f32, vec2f},
                                EvaluationStage::kConstant);
@@ -299,8 +297,8 @@ TEST_F(CoreIntrinsicTableTest, MismatchSampler) {
 TEST_F(CoreIntrinsicTableTest, MatchSampledTexture) {
     auto* i32 = ty.i32();
     auto* f32 = ty.f32();
-    auto* vec2i = ty.vec2(i32);
-    auto* vec4f = ty.vec4(f32);
+    auto* vec2i = ty.vec2i();
+    auto* vec4f = ty.vec4f();
     auto* tex = ty.sampled_texture(type::TextureDimension::k2d, f32);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, vec2i, i32},
                                EvaluationStage::kConstant);
@@ -318,8 +316,8 @@ TEST_F(CoreIntrinsicTableTest, MatchSampledTexture) {
 TEST_F(CoreIntrinsicTableTest, MatchMultisampledTexture) {
     auto* i32 = ty.i32();
     auto* f32 = ty.f32();
-    auto* vec2i = ty.vec2(i32);
-    auto* vec4f = ty.vec4(f32);
+    auto* vec2i = ty.vec2i();
+    auto* vec4f = ty.vec4f();
     auto* tex = ty.multisampled_texture(type::TextureDimension::k2d, f32);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, vec2i, i32},
                                EvaluationStage::kConstant);
@@ -337,7 +335,7 @@ TEST_F(CoreIntrinsicTableTest, MatchMultisampledTexture) {
 TEST_F(CoreIntrinsicTableTest, MatchDepthTexture) {
     auto* f32 = ty.f32();
     auto* i32 = ty.i32();
-    auto* vec2i = ty.vec2(i32);
+    auto* vec2i = ty.vec2i();
     auto* tex = ty.depth_texture(type::TextureDimension::k2d);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, vec2i, i32},
                                EvaluationStage::kConstant);
@@ -355,7 +353,7 @@ TEST_F(CoreIntrinsicTableTest, MatchDepthTexture) {
 TEST_F(CoreIntrinsicTableTest, MatchDepthMultisampledTexture) {
     auto* f32 = ty.f32();
     auto* i32 = ty.i32();
-    auto* vec2i = ty.vec2(i32);
+    auto* vec2i = ty.vec2i();
     auto* tex = ty.depth_multisampled_texture(type::TextureDimension::k2d);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, vec2i, i32},
                                EvaluationStage::kConstant);
@@ -371,10 +369,8 @@ TEST_F(CoreIntrinsicTableTest, MatchDepthMultisampledTexture) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchExternalTexture) {
-    auto* f32 = ty.f32();
-    auto* i32 = ty.i32();
-    auto* vec2i = ty.vec2(i32);
-    auto* vec4f = ty.vec4(f32);
+    auto* vec2i = ty.vec2i();
+    auto* vec4f = ty.vec4f();
     auto* tex = ty.external_texture();
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{tex, vec2i},
                                EvaluationStage::kConstant);
@@ -388,10 +384,8 @@ TEST_F(CoreIntrinsicTableTest, MatchExternalTexture) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchWOStorageTexture) {
-    auto* f32 = ty.f32();
-    auto* i32 = ty.i32();
-    auto* vec2i = ty.vec2(i32);
-    auto* vec4f = ty.vec4(f32);
+    auto* vec2i = ty.vec2i();
+    auto* vec4f = ty.vec4f();
     auto* tex =
         ty.storage_texture(type::TextureDimension::k2d, TexelFormat::kR32Float, Access::kWrite);
 
@@ -409,9 +403,8 @@ TEST_F(CoreIntrinsicTableTest, MatchWOStorageTexture) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MismatchTexture) {
+    auto* vec2i = ty.vec2i();
     auto* f32 = ty.f32();
-    auto* i32 = ty.i32();
-    auto* vec2i = ty.vec2(i32);
     auto result = table.Lookup(BuiltinFn::kTextureLoad, Empty, Vector{f32, vec2i},
                                EvaluationStage::kConstant);
     ASSERT_NE(result, Success);
@@ -439,8 +432,7 @@ TEST_F(CoreIntrinsicTableTest, MismatchTemplateType) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchOpenSizeVector) {
-    auto* f32 = ty.f32();
-    auto* vec2f = ty.vec2(f32);
+    auto* vec2f = ty.vec2f();
     auto result = table.Lookup(BuiltinFn::kClamp, Empty, Vector{vec2f, vec2f, vec2f},
                                EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -452,9 +444,8 @@ TEST_F(CoreIntrinsicTableTest, MatchOpenSizeVector) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MismatchOpenSizeVector) {
-    auto* f32 = ty.f32();
     auto* u32 = ty.u32();
-    auto* vec2f = ty.vec2(f32);
+    auto* vec2f = ty.vec2f();
     auto result = table.Lookup(BuiltinFn::kClamp, Empty, Vector{vec2f, u32, vec2f},
                                EvaluationStage::kConstant);
     ASSERT_NE(result, Success);
@@ -540,7 +531,7 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByNumberOfParameters) {
     ASSERT_EQ(result.Failure().Plain(),
               R"(no matching call to 'textureDimensions(bool, bool)'
 
-28 candidate functions:
+45 candidate functions:
  • 'textureDimensions(texture: texture_depth_2d  ✗ , level: L  ✗ ) -> vec2<u32>' where:
       ✗  'L' is 'i32' or 'u32'
  • 'textureDimensions(texture: texture_depth_2d_array  ✗ , level: L  ✗ ) -> vec2<u32>' where:
@@ -567,16 +558,29 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByNumberOfParameters) {
  • 'textureDimensions(texture: texture_cube_array<T>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
       ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_1d<f32, K>  ✗ , level: L  ✗ ) -> u32' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_2d<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_2d_array<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_3d<f32, K>  ✗ , level: L  ✗ ) -> vec3<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_cube<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_cube_array<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
  • 'textureDimensions(texture: texture_depth_2d  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_2d_array  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_cube  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_cube_array  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_multisampled_2d  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
- • 'textureDimensions(texture: texture_storage_2d<F, A>  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_2d_array<F, A>  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_3d<F, A>  ✗ ) -> vec3<u32>'
- • 'textureDimensions(texture: texel_buffer<F, A>  ✗ ) -> u32'
  • 'textureDimensions(texture: texture_external  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_1d<T>  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
@@ -590,8 +594,40 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByNumberOfParameters) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'textureDimensions(texture: texture_cube_array<T>  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_1d<f32, K>  ✗ ) -> u32' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_2d<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_2d_array<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_3d<f32, K>  ✗ ) -> vec3<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_cube<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_cube_array<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
  • 'textureDimensions(texture: texture_multisampled_2d<T>  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_storage_1d<F, R>  ✗ ) -> u32' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_2d<F, R>  ✗ ) -> vec2<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_2d_array<F, R>  ✗ ) -> vec2<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_3d<F, R>  ✗ ) -> vec3<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_1d<F, W>  ✗ ) -> u32' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_2d<F, W>  ✗ ) -> vec2<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_2d_array<F, W>  ✗ ) -> vec2<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_3d<F, W>  ✗ ) -> vec3<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texel_buffer<F, R>  ✗ ) -> u32' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texel_buffer<F, W>  ✗ ) -> u32' where:
+      ✗  'W' is 'write' or 'read_write'
 )");
 }
 
@@ -604,7 +640,7 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByMatchingParameter) {
     ASSERT_EQ(result.Failure().Plain(),
               R"(no matching call to 'textureDimensions(texture_depth_2d, bool)'
 
-28 candidate functions:
+45 candidate functions:
  • 'textureDimensions(texture: texture_depth_2d  ✓ , level: L  ✗ ) -> vec2<u32>' where:
       ✗  'L' is 'i32' or 'u32'
  • 'textureDimensions(texture: texture_depth_2d  ✓ ) -> vec2<u32>' where:
@@ -633,15 +669,28 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByMatchingParameter) {
  • 'textureDimensions(texture: texture_cube_array<T>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
       ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_1d<f32, K>  ✗ , level: L  ✗ ) -> u32' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_2d<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_2d_array<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_3d<f32, K>  ✗ , level: L  ✗ ) -> vec3<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_cube<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_cube_array<f32, K>  ✗ , level: L  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+      ✗  'L' is 'i32' or 'u32'
  • 'textureDimensions(texture: texture_depth_2d_array  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_cube  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_cube_array  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_depth_multisampled_2d  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_1d<F, A>  ✗ ) -> u32'
- • 'textureDimensions(texture: texture_storage_2d<F, A>  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_2d_array<F, A>  ✗ ) -> vec2<u32>'
- • 'textureDimensions(texture: texture_storage_3d<F, A>  ✗ ) -> vec3<u32>'
- • 'textureDimensions(texture: texel_buffer<F, A>  ✗ ) -> u32'
  • 'textureDimensions(texture: texture_external  ✗ ) -> vec2<u32>'
  • 'textureDimensions(texture: texture_1d<T>  ✗ ) -> u32' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
@@ -655,14 +704,45 @@ TEST_F(CoreIntrinsicTableTest, OverloadOrderByMatchingParameter) {
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'textureDimensions(texture: texture_cube_array<T>  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_1d<f32, K>  ✗ ) -> u32' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_2d<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_2d_array<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_3d<f32, K>  ✗ ) -> vec3<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_cube<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
+ • 'textureDimensions(texture: texture_cube_array<f32, K>  ✗ ) -> vec2<u32>' where:
+      ✗  'K' is 'filterable' or 'unfilterable'
  • 'textureDimensions(texture: texture_multisampled_2d<T>  ✗ ) -> vec2<u32>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
+ • 'textureDimensions(texture: texture_storage_1d<F, R>  ✗ ) -> u32' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_2d<F, R>  ✗ ) -> vec2<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_2d_array<F, R>  ✗ ) -> vec2<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_3d<F, R>  ✗ ) -> vec3<u32>' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texture_storage_1d<F, W>  ✗ ) -> u32' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_2d<F, W>  ✗ ) -> vec2<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_2d_array<F, W>  ✗ ) -> vec2<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texture_storage_3d<F, W>  ✗ ) -> vec3<u32>' where:
+      ✗  'W' is 'write' or 'read_write'
+ • 'textureDimensions(texture: texel_buffer<F, R>  ✗ ) -> u32' where:
+      ✗  'R' is 'read'
+ • 'textureDimensions(texture: texel_buffer<F, W>  ✗ ) -> u32' where:
+      ✗  'W' is 'write' or 'read_write'
 )");
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchUnaryOp) {
-    auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     auto result = table.Lookup(UnaryOp::kNegation, vec3i, EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result->return_type, vec3i);
@@ -698,7 +778,7 @@ TEST_F(CoreIntrinsicTableTest, MatchUnaryOp_Runtime) {
 
 TEST_F(CoreIntrinsicTableTest, MatchBinaryOp) {
     auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     auto result = table.Lookup(BinaryOp::kMultiply, i32, vec3i, EvaluationStage::kConstant,
                                /* is_compound */ false);
     ASSERT_EQ(result, Success);
@@ -739,7 +819,7 @@ TEST_F(CoreIntrinsicTableTest, MismatchBinaryOp) {
 
 TEST_F(CoreIntrinsicTableTest, MatchCompoundOp) {
     auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     auto result = table.Lookup(BinaryOp::kMultiply, i32, vec3i, EvaluationStage::kConstant,
                                /* is_compound */ true);
     ASSERT_EQ(result, Success);
@@ -780,7 +860,7 @@ TEST_F(CoreIntrinsicTableTest, MismatchCompoundOp) {
 
 TEST_F(CoreIntrinsicTableTest, MatchTypeInitializer) {
     auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     auto result = table.Lookup(CtorConv::kVec3, Vector{i32}, Vector{i32, i32, i32},
                                EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -804,19 +884,19 @@ TEST_F(CoreIntrinsicTableTest, MismatchTypeInitializer) {
 
 6 candidate constructors:
  • 'vec3<T  ✓ >(x: T  ✓ , y: T  ✗ , z: T  ✓ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(x: T  ✓ , yz: vec2<T>  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(T  ✓ ) -> vec3<T>' where:
       ✗  overload expects 1 argument, call passed 3 arguments
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(xy: vec2<T>  ✗ , z: T  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(vec3<T>  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >() -> vec3<T>' where:
       ✗  overload expects 0 arguments, call passed 3 arguments
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
 
 5 candidate conversions:
  • 'vec3<T  ✓ >(vec3<U>  ✗ ) -> vec3<T>' where:
@@ -839,7 +919,7 @@ TEST_F(CoreIntrinsicTableTest, MismatchTypeInitializer) {
 
 TEST_F(CoreIntrinsicTableTest, MatchTypeInitializer_ConstantEval) {
     auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     auto result = table.Lookup(CtorConv::kVec3, Vector{i32}, Vector{i32, i32, i32},
                                EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -857,7 +937,7 @@ TEST_F(CoreIntrinsicTableTest, MatchTypeInitializer_RuntimeEval) {
     auto* i32 = ty.i32();
     auto result = table.Lookup(CtorConv::kVec3, Vector{i32}, Vector{i32, i32, i32},
                                EvaluationStage::kRuntime);
-    auto* vec3i = ty.vec3(i32);
+    auto* vec3i = ty.vec3i();
     ASSERT_EQ(result, Success);
     EXPECT_NE(result->const_eval_fn, nullptr);
     EXPECT_EQ(result->return_type, vec3i);
@@ -871,9 +951,8 @@ TEST_F(CoreIntrinsicTableTest, MatchTypeInitializer_RuntimeEval) {
 
 TEST_F(CoreIntrinsicTableTest, MatchTypeConversion) {
     auto* i32 = ty.i32();
-    auto* vec3i = ty.vec3(i32);
-    auto* f32 = ty.f32();
-    auto* vec3f = ty.vec3(f32);
+    auto* vec3i = ty.vec3i();
+    auto* vec3f = ty.vec3f();
     auto result =
         table.Lookup(CtorConv::kVec3, Vector{i32}, Vector{vec3f}, EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -894,18 +973,18 @@ TEST_F(CoreIntrinsicTableTest, MismatchTypeConversion) {
 
 6 candidate constructors:
  • 'vec3<T  ✓ >(vec3<T>  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(T  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >() -> vec3<T>' where:
       ✗  overload expects 0 arguments, call passed 1 argument
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(xy: vec2<T>  ✗ , z: T  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(x: T  ✗ , yz: vec2<T>  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
  • 'vec3<T  ✓ >(x: T  ✗ , y: T  ✗ , z: T  ✗ ) -> vec3<T>' where:
-      ✓  'T' is 'f32', 'f16', 'i32', 'u32' or 'bool'
+      ✓  'T' is 'f32', 'f16', 'i32', 'u32', 'u16' or 'bool'
 
 5 candidate conversions:
  • 'vec3<T  ✓ >(vec3<U>  ✗ ) -> vec3<T>' where:
@@ -927,10 +1006,9 @@ TEST_F(CoreIntrinsicTableTest, MismatchTypeConversion) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchTypeConversion_ConstantEval) {
-    auto* i32 = ty.i32();
     auto* f32 = ty.f32();
-    auto* vec3i = ty.vec3(i32);
-    auto* vec3f = ty.vec3(f32);
+    auto* vec3i = ty.vec3i();
+    auto* vec3f = ty.vec3f();
     auto result =
         table.Lookup(CtorConv::kVec3, Vector{f32}, Vector{vec3i}, EvaluationStage::kConstant);
     ASSERT_EQ(result, Success);
@@ -943,10 +1021,9 @@ TEST_F(CoreIntrinsicTableTest, MatchTypeConversion_ConstantEval) {
 }
 
 TEST_F(CoreIntrinsicTableTest, MatchTypeConversion_RuntimeEval) {
-    auto* i32 = ty.i32();
     auto* f32 = ty.f32();
-    auto* vec3i = ty.vec3(i32);
-    auto* vec3f = ty.vec3(ty.f32());
+    auto* vec3i = ty.vec3i();
+    auto* vec3f = ty.vec3f();
     auto result =
         table.Lookup(CtorConv::kVec3, Vector{f32}, Vector{vec3i}, EvaluationStage::kRuntime);
     ASSERT_EQ(result, Success);

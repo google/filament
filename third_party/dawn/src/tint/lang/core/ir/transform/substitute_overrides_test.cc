@@ -233,7 +233,7 @@ $B1: {  # root
 TEST_F(IR_SubstituteOverridesTest, OverrideWithComplexInitNoOverrides) {
     core::ir::Override* o = nullptr;
     b.Append(mod.root_block, [&] {
-        auto* add = b.Add(ty.u32(), 2_u, 4_u);
+        auto* add = b.Add(2_u, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -275,7 +275,7 @@ $B1: {  # root
 TEST_F(IR_SubstituteOverridesTest, OverrideWithComplexInitComponentOverride) {
     core::ir::Override* o = nullptr;
     b.Append(mod.root_block, [&] {
-        auto* add = b.Add(ty.u32(), 2_u, 4_u);
+        auto* add = b.Add(2_u, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -321,7 +321,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideWithComplexIncludingOverride) {
         auto* x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -367,7 +367,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideWithSubgroupShuffle) {
     b.Append(mod.root_block, [&] {
         auto* x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
         o->SetInitializer(add->Result());
@@ -409,7 +409,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideWithQuantizeF16) {
         auto* x = b.Override("x", ty.f32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.f32(), x, 4_f);
+        auto* add = b.Add(x, 4_f);
 
         o = b.Override(Source{{1, 2}}, "a", ty.f32());
         o->SetOverrideId({1});
@@ -452,7 +452,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideWithComplexGenError) {
         auto* x = b.Override("x", ty.f32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.f32(), x, f32(std::numeric_limits<float>::max() - 1));
+        auto* add = b.Add(x, f32(std::numeric_limits<float>::max() - 1));
         b.ir.SetSource(add, Source{{1, 2}});
 
         o = b.Override("a", ty.f32());
@@ -494,7 +494,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideWorkgroupSize) {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -535,6 +535,44 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(IR_SubstituteOverridesTest, OverrideWorkgroupSizeMustBeGreaterThanZero) {
+    core::ir::Override* x = nullptr;
+    b.Append(mod.root_block, [&] {
+        x = b.Override("x", ty.u32());
+        x->SetOverrideId({2});
+    });
+
+    auto* func = b.ComputeFunction("foo", x, 1_u, 1_u);
+    b.Append(func->Block(), [&] { b.Return(func); });
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{2}] = 0.0;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(error: @workgroup_size values must be greater than 0)");
+}
+
+TEST_F(IR_SubstituteOverridesTest, OverrideWorkgroupSizeExceedsMax) {
+    core::ir::Override* x = nullptr;
+    core::ir::Override* y = nullptr;
+    b.Append(mod.root_block, [&] {
+        x = b.Override("x", ty.u32());
+        x->SetOverrideId({1});
+        y = b.Override("y", ty.u32());
+        y->SetOverrideId({2});
+    });
+
+    auto* func = b.ComputeFunction("foo", x, y, 1_u);
+    b.Append(func->Block(), [&] { b.Return(func); });
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{1}] = 65536.0;
+    cfg.map[OverrideId{2}] = 65536.0;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(error: workgroup grid size cannot exceed 4294967295)");
+}
+
 TEST_F(IR_SubstituteOverridesTest, FunctionExpression) {
     core::ir::Override* o = nullptr;
     core::ir::Override* x = nullptr;
@@ -542,7 +580,7 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpression) {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -551,8 +589,8 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpression) {
 
     auto* func = b.ComputeFunction("foo");
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Divide(ty.u32(), 10_u, x));
-        b.Let("z", b.Multiply(ty.u32(), 5_u, o));
+        b.Let("y", b.Divide(10_u, x));
+        b.Let("z", b.Multiply(5_u, o));
         b.Return(func);
     });
 
@@ -600,9 +638,9 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionNonConstBuiltin) {
         x->SetOverrideId({2});
     });
 
-    auto* func = b.Function("foo", ty.void_(), core::ir::Function::PipelineStage::kFragment);
+    auto* func = b.FragmentFunction("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Call(ty.f32(), core::BuiltinFn::kDpdx, b.Multiply(ty.f32(), x, 4_f)));
+        b.Let("y", b.Call(ty.f32(), core::BuiltinFn::kDpdx, b.Multiply(x, 4_f)));
         b.Return(func);
     });
 
@@ -647,7 +685,7 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperand) {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -656,9 +694,9 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperand) {
 
     auto* func = b.ComputeFunction("foo");
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Divide(ty.u32(), 10_u, o));
-        auto* k = b.Add(ty.u32(), 1_u, b.Multiply(ty.u32(), 2_u, x));
-        b.Let("z", b.Multiply(ty.u32(), k, o));
+        b.Let("y", b.Divide(10_u, o));
+        auto* k = b.Add(1_u, b.Multiply(2_u, x));
+        b.Let("z", b.Multiply(k, o));
         b.Return(func);
     });
 
@@ -708,7 +746,7 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperandFlipOrder) {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
 
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
@@ -717,9 +755,9 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperandFlipOrder) {
 
     auto* func = b.ComputeFunction("foo");
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Divide(ty.u32(), 10_u, o));
-        auto* k = b.Add(ty.u32(), 1_u, b.Multiply(ty.u32(), 2_u, o));
-        b.Let("z", b.Multiply(ty.u32(), k, x));
+        b.Let("y", b.Divide(10_u, o));
+        auto* k = b.Add(1_u, b.Multiply(2_u, o));
+        b.Let("z", b.Multiply(k, x));
         b.Return(func);
     });
 
@@ -769,18 +807,18 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperandNonConstFn) {
         x = b.Override("x", ty.f32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.f32(), x, 4_f);
+        auto* add = b.Add(x, 4_f);
 
         o = b.Override(Source{{1, 2}}, "a", ty.f32());
         o->SetOverrideId({1});
         o->SetInitializer(add->Result());
     });
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.FragmentFunction("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Divide(ty.f32(), 10_f, x));
+        b.Let("y", b.Divide(10_f, x));
         auto* k = b.Call(ty.f32(), core::BuiltinFn::kDpdx, x);
-        b.Let("z", b.Multiply(ty.f32(), k, o));
+        b.Let("z", b.Multiply(k, o));
         b.Return(func);
     });
 
@@ -791,7 +829,7 @@ $B1: {  # root
   %a:f32 = override %2 @id(1)
 }
 
-%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+%foo = @fragment func():void {
   $B2: {
     %5:f32 = div 10.0f, %x
     %y:f32 = let %5
@@ -804,7 +842,7 @@ $B1: {  # root
 )";
 
     auto* expect = R"(
-%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+%foo = @fragment func():void {
   $B1: {
     %y:f32 = let 2.0f
     %3:f32 = dpdx 5.0f
@@ -831,18 +869,18 @@ TEST_F(IR_SubstituteOverridesTest, FunctionExpressionMultiOperandLet) {
         x = b.Override("x", ty.f32());
         x->SetOverrideId({2});
 
-        auto* add = b.Add(ty.f32(), x, 4_f);
+        auto* add = b.Add(x, 4_f);
 
         o = b.Override(Source{{1, 2}}, "a", ty.f32());
         o->SetOverrideId({1});
         o->SetInitializer(add->Result());
     });
 
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.FragmentFunction("foo", ty.void_());
     b.Append(func->Block(), [&] {
-        b.Let("y", b.Divide(ty.f32(), 10_f, x));
+        b.Let("y", b.Divide(10_f, x));
         auto* k = b.Let("k", b.Call(ty.f32(), core::BuiltinFn::kDpdx, x));
-        b.Let("z", b.Multiply(ty.f32(), k, o));
+        b.Let("z", b.Multiply(k, o));
         b.Return(func);
     });
 
@@ -853,7 +891,7 @@ $B1: {  # root
   %a:f32 = override %2 @id(1)
 }
 
-%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+%foo = @fragment func():void {
   $B2: {
     %5:f32 = div 10.0f, %x
     %y:f32 = let %5
@@ -867,7 +905,7 @@ $B1: {  # root
 )";
 
     auto* expect = R"(
-%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+%foo = @fragment func():void {
   $B1: {
     %y:f32 = let 2.0f
     %3:f32 = dpdx 5.0f
@@ -894,7 +932,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySize) {
         x->SetOverrideId({2});
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u);
         b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -945,7 +983,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeOverrideOutOfBounds) {
         o->SetOverrideId({3});
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -988,7 +1026,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeLetOutOfBounds) {
         x->SetOverrideId({2});
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -1031,7 +1069,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeOutOfBounds) {
         x->SetOverrideId({2});
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -1070,9 +1108,9 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeExpression) {
         auto* x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
 
-        auto* inst = b.Multiply(ty.u32(), x, 2_u);
+        auto* inst = b.Multiply(x, 2_u);
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(inst->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u);
         b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -1121,7 +1159,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeIntoLet) {
         x->SetOverrideId({2});
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
-        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.i32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
     });
 
@@ -1180,8 +1218,8 @@ TEST_F(IR_SubstituteOverridesTest, OverrideCondConstExprSuccess) {
         auto* constexpr_if = b.ConstExprIf(cond);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* three = b.Divide(ty.f32(), one_f32, 0.0_f);
-            auto* four = b.Equal(ty.bool_(), three, 0.0_f);
+            auto* three = b.Divide(one_f32, 0.0_f);
+            auto* four = b.Equal(three, 0.0_f);
             b.ExitIf(constexpr_if, four);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });
@@ -1244,8 +1282,8 @@ TEST_F(IR_SubstituteOverridesTest, OverrideCondConstExprFailure) {
         auto* constexpr_if = b.ConstExprIf(cond);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* three = b.Divide(ty.f32(), one_f32, 0.0_f);
-            auto* four = b.Equal(ty.bool_(), three, 0.0_f);
+            auto* three = b.Divide(one_f32, 0.0_f);
+            auto* four = b.Equal(three, 0.0_f);
             b.ExitIf(constexpr_if, four);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });
@@ -1302,8 +1340,8 @@ TEST_F(IR_SubstituteOverridesTest, OverrideCondComplexConstExprSuccess) {
         auto* constexpr_if = b.ConstExprIf(cond);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* three = b.Divide(ty.f32(), one_f32, 1.0_f);
-            auto* four = b.Equal(ty.bool_(), three, 1.0_f);
+            auto* three = b.Divide(one_f32, 1.0_f);
+            auto* four = b.Equal(three, 1.0_f);
             b.ExitIf(constexpr_if, four);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, true); });
@@ -1371,13 +1409,13 @@ TEST_F(IR_SubstituteOverridesTest, OverrideCondComplexConstExprNestedSuccess) {
             auto* constexpr_if_inner = b.ConstExprIf(cond);
             constexpr_if_inner->SetResult(b.InstructionResult(ty.bool_()));
             b.Append(constexpr_if_inner->True(), [&] {
-                auto* bad_eval = b.Divide(ty.f32(), 1.0_f, zero_f32);
-                auto* bad_eval_equal = b.Equal(ty.bool_(), bad_eval, 1.0_f);
+                auto* bad_eval = b.Divide(1.0_f, zero_f32);
+                auto* bad_eval_equal = b.Equal(bad_eval, 1.0_f);
                 b.ExitIf(constexpr_if_inner, bad_eval_equal);
             });
             b.Append(constexpr_if_inner->False(), [&] {
-                auto* bad_eval = b.Divide(ty.f32(), 1.0_f, zero_f32);
-                auto* bad_eval_equal = b.Equal(ty.bool_(), bad_eval, 1.0_f);
+                auto* bad_eval = b.Divide(1.0_f, zero_f32);
+                auto* bad_eval_equal = b.Equal(bad_eval, 1.0_f);
                 b.ExitIf(constexpr_if_inner, bad_eval_equal);
             });
             b.ExitIf(constexpr_if, constexpr_if_inner);
@@ -1457,9 +1495,9 @@ TEST_F(IR_SubstituteOverridesTest, ConstExprIfInsideKernel) {
         auto* constexpr_if = b.ConstExprIf(o);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* k4 = b.Add(ty.u32(), 10_u, 5_u);
-            auto* k = b.Divide(ty.u32(), k4, x);
-            auto* k2 = b.Equal(ty.bool_(), k, 10_u);
+            auto* k4 = b.Add(10_u, 5_u);
+            auto* k = b.Divide(k4, x);
+            auto* k2 = b.Equal(k, 10_u);
             b.ExitIf(constexpr_if, k2);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });
@@ -1524,9 +1562,9 @@ TEST_F(IR_SubstituteOverridesTest, ConstExpIfDuplicateUsage) {
         auto* constexpr_if = b.ConstExprIf(y);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* k4 = b.Divide(ty.u32(), 10_u, 0_u);
-            auto* k = b.Add(ty.u32(), k4, k4);
-            auto* k2 = b.Equal(ty.bool_(), k, 10_u);
+            auto* k4 = b.Divide(10_u, 0_u);
+            auto* k = b.Add(k4, k4);
+            auto* k2 = b.Equal(k, 10_u);
             b.ExitIf(constexpr_if, k2);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });
@@ -1675,8 +1713,8 @@ TEST_F(IR_SubstituteOverridesTest, OverrideConstruct) {
         auto* o3 = b.Override("o3", ty.f16());
         o3->SetOverrideId({3});
 
-        auto* e = b.Construct(ty.vec4<f16>(), o0, o1, o2, o3);
-        // auto* e = b.Splat(ty.vec4<f16>(), 1.0_h);
+        auto* e = b.Construct(ty.vec4h(), o0, o1, o2, o3);
+        // auto* e = b.Splat(ty.vec4h(), 1.0_h);
         auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kCeil, e);
         global = b.Var<private_>("global", call_func->Result());
         // global = b.Var<private_>("global", e);//e->Result());
@@ -1830,7 +1868,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeZeroFailure) {
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
         mod.SetSource(cnt->value, Source{{5, 8}});
-        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
         mod.SetSource(v, Source{{3, 2}});
     });
@@ -1873,7 +1911,7 @@ TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeNegativeFailure) {
 
         auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
         mod.SetSource(cnt->value, Source{{5, 8}});
-        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u, 4_u, 4_u, 4_u);
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
         v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
         mod.SetSource(v, Source{{3, 2}});
     });
@@ -1907,6 +1945,51 @@ $B1: {  # root
     auto result = RunWithFailure(SubstituteOverrides, cfg);
     ASSERT_NE(result, Success);
     EXPECT_EQ(result.Failure().reason, R"(5:8 error: array count (-1) must be greater than 0)");
+}
+
+// See https://crbug.com/483751167
+TEST_F(IR_SubstituteOverridesTest, OverrideArraySizeOverflow) {
+    ir::Var* v = nullptr;
+    b.Append(mod.root_block, [&] {
+        auto* x = b.Override("x", ty.i32());
+        x->SetOverrideId({0});
+
+        auto* cnt = ty.Get<core::ir::type::ValueArrayCount>(x->Result());
+        mod.SetSource(cnt->value, Source{{5, 8}});
+        auto* ary = ty.Get<core::type::Array>(ty.u32(), cnt, 4_u);
+        v = b.Var("v", ty.ptr(core::AddressSpace::kWorkgroup, ary, core::Access::kReadWrite));
+        mod.SetSource(v, Source{{3, 2}});
+    });
+
+    auto* func = b.Function("foo", ty.u32());
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<workgroup, u32>(), v, 10000_u);
+        auto* load = b.Load(access);
+        b.Return(func, load);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %x:i32 = override undef @id(0)
+  %v:ptr<workgroup, array<u32, %x>, read_write> = var undef
+}
+
+%foo = func():u32 {
+  $B2: {
+    %4:ptr<workgroup, u32, read_write> = access %v, 10000u
+    %5:u32 = load %4
+    ret %5
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    SubstituteOverridesConfig cfg{};
+    cfg.map[OverrideId{0}] = 1'073'741'825;
+    auto result = RunWithFailure(SubstituteOverrides, cfg);
+    ASSERT_NE(result, Success);
+    EXPECT_EQ(result.Failure().reason, R"(5:8 error: array size (4294967300) is too large)");
 }
 
 }  // namespace

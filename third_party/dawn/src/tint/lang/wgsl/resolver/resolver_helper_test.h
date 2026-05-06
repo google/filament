@@ -28,7 +28,6 @@
 #ifndef SRC_TINT_LANG_WGSL_RESOLVER_RESOLVER_HELPER_TEST_H_
 #define SRC_TINT_LANG_WGSL_RESOLVER_RESOLVER_HELPER_TEST_H_
 
-#include <functional>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -134,6 +133,12 @@ class TestHelper : public ProgramBuilder {
     /// declared in WGSL.
     std::string FriendlyName(const core::type::Type* type) { return type->FriendlyName(); }
 
+    /// Run @p wgsl through the whole WGSL frontend, and check that it fails with @p error.
+    void ExpectError(std::string_view wgsl, std::string_view error);
+
+    /// Run @p wgsl through the whole WGSL frontend, and check that does not produce an error.
+    void ExpectSuccess(std::string_view wgsl);
+
   protected:
     std::unique_ptr<Resolver> resolver_;
 };
@@ -203,9 +208,9 @@ T As(const Scalar& s) {
 }
 
 using ast_type_func_ptr = ast::Type (*)(ProgramBuilder& b);
-using ast_expr_func_ptr = const ast::Expression* (*)(ProgramBuilder& b, VectorRef<Scalar> args);
-using ast_expr_from_double_func_ptr = const ast::Expression* (*)(ProgramBuilder& b, double v);
-using sem_type_func_ptr = const core::type::Type* (*)(ProgramBuilder& b);
+using ast_expr_func_ptr = const ast::Expression* (*)(ProgramBuilder & b, VectorRef<Scalar> args);
+using ast_expr_from_double_func_ptr = const ast::Expression* (*)(ProgramBuilder & b, double v);
+using sem_type_func_ptr = const core::type::Type* (*)(ProgramBuilder & b);
 using type_name_func_ptr = std::string (*)();
 
 struct UnspecializedElementType {};
@@ -635,7 +640,7 @@ struct DataType<alias<T, ID>> {
             auto type = DataType<T>::AST(b);
             b.AST().AddTypeDecl(b.ty.alias(name, type));
         }
-        return b.ty(name);
+        return b.ty.AsType(name);
     }
 
     /// @param b the ProgramBuilder
@@ -747,10 +752,7 @@ struct DataType<core::fluent_types::array<T, N>> {
         return b.create<sem::Array>(
             /* element */ el,
             /* count */ count,
-            /* align */ el->Align(),
-            /* size */ N * el->Size(),
-            /* stride */ el->Align(),
-            /* implicit_stride */ el->Align());
+            /* size */ N * el->Size());
     }
     /// @param b the ProgramBuilder
     /// @param args args of size 1 or N with values of type T to initialize with

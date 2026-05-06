@@ -27,8 +27,6 @@
 
 #include "src/tint/lang/spirv/writer/raise/keep_binding_array_as_pointer.h"
 
-#include <utility>
-
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -65,7 +63,7 @@ struct State {
             if (ba_type == nullptr) {
                 continue;
             }
-            TINT_ASSERT(ba_type->IsHandle());
+            TINT_IR_ASSERT(ir, ba_type->IsHandle());
 
             auto* ba_ptr = load->From();
             auto* element_ptr_ty = ty.ptr<handle>(ba_type->ElemType());
@@ -75,8 +73,9 @@ struct State {
                     use.instruction,
                     [&](core::ir::Access* access) {
                         b.InsertBefore(access, [&]() {
-                            Vector<core::ir::Value*, 1> indices_copy = access->Indices();
-                            auto* element_ptr = b.Access(element_ptr_ty, ba_ptr, indices_copy);
+                            std::span<core::ir::Value* const> indices_span = access->Indices();
+                            auto* element_ptr = b.Access(element_ptr_ty, ba_ptr,
+                                                         Vector<core::ir::Value*, 1>{indices_span});
                             b.LoadWithResult(access->DetachResult(), element_ptr);
                             access->Destroy();
                         });
@@ -91,10 +90,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> KeepBindingArrayAsPointer(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.KeepBindingArrayAsPointer");
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kKeepBindingArrayAsPointerCapabilities,
+                          "before spirv.KeepBindingArrayAsPointer");
 
     State{ir}.Process();
 

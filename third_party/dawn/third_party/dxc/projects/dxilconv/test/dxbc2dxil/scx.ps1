@@ -1,1 +1,0 @@
-$config.Suffixes = @("*.hlsl", "*.asm")

@@ -33,8 +33,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::ast::TypeDecl);
 
 namespace tint::ast {
 
-TypeDecl::TypeDecl(GenerationID pid, NodeID nid, const Source& src, const Identifier* n)
-    : Base(pid, nid, src), name(n) {
+TypeDecl::TypeDecl(NodeID nid, const Source& src, const Identifier* n) : Base(nid, src), name(n) {
     TINT_ASSERT(name);
     if (name) {
         TINT_ASSERT(!name->Is<TemplatedIdentifier>());

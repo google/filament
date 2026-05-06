@@ -98,12 +98,10 @@ BlobCache::BlobCache(const dawn::native::DawnCacheDeviceDescriptor& desc, bool e
       mFunctionUserdata(desc.functionUserdata) {}
 
 ResultOrError<Blob> BlobCache::Load(const CacheKey& key) {
-    std::lock_guard<std::mutex> lock(mMutex);
     return LoadInternal(key);
 }
 
 void BlobCache::Store(const CacheKey& key, size_t valueSize, const void* value) {
-    std::lock_guard<std::mutex> lock(mMutex);
     StoreInternal(key, valueSize, value);
 }
 
@@ -151,7 +149,13 @@ ResultOrError<Blob> BlobCache::LoadInternal(const CacheKey& key) {
         uint8_t* buffer = new uint8_t[expectedSize];
         const size_t actualSize =
             mLoadFunction(key.data(), key.size(), buffer, expectedSize, mFunctionUserdata);
-        DAWN_CHECK(expectedSize == actualSize);
+        // TODO(crbug.com/469351711): If `mLoadFunction` returns a different size on the second call
+        // (due to external cache eviction, I/O errors, or timeouts), treat it as a cache miss. The
+        // blob cache API should be updated to a single `mLoadFunction` call in the future.
+        if (expectedSize != actualSize) {
+            delete[] buffer;
+            return Blob();
+        }
 
         if (!mHashValidation) {
             return Blob::UnsafeCreateWithDeleter(buffer, actualSize, [=]() { delete[] buffer; });

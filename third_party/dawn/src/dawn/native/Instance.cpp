@@ -45,7 +45,6 @@
 #include "dawn/native/ValidationUtils_autogen.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-#include "tint/lang/wgsl/feature_status.h"
 
 // For SwiftShader fallback
 #if defined(DAWN_ENABLE_BACKEND_VULKAN)
@@ -146,13 +145,53 @@ static constexpr WGPULoggingCallbackInfo kDefaultLoggingCallbackInfo = {
 
 }  // anonymous namespace
 
+// Instance default limits.
+#define INSTANCE_LIMITS(X)                    \
+    /* class   name                  limit */ \
+    X(Maximum, timedWaitAnyMaxCount, kTimedWaitAnyMaxCountDefault)
+
+void GetDefaultLimits(InstanceLimits* limits) {
+    DAWN_ASSERT(limits != nullptr);
+#define X(Class, limitName, limitValue) limits->limitName = limitValue;
+    INSTANCE_LIMITS(X)
+#undef X
+}
+
+InstanceLimits ReifyDefaultLimits(const InstanceLimits& limits) {
+    InstanceLimits out;
+#define X(Class, limitName, limitValue)                                                  \
+    {                                                                                    \
+        const auto defaultLimit = static_cast<decltype(limits.limitName)>(limitValue);   \
+        if (detail::CheckLimit<detail::LimitClass::Class>::IsBetter(defaultLimit,        \
+                                                                    limits.limitName)) { \
+            /* If the limit is undefined or the default is better, use the default */    \
+            out.limitName = defaultLimit;                                                \
+        } else {                                                                         \
+            out.limitName = limits.limitName;                                            \
+        }                                                                                \
+    }
+    INSTANCE_LIMITS(X)
+#undef X
+    return out;
+}
+
+MaybeError ValidateLimits(const InstanceLimits& requiredLimits) {
+#define X(Class, limitName, supportedLimitValue)                              \
+    DAWN_TRY_CONTEXT(detail::CheckLimit<detail::LimitClass::Class>::Validate( \
+                         supportedLimitValue, requiredLimits.limitName),      \
+                     "validating " #limitName);
+    INSTANCE_LIMITS(X)
+#undef X
+
+    return {};
+}
+
 wgpu::Status APIGetInstanceLimits(InstanceLimits* limits) {
     DAWN_ASSERT(limits != nullptr);
     if (limits->nextInChain != nullptr) {
         return wgpu::Status::Error;
     }
-
-    limits->timedWaitAnyMaxCount = kTimedWaitAnyMaxCountDefault;
+    GetDefaultLimits(limits);
     return wgpu::Status::Success;
 }
 
@@ -224,6 +263,8 @@ InstanceBase::InstanceBase(const TogglesState& instanceToggles)
 InstanceBase::~InstanceBase() = default;
 
 void InstanceBase::DeleteThis() {
+    mLoggingCallbackInfo = kEmptyLoggingCallbackInfo;
+
     // Flush all remaining callback tasks on all devices and on the instance.
     absl::flat_hash_set<DeviceBase*> devices;
     do {
@@ -242,17 +283,11 @@ void InstanceBase::DeleteThis() {
         mCallbackTaskManager->Flush();
     } while (!mCallbackTaskManager->IsEmpty());
 
-    RefCountedWithExternalCount::DeleteThis();
+    RefCounted::DeleteThis();
 }
 
 void InstanceBase::DisconnectDawnPlatform() {
     SetPlatform(nullptr);
-}
-
-void InstanceBase::WillDropLastExternalRef() {
-    // Stop tracking events. See comment on ShutDown.
-    mEventManager.ShutDown();
-    mLoggingCallbackInfo = kEmptyLoggingCallbackInfo;
 }
 
 // TODO(crbug.com/dawn/832): make the platform an initialization parameter of the instance.
@@ -292,8 +327,14 @@ MaybeError InstanceBase::Initialize(const UnpackedPtr<InstanceDescriptor>& descr
         mInstanceFeatures = {features.begin(), features.end()};
     }
 
+    if (descriptor->requiredLimits != nullptr) {
+        mLimits = ReifyDefaultLimits(*(descriptor->requiredLimits));
+    } else {
+        GetDefaultLimits(&mLimits);
+    }
+    DAWN_TRY(ValidateLimits(mLimits));
+
     mCallbackTaskManager = AcquireRef(new CallbackTaskManager());
-    DAWN_TRY(mEventManager.Initialize(descriptor));
     GatherWGSLFeatures(descriptor.Get<DawnWGSLBlocklist>());
 
     return {};
@@ -385,7 +426,7 @@ std::vector<Ref<AdapterBase>> InstanceBase::EnumerateAdapters(
 
     RequestAdapterOptions rawOptions = options->WithTrivialFrontendDefaults();
     UnpackedPtr<RequestAdapterOptions> unpacked = Unpack(&rawOptions);
-    if (unpacked.Get<RequestAdapterWebXROptions>()) {
+    if (unpacked.Has<RequestAdapterWebXROptions>()) {
         ConsumedErrorAndWarnOnce(DAWN_VALIDATION_ERROR("RequestAdapterWebXROptions unsupported."));
         return {};
     }
@@ -484,7 +525,7 @@ std::vector<Ref<PhysicalDeviceBase>> InstanceBase::EnumeratePhysicalDevices(
     DAWN_ASSERT(options);
 
     BackendsBitset backendsToFind;
-    if (options.Get<RequestAdapterWebGPUBackendOptions>()) {
+    if (options.Has<RequestAdapterWebGPUBackendOptions>()) {
         // User is selecting WebGPU-on-WebGPU. Ignore the backendType, it will
         // be passed through to the inner WebGPU implementation.
         backendsToFind.set(wgpu::BackendType::WebGPU);
@@ -597,6 +638,10 @@ bool InstanceBase::HasFeature(wgpu::InstanceFeatureName feature) const {
     return mInstanceFeatures.contains(feature);
 }
 
+bool InstanceBase::HasFeature(wgpu::WGSLLanguageFeatureName feature) const {
+    return mWGSLFeatures.contains(feature);
+}
+
 bool InstanceBase::ProcessEvents() {
     std::vector<Ref<DeviceBase>> devices;
     mDevicesList.Use([&](auto deviceList) {
@@ -622,6 +667,19 @@ void InstanceBase::APIProcessEvents() {
 wgpu::WaitStatus InstanceBase::APIWaitAny(size_t count,
                                           FutureWaitInfo* futures,
                                           uint64_t timeoutNS) {
+    if (timeoutNS > 0) {
+        if (!HasFeature(wgpu::InstanceFeatureName::TimedWaitAny)) {
+            EmitLog(WGPULoggingType_Error,
+                    "Timeout waits are either not enabled or not supported.");
+            return wgpu::WaitStatus::Error;
+        }
+        if (count > mLimits.timedWaitAnyMaxCount) {
+            EmitLog(WGPULoggingType_Error,
+                    absl::StrFormat("Number of futures to wait on (%d) exceeds maximum (%d).",
+                                    count, mLimits.timedWaitAnyMaxCount));
+            return wgpu::WaitStatus::Error;
+        }
+    }
     return mEventManager.WaitAny(count, futures, Nanoseconds(timeoutNS));
 }
 
@@ -730,7 +788,7 @@ void InstanceBase::GatherWGSLFeatures(const DawnWGSLBlocklist* wgslBlocklist) {
 }
 
 bool InstanceBase::APIHasWGSLLanguageFeature(wgpu::WGSLLanguageFeatureName feature) const {
-    return mWGSLFeatures.contains(feature);
+    return HasFeature(feature);
 }
 
 void InstanceBase::APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const {

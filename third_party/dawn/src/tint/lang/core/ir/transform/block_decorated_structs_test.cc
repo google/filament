@@ -343,7 +343,7 @@ TEST_F(IR_BlockDecoratedStructsTest, MultipleBuffers) {
     buffer_a->SetBindingPoint(0, 0);
     buffer_b->SetBindingPoint(0, 1);
     buffer_c->SetBindingPoint(0, 2);
-    auto* root = mod.root_block.Get();
+    auto* root = mod.root_block;
     root->Append(buffer_a);
     root->Append(buffer_b);
     root->Append(buffer_c);
@@ -352,7 +352,7 @@ TEST_F(IR_BlockDecoratedStructsTest, MultipleBuffers) {
     b.Append(func->Block(), [&] {
         auto* load_b = b.Load(buffer_b);
         auto* load_c = b.Load(buffer_c);
-        b.Store(buffer_a, b.Add(ty.i32(), load_b, load_c));
+        b.Store(buffer_a, b.Add(load_b, load_c));
         b.Return(func);
     });
 

@@ -53,8 +53,7 @@ class ShaderModule final : public ShaderModuleBase {
     static ResultOrError<Ref<ShaderModule>> Create(
         Device* device,
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult);
+        const std::vector<tint::wgsl::Extension>& internalExtensions);
 
     ResultOrError<d3d::CompiledShader> Compile(
         const ProgrammableStage& programmableStage,
@@ -71,7 +70,6 @@ class ShaderModule final : public ShaderModuleBase {
                  const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
                  std::vector<tint::wgsl::Extension> internalExtensions);
     ~ShaderModule() override = default;
-    MaybeError Initialize(ShaderModuleParseResult* parseResult);
 };
 
 }  // namespace dawn::native::d3d11

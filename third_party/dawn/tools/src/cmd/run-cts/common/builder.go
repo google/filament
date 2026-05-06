@@ -28,12 +28,13 @@
 package common
 
 import (
-	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
 )
@@ -63,7 +64,7 @@ func (b *Builder) BuildIfRequired(verbose bool, osWrapper oswrapper.OSWrapper) e
 	cachePath := ""
 	if home, err := osWrapper.UserHomeDir(); err == nil {
 		cacheDir := filepath.Join(home, ".cache/webgpu")
-		cachePath = filepath.Join(cacheDir, "run-cts.json")
+		cachePath = filepath.Join(cacheDir, "run-cts.cjson")
 		osWrapper.MkdirAll(cacheDir, 0777)
 	}
 

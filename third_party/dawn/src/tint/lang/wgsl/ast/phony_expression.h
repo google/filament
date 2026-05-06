@@ -37,19 +37,12 @@ namespace tint::ast {
 class PhonyExpression final : public Castable<PhonyExpression, Expression> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
-    PhonyExpression(GenerationID pid, NodeID nid, const Source& src);
+    PhonyExpression(NodeID nid, const Source& src);
 
     /// Destructor
     ~PhonyExpression() override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const PhonyExpression* Clone(CloneContext& ctx) const override;
 };
 
 }  // namespace tint::ast

@@ -18,21 +18,21 @@
 
 #include "EntityManagerImpl.h"
 
+#include <utils/Entity.h>
+
+#include <cassert>
+#include <cstddef>
+#include <mutex>
 #include <new>
+#include <utility>
 
 namespace utils {
 
 EntityManager::Listener::~Listener() noexcept = default;
 
-EntityManager::EntityManager()
-        : mGens(new uint8_t[RAW_INDEX_COUNT]) {
-    // initialize all the generations to 0
-    std::fill_n(mGens, RAW_INDEX_COUNT, 0);
-}
+EntityManager::EntityManager() = default;
 
-EntityManager::~EntityManager() {
-    delete [] mGens;
-}
+EntityManager::~EntityManager() = default;
 
 EntityManager& EntityManager::get() noexcept {
     // note: we leak the EntityManager because it's more important that it survives everything else
@@ -41,11 +41,11 @@ EntityManager& EntityManager::get() noexcept {
     return *instance;
 }
 
-void EntityManager::create(size_t n, Entity* entities) {
+void EntityManager::create(size_t const n, Entity* entities) {
     static_cast<EntityManagerImpl *>(this)->create(n, entities);
 }
 
-void EntityManager::destroy(size_t n, Entity* entities) noexcept {
+void EntityManager::destroy(size_t const n, Entity* entities) noexcept {
     static_cast<EntityManagerImpl *>(this)->destroy(n, entities);
 }
 
@@ -55,6 +55,18 @@ void EntityManager::registerListener(Listener* l) noexcept {
 
 void EntityManager::unregisterListener(Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
+}
+
+void EntityManager::registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
+    static_cast<EntityManagerImpl *>(this)->registerChangeCallback(token, std::move(callback));
+}
+
+void EntityManager::unregisterChangeCallback(void const* token) noexcept {
+    static_cast<EntityManagerImpl *>(this)->unregisterChangeCallback(token);
+}
+
+void EntityManager::flushNotifications() noexcept {
+    static_cast<EntityManagerImpl *>(this)->flushNotifications();
 }
 
 size_t EntityManager::getEntityCount() const noexcept {
@@ -71,5 +83,9 @@ void EntityManager::dumpActiveEntities(utils::io::ostream& out) const {
 }
 
 #endif
+
+bool EntityManager::isAlive(Entity const e) const noexcept {
+    return static_cast<EntityManagerImpl const *>(this)->isAlive(e);
+}
 
 } // namespace utils

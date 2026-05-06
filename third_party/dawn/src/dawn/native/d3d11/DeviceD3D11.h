@@ -31,13 +31,25 @@
 #include <memory>
 #include <vector>
 
+#include "dawn/common/LRUCache.h"
+#include "dawn/common/MutexProtected.h"
 #include "dawn/common/SerialQueue.h"
+#include "dawn/common/Sha3.h"
 #include "dawn/native/d3d/DeviceD3D.h"
 #include "dawn/native/d3d11/CommandRecordingContextD3D11.h"
 #include "dawn/native/d3d11/DeviceInfoD3D11.h"
 #include "dawn/native/d3d11/Forward.h"
 
+namespace dawn::native::d3d {
+struct CompiledShader;
+}
+
 namespace dawn::native::d3d11 {
+
+struct Sha3CacheFuncs {
+    size_t operator()(const Sha3_256::Output& key) const;
+    bool operator()(const Sha3_256::Output& a, const Sha3_256::Output& b) const;
+};
 
 // Definition of backend types
 class Device final : public d3d::Device {
@@ -67,7 +79,7 @@ class Device final : public d3d::Device {
                                        BufferBase* destination,
                                        uint64_t destinationOffset,
                                        uint64_t size) override;
-    MaybeError CopyFromStagingToTextureImpl(const BufferBase* source,
+    MaybeError CopyFromStagingToTextureImpl(BufferBase* source,
                                             const TexelCopyBufferLayout& src,
                                             const TextureCopy& dst,
                                             const Extent3D& copySizePixels) override;
@@ -86,6 +98,12 @@ class Device final : public d3d::Device {
 
     bool ReduceMemoryUsageImpl() override;
 
+    std::optional<DeviceGuard> UseGuardForCreateBindGroup() override;
+    std::optional<DeviceGuard> UseGuardForCreateBindGroupLayout() override;
+    std::optional<DeviceGuard> UseGuardForCreateBuffer() override;
+    std::optional<DeviceGuard> UseGuardForCreateSampler() override;
+    std::optional<DeviceGuard> UseGuardForCreateTexture() override;
+
     uint32_t GetUAVSlotCount() const;
 
     ResultOrError<TextureViewBase*> GetOrCreateCachedImplicitPixelLocalStorageAttachment(
@@ -100,26 +118,39 @@ class Device final : public d3d::Device {
         uint64_t size);
     void ReturnStagingBuffer(Ref<BufferBase>&& buffer);
 
+    ResultOrError<ComPtr<ID3D11VertexShader>> GetOrCreateVertexShader(
+        const d3d::CompiledShader& args);
+    ResultOrError<ComPtr<ID3D11PixelShader>> GetOrCreatePixelShader(
+        const d3d::CompiledShader& args);
+    ResultOrError<ComPtr<ID3D11ComputeShader>> GetOrCreateComputeShader(
+        const d3d::CompiledShader& args);
+
+    void DeferUnmapDestroyedBuffer(ComPtr<ID3D11Buffer> buffer);
+
   private:
     using Base = d3d::Device;
-    using Base::Base;
+    Device(AdapterBase* adapter,
+           const UnpackedPtr<DeviceDescriptor>& descriptor,
+           const TogglesState& deviceToggles,
+           Ref<DeviceBase::DeviceLostEvent>&& lostEvent);
     static constexpr uint64_t kMaxStagingBufferSize = 512 * 1024;
 
     ResultOrError<Ref<BindGroupBase>> CreateBindGroupImpl(
-        const BindGroupDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupDescriptor>& descriptor) override;
     ResultOrError<Ref<BindGroupLayoutInternalBase>> CreateBindGroupLayoutImpl(
-        const BindGroupLayoutDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) override;
     ResultOrError<Ref<BufferBase>> CreateBufferImpl(
         const UnpackedPtr<BufferDescriptor>& descriptor) override;
     ResultOrError<Ref<PipelineLayoutBase>> CreatePipelineLayoutImpl(
         const UnpackedPtr<PipelineLayoutDescriptor>& descriptor) override;
     ResultOrError<Ref<QuerySetBase>> CreateQuerySetImpl(
         const QuerySetDescriptor* descriptor) override;
+    ResultOrError<Ref<ResourceTableBase>> CreateResourceTableImpl(
+        const ResourceTableDescriptor* descriptor) override;
     ResultOrError<Ref<SamplerBase>> CreateSamplerImpl(const SamplerDescriptor* descriptor) override;
     ResultOrError<Ref<ShaderModuleBase>> CreateShaderModuleImpl(
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult) override;
+        const std::vector<tint::wgsl::Extension>& internalExtensions) override;
     ResultOrError<Ref<SwapChainBase>> CreateSwapChainImpl(
         Surface* surface,
         SwapChainBase* previousSwapChain,
@@ -141,10 +172,12 @@ class Device final : public d3d::Device {
     ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* descriptor) override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
     MaybeError CheckDebugLayerAndGenerateErrors();
     void AppendDebugLayerMessages(ErrorData* error) override;
     void AppendDeviceLostMessage(ErrorData* error) override;
+
+    void UnmapDestroyedBuffers();
 
     ComPtr<ID3D11Device> mD3d11Device;
     bool mIsDebugLayerEnabled = false;
@@ -158,6 +191,22 @@ class Device final : public d3d::Device {
     // The cached staging buffers.
     std::vector<Ref<BufferBase>> mStagingBuffers;
     uint64_t mTotalStagingBufferSize = 0;
+
+    // The cached shader objects:
+    // We use the SHA3 hash of the shader blob as the key because it's computed based on the
+    // shader blob's hash. SHA3 is a cryptographic hash function, hence it's extremely unlikely
+    // to have collisions (in fact, it's impractical).
+    LRUCache<Sha3_256::Output, ComPtr<ID3D11VertexShader>, Sha3CacheFuncs> mVertexShaderCache;
+    LRUCache<Sha3_256::Output, ComPtr<ID3D11PixelShader>, Sha3CacheFuncs> mPixelShaderCache;
+    LRUCache<Sha3_256::Output, ComPtr<ID3D11ComputeShader>, Sha3CacheFuncs> mComputeShaderCache;
+
+    // List of D3D11 buffers that were still mapped when destroyed and need to be unmapped.
+    // This allows Buffer::DestroyImpl to defer the unmap operation to avoid acquiring the
+    // CommandContext lock during destruction. The unmapping is performed later when
+    // Tick() or ReduceMemoryUsage() is called.
+    // MutexProtected is required because in the future Buffer::DestroyImpl might no longer be
+    // protected by the device guard, making concurrent access possible from multiple threads.
+    MutexProtected<std::vector<ComPtr<ID3D11Buffer>>> mPendingDestroyedBufferUnmaps;
 };
 
 }  // namespace dawn::native::d3d11

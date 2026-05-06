@@ -45,13 +45,15 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("ir") {
   sources = [
+    "atomic_vec2u_to_from_u64.cc",
+    "atomic_vec2u_to_from_u64.h",
     "builtin_call.cc",
     "builtin_call.h",
     "unary.cc",
     "unary.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/constant",
@@ -74,22 +76,29 @@ libtint_source_set("ir") {
 }
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
-    sources = []
+    sources = [
+      "atomic_vec2u_to_from_u64_test.cc",
+      "builtin_call_test.cc",
+    ]
     deps = [
-      "${dawn_root}/src/utils:utils",
+      "${dawn_root}/src/utils",
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/intrinsic",
       "${tint_src_dir}/lang/core/ir",
+      "${tint_src_dir}/lang/core/ir:unittests",
       "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/ir/transform:unittests",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
+      "${tint_src_dir}/lang/wgsl/intrinsic",
+      "${tint_src_dir}/lang/wgsl/ir",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
+      "${tint_src_dir}/lang/wgsl/writer/common",
       "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
       "${tint_src_dir}/lang/wgsl/writer/raise",
       "${tint_src_dir}/utils",

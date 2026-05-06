@@ -26,7 +26,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gmock/gmock.h"
-
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
@@ -46,188 +45,239 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(MslWriterTest, EmitType_Array) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.array<bool, 4>()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + MetalArray() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   tint_array<bool, 4> a = {};
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_ArrayOfArray) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.array(ty.array<bool, 4>(), 5)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + MetalArray() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   tint_array<tint_array<bool, 4>, 5> a = {};
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_ArrayOfArrayOfArray) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a",
               ty.ptr(core::AddressSpace::kFunction, ty.array(ty.array(ty.array<bool, 4>(), 5), 6)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + MetalArray() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   tint_array<tint_array<tint_array<bool, 4>, 5>, 6> a = {};
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_RuntimeArray) {
+    auto* s =
+        ty.Struct(mod.symbols.New("S"), {{mod.symbols.Register("a"), ty.runtime_array(ty.i32())}});
+
+    auto* var = b.Var("v", ty.ptr(storage, s));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param =
-        b.FunctionParam("param", ty.ptr(core::AddressSpace::kStorage, ty.array<bool, 0>()));
+        b.FunctionParam("param", ty.ptr(core::AddressSpace::kStorage, ty.runtime_array(ty.i32())));
     func->SetParams({param});
-    b.Append(func->Block(), [&] {
-        b.Return(func);
+    b.Append(func->Block(), [&] { b.Return(func); });
+
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Access(ty.ptr(storage, ty.runtime_array(ty.i32())), var, 0_u));
+        b.Return(eb);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + MetalArray() + R"(
-void foo(device tint_array<bool, 1>* const param) {
+struct S {
+  /* 0x0000 */ tint_array<int, 1> a;
+};
+
+struct tint_module_vars_struct {
+  device S* v;
+};
+
+void foo(device tint_array<int, 1>* const param) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(device S* v [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo((&(*tint_module_vars.v).a));
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Bool) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.bool_()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   bool a = false;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_F32) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.f32()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   float a = 0.0f;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_F16) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.f16()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   half a = 0.0h;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_I32) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.i32()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   int a = 0;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Matrix_F32) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.mat2x3<f32>()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   float2x3 a = float2x3(0.0f);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Matrix_F16) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.mat2x3<f16>()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   half2x3 a = half2x3(0.0h);
 }
 )");
 }
 TEST_F(MslWriterTest, EmitType_U32) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.u32()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   uint a = 0u;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_U64) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.u64()));
         b.Return(func);
     });
 
     // Use `Print()` as u64 types are only support after certain transforms have run.
-    ASSERT_TRUE(Print()) << err_ << output_.msl;
+    auto result = Print();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   ulong a = 0u;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Atomic_U32) {
+    auto* var = b.Var("v", ty.ptr(workgroup, ty.atomic<u32>()));
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<u32>()));
     func->SetParams({param});
@@ -235,14 +285,46 @@ TEST_F(MslWriterTest, EmitType_Atomic_U32) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, var);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  threadgroup atomic_uint* v;
+};
+
+struct tint_symbol_1 {
+  atomic_uint tint_symbol;
+};
+
 void foo(threadgroup atomic_uint* const a) {
+}
+
+void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    atomic_store_explicit(tint_module_vars.v, 0u, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  foo(tint_module_vars.v);
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
+  entry_inner(tint_local_index, tint_module_vars);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Atomic_I32) {
+    auto* var = b.Var("v", ty.ptr(workgroup, ty.atomic<i32>()));
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ty.ptr(core::AddressSpace::kWorkgroup, ty.atomic<i32>()));
     func->SetParams({param});
@@ -250,38 +332,71 @@ TEST_F(MslWriterTest, EmitType_Atomic_I32) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, var);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  threadgroup atomic_int* v;
+};
+
+struct tint_symbol_1 {
+  atomic_int tint_symbol;
+};
+
 void foo(threadgroup atomic_int* const a) {
+}
+
+void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    atomic_store_explicit(tint_module_vars.v, 0, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  foo(tint_module_vars.v);
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
+  entry_inner(tint_local_index, tint_module_vars);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Vector) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
-        b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.vec3<f32>()));
+        b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.vec3f()));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   float3 a = 0.0f;
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_VectorPacked) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.packed_vec(ty.f32(), 3)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   packed_float3 a = 0.0f;
 }
 )");
@@ -289,19 +404,24 @@ void foo() {
 
 TEST_F(MslWriterTest, EmitType_Void) {
     // Tested via the function return type.
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {  //
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Pointer_Workgroup) {
+    auto* var = b.Var("v", ty.ptr<workgroup, f32>());
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("param", ty.ptr<workgroup, f32>());
     func->SetParams({param});
@@ -309,14 +429,47 @@ TEST_F(MslWriterTest, EmitType_Pointer_Workgroup) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, var);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  threadgroup float* v;
+};
+
+struct tint_symbol_1 {
+  float tint_symbol;
+};
+
 void foo(threadgroup float* const param) {
+}
+
+void entry_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    (*tint_module_vars.v) = 0.0f;
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  foo(tint_module_vars.v);
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_1 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&(*v_1).tint_symbol)};
+  entry_inner(tint_local_index, tint_module_vars);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_Pointer_Const) {
+    auto* var = b.Var("v", ty.ptr<storage, i32, read>());
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("param", ty.ptr<storage, i32, read>());
     func->SetParams({param});
@@ -324,9 +477,26 @@ TEST_F(MslWriterTest, EmitType_Pointer_Const) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, var);
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  const device int* v;
+};
+
 void foo(const device int* const param) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(const device int* v [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -336,20 +506,22 @@ TEST_F(MslWriterTest, EmitType_Struct) {
                                                   {mod.symbols.Register("a"), ty.i32()},
                                                   {mod.symbols.Register("b"), ty.f32()},
                                               });
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, s));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
 struct S {
   int a;
   float b;
 };
 
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   S a = {};
 }
 )");
@@ -360,21 +532,23 @@ TEST_F(MslWriterTest, EmitType_Struct_Dedup) {
                                                   {mod.symbols.Register("a"), ty.i32()},
                                                   {mod.symbols.Register("b"), ty.f32()},
                                               });
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, s));
         b.Var("b", ty.ptr(core::AddressSpace::kFunction, s));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
 struct S {
   int a;
   float b;
 };
 
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   S a = {};
   S b = {};
 }
@@ -462,17 +636,17 @@ core::type::Struct* MkStruct(core::ir::Module& mod,
         size = offset + mem_size;
     }
 
-    return ty.Get<core::type::Struct>(mod.symbols.New(name), std::move(members), align,
-                                      tint::RoundUp(align, size), size);
+    return ty.Get<core::type::Struct>(mod.symbols.New(name), std::move(members),
+                                      tint::RoundUp(align, size));
 }
 
 TEST_F(MslWriterTest, EmitType_Struct_Layout_NumericTypes) {
     // Note: Skip vec3 and matCx3 types here as they have need special treatment.
     Vector<MemberData, 26> data = {{mod.symbols.Register("a"), ty.i32(), 32},        //
                                    {mod.symbols.Register("b"), ty.f32(), 128, 128},  //
-                                   {mod.symbols.Register("c"), ty.vec2<f32>()},      //
+                                   {mod.symbols.Register("c"), ty.vec2f()},          //
                                    {mod.symbols.Register("d"), ty.u32()},            //
-                                   {mod.symbols.Register("e"), ty.vec4<f32>()},      //
+                                   {mod.symbols.Register("e"), ty.vec4f()},          //
                                    {mod.symbols.Register("f"), ty.u32()},            //
                                    {mod.symbols.Register("g"), ty.mat2x2<f32>()},    //
                                    {mod.symbols.Register("h"), ty.u32()},            //
@@ -534,13 +708,14 @@ TEST_F(MslWriterTest, EmitType_Struct_Layout_NumericTypes) {
     auto* var = b.Var("a", ty.ptr(core::AddressSpace::kStorage, s));
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Load(var);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_THAT(output_.msl, testing::HasSubstr(expect.str())) << output_.msl;
 
     // 1.4 Metal and C++14
@@ -624,13 +799,14 @@ struct inner_y {
     auto* var = b.Var("a", ty.ptr(core::AddressSpace::kStorage, s));
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Load(var);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_THAT(output_.msl, testing::HasSubstr(expect.str())) << output_.msl;
 
     // 1.4 Metal and C++14
@@ -728,13 +904,14 @@ struct inner {
     auto* var = b.Var("a", ty.ptr(core::AddressSpace::kStorage, s));
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
-        b.Load(var);
+        b.Let(var);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_THAT(output_.msl, testing::HasSubstr(expect.str())) << output_.msl;
 
     // 1.4 Metal and C++14
@@ -785,8 +962,8 @@ TEST_F(MslWriterTest, EmitType_Struct_Layout_Vec3) {
 
     auto* s = ty.Struct(mod.symbols.New("S"), {
                                                   {mod.symbols.Register("a"), ty.i32()},
-                                                  {mod.symbols.Register("b"), ty.vec3<u32>()},
-                                                  {mod.symbols.Register("c"), ty.vec3<f32>()},
+                                                  {mod.symbols.Register("b"), ty.vec3u()},
+                                                  {mod.symbols.Register("c"), ty.vec3f()},
                                                   {mod.symbols.Register("d"), ty.f32()},
                                                   {mod.symbols.Register("e"), ty.mat2x3<f32>()},
                                                   {mod.symbols.Register("f"), ty.mat3x3<f32>()},
@@ -856,7 +1033,8 @@ S tint_load_struct_packed_vec3(device S_packed_vec3* const from) {
   return S{.a=v, .b=v_1, .c=v_2, .d=v_3, .e=v_5, .f=v_7, .g=v_9, .h=v_10, .i=v_11, .j=(*from).j};
 }
 
-kernel void foo(device S_packed_vec3* a [[buffer(0)]]) {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(device S_packed_vec3* a [[buffer(0)]]) {
   tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=a};
   tint_load_struct_packed_vec3(tint_module_vars.a);
 }
@@ -865,13 +1043,14 @@ kernel void foo(device S_packed_vec3* a [[buffer(0)]]) {
     auto* var = b.Var("a", ty.ptr(core::AddressSpace::kStorage, s));
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Load(var);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, expect);
 }
 
@@ -879,11 +1058,11 @@ TEST_F(MslWriterTest, AttemptTintPadSymbolCollision) {
     Vector<MemberData, 26> data = {// uses symbols tint_pad_[0..9] and tint_pad_[20..35]
                                    {mod.symbols.Register("tint_pad_2"), ty.i32(), 32},         //
                                    {mod.symbols.Register("tint_pad_20"), ty.f32(), 128, 128},  //
-                                   {mod.symbols.Register("tint_pad_33"), ty.vec2<f32>()},      //
+                                   {mod.symbols.Register("tint_pad_33"), ty.vec2f()},          //
                                    {mod.symbols.Register("tint_pad_1"), ty.u32()},             //
-                                   {mod.symbols.Register("tint_pad_3"), ty.vec3<f32>()},       //
+                                   {mod.symbols.Register("tint_pad_3"), ty.vec3f()},           //
                                    {mod.symbols.Register("tint_pad_7"), ty.u32()},             //
-                                   {mod.symbols.Register("tint_pad_25"), ty.vec4<f32>()},      //
+                                   {mod.symbols.Register("tint_pad_25"), ty.vec4f()},          //
                                    {mod.symbols.Register("tint_pad_5"), ty.u32()},             //
                                    {mod.symbols.Register("tint_pad_27"), ty.mat2x2<f32>()},    //
                                    {mod.symbols.Register("tint_pad_24"), ty.u32()},            //
@@ -953,17 +1132,22 @@ struct S_packed_vec3 {
     auto* var = b.Var("a", ty.ptr(core::AddressSpace::kStorage, s));
     var->SetBindingPoint(0, 0);
     mod.root_block->Append(var);
-    auto* func = b.ComputeFunction("foo");
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Load(var);
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_THAT(output_.msl, testing::HasSubstr(expect)) << output_.msl;
 }
 
 TEST_F(MslWriterTest, EmitType_Sampler) {
+    auto* var = b.Var("v", ty.ptr(handle, ty.sampler()));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ty.sampler());
     func->SetParams({param});
@@ -971,14 +1155,35 @@ TEST_F(MslWriterTest, EmitType_Sampler) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  sampler v;
+};
+
 void foo(sampler a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(sampler v [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_SamplerComparison) {
+    auto* var = b.Var("v", ty.ptr(handle, ty.comparison_sampler()));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ty.comparison_sampler());
     func->SetParams({param});
@@ -986,25 +1191,65 @@ TEST_F(MslWriterTest, EmitType_SamplerComparison) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  sampler v;
+};
+
 void foo(sampler a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(sampler v [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
 
 TEST_F(MslWriterTest, EmitType_BindingArraySampledTexture) {
-    auto* func = b.Function("foo", ty.void_());
     auto* sampled_texture = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
-    auto* param = b.FunctionParam("a", ty.binding_array(sampled_texture, 4_u));
+    auto* t = ty.binding_array(sampled_texture, 4_u);
+
+    auto* var = b.Var("v", ty.ptr(handle, t));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.Function("foo", ty.void_());
+    auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
     b.Append(func->Block(), [&] {  //
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  array<texture2d<float, access::sample>, 4> v;
+};
+
 void foo(array<texture2d<float, access::sample>, 4> a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(array<texture2d<float, access::sample>, 4> v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1024,6 +1269,11 @@ TEST_P(MslWriterDepthTexturesTest, Emit) {
     auto params = GetParam();
 
     auto* t = ty.depth_texture(params.dim);
+
+    auto* var = b.Var("v", ty.ptr(handle, t));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
@@ -1031,10 +1281,28 @@ TEST_P(MslWriterDepthTexturesTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  )" + params.result + R"( v;
+};
+
 void foo()" + params.result +
                                R"( a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry()" + params.result +
+                               R"( v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1052,6 +1320,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(MslWriterTest, EmitType_DepthMultisampledTexture) {
     auto* t = ty.Get<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d);
+
+    auto* var = b.Var("v", ty.ptr(handle, t));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
@@ -1059,9 +1332,26 @@ TEST_F(MslWriterTest, EmitType_DepthMultisampledTexture) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  depth2d_ms<float, access::read> v;
+};
+
 void foo(depth2d_ms<float, access::read> a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(depth2d_ms<float, access::read> v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1081,6 +1371,11 @@ TEST_P(MslWriterSampledtexturesTest, Emit) {
     auto params = GetParam();
 
     auto* t = ty.sampled_texture(params.dim, ty.f32());
+
+    auto* var = b.Var("v", ty.ptr(handle, t));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
@@ -1088,10 +1383,28 @@ TEST_P(MslWriterSampledtexturesTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  )" + params.result + R"( v;
+};
+
 void foo()" + params.result +
                                R"( a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry()" + params.result +
+                               R"( v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1110,6 +1423,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(MslWriterTest, EmitType_MultisampledTexture) {
     auto* ms = ty.multisampled_texture(core::type::TextureDimension::k2d, ty.u32());
+
+    auto* var = b.Var("v", ty.ptr(handle, ms));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ms);
     func->SetParams({param});
@@ -1117,9 +1435,26 @@ TEST_F(MslWriterTest, EmitType_MultisampledTexture) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  texture2d_ms<uint, access::read> v;
+};
+
 void foo(texture2d_ms<uint, access::read> a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry(texture2d_ms<uint, access::read> v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1138,6 +1473,11 @@ TEST_P(MslWriterStorageTexturesTest, Emit) {
     auto params = GetParam();
 
     auto s = ty.storage_texture(params.dim, core::TexelFormat::kR32Float, core::Access::kWrite);
+
+    auto* var = b.Var("v", ty.ptr(handle, s, core::Access::kRead));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", s);
     func->SetParams({param});
@@ -1145,10 +1485,28 @@ TEST_P(MslWriterStorageTexturesTest, Emit) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto* eb = b.ComputeFunction("entry");
+    b.Append(eb->Block(), [&] {
+        b.Call(func, b.Load(var));
+        b.Return(eb);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
+struct tint_module_vars_struct {
+  )" + params.result + R"( v;
+};
+
 void foo()" + params.result +
                                R"( a) {
+}
+
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry()" + params.result +
+                               R"( v [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=v};
+  foo(tint_module_vars.v);
 }
 )");
 }
@@ -1166,15 +1524,17 @@ INSTANTIATE_TEST_SUITE_P(MslWriterTest,
 
 // Metal only supports f{16, 32} at (8x8). Bfloat is also supported but isn't in WGSL.
 TEST_F(MslWriterTest, EmitType_SubgroupMatrixLeft) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.subgroup_matrix_left(ty.f32(), 8, 8)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   simdgroup_float8x8 a = make_filled_simdgroup_matrix<float, 8, 8>(0.0f);
 }
 )");
@@ -1182,15 +1542,17 @@ void foo() {
 
 // Metal only supports f{16, 32} at (8x8). Bfloat is also supported but isn't in WGSL.
 TEST_F(MslWriterTest, EmitType_SubgroupMatrixRight) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.subgroup_matrix_right(ty.f16(), 8, 8)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   simdgroup_half8x8 a = make_filled_simdgroup_matrix<half, 8, 8>(0.0h);
 }
 )");
@@ -1198,16 +1560,18 @@ void foo() {
 
 // Metal only supports f{16, 32} at (8x8). Bfloat is also supported but isn't in WGSL.
 TEST_F(MslWriterTest, EmitType_SubgroupMatrixResult) {
-    auto* func = b.Function("foo", ty.void_());
+    auto* func = b.ComputeFunction("entry");
     b.Append(func->Block(), [&] {
         b.Var("a",
               ty.ptr(core::AddressSpace::kFunction, ty.subgroup_matrix_result(ty.f32(), 8, 8)));
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + R"(
-void foo() {
+[[max_total_threads_per_threadgroup(1)]]
+kernel void entry() {
   simdgroup_float8x8 a = make_filled_simdgroup_matrix<float, 8, 8>(0.0f);
 }
 )");

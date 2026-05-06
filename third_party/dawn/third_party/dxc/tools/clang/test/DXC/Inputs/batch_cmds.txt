@@ -1,5 +1,0 @@
--E ps_main -T ps_6_0     lib_entries2.hlsl
--E vs_main -T vs_6_0   lib_entries2.hlsl
--E hs_main -T hs_6_0     lib_entries2.hlsl
--E gs_main -T gs_6_0     lib_entries2.hlsl
--E ds_main -T ds_6_0    lib_entries2.hlsl

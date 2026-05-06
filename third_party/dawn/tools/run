@@ -26,38 +26,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# TODO(crbug.com/385317083): Remove this bash script and move run.py to this
+# location once all standalone GN builders are switched to the gn_v2 recipes.
+
 set -e # Fail on any error.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
-TOOL="$1"
 
-if [ ! -x "$(which go)" ] ; then
-  echo "error: go needs to be on \$PATH to use $0"
-  exit 1
-fi
-
-function list_tools() {
-  echo "Available tools:"
-  ls "${SCRIPT_DIR}/src/cmd"
-}
-
-function show_usage() {
-  echo "run <tool> <args>"
-  echo
-  echo "builds and runs the go tool in <dawn>/tools/src/cmd"
-  echo
-  list_tools
-  exit 1
-}
-
-if [ -z "${TOOL}" ]; then
-  show_usage
-fi
-
-if [ ! -d "${SCRIPT_DIR}/src/cmd/${TOOL}" ]; then
-  show_usage
-fi
-
-pushd "${SCRIPT_DIR}/.." > /dev/null
-    go run "${SCRIPT_DIR}/src/cmd/${TOOL}" "${@:2}"
-popd > /dev/null
+python3 "${SCRIPT_DIR}/run.py" "${@:1}"

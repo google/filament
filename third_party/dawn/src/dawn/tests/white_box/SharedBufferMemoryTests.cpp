@@ -28,7 +28,9 @@
 #include "dawn/tests/white_box/SharedBufferMemoryTests.h"
 
 #include <gtest/gtest.h>
+
 #include <vector>
+
 #include "dawn/tests/DawnTest.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
@@ -38,6 +40,7 @@ namespace dawn {
 void SharedBufferMemoryTests::SetUp() {
     DAWN_TEST_UNSUPPORTED_IF(UsesWire());
     DawnTestWithParams<SharedBufferMemoryTestParams>::SetUp();
+    DAWN_TEST_UNSUPPORTED_IF(!SupportsBackend());
 }
 
 std::vector<wgpu::FeatureName> SharedBufferMemoryTests::GetRequiredFeatures() {
@@ -47,6 +50,10 @@ std::vector<wgpu::FeatureName> SharedBufferMemoryTests::GetRequiredFeatures() {
     }
 
     return features;
+}
+
+bool SharedBufferMemoryTests::SupportsBackend() {
+    return !GetRequiredFeatures().empty();
 }
 
 wgpu::Texture Create2DTexture(wgpu::Device device,
@@ -232,7 +239,13 @@ TEST_P(SharedBufferMemoryTests, UniformUsageValidation) {
 TEST_P(SharedBufferMemoryTests, CallEndAccessOnMappedBuffer) {
     wgpu::SharedBufferMemory memory =
         GetParam().mBackend->CreateSharedBufferMemory(device, kMapWriteUsages, kBufferSize);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapWriteUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
     wgpu::SharedBufferMemoryBeginAccessDescriptor desc;
     memory.BeginAccess(buffer, &desc);
 
@@ -318,8 +331,14 @@ TEST_P(SharedBufferMemoryTests, EnsureNoEndAccessBeforeBeginAccess) {
 TEST_P(SharedBufferMemoryTests, EndAccessOnDifferentBuffer) {
     wgpu::SharedBufferMemory memory =
         GetParam().mBackend->CreateSharedBufferMemory(device, kMapWriteUsages, kBufferSize);
-    wgpu::Buffer buffer = memory.CreateBuffer();
-    wgpu::Buffer buffer2 = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapWriteUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
+    wgpu::Buffer buffer2 = memory.CreateBuffer(&bufferDesc);
 
     wgpu::SharedBufferMemoryBeginAccessDescriptor desc;
     memory.BeginAccess(buffer, &desc);
@@ -358,12 +377,16 @@ TEST_P(SharedBufferMemoryTests, EnsureNoDuplicateBeginAccessCalls) {
 // Ensure the BeginAccessDescriptor initialized parameter preserves or clears the buffer as
 // necessary.
 TEST_P(SharedBufferMemoryTests, BeginAccessInitialization) {
-    DAWN_SUPPRESS_TEST_IF(IsWARP());  // TODO(crbug.com/407748576): Remove once bug is fixed
-
     // Create a buffer with initialized data.
     wgpu::SharedBufferMemory memory =
         GetParam().mBackend->CreateSharedBufferMemory(device, kMapWriteUsages, kBufferSize);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapWriteUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
 
     // Write data into the shared buffer.
     wgpu::SharedBufferMemoryBeginAccessDescriptor beginAccessDesc;
@@ -393,7 +416,7 @@ TEST_P(SharedBufferMemoryTests, BeginAccessInitialization) {
 
     // Create a second buffer from the SharedBuffer memory, which will be marked as initialized in
     // the BeginAccessDescriptor. This buffer should preserve the data from the previous copy.
-    wgpu::Buffer buffer2 = memory.CreateBuffer();
+    wgpu::Buffer buffer2 = memory.CreateBuffer(&bufferDesc);
     beginAccessDesc.initialized = true;
     memory.BeginAccess(buffer2, &beginAccessDesc);
     // The buffer should contain the data from initialization.
@@ -414,7 +437,7 @@ TEST_P(SharedBufferMemoryTests, BeginAccessInitialization) {
 
     // Create another buffer from the SharedBufferMemory, but mark it uninitialized in the
     // BeginAccessDescriptor.
-    wgpu::Buffer buffer3 = memory.CreateBuffer();
+    wgpu::Buffer buffer3 = memory.CreateBuffer(&bufferDesc);
     beginAccessDesc.initialized = false;
     memory.BeginAccess(buffer3, &beginAccessDesc);
     // The buffer should be zero'd out because the BeginAccessDescriptor stated it was
@@ -442,10 +465,19 @@ TEST_P(SharedBufferMemoryTests, UninitializedBufferRemainsUninitialized) {
 
 // Read and write a buffer with MapWrite and CopySrc usages.
 TEST_P(SharedBufferMemoryTests, ReadWriteSharedMapWriteBuffer) {
+    // TODO(crbug.com/468353728): Flaky on Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
     // Create buffer buffer with initialized data.
     wgpu::SharedBufferMemory memory = GetParam().mBackend->CreateSharedBufferMemory(
         device, kMapWriteUsages, kBufferSize, kBufferData);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapWriteUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
 
     // Begin access and check the contents within Dawn.
     wgpu::SharedBufferMemoryBeginAccessDescriptor beginAccessDesc;
@@ -464,10 +496,19 @@ TEST_P(SharedBufferMemoryTests, ReadWriteSharedMapWriteBuffer) {
 
 // Read and write a buffer with MapRead and CopyDst usages.
 TEST_P(SharedBufferMemoryTests, ReadWriteSharedMapReadBuffer) {
+    // TODO(crbug.com/468353728): Flaky on Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
     // Create buffer buffer with initialized data.
     wgpu::SharedBufferMemory memory = GetParam().mBackend->CreateSharedBufferMemory(
         device, kMapReadUsages, kBufferSize, kBufferData);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapReadUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
 
     // Begin access and check the contents within Dawn.
     wgpu::SharedBufferMemoryBeginAccessDescriptor beginAccessDesc;
@@ -664,9 +705,18 @@ TEST_P(SharedBufferMemoryTests, UseInPassEnsureSynchronization) {
 
 // Test to ensure WriteBuffer waits on a fence provided to BeginAccess.
 TEST_P(SharedBufferMemoryTests, WriteBufferEnsureSynchronization) {
+    // TODO(crbug.com/468353728): Flaky on Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
     wgpu::SharedBufferMemory memory =
         GetParam().mBackend->CreateSharedBufferMemory(device, kMapReadUsages, kBufferSize * 2);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapReadUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
 
     wgpu::SharedBufferMemoryBeginAccessDescriptor beginAccessDesc;
     beginAccessDesc.initialized = true;
@@ -693,7 +743,7 @@ TEST_P(SharedBufferMemoryTests, WriteBufferEnsureSynchronization) {
     beginAccessDesc.fences = sharedFences.data();
     beginAccessDesc.signaledValues = endState.signaledValues;
     beginAccessDesc.initialized = true;
-    wgpu::Buffer buffer2 = memory.CreateBuffer();
+    wgpu::Buffer buffer2 = memory.CreateBuffer(&bufferDesc);
     memory.BeginAccess(buffer2, &beginAccessDesc);
 
     // Use WriteBuffer to write data to the second half of the buffer.
@@ -713,7 +763,13 @@ TEST_P(SharedBufferMemoryTests, WriteBufferEnsureSynchronization) {
 TEST_P(SharedBufferMemoryTests, MapAsyncEnsureSynchronization) {
     wgpu::SharedBufferMemory memory =
         GetParam().mBackend->CreateSharedBufferMemory(device, kMapReadUsages, kBufferSize);
-    wgpu::Buffer buffer = memory.CreateBuffer();
+    wgpu::SharedBufferMemoryProperties properties;
+    memory.GetProperties(&properties);
+
+    wgpu::BufferDescriptor bufferDesc = {};
+    bufferDesc.size = properties.size;
+    bufferDesc.usage = kMapReadUsages;
+    wgpu::Buffer buffer = memory.CreateBuffer(&bufferDesc);
 
     wgpu::SharedBufferMemoryBeginAccessDescriptor beginAccessDesc;
     beginAccessDesc.initialized = true;
@@ -739,7 +795,7 @@ TEST_P(SharedBufferMemoryTests, MapAsyncEnsureSynchronization) {
     beginAccessDesc.fences = sharedFences.data();
     beginAccessDesc.signaledValues = endState.signaledValues;
     beginAccessDesc.initialized = true;
-    wgpu::Buffer buffer2 = memory.CreateBuffer();
+    wgpu::Buffer buffer2 = memory.CreateBuffer(&bufferDesc);
     memory.BeginAccess(buffer2, &beginAccessDesc);
 
     // Map and check the buffer. If operations were synchronized correctly during the MapRead call,

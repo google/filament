@@ -47,6 +47,12 @@ ResultOrError<DeviceInfo> GatherDeviceInfo(const ComPtr<IDXGIAdapter3>& adapter,
 
     info.supportsPartialConstantBufferUpdate = options.ConstantBufferPartialUpdate;
 
+    D3D11_FEATURE_DATA_D3D11_OPTIONS1 options1 = {};
+    if (SUCCEEDED(device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS1, &options1,
+                                              sizeof(options1)))) {
+        info.supportsMapOnDefaultBuffer = options1.MapOnDefaultBuffers != 0;
+    }
+
     // TODO(405401229): Return error if the device doesn't support binding constant buffers with
     // non-zero offsets.
     DAWN_INVALID_IF(!options.ConstantBufferOffsetting, "ConstantBufferOffsetting is not supported");

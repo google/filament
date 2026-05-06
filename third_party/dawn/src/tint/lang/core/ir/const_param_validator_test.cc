@@ -25,13 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/ir/const_param_validator.h"
+
 #include <string>
 
 #include "gtest/gtest.h"
-
 #include "src/tint/lang/core/binary_op.h"
 #include "src/tint/lang/core/ir/builder.h"
-#include "src/tint/lang/core/ir/const_param_validator.h"
 #include "src/tint/lang/core/ir/function_param.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -307,10 +307,10 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainkExtractBits) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.i32()));
+    auto* func = b.Function("foo", ty.vec4i());
     b.Append(func->Block(), [&] {
-        auto* e = b.Let("a", b.Splat(ty.vec4<i32>(), -3_i));
-        auto* call_func = b.Call(ty.vec4<i32>(), core::BuiltinFn::kExtractBits, e, 13_u, 23_u);
+        auto* e = b.Let("a", b.Splat(ty.vec4i(), -3_i));
+        auto* call_func = b.Call(ty.vec4i(), core::BuiltinFn::kExtractBits, e, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });
@@ -334,12 +334,11 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkExtractBits_Vec) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainkInsertBits_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.u32()));
+    auto* func = b.Function("foo", ty.vec4u());
     b.Append(func->Block(), [&] {
-        auto* e = b.Let("a", b.Splat(ty.vec4<u32>(), 3_u));
-        auto* newBits = b.Let("b", b.Splat(ty.vec4<u32>(), 4_u));
-        auto* call_func =
-            b.Call(ty.vec4<u32>(), core::BuiltinFn::kInsertBits, e, newBits, 13_u, 23_u);
+        auto* e = b.Let("a", b.Splat(ty.vec4u(), 3_u));
+        auto* newBits = b.Let("b", b.Splat(ty.vec4u(), 4_u));
+        auto* call_func = b.Call(ty.vec4u(), core::BuiltinFn::kInsertBits, e, newBits, 13_u, 23_u);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });
@@ -472,12 +471,12 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainClamp) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainClamp_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.f16()));
+    auto* func = b.Function("foo", ty.vec4h());
     b.Append(func->Block(), [&] {
-        auto* e = b.Let("b", b.Splat(ty.vec4<f16>(), 4_h));
-        auto* low = b.Splat(ty.vec4<f16>(), 4_h);
-        auto* high = b.Splat(ty.vec4<f16>(), 2_h);
-        auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kClamp, e, low, high);
+        auto* e = b.Let("b", b.Splat(ty.vec4h(), 4_h));
+        auto* low = b.Splat(ty.vec4h(), 4_h);
+        auto* high = b.Splat(ty.vec4h(), 2_h);
+        auto* call_func = b.Call(ty.vec4h(), core::BuiltinFn::kClamp, e, low, high);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });
@@ -526,12 +525,12 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainSmoothstep) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSmoothstep_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.f16()));
+    auto* func = b.Function("foo", ty.vec4h());
     b.Append(func->Block(), [&] {
-        auto* e = b.Let("b", b.Splat(ty.vec4<f16>(), 4_h));
-        auto* edge0 = b.Splat(ty.vec4<f16>(), 3_h);
-        auto* edge1 = b.Splat(ty.vec4<f16>(), 3_h);
-        auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kSmoothstep, edge0, edge1, e);
+        auto* e = b.Let("b", b.Splat(ty.vec4h(), 4_h));
+        auto* edge0 = b.Splat(ty.vec4h(), 3_h);
+        auto* edge1 = b.Splat(ty.vec4h(), 3_h);
+        auto* call_func = b.Call(ty.vec4h(), core::BuiltinFn::kSmoothstep, edge0, edge1, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });
@@ -555,10 +554,10 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainSmoothstep_Vec) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.f32()));
+    auto* func = b.Function("foo", ty.vec4f());
     b.Append(func->Block(), [&] {
-        auto* e1 = b.Let("b", b.Splat(ty.vec4<f32>(), 4_f));
-        auto* e2 = b.Splat(ty.vec4<i32>(), 267_i);
+        auto* e1 = b.Let("b", b.Splat(ty.vec4f(), 4_f));
+        auto* e2 = b.Splat(ty.vec4i(), 267_i);
         auto* call_func = b.Call(ty.vec4(ty.f32()), core::BuiltinFn::kLdexp, e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
@@ -582,10 +581,10 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainLdexp_Vec) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.f16()));
+    auto* func = b.Function("foo", ty.vec4h());
     b.Append(func->Block(), [&] {
-        auto* e1 = b.Let("b", b.Splat(ty.vec4<f16>(), 4_h));
-        auto* e2 = b.Splat(ty.vec4<i32>(), 10_i);
+        auto* e1 = b.Let("b", b.Splat(ty.vec4h(), 4_h));
+        auto* e2 = b.Splat(ty.vec4i(), 10_i);
         auto* call_func = b.Call(ty.vec4(ty.f16()), core::BuiltinFn::kLdexp, e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
@@ -661,7 +660,7 @@ TEST_F(IR_ConstParamValidatorTest, CorrectDomainLdexp) {
 TEST_F(IR_ConstParamValidatorTest, IncorrectPack2x16Float) {
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
-        auto* e = b.Splat(ty.vec2<f32>(), 65505_f);
+        auto* e = b.Splat(ty.vec2f(), 65505_f);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kPack2X16Float, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
@@ -686,7 +685,7 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectPack2x16Float) {
 TEST_F(IR_ConstParamValidatorTest, CorrectPack2x16Float) {
     auto* func = b.Function("foo", ty.u32());
     b.Append(func->Block(), [&] {
-        auto* e = b.Splat(ty.vec2<f32>(), 4.0_f);
+        auto* e = b.Splat(ty.vec2f(), 4.0_f);
         auto* call_func = b.Call(ty.u32(), core::BuiltinFn::kPack2X16Float, e);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
@@ -761,11 +760,11 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftLeft) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainShiftRight_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.i32()));
+    auto* func = b.Function("foo", ty.vec4i());
     b.Append(func->Block(), [&] {
-        auto* e1 = b.Let("b", b.Splat(ty.vec4<i32>(), 4_i));
-        auto* e2 = b.Splat(ty.vec4<u32>(), 33_u);
-        auto* call_func = b.Binary(core::BinaryOp::kShiftLeft, ty.vec4(ty.i32()), e1, e2);
+        auto* e1 = b.Let("b", b.Splat(ty.vec4i(), 4_i));
+        auto* e2 = b.Splat(ty.vec4u(), 33_u);
+        auto* call_func = b.Binary(core::BinaryOp::kShiftLeft, ty.vec4i(), e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });
@@ -841,11 +840,11 @@ TEST_F(IR_ConstParamValidatorTest, IncorrectDomainDiv) {
 }
 
 TEST_F(IR_ConstParamValidatorTest, IncorrectDomainModulo_Vec) {
-    auto* func = b.Function("foo", ty.vec4(ty.i32()));
+    auto* func = b.Function("foo", ty.vec4i());
     b.Append(func->Block(), [&] {
-        auto* e1 = b.Let("b", b.Splat(ty.vec4<i32>(), 4_i));
-        auto* e2 = b.Splat(ty.vec4<i32>(), 0_i);
-        auto* call_func = b.Binary(core::BinaryOp::kModulo, ty.vec4(ty.i32()), e1, e2);
+        auto* e1 = b.Let("b", b.Splat(ty.vec4i(), 4_i));
+        auto* e2 = b.Splat(ty.vec4i(), 0_i);
+        auto* call_func = b.Binary(core::BinaryOp::kModulo, ty.vec4i(), e1, e2);
         b.ir.SetSource(call_func, Source{{5, 7}});
         b.Return(func, call_func->Result());
     });

@@ -29,7 +29,6 @@
 #include <string_view>
 
 #include "gmock/gmock.h"
-
 #include "langsvr/lsp/lsp.h"
 #include "langsvr/lsp/primitives.h"
 #include "langsvr/lsp/printer.h"

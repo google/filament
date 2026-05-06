@@ -254,7 +254,8 @@ DAWN_INSTANTIATE_TEST(
     OpenGLBackend(),
     OpenGLESBackend(),
     VulkanBackend(),
-    VulkanBackend({"vulkan_split_command_buffer_on_compute_pass_after_render_pass"}));
+    VulkanBackend({"vulkan_split_command_buffer_on_compute_pass_after_render_pass"}),
+    WebGPUBackend());
 
 class StorageToUniformSyncTests : public DawnTest {
   protected:
@@ -425,7 +426,8 @@ DAWN_INSTANTIATE_TEST(StorageToUniformSyncTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 constexpr int kRTSize = 8;
 constexpr int kVertexBufferStride = 4 * sizeof(float);
@@ -693,7 +695,8 @@ DAWN_INSTANTIATE_TEST(MultipleWriteThenMultipleReadTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

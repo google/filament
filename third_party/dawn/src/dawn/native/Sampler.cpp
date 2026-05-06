@@ -71,9 +71,12 @@ MaybeError ValidateSamplerDescriptor(DeviceBase* device, const SamplerDescriptor
     DAWN_TRY(ValidateCompareFunction(descriptor->compare));
 
     UnpackedPtr<SamplerDescriptor> unpacked = Unpack(descriptor);
-    if (unpacked.Get<YCbCrVkDescriptor>()) {
+    if (auto* ycbcr = unpacked.Get<YCbCrVkDescriptor>()) {
         DAWN_INVALID_IF(!device->HasFeature(Feature::YCbCrVulkanSamplers), "%s is not enabled.",
                         wgpu::FeatureName::YCbCrVulkanSamplers);
+
+        DAWN_INVALID_IF(ycbcr->externalFormat == 0 && ycbcr->vkFormat == 0,
+                        "Both VkFormat and VkExternalFormatANDROID are undefined.");
     }
 
     return {};
@@ -112,7 +115,7 @@ SamplerBase::SamplerBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringVie
 
 SamplerBase::~SamplerBase() = default;
 
-void SamplerBase::DestroyImpl() {
+void SamplerBase::DestroyImpl(DestroyReason reason) {
     Uncache();
 }
 
@@ -132,6 +135,17 @@ bool SamplerBase::IsComparison() const {
 bool SamplerBase::IsFiltering() const {
     return mMinFilter == wgpu::FilterMode::Linear || mMagFilter == wgpu::FilterMode::Linear ||
            mMipmapFilter == wgpu::MipmapFilterMode::Linear;
+}
+
+wgpu::SamplerBindingType SamplerBase::GetBindingType() const {
+    if (IsComparison()) {
+        return wgpu::SamplerBindingType::Comparison;
+    }
+    if (IsFiltering()) {
+        return wgpu::SamplerBindingType::Filtering;
+    }
+
+    return wgpu::SamplerBindingType::NonFiltering;
 }
 
 bool SamplerBase::IsYCbCr() const {

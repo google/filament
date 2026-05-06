@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/block.h"
+
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 
 namespace tint::core::ir {
@@ -41,7 +42,7 @@ TEST_F(IR_BlockTest, Terminator_Empty) {
 
 TEST_F(IR_BlockTest, Terminator_None) {
     auto* blk = b.Block();
-    blk->Append(b.Add(mod.Types().i32(), 1_u, 2_u));
+    blk->Append(b.Add(1_u, 2_u));
     EXPECT_EQ(blk->Terminator(), nullptr);
 }
 

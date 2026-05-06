@@ -44,25 +44,21 @@ Result<SuccessType> IRBinaryRoundtripFuzzer(core::ir::Module& module, const fuzz
         return Failure{"Failed to encode module to binary"};
     }
 
-    auto decoded = Decode(encoded->Slice());
-    if (decoded != Success) {
-        TINT_ICE() << "Decode() failed\n" << decoded.Failure();
-    }
+    auto decoded = Decode(encoded->AsSpan());
+    TINT_ASSERT(decoded == Success) << "Decode() failed\n" << decoded.Failure();
 
     auto in = Disassembler(module).Plain();
     auto out = Disassembler(decoded.Get()).Plain();
-    if (in != out) {
-        TINT_ICE() << "Roundtrip produced different disassembly\n"
-                   << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-                   << "-=                     In                      =-\n"
-                   << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-                   << in << "\n"
-                   << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-                   << "-=                     Out                     =-\n"
-                   << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-                   << out << "\n"
-                   << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n";
-    }
+    TINT_ASSERT(in == out) << "Roundtrip produced different disassembly\n"
+                           << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
+                           << "-=                     In                      =-\n"
+                           << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
+                           << in << "\n"
+                           << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
+                           << "-=                     Out                     =-\n"
+                           << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
+                           << out << "\n"
+                           << "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n";
     return Success;
 }
 

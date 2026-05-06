@@ -222,7 +222,7 @@ public:
     using TagResolver = MetalBuffer::TagResolver;
 
     MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
-         uint32_t byteCount);
+            uint32_t byteCount, bool async = false);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag);
     void updateBufferUnsynchronized(
@@ -264,7 +264,7 @@ struct MetalVertexBuffer : public HwVertexBuffer {
 
 struct MetalIndexBuffer : public HwIndexBuffer {
     MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
-            uint32_t indexCount);
+            uint32_t indexCount, bool async = false);
 
     MetalBuffer buffer;
 };
@@ -307,8 +307,8 @@ struct PixelBufferShape {
 class MetalTexture : public HwTexture {
 public:
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
-            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-            TextureUsage usage) noexcept;
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+            bool async = false) noexcept;
 
     // constructors for creating texture views
     MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
@@ -337,7 +337,8 @@ public:
 
     std::shared_ptr<MetalExternalImage> getExternalImage() const noexcept { return externalImage; }
 
-    void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
+    void loadImage(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTLRegion region,
+            PixelBufferDescriptor& p) noexcept;
     void generateMipmaps() noexcept;
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
@@ -362,12 +363,12 @@ public:
     MTLPixelFormat devicePixelFormat;
 
 private:
-    void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
-            PixelBufferDescriptor const& data) noexcept;
-    void loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor const& data,
-            const PixelBufferShape& shape);
-    void loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region, PixelBufferDescriptor const& data,
-            const PixelBufferShape& shape);
+    void loadSlice(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTLRegion region,
+            uint32_t byteOffset, uint32_t slice, PixelBufferDescriptor const& data) noexcept;
+    void loadWithCopyBuffer(id<MTLCommandBuffer> cmdBuffer, uint32_t level, uint32_t slice,
+            MTLRegion region, PixelBufferDescriptor const& data, const PixelBufferShape& shape);
+    void loadWithBlit(id<MTLCommandBuffer> cmdBuffer, uint32_t level, uint32_t slice,
+            MTLRegion region, PixelBufferDescriptor const& data, const PixelBufferShape& shape);
 
     id<MTLTexture> texture = nil;
 

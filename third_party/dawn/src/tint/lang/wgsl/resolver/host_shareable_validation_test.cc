@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/struct.h"
 
@@ -73,7 +72,8 @@ TEST_F(ResolverHostShareableValidationTest, BoolVectorMember) {
 
 TEST_F(ResolverHostShareableValidationTest, Aliases) {
     Alias("a1", ty.bool_());
-    auto* s = Structure("S", Vector{Member(Source{{56, 78}}, "x", ty(Source{{12, 34}}, "a1"))});
+    auto* s =
+        Structure("S", Vector{Member(Source{{56, 78}}, "x", ty.AsType(Source{{12, 34}}, "a1"))});
     auto* a2 = Alias("a2", ty.Of(s));
     GlobalVar(Source{{90, 12}}, "g", ty.Of(a2), core::AddressSpace::kStorage, core::Access::kRead,
               Binding(0_a), Group(0_a));

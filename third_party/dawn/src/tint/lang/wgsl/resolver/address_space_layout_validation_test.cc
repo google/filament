@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 
 namespace tint::resolver {
@@ -53,7 +52,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, StorageBuffer_UnalignedMember) 
                   Member(Source{{34, 56}}, "b", ty.f32(), Vector{MemberAlign(1_i)}),
               });
 
-    GlobalVar(Source{{78, 90}}, "a", ty("S"), core::AddressSpace::kStorage, Group(0_a),
+    GlobalVar(Source{{78, 90}}, "a", ty.AsType("S"), core::AddressSpace::kStorage, Group(0_a),
               Binding(0_a));
 
     ASSERT_FALSE(r()->Resolve());
@@ -82,7 +81,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, StorageBuffer_UnalignedMember_S
                        Member("b", ty.f32(), Vector{MemberAlign(4_i)}),
                    });
 
-    GlobalVar("a", ty("S"), core::AddressSpace::kStorage, Group(0_a), Binding(0_a));
+    GlobalVar("a", ty.AsType("S"), core::AddressSpace::kStorage, Group(0_a), Binding(0_a));
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -94,8 +93,8 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_UnalignedMember_S
     // };
     //
     // struct Outer {
-    //   scalar : f32;
-    //   inner : Inner;
+    //   @size(5) scalar : f32;
+    //   @align(1) inner : Inner;
     // };
     //
     // @group(0) @binding(0)
@@ -105,23 +104,25 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_UnalignedMember_S
                                                     Member("scalar", ty.i32()),
                                                 });
 
-    Structure(Ident(Source{{34, 56}}, "Outer"), Vector{
-                                                    Member("scalar", ty.f32()),
-                                                    Member(Source{{56, 78}}, "inner", ty("Inner")),
-                                                });
+    Structure(Ident(Source{{34, 56}}, "Outer"),
+              Vector{
+                  Member("scalar", ty.f32(), Vector{MemberSize(5_a)}),
+                  Member(Source{{56, 78}}, "inner", ty.AsType("Inner"), Vector{MemberAlign(1_a)}),
+              });
 
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
+    GlobalVar(Source{{78, 90}}, "a", ty.AsType("Outer"), core::AddressSpace::kUniform, Group(0_a),
               Binding(0_a));
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(56:78 error: the offset of a struct member of type 'Inner' in address space 'uniform' must be a multiple of 16 bytes, but 'inner' is currently at offset 4. Consider setting '@align(16)' on this member
+        R"(56:78 error: the offset of a struct member of type 'Inner' in address space 'uniform' must be a multiple of 4 bytes, but 'inner' is currently at offset 5. Consider setting '@align(4)' on this member
 34:56 note: see layout of struct:
-/*           align(4) size(8) */ struct Outer {
-/* offset(0) align(4) size(4) */   scalar : f32,
-/* offset(4) align(4) size(4) */   inner : Inner,
-/*                            */ };
+/*           align(4) size(12) */ struct Outer {
+/* offset(0) align(4) size( 5) */   scalar : f32,
+/* offset(5) align(1) size( 4) */   inner : Inner,
+/* offset(9) align(1) size( 3) */   // -- implicit struct size padding --
+/*                             */ };
 12:34 note: and layout of struct member:
 /*           align(4) size(4) */ struct Inner {
 /* offset(0) align(4) size(4) */   scalar : i32,
@@ -136,8 +137,8 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest,
     // };
     //
     // struct Outer {
-    //   scalar : f32;
-    //   @align(16) inner : Inner;
+    //   @size(5) scalar : f32;
+    //   @align(4) inner : Inner;
     // };
     //
     // @group(0) @binding(0)
@@ -148,169 +149,13 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest,
                        });
 
     Structure("Outer", Vector{
-                           Member("scalar", ty.f32()),
-                           Member("inner", ty("Inner"), Vector{MemberAlign(16_i)}),
+                           Member("scalar", ty.f32(), Vector{MemberSize(5_a)}),
+                           Member("inner", ty.AsType("Inner"), Vector{MemberAlign(4_i)}),
                        });
 
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
+    GlobalVar("a", ty.AsType("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
-}
-
-// Detect unaligned array member for uniform buffers
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_UnalignedMember_Array) {
-    // type Inner = @stride(16) array<f32, 10u>;
-    //
-    // struct Outer {
-    //   scalar : f32;
-    //   inner : Inner;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-    Alias("Inner", ty.array<f32, 10>(Vector{Stride(16)}));
-
-    Structure(Ident(Source{{12, 34}}, "Outer"), Vector{
-                                                    Member("scalar", ty.f32()),
-                                                    Member(Source{{56, 78}}, "inner", ty("Inner")),
-                                                });
-
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(56:78 error: the offset of a struct member of type '@stride(16) array<f32, 10>' in address space 'uniform' must be a multiple of 16 bytes, but 'inner' is currently at offset 4. Consider setting '@align(16)' on this member
-12:34 note: see layout of struct:
-/*             align(4) size(164) */ struct Outer {
-/* offset(  0) align(4) size(  4) */   scalar : f32,
-/* offset(  4) align(4) size(160) */   inner : @stride(16) array<f32, 10>,
-/*                                */ };
-78:90 note: 'Outer' used in address space 'uniform' here)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_UnalignedMember_Array_SuggestedFix) {
-    // type Inner = @stride(16) array<f32, 10u>;
-    //
-    // struct Outer {
-    //   scalar : f32;
-    //   @align(16) inner : Inner;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-    Alias("Inner", ty.array<f32, 10>(Vector{Stride(16)}));
-
-    Structure("Outer", Vector{
-                           Member("scalar", ty.f32()),
-                           Member("inner", ty("Inner"), Vector{MemberAlign(16_i)}),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-}
-
-// Detect uniform buffers with byte offset between 2 members that is not a
-// multiple of 16 bytes
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_MembersOffsetNotMultipleOf16) {
-    // struct Inner {
-    //   @align(4) @size(5) scalar : i32;
-    // };
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Structure(Ident(Source{{12, 34}}, "Inner"),
-              Vector{
-                  Member("scalar", ty.i32(), Vector{MemberAlign(4_i), MemberSize(5_a)}),
-              });
-
-    Structure(Source{{34, 56}}, "Outer",
-              Vector{
-                  Member(Source{{56, 78}}, "inner", ty("Inner")),
-                  Member(Source{{78, 90}}, "scalar", ty.i32()),
-              });
-
-    GlobalVar(Source{{22, 24}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(78:90 error: 'uniform' storage requires that the number of bytes between the start of the previous member of type struct and the current member be a multiple of 16 bytes, but there are currently 8 bytes between 'inner' and 'scalar'. Consider setting '@align(16)' on this member
-note: see layout of struct:
-/*            align(4) size(12) */ struct Outer {
-/* offset( 0) align(4) size( 8) */   inner : Inner,
-/* offset( 8) align(4) size( 4) */   scalar : i32,
-/*                              */ };
-12:34 note: and layout of previous member struct:
-/*           align(4) size(8) */ struct Inner {
-/* offset(0) align(4) size(5) */   scalar : i32,
-/* offset(5) align(1) size(3) */   // -- implicit struct size padding --
-/*                            */ };
-22:24 note: 'Outer' used in address space 'uniform' here)");
-}
-
-// See https://crbug.com/tint/1344
-TEST_F(ResolverAddressSpaceLayoutValidationTest,
-       UniformBuffer_MembersOffsetNotMultipleOf16_InnerMoreMembersThanOuter) {
-    // struct Inner {
-    //   a : i32;
-    //   b : i32;
-    //   c : i32;
-    //   @align(4) @size(5) scalar : i32;
-    // };
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Structure(Ident(Source{{12, 34}}, "Inner"),
-              Vector{
-                  Member("a", ty.i32()),
-                  Member("b", ty.i32()),
-                  Member("c", ty.i32()),
-                  Member("scalar", ty.i32(), Vector{MemberAlign(4_i), MemberSize(5_a)}),
-              });
-
-    Structure(Source{{34, 56}}, "Outer",
-              Vector{
-                  Member(Source{{56, 78}}, "inner", ty("Inner")),
-                  Member(Source{{78, 90}}, "scalar", ty.i32()),
-              });
-
-    GlobalVar(Source{{22, 24}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(78:90 error: 'uniform' storage requires that the number of bytes between the start of the previous member of type struct and the current member be a multiple of 16 bytes, but there are currently 20 bytes between 'inner' and 'scalar'. Consider setting '@align(16)' on this member
-note: see layout of struct:
-/*            align(4) size(24) */ struct Outer {
-/* offset( 0) align(4) size(20) */   inner : Inner,
-/* offset(20) align(4) size( 4) */   scalar : i32,
-/*                              */ };
-12:34 note: and layout of previous member struct:
-/*            align(4) size(20) */ struct Inner {
-/* offset( 0) align(4) size( 4) */   a : i32,
-/* offset( 4) align(4) size( 4) */   b : i32,
-/* offset( 8) align(4) size( 4) */   c : i32,
-/* offset(12) align(4) size( 5) */   scalar : i32,
-/* offset(17) align(1) size( 3) */   // -- implicit struct size padding --
-/*                              */ };
-22:24 note: 'Outer' used in address space 'uniform' here)");
 }
 
 TEST_F(ResolverAddressSpaceLayoutValidationTest,
@@ -332,11 +177,11 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest,
                        });
 
     Structure("Outer", Vector{
-                           Member("inner", ty("Inner")),
+                           Member("inner", ty.AsType("Inner")),
                            Member("scalar", ty.i32(), Vector{MemberAlign(16_i)}),
                        });
 
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
+    GlobalVar("a", ty.AsType("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -356,7 +201,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_Vec3MemberOffset_
                                              Member("s", ty.f32()),
                                          });
 
-    GlobalVar("a", ty("ScalarPackedAtEndOfVec3"), core::AddressSpace::kUniform, Group(0_a),
+    GlobalVar("a", ty.AsType("ScalarPackedAtEndOfVec3"), core::AddressSpace::kUniform, Group(0_a),
               Binding(0_a));
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
@@ -379,195 +224,23 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_Vec3F16MemberOffs
                                              Member("s", ty.f16()),
                                          });
 
-    GlobalVar("a", ty("ScalarPackedAtEndOfVec3"), core::AddressSpace::kUniform, Group(0_a),
+    GlobalVar("a", ty.AsType("ScalarPackedAtEndOfVec3"), core::AddressSpace::kUniform, Group(0_a),
               Binding(0_a));
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-}
-
-// Detect array stride must be a multiple of 16 bytes for uniform buffers
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_Scalar) {
-    // type Inner = array<f32, 10u>;
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Alias("Inner", ty.array<f32, 10>());
-
-    Structure(Ident(Source{{12, 34}}, "Outer"), Vector{
-                                                    Member("inner", ty(Source{{34, 56}}, "Inner")),
-                                                    Member("scalar", ty.i32()),
-                                                });
-
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(34:56 error: 'uniform' storage requires that array elements are aligned to 16 bytes, but array element of type 'f32' has a stride of 4 bytes. Consider using a vector or struct as the element type instead.
-12:34 note: see layout of struct:
-/*            align(4) size(44) */ struct Outer {
-/* offset( 0) align(4) size(40) */   inner : array<f32, 10>,
-/* offset(40) align(4) size( 4) */   scalar : i32,
-/*                              */ };
-78:90 note: 'Outer' used in address space 'uniform' here)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_Vector) {
-    // type Inner = array<vec2<f32>, 10u>;
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Alias("Inner", ty.array<vec2<f32>, 10>());
-
-    Structure(Ident(Source{{12, 34}}, "Outer"), Vector{
-                                                    Member("inner", ty(Source{{34, 56}}, "Inner")),
-                                                    Member("scalar", ty.i32()),
-                                                });
-
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(34:56 error: 'uniform' storage requires that array elements are aligned to 16 bytes, but array element of type 'vec2<f32>' has a stride of 8 bytes. Consider using a vec4 instead.
-12:34 note: see layout of struct:
-/*            align(8) size(88) */ struct Outer {
-/* offset( 0) align(8) size(80) */   inner : array<vec2<f32>, 10>,
-/* offset(80) align(4) size( 4) */   scalar : i32,
-/* offset(84) align(1) size( 4) */   // -- implicit struct size padding --
-/*                              */ };
-78:90 note: 'Outer' used in address space 'uniform' here)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_Struct) {
-    // struct ArrayElem {
-    //   a : f32;
-    //   b : i32;
-    // }
-    // type Inner = array<ArrayElem, 10u>;
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    auto* array_elem = Structure("ArrayElem", Vector{
-                                                  Member("a", ty.f32()),
-                                                  Member("b", ty.i32()),
-                                              });
-    Alias("Inner", ty.array(ty.Of(array_elem), 10_u));
-
-    Structure(Ident(Source{{12, 34}}, "Outer"), Vector{
-                                                    Member("inner", ty(Source{{34, 56}}, "Inner")),
-                                                    Member("scalar", ty.i32()),
-                                                });
-
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(34:56 error: 'uniform' storage requires that array elements are aligned to 16 bytes, but array element of type 'ArrayElem' has a stride of 8 bytes. Consider using the '@size' attribute on the last struct member.
-12:34 note: see layout of struct:
-/*            align(4) size(84) */ struct Outer {
-/* offset( 0) align(4) size(80) */   inner : array<ArrayElem, 10>,
-/* offset(80) align(4) size( 4) */   scalar : i32,
-/*                              */ };
-78:90 note: 'Outer' used in address space 'uniform' here)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_TopLevelArray) {
-    // @group(0) @binding(0)
-    // var<uniform> a : array<f32, 4u>;
-    GlobalVar("a", ty.array(ty.f32(), 4_u), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(error: 'uniform' storage requires that array elements are aligned to 16 bytes, but array element of type 'f32' has a stride of 4 bytes. Consider using a vector or struct as the element type instead.)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_NestedArray) {
-    // struct Outer {
-    //   inner : array<array<f32, 4u>, 4u>
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : array<Outer, 4u>;
-
-    Structure(Ident(Source{{12, 34}}, "Outer"),
-              Vector{
-                  Member("inner", ty.array(Source{{34, 56}}, ty.array<f32, 4>(), 4_u)),
-              });
-
-    GlobalVar(Source{{78, 90}}, "a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a),
-              Binding(0_a));
-
-    ASSERT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(34:56 error: 'uniform' storage requires that array elements are aligned to 16 bytes, but array element of type 'f32' has a stride of 4 bytes. Consider using a vector or struct as the element type instead.
-12:34 note: see layout of struct:
-/*            align(4) size(64) */ struct Outer {
-/* offset( 0) align(4) size(64) */   inner : array<array<f32, 4>, 4>,
-/*                              */ };
-78:90 note: 'Outer' used in address space 'uniform' here)");
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStride_SuggestedFix) {
-    // type Inner = @stride(16) array<f32, 10u>;
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Alias("Inner", ty.array<f32, 10>(Vector{Stride(16)}));
-
-    Structure("Outer", Vector{
-                           Member("inner", ty("Inner")),
-                           Member("scalar", ty.i32()),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
 }
 
 // Detect unaligned member for immediate data buffers
 TEST_F(ResolverAddressSpaceLayoutValidationTest, Immediate_UnalignedMember) {
-    // enable chromium_experimental_immediate;
     // struct S {
     //     @size(5) a : f32;
     //     @align(1) b : f32;
     // };
     // var<immediate> a : S;
-    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
     Structure(Ident(Source{{12, 34}}, "S"),
               Vector{Member("a", ty.f32(), Vector{MemberSize(5_a)}),
                      Member(Source{{34, 56}}, "b", ty.f32(), Vector{MemberAlign(1_i)})});
-    GlobalVar(Source{{78, 90}}, "a", ty("S"), core::AddressSpace::kImmediate);
+    GlobalVar(Source{{78, 90}}, "a", ty.AsType("S"), core::AddressSpace::kImmediate);
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -583,16 +256,14 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, Immediate_UnalignedMember) {
 }
 
 TEST_F(ResolverAddressSpaceLayoutValidationTest, Immediate_Aligned) {
-    // enable chromium_experimental_immediate;
     // struct S {
     //     @size(5) a : f32;
     //     @align(4) b : f32;
     // };
     // var<immediate> a : S;
-    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
     Structure("S", Vector{Member("a", ty.f32(), Vector{MemberSize(5_a)}),
                           Member("b", ty.f32(), Vector{MemberAlign(4_i)})});
-    GlobalVar("a", ty("S"), core::AddressSpace::kImmediate);
+    GlobalVar("a", ty.AsType("S"), core::AddressSpace::kImmediate);
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
 }
@@ -611,7 +282,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Storage)
                  Member("scalar", ty.u32()),
              });
 
-    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kStorage,
+    GlobalVar(Source{{56, 78}}, "a", ty.AsType("S"), core::AddressSpace::kStorage,
               core::Access::kReadWrite, Group(0_a), Binding(0_a));
 
     ASSERT_FALSE(r()->Resolve());
@@ -634,7 +305,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Workgrou
                  Member("scalar", ty.u32()),
              });
 
-    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kWorkgroup, Group(0_a));
+    GlobalVar(Source{{56, 78}}, "a", ty.AsType("S"), core::AddressSpace::kWorkgroup, Group(0_a));
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -656,7 +327,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Private)
                  Member("scalar", ty.u32()),
              });
 
-    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kPrivate, Group(0_a));
+    GlobalVar(Source{{56, 78}}, "a", ty.AsType("S"), core::AddressSpace::kPrivate, Group(0_a));
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
@@ -680,7 +351,7 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Function
                  Member("scalar", ty.u32()),
              });
 
-    GlobalVar(Source{{56, 78}}, "a", ty("S"), core::AddressSpace::kFunction, Group(0_a));
+    GlobalVar(Source{{56, 78}}, "a", ty.AsType("S"), core::AddressSpace::kFunction, Group(0_a));
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(

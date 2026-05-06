@@ -117,7 +117,7 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const noexcept {
+math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const {
     FILAMENT_CHECK_PRECONDITION(index < mInstanceCount)
             << "getLocalTransform overflow: 'index (" << index
             << ") must be < getInstanceCount() ("<< mInstanceCount << ").";

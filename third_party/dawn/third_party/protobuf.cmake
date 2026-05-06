@@ -38,9 +38,10 @@ set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the 
 add_subdirectory("${DAWN_PROTOBUF_DIR}")
 target_compile_definitions(libprotobuf PUBLIC "-DPROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0")
 
-target_compile_options(libprotobuf PUBLIC
-        -fno-exceptions
-        -fno-rtti)
+target_compile_options(libprotobuf PUBLIC -fno-exceptions)
+if (NOT DAWN_ENABLE_RTTI)
+  target_compile_options(libprotobuf PUBLIC -fno-rtti)
+endif()
 
 # Allowing usage of enable_if() and nullability extensions in abseil and avoid shadowing errors
 if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
@@ -173,11 +174,17 @@ function(generate_protos)
 
     file(MAKE_DIRECTORY "${ARGS_PROTOC_OUT_DIR}/${REL_DIR}")
 
+    if(PLUGIN_OPTIONS)
+      set(lang_out_arg "--${ARGS_LANGUAGE}_out=${PLUGIN_OPTIONS}:${ARGS_PROTOC_OUT_DIR}")
+    else()
+      set(lang_out_arg "--${ARGS_LANGUAGE}_out=${ARGS_PROTOC_OUT_DIR}")
+    endif()
+
     add_custom_command(
       OUTPUT ${GENERATED_SRCS}
-      COMMAND protobuf::protoc
-      ARGS ${ARGS_PROTOC_OPTIONS} --${ARGS_LANGUAGE}_out ${_plugin_options}:${ARGS_PROTOC_OUT_DIR} ${_plugin} ${PROTOBUF_INCLUDE_PATH} ${ABS_FILE}
-      DEPENDS ${ABS_FILE} protobuf::protoc
+      COMMAND $<TARGET_FILE:protobuf::protoc>
+      ARGS ${ARGS_PROTOC_OPTIONS} ${lang_out_arg} ${_plugin} ${PROTOBUF_INCLUDE_PATH} ${ABS_FILE}
+      DEPENDS ${ABS_FILE} $<TARGET_FILE:protobuf::protoc>
       COMMENT ${COMMENT}
       VERBATIM)
   endforeach()

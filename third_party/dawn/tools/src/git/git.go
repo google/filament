@@ -34,12 +34,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
 // Hash is a 20 byte, git object hash.
@@ -71,12 +72,16 @@ var DefaultTimeout = 5 * time.Minute
 type Git struct {
 	// Path to the git executable
 	exe string
+	// OS is the wrapper for all os functions
+	os oswrapper.OSWrapper
 	// Debug flag to print all command to the `git` executable
 	LogAllActions bool
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // New returns a new Git instance
-func New(exe string) (*Git, error) {
+func New(exe string, osWrapper oswrapper.OSWrapper) (*Git, error) {
 	if exe == "" {
 		g, err := exec.LookPath("git")
 		if err != nil {
@@ -84,10 +89,10 @@ func New(exe string) (*Git, error) {
 		}
 		exe = g
 	}
-	if _, err := os.Stat(exe); err != nil {
+	if _, err := osWrapper.Stat(exe); err != nil {
 		return nil, err
 	}
-	return &Git{exe: exe}, nil
+	return &Git{exe: exe, os: osWrapper}, nil
 }
 
 // Credentials holds the user name and password used to perform git operations.
@@ -97,8 +102,8 @@ type Credentials struct {
 }
 
 // Empty return true if there's no username or password for authentication
-func (a Credentials) Empty() bool {
-	return a.Username == "" && a.Password == ""
+func (c Credentials) Empty() bool {
+	return c.Username == "" && c.Password == ""
 }
 
 // addToURL returns the url with the credentials appended
@@ -120,7 +125,7 @@ var ErrRepositoryDoesNotExist = errors.New("repository does not exist")
 // Open opens an existing git repo at path. If the repository does not exist at
 // path then ErrRepositoryDoesNotExist is returned.
 func (g Git) Open(path string) (*Repository, error) {
-	info, err := os.Stat(filepath.Join(path, ".git"))
+	info, err := g.os.Stat(filepath.Join(path, ".git"))
 	if err != nil || !info.IsDir() {
 		return nil, ErrRepositoryDoesNotExist
 	}
@@ -137,20 +142,22 @@ type CloneOptions struct {
 	Credentials Credentials
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Clone performs a clone of the repository at url to path.
-func (g Git) Clone(path, url string, opt *CloneOptions) (*Repository, error) {
-	if err := os.MkdirAll(path, 0777); err != nil {
+func (g Git) Clone(path, urlStr string, opt *CloneOptions) (*Repository, error) {
+	if err := g.os.MkdirAll(path, 0777); err != nil {
 		return nil, err
 	}
 	if opt == nil {
 		opt = &CloneOptions{}
 	}
-	url, err := opt.Credentials.addToURL(url)
+	urlStr, err := opt.Credentials.addToURL(urlStr)
 	if err != nil {
 		return nil, err
 	}
 	r := &Repository{g, path}
-	args := []string{"clone", url, "."}
+	args := []string{"clone", urlStr, "."}
 	if opt.Branch != "" {
 		args = append(args, "--branch", opt.Branch)
 	}
@@ -178,6 +185,8 @@ type FetchOptions struct {
 	Credentials Credentials
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Fetch performs a fetch of a reference from the remote, returning the Hash of
 // the fetched reference.
 func (r Repository) Fetch(ref string, opt *FetchOptions) (Hash, error) {
@@ -207,6 +216,8 @@ type PushOptions struct {
 	Credentials Credentials
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Push performs a push of the local reference to the remote reference.
 func (r Repository) Push(localRef, remoteRef string, opt *PushOptions) error {
 	if opt == nil {
@@ -215,15 +226,15 @@ func (r Repository) Push(localRef, remoteRef string, opt *PushOptions) error {
 	if opt.Remote == "" {
 		opt.Remote = "origin"
 	}
-	url, err := r.run(nil, opt.Timeout, "remote", "get-url", opt.Remote)
+	urlStr, err := r.run(nil, opt.Timeout, "remote", "get-url", opt.Remote)
 	if err != nil {
 		return err
 	}
-	url, err = opt.Credentials.addToURL(url)
+	urlStr, err = opt.Credentials.addToURL(urlStr)
 	if err != nil {
 		return err
 	}
-	if _, err := r.run(nil, opt.Timeout, "push", url, localRef+":"+remoteRef); err != nil {
+	if _, err := r.run(nil, opt.Timeout, "push", urlStr, localRef+":"+remoteRef); err != nil {
 		return err
 	}
 	return nil
@@ -237,6 +248,8 @@ type AddOptions struct {
 	Credentials Credentials
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Add stages the listed files
 func (r Repository) Add(path string, opt *AddOptions) error {
 	if opt == nil {
@@ -260,18 +273,13 @@ type CommitOptions struct {
 	Amend bool
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Commit commits the staged files with the given message, returning the hash of
 // commit
 func (r Repository) Commit(msg string, opt *CommitOptions) (Hash, error) {
 	if opt == nil {
 		opt = &CommitOptions{}
-	}
-
-	args := []string{"commit"}
-	if opt.Amend {
-		args = append(args, "--amend")
-	} else {
-		args = append(args, "-m", msg)
 	}
 
 	var env []string
@@ -283,7 +291,14 @@ func (r Repository) Commit(msg string, opt *CommitOptions) (Hash, error) {
 			fmt.Sprintf("GIT_COMMITTER_EMAIL=%v", opt.AuthorEmail),
 		}
 	}
-	if _, err := r.run(env, opt.Timeout, "commit", "-m", msg); err != nil {
+
+	args := []string{"commit"}
+	if opt.Amend {
+		args = append(args, "--amend")
+	} else {
+		args = append(args, "-m", msg)
+	}
+	if _, err := r.run(env, opt.Timeout, args...); err != nil {
 		return Hash{}, err
 	}
 	out, err := r.run(nil, 0, "rev-parse", "HEAD")
@@ -299,6 +314,8 @@ type CleanOptions struct {
 	Timeout time.Duration
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Clean deletes all the untracked files in the repo
 func (r Repository) Clean(opt *CleanOptions) error {
 	if opt == nil {
@@ -316,6 +333,8 @@ type CheckoutOptions struct {
 	Timeout time.Duration
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Checkout performs a checkout of a reference.
 func (r Repository) Checkout(ref string, opt *CheckoutOptions) error {
 	if opt == nil {
@@ -339,6 +358,8 @@ type LogOptions struct {
 
 const logPrettyFormatArg = "--pretty=format:ǁ%Hǀ%cIǀ%an <%ae>ǀ%sǀ%b"
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Log returns the list of commits between two references (inclusive).
 // The first returned commit is the most recent.
 func (r Repository) Log(opt *LogOptions) ([]CommitInfo, error) {
@@ -367,6 +388,8 @@ type LogBetweenOptions struct {
 	Timeout time.Duration
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // LogBetween returns the list of commits between two timestamps
 // The first returned commit is the most recent.
 func (r Repository) LogBetween(since, until time.Time, opt *LogBetweenOptions) ([]CommitInfo, error) {
@@ -400,6 +423,8 @@ type StatsOptions struct {
 	Timeout time.Duration
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // StatsOptions returns the statistics for a given change
 func (r Repository) Stats(commit CommitInfo, opt *StatsOptions) (CommitStats, error) {
 	if opt == nil {
@@ -455,6 +480,8 @@ type ConfigOptions struct {
 	Timeout time.Duration
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 // Config returns the git configuration values for the repo
 func (r Repository) Config(opt *ConfigOptions) (map[string]string, error) {
 	if opt == nil {
@@ -480,6 +507,8 @@ func (r Repository) run(env []string, timeout time.Duration, args ...string) (st
 	return r.Git.run(r.Path, env, timeout, args...)
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 func (g Git) run(dir string, env []string, timeout time.Duration, args ...string) (string, error) {
 	if timeout == 0 {
 		timeout = DefaultTimeout
@@ -492,7 +521,7 @@ func (g Git) run(dir string, env []string, timeout time.Duration, args ...string
 		// Godocs for exec.Cmd.Env:
 		// "If Env contains duplicate environment keys, only the last value in
 		// the slice for each duplicate key is used.
-		cmd.Env = append(os.Environ(), env...)
+		cmd.Env = append(g.os.Environ(), env...)
 	}
 	if g.LogAllActions {
 		fmt.Printf("%v> %v %v\n", dir, g.exe, strings.Join(args, " "))

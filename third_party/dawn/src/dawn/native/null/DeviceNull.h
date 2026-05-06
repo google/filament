@@ -43,6 +43,7 @@
 #include "dawn/native/QuerySet.h"
 #include "dawn/native/Queue.h"
 #include "dawn/native/RenderPipeline.h"
+#include "dawn/native/ResourceTable.h"
 #include "dawn/native/RingBufferAllocator.h"
 #include "dawn/native/Sampler.h"
 #include "dawn/native/ShaderModule.h"
@@ -65,6 +66,7 @@ using PipelineLayout = PipelineLayoutBase;
 class QuerySet;
 class Queue;
 class RenderPipeline;
+class ResourceTable;
 using Sampler = SamplerBase;
 class ShaderModule;
 class SwapChain;
@@ -83,6 +85,7 @@ struct NullBackendTraits {
     using QuerySetType = QuerySet;
     using QueueType = Queue;
     using RenderPipelineType = RenderPipeline;
+    using ResourceTableType = ResourceTable;
     using SamplerType = Sampler;
     using ShaderModuleType = ShaderModule;
     using SwapChainType = SwapChain;
@@ -125,7 +128,7 @@ class Device final : public DeviceBase {
                                        BufferBase* destination,
                                        uint64_t destinationOffset,
                                        uint64_t size) override;
-    MaybeError CopyFromStagingToTextureImpl(const BufferBase* source,
+    MaybeError CopyFromStagingToTextureImpl(BufferBase* source,
                                             const TexelCopyBufferLayout& src,
                                             const TextureCopy& dst,
                                             const Extent3D& copySizePixels) override;
@@ -144,9 +147,9 @@ class Device final : public DeviceBase {
     using DeviceBase::DeviceBase;
 
     ResultOrError<Ref<BindGroupBase>> CreateBindGroupImpl(
-        const BindGroupDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupDescriptor>& descriptor) override;
     ResultOrError<Ref<BindGroupLayoutInternalBase>> CreateBindGroupLayoutImpl(
-        const BindGroupLayoutDescriptor* descriptor) override;
+        const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor) override;
     ResultOrError<Ref<BufferBase>> CreateBufferImpl(
         const UnpackedPtr<BufferDescriptor>& descriptor) override;
     Ref<ComputePipelineBase> CreateUninitializedComputePipelineImpl(
@@ -157,11 +160,12 @@ class Device final : public DeviceBase {
         const QuerySetDescriptor* descriptor) override;
     Ref<RenderPipelineBase> CreateUninitializedRenderPipelineImpl(
         const UnpackedPtr<RenderPipelineDescriptor>& descriptor) override;
+    ResultOrError<Ref<ResourceTableBase>> CreateResourceTableImpl(
+        const ResourceTableDescriptor* descriptor) override;
     ResultOrError<Ref<SamplerBase>> CreateSamplerImpl(const SamplerDescriptor* descriptor) override;
     ResultOrError<Ref<ShaderModuleBase>> CreateShaderModuleImpl(
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
-        const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult) override;
+        const std::vector<tint::wgsl::Extension>& internalExtensions) override;
     ResultOrError<Ref<SwapChainBase>> CreateSwapChainImpl(
         Surface* surface,
         SwapChainBase* previousSwapChain,
@@ -172,7 +176,7 @@ class Device final : public DeviceBase {
         TextureBase* texture,
         const UnpackedPtr<TextureViewDescriptor>& descriptor) override;
 
-    void DestroyImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
 
     std::vector<std::unique_ptr<PendingOperation>> mPendingOperations;
 
@@ -220,7 +224,8 @@ class PhysicalDevice : public PhysicalDeviceBase {
         const TogglesState& deviceToggles,
         Ref<DeviceBase::DeviceLostEvent>&& lostEvent) override;
 
-    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info,
+                                   const TogglesState& adapterToggles) const override;
 };
 
 // Helper class so |BindGroup| can allocate memory for its binding data,
@@ -237,7 +242,7 @@ class BindGroupDataHolder {
 // the Null backend. This class, keeps the binding data in a separate allocation for simplicity.
 class BindGroup final : private BindGroupDataHolder, public BindGroupBase {
   public:
-    BindGroup(DeviceBase* device, const BindGroupDescriptor* descriptor);
+    BindGroup(DeviceBase* device, const UnpackedPtr<BindGroupDescriptor>& descriptor);
 
   private:
     ~BindGroup() override = default;
@@ -247,7 +252,7 @@ class BindGroup final : private BindGroupDataHolder, public BindGroupBase {
 
 class BindGroupLayout final : public BindGroupLayoutInternalBase {
   public:
-    BindGroupLayout(DeviceBase* device, const BindGroupLayoutDescriptor* descriptor);
+    BindGroupLayout(DeviceBase* device, const UnpackedPtr<BindGroupLayoutDescriptor>& descriptor);
 
   private:
     ~BindGroupLayout() override = default;
@@ -266,8 +271,9 @@ class Buffer final : public BufferBase {
 
   private:
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
-    void UnmapImpl() override;
-    void DestroyImpl() override;
+    MaybeError FinalizeMapImpl(BufferState newState) override;
+    void UnmapImpl(BufferState oldState, BufferState newState) override;
+    void DestroyImpl(DestroyReason reason) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
     void* GetMappedPointerImpl() override;
@@ -302,14 +308,15 @@ class Queue final : public QueueBase {
     MaybeError SubmitPendingCommandsImpl() override;
     ResultOrError<ExecutionSerial> WaitForQueueSerialImpl(ExecutionSerial waitSerial,
                                                           Nanoseconds timeout) override;
-    MaybeError WaitForIdleForDestruction() override;
+    MaybeError WaitForIdleForDestructionImpl() override;
 };
 
 class ComputePipeline final : public ComputePipelineBase {
   public:
     using ComputePipelineBase::ComputePipelineBase;
 
-    MaybeError InitializeImpl() override;
+  private:
+    ResultOrError<Extent3D> InitializeImpl() override;
 };
 
 class RenderPipeline final : public RenderPipelineBase {
@@ -319,11 +326,16 @@ class RenderPipeline final : public RenderPipelineBase {
     MaybeError InitializeImpl() override;
 };
 
+class ResourceTable final : public ResourceTableBase {
+  public:
+    ResourceTable(Device* device, const ResourceTableDescriptor* descriptor);
+
+    MaybeError Initialize();
+};
+
 class ShaderModule final : public ShaderModuleBase {
   public:
     using ShaderModuleBase::ShaderModuleBase;
-
-    MaybeError Initialize(ShaderModuleParseResult* parseResult);
 };
 
 class SwapChain final : public SwapChainBase {
@@ -348,6 +360,10 @@ class SwapChain final : public SwapChainBase {
 class Texture : public TextureBase {
   public:
     Texture(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor);
+
+  private:
+    MaybeError PinImpl(wgpu::TextureUsage usage) override;
+    void UnpinImpl() override;
 };
 
 }  // namespace dawn::native::null

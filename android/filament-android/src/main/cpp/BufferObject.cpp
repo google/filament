@@ -16,7 +16,6 @@
 
 #include <jni.h>
 
-#include <functional>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,6 +25,7 @@
 
 #include "common/CallbackUtils.h"
 #include "common/NioUtils.h"
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace backend;
@@ -63,7 +63,9 @@ Java_com_google_android_filament_BufferObject_nBuilderBuild(JNIEnv *env, jclass 
         jlong nativeBuilder, jlong nativeEngine) {
     BufferObject::Builder* builder = (BufferObject::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -81,20 +83,22 @@ Java_com_google_android_filament_BufferObject_nSetBuffer(JNIEnv *env, jclass typ
     BufferObject *bufferObject = (BufferObject *) nativeBufferObject;
     Engine *engine = (Engine *) nativeEngine;
 
-    AutoBuffer nioBuffer(env, buffer, count);
-    void* data = nioBuffer.getData();
-    size_t sizeInBytes = nioBuffer.getSize();
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
+    return filament::android::wrapJni<int>(env, [=]() {
+        AutoBuffer nioBuffer(env, buffer, count);
+        void* data = nioBuffer.getData();
+        size_t sizeInBytes = nioBuffer.getSize();
+        if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+            // BufferOverflowException
+            return -1;
+        }
 
-    auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+        auto* callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    BufferDescriptor desc(data, sizeInBytes,
-            callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
+        BufferDescriptor desc(data, sizeInBytes,
+                callback->getHandler(), &JniBufferCallback::postToJavaAndDestroy, callback);
 
-    bufferObject->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
+        bufferObject->setBuffer(*engine, std::move(desc), (uint32_t) destOffsetInBytes);
 
-    return 0;
+        return 0;
+    });
 }

@@ -38,7 +38,6 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/ir/access.h"
 #include "src/tint/lang/core/ir/binary.h"
-#include "src/tint/lang/core/ir/bitcast.h"
 #include "src/tint/lang/core/ir/break_if.h"
 #include "src/tint/lang/core/ir/constant.h"
 #include "src/tint/lang/core/ir/construct.h"
@@ -126,10 +125,7 @@ class Printer : public tint::TextGenerator {
 
     /// @returns the generated MSL shader
     tint::Result<Output> Generate() {
-        auto valid = core::ir::ValidateAndDumpIfNeeded(ir_, "msl.Printer", kPrinterCapabilities);
-        if (valid != Success) {
-            return std::move(valid.Failure());
-        }
+        core::ir::AssertValid(ir_, kPrinterCapabilities, "before msl.Printer");
 
         {
             TINT_SCOPED_ASSIGNMENT(current_buffer_, &preamble_buffer_);
@@ -332,11 +328,19 @@ class Printer : public tint::TextGenerator {
 
             switch (func->Stage()) {
                 case core::ir::Function::PipelineStage::kCompute: {
-                    out << "kernel ";
-
                     auto const_wg_size = func->WorkgroupSizeAsConst();
                     TINT_IR_ASSERT(ir_, const_wg_size);
                     auto wg_size = *const_wg_size;
+
+                    // Tell the MSL compiler how large the threadgroup is going to be.
+                    // Without this, the MSL compiler will decide on a maximum threadgroup size
+                    // based on its own heuristics. This can result in a pipeline that cannot
+                    // support the workgroup size that was specified in the WGSL shader.
+                    // See crbug.com/443794633
+                    auto total_threads = wg_size[0] * wg_size[1] * wg_size[2];
+                    out << "[[max_total_threads_per_threadgroup(" << total_threads << ")]]\n";
+
+                    out << "kernel ";
 
                     // Store the workgroup information away to return from the generator.
                     result_.workgroup_info.x = wg_size[0];
@@ -422,7 +426,7 @@ class Printer : public tint::TextGenerator {
                     func->Stage() == core::ir::Function::PipelineStage::kCompute) {
                     auto* ty = ptr->StoreType();
 
-                    auto& allocations = result_.workgroup_info.allocations;
+                    auto& allocations = result_.workgroup_allocations;
                     out << " [[threadgroup(" << allocations.size() << ")]]";
                     allocations.push_back(ty->Size());
 
@@ -442,10 +446,10 @@ class Printer : public tint::TextGenerator {
                     // case.
                     for (auto& mem : ty->As<core::type::Struct>()->Members()) {
                         auto mem_ty = mem->Type();
-                        uint32_t align = mem_ty->Align();
-                        uint32_t size = mem_ty->Size();
+                        uint64_t align = mem_ty->Align();
+                        uint64_t size = mem_ty->Size();
                         result_.workgroup_info.storage_size +=
-                            tint::RoundUp(16u, tint::RoundUp(align, size));
+                            tint::RoundUp(static_cast<uint64_t>(16u), tint::RoundUp(align, size));
                     }
                 }
             }
@@ -473,7 +477,7 @@ class Printer : public tint::TextGenerator {
             Switch(
                 inst,                                                                    //
                 [&](const core::ir::BreakIf* i) { EmitBreakIf(i); },                     //
-                [&](const core::ir::Continue*) { EmitContinue(); },                      //
+                [&](const core::ir::Continue* c) { EmitContinue(c); },                   //
                 [&](const core::ir::Discard*) { EmitDiscard(); },                        //
                 [&](const core::ir::ExitIf*) { /* do nothing handled by transform */ },  //
                 [&](const core::ir::ExitLoop*) { EmitExitLoop(); },                      //
@@ -493,7 +497,6 @@ class Printer : public tint::TextGenerator {
 
                 [&](const core::ir::LoadVectorElement*) { /* inlined */ },  //
                 [&](const core::ir::Swizzle*) { /* inlined */ },            //
-                [&](const core::ir::Bitcast*) { /* inlined */ },            //
                 [&](const core::ir::Binary*) { /* inlined */ },             //
                 [&](const core::ir::CoreUnary*) { /* inlined */ },          //
                 [&](const core::ir::Load*) { /* inlined */ },               //
@@ -517,7 +520,6 @@ class Printer : public tint::TextGenerator {
                     [&](const core::ir::Load* l) { EmitLoad(out, l); },                  //
                     [&](const core::ir::Construct* c) { EmitConstruct(out, c); },        //
                     [&](const core::ir::Var* var) { out << NameOf(var->Result()); },     //
-                    [&](const core::ir::Bitcast* b) { EmitBitcast(out, b); },            //
                     [&](const core::ir::Access* a) { EmitAccess(out, a); },              //
                     [&](const msl::ir::BuiltinCall* c) { EmitMslBuiltinCall(out, c); },  //
                     [&](const msl::ir::MemberBuiltinCall* c) {
@@ -682,11 +684,13 @@ class Printer : public tint::TextGenerator {
         out << ") { break; }";
     }
 
-    void EmitContinue() {
+    void EmitContinue(const core::ir::Continue* c) {
         if (emit_continuing_) {
             emit_continuing_();
         }
-        Line() << "continue;";
+        if (c->Block() != c->Loop()->Body()) {
+            Line() << "continue;";
+        }
     }
 
     void EmitLoop(const core::ir::Loop* l) {
@@ -841,15 +845,15 @@ class Printer : public tint::TextGenerator {
     void EmitReturn(const core::ir::Return* r) {
         // If this return has no arguments and the current block is for the function which is
         // being returned, skip the return.
-        if (current_block_ == current_function_->Block() && r->Args().IsEmpty()) {
+        if (current_block_ == current_function_->Block() && r->Args().empty()) {
             return;
         }
 
         auto out = Line();
         out << "return";
-        if (!r->Args().IsEmpty()) {
+        if (!r->Args().empty()) {
             out << " ";
-            EmitValue(out, r->Args().Front());
+            EmitValue(out, r->Args().front());
         }
         out << ";";
     }
@@ -886,11 +890,11 @@ class Printer : public tint::TextGenerator {
     }
 
     /// Emit a bitcast instruction
-    void EmitBitcast(StringStream& out, const core::ir::Bitcast* b) {
+    void EmitBitcast(StringStream& out, const core::ir::CoreBuiltinCall* b) {
         out << "as_type<";
         EmitType(out, b->Result()->Type());
         out << ">(";
-        EmitValue(out, b->Val());
+        EmitValue(out, b->Args()[0]);
         out << ")";
     }
 
@@ -962,6 +966,13 @@ class Printer : public tint::TextGenerator {
             return;
         }
         if (c->Func() == msl::BuiltinFn::kConvert) {
+            // Subgroup matrix types don't convert, they're the same type as there is no concept of
+            // left/right/result in MSL. So, just no-op the actual conversion.
+            if (c->Result()->Type()->Is<core::type::SubgroupMatrix>()) {
+                EmitValue(out, c->Operand(0));
+                return;
+            }
+
             EmitType(out, c->Result()->Type());
             out << "(";
             EmitValue(out, c->Operand(0));
@@ -969,12 +980,47 @@ class Printer : public tint::TextGenerator {
             return;
         }
         if (c->Func() == msl::BuiltinFn::kPointerOffset) {
+            const auto* result_type = c->Result()->Type()->As<core::type::Pointer>();
             out << "reinterpret_cast<";
-            EmitType(out, c->Result()->Type());
-            out << ">(reinterpret_cast<const constant char*>(";
+            EmitType(out, result_type);
+            out << ">(reinterpret_cast<";
+
+            // Here we are constructing a temporary pointer type just to do pointer arithmetic in.
+            // It needs to be compatible with the pointer we're doing the arithmetic on.
+            if (result_type->Access() == core::Access::kRead) {
+                out << "const ";
+            }
+            switch (result_type->AddressSpace()) {
+                case core::AddressSpace::kUniform:
+                    out << "constant ";
+                    break;
+                case core::AddressSpace::kStorage:
+                    out << "device ";
+                    break;
+                default:
+                    TINT_IR_ICE(ir_) << "invalid address space for pointer_offset";
+            }
+
+            out << "char*>(";
             EmitValue(out, c->Operand(0));
             out << ") + ";
             EmitValue(out, c->Operand(1));
+            out << ")";
+            return;
+        }
+        if (c->Func() == msl::BuiltinFn::kMakeDiagonalSimdgroupMatrix) {
+            EmitType(out, c->Result()->Type());
+            out << "(";
+            EmitValue(out, c->Args()[0]);
+            out << ")";
+            return;
+        }
+        if (c->Func() == msl::BuiltinFn::kMakeFilledSimdgroupMatrix) {
+            auto* sm = c->Result()->Type()->As<core::type::SubgroupMatrix>();
+            out << "make_filled_simdgroup_matrix<";
+            EmitType(out, sm->Type());
+            out << ", " << sm->Columns() << ", " << sm->Rows() << ">(";
+            EmitValue(out, c->Args()[0]);
             out << ")";
             return;
         }
@@ -1025,6 +1071,11 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitCoreBuiltinCall(StringStream& out, const core::ir::CoreBuiltinCall* c) {
+        if (c->Func() == core::BuiltinFn::kBitcast) {
+            EmitBitcast(out, c);
+            return;
+        }
+
         EmitCoreBuiltinName(out, c->Func());
         out << "(";
 
@@ -1403,6 +1454,11 @@ class Printer : public tint::TextGenerator {
             out << "atomic_uint";
             return;
         }
+
+        if (atomic->Type()->Is<core::type::U64>()) {
+            out << "atomic_ulong";
+            return;
+        }
         TINT_IR_ICE(ir_) << "unhandled atomic type " << atomic->Type()->FriendlyName();
     }
 
@@ -1610,7 +1666,7 @@ class Printer : public tint::TextGenerator {
             auto& attributes = mem->Attributes();
 
             if (auto builtin = attributes.builtin) {
-                auto name = BuiltinToAttribute(builtin.value());
+                auto name = BuiltinToAttribute(builtin.value(), attributes.depth_mode);
                 if (name.empty()) {
                     TINT_IR_ICE(ir_) << "unknown builtin";
                 }
@@ -1855,7 +1911,7 @@ class Printer : public tint::TextGenerator {
     std::string StructName(const core::type::Struct* s) {
         return names_.GetOrAdd(s, [&] {
             auto name = s->Name().Name();
-            if (HasPrefix(name, "__")) {
+            if (name.starts_with("__")) {
                 name = UniqueIdentifier(name.substr(2));
             }
             if (ShouldRename(name)) {

@@ -25,6 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/wgsl/ls/file.h"
+
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -32,7 +34,6 @@
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/member_accessor_expression.h"
-#include "src/tint/lang/wgsl/ls/file.h"
 #include "src/tint/lang/wgsl/ls/utils.h"
 #include "src/tint/lang/wgsl/sem/function.h"
 #include "src/tint/lang/wgsl/sem/function_expression.h"
@@ -209,7 +210,7 @@ Source::Location File::Conv(langsvr::lsp::Position pos) const {
                 break;
             }
             loc.column += n;
-            i += utf16::Encode(code_point, nullptr);
+            i += utf16::Encode(code_point, {});
         }
     }
 
@@ -230,7 +231,7 @@ langsvr::lsp::Position File::Conv(Source::Location loc) const {
             if (n == 0) {
                 break;
             }
-            pos.character += utf16::Encode(code_point, nullptr);
+            pos.character += utf16::Encode(code_point, {});
             i += n;
         }
     }

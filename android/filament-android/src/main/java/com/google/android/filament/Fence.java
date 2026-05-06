@@ -38,7 +38,17 @@ public class Fence {
     }
 
     /**
+     * Client-side wait on the Fence.
+     *
      * Blocks the current thread until the Fence signals.
+     *
+     * @param mode      Whether the command stream is flushed before waiting or not.
+     * @param timeoutNanoSeconds   Wait time out in nanoseconds. Using a timeout of 0 is a way to query the state of the fence.
+     *                  A timeout value of WAIT_FOR_EVER is used to disable the timeout.
+     * @return          FenceStatus::CONDITION_SATISFIED on success,
+     *                  FenceStatus::TIMEOUT_EXPIRED if the time out expired or
+     *                  FenceStatus::ERROR in other cases.
+     * @throws Error if the backend thread encountered an unrecoverable error.
      */
     public FenceStatus wait(@NonNull Mode mode, long timeoutNanoSeconds) {
         int nativeResult = nWait(getNativeObject(), mode.ordinal(), timeoutNanoSeconds);
@@ -55,6 +65,15 @@ public class Fence {
         }
     }
 
+    /**
+     * Client-side wait on a Fence and destroy the Fence.
+     *
+     * @param fence Fence object to wait on.
+     * @param mode  Whether the command stream is flushed before waiting or not.
+     * @return  FenceStatus::CONDITION_SATISFIED on success,
+     *          FenceStatus::ERROR otherwise.
+     * @throws Error if the backend thread encountered an unrecoverable error.
+     */
     public static FenceStatus waitAndDestroy(@NonNull Fence fence, @NonNull Mode mode) {
         int nativeResult = nWaitAndDestroy(fence.getNativeObject(), mode.ordinal());
         switch (nativeResult) {

@@ -76,8 +76,10 @@ private:
         uint8_t bindGroupLayoutCount{ 0 };                                               // 1  :32
         uint8_t padding[7]{ 0 };                                                         // 7  :33
     };
+#if !defined(__EMSCRIPTEN__)
     static_assert(sizeof(PipelineLayoutKey) == 40,
             "PipelineLayoutKey must not have implicit padding.");
+#endif
     static_assert(std::is_trivially_copyable<PipelineLayoutKey>::value,
             "PipelineLayoutKey must be a trivially copyable POD for fast hashing.");
 

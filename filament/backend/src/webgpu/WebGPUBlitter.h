@@ -19,6 +19,10 @@
 
 #include <backend/DriverEnums.h>
 
+#if defined(__EMSCRIPTEN__)
+#include <backend/platforms/WebGPUWasmPolyfill.h>
+#endif
+
 #include <tsl/robin_map.h>
 #include <webgpu/webgpu_cpp.h>
 

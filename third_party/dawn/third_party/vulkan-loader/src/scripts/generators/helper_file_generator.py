@@ -137,7 +137,7 @@ class HelperFileGenerator(BaseGenerator):
             out.append(f'    kVulkanObjectType{name} = {number},\n')
         out.append(f'    kVulkanObjectTypeMax = {enum_num},\n')
 
-        out.append('    // Aliases for backwards compatibilty of "promoted" types\n')
+        out.append('    // Aliases for backwards compatibility of "promoted" types\n')
         for name, aliases in object_type_aliases.items():
             for alias in aliases:
                 out.append(f'    kVulkanObjectType{alias[2:]} = kVulkanObjectType{name[2:]},\n')

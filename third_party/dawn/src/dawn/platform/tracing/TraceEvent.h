@@ -170,6 +170,7 @@
 
 #include "dawn/platform/tracing/EventTracer.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "partition_alloc/pointers/raw_ptr_exclusion.h"
 
 // Records a pair of begin and end events called "name" for the current
 // scope, with 0, 1 or 2 associated arguments. If the category is not
@@ -822,8 +823,10 @@ union TraceValueUnion {
     uint64_t m_uint;
     int64_t m_int;
     double m_double;
-    const void* m_pointer;
-    const char* m_string;
+    // RAW_PTR_EXCLUSION: #union
+    RAW_PTR_EXCLUSION const void* m_pointer;
+    // RAW_PTR_EXCLUSION: #union
+    RAW_PTR_EXCLUSION const char* m_string;
 };
 
 // Simple container for const char* that should be copied instead of retained.

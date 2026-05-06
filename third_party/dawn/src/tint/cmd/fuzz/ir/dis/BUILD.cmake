@@ -57,7 +57,7 @@ tint_target_add_dependencies(tint_cmd_fuzz_ir_dis_cmd cmd
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_ir_to_program
+  tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_command
   tint_utils_containers

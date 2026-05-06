@@ -27,6 +27,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
+
 #include "src/tint/lang/core/ir/construct.h"
 #include "src/tint/lang/core/ir/control_instruction.h"
 #include "src/tint/lang/core/ir/convert.h"
@@ -276,7 +277,7 @@ struct State {
         // Add the declaration to the current scope, and make sure that it was either successfully
         // added or has already been added.
         auto add = scopes.Back().Add(name.NameView(), thing);
-        TINT_ASSERT(add || add.value == thing);
+        TINT_IR_ASSERT(ir, add || add.value == thing);
     }
 
     /// Rename changes the name of @p thing with the old name of @p old_name
@@ -293,17 +294,14 @@ struct State {
 
     /// @return true if @p s is a builtin (non-user declared) structure.
     bool IsBuiltinStruct(const core::type::Struct* s) {
-        return tint::HasPrefix(s->Name().NameView(), "__");
+        return s->Name().NameView().starts_with("__");
     }
 };
 
 }  // namespace
 
 Result<SuccessType> RenameConflicts(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.RenameConflicts", kRenameConflictsCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kRenameConflictsCapabilities, "before core.RenameConflicts");
 
     State{ir}.Process();
 

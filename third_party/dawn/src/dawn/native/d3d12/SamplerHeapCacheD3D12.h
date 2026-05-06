@@ -72,7 +72,7 @@ class SamplerHeapCacheEntry : public RefCounted {
 
     std::vector<Sampler*>&& AcquireSamplers();
 
-    bool Populate(MutexProtected<ShaderVisibleDescriptorAllocator>& allocator);
+    bool Populate(ShaderVisibleDescriptorAllocator* allocator);
 
     // Functors necessary for the unordered_map<SamplerHeapCacheEntry*>-based cache.
     struct HashFunc {

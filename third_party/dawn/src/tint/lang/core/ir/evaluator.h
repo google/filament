@@ -61,7 +61,6 @@ class Evaluator {
     diag::Diagnostic& AddError(Source src);
     Source SourceOf(core::ir::Instruction* val);
 
-    EvalResult EvalBitcast(core::ir::Bitcast* bc);
     EvalResult EvalValue(core::ir::Value* val);
     EvalResult EvalAccess(core::ir::Access* a);
     EvalResult EvalConvert(core::ir::Convert* c);

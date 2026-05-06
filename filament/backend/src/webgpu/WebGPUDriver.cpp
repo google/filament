@@ -64,6 +64,22 @@
 
 using namespace std::chrono_literals;
 
+
+// https://issues.chromium.org/issues/507581790
+// Manual polyfill pending upstream fix.
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/em_js.h>
+
+EM_JS(void, wgpuRenderPassEncoderSetImmediates, (WGPURenderPassEncoder passEncoder,
+                uint32_t offset, void const * data, size_t size), {
+    const encoder = WebGPU.Internals.jsObjects[passEncoder];
+    if (encoder && encoder.setImmediates) {
+        const buffer = HEAPU8.slice(data, data + size);
+        encoder.setImmediates(offset, buffer);
+    }
+})
+#endif
+
 namespace filament::backend {
 
 namespace {
@@ -147,8 +163,10 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+#if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
+#endif
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -198,7 +216,9 @@ void WebGPUDriver::finish(int /* dummy */) {
     // processed. Note that blocking with mReadPixelMapsCounter.waitForAllToFinish will only
     // deadlock since we could not advance the counter.
     while (!mReadPixelMapsCounter.isIdle()) {
+#if !defined(__EMSCRIPTEN__)
         mAdapter.GetInstance().ProcessEvents();
+#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -782,7 +802,7 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    
+
     using namespace std::chrono;
     auto now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
@@ -796,15 +816,19 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     }
 
     std::shared_ptr<WebGPUSubmissionState> state;
-    bool const success = waitForFence([&] {
+    FenceStatus status = waitForFence([&] {
         state = fence->getState();
         return bool(state);
     }, until);
-    
-    if (!success) {
+
+    if (status == FenceStatus::ERROR) {
+        return FenceStatus::ERROR;
+    }
+
+    if (status == FenceStatus::TIMEOUT_EXPIRED) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
-    
+
     auto duration_ns = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
                     .count());
@@ -833,7 +857,11 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
+#if defined(__EMSCRIPTEN__)
+    return false;
+#else
     return mDevice.HasFeature(wgpu::FeatureName::TextureComponentSwizzle);
+#endif
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
@@ -855,7 +883,7 @@ bool WebGPUDriver::isTextureFormatFilterable(TextureFormat format) {
     if (isFp32ColorFormat(format)) {
         return mDevice.HasFeature(wgpu::FeatureName::Float32Filterable);
     }
-    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) ||
         isDepthFormat(format) || isStencilFormat(format)) {
         return false;
     }
@@ -1320,7 +1348,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
                     customColorViews[customColorViewCount] =
-                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer, renderTarget->getLayerCount());
+                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer,
+                                    renderTarget->getLayerCount());
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -1468,7 +1497,23 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
-    //todo
+    assert_invariant(mRenderPassEncoder && "Should be called within a renderpass");
+    uint32_t data = 0;
+    if (std::holds_alternative<int32_t>(value)) {
+        int32_t v = std::get<int32_t>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<float>(value)) {
+        float v = std::get<float>(value);
+        std::memcpy(&data, &v, sizeof(data));
+    } else if (std::holds_alternative<bool>(value)) {
+        data = std::get<bool>(value) ? 1 : 0;
+    }
+#if defined(__EMSCRIPTEN__)
+    wgpuRenderPassEncoderSetImmediates(mRenderPassEncoder.Get(), index * sizeof(uint32_t), &data,
+            sizeof(uint32_t));
+#else
+    mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
+#endif
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {
@@ -2014,15 +2059,15 @@ void WebGPUDriver::scissor(Viewport scissor) {
     assert_invariant(mRenderPassEncoder);
     assert_invariant(mCurrentRenderTarget);
 
-    // The WebGPU scissor starts from the top-left corner
-    assert_invariant(scissor.left >= 0 &&
-                     mCurrentRenderTarget->height >= scissor.bottom + scissor.height /*top >= 0*/ &&
-                     scissor.width <= mCurrentRenderTarget->width &&
-                     scissor.height <= mCurrentRenderTarget->height);
+    uint32_t rtHeight = mCurrentRenderTarget->height;
+    uint32_t rtWidth = mCurrentRenderTarget->width;
+    uint32_t left = std::max(0, scissor.left);
+    uint32_t bottom = std::max(0, scissor.bottom);
+    uint32_t top = rtHeight > (bottom + scissor.height) ? rtHeight - bottom - scissor.height : 0;
+    uint32_t width = std::min((uint32_t)scissor.width, rtWidth - left);
+    uint32_t height = std::min((uint32_t)scissor.height, rtHeight - top);
 
-    mRenderPassEncoder.SetScissorRect(scissor.left,
-            mCurrentRenderTarget->height - scissor.bottom - scissor.height /*top*/, scissor.width,
-            scissor.height);
+    mRenderPassEncoder.SetScissorRect(left, top, width, height);
 }
 
 void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

@@ -28,9 +28,7 @@
 #ifndef SRC_TINT_LANG_WGSL_SEM_ACCESSOR_EXPRESSION_H_
 #define SRC_TINT_LANG_WGSL_SEM_ACCESSOR_EXPRESSION_H_
 
-#include <vector>
-
-#include "src/tint/lang/wgsl/ast/index_accessor_expression.h"
+#include "src/tint/lang/wgsl/ast/accessor_expression.h"
 #include "src/tint/lang/wgsl/sem/value_expression.h"
 
 namespace tint::sem {
@@ -41,11 +39,6 @@ class AccessorExpression : public Castable<AccessorExpression, ValueExpression> 
   public:
     /// Destructor
     ~AccessorExpression() override;
-
-    /// @returns the AST node
-    const ast::AccessorExpression* Declaration() const {
-        return static_cast<const ast::AccessorExpression*>(declaration_);
-    }
 
     /// @returns the object expression that is being indexed
     ValueExpression const* Object() const { return object_; }
@@ -58,7 +51,6 @@ class AccessorExpression : public Castable<AccessorExpression, ValueExpression> 
     /// @param object the object expression that is being indexed
     /// @param statement the statement that owns this expression
     /// @param constant the constant value of the expression. May be null
-    /// @param has_side_effects whether this expression may have side effects
     /// @param root_ident the (optional) root identifier for this expression
     AccessorExpression(const ast::AccessorExpression* declaration,
                        const core::type::Type* type,
@@ -66,7 +58,6 @@ class AccessorExpression : public Castable<AccessorExpression, ValueExpression> 
                        const ValueExpression* object,
                        const Statement* statement,
                        const core::constant::Value* constant,
-                       bool has_side_effects,
                        const Variable* root_ident = nullptr);
 
   private:

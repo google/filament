@@ -5,7 +5,7 @@ This directory contains the web-based samples, tutorials, and the JavaScript wra
 ## Structure
 
 - `examples/`
-  Contains the source for the WebGL tutorials, HTML samples, materials, and assets.
+  Contains the source for the Web tutorials, HTML samples, materials, and assets.
   These examples use `filament.js` and `filament.wasm` to demonstrate various features of the engine.
 
 - `filament-js/`
@@ -13,7 +13,7 @@ This directory contains the web-based samples, tutorials, and the JavaScript wra
 
 ## Building the Web Examples
 
-To build the WebGL targets and compile all required materials and assets, you will need the Emscripten SDK installed and activated.
+To build the Web targets and compile all required materials and assets, you will need the Emscripten SDK installed and activated.
 
 1. **Activate Emscripten SDK:**
    Make sure you have `EMSDK` in your environment.
@@ -24,15 +24,15 @@ To build the WebGL targets and compile all required materials and assets, you wi
    ```
 
 2. **Run the Build Script:**
-   From the root directory of the repository, execute the build script targeting WebGL:
+   From the root directory of the repository, execute the build script targeting Web:
    ```bash
-   ./build.sh -p webgl release
+   ./build.sh -p wasm release
    ```
 
    This will:
    - Compile the C++ engine to `filament.wasm` and `filament.js`.
    - Build all materials (`.mat` to `.filamat`) and process textures required by the examples.
-   - Output everything into `out/cmake-webgl-release/examples/`.
+   - Output everything into `out/cmake-wasm-release/examples/`.
 
 ## Running the Examples
 
@@ -71,7 +71,7 @@ If you want your web sample or tutorial to appear on the official Filament docum
    Add your generated `.html` or `.md` file to the mapping in `docs_src/build/duplicates.json`. This
    tells the documentation build script to copy your sample into the `mdbook` structure.
    ```json
-   "out/cmake-webgl-release/web/examples/examples/your_sample/your_sample.html": {
+   "out/cmake-wasm-release/web/examples/examples/your_sample/your_sample.html": {
        "dest": "samples/web/your_sample.md"
    }
    ```

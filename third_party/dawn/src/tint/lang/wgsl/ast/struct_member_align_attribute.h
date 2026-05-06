@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_WGSL_AST_STRUCT_MEMBER_ALIGN_ATTRIBUTE_H_
 
 #include <stddef.h>
+
 #include <string>
 
 #include "src/tint/lang/wgsl/ast/attribute.h"
@@ -40,24 +41,14 @@ namespace tint::ast {
 class StructMemberAlignAttribute final : public Castable<StructMemberAlignAttribute, Attribute> {
   public:
     /// constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param align the align expression
-    StructMemberAlignAttribute(GenerationID pid,
-                               NodeID nid,
-                               const Source& src,
-                               const Expression* align);
+    StructMemberAlignAttribute(NodeID nid, const Source& src, const Expression* align);
     ~StructMemberAlignAttribute() override;
 
     /// @returns the WGSL name for the attribute
     std::string Name() const override;
-
-    /// Clones this node and all transitive child nodes using the `CloneContext`
-    /// `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const StructMemberAlignAttribute* Clone(CloneContext& ctx) const override;
 
     /// The align expression
     const Expression* const expr;

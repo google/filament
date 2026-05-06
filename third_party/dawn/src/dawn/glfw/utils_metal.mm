@@ -29,12 +29,12 @@
 #error "utils_metal.mm requires the Metal backend to be enabled."
 #endif  // !defined(DAWN_ENABLE_BACKEND_METAL)
 
-#include "webgpu/webgpu_glfw.h"
-
 #import <QuartzCore/CAMetalLayer.h>
-#include "GLFW/glfw3.h"
 
 #include <cstdlib>
+
+#include "GLFW/glfw3.h"
+#include "webgpu/webgpu_glfw.h"
 
 #define GLFW_EXPOSE_NATIVE_COCOA
 #include "GLFW/glfw3native.h"

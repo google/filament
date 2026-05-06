@@ -48,7 +48,12 @@ struct BackendTestConfig {
 };
 
 struct TestAdapterProperties {
-    TestAdapterProperties(const wgpu::AdapterInfo& info, bool selected, bool compatibilityMode);
+    // The innerBackendType is only used for WebGPU backend.
+    TestAdapterProperties(const wgpu::AdapterInfo& info,
+                          bool selected,
+                          bool compatibilityMode,
+                          wgpu::BackendType innerBackendType = wgpu::BackendType::Undefined);
+
     uint32_t vendorID;
     std::string vendorName;
     std::string architecture;
@@ -57,6 +62,9 @@ struct TestAdapterProperties {
     std::string driverDescription;
     wgpu::AdapterType adapterType;
     wgpu::BackendType backendType;
+    // The inner backend type for WebGPU backend. when backendType is not wgpu::BackendType::WebGPU,
+    // innerBackendType is wgpu::BackendType::Undefined.
+    wgpu::BackendType innerBackendType;
     bool compatibilityMode;
     bool selected;
 

@@ -64,13 +64,6 @@ std::string GetEnvVar(const char* varName) {
 #endif
 }
 
-void SetDllDir(const char* dir) {
-    (void)dir;
-#if defined(_WIN32)
-    ::SetDllDirectory(dir);
-#endif
-}
-
 struct BackendInfo {
     const char* const name;
     const char* const alias;  // may be nullptr
@@ -114,11 +107,6 @@ namespace wgpu::binding {
 // wgpu::bindings::GPU
 ////////////////////////////////////////////////////////////////////////////////
 GPU::GPU(Flags flags) : flags_(std::move(flags)) {
-    // Setting the DllDir changes where we load adapter DLLs from (e.g. d3dcompiler_47.dll)
-    if (auto dir = flags_.Get("dlldir")) {
-        SetDllDir(dir->c_str());
-    }
-
     // Set up the chained descriptor for the various instance extensions.
     dawn::native::DawnInstanceDescriptor dawnDesc;
     if (auto validate = flags_.Get("validate"); validate == "1" || validate == "true") {

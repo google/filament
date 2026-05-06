@@ -32,6 +32,8 @@ script_executable = "python3"
 
 default_args = {
   clang_use_chrome_plugins = false
+  clang_use_unsafe_buffers_plugin = true
+  clang_unsafe_buffers_paths = "//unsafe_buffers_paths.txt"
 
   angle_enable_abseil = false
   angle_standalone = false
@@ -56,6 +58,12 @@ default_args = {
 
   # Chromium defaults to minimum 15 at least.
   mac_sdk_min = "12"
+
+  # Dawn needs to stay in C++20 for longer than Chromium due to some partners.
+  use_cxx23 = false
+
+  # Use Siso instead of Ninja.
+  use_siso = true
 }
 
 # Export compile_commands.json to build dir for all generated targets.

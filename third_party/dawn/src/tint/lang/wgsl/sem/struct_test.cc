@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "src/tint/lang/wgsl/sem/struct.h"
+
 #include "src/tint/lang/core/type/texture.h"
 #include "src/tint/lang/wgsl/sem/helper_test.h"
 
@@ -39,21 +40,18 @@ TEST_F(SemStructTest, Creation) {
     auto name = Sym("S");
     auto* impl = create<ast::Struct>(Ident(name), tint::Empty, tint::Empty);
     auto* ptr = impl;
-    auto* s = create<sem::Struct>(impl, impl->name->symbol, tint::Empty, 4u /* align */,
-                                  8u /* size */, 16u /* size_no_padding */);
+    auto* s = create<sem::Struct>(impl, impl->name->symbol, tint::Empty, 8u /* size */);
     EXPECT_EQ(s->Declaration(), ptr);
-    EXPECT_EQ(s->Align(), 4u);
+    EXPECT_EQ(s->Align(), 0u);
     EXPECT_EQ(s->Size(), 8u);
-    EXPECT_EQ(s->SizeNoPadding(), 16u);
+    EXPECT_EQ(s->SizeNoPadding(), 0u);
 }
 
 TEST_F(SemStructTest, Equals) {
     auto* a_impl = create<ast::Struct>(Ident("a"), tint::Empty, tint::Empty);
-    auto* a = create<sem::Struct>(a_impl, a_impl->name->symbol, tint::Empty, 4u /* align */,
-                                  4u /* size */, 4u /* size_no_padding */);
+    auto* a = create<sem::Struct>(a_impl, a_impl->name->symbol, tint::Empty, 4u /* size */);
     auto* b_impl = create<ast::Struct>(Ident("b"), tint::Empty, tint::Empty);
-    auto* b = create<sem::Struct>(b_impl, b_impl->name->symbol, tint::Empty, 4u /* align */,
-                                  4u /* size */, 4u /* size_no_padding */);
+    auto* b = create<sem::Struct>(b_impl, b_impl->name->symbol, tint::Empty, 8u /* size */);
 
     EXPECT_TRUE(a->Equals(*a));
     EXPECT_FALSE(a->Equals(*b));
@@ -63,8 +61,7 @@ TEST_F(SemStructTest, Equals) {
 TEST_F(SemStructTest, FriendlyName) {
     auto name = Sym("my_struct");
     auto* impl = create<ast::Struct>(Ident(name), tint::Empty, tint::Empty);
-    auto* s = create<sem::Struct>(impl, impl->name->symbol, tint::Empty, 4u /* align */,
-                                  4u /* size */, 4u /* size_no_padding */);
+    auto* s = create<sem::Struct>(impl, impl->name->symbol, tint::Empty, 4u /* size */);
     EXPECT_EQ(s->FriendlyName(), "my_struct");
 }
 

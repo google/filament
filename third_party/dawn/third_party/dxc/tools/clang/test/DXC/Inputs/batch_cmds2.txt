@@ -1,1 +1,0 @@
--E ps_main -T ps_6_0  lib_entries3.hlsl

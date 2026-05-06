@@ -28,25 +28,15 @@
 #include "src/tint/lang/wgsl/ast/identifier.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::Identifier);
 
 namespace tint::ast {
 
-Identifier::Identifier(GenerationID pid, NodeID nid, const Source& src, Symbol sym)
-    : Base(pid, nid, src), symbol(sym) {
-    TINT_ASSERT_GENERATION_IDS_EQUAL_IF_VALID(symbol, generation_id);
+Identifier::Identifier(NodeID nid, const Source& src, Symbol sym) : Base(nid, src), symbol(sym) {
     TINT_ASSERT(symbol.IsValid());
 }
 
 Identifier::~Identifier() = default;
-
-const Identifier* Identifier::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    auto sym = ctx.Clone(symbol);
-    return ctx.dst->create<Identifier>(src, sym);
-}
 
 }  // namespace tint::ast

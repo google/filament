@@ -1,18 +1,30 @@
 #!/usr/bin/env python3 -i
 #
-# Copyright 2023-2025 The Khronos Group Inc.
+# Copyright 2023-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Added in python 3.7 to allow for doing forward declaration of class names
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from enum import IntFlag, Enum, auto
+from enum import Enum, auto
+
+@dataclass
+class FeatureRequirement:
+    """Each instance of FeatureRequirement is one part of the AND operation,
+       unless the struct/field are the same, then the depends are AND togethered"""
+    struct: str
+    field: str # Can have comma delimiter, which are expressed as OR
+    depends: (str | None) # ex) "VK_EXT_descriptor_indexing", "VK_VERSION_1_2+VkPhysicalDeviceVulkan12Features::descriptorIndexing"
 
 @dataclass
 class Extension:
     """<extension>"""
     name: str # ex) VK_KHR_SURFACE
-    nameString: str # marco with string, ex) VK_KHR_SURFACE_EXTENSION_NAME
-    specVersion: str # marco with string, ex) VK_KHR_SURFACE_SPEC_VERSION
+    nameString: str # macro with string, ex) VK_KHR_SURFACE_EXTENSION_NAME
+    specVersion: str # macro with string, ex) VK_KHR_SURFACE_SPEC_VERSION
+    specVersionValue: int # value of specVersion macro, ex) 25 for VK_KHR_surface
 
     # Only one will be True, the other is False
     instance: bool
@@ -27,16 +39,18 @@ class Extension:
     deprecatedBy: (str | None)
     obsoletedBy: (str | None)
     specialUse: list[str]
+    featureRequirement: list[FeatureRequirement]
     ratified: bool
 
     # These are here to allow for easy reverse lookups
     # To prevent infinite recursion, other classes reference a string back to the Extension class
     # Quotes allow us to forward declare the dataclass
-    handles: list['Handle'] = field(default_factory=list, init=False)
+    handles:  list['Handle']  = field(default_factory=list, init=False)
     commands: list['Command'] = field(default_factory=list, init=False)
+    structs:  list['Struct']  = field(default_factory=list, init=False)
     enums:    list['Enum']    = field(default_factory=list, init=False)
     bitmasks: list['Bitmask'] = field(default_factory=list, init=False)
-    flags: dict[str, list['Flags']] = field(default_factory=dict, init=False)
+    flags:    list['Flags']   = field(default_factory=list, init=False)
     # Use the Enum name to see what fields are extended
     enumFields: dict[str, list['EnumField']] = field(default_factory=dict, init=False)
     # Use the Bitmask name to see what flag bits are added to it
@@ -49,15 +63,20 @@ class Version:
     This will NEVER be Version 1.0, since having 'no version' is same as being 1.0
     """
     name: str       # ex) VK_VERSION_1_1
-    nameString: str # ex) "VK_VERSION_1_1" (no marco, so has quotes)
+    nameString: str # ex) "VK_VERSION_1_1" (no macro, so has quotes)
     nameApi: str    # ex) VK_API_VERSION_1_1
 
+    featureRequirement: list[FeatureRequirement]
+
 @dataclass
-class Deprecate:
-    """<deprecate>"""
-    link: (str | None) # Spec URL Anchor - ex) deprecation-dynamicrendering
+class Legacy:
+    """<deprecate>
+    For historical reasons, the XML tag is "deprecate" but we decided in the WG to not use that as the public facing name
+    """
+    link: (str | None) # Spec URL Anchor - ex) legacy-dynamicrendering
     version: (Version | None)
     extensions: list[str]
+    supersededBy: (str | None)
 
 @dataclass
 class Handle:
@@ -68,7 +87,8 @@ class Handle:
     type: str # ex) VK_OBJECT_TYPE_BUFFER
     protect: (str | None) # ex) VK_USE_PLATFORM_ANDROID_KHR
 
-    parent: 'Handle' # Chain of parent handles, can be None
+    # Chain of parent handles
+    parent: (Handle | None) # ex) VkDevice is the parent of VkBuffer as it was used to create it
 
     # Only one will be True, the other is False
     instance: bool
@@ -78,8 +98,45 @@ class Handle:
 
     extensions: list[str] # All extensions that enable the handle
 
+    # This dict tells where this handle is actually defined in an extension or version.
+    # Example: VkVideoSessionKHR -> {"VK_KHR_video_queue": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
+
     def __lt__(self, other):
         return self.name < other.name
+
+@dataclass
+class FuncPointerParam:
+    """<funcpointer/param>"""
+    name: str
+
+    # the "base type" - will not preserve the 'const' or pointer info
+    # ex) void, uint32_t, VkFormat, VkBuffer, etc
+    type: str
+    # the "full type" - will be cDeclaration without the type name
+    # ex) const void*, uint32_t, const VkFormat, VkBuffer*, etc
+    fullType: str
+
+    # C string of param, ex) void* pUserData
+    cDeclaration: str
+
+
+@dataclass
+class FuncPointer:
+    """<funcpointer>"""
+    name: str # ex) PFN_vkAllocationFunction
+
+    protect: (str | None) # ex) 'VK_ENABLE_BETA_EXTENSIONS'
+
+    returnType: str # ex) void, VkResult, etc
+
+    requires: (str | None) # ex VkDebugUtilsMessengerCallbackDataEXT
+
+    params: list[FuncPointerParam] # Each parameter of the command
+
+    # function pointer typedef  - ex:
+    # typedef void* (VKAPI_PTR void*PFN_vkAllocationFunction)(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+    cFunctionPointer: str
 
 class ExternSync(Enum):
     NONE          = auto() # no externsync attribute
@@ -92,7 +149,7 @@ class ExternSync(Enum):
 class Param:
     """<command/param>"""
     name: str # ex) pCreateInfo, pAllocator, pBuffer
-    alias: str
+    alias: (str | None)
 
     # the "base type" - will not preserve the 'const' or pointer info
     # ex) void, uint32_t, VkFormat, VkBuffer, etc
@@ -115,6 +172,7 @@ class Param:
     fixedSizeArray: list[str]
 
     optional: bool
+    # Note: "optionalPointer" is a misleading name, this should have probably been "optionalPointedValue"
     optionalPointer: bool # if type contains a pointer, is the pointer value optional
 
     externSync: ExternSync
@@ -129,17 +187,6 @@ class Param:
 
     def __lt__(self, other):
         return self.name < other.name
-
-class Queues(IntFlag):
-    TRANSFER       = auto() # VK_QUEUE_TRANSFER_BIT
-    GRAPHICS       = auto() # VK_QUEUE_GRAPHICS_BIT
-    COMPUTE        = auto() # VK_QUEUE_COMPUTE_BIT
-    PROTECTED      = auto() # VK_QUEUE_PROTECTED_BIT
-    SPARSE_BINDING = auto() # VK_QUEUE_SPARSE_BINDING_BIT
-    OPTICAL_FLOW   = auto() # VK_QUEUE_OPTICAL_FLOW_BIT_NV
-    DECODE         = auto() # VK_QUEUE_VIDEO_DECODE_BIT_KHR
-    ENCODE         = auto() # VK_QUEUE_VIDEO_ENCODE_BIT_KHR
-    DATA_GRAPH     = auto() # VK_QUEUE_DATA_GRAPH_BIT_ARM
 
 class CommandScope(Enum):
     NONE    = auto()
@@ -166,7 +213,7 @@ class Command:
     device: bool
 
     tasks: list[str]        # ex) [ action, state, synchronization ]
-    queues: Queues          # zero == No Queues found (represents restriction which queue type can be used)
+    queues: list[str]       # ex) [ VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT ]
     allowNoQueues: bool     # VK_KHR_maintenance9 allows some calls to be done with zero queues
     successCodes: list[str] # ex) [ VK_SUCCESS, VK_INCOMPLETE ]
     errorCodes: list[str]   # ex) [ VK_ERROR_OUT_OF_HOST_MEMORY ]
@@ -180,7 +227,7 @@ class Command:
 
     implicitExternSyncParams: list[str]
 
-    deprecate: (Deprecate | None)
+    legacy: (Legacy | None)
 
     # C prototype string - ex:
     # VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
@@ -193,6 +240,11 @@ class Command:
     # typedef VkResult (VKAPI_PTR *PFN_vkCreateInstance)
     #   (const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance);
     cFunctionPointer: str
+
+    # This dict tells where this command is actually defined in an extension or version.
+    # Example: vkCmdDrawMeshTasksIndirectCountEXT -> {"VK_EXT_mesh_shader": "VK_VERSION_1_2,VK_KHR_draw_indirect_count,VK_AMD_draw_indirect_count"}
+    #          vkGetPhysicalDeviceToolProperties -> {"VK_VERSION_1_3": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -224,6 +276,7 @@ class Member:
     fixedSizeArray: list[str]
 
     optional: bool
+    # Note: "optionalPointer" is a misleading name, this should have probably been "optionalPointedValue"
     optionalPointer: bool # if type contains a pointer, is the pointer value optional
 
     externSync: ExternSync
@@ -235,6 +288,11 @@ class Member:
     cDeclaration: str
 
     bitFieldWidth: (int | None) # bit width (only for bit field struct members)
+
+    # Selector for the union, this type determines the used data type in the union
+    selector: (str | None)
+    # Valid selections for the union member
+    selection: list[str]
 
     def __lt__(self, other):
         return self.name < other.name
@@ -262,6 +320,11 @@ class Struct:
     extends: list[str] # Struct names that this struct extends
     extendedBy: list[str] # Struct names that can be extended by this struct
 
+    # This dict tells where this struct is actually defined in an extension or version.
+    # Example: VkPhysicalDeviceMeshShaderFeaturesEXT -> {"VK_EXT_mesh_shader": None}
+    #          VkPhysicalDeviceToolProperties -> {"VK_VERSION_1_3": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
+
     # This field is only set for enum definitions coming from Video Std headers
     videoStdHeader: (str | None) = None
 
@@ -273,6 +336,7 @@ class EnumField:
     """<enum> of type enum"""
     name: str # ex) VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT
     aliases: list[str] # ex) ['VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT_EXT']
+    parent: str  # ex) "VkStructureType" - Name of parent enum, Allows for reverse lookup
 
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
 
@@ -282,6 +346,16 @@ class EnumField:
 
     # some fields are enabled from 2 extensions (ex) VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR)
     extensions: list[str] # None if part of 1.0 core
+    # True when this field was added from an extension or version
+    #   ex) VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR extends VkStructureType
+    # False if this field is part of the original enum
+    extending: bool
+
+    # This dict tells where this enum field is actually defined in an extension or version.
+    # Note: Only base name, not aliases (aliases in aliasFieldRequirements).
+    # Example: VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT -> {"VK_EXT_mesh_shader": None}
+    #          VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TOOL_PROPERTIES -> {"VK_VERSION_1_3": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -303,6 +377,11 @@ class Enum:
     # Unique list of all extension that are involved in 'fields' (superset of 'extensions')
     fieldExtensions: list[str]
 
+    # This dict tells where this enum is actually defined in an extension or version.
+    # Example: VkLineRasterizationMode -> {"VK_VERSION_1_4": None},
+    #          VkDescriptorMappingSourceEXT -> {"VK_EXT_descriptor_heap": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
+
     # This field is only set for enum definitions coming from Video Std headers
     videoStdHeader: (str | None) = None
 
@@ -314,16 +393,27 @@ class Flag:
     """<enum> of type bitmask"""
     name: str # ex) VK_ACCESS_2_SHADER_READ_BIT
     aliases: str # ex) ['VK_ACCESS_2_SHADER_READ_BIT_KHR']
+    parent: str # ex) "VkAccessFlagBits2" - Name of parent bitmask, Allows for reverse lookup
 
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
 
     value: int
     valueStr: str # value as shown in spec (ex. 0x00000000", "0x00000004", "0x0000000F", "0x800000000ULL")
+    bitpos: (int | None) # Bit position in bitmask (ex. VK_CULL_MODE_FRONT_BIT has value of 1 and a bitmask of 0, but VK_CULL_MODE_NONE bitpos is None)
     multiBit: bool # if true, more than one bit is set (ex) VK_SHADER_STAGE_ALL_GRAPHICS)
     zero: bool     # if true, the value is zero (ex) VK_PIPELINE_STAGE_NONE)
 
     # some fields are enabled from 2 extensions (ex) VK_TOOL_PURPOSE_DEBUG_REPORTING_BIT_EXT)
     extensions: list[str] # None if part of 1.0 core
+    # True when this flag was added from an extension or version
+    #   ex) VK_ACCESS_2_SHADER_READ_BIT_KHR extends VkAccessFlagBits2
+    # False if this field is part of the original bitmask
+    extending: bool
+
+    # This dict tells where this flag is actually defined in an extension or version, whether under a <require depends="..."> attribute or not.
+    # Note: Only base name, not aliases (aliases in aliasFlagRequirements).
+    # Example: VK_FORMAT_FEATURE_2_VIDEO_DECODE_OUTPUT_BIT_KHR -> {"VK_KHR_video_decode_queue": "VK_KHR_format_feature_flags2,VK_VERSION_1_3"}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -346,6 +436,11 @@ class Bitmask:
     # Unique list of all extension that are involved in 'flag' (superset of 'extensions')
     flagExtensions: list[str]
 
+    # This dict tells where this bitmask is actually defined in an extension or version, whether under a <require depends="..."> attribute or not.
+    # Example: VkVideoDecodeCapabilityFlagBitsKHR -> {"VK_KHR_video_decode_queue": None}
+    #          VkAccessFlagBits2 -> {"VK_VERSION_1_3": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
+
     def __lt__(self, other):
         return self.name < other.name
 
@@ -363,6 +458,11 @@ class Flags:
     returnedOnly: bool
 
     extensions: list[str] # None if part of 1.0 core
+
+    # This dict tells where this flags type is actually defined in an extension or version, whether under a <require depends="..."> attribute or not.
+    # Example: VkVideoDecodeCapabilityFlagsKHR -> {"VK_KHR_video_decode_queue": None}
+    #          VkAccessFlags2 -> {"VK_VERSION_1_3": None}
+    definingRequirements: dict[str, str | None] = field(default_factory=dict, init=False)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -411,15 +511,17 @@ class Format:
 @dataclass
 class SyncSupport:
     """<syncsupport>"""
-    queues: Queues
-    stages: list[Flag] # VkPipelineStageFlagBits2
+    # Note - We normally use empty list instead of None, these are exceptions
+    queues: (list[str] | None)  # ex) [ VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT ]
+    stages: (list[Flag] | None) # VkPipelineStageFlagBits2
     max: bool # If this supports max values
 
 @dataclass
 class SyncEquivalent:
     """<syncequivalent>"""
-    stages: list[Flag] # VkPipelineStageFlagBits2
-    accesses: list[Flag] # VkAccessFlagBits2
+    # Note - We normally use empty list instead of None, these are exceptions
+    stages: (list[Flag] | None) # VkPipelineStageFlagBits2
+    accesses: (list[Flag] | None) # VkAccessFlagBits2
     max: bool # If this equivalent to everything
 
 @dataclass
@@ -545,7 +647,7 @@ class VideoStd:
 # This class is designed so all generator scripts can use this to obtain data
 @dataclass
 class VulkanObject():
-    headerVersion:         int = 0  # value of VK_HEADER_VERSION (ex. 345)
+    headerVersion:         str = '' # value of VK_HEADER_VERSION (ex. '345')
     headerVersionComplete: str = '' # value of VK_HEADER_VERSION_COMPLETE (ex. '1.2.345' )
 
     extensions: dict[str, Extension] = field(default_factory=dict, init=False)
@@ -559,6 +661,7 @@ class VulkanObject():
     flags:     dict[str, Flags]      = field(default_factory=dict, init=False)
     constants: dict[str, Constant]   = field(default_factory=dict, init=False)
     formats:   dict[str, Format]     = field(default_factory=dict, init=False)
+    funcPointers: dict[str, FuncPointer] = field(default_factory=dict, init=False)
 
     syncStage:    list[SyncStage]    = field(default_factory=list, init=False)
     syncAccess:   list[SyncAccess]   = field(default_factory=list, init=False)
@@ -570,8 +673,15 @@ class VulkanObject():
     platforms: dict[str, str]        = field(default_factory=dict, init=False)
     # list of all vendor Suffix names (KHR, EXT, etc. )
     vendorTags: list[str]            = field(default_factory=list, init=False)
-    # ex) [ Queues.COMPUTE : VK_QUEUE_COMPUTE_BIT ]
-    queueBits: dict[IntFlag, str]    = field(default_factory=dict, init=False)
+
+    # Alias requirements - store definingRequirements separately for aliases (they do not have objects)
+    # Maps alias name -> definingRequirements dict (same structure as definingRequirements field)
+    # Example: {"VkLineRasterizationModeKHR": {"VK_KHR_line_rasterization": None}}
+    aliasTypeRequirements: dict[str, dict[str, str | None]] = field(default_factory=dict, init=False)
+    # Example: {"VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT": {"VK_EXT_line_rasterization": None}}
+    aliasFieldRequirements: dict[str, dict[str, str | None]] = field(default_factory=dict, init=False)
+    # Example: {"VK_ADDRESS_COMMAND_MAYBE_ALIASES_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT": {"VK_EXT_transform_feedback": None}}
+    aliasFlagRequirements: dict[str, dict[str, str | None]] = field(default_factory=dict, init=False)
 
     # Video codec information from the vk.xml
     videoCodecs: dict[str, VideoCodec] = field(default_factory=dict, init=False)

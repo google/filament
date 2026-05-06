@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "gmock/gmock.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/glsl/writer/helper_test.h"
-
-#include "gmock/gmock.h"
 
 namespace tint::glsl::writer {
 namespace {
@@ -37,11 +36,10 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 TEST_F(GlslWriterTest, StripAllNames) {
-    auto* str =
-        ty.Struct(mod.symbols.New("MyStruct"), {
-                                                   {mod.symbols.Register("a"), ty.i32()},
-                                                   {mod.symbols.Register("b"), ty.vec4<i32>()},
-                                               });
+    auto* str = ty.Struct(mod.symbols.New("MyStruct"), {
+                                                           {mod.symbols.Register("a"), ty.i32()},
+                                                           {mod.symbols.Register("b"), ty.vec4i()},
+                                                       });
     auto* foo = b.Function("foo", ty.u32());
     auto* param = b.FunctionParam("param", ty.u32());
     foo->AppendParam(param);
@@ -65,7 +63,8 @@ TEST_F(GlslWriterTest, StripAllNames) {
 
     Options options;
     options.strip_all_names = true;
-    ASSERT_TRUE(Generate(options)) << err_ << output_.glsl;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 
 struct tint_struct {
@@ -109,9 +108,10 @@ TEST_F(GlslWriterTest, StripAllNames_CombinedTextureSamplerName) {
 
     Options options;
     options.strip_all_names = true;
-    options.bindings.sampler_texture_to_name.insert(
+    options.sampler_texture_to_name.insert(
         {CombinedTextureSamplerPair{texture_bp, sampler_bp}, "tint_combined_texture_sampler"});
-    ASSERT_TRUE(Generate(options)) << err_ << output_.glsl;
+    auto result = Generate(options);
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
 
@@ -120,6 +120,113 @@ void main() {
   vec4 v = texture(tint_combined_texture_sampler, vec2(0.0f));
 }
 )");
+}
+
+TEST_F(GlslWriterTest, CanGenerate_TexelBufferUnsupported) {
+    auto* buffer_ty = ty.texel_buffer(core::TexelFormat::kRgba8Unorm, core::Access::kRead);
+    auto* var = b.Var("buf", ty.ptr<handle>(buffer_ty));
+    mod.root_block->Append(var);
+
+    auto* ep = b.ComputeFunction("main");
+    b.Append(ep->Block(), [&] {
+        b.Let("x", var);
+        b.Return(ep);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr("texel buffers are not supported by the GLSL backend"));
+}
+
+TEST_F(GlslWriterTest, CanGenerate_AtomicStoreMax_Unsupported) {
+    auto* sb =
+        ty.Struct(mod.symbols.New("SB"), {
+                                             {mod.symbols.Register("a"), ty.atomic(ty.u64())},
+                                         });
+    auto* var = b.Var("sb", ty.ptr<storage, read_write>(sb));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMax, access, 1_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr(
+                    "64-bit (vec2u) atomic operations are not yet supported by the GLSL backend"));
+}
+
+TEST_F(GlslWriterTest, CanGenerate_AtomicStoreMin_Unsupported) {
+    auto* sb =
+        ty.Struct(mod.symbols.New("SB"), {
+                                             {mod.symbols.Register("a"), ty.atomic(ty.u64())},
+                                         });
+    auto* var = b.Var("sb", ty.ptr<storage, read_write>(sb));
+    var->SetBindingPoint(0, 0);
+    mod.root_block->Append(var);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* access = b.Access(ty.ptr<storage, read_write>(ty.atomic(ty.u64())), var, 0_u);
+        b.Call<void>(core::BuiltinFn::kAtomicStoreMin, access, 1_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.entry_point_name = "main";
+    auto result = Generate(options);
+    ASSERT_NE(result, Success);
+    EXPECT_THAT(result.Failure().reason,
+                testing::HasSubstr(
+                    "64-bit (vec2u) atomic operations are not yet supported by the GLSL backend"));
+}
+
+TEST_F(GlslWriterTest, WorkgroupStorageSize_OverflowAfterAlign) {
+    auto* var = mod.root_block->Append(b.Var<workgroup, array<u32, 0x3FFFFFFFu>>("a"));
+    auto* foo = b.ComputeFunction("main", 64_u, 1_u, 1_u);
+    b.Append(foo->Block(), [&] {  //
+        b.Load(b.Access<ptr<workgroup, u32>>(var, 0_u));
+        b.Return(foo);
+    });
+
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure() << output_.glsl;
+    EXPECT_EQ(output_.glsl, GlslHeader() + R"(
+shared uint a[1073741823];
+void main_inner(uint tint_local_index) {
+  {
+    uint v = 0u;
+    v = tint_local_index;
+    while(true) {
+      uint v_1 = v;
+      if ((v_1 >= 1073741823u)) {
+        break;
+      }
+      a[v_1] = 0u;
+      {
+        v = (v_1 + 64u);
+      }
+    }
+  }
+  barrier();
+}
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main() {
+  main_inner(gl_LocalInvocationIndex);
+}
+)");
+
+    EXPECT_EQ(output_.workgroup_info.storage_size, 0x100000000ull);
 }
 
 }  // namespace

@@ -39,15 +39,16 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "symbol",
   srcs = [
+    "generation_id.cc",
     "symbol.cc",
     "symbol_table.cc",
   ],
   hdrs = [
+    "generation_id.h",
     "symbol.h",
     "symbol_table.h",
   ],
   deps = [
-    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
@@ -67,7 +68,6 @@ cc_library(
     "symbol_test.cc",
   ],
   deps = [
-    "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",

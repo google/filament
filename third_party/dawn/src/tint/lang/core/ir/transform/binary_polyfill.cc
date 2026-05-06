@@ -142,27 +142,25 @@ struct State {
 
                 // Select either the RHS or a constant one value if the RHS is zero.
                 // If this is a signed operation, we also check for `INT_MIN / -1`.
-                auto* bool_ty = ty.MatchWidth(ty.bool_(), result_ty);
-                auto* cond = b.Equal(bool_ty, rhs, zero);
+                auto* cond = b.Equal(rhs, zero);
                 if (is_signed) {
                     auto* lowest = b.MatchWidth(i32::Lowest(), result_ty);
                     auto* minus_one = b.MatchWidth(-1_i, result_ty);
-                    auto* lhs_is_lowest = b.Equal(bool_ty, lhs, lowest);
-                    auto* rhs_is_minus_one = b.Equal(bool_ty, rhs, minus_one);
-                    cond = b.Or(bool_ty, cond, b.And(bool_ty, lhs_is_lowest, rhs_is_minus_one));
+                    auto* lhs_is_lowest = b.Equal(lhs, lowest);
+                    auto* rhs_is_minus_one = b.Equal(rhs, minus_one);
+                    cond = b.Or(cond, b.And(lhs_is_lowest, rhs_is_minus_one));
                 }
                 auto* rhs_or_one = b.Call(result_ty, core::BuiltinFn::kSelect, rhs, one, cond);
 
                 if (binary->Op() == BinaryOp::kDivide) {
                     // Perform the divide with the modified RHS.
-                    b.Return(func, b.Divide(result_ty, lhs, rhs_or_one)->Result());
+                    b.Return(func, b.Divide(lhs, rhs_or_one)->Result());
                 } else if (binary->Op() == BinaryOp::kModulo) {
                     // Calculate the modulo manually, as modulo with negative operands is undefined
                     // behavior for many backends:
                     //   result = lhs - ((lhs / rhs_or_one) * rhs_or_one)
-                    auto* whole = b.Divide(result_ty, lhs, rhs_or_one);
-                    auto* remainder =
-                        b.Subtract(result_ty, lhs, b.Multiply(result_ty, whole, rhs_or_one));
+                    auto* whole = b.Divide(lhs, rhs_or_one);
+                    auto* remainder = b.Subtract(lhs, b.Multiply(whole, rhs_or_one));
                     b.Return(func, remainder->Result());
                 }
             });
@@ -192,7 +190,7 @@ struct State {
         auto* lhs = binary->LHS();
         auto* rhs = binary->RHS();
         auto mask = u32(lhs->Type()->DeepestElement()->Size() * 8 - 1);
-        auto* masked = b.And(rhs->Type(), rhs, b.MatchWidth(mask, rhs->Type()));
+        auto* masked = b.And(rhs, b.MatchWidth(mask, rhs->Type()));
         masked->InsertBefore(binary);
         binary->SetOperand(ir::CoreBinary::kRhsOperandOffset, masked->Result());
     }
@@ -201,10 +199,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(Module& ir, const BinaryPolyfillConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.BinaryPolyfill", kBinaryPolyfillCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kBinaryPolyfillCapabilities, "before core.BinaryPolyfill");
 
     State{config, ir}.Process();
 

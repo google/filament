@@ -30,6 +30,7 @@
 
 #include "dawn/common/RefBase.h"
 #include "gmock/gmock.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn {
 namespace {
@@ -94,7 +95,7 @@ struct RefTracker {
     bool operator==(const RefTracker& other) const = default;
 
     Id mId;
-    Events* mEvents;
+    raw_ptr<Events> mEvents;
 };
 
 struct RefTrackerTraits {
@@ -116,7 +117,9 @@ TEST(RefBase, Acquire) {
     Ref ref(tracker1);
 
     events.clear();
-    { ref.Acquire(tracker2); }
+    {
+        ref.Acquire(tracker2);
+    }
     EXPECT_THAT(events, testing::ElementsAre(Event{Action::kRelease, 1},   // release ref
                                              Event{Action::kAssign, 1, 2}  // acquire tracker2
                                              ));
@@ -128,7 +131,9 @@ TEST(RefBase, Detach) {
     Ref ref(tracker);
 
     events.clear();
-    { [[maybe_unused]] auto ptr = ref.Detach(); }
+    {
+        [[maybe_unused]] auto ptr = ref.Detach();
+    }
     EXPECT_THAT(events, testing::ElementsAre(Event{Action::kAssign, 1, 0}  // nullify ref
                                              ));
 }
@@ -253,7 +258,9 @@ TEST(RefBase, RefMoveAssignmentSelf) {
     Ref& self = ref;
 
     events.clear();
-    { ref = std::move(self); }
+    {
+        ref = std::move(self);
+    }
     EXPECT_THAT(events, testing::ElementsAre());
 }
 
@@ -278,7 +285,9 @@ TEST(RefBase, TMoveAssignment) {
     Ref ref;
 
     events.clear();
-    { ref = std::move(tracker); }
+    {
+        ref = std::move(tracker);
+    }
     EXPECT_THAT(events, testing::ElementsAre(Event{Action::kAddRef, 1},  //
                                              Event{Action::kAssign, 0, 1}));
 }
@@ -309,6 +318,32 @@ TEST(RefBase, TCopyAssignmentAlternate) {
                                              Event{Action::kRelease, 2},    // release tracker2
                                              Event{Action::kAssign, 2, 1},  // copy tracker1
                                              Event{Action::kMarker, 30}));
+}
+
+TEST(RefBase, AssignNull) {
+    Events events;
+    RefTracker tracker(1, &events);
+    Ref ref(tracker);
+
+    events.clear();
+    ref = nullptr;
+    EXPECT_EQ(ref.Get(), RefTrackerTraits::kNullValue);
+    EXPECT_THAT(events, testing::ElementsAre(Event{Action::kRelease, 1},   // release tracker
+                                             Event{Action::kAssign, 1, 0}  // assign null
+                                             ));
+}
+
+TEST(RefBase, Reset) {
+    Events events;
+    RefTracker tracker(1, &events);
+    Ref ref(tracker);
+
+    events.clear();
+    ref.Reset();
+    EXPECT_EQ(ref.Get(), RefTrackerTraits::kNullValue);
+    EXPECT_THAT(events, testing::ElementsAre(Event{Action::kRelease, 1},   // release tracker
+                                             Event{Action::kAssign, 1, 0}  // assign null
+                                             ));
 }
 
 // Regression test for an issue where RefBase<T*> comparison would end up using operator bool

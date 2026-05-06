@@ -29,28 +29,40 @@
 #define SRC_DAWN_NATIVE_WEBGPU_BUFFERWGPU_H_
 
 #include "dawn/native/Buffer.h"
-
 #include "dawn/native/webgpu/Forward.h"
 #include "dawn/native/webgpu/ObjectWGPU.h"
+#include "dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 
 class Device;
 
-class Buffer final : public BufferBase, public ObjectWGPU<WGPUBuffer> {
+class Buffer final : public BufferBase, public RecordableObject, public ObjectWGPU<WGPUBuffer> {
   public:
     static ResultOrError<Ref<Buffer>> Create(Device* device,
                                              const UnpackedPtr<BufferDescriptor>& descriptor);
     Buffer(Device* device, const UnpackedPtr<BufferDescriptor>& descriptor, WGPUBuffer innerBuffer);
 
+    MaybeError AddReferenced(CaptureContext& captureContext) override;
+    MaybeError CaptureCreationParameters(CaptureContext& context) override;
+    MaybeError CaptureContentIfNeeded(CaptureContext& context,
+                                      schema::ObjectId id,
+                                      bool newResource) override;
+
   private:
     MaybeError MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) override;
-    void UnmapImpl() override;
+    void UnmapImpl(BufferState oldState, BufferState newState) override;
+    MaybeError FinalizeMapImpl(BufferState newState) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
     void* GetMappedPointerImpl() override;
+    void DestroyImpl(DestroyReason reason) override;
+    void SetLabelImpl() override;
+
+    MaybeError AddContentToCapture(CaptureContext& captureContext);
 
     raw_ptr<void> mMappedData = nullptr;
+    bool mNeedsCapture = true;
 };
 
 }  // namespace dawn::native::webgpu

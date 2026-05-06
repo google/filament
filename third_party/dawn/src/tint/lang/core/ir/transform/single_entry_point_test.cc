@@ -330,12 +330,12 @@ TEST_F(IR_SingleEntryPointTest, DirectOverridesWithInitializer) {
     Value* init2 = nullptr;
     Value* init3 = nullptr;
     b.Append(mod.root_block, [&] {
-        init1 = b.Multiply(ty.i32(), 2_i, 4_i)->Result();
-        auto* x = b.Multiply(ty.i32(), 2_i, 4_i);
-        init2 = b.Add(ty.i32(), x, 4_i)->Result();
+        init1 = b.Multiply(2_i, 4_i)->Result();
+        auto* x = b.Multiply(2_i, 4_i);
+        init2 = b.Add(x, 4_i)->Result();
 
-        auto* y = b.Multiply(ty.i32(), 3_i, 5_i);
-        init3 = b.Add(ty.i32(), y, 5_i)->Result();
+        auto* y = b.Multiply(3_i, 5_i);
+        init3 = b.Add(y, 5_i)->Result();
     });
 
     auto* o1 = Override("o1", 1, init1);
@@ -879,17 +879,26 @@ TEST_F(IR_SingleEntryPointTest, OverrideInArrayType) {
     core::ir::Value* v2 = nullptr;
     b.Append(mod.root_block, [&] {
         auto* c1 = ty.Get<core::ir::type::ValueArrayCount>(o1);
-        auto* a1 = ty.Get<core::type::Array>(ty.i32(), c1, 4u, 4u, 4u, 4u);
+        auto* a1 = ty.Get<core::type::Array>(ty.i32(), c1, 4u);
 
         auto* c2 = ty.Get<core::ir::type::ValueArrayCount>(o2);
-        auto* a2 = ty.Get<core::type::Array>(ty.i32(), c2, 4u, 4u, 4u, 4u);
+        auto* a2 = ty.Get<core::type::Array>(ty.i32(), c2, 4u);
 
         v1 = b.Var("a", ty.ptr(workgroup, a1, read_write))->Result();
         v2 = b.Var("b", ty.ptr(workgroup, a2, read_write))->Result();
     });
 
-    EntryPoint("foo", {v1});
-    EntryPoint("bar", {v2});
+    auto foo = b.ComputeFunction("foo");
+    b.Append(foo->Block(), [&] {
+        b.Let(v1->Type())->SetValue(v1);
+        b.Return(foo);
+    });
+
+    auto bar = b.ComputeFunction("bar");
+    b.Append(bar->Block(), [&] {
+        b.Let(v2->Type())->SetValue(v2);
+        b.Return(bar);
+    });
 
     auto* src = R"(
 $B1: {  # root
@@ -899,13 +908,13 @@ $B1: {  # root
   %b:ptr<workgroup, array<i32, %o2>, read_write> = var undef
 }
 
-%foo = @fragment func():void {
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
     %6:ptr<workgroup, array<i32, %o1>, read_write> = let %a
     ret
   }
 }
-%bar = @fragment func():void {
+%bar = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B3: {
     %8:ptr<workgroup, array<i32, %o2>, read_write> = let %b
     ret
@@ -919,7 +928,7 @@ $B1: {  # root
   %a:ptr<workgroup, array<i32, %o1>, read_write> = var undef
 }
 
-%foo = @fragment func():void {
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
     %4:ptr<workgroup, array<i32, %o1>, read_write> = let %a
     ret
@@ -940,7 +949,7 @@ TEST_F(IR_SingleEntryPointTest, OverrideWithComplexIncludingOverride) {
     b.Append(mod.root_block, [&] {
         auto* x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
-        auto* add = b.Add(ty.u32(), x, 4_u);
+        auto* add = b.Add(x, 4_u);
         o = b.Override(Source{{1, 2}}, "a", ty.u32());
         o->SetOverrideId({1});
         o->SetInitializer(add->Result());
@@ -1003,7 +1012,7 @@ TEST_F(IR_SingleEntryPointTest, OverrideInitVar) {
     b.Append(mod.root_block, [&] {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
-        auto* add = b.Add(ty.u32(), x, 3_u);
+        auto* add = b.Add(x, 3_u);
         auto* var_local =
             b.Var("a", core::AddressSpace::kPrivate, ty.u32(), core::Access::kReadWrite);
         var_local->SetInitializer(add->Result());
@@ -1055,8 +1064,8 @@ TEST_F(IR_SingleEntryPointTest, OverrideInitVarIntermediateUnused) {
     b.Append(mod.root_block, [&] {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
-        auto* add_a = b.Add(ty.u32(), x, 3_u);
-        auto* add_b = b.Add(ty.u32(), x, 3_u);
+        auto* add_a = b.Add(x, 3_u);
+        auto* add_b = b.Add(x, 3_u);
         auto* var_local =
             b.Var("a", core::AddressSpace::kPrivate, ty.u32(), core::Access::kReadWrite);
         auto* var_local_b =
@@ -1113,7 +1122,7 @@ TEST_F(IR_SingleEntryPointTest, OverideInitVarUnused) {
     b.Append(mod.root_block, [&] {
         x = b.Override("x", ty.u32());
         x->SetOverrideId({2});
-        auto* add = b.Add(ty.u32(), x, 3_u);
+        auto* add = b.Add(x, 3_u);
         auto* var_local =
             b.Var("a", core::AddressSpace::kPrivate, ty.u32(), core::Access::kReadWrite);
         var_local->SetInitializer(add->Result());
@@ -1161,8 +1170,8 @@ TEST_F(IR_SingleEntryPointTest, OverrideCondConstExprFailure) {
         auto* constexpr_if = b.ConstExprIf(cond);
         constexpr_if->SetResult(b.InstructionResult(ty.bool_()));
         b.Append(constexpr_if->True(), [&] {
-            auto* three = b.Divide(ty.f32(), one_f32, 0.0_f);
-            auto* four = b.Equal(ty.bool_(), three, 0.0_f);
+            auto* three = b.Divide(one_f32, 0.0_f);
+            auto* four = b.Equal(three, 0.0_f);
             b.ExitIf(constexpr_if, four);
         });
         b.Append(constexpr_if->False(), [&] { b.ExitIf(constexpr_if, false); });

@@ -73,7 +73,11 @@ struct State {
 
         // Find any unused vars, do this after removing functions in case the usage was in a
         // function which is unused.
-        for (auto* inst : *ir_.root_block) {
+        auto* next = ir_.root_block->Front();
+        while (next) {
+            auto* inst = next;
+            next = inst->next;
+
             if (inst->Result()->IsUsed()) {
                 continue;
             }
@@ -85,7 +89,7 @@ struct State {
             }
 
             auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-            TINT_ASSERT(ptr);
+            TINT_IR_ASSERT(ir_, ptr);
 
             auto space = ptr->AddressSpace();
             if (space != core::AddressSpace::kOut && space != core::AddressSpace::kIn &&
@@ -101,11 +105,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DeadCodeElimination(Module& ir) {
-    auto result =
-        ValidateAndDumpIfNeeded(ir, "core.DeadCodeElimination", kDeadCodeEliminationCapabilities);
-    if (result != Success) {
-        return result;
-    }
+    core::ir::AssertValid(ir, kDeadCodeEliminationCapabilities, "before core.DeadCodeElimination");
 
     State{ir}.Process();
 

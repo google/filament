@@ -106,5 +106,25 @@ TEST_F(ITypArrayTest, BeginEndFrontBackData) {
     ASSERT_EQ(constArr.data(), &constArr[Key(0)]);
 }
 
+// Name "*DeathTest" per https://google.github.io/googletest/advanced.html#death-test-naming
+using ITypArrayDeathTest = ITypArrayTest;
+
+// Out of bounds accesses should crash even in release (the underlying container
+// should have asserts enabled).
+TEST_F(ITypArrayDeathTest, OutOfBounds) {
+    // MSVC doesn't have asserts (without _MSVC_STL_HARDENING).
+    if constexpr (DAWN_COMPILER_IS(MSVC)) {
+        GTEST_SKIP();
+    }
+
+    Array arr;
+    EXPECT_DEATH(arr[Key(10)], "");
+    EXPECT_DEATH(arr.at(Key(10)), "");
+
+    const Array& constArr = arr;
+    EXPECT_DEATH(constArr[Key(10)], "");
+    EXPECT_DEATH(constArr.at(Key(10)), "");
+}
+
 }  // anonymous namespace
 }  // namespace dawn

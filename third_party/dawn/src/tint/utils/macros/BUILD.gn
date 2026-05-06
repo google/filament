@@ -53,7 +53,7 @@ libtint_source_set("macros") {
     "scoped_assignment.h",
     "static_init.h",
   ]
-  deps = [ "${dawn_root}/src/utils:utils" ]
+  deps = [ "${dawn_root}/src/utils" ]
 }
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {

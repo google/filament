@@ -31,8 +31,7 @@ TINT_INSTANTIATE_TYPEINFO(tint::ast::Node);
 
 namespace tint::ast {
 
-Node::Node(GenerationID pid, NodeID nid, const Source& src)
-    : generation_id(pid), node_id(nid), source(src) {}
+Node::Node(NodeID nid, const Source& src) : node_id(nid), source(src) {}
 
 Node::~Node() = default;
 

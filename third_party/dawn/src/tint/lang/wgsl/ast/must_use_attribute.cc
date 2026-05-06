@@ -28,25 +28,17 @@
 #include "src/tint/lang/wgsl/ast/must_use_attribute.h"
 
 #include "src/tint/lang/wgsl/ast/builder.h"
-#include "src/tint/lang/wgsl/ast/clone_context.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::ast::MustUseAttribute);
 
 namespace tint::ast {
 
-MustUseAttribute::MustUseAttribute(GenerationID pid, NodeID nid, const Source& src)
-    : Base(pid, nid, src) {}
+MustUseAttribute::MustUseAttribute(NodeID nid, const Source& src) : Base(nid, src) {}
 
 MustUseAttribute::~MustUseAttribute() = default;
 
 std::string MustUseAttribute::Name() const {
     return "must_use";
-}
-
-const MustUseAttribute* MustUseAttribute::Clone(CloneContext& ctx) const {
-    // Clone arguments outside of create() call to have deterministic ordering
-    auto src = ctx.Clone(source);
-    return ctx.dst->create<MustUseAttribute>(src);
 }
 
 }  // namespace tint::ast

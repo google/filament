@@ -6,6 +6,7 @@ BoxInterleaved
 BoxTextured
 BoxTexturedNonPowerOfTwo
 Duck
+Fox
 IridescenceSuzanne
 IridescentDishWithOlives
 Lantern

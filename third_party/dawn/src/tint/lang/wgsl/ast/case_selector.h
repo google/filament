@@ -39,22 +39,16 @@ namespace tint::ast {
 class CaseSelector final : public Castable<CaseSelector, Node> {
   public:
     /// Constructor
-    /// @param pid the identifier of the program that owns this node
     /// @param nid the unique node identifier
     /// @param src the source of this node
     /// @param expr the selector expression, |nullptr| for a `default` selector
-    CaseSelector(GenerationID pid, NodeID nid, const Source& src, const Expression* expr = nullptr);
+    CaseSelector(NodeID nid, const Source& src, const Expression* expr = nullptr);
 
     /// Destructor
     ~CaseSelector() override;
 
     /// @returns true if this is a default statement
     bool IsDefault() const { return expr == nullptr; }
-
-    /// Clones this node and all transitive child nodes using the `CloneContext` `ctx`.
-    /// @param ctx the clone context
-    /// @return the newly cloned node
-    const CaseSelector* Clone(CloneContext& ctx) const override;
 
     /// The selector, nullptr for a default selector
     const Expression* const expr = nullptr;

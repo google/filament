@@ -25,10 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/wgsl/resolver/resolver.h"
-
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 #include "src/tint/lang/wgsl/sem/struct.h"
 
@@ -188,46 +187,6 @@ TEST_F(ResolverStructLayoutTest, ImplicitStrideArrayStaticSize) {
     }
 }
 
-TEST_F(ResolverStructLayoutTest, ExplicitStrideArrayStaticSize) {
-    Enable(wgsl::Extension::kF16);
-
-    auto* s = Structure("S", Vector{
-                                 Member("a", ty.array<i32, 3>(Vector{Stride(8)})),
-                                 Member("b", ty.array<f32, 5>(Vector{Stride(16)})),
-                                 Member("c", ty.array<f16, 7>(Vector{Stride(4)})),
-                                 Member("d", ty.array<f32, 1>(Vector{Stride(32)})),
-                             });
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-
-    auto* sem = TypeOf(s)->As<sem::Struct>();
-    ASSERT_NE(sem, nullptr);
-    EXPECT_EQ(sem->Size(), 164u);
-    EXPECT_EQ(sem->SizeNoPadding(), 164u);
-    EXPECT_EQ(sem->Align(), 4u);
-    ASSERT_EQ(sem->Members().Length(), 4u);
-    // array<i32, 3>, stride = 8
-    EXPECT_EQ(sem->Members()[0]->Offset(), 0u);
-    EXPECT_EQ(sem->Members()[0]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[0]->Size(), 24u);
-    // array<f32, 5>, stride = 16
-    EXPECT_EQ(sem->Members()[1]->Offset(), 24u);
-    EXPECT_EQ(sem->Members()[1]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[1]->Size(), 80u);
-    // array<f16, 7>, stride = 4
-    EXPECT_EQ(sem->Members()[2]->Offset(), 104u);
-    EXPECT_EQ(sem->Members()[2]->Align(), 2u);
-    EXPECT_EQ(sem->Members()[2]->Size(), 28u);
-    // array<f32, 1>, stride = 32
-    EXPECT_EQ(sem->Members()[3]->Offset(), 132u);
-    EXPECT_EQ(sem->Members()[3]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[3]->Size(), 32u);
-
-    for (auto& m : sem->Members()) {
-        EXPECT_EQ(m->Struct()->Declaration(), s);
-    }
-}
-
 TEST_F(ResolverStructLayoutTest, ImplicitStrideArrayRuntimeSized) {
     auto* s = Structure("S", Vector{
                                  Member("c", ty.array<f32>()),
@@ -249,57 +208,13 @@ TEST_F(ResolverStructLayoutTest, ImplicitStrideArrayRuntimeSized) {
     }
 }
 
-TEST_F(ResolverStructLayoutTest, ExplicitStrideArrayRuntimeSized) {
-    auto* s = Structure("S", Vector{
-                                 Member("c", ty.array<f32>(Vector{Stride(32)})),
-                             });
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-
-    auto* sem = TypeOf(s)->As<sem::Struct>();
-    ASSERT_NE(sem, nullptr);
-    EXPECT_EQ(sem->Size(), 32u);
-    EXPECT_EQ(sem->SizeNoPadding(), 32u);
-    EXPECT_EQ(sem->Align(), 4u);
-    ASSERT_EQ(sem->Members().Length(), 1u);
-    EXPECT_EQ(sem->Members()[0]->Offset(), 0u);
-    EXPECT_EQ(sem->Members()[0]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[0]->Size(), 32u);
-    for (auto& m : sem->Members()) {
-        EXPECT_EQ(m->Struct()->Declaration(), s);
-    }
-}
-
-TEST_F(ResolverStructLayoutTest, ImplicitStrideArrayOfExplicitStrideArray) {
-    auto inner = ty.array<i32, 2>(Vector{Stride(16)});  // size: 32
-    auto outer = ty.array(inner, 12_u);                 // size: 12 * 32
-    auto* s = Structure("S", Vector{
-                                 Member("c", outer),
-                             });
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-
-    auto* sem = TypeOf(s)->As<sem::Struct>();
-    ASSERT_NE(sem, nullptr);
-    EXPECT_EQ(sem->Size(), 384u);
-    EXPECT_EQ(sem->SizeNoPadding(), 384u);
-    EXPECT_EQ(sem->Align(), 4u);
-    ASSERT_EQ(sem->Members().Length(), 1u);
-    EXPECT_EQ(sem->Members()[0]->Offset(), 0u);
-    EXPECT_EQ(sem->Members()[0]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[0]->Size(), 384u);
-    for (auto& m : sem->Members()) {
-        EXPECT_EQ(m->Struct()->Declaration(), s);
-    }
-}
-
 TEST_F(ResolverStructLayoutTest, ImplicitStrideArrayOfStructure) {
     auto* inner = Structure("Inner", Vector{
                                          Member("a", ty.vec2<i32>()),
                                          Member("b", ty.vec3<i32>()),
                                          Member("c", ty.vec4<i32>()),
-                                     });        // size: 48
-    auto outer = ty.array(ty.Of(inner), 12_u);  // size: 12 * 48
+                                     });       // size: 48
+    auto outer = ty.array(ty.Of(inner), 12u);  // size: 12 * 48
     auto* s = Structure("S", Vector{
                                  Member("c", outer),
                              });
@@ -565,48 +480,6 @@ TEST_F(ResolverStructLayoutTest, StructWithLotsOfPadding) {
     EXPECT_EQ(sem->Members()[0]->Offset(), 0u);
     EXPECT_EQ(sem->Members()[0]->Align(), 1024u);
     EXPECT_EQ(sem->Members()[0]->Size(), 4u);
-    for (auto& m : sem->Members()) {
-        EXPECT_EQ(m->Struct()->Declaration(), s);
-    }
-}
-
-TEST_F(ResolverStructLayoutTest, OffsetAttributes) {
-    auto* inner = Structure("Inner", Vector{
-                                         Member("a", ty.f32(), Vector{MemberOffset(8_i)}),
-                                         Member("b", ty.f32(), Vector{MemberOffset(16_i)}),
-                                         Member("c", ty.f32(), Vector{MemberOffset(32_i)}),
-                                     });
-    auto* s = Structure("S", Vector{
-                                 Member("a", ty.f32(), Vector{MemberOffset(4_i)}),
-                                 Member("b", ty.u32(), Vector{MemberOffset(8_i)}),
-                                 Member("c", ty.Of(inner), Vector{MemberOffset(32_i)}),
-                                 Member("d", ty.i32()),
-                                 Member("e", ty.i32(), Vector{MemberOffset(128_i)}),
-                             });
-
-    ASSERT_TRUE(r()->Resolve()) << r()->error();
-
-    auto* sem = TypeOf(s)->As<sem::Struct>();
-    ASSERT_NE(sem, nullptr);
-    EXPECT_EQ(sem->Size(), 132u);
-    EXPECT_EQ(sem->SizeNoPadding(), 132u);
-    EXPECT_EQ(sem->Align(), 4u);
-    ASSERT_EQ(sem->Members().Length(), 5u);
-    EXPECT_EQ(sem->Members()[0]->Offset(), 4u);
-    EXPECT_EQ(sem->Members()[0]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[0]->Size(), 4u);
-    EXPECT_EQ(sem->Members()[1]->Offset(), 8u);
-    EXPECT_EQ(sem->Members()[1]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[1]->Size(), 4u);
-    EXPECT_EQ(sem->Members()[2]->Offset(), 32u);
-    EXPECT_EQ(sem->Members()[2]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[2]->Size(), 36u);
-    EXPECT_EQ(sem->Members()[3]->Offset(), 68u);
-    EXPECT_EQ(sem->Members()[3]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[3]->Size(), 4u);
-    EXPECT_EQ(sem->Members()[4]->Offset(), 128u);
-    EXPECT_EQ(sem->Members()[4]->Align(), 4u);
-    EXPECT_EQ(sem->Members()[4]->Size(), 4u);
     for (auto& m : sem->Members()) {
         EXPECT_EQ(m->Struct()->Declaration(), s);
     }

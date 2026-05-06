@@ -1,6 +1,6 @@
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -15,6 +15,8 @@
 #include "absl/flags/parse.h"
 #include "absl/log/absl_log.h"
 #include "absl/strings/escaping.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 
 #if defined(_WIN32)
 #include "google/protobuf/io/io_win32.h"
@@ -40,14 +42,13 @@ int defaults_escape(const std::string& defaults_path,
                     const std::string& encoding, std::string& out_content) {
   std::ifstream defaults_file(defaults_path);
   if (!defaults_file.is_open()) {
-    std::cerr << "Could not open defaults file " << defaults_path << std::endl;
+    ABSL_LOG(ERROR) << "Could not open defaults file " << defaults_path;
     return 1;
   }
 
   google::protobuf::FeatureSetDefaults defaults;
   if (!defaults.ParseFromIstream(&defaults_file)) {
-    std::cerr << "Unable to parse edition defaults " << defaults_path
-              << std::endl;
+    ABSL_LOG(ERROR) << "Unable to parse edition defaults " << defaults_path;
     defaults_file.close();
     return 1;
   }
@@ -60,6 +61,28 @@ int defaults_escape(const std::string& defaults_path,
     content = absl::Base64Escape(content);
   } else if (encoding == "octal") {
     content = absl::CEscape(content);
+  } else if (encoding == "decimal_array") {
+    std::string encoded;
+    bool first = true;
+    for (uint8_t c : content) {
+      if (first) {
+        first = false;
+        absl::StrAppend(&encoded, c);
+      } else {
+        absl::StrAppend(&encoded, ", ", c);
+      }
+    }
+    content = encoded;
+  } else if (encoding == "hex_array") {
+    std::string encoded = {};
+    size_t count = 0;
+    for (uint8_t c : content) {
+      absl::string_view prefix =
+          (count % 12 != 0) ? ", 0x" : (count == 0 ? "  0x" : ",\n  0x");
+      absl::StrAppend(&encoded, prefix, absl::Hex(c, absl::kZeroPad2));
+      ++count;
+    }
+    content = encoded;
   } else {
     ABSL_LOG(FATAL) << "Unknown encoding: " << encoding;
     return 1;
@@ -72,7 +95,7 @@ int defaults_escape(const std::string& defaults_path,
 int read_to_string(const std::string& path, std::string& out_content) {
   std::ifstream input_file(path);
   if (!input_file.is_open()) {
-    std::cerr << "Could not open file " << path << std::endl;
+    ABSL_LOG(ERROR) << "Could not open file " << path;
     return 1;
   }
 
@@ -100,7 +123,7 @@ int replace_placeholder(std::string& out_content,
 int write(const std::string& path, const std::string& content) {
   std::ofstream output_file(path);
   if (!output_file.is_open()) {
-    std::cerr << "Could not write to file " << path << std::endl;
+    ABSL_LOG(ERROR) << "Could not write to file " << path;
     return 1;
   }
 

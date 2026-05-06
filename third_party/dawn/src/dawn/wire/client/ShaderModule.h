@@ -53,6 +53,7 @@ class ShaderModule final : public ObjectWithEventsBase {
     std::optional<WGPUCompilationInfo> mCompilationInfo;
     std::vector<std::string> mMessageStrings;
     std::vector<WGPUCompilationMessage> mMessages;
+    std::vector<WGPUDawnCompilationMessageUtf16> mUtf16s;
 };
 
 }  // namespace dawn::wire::client

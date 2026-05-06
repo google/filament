@@ -72,7 +72,9 @@ class BindGroupValidationTest : public ValidationTest {
             descriptor.usage = wgpu::BufferUsage::Storage;
             mSSBO = device.CreateBuffer(&descriptor);
         }
-        { mSampler = device.CreateSampler(); }
+        {
+            mSampler = device.CreateSampler();
+        }
         {
             mSampledTexture =
                 CreateTexture(wgpu::TextureUsage::TextureBinding, kDefaultTextureFormat, 1);
@@ -142,7 +144,7 @@ class BindGroupValidationTest : public ValidationTest {
 };
 
 // Test the validation of BindGroupDescriptor::nextInChain
-TEST_F(BindGroupValidationTest, NextInChainNullptr) {
+TEST_F(BindGroupValidationTest, InvalidChain) {
     wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(device, {});
 
     wgpu::BindGroupDescriptor descriptor;
@@ -196,6 +198,20 @@ TEST_F(BindGroupValidationTest, BindingSetTwice) {
 
     // Check that setting the same binding twice is invalid
     ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, layout, {{0, mSampler}, {0, mSampler}}));
+}
+
+// Check that a binding past kMaxBindingsPerBindGroup - 1 results in a validation error. This is a
+// regression test for https://issues.chromium.org/492390076
+TEST_F(BindGroupValidationTest, BindingPastMaxBindingsPerGroup) {
+    wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, wgpu::SamplerBindingType::Filtering}});
+
+    // Control case: check that a descriptor with one binding is ok
+    utils::MakeBindGroup(device, layout, {{0, mSampler}});
+
+    // Error case: binding is not in the layout.
+    ASSERT_DEVICE_ERROR(
+        utils::MakeBindGroup(device, layout, {{kMaxBindingsPerBindGroup, mSampler}}));
 }
 
 // Check that a sampler binding must contain exactly one sampler
@@ -437,6 +453,7 @@ TEST_F(BindGroupValidationTest, ExternalTextureBindingType) {
 
             wgpu::ExternalTextureBindingEntry errorExternalBindingEntry;
             errorExternalBindingEntry.externalTexture = errorExternalTexture;
+
             binding.nextInChain = &errorExternalBindingEntry;
             ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
             binding.nextInChain = nullptr;
@@ -454,18 +471,60 @@ TEST_F(BindGroupValidationTest, ExternalTextureBindingType) {
             wgpu::ExternalTexture externalTexture2 = device.CreateExternalTexture(&externalDesc);
             wgpu::ExternalTextureBindingEntry externalBindingEntry2;
             externalBindingEntry2.externalTexture = externalTexture2;
+
             externalBindingEntry.nextInChain = &externalBindingEntry2;
-
             ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
-        }
-
-        // Chaining a struct that isn't an external texture binding entry is an error.
-        {
-            wgpu::ExternalTextureBindingLayout externalBindingLayout;
-            binding.nextInChain = &externalBindingLayout;
-            ASSERT_DEVICE_ERROR(device.CreateBindGroup(&descriptor));
+            externalBindingEntry.nextInChain = nullptr;
         }
     }
+}
+
+// Test that an external texture entry must not have more chained structs
+TEST_F(BindGroupValidationTest, ExternalTextureAdditionalChain) {
+    // Create an external texture
+    wgpu::Texture texture =
+        CreateTexture(wgpu::TextureUsage::TextureBinding, kDefaultTextureFormat, 1);
+    wgpu::ExternalTextureDescriptor externalDesc = CreateDefaultExternalTextureDescriptor();
+    externalDesc.plane0 = texture.CreateView();
+    wgpu::ExternalTexture externalTexture = device.CreateExternalTexture(&externalDesc);
+
+    // Create a bind group layout for a single external texture
+    wgpu::BindGroupLayout layout = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+
+    // Prepare
+    wgpu::ExternalTextureBindingEntry externalBindingEntry;
+    externalBindingEntry.externalTexture = externalTexture;
+
+    wgpu::BindGroupEntry binding;
+    binding.binding = 0;
+    binding.nextInChain = &externalBindingEntry;
+
+    wgpu::BindGroupDescriptor bgDesc;
+    bgDesc.layout = layout;
+    bgDesc.entryCount = 1;
+    bgDesc.entries = &binding;
+
+    // Success case, having only the ExternalTextureBindingEntry is valid.
+    device.CreateBindGroup(&bgDesc);
+
+    // Error case, adding more to the chain produces an error.
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = 256;
+    bufferDesc.usage = wgpu::BufferUsage::TexelBuffer;
+    wgpu::Buffer buffer = device.CreateBuffer(&bufferDesc);
+
+    wgpu::TexelBufferViewDescriptor viewDesc = {};
+    viewDesc.format = wgpu::TextureFormat::R32Uint;
+    viewDesc.offset = 0;
+    viewDesc.size = 4;
+    wgpu::TexelBufferView view = buffer.CreateTexelView(&viewDesc);
+
+    wgpu::TexelBufferBindingEntry texelEntry = {};
+    texelEntry.texelBufferView = view;
+
+    externalBindingEntry.nextInChain = &texelEntry;
+    ASSERT_DEVICE_ERROR(device.CreateBindGroup(&bgDesc));
 }
 
 // Check that a texture binding must have the correct usage
@@ -2434,6 +2493,155 @@ TEST_F(BindGroupLayoutWithStaticSamplersValidationTest, StaticSamplerWithArraySi
     ASSERT_DEVICE_ERROR(device.CreateBindGroupLayout(&desc));
 }
 
+// Test that the BGL visibility of a static sampler contain the shader's stage.
+TEST_F(BindGroupLayoutWithStaticSamplersValidationTest, BGLVisibilityContainsShaderStage) {
+    // Set up the static sampler binding but don't create the BGL yet.
+    wgpu::StaticSamplerBindingLayout staticSamplerBinding = {};
+    staticSamplerBinding.sampler = device.CreateSampler();
+
+    wgpu::BindGroupLayoutEntry binding = {};
+    binding.binding = 0;
+    binding.nextInChain = &staticSamplerBinding;
+
+    wgpu::BindGroupLayoutDescriptor desc = {};
+    desc.entryCount = 1;
+    desc.entries = &binding;
+
+    // Set up the compute pipeline but don't create it yet.
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0) var s : sampler;
+        @compute @workgroup_size(1) fn main() {
+            _ = s;
+        }
+    )");
+
+    // Success case, the BGL contains compute.
+    binding.visibility = wgpu::ShaderStage::Compute;
+    wgpu::BindGroupLayout bglCompute = device.CreateBindGroupLayout(&desc);
+    csDesc.layout = utils::MakeBasicPipelineLayout(device, &bglCompute);
+    device.CreateComputePipeline(&csDesc);
+
+    // Error case, the BGL doesn't contains compute.
+    binding.visibility = wgpu::ShaderStage::Fragment;
+    wgpu::BindGroupLayout bglFragment = device.CreateBindGroupLayout(&desc);
+    csDesc.layout = utils::MakeBasicPipelineLayout(device, &bglFragment);
+    ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&csDesc));
+}
+
+// Test that the BGL comparisoness for static sampler must match the shader.
+TEST_F(BindGroupLayoutWithStaticSamplersValidationTest, BGLComparisonessMatchesShader) {
+    // Set up the static sampler binding but don't create the BGL yet.
+    wgpu::StaticSamplerBindingLayout staticSamplerBinding = {};
+
+    wgpu::BindGroupLayoutEntry binding = {};
+    binding.binding = 0;
+    binding.visibility = wgpu::ShaderStage::Compute;
+    binding.nextInChain = &staticSamplerBinding;
+
+    wgpu::BindGroupLayoutDescriptor desc = {};
+    desc.entryCount = 1;
+    desc.entries = &binding;
+
+    // Set up the compute pipeline but don't create it yet.
+    wgpu::ComputePipelineDescriptor csDesc;
+    csDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0) var s : sampler;
+        @compute @workgroup_size(1) fn main() {
+            _ = s;
+        }
+    )");
+
+    // Success case, the BGL contains a non-comparison sampler, like the shader.
+    staticSamplerBinding.sampler = device.CreateSampler();
+    wgpu::BindGroupLayout bglCompute = device.CreateBindGroupLayout(&desc);
+    csDesc.layout = utils::MakeBasicPipelineLayout(device, &bglCompute);
+    device.CreateComputePipeline(&csDesc);
+
+    // Error case, the BGL contains a comparison sampler unlike the shader.
+    wgpu::SamplerDescriptor comparisonDesc = {};
+    comparisonDesc.compare = wgpu::CompareFunction::Never;
+    staticSamplerBinding.sampler = device.CreateSampler(&comparisonDesc);
+    wgpu::BindGroupLayout bglFragment = device.CreateBindGroupLayout(&desc);
+    csDesc.layout = utils::MakeBasicPipelineLayout(device, &bglFragment);
+    ASSERT_DEVICE_ERROR(device.CreateComputePipeline(&csDesc));
+}
+
+// Test that static samplers and external textures are not allowed in the same BGL.
+TEST_F(BindGroupLayoutWithStaticSamplersValidationTest,
+       StaticSamplerNotAllowedWithExternalTexture_BindGroupLayout) {
+    wgpu::StaticSamplerBindingLayout staticSamplerBindingLayout = {};
+    staticSamplerBindingLayout.sampler = device.CreateSampler();
+    wgpu::BindGroupLayoutEntry staticSamplerBinding = {};
+    staticSamplerBinding.binding = 0;
+    staticSamplerBinding.visibility = wgpu::ShaderStage::Compute;
+    staticSamplerBinding.nextInChain = &staticSamplerBindingLayout;
+
+    wgpu::ExternalTextureBindingLayout externalTextureBindingLayout = {};
+    wgpu::BindGroupLayoutEntry externalTextureBinding = {};
+    externalTextureBinding.binding = 0;
+    externalTextureBinding.visibility = wgpu::ShaderStage::Compute;
+    externalTextureBinding.nextInChain = &externalTextureBindingLayout;
+
+    // Success case: just the static sampler is valid.
+    {
+        wgpu::BindGroupLayoutDescriptor desc = {};
+        desc.entryCount = 1;
+        desc.entries = &staticSamplerBinding;
+        device.CreateBindGroupLayout(&desc);
+    }
+
+    // Success case: just the external texture is valid.
+    {
+        wgpu::BindGroupLayoutDescriptor desc = {};
+        desc.entryCount = 1;
+        desc.entries = &externalTextureBinding;
+        device.CreateBindGroupLayout(&desc);
+    }
+
+    // Error case: both together is an error.
+    {
+        std::array<wgpu::BindGroupLayoutEntry, 2> bindings = {staticSamplerBinding,
+                                                              externalTextureBinding};
+
+        wgpu::BindGroupLayoutDescriptor desc = {};
+        desc.entryCount = bindings.size();
+        desc.entries = bindings.data();
+        ASSERT_DEVICE_ERROR(device.CreateBindGroupLayout(&desc));
+    }
+}
+
+// Test that static samplers and external textures are not allowed in the same pipeline layout.
+TEST_F(BindGroupLayoutWithStaticSamplersValidationTest,
+       StaticSamplerNotAllowedWithExternalTexture_PipelineLayout) {
+    wgpu::BindGroupLayout staticSamplerBGL;
+    {
+        wgpu::StaticSamplerBindingLayout staticSamplerBindingLayout = {};
+        staticSamplerBindingLayout.sampler = device.CreateSampler();
+        wgpu::BindGroupLayoutEntry staticSamplerBinding = {};
+        staticSamplerBinding.binding = 0;
+        staticSamplerBinding.visibility = wgpu::ShaderStage::Compute;
+        staticSamplerBinding.nextInChain = &staticSamplerBindingLayout;
+
+        wgpu::BindGroupLayoutDescriptor desc = {};
+        desc.entryCount = 1;
+        desc.entries = &staticSamplerBinding;
+        staticSamplerBGL = device.CreateBindGroupLayout(&desc);
+    }
+
+    wgpu::BindGroupLayout externalTextureBGL = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Compute, &utils::kExternalTextureBindingLayout}});
+
+    // Success case: just the static sampler is valid.
+    utils::MakePipelineLayout(device, {staticSamplerBGL});
+
+    // Success case: just the external texture is valid.
+    utils::MakePipelineLayout(device, {externalTextureBGL});
+
+    // Error case: both together is an error.
+    utils::MakePipelineLayout(device, {staticSamplerBGL, externalTextureBGL});
+}
+
 constexpr uint32_t kBindingSize = 8;
 
 class SetBindGroupValidationTest : public ValidationTest {
@@ -3556,6 +3764,25 @@ TEST_F(BindGroupLayoutCompatibilityTest, ExternalTextureBindGroupLayoutCompatibi
                                                {bgl}));
 }
 
+// Test that the ExternalTexture in the BGL must have visibility that's a superset of the shader.
+TEST_F(BindGroupLayoutCompatibilityTest, ExternalTextureLayoutVisibility) {
+    const char shader[] = R"(
+        @group(0) @binding(0) var myExternalTexture: texture_external;
+        @fragment fn main() {
+            _ = myExternalTexture;
+        })";
+
+    // Success case, visibility in the BGL contains Fragment.
+    wgpu::BindGroupLayout bglFragment = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Fragment, &utils::kExternalTextureBindingLayout}});
+    CreateFSRenderPipeline(shader, {bglFragment});
+
+    // Error case, visibility in the BGL doesn't have Fragment.
+    wgpu::BindGroupLayout bglCompute = utils::MakeBindGroupLayout(
+        device, {{0, wgpu::ShaderStage::Compute, &utils::kExternalTextureBindingLayout}});
+    ASSERT_DEVICE_ERROR(CreateFSRenderPipeline(shader, {bglCompute}));
+}
+
 // Test that a BGL is compatible with a pipeline if a binding's array size is at least as big as the
 // shader's binding_array's size.
 TEST_F(BindGroupLayoutCompatibilityTest, ArraySizeCompatibility) {
@@ -3823,6 +4050,270 @@ TEST_F(BindingsValidationTest, BindGroupsWithFewerBindingsThanPipelineLayout) {
     TestRenderPassBindings(bg.data(), kBindingNum, renderPipeline, false);
 
     TestComputePassBindings(bg.data(), kBindingNum, computePipeline, false);
+}
+
+class FilterabilityValidationTest : public BindGroupLayoutCompatibilityTest {};
+
+TEST_F(FilterabilityValidationTest, FilterableBGL_UnFilterableShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32, unfilterable>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, FilterableBGL_FilterableShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32, filterable>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, FilterableBGL_UnknownShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, UnfilterableBGL_UnFilterableShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32, unfilterable>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::UnfilterableFloat},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, UnfilterableBGL_FilterableShader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32, filterable>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::UnfilterableFloat},
+                });
+
+    ASSERT_DEVICE_ERROR(CreateComputePipeline(shaderSource, {bgl}),
+                        testing::HasSubstr("isn't compatible"));
+}
+
+TEST_F(FilterabilityValidationTest, UnfilterableBGL_UnknownShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::UnfilterableFloat},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, FilterableBGL_DepthShader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_depth_2d;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                });
+
+    ASSERT_DEVICE_ERROR(CreateComputePipeline(shaderSource, {bgl}),
+                        testing::HasSubstr("isn't compatible"));
+}
+
+TEST_F(FilterabilityValidationTest, FilterableBGL_i32Shader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<i32>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                });
+
+    ASSERT_DEVICE_ERROR(CreateComputePipeline(shaderSource, {bgl}),
+                        testing::HasSubstr("isn't compatible"));
+}
+
+TEST_F(FilterabilityValidationTest, FilteringBGL_FilteringShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::Filtering},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, FilteringBGL_NonFilteringShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<non_filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::Filtering},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, NonFilteringBGL_NonFilteringShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<non_filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::NonFiltering},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, NonFilteringBGL_FilteringShader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::NonFiltering},
+                });
+
+    ASSERT_DEVICE_ERROR(CreateComputePipeline(shaderSource, {bgl}),
+                        testing::HasSubstr("doesn't match"));
+}
+
+TEST_F(FilterabilityValidationTest, ComparisonBGL_ComparisonShader_Pass) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler_comparison;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::Comparison},
+                });
+    CreateComputePipeline(shaderSource, {bgl});
+}
+
+TEST_F(FilterabilityValidationTest, ComparisonBGL_FilteringShader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::Comparison},
+                });
+    ASSERT_DEVICE_ERROR(
+        CreateComputePipeline(shaderSource, {bgl}),
+        testing::HasSubstr("(SamplerBindingType::Filtering) doesn't match the type in the layout "
+                           "(SamplerBindingType::Comparison"));
+}
+
+TEST_F(FilterabilityValidationTest, ComparisonBGL_NonFilteringShader_Fail) {
+    auto shaderSource = R"(
+    @group(0) @binding(0) var tex1 : texture_2d<f32>;
+    @group(0) @binding(1) var samp : sampler<non_filtering>;
+
+    @compute @workgroup_size(1) fn main() {
+      _ = tex1;
+      _ = samp;
+    })";
+
+    auto bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::Float},
+                    {1, wgpu::ShaderStage::Compute, wgpu::SamplerBindingType::Comparison},
+                });
+
+    ASSERT_DEVICE_ERROR(
+        CreateComputePipeline(shaderSource, {bgl}),
+        testing::HasSubstr(
+            "(SamplerBindingType::NonFiltering) doesn't match the type in the layout "
+            "(SamplerBindingType::Comparison"));
 }
 
 class SamplerTypeBindingTest : public ValidationTest {

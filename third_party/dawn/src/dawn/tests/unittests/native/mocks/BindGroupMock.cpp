@@ -29,11 +29,13 @@
 
 namespace dawn::native {
 
-BindGroupMock::BindGroupMock(DeviceMock* device, const BindGroupDescriptor* descriptor)
+BindGroupMock::BindGroupMock(DeviceMock* device, const UnpackedPtr<BindGroupDescriptor>& descriptor)
     : BindGroupDataHolder(descriptor->layout->GetInternalBindGroupLayout()->GetBindingDataSize()),
       BindGroupBase(device, descriptor, mBindingDataAllocation) {
     ON_CALL(*this, InitializeImpl).WillByDefault([]() -> MaybeError { return {}; });
-    ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->BindGroupBase::DestroyImpl(); });
+    ON_CALL(*this, DestroyImpl).WillByDefault([this](DestroyReason reason) {
+        this->BindGroupBase::DestroyImpl(reason);
+    });
 }
 
 BindGroupMock::~BindGroupMock() = default;

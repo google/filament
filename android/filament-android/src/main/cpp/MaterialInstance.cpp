@@ -20,14 +20,18 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
+#include "common/CallbackUtils.h"
+
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace filament::math;
+using namespace filament::android;
 
 enum BooleanElement {
     BOOL,
@@ -56,7 +60,9 @@ template<typename T>
 static void setParameter(JNIEnv* env, jlong nativeMaterialInstance, jstring name_, T v) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     const char *name = env->GetStringUTFChars(name_, 0);
-    instance->setParameter(name, v);
+    wrapJni(env, [=]() {
+        instance->setParameter(name, v);
+    });
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -160,20 +166,22 @@ Java_com_google_android_filament_MaterialInstance_nSetBooleanParameterArray(JNIE
     // NOTE: In C++, bool has an implementation-defined size. Here we assume
     // it has the same size as jboolean, which is 1 byte.
 
-    switch ((BooleanElement) element) {
-        case BOOL:
-            instance->setParameter(name, ((const bool*) v) + offset, count);
-            break;
-        case BOOL2:
-            instance->setParameter(name, ((const bool2*) v) + offset, count);
-            break;
-        case BOOL3:
-            instance->setParameter(name, ((const bool3*) v) + offset, count);
-            break;
-        case BOOL4:
-            instance->setParameter(name, ((const bool4*) v) + offset, count);
-            break;
-    }
+    wrapJni(env, [=]() {
+        switch ((BooleanElement) element) {
+            case BOOL:
+                instance->setParameter(name, ((const bool*) v) + offset, count);
+                break;
+            case BOOL2:
+                instance->setParameter(name, ((const bool2*) v) + offset, count);
+                break;
+            case BOOL3:
+                instance->setParameter(name, ((const bool3*) v) + offset, count);
+                break;
+            case BOOL4:
+                instance->setParameter(name, ((const bool4*) v) + offset, count);
+                break;
+        }
+    });
 
     env->ReleaseBooleanArrayElements(v_, v, 0);
 
@@ -190,20 +198,22 @@ Java_com_google_android_filament_MaterialInstance_nSetIntParameterArray(JNIEnv *
     const char* name = env->GetStringUTFChars(name_, 0);
     jint* v = env->GetIntArrayElements(v_, NULL);
 
-    switch ((IntElement) element) {
-        case INT:
-            instance->setParameter(name, ((const int32_t*) v) + offset, count);
-            break;
-        case INT2:
-            instance->setParameter(name, ((const int2*) v) + offset, count);
-            break;
-        case INT3:
-            instance->setParameter(name, ((const int3*) v) + offset, count);
-            break;
-        case INT4:
-            instance->setParameter(name, ((const int4*) v) + offset, count);
-            break;
-    }
+    wrapJni(env, [=]() {
+        switch ((IntElement) element) {
+            case INT:
+                instance->setParameter(name, ((const int32_t*) v) + offset, count);
+                break;
+            case INT2:
+                instance->setParameter(name, ((const int2*) v) + offset, count);
+                break;
+            case INT3:
+                instance->setParameter(name, ((const int3*) v) + offset, count);
+                break;
+            case INT4:
+                instance->setParameter(name, ((const int4*) v) + offset, count);
+                break;
+        }
+    });
 
     env->ReleaseIntArrayElements(v_, v, JNI_ABORT);
 
@@ -220,29 +230,94 @@ Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray(JNIEnv
     const char* name = env->GetStringUTFChars(name_, 0);
     jfloat* v = env->GetFloatArrayElements(v_, NULL);
 
-    switch ((FloatElement) element) {
-        case FLOAT:
-            instance->setParameter(name, ((const float*) v) + offset, count);
-            break;
-        case FLOAT2:
-            instance->setParameter(name, ((const float2*) v) + offset, count);
-            break;
-        case FLOAT3:
-            instance->setParameter(name, ((const float3*) v) + offset, count);
-            break;
-        case FLOAT4:
-            instance->setParameter(name, ((const float4*) v) + offset, count);
-            break;
-        case MAT3:
-            instance->setParameter(name, ((const mat3f*) v) + offset, count);
-            break;
-        case MAT4:
-            instance->setParameter(name, ((const mat4f*) v) + offset, count);
-            break;
-    }
+    wrapJni(env, [=]() {
+        switch ((FloatElement) element) {
+            case FLOAT:
+                instance->setParameter(name, ((const float*) v) + offset, count);
+                break;
+            case FLOAT2:
+                instance->setParameter(name, ((const float2*) v) + offset, count);
+                break;
+            case FLOAT3:
+                instance->setParameter(name, ((const float3*) v) + offset, count);
+                break;
+            case FLOAT4:
+                instance->setParameter(name, ((const float4*) v) + offset, count);
+                break;
+            case MAT3:
+                instance->setParameter(name, ((const mat3f*) v) + offset, count);
+                break;
+            case MAT4:
+                instance->setParameter(name, ((const mat4f*) v) + offset, count);
+                break;
+        }
+    });
 
     env->ReleaseFloatArrayElements(v_, v, 0);
 
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantBool(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jboolean result = instance->getConstant<bool>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantFloat(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jfloat result = instance->getConstant<float>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetConstantInt(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jint result = instance->getConstant<int32_t>(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantBool(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jboolean x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<bool>(name, x);
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantFloat(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jfloat x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<float>(name, x);
+    env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantInt(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jint x) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant<int32_t>(name, x);
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -260,7 +335,9 @@ Java_com_google_android_filament_MaterialInstance_nSetParameterTexture(
     Texture* texture = (Texture*) nativeTexture;
 
     const char *name = env->GetStringUTFChars(name_, 0);
-    instance->setParameter(name, texture, JniUtils::from_long(sampler_));
+    wrapJni(env, [=]() {
+        instance->setParameter(name, texture, JniUtils::from_long(sampler_));
+    });
     env->ReleaseStringUTFChars(name_, name);
 }
 
@@ -579,4 +656,18 @@ Java_com_google_android_filament_MaterialInstance_nGetTransparencyMode(JNIEnv*, 
         jlong nativeMaterialInstance) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     return (jint) instance->getTransparencyMode();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nCompile(JNIEnv *env, jclass clazz,
+        jlong nativeMaterialInstance, jint priority, jint variants, jobject handler, jobject runnable) {
+    MaterialInstance* materialInstance = (MaterialInstance*) nativeMaterialInstance;
+    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+    materialInstance->compile(
+            (MaterialInstance::CompilerPriorityQueue) priority,
+            (UserVariantFilterBit) variants,
+            jniCallback->getHandler(), [jniCallback](MaterialInstance*){
+                JniCallback::postToJavaAndDestroy(jniCallback);
+            });
 }

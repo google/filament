@@ -44,7 +44,7 @@ class ErrorQuerySet final : public QuerySetBase {
         : QuerySetBase(device, descriptor, ObjectBase::kError) {}
 
   private:
-    void DestroyImpl() override { DAWN_UNREACHABLE(); }
+    void DestroyImpl(DestroyReason reason) override { DAWN_UNREACHABLE(); }
 };
 
 }  // anonymous namespace
@@ -97,7 +97,7 @@ QuerySetBase::~QuerySetBase() {
     DAWN_ASSERT(mState == QuerySetState::Unavailable || mState == QuerySetState::Destroyed);
 }
 
-void QuerySetBase::DestroyImpl() {
+void QuerySetBase::DestroyImpl(DestroyReason reason) {
     // TODO(crbug.com/dawn/831): DestroyImpl is called from two places.
     // - It may be called if the query set is explicitly destroyed with APIDestroy.
     //   This case is NOT thread-safe and needs proper synchronization with other

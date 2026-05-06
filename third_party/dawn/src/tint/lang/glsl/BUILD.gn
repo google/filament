@@ -45,7 +45,7 @@ libtint_source_set("glsl") {
     "builtin_fn.h",
   ]
   deps = [
-    "${dawn_root}/src/utils:utils",
+    "${dawn_root}/src/utils",
     "${tint_src_dir}/lang/core/ir",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/utils/containers",

@@ -82,48 +82,19 @@ void GPUQueue::writeBuffer(Napi::Env env,
                            interop::GPUSize64 dataOffsetElements,
                            std::optional<interop::GPUSize64> sizeElements) {
     wgpu::Buffer buf = *buffer.As<GPUBuffer>();
-    Converter::BufferSource src{};
-    Converter conv(env);
-    if (!conv(src, data)) {
+
+    std::span<const uint8_t> dataSpan;
+    if (!ConvertDataElementsToSpan(env, &dataSpan, data, dataOffsetElements, sizeElements)) {
         return;
     }
 
-    // Note that in the JS semantics of WebGPU, writeBuffer works in number of elements of the
-    // typed arrays.
-    if (dataOffsetElements > uint64_t(src.size / src.bytesPerElement)) {
-        binding::Errors::OperationError(env, "dataOffset is larger than data's size.")
-            .ThrowAsJavaScriptException();
-        return;
-    }
-    uint64_t dataOffset = dataOffsetElements * src.bytesPerElement;
-    src.data = reinterpret_cast<uint8_t*>(src.data) + dataOffset;
-    src.size -= dataOffset;
-
-    // Size defaults to dataSize - dataOffset. Instead of computing in elements, we directly
-    // use it in bytes, and convert the provided value, if any, in bytes.
-    uint64_t size64 = uint64_t(src.size);
-    if (sizeElements.has_value()) {
-        if (sizeElements.value() > std::numeric_limits<uint64_t>::max() / src.bytesPerElement) {
-            binding::Errors::OperationError(env, "size overflows.").ThrowAsJavaScriptException();
-            return;
-        }
-        size64 = sizeElements.value() * src.bytesPerElement;
-    }
-
-    if (size64 > uint64_t(src.size)) {
-        binding::Errors::OperationError(env, "size + dataOffset is larger than data's size.")
-            .ThrowAsJavaScriptException();
-        return;
-    }
-
-    if (size64 % 4 != 0) {
+    if (dataSpan.size() % 4 != 0) {
         binding::Errors::OperationError(env, "size is not a multiple of 4 bytes.")
             .ThrowAsJavaScriptException();
         return;
     }
 
-    assert(size64 <= std::numeric_limits<size_t>::max());
-    queue_.WriteBuffer(buf, bufferOffset, src.data, static_cast<size_t>(size64));
+    queue_.WriteBuffer(buf, bufferOffset, dataSpan.data(), dataSpan.size());
 }
 
 void GPUQueue::writeTexture(Napi::Env env,

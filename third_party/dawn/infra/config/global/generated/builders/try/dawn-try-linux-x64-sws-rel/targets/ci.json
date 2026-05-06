@@ -1,0 +1,194 @@
+{
+  "dawn-linux-x64-builder-rel": {
+    "additional_compile_targets": [
+      "default"
+    ]
+  },
+  "dawn-linux-x64-sws-rel": {
+    "gtest_tests": [
+      {
+        "args": [
+          "--backend=opengles",
+          "--use-angle=swiftshader",
+          "--enable-toggles=gl_force_es_31_and_no_extensions"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_swangle_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 2
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "args": [
+          "--adapter-vendor-id=0x1AE0"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_end2end_tests/",
+        "module_scheme": "gtest",
+        "name": "dawn_end2end_sws_tests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com",
+          "shards": 3
+        },
+        "test": "dawn_end2end_tests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_end2end_tests/"
+      },
+      {
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_unittests/",
+        "module_scheme": "gtest",
+        "name": "dawn_unittests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_unittests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_unittests/"
+      },
+      {
+        "args": [
+          "--use-wire"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/dawn/tests:dawn_unittests/",
+        "module_scheme": "gtest",
+        "name": "dawn_wire_unittests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_unittests",
+        "test_id_prefix": "ninja://src/dawn/tests:dawn_unittests/"
+      },
+      {
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/tint/cmd/test:tint_unittests/",
+        "module_scheme": "gtest",
+        "name": "tint_unittests",
+        "resultdb": {
+          "result_format": "gtest_json"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "tint_unittests",
+        "test_id_prefix": "ninja://src/tint/cmd/test:tint_unittests/"
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "-backend",
+          "vulkan",
+          "-adapter",
+          "SwiftShader",
+          "webgpu:api,operation,adapter,requestDevice:default:*"
+        ],
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//scripts/dawn_node_cts:dawn_node_cts/",
+        "module_scheme": "single",
+        "name": "dawn_node_sws_cts",
+        "resultdb": {
+          "result_format": "single"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "dawn_node_cts",
+        "test_id_prefix": "ninja://scripts/dawn_node_cts:dawn_node_cts/"
+      },
+      {
+        "merge": {
+          "script": "//scripts/merge_scripts/true_noop_merge.py"
+        },
+        "module_name": "//src/tint:benchmarks/",
+        "module_scheme": "single",
+        "name": "tint_benchmark",
+        "resultdb": {
+          "result_format": "single"
+        },
+        "swarming": {
+          "containment_type": "AUTO",
+          "dimensions": {
+            "cpu": "x86-64",
+            "gpu": "none",
+            "os": "Ubuntu-22.04",
+            "pool": "chromium.tests.gpu"
+          },
+          "service_account": "chromium-tester@chops-service-accounts.iam.gserviceaccount.com"
+        },
+        "test": "benchmarks",
+        "test_id_prefix": "ninja://src/tint:benchmarks/"
+      }
+    ]
+  }
+}

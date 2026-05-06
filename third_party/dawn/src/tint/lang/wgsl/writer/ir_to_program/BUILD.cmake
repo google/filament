@@ -41,7 +41,6 @@
 tint_add_target(tint_lang_wgsl_writer_ir_to_program lib
   lang/wgsl/writer/ir_to_program/ir_to_program.cc
   lang/wgsl/writer/ir_to_program/ir_to_program.h
-  lang/wgsl/writer/ir_to_program/program_options.h
 )
 
 tint_target_add_dependencies(tint_lang_wgsl_writer_ir_to_program lib
@@ -58,6 +57,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer_ir_to_program lib
   tint_lang_wgsl_program
   tint_lang_wgsl_resolver
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_common
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -96,6 +96,7 @@ tint_target_add_dependencies(tint_lang_wgsl_writer_ir_to_program_test test
   tint_lang_wgsl_ir
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_common
   tint_lang_wgsl_writer_ir_to_program
   tint_utils
   tint_utils_containers

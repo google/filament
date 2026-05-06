@@ -77,5 +77,19 @@ TEST(ResultTest, ValueCast) {
     (void)r_y;
 }
 
+TEST(ResultTest, CheckResultMacro_ExpressionEvaluatedOnlyOnce) {
+    uint32_t count = 0;
+    auto f = [&]() -> Result<SuccessType> {
+        count++;
+        return Failure{"failed"};
+    };
+    auto caller = [&]() -> Result<SuccessType> {
+        TINT_CHECK_RESULT(f());
+        return Success;
+    };
+    ASSERT_NE(caller(), Success);
+    EXPECT_EQ(count, 1u);
+}
+
 }  // namespace
 }  // namespace tint

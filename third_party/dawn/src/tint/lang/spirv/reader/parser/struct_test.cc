@@ -53,7 +53,7 @@ TEST_F(SpirvParserDeathTest, Struct_Empty) {
                OpReturn
                OpFunctionEnd
 )");
-            auto parsed = Parse(Slice(assembly.Get().data(), assembly.Get().size()));
+            auto parsed = Parse(assembly.Get());
             EXPECT_EQ(parsed, Success);
         },
         "empty structures are not supported");

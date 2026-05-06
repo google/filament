@@ -463,7 +463,9 @@ TEST_F(TextureViewValidationTest, TextureViewDescriptorDefaults2DArray) {
     constexpr uint32_t kDefaultArrayLayers = 8;
     wgpu::Texture texture = Create2DArrayTexture(device, kDefaultArrayLayers);
 
-    { texture.CreateView(); }
+    {
+        texture.CreateView();
+    }
     {
         wgpu::TextureViewDescriptor descriptor;
         descriptor.format = wgpu::TextureFormat::Undefined;
@@ -527,7 +529,9 @@ TEST_F(TextureViewValidationTest, TextureViewDescriptorDefaults2DNonArray) {
     constexpr uint32_t kDefaultArrayLayers = 1;
     wgpu::Texture texture = Create2DArrayTexture(device, kDefaultArrayLayers);
 
-    { texture.CreateView(); }
+    {
+        texture.CreateView();
+    }
     {
         wgpu::TextureViewDescriptor descriptor;
         descriptor.format = wgpu::TextureFormat::Undefined;
@@ -570,7 +574,9 @@ TEST_F(TextureViewValidationTest, TextureViewDescriptorDefaults2DNonArray) {
 TEST_F(TextureViewValidationTest, TextureViewDescriptorDefaults3D) {
     wgpu::Texture texture = Create3DTexture(device);
 
-    { texture.CreateView(); }
+    {
+        texture.CreateView();
+    }
     {
         wgpu::TextureViewDescriptor descriptor;
         descriptor.format = wgpu::TextureFormat::Undefined;
@@ -985,10 +991,7 @@ TEST_F(TextureViewValidationTest, Usage) {
     {
         wgpu::TextureViewDescriptor descriptor = base2DTextureViewDescriptor;
         descriptor.format = wgpu::TextureFormat::RGBA8UnormSrgb;
-
-        // TODO(363903526): Change this to inherited usage when inherited and explicit usages are
-        // validated the same way.
-        descriptor.usage = textureDescriptor.usage;
+        descriptor.usage = wgpu::TextureUsage::None;
 
         ASSERT_DEVICE_ERROR(texture.CreateView(&descriptor));
     }
@@ -1025,23 +1028,25 @@ class ComponentSwizzleTextureViewValidationTests : public ValidationTest {
         return {wgpu::FeatureName::TextureComponentSwizzle};
     }
 
-    wgpu::TextureComponentSwizzleDescriptor GetIdenticalButOneSwizzleDesc(SwizzleChannel channel) {
+    wgpu::TextureComponentSwizzleDescriptor GetIdenticalButOneSwizzleDesc(
+        SwizzleChannel channel,
+        std::optional<wgpu::ComponentSwizzle> swizzle = std::nullopt) {
         wgpu::TextureComponentSwizzleDescriptor desc = {};
         switch (channel) {
             case (SwizzleChannel::R): {
-                desc.swizzle.r = wgpu::ComponentSwizzle::Zero;
+                desc.swizzle.r = swizzle.value_or(wgpu::ComponentSwizzle::Zero);
                 break;
             }
             case (SwizzleChannel::G): {
-                desc.swizzle.g = wgpu::ComponentSwizzle::One;
+                desc.swizzle.g = swizzle.value_or(wgpu::ComponentSwizzle::One);
                 break;
             }
             case (SwizzleChannel::B): {
-                desc.swizzle.b = wgpu::ComponentSwizzle::R;
+                desc.swizzle.b = swizzle.value_or(wgpu::ComponentSwizzle::R);
                 break;
             }
             case (SwizzleChannel::A): {
-                desc.swizzle.a = wgpu::ComponentSwizzle::G;
+                desc.swizzle.a = swizzle.value_or(wgpu::ComponentSwizzle::G);
                 break;
             }
         }
@@ -1049,46 +1054,171 @@ class ComponentSwizzleTextureViewValidationTests : public ValidationTest {
     }
 };
 
-// Test different swizzle values when creating a texture view.
-TEST_F(ComponentSwizzleTextureViewValidationTests, InvalidSwizzle) {
+// Test setting invalid component swizzle when creating a texture view fails.
+TEST_F(ComponentSwizzleTextureViewValidationTests, InvalidComponentSwizzle) {
     wgpu::TextureDescriptor textureDesc = {};
     textureDesc.size = {kWidth, kHeight, kDepth};
-    textureDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::RenderAttachment;
+    textureDesc.usage = wgpu::TextureUsage::StorageBinding | wgpu::TextureUsage::RenderAttachment;
     textureDesc.format = kDefaultTextureFormat;
+    wgpu::Texture texture = device.CreateTexture(&textureDesc);
+
+    // Control case: identity swizzle
+    wgpu::TextureViewDescriptor viewDesc = {};
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc = {};
+    viewDesc.nextInChain = &swizzleDesc;
+    texture.CreateView(&viewDesc);
+
+    // Invalid component swizzle for each channel
+    for (auto changedChannel :
+         {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
+        swizzleDesc =
+            GetIdenticalButOneSwizzleDesc(changedChannel, static_cast<wgpu::ComponentSwizzle>(-1));
+        ASSERT_DEVICE_ERROR(texture.CreateView(&viewDesc));
+    }
+}
+
+// Test storage binding requires identity swizzle.
+TEST_F(ComponentSwizzleTextureViewValidationTests, StorageBindingRequiresIdentitySwizzle) {
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.size = {kWidth, kHeight, 1};
+    textureDesc.usage = wgpu::TextureUsage::StorageBinding;
+    textureDesc.format = kDefaultTextureFormat;
+    wgpu::Texture texture = device.CreateTexture(&textureDesc);
 
     wgpu::TextureViewDescriptor viewDesc = {};
     wgpu::TextureComponentSwizzleDescriptor swizzleDesc = {};
     viewDesc.nextInChain = &swizzleDesc;
 
-    std::vector<wgpu::TextureUsage> usages = {
-        wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::RenderAttachment,
-        wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::StorageBinding,
-        wgpu::TextureUsage::TextureBinding};
+    wgpu::ComputePipelineDescriptor cpDesc;
+    cpDesc.compute.module = utils::CreateShaderModule(device, R"(
+        @group(0) @binding(0) var texture : texture_storage_2d<rgba8unorm, read>;
 
-    for (auto textureUsage : usages) {
-        textureDesc.usage = textureUsage;
-        wgpu::Texture texture = device.CreateTexture(&textureDesc);
+        @compute @workgroup_size(1) fn main() {
+          var res : vec4f = textureLoad(texture, vec2i(0, 0));
+        })");
+    wgpu::ComputePipeline cp = device.CreateComputePipeline(&cpDesc);
 
-        // Control case for identical swizzle, always success.
-        {
-            swizzleDesc = wgpu::TextureComponentSwizzleDescriptor{};
-            texture.CreateView(&viewDesc);
-        }
+    // Control case: identity swizzle
+    utils::MakeBindGroup(device, cp.GetBindGroupLayout(0), {{0, texture.CreateView(&viewDesc)}});
 
-        // Non-identical swizzle cases
-        for (auto changedChannel :
-             {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
-            swizzleDesc = GetIdenticalButOneSwizzleDesc(changedChannel);
-            // CreateView would succeed iif usage doesn't include RENDER_ATTACHMENT
-            // or STORAGE_BINDING.
-            bool expectSuccess = !(textureUsage & (wgpu::TextureUsage::RenderAttachment |
-                                                   wgpu::TextureUsage::StorageBinding));
-            if (expectSuccess) {
-                texture.CreateView(&viewDesc);
-            } else {
-                ASSERT_DEVICE_ERROR(texture.CreateView(&viewDesc));
-            }
-        }
+    // Non-identical swizzle cases
+    for (auto changedChannel :
+         {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
+        swizzleDesc = GetIdenticalButOneSwizzleDesc(changedChannel);
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroup(device, cp.GetBindGroupLayout(0),
+                                                 {{0, texture.CreateView(&viewDesc)}}),
+                            testing::HasSubstr("must be identity"));
+    }
+}
+
+// Test color attachment requires identity swizzle.
+TEST_F(ComponentSwizzleTextureViewValidationTests, ColorAttachmentRequiresIdentitySwizzle) {
+    wgpu::Texture texture = Create2DArrayTexture(device, /*arrayLayerCount=*/1, kWidth, kHeight,
+                                                 /*mipLevelCount=*/1);
+    wgpu::TextureViewDescriptor viewDesc = {};
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc = {};
+    viewDesc.nextInChain = &swizzleDesc;
+
+    // Control case: identity swizzle
+    {
+        utils::ComboRenderPassDescriptor renderPassDesc({texture.CreateView(&viewDesc)});
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        commandEncoder.Finish();
+    }
+
+    // Non-identical swizzle cases
+    for (auto changedChannel :
+         {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
+        swizzleDesc = GetIdenticalButOneSwizzleDesc(changedChannel);
+        utils::ComboRenderPassDescriptor renderPassDesc({texture.CreateView(&viewDesc)});
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        ASSERT_DEVICE_ERROR(commandEncoder.Finish(),
+                            testing::HasSubstr("The color attachment swizzle must be identity"));
+    }
+}
+
+// Test resolve target requires identity swizzle.
+TEST_F(ComponentSwizzleTextureViewValidationTests, ResolveTargetRequiresIdentitySwizzle) {
+    wgpu::Texture texture = Create2DArrayTexture(device, /*arrayLayerCount=*/1, kWidth, kHeight,
+                                                 /*mipLevelCount=*/1, /*sampleCount=*/4);
+    wgpu::TextureView view = texture.CreateView();
+
+    wgpu::Texture resolveTargetTexture =
+        Create2DArrayTexture(device, /*arrayLayerCount=*/1, kWidth, kHeight,
+                             /*mipLevelCount=*/1);
+    wgpu::TextureViewDescriptor viewDesc = {};
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc = {};
+    viewDesc.nextInChain = &swizzleDesc;
+
+    // Control case: identity swizzle
+    {
+        utils::ComboRenderPassDescriptor renderPassDesc({view});
+        renderPassDesc.cColorAttachments[0].resolveTarget =
+            resolveTargetTexture.CreateView(&viewDesc);
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        commandEncoder.Finish();
+    }
+
+    // Non-identical swizzle cases
+    for (auto changedChannel :
+         {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
+        swizzleDesc = GetIdenticalButOneSwizzleDesc(changedChannel);
+        utils::ComboRenderPassDescriptor renderPassDesc({view});
+        renderPassDesc.cColorAttachments[0].resolveTarget =
+            resolveTargetTexture.CreateView(&viewDesc);
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        ASSERT_DEVICE_ERROR(commandEncoder.Finish(),
+                            testing::HasSubstr("The resolve target swizzle must be identity"));
+    }
+}
+
+// Test depth stencil attachment requires identity swizzle.
+TEST_F(ComponentSwizzleTextureViewValidationTests, DepthStencilAttachmentRequiresIdentitySwizzle) {
+    wgpu::Texture texture = Create2DArrayTexture(device, /*arrayLayerCount=*/1, kWidth, kHeight,
+                                                 /*mipLevelCount=*/1);
+    wgpu::TextureView view = texture.CreateView();
+
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.size = {kWidth, kHeight, 1};
+    textureDesc.usage = wgpu::TextureUsage::RenderAttachment;
+    textureDesc.format = wgpu::TextureFormat::Depth24PlusStencil8;
+    wgpu::Texture depthStencilTexture = device.CreateTexture(&textureDesc);
+
+    wgpu::TextureViewDescriptor viewDesc = {};
+    viewDesc.aspect = wgpu::TextureAspect::All;
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc = {};
+    viewDesc.nextInChain = &swizzleDesc;
+
+    // Control case: identity swizzle
+    {
+        utils::ComboRenderPassDescriptor renderPassDesc({view},
+                                                        depthStencilTexture.CreateView(&viewDesc));
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        commandEncoder.Finish();
+    }
+
+    // Non-identical swizzle cases
+    for (auto changedChannel :
+         {SwizzleChannel::R, SwizzleChannel::G, SwizzleChannel::B, SwizzleChannel::A}) {
+        swizzleDesc = GetIdenticalButOneSwizzleDesc(changedChannel);
+        utils::ComboRenderPassDescriptor renderPassDesc({view},
+                                                        depthStencilTexture.CreateView(&viewDesc));
+        wgpu::CommandEncoder commandEncoder = device.CreateCommandEncoder();
+        wgpu::RenderPassEncoder renderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDesc);
+        renderPassEncoder.End();
+        ASSERT_DEVICE_ERROR(
+            commandEncoder.Finish(),
+            testing::HasSubstr("The depth stencil attachment swizzle must be identity"));
     }
 }
 
@@ -1132,6 +1262,114 @@ TEST_F(D32S8TextureViewValidationTests, TextureViewFormatCompatibility) {
         descriptor.format = wgpu::TextureFormat::RGBA8Unorm;
         ASSERT_DEVICE_ERROR(texture.CreateView(&descriptor));
     }
+}
+
+class TexelBufferViewValidationTest : public ValidationTest {
+  protected:
+    wgpu::Buffer CreateTexelBuffer(uint64_t size, wgpu::BufferUsage usage) {
+        wgpu::BufferDescriptor desc;
+        desc.size = size;
+        desc.usage = usage;
+        return device.CreateBuffer(&desc);
+    }
+};
+
+// Valid texel buffer view creation
+TEST_F(TexelBufferViewValidationTest, CreationSuccess) {
+    constexpr uint64_t kSize = 4 * 4;  // 4 texels of RGBA8Uint
+    wgpu::Buffer buffer =
+        CreateTexelBuffer(kSize, wgpu::BufferUsage::TexelBuffer | wgpu::BufferUsage::CopySrc);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::RGBA8Uint;
+    viewDesc.offset = 0;
+    viewDesc.size = kSize;
+
+    buffer.CreateTexelView(&viewDesc);
+}
+
+// Format must not be undefined
+TEST_F(TexelBufferViewValidationTest, UndefinedFormat) {
+    wgpu::Buffer buffer = CreateTexelBuffer(256, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::Undefined;
+    viewDesc.offset = 0;
+    viewDesc.size = 256;
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
+}
+
+// Offset must be aligned to the texel size
+TEST_F(TexelBufferViewValidationTest, OffsetAlignment) {
+    wgpu::Buffer buffer = CreateTexelBuffer(512, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::RGBA8Uint;
+    viewDesc.offset = 2;  // Not aligned to 4-byte texel
+    viewDesc.size = 256;
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
+}
+
+// Size must be multiple of texel size
+TEST_F(TexelBufferViewValidationTest, SizeMustBeMultipleOfTexel) {
+    wgpu::Buffer buffer = CreateTexelBuffer(512, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::RGBA8Uint;
+    viewDesc.offset = 256;
+    viewDesc.size = 3;  // Not multiple of 4-byte texel
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
+}
+
+// Range may not exceed buffer size
+TEST_F(TexelBufferViewValidationTest, RangeExceedsBuffer) {
+    wgpu::Buffer buffer = CreateTexelBuffer(256, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::RGBA8Uint;
+    viewDesc.offset = 0;
+    viewDesc.size = 512;  // Larger than buffer
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
+}
+
+// Depth formats are not allowed
+TEST_F(TexelBufferViewValidationTest, DepthFormatNotAllowed) {
+    wgpu::Buffer buffer = CreateTexelBuffer(256, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::Depth24Plus;
+    viewDesc.offset = 0;
+    viewDesc.size = 256;
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
+}
+
+// R32Float is allowed
+TEST_F(TexelBufferViewValidationTest, R32FloatAllowed) {
+    wgpu::Buffer buffer = CreateTexelBuffer(256, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::R32Float;
+    viewDesc.offset = 0;
+    viewDesc.size = 256;
+
+    buffer.CreateTexelView(&viewDesc);
+}
+
+// RG8Uint is not a supported texel format
+TEST_F(TexelBufferViewValidationTest, ColorFormatNotAllowed) {
+    wgpu::Buffer buffer = CreateTexelBuffer(256, wgpu::BufferUsage::TexelBuffer);
+
+    wgpu::TexelBufferViewDescriptor viewDesc;
+    viewDesc.format = wgpu::TextureFormat::RG8Uint;
+    viewDesc.offset = 0;
+    viewDesc.size = 256;
+
+    ASSERT_DEVICE_ERROR(buffer.CreateTexelView(&viewDesc));
 }
 
 }  // anonymous namespace

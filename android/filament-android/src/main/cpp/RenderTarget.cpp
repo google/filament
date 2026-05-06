@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include <filament/RenderTarget.h>
+#include <common/JniUtils.h>
 
 using namespace filament;
 using namespace backend;
@@ -72,7 +73,9 @@ Java_com_google_android_filament_RenderTarget_nBuilderBuild(JNIEnv *env, jclass 
         jlong nativeBuilder, jlong nativeEngine) {
     RenderTarget::Builder* builder = (RenderTarget::Builder*) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
-    return (jlong) builder->build(*engine);
+    return filament::android::wrapJni<jlong>(env, [=]() {
+        return (jlong) builder->build(*engine);
+    });
 }
 
 extern "C" JNIEXPORT jint JNICALL

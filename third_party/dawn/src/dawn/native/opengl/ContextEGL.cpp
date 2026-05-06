@@ -49,38 +49,75 @@
 #define EGL_EXTENSIONS_ENABLED_ANGLE 0x345F
 #endif
 
+// https://chromium.googlesource.com/angle/angle/+/main/extensions/EGL_ANGLE_context_virtualization.txt
+#ifndef EGL_ANGLE_context_virtualization
+#define EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE 0x3481
+#endif
+
 namespace dawn::native::opengl {
+
+namespace {
+
+thread_local ContextEGL* gCurrentContextInScope = nullptr;
+
+MaybeError MakeContextCurrent(DisplayEGL* display, const ContextEGL::ContextState& state) {
+    if (display->egl->GetCurrentContext() != state.context ||
+        display->egl->GetCurrentSurface(EGL_DRAW) != state.drawSurface ||
+        display->egl->GetCurrentSurface(EGL_READ) != state.readSurface) {
+        EGLBoolean success = display->egl->MakeCurrent(display->GetDisplay(), state.drawSurface,
+
+                                                       state.readSurface, state.context);
+
+        return CheckEGL(display->egl.get(), static_cast<EGLBoolean>(success == EGL_TRUE),
+                        "eglMakeCurrent");
+    }
+    return {};
+}
+
+}  // namespace
 
 // static
 ResultOrError<std::unique_ptr<ContextEGL>> ContextEGL::Create(Ref<DisplayEGL> display,
                                                               wgpu::BackendType backend,
                                                               bool useRobustness,
+                                                              bool disableEGL15Robustness,
                                                               bool useANGLETextureSharing,
-                                                              bool forceES31AndMinExtensions) {
-    auto context = std::make_unique<ContextEGL>(std::move(display));
-    DAWN_TRY(context->Initialize(backend, useRobustness, useANGLETextureSharing,
-                                 forceES31AndMinExtensions));
+                                                              bool forceES31AndMinExtensions,
+                                                              bool bindContextOnlyDuringUse,
+                                                              EGLint angleVirtualizationGroup) {
+    auto context =
+        std::unique_ptr<ContextEGL>(new ContextEGL(std::move(display), bindContextOnlyDuringUse));
+    DAWN_TRY(context->Initialize(backend, useRobustness, disableEGL15Robustness,
+                                 useANGLETextureSharing, forceES31AndMinExtensions,
+                                 angleVirtualizationGroup));
     return std::move(context);
 }
 
-ContextEGL::ContextEGL(Ref<DisplayEGL> display) : mDisplay(std::move(display)) {}
+ContextEGL::ContextEGL(Ref<DisplayEGL> display, bool bindContextOnlyDuringUse)
+    : mDisplay(std::move(display)), mBindContextOnlyDuringUse(bindContextOnlyDuringUse) {}
 
 ContextEGL::~ContextEGL() {
     if (mOffscreenSurface != EGL_NO_SURFACE) {
-        mDisplay->egl.DestroySurface(mDisplay->GetDisplay(), mOffscreenSurface);
+        mDisplay->egl->DestroySurface(mDisplay->GetDisplay(), mOffscreenSurface);
         mOffscreenSurface = EGL_NO_SURFACE;
     }
-    if (mContext != EGL_NO_CONTEXT) {
-        mDisplay->egl.DestroyContext(mDisplay->GetDisplay(), mContext);
-        mContext = EGL_NO_CONTEXT;
+    if (mState.context != EGL_NO_CONTEXT) {
+        if (mState.context == mDisplay->egl->GetCurrentContext()) {
+            mDisplay->egl->MakeCurrent(mDisplay->GetDisplay(), EGL_NO_SURFACE, EGL_NO_SURFACE,
+                                       EGL_NO_CONTEXT);
+        }
+        mDisplay->egl->DestroyContext(mDisplay->GetDisplay(), mState.context);
+        mState.context = EGL_NO_CONTEXT;
     }
 }
 
 MaybeError ContextEGL::Initialize(wgpu::BackendType backend,
                                   bool useRobustness,
+                                  bool disableEGL15Robustness,
                                   bool useANGLETextureSharing,
-                                  bool forceES31AndMinExtensions) {
-    const EGLFunctions& egl = mDisplay->egl;
+                                  bool forceES31AndMinExtensions,
+                                  EGLint angleVirtualizationGroup) {
+    const EGLFunctions& egl = mDisplay->egl.get();
 
     // Unless EGL_KHR_no_config is present, we need to choose an EGLConfig on context creation that
     // will lock the EGLContext to be use with a single kind of color buffer. In that case the
@@ -127,7 +164,8 @@ MaybeError ContextEGL::Initialize(wgpu::BackendType backend,
     if (useRobustness) {
         DAWN_ASSERT(egl.HasExt(EGLExt::CreateContextRobustness));
         // EGL_EXT_create_context_robustness is promoted to 1.5 but with a different enum value.
-        if (egl.GetMinorVersion() >= 5) {
+        // PowerVR advertises EGL 1.5, but only supports the old enum value.
+        if (egl.GetMinorVersion() >= 5 && !disableEGL15Robustness) {
             AddAttrib(EGL_CONTEXT_OPENGL_ROBUST_ACCESS, EGL_TRUE);
         } else {
             AddAttrib(EGL_CONTEXT_OPENGL_ROBUST_ACCESS_EXT, EGL_TRUE);
@@ -149,12 +187,16 @@ MaybeError ContextEGL::Initialize(wgpu::BackendType backend,
         }
     }
 
+    if (egl.HasExt(EGLExt::ANGLEContextVirtualization)) {
+        AddAttrib(EGL_CONTEXT_VIRTUALIZATION_GROUP_ANGLE, angleVirtualizationGroup);
+    }
+
     // The attrib list is finished with an EGL_NONE tag.
     attribs.push_back(EGL_NONE);
 
-    mContext =
+    mState.context =
         egl.CreateContext(mDisplay->GetDisplay(), contextConfig, EGL_NO_CONTEXT, attribs.data());
-    DAWN_TRY(CheckEGL(egl, mContext != EGL_NO_CONTEXT, "eglCreateContext"));
+    DAWN_TRY(CheckEGL(egl, mState.context != EGL_NO_CONTEXT, "eglCreateContext"));
 
     // When EGL_KHR_surfaceless_context is not supported, we need to create a pbuffer to act
     // as an offscreen surface.
@@ -190,7 +232,7 @@ void ContextEGL::RequestRequiredExtensionsExplicitly() {
         return;
     }
 
-    const EGLFunctions& egl = mDisplay->egl;
+    const EGLFunctions& egl = mDisplay->egl.get();
     // Copied from third_party/angle/include/GLES/gl.h
     typedef void(KHRONOS_APIENTRY * PFNGLREQUESTEXTENSIONANGLEPROC)(const GLchar* name);
 
@@ -212,28 +254,138 @@ void ContextEGL::RequestRequiredExtensionsExplicitly() {
     glRequestExtension("GL_EXT_color_buffer_half_float");
 }
 
-void ContextEGL::MakeCurrent() {
-    EGLBoolean success = mDisplay->egl.MakeCurrent(mDisplay->GetDisplay(), mCurrentSurface,
-                                                   mCurrentSurface, mContext);
-    IgnoreErrors(
-        CheckEGL(mDisplay->egl, static_cast<EGLBoolean>(success == EGL_TRUE), "eglMakeCurrent"));
+bool ContextEGL::IsInScopedMakeCurrent() const {
+    // TODO(451928481): This should ideally check `eglGetCurrentContext() == mState.context`,
+    // but that is not possible until all legacy call sites are updated to use
+    // `ScopedMakeCurrent` instead of `DeprecatedMakeCurrent`. This thread-local tracks if the
+    // context was made current via a scope and can be removed after the refactor.
+    return gCurrentContextInScope == this;
 }
 
-// ScopedMakeSurfaceCurrent
+bool ContextEGL::IsNotCurrentOnAnotherThread() const {
+#if defined(DAWN_ENABLE_ASSERTS)
+    return mCurrentThread == std::thread::id() || mCurrentThread == std::this_thread::get_id();
+#else
+    // For non-assert builds, assuming not current on another thread.
+    // This function is intended to be used by DAWN_ASSERT.
+    return true;
+#endif
+}
 
-[[nodiscard]] ContextEGL::ScopedMakeSurfaceCurrent ContextEGL::MakeSurfaceCurrentScope(
+void ContextEGL::DeprecatedMakeCurrent() {
+    IgnoreErrors(MakeContextCurrent(mDisplay.Get(), mState));
+}
+
+// ScopedSetCurrentSurface
+
+[[nodiscard]] ContextEGL::ScopedSetCurrentSurface ContextEGL::SetCurrentSurfaceScope(
     EGLSurface surface) {
     return {this, surface};
 }
 
-ContextEGL::ScopedMakeSurfaceCurrent::ScopedMakeSurfaceCurrent(ContextEGL* context,
-                                                               EGLSurface surface)
+ContextEGL::ScopedSetCurrentSurface::ScopedSetCurrentSurface(ContextEGL* context,
+                                                             EGLSurface surface)
     : mContext(context) {
-    mContext->mCurrentSurface = surface;
+    mContext->mState.drawSurface = surface;
+    mContext->mState.readSurface = surface;
 }
 
-ContextEGL::ScopedMakeSurfaceCurrent::~ScopedMakeSurfaceCurrent() {
-    mContext->mCurrentSurface = mContext->mOffscreenSurface;
+ContextEGL::ScopedSetCurrentSurface::~ScopedSetCurrentSurface() {
+    mContext->mState.drawSurface = mContext->mOffscreenSurface;
+    mContext->mState.readSurface = mContext->mOffscreenSurface;
+}
+
+// ContextState
+
+bool ContextEGL::ContextState::operator==(const ContextState& other) const {
+    return context == other.context && drawSurface == other.drawSurface &&
+           readSurface == other.readSurface;
+}
+
+bool ContextEGL::ContextState::operator!=(const ContextState& other) const {
+    return !(*this == other);
+}
+
+// ScopedMakeCurrent
+
+ContextEGL::ScopedMakeCurrent::ScopedMakeCurrent(ContextEGL* context) : mContext(context) {}
+
+ContextEGL::ScopedMakeCurrent::ScopedMakeCurrent(ScopedMakeCurrent&& src)
+    : mContext(std::move(src.mContext)),
+      mPrevState(std::move(src.mPrevState)),
+      mLock(std::move(src.mLock)) {
+    src.mContext = nullptr;
+}
+
+ContextEGL::ScopedMakeCurrent& ContextEGL::ScopedMakeCurrent::operator=(ScopedMakeCurrent&& src) {
+    if (&src == this) {
+        return *this;
+    }
+    mContext = std::move(src.mContext);
+    src.mContext = nullptr;
+    mPrevState = std::move(src.mPrevState);
+    mLock = std::move(src.mLock);
+    return *this;
+}
+
+ContextEGL::ScopedMakeCurrent::~ScopedMakeCurrent() {
+    auto result = End();
+    DAWN_ASSERT(result.IsSuccess());
+    IgnoreErrors(std::move(result));
+}
+
+MaybeError ContextEGL::ScopedMakeCurrent::Initialize() {
+    if (!mContext) {
+        return {};
+    }
+    mLock = std::unique_lock<std::mutex>(mContext->mExclusiveMakeCurrentMutex);
+
+    mPrevState.context = mContext->mDisplay->egl->GetCurrentContext();
+    mPrevState.drawSurface = mContext->mDisplay->egl->GetCurrentSurface(EGL_DRAW);
+    mPrevState.readSurface = mContext->mDisplay->egl->GetCurrentSurface(EGL_READ);
+
+    // Assert that the context is not current on another thread.
+    DAWN_ASSERT(mContext->IsNotCurrentOnAnotherThread());
+
+    if (mPrevState != mContext->mState) {
+        auto result = MakeContextCurrent(mContext->mDisplay.Get(), mContext->mState);
+        if (DAWN_UNLIKELY(result.IsError())) {
+            mContext = nullptr;
+            return result;
+        }
+    }
+
+#if defined(DAWN_ENABLE_ASSERTS)
+    mContext->mCurrentThread = std::this_thread::get_id();
+#endif
+
+    gCurrentContextInScope = mContext;
+    return {};
+}
+
+MaybeError ContextEGL::ScopedMakeCurrent::End() {
+    if (!mContext) {
+        return {};
+    }
+
+    MaybeError result;
+    if (mContext->mBindContextOnlyDuringUse && mPrevState != mContext->mState) {
+        // Unmake current this context so that other threads can use it.
+        result = MakeContextCurrent(mContext->mDisplay.Get(), mPrevState);
+
+#if defined(DAWN_ENABLE_ASSERTS)
+        mContext->mCurrentThread = {};
+#endif
+    }
+    gCurrentContextInScope = nullptr;
+    mContext = nullptr;
+    return result;
+}
+
+ResultOrError<ContextEGL::ScopedMakeCurrent> ContextEGL::MakeCurrent() {
+    ScopedMakeCurrent scopedMakeCurrent(IsInScopedMakeCurrent() ? nullptr : this);
+    DAWN_TRY(scopedMakeCurrent.Initialize());
+    return std::move(scopedMakeCurrent);
 }
 
 }  // namespace dawn::native::opengl

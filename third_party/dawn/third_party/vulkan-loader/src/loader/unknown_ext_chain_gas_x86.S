@@ -88,11 +88,16 @@ vkdev_ext\num:
 .else
 
 .macro PhysDevExtTramp num
+#if defined(_WIN32)
+.global "_vkPhysDevExtTramp\num\()@4"
+"_vkPhysDevExtTramp\num\()@4":
+#else
 .global vkPhysDevExtTramp\num
 #if defined(__ELF__)
 .hidden vkPhysDevExtTramp\num
 #endif
 vkPhysDevExtTramp\num:
+#endif
     _CET_ENDBR
     mov     eax, [esp + 4]                              # Load the wrapped VkPhysicalDevice into eax
     mov     ecx, [eax + PHYS_DEV_OFFSET_PHYS_DEV_TRAMP] # Load the unwrapped VkPhysicalDevice into ecx
@@ -102,11 +107,16 @@ vkPhysDevExtTramp\num:
 .endm
 
 .macro PhysDevExtTermin num
+#if defined(_WIN32)
+.global "_vkPhysDevExtTermin\num\()@4"
+"_vkPhysDevExtTermin\num\()@4":
+#else
 .global vkPhysDevExtTermin\num
 #if defined(__ELF__)
 .hidden vkPhysDevExtTermin\num
 #endif
 vkPhysDevExtTermin\num:
+#endif
     _CET_ENDBR
     mov     ecx, [esp + 4]                                                      # Move the wrapped VkPhysicalDevice into ecx
     mov     eax, [ecx + ICD_TERM_OFFSET_PHYS_DEV_TERM]                          # Store the loader_icd_term* in eax
@@ -121,18 +131,27 @@ terminError\num:
     push    0                                                                     # Push zero (third arg)
     push    VULKAN_LOADER_ERROR_BIT                                               # Push the error logging bit (second arg)
     push    eax                                                                   # Push the loader_instance (first arg)
+#if defined(_WIN32)
+    call    _loader_log_asm_function_not_supported                                # Log the error message before we crash
+#else
     call    loader_log_asm_function_not_supported                                 # Log the error message before we crash
+#endif
     add     esp, 20                                                               # Clean up the args
     mov     eax, 0
     jmp     eax                                                         # Crash intentionally by jumping to address zero
 .endm
 
 .macro DevExtTramp num
+#if defined(_WIN32)
+.global "_vkdev_ext\num\()@4"
+"_vkdev_ext\num\()@4":
+#else
 .global vkdev_ext\num
 #if defined(__ELF__)
 .hidden vkdev_ext\num
 #endif
 vkdev_ext\num:
+#endif
     _CET_ENDBR
     mov     eax, dword ptr [esp + 4]                                            # Dereference the handle to get the dispatch table
     mov     eax, dword ptr [eax]                                                # Dereference the chain_device to get the loader_dispatch

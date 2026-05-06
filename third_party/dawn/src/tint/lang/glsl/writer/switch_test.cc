@@ -25,9 +25,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/glsl/writer/helper_test.h"
-
 #include "gmock/gmock.h"
+#include "src/tint/lang/glsl/writer/helper_test.h"
 
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
@@ -36,7 +35,7 @@ namespace tint::glsl::writer {
 namespace {
 
 TEST_F(GlslWriterTest, Switch) {
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* a = b.Var("a", b.Zero<i32>());
@@ -46,7 +45,8 @@ TEST_F(GlslWriterTest, Switch) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
@@ -66,7 +66,7 @@ void main() {
 }
 
 TEST_F(GlslWriterTest, Switch_MixedDefault) {
-    auto* f = b.ComputeFunction("foo");
+    auto* f = b.ComputeFunction("main");
 
     b.Append(f->Block(), [&] {
         auto* a = b.Var("a", b.Zero<i32>());
@@ -76,7 +76,8 @@ TEST_F(GlslWriterTest, Switch_MixedDefault) {
         b.Return(f);
     });
 
-    ASSERT_TRUE(Generate()) << err_ << output_.glsl;
+    auto result = Generate();
+    ASSERT_EQ(result, Success) << result.Failure().reason << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {

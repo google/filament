@@ -557,6 +557,12 @@ environment variable.
 This is useful if you disable all layers/drivers with the intent of only
 enabling a smaller subset of specific layers/drivers for issue triaging.
 
+### Multiple Filtering
+
+When multiple `VK_LOADER_<DEVICE|VENDOR|DRIVER>_ID_FILTER`s are provided, they
+apply cummulatively. Only devices matching all of the filters will be presented
+to the application.
+
 ## Table of Debug Environment Variables
 
 The following are all the Debug Environment Variables available for use with the
@@ -767,7 +773,7 @@ discovery.
         other devices in the return order of <i>vkGetPhysicalDevices<i> and
         <i>vkGetPhysicalDeviceGroups<i> functions.<br/>
         The value should be "<hex vendor id>:<hex device id>".<br/>
-        <b>NOTE:</b> This DOES NOT REMOVE devices from the list on reorders them.
+        <b>NOTE:</b> This DOES NOT REMOVE devices from the list, only reorders them.
     </small></td>
     <td><small>
         <b>Linux Only</b>
@@ -888,9 +894,7 @@ discovery.
         Known layers are those which are found by the loader taking into account
         default search paths and other environment variables
         (like <i>VK_LAYER_PATH</i>).
-        <br/>
-        This has replaced the older deprecated environment variable
-        <i>VK_INSTANCE_LAYERS</i>
+        </i>
     </small></td>
     <td><small>
         This functionality is only available with Loaders built with version
@@ -988,6 +992,75 @@ discovery.
         &nbsp;&nbsp;VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING=1<br/><br/>
     </small></td>
   </tr>
+  <tr>
+    <td><small>
+        <i>VK_LOADER_DEVICE_ID_FILTER</i>
+    </small></td>
+    <td><small>
+        If set, causes the loader to only enumerate physical devices matching the
+        filter. The filter is a comma-delimited list of device ids or device id
+        ranges, where ids may be provided as decimal or hexadecimal values and ranges
+        are colon-delimited. A device passes if any one of the filters match its
+        device id as provided by <i>VkPhysicalDeviceProperties::deviceID<i>.
+    </small></td>
+    <td><small>
+        This functionality is only available with Loaders built with version
+        1.4.326 of the Vulkan headers and later.
+    </small></td>
+    <td><small>
+        export<br/>
+        &nbsp;&nbsp;VK_LOADER_DEVICE_ID_FILTER=0x7460:0x747e,29827<br/>
+        <br/>
+        set<br/>
+        &nbsp;&nbsp;VK_LOADER_DEVICE_ID_FILTER=0x7460:0x747e,29827<br/><br/>
+    </small></td>
+  </tr>
+  <tr>
+    <td><small>
+        <i>VK_LOADER_VENDOR_ID_FILTER</i>
+    </small></td>
+    <td><small>
+        If set, causes the loader to only enumerate physical devices matching the
+        filter. The filter is a comma-delimited list of vendor ids or vendor id
+        ranges, where ids may be provided as decimal or hexadecimal values and ranges
+        are colon-delimited. A device passes if any one of the filters match its
+        vendor id as provided by <i>VkPhysicalDeviceProperties::vendorID<i>.
+    </small></td>
+    <td><small>
+        This functionality is only available with Loaders built with version
+        1.4.326 of the Vulkan headers and later.
+    </small></td>
+    <td><small>
+        export<br/>
+        &nbsp;&nbsp;VK_LOADER_VENDOR_ID_FILTER=65541<br/>
+        <br/>
+        set<br/>
+        &nbsp;&nbsp;VK_LOADER_VENDOR_ID_FILTER=65541<br/><br/>
+    </small></td>
+  </tr>
+  <tr>
+    <td><small>
+        <i>VK_LOADER_DRIVER_ID_FILTER</i>
+    </small></td>
+    <td><small>
+        If set, causes the loader to only enumerate physical devices matching the
+        filter. The filter is a comma-delimited list of driver ids or driver id
+        ranges, where ids may be provided as decimal or hexadecimal values and ranges
+        are colon-delimited. A device passes if any one of the filters match its
+        driver id as provided by <i>VkPhysicalDeviceDriverProperties::driverID<i>.
+    </small></td>
+    <td><small>
+        This functionality is only available with Loaders built with version
+        1.4.326 of the Vulkan headers and later.
+    </small></td>
+    <td><small>
+        export<br/>
+        &nbsp;&nbsp;VK_LOADER_DRIVER_ID_FILTER=1-3:13<br/>
+        <br/>
+        set<br/>
+        &nbsp;&nbsp;VK_LOADER_DRIVER_ID_FILTER=1-3:13<br/><br/>
+    </small></td>
+  </tr>
 </table>
 
 <br/>
@@ -1045,8 +1118,7 @@ may be removed in a future loader release.
         <i>ppEnabledLayerNames</i>.
     </small></td>
     <td><small>
-        This has been deprecated by <i>VK_LOADER_LAYERS_ENABLE</i>.
-        It also overrides any layers disabled with
+        It overrides any layers disabled with
         <i>VK_LOADER_LAYERS_DISABLE</i>.
     </small></td>
     <td><small>

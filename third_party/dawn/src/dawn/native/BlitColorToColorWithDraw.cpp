@@ -36,6 +36,7 @@
 #include "dawn/common/Assert.h"
 #include "dawn/common/Enumerator.h"
 #include "dawn/common/HashUtils.h"
+#include "dawn/common/Strings.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/CommandEncoder.h"
@@ -50,48 +51,48 @@ namespace dawn::native {
 
 namespace {
 
-constexpr std::string_view kVertexOutputsStruct = R"(
-struct VertexOutputs {
-  @builtin(position) position : vec4<f32>,
-  @location(0) @interpolate(flat, either) offsets : vec2i,
-};
-)";
+constexpr std::string_view kVertexOutputsStruct = DAWN_MULTILINE(
+    struct VertexOutputs {
+        @builtin(position) position : vec4<f32>,
+        @location(0) @interpolate(flat, either) offsets : vec2i,
+    };
+);
 
 std::string GenerateBlitToColorVS() {
-    constexpr std::string_view kBlitToColorVS = R"(
-// Unpack a u32 into two i32 values, each was originally two 16-bit signed
-// integer.
-fn unpack_offsets(offsets : u32) -> vec2<i32> {
-  // First extract the high and low 16-bit values, then convert to u32 for
-  // zero-extension.
-  var offsets_bits = vec2u(offsets & 0xFFFFu, (offsets >> 16) & 0xFFFFu);
-  // For each 16-bit value, if the sign bit is set (0x8000), perform sign
-  // extension by setting the upper 16 bits to 1s (0xFFFF0000).
-  offsets_bits = select(
-      offsets_bits,
-      offsets_bits | vec2u(0xFFFF0000u),
-      // Check if negative.
-      (offsets_bits & vec2u(0x8000u)) != vec2u(0u),
-  );
-  // Reinterpret the final 32-bit values as signed integers.
-  return bitcast<vec2i>(offsets_bits);
-}
+    constexpr std::string_view kBlitToColorVS = DAWN_MULTILINE(
+        // Unpack a u32 into two i32 values, each was originally two 16-bit signed
+        // integer.
+        fn unpack_offsets(offsets : u32) -> vec2<i32> {
+            // First extract the high and low 16-bit values, then convert to u32 for
+            // zero-extension.
+            var offsets_bits = vec2u(offsets & 0xFFFFu, (offsets >> 16) & 0xFFFFu);
+            // For each 16-bit value, if the sign bit is set (0x8000), perform sign
+            // extension by setting the upper 16 bits to 1s (0xFFFF0000).
+            offsets_bits = select(
+                offsets_bits,
+                offsets_bits | vec2u(0xFFFF0000u),
+                // Check if negative.
+                (offsets_bits & vec2u(0x8000u)) != vec2u(0u),
+            );
+            // Reinterpret the final 32-bit values as signed integers.
+            return bitcast<vec2i>(offsets_bits);
+        }
 
-@vertex fn vert_fullscreen_quad(
-  @builtin(vertex_index) vertex_index : u32,
-  @builtin(instance_index) instance_index : u32
-) -> VertexOutputs {
-  var output : VertexOutputs;
-  const pos = array(
-      vec2f(-1.0, -1.0),
-      vec2f(3.0, -1.0),
-      vec2f(-1.0, 3.0));
-  output.position = vec4f(pos[vertex_index], 0.0, 1.0);
-  output.offsets = unpack_offsets(instance_index);
-  return output;
-}
-)";
-    return std::string(kVertexOutputsStruct) + "\n" + std::string(kBlitToColorVS);
+        @vertex fn vert_fullscreen_quad(
+            @builtin(vertex_index) vertex_index : u32,
+            @builtin(instance_index) instance_index : u32
+        ) -> VertexOutputs {
+            var output : VertexOutputs;
+            const pos = array(
+                vec2f(-1.0, -1.0),
+                vec2f(3.0, -1.0),
+                vec2f(-1.0, 3.0));
+            output.position = vec4f(pos[vertex_index], 0.0, 1.0);
+            output.offsets = unpack_offsets(instance_index);
+            return output;
+        }
+    );
+    return std::string(kVertexOutputsStruct) + std::string(kBlitToColorVS);
 }
 
 std::string GenerateExpandFS(const BlitColorToColorWithDrawPipelineKey& pipelineKey) {
@@ -99,26 +100,28 @@ std::string GenerateExpandFS(const BlitColorToColorWithDrawPipelineKey& pipeline
     std::ostringstream assignOutputsStream;
     std::ostringstream finalStream;
     for (auto i : pipelineKey.attachmentsToExpandResolve) {
-        finalStream << absl::StrFormat("@group(0) @binding(%u) var srcTex%u : texture_2d<f32>;\n",
-                                       i, i);
+        finalStream << absl::StrFormat("@group(0) @binding(%u) var srcTex%u : texture_2d<f32>;", i,
+                                       i);
 
-        outputStructStream << absl::StrFormat("@location(%u) output%u : vec4f,\n", i, i);
+        outputStructStream << absl::StrFormat("@location(%u) output%u : vec4f,", i, i);
 
         assignOutputsStream << absl::StrFormat(
             "\toutputColor.output%u = textureLoad(srcTex%u, vec2i(input.position.xy) + "
-            "input.offsets, 0);\n",
+            "input.offsets, 0);",
             i, i);
     }
 
-    finalStream << kVertexOutputsStruct << "\n";
-    finalStream << "struct OutputColor {\n" << outputStructStream.str() << "}\n\n";
-    finalStream << R"(
-@fragment fn expand_multisample(input: VertexOutputs) -> OutputColor {
-    var outputColor : OutputColor;
-)" << assignOutputsStream.str()
-                << R"(
-    return outputColor;
-})";
+    finalStream << kVertexOutputsStruct << "struct OutputColor {" << outputStructStream.str()
+                << "}";
+    finalStream << DAWN_MULTILINE(
+        @fragment fn expand_multisample(input: VertexOutputs) -> OutputColor {
+            var outputColor : OutputColor;
+    );
+    finalStream << assignOutputsStream.str();
+    finalStream << DAWN_MULTILINE(
+            return outputColor;
+        }
+    );
 
     return finalStream.str();
 }
@@ -126,19 +129,22 @@ std::string GenerateExpandFS(const BlitColorToColorWithDrawPipelineKey& pipeline
 // Generate the fragment shader to average multiple samples into one.
 std::string GenerateResolveFS(uint32_t sampleCount) {
     std::ostringstream ss;
-    ss << kVertexOutputsStruct << "\n";
-    ss << R"(
-@group(0) @binding(0) var srcTex : texture_multisampled_2d<f32>;
+    ss << kVertexOutputsStruct;
+    ss << DAWN_MULTILINE(
+        @group(0) @binding(0) var srcTex : texture_multisampled_2d<f32>;
 
-@fragment
-fn resolve_multisample(input: VertexOutputs) -> @location(0) vec4f {
-    var sum = vec4f(0.0, 0.0, 0.0, 0.0);
-    var offsetPos = vec2i(input.position.xy) - input.offsets;)";
-    ss << "\n";
+        @fragment
+        fn resolve_multisample(input: VertexOutputs) -> @location(0) vec4f {
+            var sum = vec4f(0.0, 0.0, 0.0, 0.0);
+            var offsetPos = vec2i(input.position.xy) - input.offsets;
+    );
     for (uint32_t sample = 0; sample < sampleCount; ++sample) {
-        ss << absl::StrFormat("    sum += textureLoad(srcTex, offsetPos, %u);\n", sample);
+        ss << absl::StrFormat("sum += textureLoad(srcTex, offsetPos, %u);", sample);
     }
-    ss << absl::StrFormat("    return sum / %u;\n", sampleCount) << "}\n";
+    ss << absl::StrFormat("return sum / %u;", sampleCount);
+    ss << DAWN_MULTILINE(
+        }
+    );
 
     return ss.str();
 }
@@ -365,8 +371,10 @@ MaybeError ExpandResolveTextureWithDraw(
     }
 
     Ref<RenderPipelineBase> pipeline;
-    DAWN_TRY_ASSIGN(pipeline, GetOrCreateExpandMultisamplePipeline(
-                                  device, pipelineKey, renderPassDescriptor->colorAttachmentCount));
+    DAWN_TRY_ASSIGN(
+        pipeline,
+        GetOrCreateExpandMultisamplePipeline(
+            device, pipelineKey, static_cast<uint8_t>(renderPassDescriptor->colorAttachmentCount)));
 
     Ref<BindGroupLayoutBase> bgl;
     DAWN_TRY_ASSIGN(bgl, pipeline->GetBindGroupLayout(0));

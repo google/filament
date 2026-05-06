@@ -29,7 +29,7 @@
 #define SRC_TINT_CMD_FUZZ_IR_FUZZ_H_
 
 #include <functional>
-#include <iostream>
+#include <span>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -37,7 +37,6 @@
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/bytes/buffer_reader.h"
 #include "src/tint/utils/bytes/decoder.h"
-#include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/macros/static_init.h"
 #include "src/tint/utils/result.h"
 
@@ -57,8 +56,14 @@ struct Options {
     bool verbose = false;
     /// If not empty, load DXC from this path when fuzzing HLSL generation.
     std::string dxc;
+#if TINT_BUILD_FUZZER_VULKAN_SUPPORT
+    /// If not empty, load the Vulkan ICD from this path when fuzzing SPIR-V generation.
+    std::string vk_icd;
+#endif
     /// If true, dump shader input/output text to stdout
     bool dump = false;
+    /// If true, dump the IR whenever validation is performed.
+    bool dump_ir_when_validating = false;
 };
 
 /// Context holds information about the fuzzer options and the input program.
@@ -82,21 +87,16 @@ struct IRFuzzer {
                            core::ir::Capabilities post_capabilities) {
         if constexpr (sizeof...(ARGS) > 0) {
             auto fn_with_decode = [fn](core::ir::Module& module, const Context& context,
-                                       Slice<const std::byte> data) -> Result<SuccessType> {
-                if (!data.data) {
-                    if (context.options.verbose) {
-                        std::cout << "   - Data expected but no data provided.\n";
-                    }
-                    return Failure{"Invalid data"};
+                                       std::span<const std::byte> data) -> Result<SuccessType> {
+                if (data.empty()) {
+                    return Failure{"Data expected but no data provided."};
                 }
 
                 bytes::BufferReader reader{data};
                 auto data_args = bytes::Decode<std::tuple<std::decay_t<ARGS>...>>(reader);
                 if (data_args != Success) {
-                    if (context.options.verbose) {
-                        std::cout << "   - Failed to decode fuzzer argument data.\n";
-                    }
-                    return data_args.Failure();
+                    return Failure("Failed to decode fuzzer argument data: " +
+                                   data_args.Failure().reason);
                 }
 
                 auto all_args =
@@ -108,8 +108,8 @@ struct IRFuzzer {
         } else {
             return IRFuzzer{
                 name,
-                [fn](core::ir::Module& module, const Context& context,
-                     Slice<const std::byte>) -> Result<SuccessType> { return fn(module, context); },
+                [fn](core::ir::Module& module, const Context& context, std::span<const std::byte>)
+                    -> Result<SuccessType> { return fn(module, context); },
                 pre_capabilities,
                 post_capabilities,
             };
@@ -134,7 +134,7 @@ struct IRFuzzer {
     /// Takes in the module and any sidecar data, returns true iff transform succeeded in running,
     /// otherwise false
     std::function<
-        Result<SuccessType>(core::ir::Module&, const Context&, Slice<const std::byte> data)>
+        Result<SuccessType>(core::ir::Module&, const Context&, std::span<const std::byte> data)>
         fn;
     /// The IR capabilities that are used before the fuzzer runs.
     core::ir::Capabilities pre_capabilities;
@@ -153,7 +153,7 @@ void Register([[maybe_unused]] const IRFuzzer& fuzzer);
 /// @param data additional data used for fuzzing
 void Run(const std::function<tint::core::ir::Module()>& acquire_module,
          const Options& options,
-         Slice<const std::byte> data);
+         std::span<const std::byte> data);
 #endif  // TINT_BUILD_IR_BINARY
 
 /// TINT_IR_MODULE_FUZZER registers the fuzzer function, the variadic args are either a single

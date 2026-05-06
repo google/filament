@@ -40,6 +40,7 @@ struct D3D12DeviceInfo {
     bool isUMA;
     bool isCacheCoherentUMA;
     uint32_t resourceHeapTier;
+    uint32_t resourceBindingTier;
     bool supportsRenderPass;
     // Whether the device support native 16bit shader ops, required for shader f16 feature. Note
     // that the feature also requires using shader model version >= 6.2.

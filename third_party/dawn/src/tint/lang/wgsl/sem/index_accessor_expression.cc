@@ -29,8 +29,6 @@
 
 #include "src/tint/lang/wgsl/ast/index_accessor_expression.h"
 
-#include <utility>
-
 TINT_INSTANTIATE_TYPEINFO(tint::sem::IndexAccessorExpression);
 
 namespace tint::sem {
@@ -42,10 +40,8 @@ IndexAccessorExpression::IndexAccessorExpression(const ast::IndexAccessorExpress
                                                  const ValueExpression* index,
                                                  const Statement* statement,
                                                  const core::constant::Value* constant,
-                                                 bool has_side_effects,
                                                  const Variable* root_ident /* = nullptr */)
-    : Base(declaration, type, stage, object, statement, constant, has_side_effects, root_ident),
-      index_(index) {}
+    : Base(declaration, type, stage, object, statement, constant, root_ident), index_(index) {}
 
 IndexAccessorExpression::~IndexAccessorExpression() = default;
 

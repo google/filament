@@ -20,7 +20,7 @@ import glob
 import re
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(CUR_DIR, "../../out/cmake-webgl-release/web/examples/examples")
+OUT_DIR = os.path.join(CUR_DIR, "../../out/cmake-wasm-release/web/examples/examples")
 BOOK_DIR = os.path.join(CUR_DIR, "../src_mdbook/book")
 
 def setup_dirs():
