@@ -236,10 +236,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         attributedBuffers.set(attributes[j].buffer);
     });
 
-    if (!isAttributeless) {
-        FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
-                << "At least one buffer slot was never assigned to an attribute.";
-    }
+    FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
+            << "At least one buffer slot was never assigned to an attribute.";
 
     if (mImpl->mAdvancedSkinningEnabled) {
         FILAMENT_CHECK_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_INDICES])

@@ -2660,13 +2660,13 @@ void VulkanDriver::prepareDraw() {
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
-    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     prepareDraw();
 
     // Finally, make the actual draw call. TODO: support subranges
     uint32_t const firstIndex = indexOffset;
     constexpr int32_t vertexOffset = 0;
     constexpr uint32_t firstInstId = 0;
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
 }
@@ -2674,10 +2674,11 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 void VulkanDriver::drawArrays(uint32_t vertexOffset, uint32_t vertexCount,
         uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
-    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     prepareDraw();
 
     constexpr uint32_t firstInstId = 0;
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
+
     vkCmdDraw(cmdbuffer, vertexCount, instanceCount, vertexOffset, firstInstId);
 }
 

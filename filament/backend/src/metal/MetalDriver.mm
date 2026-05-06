@@ -2361,7 +2361,7 @@ void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // For attribute-less primitives `vbi->bufferMapping` is empty, in which case the loop above
     // never runs. Don't bind a phantom buffer in that case (would otherwise be a 1-slot bind of
     // a nil pointer).
-    if (!vbi->bufferMapping.empty()) {
+    if (UTILS_LIKELY(!vbi->bufferMapping.empty())) {
         const auto bufferCount = maxBufferIndex + 1;
         MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext),
                 mContext->currentRenderPassEncoder, USER_VERTEX_BUFFER_BINDING_START,
@@ -2442,7 +2442,7 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     }
 
     // Bind the offset data.
-    if (mContext->dynamicOffsets.isDirty()) {
+    if (UTILS_UNLIKELY(mContext->dynamicOffsets.isDirty())) {
         const auto [size, data] = mContext->dynamicOffsets.getOffsets();
         if (size > 0) {
             [mContext->currentRenderPassEncoder setFragmentBytes:data
@@ -2491,7 +2491,7 @@ void MetalDriver::drawArrays(uint32_t vertexOffset, uint32_t vertexCount,
     }
 
     // Bind the offset data.
-    if (mContext->dynamicOffsets.isDirty()) {
+    if (UTILS_UNLIKELY(mContext->dynamicOffsets.isDirty())) {
         const auto [size, data] = mContext->dynamicOffsets.getOffsets();
         if (size > 0) {
             [mContext->currentRenderPassEncoder setFragmentBytes:data
