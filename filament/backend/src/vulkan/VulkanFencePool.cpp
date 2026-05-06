@@ -17,6 +17,11 @@
 #include "VulkanConstants.h"
 #include "VulkanFencePool.h"
 
+#include <deque>
+#include <mutex>
+#include <utility>
+#include <vector>
+
 using namespace bluevk;
 using namespace utils;
 
@@ -33,13 +38,11 @@ VulkanFencePool::VulkanFencePool(VulkanContext const& context,
                                  uint32_t minPoolSize)
     : mContext(context), mDevice(device), mMinPoolSize(minPoolSize)
 {
-    mFences.reserve(minPoolSize);
     for (size_t i = 0; i < minPoolSize; ++i) {
         VkFence fence = allocateFence();
         assert_invariant(fence != VK_NULL_HANDLE);
         if (fence != VK_NULL_HANDLE) {
-            mFences.push_back(fence);
-            mFenceReturnTimestamps.push_back(mCurrFrame);
+            mFences.push_back(std::make_pair(mCurrFrame, fence));
         }
     }
     mNumFences = mFences.size();  // Only count the fences we successfully acquired.
@@ -77,28 +80,12 @@ void VulkanFencePool::gc() noexcept {
     // clearing fenceStatus objects, and trying to return fences to the
     // pool.
     std::unique_lock<std::mutex> lock (mFenceListMutex);
-    while (mNumFences > mMinPoolSize && !mFenceReturnTimestamps.empty() &&
-           mFenceReturnTimestamps.front() + TIME_BEFORE_EVICTION < mCurrFrame) {
-        mFenceReturnTimestamps.pop_front();
-        destroyFence(mFences.back());
-        mFences.pop_back();
+    while (mNumFences > mMinPoolSize && !mFences.empty() &&
+           mFences.front().first + TIME_BEFORE_EVICTION < mCurrFrame) {
+        destroyFence(mFences.front().second);
+        mFences.pop_front();
         --mNumFences;
     }
-
-    // std::unique_lock<std::mutex> lock (mFenceListMutex);
-
-    // // Simply prevent holding more fences than the min pool size.
-    // // Is it possible we have more than the number of fences we
-    // // need? Yes, but we will never exceed that by more than mMinPoolSize.
-    // // TODO: destroy fences without holding lock.
-    // if (mFences.size() > mMinPoolSize) {
-    //     size_t numFencesToFree = mFences.size() - mMinPoolSize;
-    //     for (size_t i = 0; i < numFencesToFree; ++i) {
-    //         destroyFence(mFences.back());
-    //         mFences.pop_back();
-    //         --mNumFences;
-    //     }
-    // }
 }
 
 void VulkanFencePool::terminate() noexcept {
@@ -114,8 +101,8 @@ void VulkanFencePool::terminate() noexcept {
     // No need to lock. We do not allow usages of fences aside from
     // the ones provided in fenceStatuses, and we have reclaimed
     // fences from all fenceStatus objects.
-    for (const auto fence : mFences) {
-        destroyFence(fence);
+    for (const auto& fence : mFences) {
+        destroyFence(fence.second);
     }
     mFences.clear();
     mNumFences = 0;
@@ -124,9 +111,8 @@ void VulkanFencePool::terminate() noexcept {
 VkFence VulkanFencePool::acquireFence() noexcept {
     std::unique_lock<std::mutex> lock (mFenceListMutex);
     if (!mFences.empty()) {
-        VkFence fence = mFences.back();
+        VkFence fence = mFences.back().second;
         mFences.pop_back();
-        mFenceReturnTimestamps.pop_back();
         return fence;
     } else {
         VkFence fence = allocateFence();
@@ -151,8 +137,7 @@ void VulkanFencePool::releaseFence(VkFence fence) noexcept {
 
     // Since fences may be released concurrently, make sure we lock.
     std::unique_lock<std::mutex> lock (mFenceListMutex);
-    mFences.push_back(fence);
-    mFenceReturnTimestamps.push_back(mCurrFrame);
+    mFences.push_back(std::make_pair(mCurrFrame, fence));
 }
 
 VkFence VulkanFencePool::allocateFence() const noexcept {

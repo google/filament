@@ -195,7 +195,7 @@ VulkanCmdFence::~VulkanCmdFence() {
 }
 
 std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
-    auto cmdFence = std::make_unique<VulkanCmdFence>(VK_NULL_HANDLE);
+    auto cmdFence = std::make_shared<VulkanCmdFence>(VK_NULL_HANDLE);
     cmdFence->mStatus = VK_SUCCESS;
     return cmdFence;
 }
@@ -256,6 +256,16 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     }
 
     return FenceStatus::ERROR; // not supported
+}
+
+void VulkanCmdFence::clearFence() {
+    std::lock_guard const l(mLock);
+    if (mRecycleFn != nullptr) {
+        mRecycleFn(mFence);
+    }
+
+    mFence = VK_NULL_HANDLE;
+    mRecycleFn = nullptr;
 }
 
 } // namespace filament::backend

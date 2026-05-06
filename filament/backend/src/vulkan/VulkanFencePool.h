@@ -22,6 +22,7 @@
 
 #include <deque>
 #include <mutex>
+#include <utility>
 #include <vector>
 
 namespace filament::backend {
@@ -48,8 +49,7 @@ private:
     VulkanContext const& mContext;
     VkDevice mDevice;
     uint32_t mMinPoolSize;
-    std::vector<VkFence> mFences;
-    std::deque<uint64_t> mFenceReturnTimestamps;
+    std::deque<std::pair<uint64_t, VkFence>> mFences;
     std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
     uint32_t mNumFences = 0;
     uint64_t mCurrFrame = 0;

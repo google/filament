@@ -192,15 +192,7 @@ struct VulkanCmdFence {
     // a) the recycleFn was defined in the ctor, and knows how to
     // dispose of the fence, or b) the creator of this object owns
     // the fence.
-    inline void clearFence() {
-        std::lock_guard l(mLock);
-        if (mRecycleFn != nullptr) {
-            mRecycleFn(mFence);
-        }
-
-        mFence = VK_NULL_HANDLE;
-        mRecycleFn = nullptr;
-    }
+    void clearFence();
 
     template <typename T>
     T lockAndUseFence(std::function<T(VkFence)> cb) {

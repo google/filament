@@ -272,13 +272,13 @@ private:
     uint32_t const mProtectedQueueFamilyIndex;
     VulkanContext const& mContext;
     VulkanSemaphoreManager* mSemaphoreManager;
-    
+
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
-    
+
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
-    
+
     // Start out with a completed fence, because if no commands have
     // been queued or submited, then by definition, all pending work
     // is complete.
