@@ -144,5 +144,11 @@
     },
     "out/cmake-wasm-release/web/examples/examples/remote/remote.html": {
         "dest": "remote/index.html"
+    },
+    "out/cmake-wasm-release/web/examples/examples/viewer/viewer.html": {
+        "dest": "viewer/index.html"
+    },
+    "out/cmake-wasm-release/web/examples/examples/viewer/viewer.js": {
+        "dest": "viewer/viewer.js"
     }
 }
