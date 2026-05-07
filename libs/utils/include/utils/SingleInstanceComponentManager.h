@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
@@ -37,6 +38,7 @@
 namespace utils {
 
 class EntityManager;
+class PagedArenaBitset;
 
 /**
  * Base class for SingleInstanceComponentManager to handle callbacks without template bloat.
@@ -72,6 +74,18 @@ public:
     void flushNotifications() noexcept;
 
     /**
+     * Registers a bitset to be updated when entities change.
+     * @param bitset A pointer to the PagedArenaBitset to register.
+     */
+    void registerBitset(PagedArenaBitset* bitset);
+
+    /**
+     * Unregisters a bitset.
+     * @param bitset A pointer to the PagedArenaBitset to unregister.
+     */
+    void unregisterBitset(PagedArenaBitset const* bitset);
+
+    /**
      * Records a change for the given entity.
      * Flushes notifications if the internal buffer becomes full.
      */
@@ -96,6 +110,7 @@ private:
     Entity mDirtyEntities[MAX_DIRTY_COUNT];
     size_t mDirtyCount = 0;
     std::vector<CallbackInfo> mChangeCallbacks;
+    std::vector<PagedArenaBitset*> mBitsets;
 };
 
 /*
@@ -251,6 +266,10 @@ public:
         using SoA::template Field<E>::operator =;
     };
 
+    const PagedArenaBitset& getEntityBitset() const noexcept {
+        return mEntities;
+    }
+
 protected:
     template<size_t ElementIndex>
     typename SoA::template TypeAt<ElementIndex>* data() noexcept {
@@ -317,6 +336,7 @@ private:
     // maps an entity to an instance index
     tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
     default_random_engine mRng;
+    PagedArenaBitset mEntities;
 };
 
 // Keep these outside of the class because CLion has trouble parsing them
@@ -331,6 +351,7 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
             // index 0 is used when the component doesn't exist
             ci = Instance(mData.size() - 1);
             mInstanceMap[e] = ci;
+            mEntities.add(e.getId());
             notifyChange(e);
         } else {
             // if the entity already has this component, just return its instance
@@ -363,6 +384,7 @@ SingleInstanceComponentManager<Elements ... >::removeComponent(Entity const e) {
         }
         mData.pop_back();
         map.erase(pos);
+        mEntities.remove(e.getId());
         notifyChange(e);
         return last;
     }

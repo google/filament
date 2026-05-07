@@ -705,7 +705,7 @@ VulkanPlatform::VulkanPlatform() = default;
 VulkanPlatform::~VulkanPlatform() = default;
 
 utils::CString VulkanPlatform::getDeviceInfo(DeviceInfoType infoType,
-        Driver* driver) const noexcept {
+        Driver* driver) const {
     if (mImpl->mPhysicalDevice == VK_NULL_HANDLE) {
         return {};
     }

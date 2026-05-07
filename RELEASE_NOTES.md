@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.71.4
+
+- iOS: add Apple silicon (`arm64`) iOS Simulator support. The sample Xcode projects now require Xcode 16+ (CI is pinned to Xcode 16.2).
+- WEBGL_PTHREADS renamed to WASM_PTHREADS in CMakeLists.txt
+
 ## v1.71.3
 
 - Metal: add support for asynchronous resource loading

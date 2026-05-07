@@ -46,7 +46,7 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
 utils::CString OpenGLPlatform::getDeviceInfo(DeviceInfoType infoType,
-        Driver* driver) const noexcept {
+        Driver* driver) const {
     switch (infoType) {
         case DeviceInfoType::OPENGL_RENDERER:
             return getRendererString(driver);

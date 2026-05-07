@@ -61,7 +61,7 @@ struct OpenGLProgram::LazyInitializationData {
 OpenGLProgram::OpenGLProgram() noexcept = default;
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
-        : HwProgram(std::move(program.getName())), mRec709Location(-1) {
+        : HwProgram(std::move(program.getName())), mRec709Location(-1), mPushConstantFragmentStageOffset(0) {
     auto* const lazyInitializationData = new(std::nothrow) LazyInitializationData();
     if (UTILS_UNLIKELY(gld.getContext().isES2())) {
         lazyInitializationData->bindingUniformInfo = std::move(program.getBindingUniformInfo());

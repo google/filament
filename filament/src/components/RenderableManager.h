@@ -123,6 +123,10 @@ public:
         return mManager.getEntities();
     }
 
+    const utils::PagedArenaBitset& getEntityBitset() const noexcept {
+        return mManager.getEntityBitset();
+    }
+
     void create(const Builder& builder, utils::Entity entity);
 
     void destroy(utils::Entity e, backend::DriverApi& driver) noexcept;

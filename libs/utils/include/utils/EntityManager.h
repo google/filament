@@ -20,6 +20,7 @@
 #include <utils/Entity.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
+#include <utils/PagedArenaBitset.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -114,6 +115,8 @@ public:
     // unregisters a listener.
     void unregisterListener(Listener* l) noexcept;
 
+    // Returns the bitset of alive entities.
+    PagedArenaBitset getAliveEntities() const noexcept;
 
 
     /* no user serviceable parts below */
@@ -139,9 +142,13 @@ private:
 
     // GENERATION_SHIFT determines how many simultaneous Entities are available, the
     // minimum memory requirement is 2^GENERATION_SHIFT bytes.
-    static constexpr int GENERATION_SHIFT = 17;
-    static constexpr size_t RAW_INDEX_COUNT = (1 << GENERATION_SHIFT);
-    static constexpr Entity::Type INDEX_MASK = (1 << GENERATION_SHIFT) - 1u;
+    // **IMPORTANT**
+    // These constants must stay consistent with PagedArenaBitset.h
+    static constexpr size_t GENERATION_SHIFT    = Entity::GENERATION_SHIFT;
+    static constexpr size_t GENERATION_BITS     = Entity::GENERATION_BITS;
+    static constexpr size_t RAW_INDEX_COUNT     = Entity::RAW_INDEX_COUNT;
+    static constexpr Entity::Type INDEX_MASK    = Entity::INDEX_MASK;
+    static constexpr Entity::Type MAX_IDENTITY  = Entity::MAX_IDENTITY;
 
     static Entity::Type getGeneration(Entity const e) noexcept {
         return e.getId() >> GENERATION_SHIFT;

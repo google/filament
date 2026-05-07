@@ -396,7 +396,7 @@ public:
      * @return a CString containing the requested information.
      */
     virtual utils::CString getDeviceInfo(DeviceInfoType infoType,
-            Driver* UTILS_NULLABLE driver) const noexcept = 0;
+            Driver* UTILS_NULLABLE driver) const = 0;
 
 
     /**

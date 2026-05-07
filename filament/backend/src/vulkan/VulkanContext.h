@@ -61,11 +61,11 @@ struct VulkanAttachment {
 
 struct VulkanRenderPassContext {
     // Between the begin and end command render pass we cache the command buffer
-    VulkanCommandBuffer* commandBuffer;
-    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
-    fvkmemory::resource_ptr<VulkanRenderPass> renderPass;
-    RenderPassParams params;
-    int currentSubpass;
+    VulkanCommandBuffer* commandBuffer= nullptr;
+    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget {};
+    fvkmemory::resource_ptr<VulkanRenderPass> renderPass {};
+    RenderPassParams params = {};
+    int currentSubpass = 0;
 };
 
 // This is a collection of immutable data about the vulkan context. This actual handles to the

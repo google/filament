@@ -64,7 +64,9 @@ protected:
     }
 };
 
-TEST_F(CommandBufferQueueTest, BasicProduceConsume) {
+// Test disabled because it violates CommandBufferQueue internal invariant that all writes must be
+// aligned on FILAMENT_OBJECT_ALIGNMENT
+TEST_F(CommandBufferQueueTest, DISABLED_BasicProduceConsume) {
     // Test with a standard, valid configuration.
     CommandBufferQueue queue(1024, 4096, false);
     std::atomic<bool> consumerFinished = false;
@@ -88,7 +90,9 @@ TEST_F(CommandBufferQueueTest, BasicProduceConsume) {
     EXPECT_TRUE(consumerFinished);
 }
 
-TEST_F(CommandBufferQueueTest, MultipleFlushes) {
+// Test disabled because it violates CommandBufferQueue internal invariant that all writes must be
+// aligned on FILAMENT_OBJECT_ALIGNMENT
+TEST_F(CommandBufferQueueTest, DISABLED_MultipleFlushes) {
     // Test with a standard, valid configuration.
     CommandBufferQueue queue(1024, 4096, false);
     std::atomic<int> buffersProcessed = 0;
@@ -215,7 +219,9 @@ TEST_F(CommandBufferQueueTest, Backpressure) {
     queue.releaseBuffer(buffers[1]);
 }
 
-TEST_F(CommandBufferQueueTest, Pause) {
+// Test disabled because it violates CommandBufferQueue internal invariant that all writes must be
+// aligned on FILAMENT_OBJECT_ALIGNMENT
+TEST_F(CommandBufferQueueTest, DISABLED_Pause) {
     const size_t blockSize = CircularBuffer::getBlockSize();
     CommandBufferQueue queue(blockSize, blockSize*2, false);
 
@@ -249,7 +255,9 @@ TEST_F(CommandBufferQueueTest, Pause) {
     EXPECT_TRUE(consumerGotBuffers);
 }
 
-TEST_F(CommandBufferQueueTest, StressTest) {
+// Test disabled because it violates CommandBufferQueue internal invariant that all writes must be
+// aligned on FILAMENT_OBJECT_ALIGNMENT
+TEST_F(CommandBufferQueueTest, DISABLED_StressTest) {
     const size_t bufferSize = 1 * 1024 * 1024; // 1 MB
     const size_t requiredSize = 256 * 1024;    // 256 KB
     CommandBufferQueue queue(requiredSize, bufferSize, false);

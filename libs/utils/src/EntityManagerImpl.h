@@ -18,6 +18,7 @@
 #define TNT_UTILS_ENTITYMANAGERIMPL_H
 
 #include <utils/EntityManager.h>
+#include <utils/PagedArenaBitset.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -76,6 +77,7 @@ public:
 
         std::lock_guard const lock(mFreeListLock);
         bool const alive = (getGeneration(e) == mGens[getIndex(e)]);
+        assert(alive == mAliveEntities[e.getId()]);
         return alive;
     }
 
@@ -114,6 +116,7 @@ public:
                 index = currentIndex++;
             }
             entities[i] = Entity{ makeIdentity(gens[index], index) };
+            mAliveEntities.add(entities[i].getId());
 #if FILAMENT_UTILS_TRACK_ENTITIES
             mDebugActiveEntities.emplace(entities[i], CallStack::unwind(5));
 #endif
@@ -144,6 +147,7 @@ public:
                 Entity::Type const index = getIndex(entities[i]);
                 freeList.push_back(index);
                 gens[index]++;
+                mAliveEntities.remove(entities[i].getId());
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
                 mDebugActiveEntities.erase(entities[i]);
@@ -264,6 +268,7 @@ private:
     uint32_t mCurrentIndex = 1;
     std::deque<Entity::Type> mFreeList;     // stores indices that got freed
     uint8_t* const mGens;                   // stores the generation of each index.
+    PagedArenaBitset mAliveEntities;        // stores entities that are alive
 
     mutable Mutex mListenerLock;
     tsl::robin_set<Listener*> mListeners;
