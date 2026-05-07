@@ -251,26 +251,26 @@ public:
             FMaterialInstance const* mi;
             uint64_t padding; // make this field 64 bits on all platforms
         };
-        backend::RenderPrimitiveHandle rph;                 // 4 bytes
-        backend::VertexBufferInfoHandle vbih;               // 4 bytes
-        backend::DescriptorSetHandle dsh;                   // 4 bytes
-        uint32_t indexOffset;                               // 4 bytes
-        uint32_t indexCount;                                // 4 bytes
-        uint32_t index = 0;                                 // 4 bytes
-        uint32_t skinningOffset = 0;                        // 4 bytes
-        uint32_t morphingOffset = 0;                        // 4 bytes
+        backend::RenderPrimitiveHandle rph;    // 4 bytes
+        backend::VertexBufferInfoHandle vbih;  // 4 bytes
+        backend::DescriptorSetHandle dsh;      // 4 bytes
+        uint32_t offset;                       // 4 bytes, isIndexed ? index offset : vertex offset
+        uint32_t count;                        // 4 bytes, isIndexed ? index count : vertex count
+        uint32_t index = 0;                    // 4 bytes
+        uint32_t skinningOffset = 0;           // 4 bytes
+        uint32_t morphingOffset = 0;           // 4 bytes
 
-        backend::RasterState rasterState;                   // 4 bytes
+        backend::RasterState rasterState;      // 4 bytes
 
-        uint16_t instanceCount;                             // 2 bytes [MSb: user]
-        Variant materialVariant;                            // 1 byte
-        backend::PrimitiveType type : 3;                    // 1 byte       3 bits
-        bool hasSkinning : 1;                               //              1 bit
-        bool hasMorphing : 1;                               //              1 bit
-        bool hasHybridInstancing : 1;                       //              1 bit
-        bool isIndexed : 1;                                 //              1 bit
+        uint16_t instanceCount;                // 2 bytes [MSb: user]
+        Variant materialVariant;               // 1 byte
+        backend::PrimitiveType type : 3;       // 1 byte       3 bits
+        bool hasSkinning : 1;                  //              1 bit
+        bool hasMorphing : 1;                  //              1 bit
+        bool hasHybridInstancing : 1;          //              1 bit
+        bool isIndexed : 1;                    //              1 bit
 
-        uint32_t rfu[2];                                    // 8 bytes
+        uint32_t rfu[2];                       // 8 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 

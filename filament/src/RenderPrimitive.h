@@ -54,12 +54,12 @@ public:
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::RenderPrimitiveHandle getHwHandle() const noexcept { return mHandle; }
     backend::VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
-    // For indexed primitives, this is the index offset; for non-indexed primitives, we reuse this
-    // field for the vertex offset of the draw call. See `isIndexed() and mIsIndexed`.
-    uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
+    // For indexed primitives, this is the index offset; for non-indexed primitives, this is the
+    // vertex offset of the draw call. See `isIndexed() and mIsIndexed`.
+    uint32_t getOffset() const noexcept { return mOffset; }
     // For indexed primitives, this is the index count; for non-indexed primitives, the vertex
     // count of the draw call.
-    uint32_t getIndexCount() const noexcept { return mIndexCount; }
+    uint32_t getCount() const noexcept { return mCount; }
     uint32_t getMorphingBufferOffset() const noexcept { return mMorphingBufferOffset; }
 
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
@@ -87,8 +87,8 @@ private:
     FMaterialInstance const* mMaterialInstance = nullptr;
     backend::Handle<backend::HwRenderPrimitive> mHandle = {};
     backend::Handle<backend::HwVertexBufferInfo> mVertexBufferInfoHandle = {};
-    uint32_t mIndexOffset = 0;
-    uint32_t mIndexCount = 0;
+    uint32_t mOffset = 0;
+    uint32_t mCount = 0;
     uint32_t mMorphingBufferOffset = 0;
     // End PrimitiveInfo fields.
 

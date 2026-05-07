@@ -314,8 +314,8 @@ RenderPass::Command* RenderPass::instanceify(
         return lhs.info.mi == rhs.info.mi &&
                lhs.info.rph == rhs.info.rph &&
                lhs.info.vbih == rhs.info.vbih &&
-               lhs.info.indexOffset == rhs.info.indexOffset &&
-               lhs.info.indexCount == rhs.info.indexCount &&
+               lhs.info.offset == rhs.info.offset &&
+               lhs.info.count == rhs.info.count &&
                lhs.info.rasterState == rhs.info.rasterState;
     };
 
@@ -692,8 +692,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
             cmd.info.mi = mi;
             cmd.info.rph = primitive.getHwHandle();
             cmd.info.vbih = primitive.getVertexBufferInfoHandle();
-            cmd.info.indexOffset = primitive.getIndexOffset();
-            cmd.info.indexCount = primitive.getIndexCount();
+            cmd.info.offset = primitive.getOffset();
+            cmd.info.count = primitive.getCount();
             cmd.info.type = primitive.getPrimitiveType();
             cmd.info.isIndexed = primitive.isIndexed();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
@@ -1116,10 +1116,11 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                 }
 
                 if (UTILS_LIKELY(info.isIndexed)) {
-                    driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
+                    // For indexed draws, offset/count carry indexOffset/indexCount.
+                    driver.draw2(info.offset, info.count, info.instanceCount);
                 } else {
-                    // For non-indexed draws, indexOffset/indexCount carry vertexOffset/vertexCount.
-                    driver.drawArrays(info.indexOffset, info.indexCount, info.instanceCount);
+                    // For non-indexed draws, offset/count carry vertexOffset/vertexCount.
+                    driver.drawArrays(info.offset, info.count, info.instanceCount);
                 }
             }
         }
