@@ -284,6 +284,21 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->attachments[0];
     }
 
+    // Returns the attachment for color slot `slot`, or nullptr if that slot is unused.
+    // Note: `attachments` is stored compactly (only populated slots are pushed), so we map the
+    // slot index to its compact position via the `colors` bitset.
+    inline VulkanAttachment const* getColorAttachment(uint32_t slot) const {
+        assert_invariant(slot < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+        if (!mInfo->colors[slot]) {
+            return nullptr;
+        }
+        uint32_t compactIdx = 0;
+        for (uint32_t i = 0; i < slot; ++i) {
+            if (mInfo->colors[i]) ++compactIdx;
+        }
+        return &mInfo->attachments[compactIdx];
+    }
+
     inline VulkanAttachment& getDepthStencil() const {
         assert_invariant(hasDepthStencil());
         if (mInfo->fbkey.samples == 1) {

@@ -110,6 +110,13 @@ namespace {
     return sampleCountPerAttachment;
 }
 
+[[nodiscard]] wgpu::Color toWgpuClearColor(ClearColorValue const& c) {
+    // wgpu::Color is always 4 doubles. The texture's pixel format determines whether they are
+    // interpreted as floats, signed ints, or unsigned ints. A double has a 53-bit mantissa, so any
+    // int32_t / uint32_t value round-trips exactly.
+    return { .r = c.color[0], .g = c.color[1], .b = c.color[2], .a = c.color[3] };
+}
+
 }  // namespace
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
@@ -203,6 +210,7 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
     bool const depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
 
     // Color attachments
+    const wgpu::Color clearColor = toWgpuClearColor(params.clearColor);
     if (mDefaultRenderTarget) {
         assert_invariant(defaultColorTextureView);
         mColorAttachmentDesc.push_back({
@@ -210,12 +218,7 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             .resolveTarget = nullptr,
             .loadOp = WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
             .storeOp = WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0),
-            .clearValue = {
-                .r = params.clearColor.r,
-                .g = params.clearColor.g,
-                .b = params.clearColor.b,
-                .a = params.clearColor.a,
-            },
+            .clearValue = clearColor,
         });
     } else {
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
@@ -228,12 +231,7 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                             WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
                     .storeOp = WebGPURenderTarget::getStoreOperation(params,
                             getTargetBufferFlagsAt(i)),
-                    .clearValue = {
-                        .r = params.clearColor.r,
-                        .g = params.clearColor.g,
-                        .b = params.clearColor.b,
-                        .a = params.clearColor.a,
-                    },
+                    .clearValue = clearColor,
                 });
             }
         }

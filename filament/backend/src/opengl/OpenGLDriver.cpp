@@ -3818,7 +3818,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             // It's important to clear the framebuffer before drawing, as it resets
             // the fb to a known state (resets fb compression and possibly other things).
             // So we use glClear instead of glInvalidateFramebuffer
-            clearWithRasterPipe(discardOnlyFlags, { 0.0f }, 0.0f, 0);
+            clearWithRasterPipe(discardOnlyFlags, { 0.0f, 0.0f, 0.0f, 0.0f }, 0.0f, 0);
         }
     }
 
@@ -4511,7 +4511,7 @@ void OpenGLDriver::finish(int) {
 
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
-        float4 const& linearColor, GLfloat const depth, GLint const stencil) noexcept {
+        ClearColorValue const& clearColor, GLfloat const depth, GLint const stencil) noexcept {
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
         getBackendState().colorMask(GL_TRUE);
@@ -4525,30 +4525,79 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (UTILS_LIKELY(!mContext.isES2())) {
-        if (any(clearFlags & TargetBufferFlags::COLOR0)) {
-            glClearBufferfv(GL_COLOR, 0, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR1)) {
-            glClearBufferfv(GL_COLOR, 1, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR2)) {
-            glClearBufferfv(GL_COLOR, 2, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR3)) {
-            glClearBufferfv(GL_COLOR, 3, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR4)) {
-            glClearBufferfv(GL_COLOR, 4, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR5)) {
-            glClearBufferfv(GL_COLOR, 5, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR6)) {
-            glClearBufferfv(GL_COLOR, 6, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR7)) {
-            glClearBufferfv(GL_COLOR, 7, linearColor.v);
-        }
+        GLRenderTarget const* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
+        auto clearColorBuffer = [&](int i, TargetBufferFlags flag) {
+            if (!any(clearFlags & flag)) {
+                return;
+            }
+            // Resolve the type family. AUTO defers to the attachment format. Explicit FLOAT/INT/
+            // UINT are trusted at runtime, with a debug-only check that they match the attachment.
+            ClearColorValue::Type resolved = clearColor.type;
+            if (resolved == ClearColorValue::Type::AUTO) {
+                resolved = ClearColorValue::Type::FLOAT;
+                if (rt->gl.color[i]) {
+                    TextureFormat const format = rt->gl.color[i]->format;
+                    if (isUnsignedIntFormat(format)) {
+                        resolved = ClearColorValue::Type::UINT;
+                    } else if (isSignedIntFormat(format)) {
+                        resolved = ClearColorValue::Type::INT;
+                    }
+                }
+            } else if (rt->gl.color[i]) {
+                // Calling the wrong glClearBuffer*v variant for an attachment is UB and crashes
+                // some drivers. Catch mismatches early when a debug-only check is cheap.
+                [[maybe_unused]] TextureFormat const format = rt->gl.color[i]->format;
+                assert_invariant(
+                        (resolved == ClearColorValue::Type::UINT  && isUnsignedIntFormat(format)) ||
+                        (resolved == ClearColorValue::Type::INT   && isSignedIntFormat(format)) ||
+                        (resolved == ClearColorValue::Type::FLOAT && !isUnsignedIntFormat(format)
+                                && !isSignedIntFormat(format)));
+            }
+
+            switch (resolved) {
+                case ClearColorValue::Type::AUTO: {
+                    // Unreachable. AUTO was resolved above.
+                    assert_invariant(false);
+                    break;
+                }
+                case ClearColorValue::Type::FLOAT: {
+                    GLfloat const v[4] = {
+                            static_cast<GLfloat>(clearColor.color[0]),
+                            static_cast<GLfloat>(clearColor.color[1]),
+                            static_cast<GLfloat>(clearColor.color[2]),
+                            static_cast<GLfloat>(clearColor.color[3]) };
+                    glClearBufferfv(GL_COLOR, i, v);
+                    break;
+                }
+                case ClearColorValue::Type::INT: {
+                    GLint const v[4] = {
+                            static_cast<GLint>(clearColor.color[0]),
+                            static_cast<GLint>(clearColor.color[1]),
+                            static_cast<GLint>(clearColor.color[2]),
+                            static_cast<GLint>(clearColor.color[3]) };
+                    glClearBufferiv(GL_COLOR, i, v);
+                    break;
+                }
+                case ClearColorValue::Type::UINT: {
+                    GLuint const v[4] = {
+                            static_cast<GLuint>(clearColor.color[0]),
+                            static_cast<GLuint>(clearColor.color[1]),
+                            static_cast<GLuint>(clearColor.color[2]),
+                            static_cast<GLuint>(clearColor.color[3]) };
+                    glClearBufferuiv(GL_COLOR, i, v);
+                    break;
+                }
+            }
+        };
+        clearColorBuffer(0, TargetBufferFlags::COLOR0);
+        clearColorBuffer(1, TargetBufferFlags::COLOR1);
+        clearColorBuffer(2, TargetBufferFlags::COLOR2);
+        clearColorBuffer(3, TargetBufferFlags::COLOR3);
+        clearColorBuffer(4, TargetBufferFlags::COLOR4);
+        clearColorBuffer(5, TargetBufferFlags::COLOR5);
+        clearColorBuffer(6, TargetBufferFlags::COLOR6);
+        clearColorBuffer(7, TargetBufferFlags::COLOR7);
+
         if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
             glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
         } else {
@@ -4562,9 +4611,16 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
     } else
 #endif
     {
+        // ES2 has no integer-format color attachments, so a float clear is always correct here.
+        assert_invariant(clearColor.type == ClearColorValue::Type::FLOAT
+                || clearColor.type == ClearColorValue::Type::AUTO);
         GLbitfield mask = 0;
         if (any(clearFlags & TargetBufferFlags::COLOR0)) {
-            glClearColor(linearColor.r, linearColor.g, linearColor.b, linearColor.a);
+            glClearColor(
+                    static_cast<float>(clearColor.color[0]),
+                    static_cast<float>(clearColor.color[1]),
+                    static_cast<float>(clearColor.color[2]),
+                    static_cast<float>(clearColor.color[3]));
             mask |= GL_COLOR_BUFFER_BIT;
         }
         if (any(clearFlags & TargetBufferFlags::DEPTH)) {

@@ -1584,6 +1584,71 @@ struct RenderPassFlags {
 };
 
 /**
+ * A typed clear-color value for a color attachment.
+ *
+ * Color attachments come in three "type families":
+ *  - float / normalized formats (interpreted as floats in shaders)
+ *  - signed-integer formats (`R*I`, `RG*I`, ..., `RGBA*I`)
+ *  - unsigned-integer formats (`R*UI`, ..., `RGBA*UI`).
+ * Each family needs the matching clear entry-point at the API level (e.g., GL's `glClearBufferfv`,
+ * `glClearBufferiv`, or `glClearBufferuiv`). Passing a float clear to an integer attachment is
+ * undefined behavior.
+ *
+ * `ClearColorValue` carries which family the caller meant. It is implicitly constructible from
+ * `math::float4`, `math::int4`, and `math::uint4`.
+ *
+ * `Type::AUTO` defers the choice to the backend, which inspects the actual attachment format and
+ * picks the matching family. Backends assert in debug builds that an explicit type matches the
+ * attachment.
+ */
+struct ClearColorValue {
+    enum class Type : uint8_t {
+        AUTO,   //!< Auto-detect based on attachment format
+        FLOAT,  //!< Float / normalized
+        INT,    //!< Signed integer
+        UINT    //!< Unsigned integer
+    };
+
+    constexpr ClearColorValue() noexcept
+            : type(Type::AUTO),
+              color{ 0.0, 0.0, 0.0, 0.0 } {}
+
+    // Implicit conversion from math::float4 / int4 / uint4 keeps existing call sites compiling.
+    constexpr ClearColorValue(math::float4 const& f) noexcept
+            : type(Type::FLOAT),
+              color{ f.r, f.g, f.b, f.a } {}
+    constexpr ClearColorValue(math::int4 const& i) noexcept
+            : type(Type::INT),
+              color{ static_cast<double>(i.r), static_cast<double>(i.g), static_cast<double>(i.b),
+                  static_cast<double>(i.a) } {}
+    constexpr ClearColorValue(math::uint4 const& u) noexcept
+            : type(Type::UINT),
+              color{ static_cast<double>(u.r), static_cast<double>(u.g), static_cast<double>(u.b),
+                  static_cast<double>(u.a) } {}
+
+    // Support for math::double4
+    constexpr ClearColorValue(math::double4 const& d, Type t = Type::FLOAT) noexcept
+            : type(t),
+              color(d) {}
+
+    // Convenience to keep `{r, g, b, a}` brace-init syntax working at call sites.
+    constexpr ClearColorValue(float r, float g, float b, float a) noexcept
+            : type(Type::FLOAT),
+              color{ r, g, b, a } {}
+    constexpr ClearColorValue(int32_t r, int32_t g, int32_t b, int32_t a) noexcept
+            : type(Type::INT),
+              color{ static_cast<double>(r), static_cast<double>(g), static_cast<double>(b),
+                  static_cast<double>(a) } {}
+    constexpr ClearColorValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) noexcept
+            : type(Type::UINT),
+              color{ static_cast<double>(r), static_cast<double>(g), static_cast<double>(b),
+                  static_cast<double>(a) } {}
+
+    Type type;
+    math::double4 color;
+};
+
+/**
  * Parameters of a render pass.
  */
 struct RenderPassParams {
@@ -1592,8 +1657,9 @@ struct RenderPassParams {
     Viewport viewport{};        //!< viewport for this pass
     DepthRange depthRange{};    //!< depth range for this pass
 
-    //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
-    math::float4 clearColor = {};
+    //! Value used to clear the COLOR attachments. RenderPassFlags::clear must be set.
+    //! For integer-format attachments, call appropriate constructors.
+    ClearColorValue clearColor{};
 
     //! Depth value to clear the depth buffer with
     double clearDepth = 0.0;
@@ -1788,6 +1854,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend:
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::DescriptorSetLayout& dsl);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::ClearColorValue& c);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
 #endif

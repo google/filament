@@ -970,7 +970,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 builder.declareRenderPass("SSAO Target", {
                         .attachments = { .color = { data.ao, data.bn }, .depth = depthAttachment },
-                        .clearColor = { 1.0f },
+                        .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f },
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
@@ -1170,7 +1170,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
 
                 builder.declareRenderPass("Blurred target", {
                         .attachments = { .color = { data.ao, data.bn }, .depth = depth },
-                        .clearColor = { 1.0f },
+                        .clearColor = { 1.0f, 1.0f, 1.0f, 1.0f },
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },

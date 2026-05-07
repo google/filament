@@ -458,6 +458,36 @@ io::ostream& operator<<(io::ostream& out, TargetBufferFlags flags) {
     return out;
 }
 
+io::ostream& operator<<(io::ostream& out, ClearColorValue const& c) {
+    switch (c.type) {
+        case ClearColorValue::Type::AUTO:
+            return out << "auto{"
+                       << c.color[0] << ", "
+                       << c.color[1] << ", "
+                       << c.color[2] << ", "
+                       << c.color[3] << "}";
+        case ClearColorValue::Type::FLOAT:
+            return out << "float{"
+                       << static_cast<float>(c.color[0]) << ", "
+                       << static_cast<float>(c.color[1]) << ", "
+                       << static_cast<float>(c.color[2]) << ", "
+                       << static_cast<float>(c.color[3]) << "}";
+        case ClearColorValue::Type::INT:
+            return out << "int{"
+                       << static_cast<int32_t>(c.color[0]) << ", "
+                       << static_cast<int32_t>(c.color[1]) << ", "
+                       << static_cast<int32_t>(c.color[2]) << ", "
+                       << static_cast<int32_t>(c.color[3]) << "}";
+        case ClearColorValue::Type::UINT:
+            return out << "uint{"
+                       << static_cast<uint32_t>(c.color[0]) << ", "
+                       << static_cast<uint32_t>(c.color[1]) << ", "
+                       << static_cast<uint32_t>(c.color[2]) << ", "
+                       << static_cast<uint32_t>(c.color[3]) << "}";
+    }
+    return out;
+}
+
 io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     out << "RenderPassParams{"
     <<   "clear=" << params.flags.clear

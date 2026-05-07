@@ -432,7 +432,7 @@ private:
     } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT] = {};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
-            math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
+            ClearColorValue const& clearColor, GLfloat depth, GLint stencil) noexcept;
 
     void setScissor(Viewport const& scissor) noexcept;
 

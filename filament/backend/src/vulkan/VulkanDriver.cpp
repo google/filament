@@ -2068,10 +2068,62 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
-                clearValue.color.float32[0] = params.clearColor.r;
-                clearValue.color.float32[1] = params.clearColor.g;
-                clearValue.color.float32[2] = params.clearColor.b;
-                clearValue.color.float32[3] = params.clearColor.a;
+                // Resolve the type family. AUTO defers to the attachment format. Explicit types
+                // are trusted at runtime, with a debug-only check that they match the attachment
+                // (mismatch produces silent corruption in Vulkan since VkClearColorValue is a
+                // union the driver reads according to the attachment format).
+                VulkanAttachment const* const attachment = rt->getColorAttachment(i);
+                ClearColorValue::Type resolved = params.clearColor.type;
+                if (resolved == ClearColorValue::Type::AUTO) {
+                    resolved = ClearColorValue::Type::FLOAT;
+                    if (attachment) {
+                        TextureFormat const format = attachment->texture->format;
+                        if (isUnsignedIntFormat(format)) {
+                            resolved = ClearColorValue::Type::UINT;
+                        } else if (isSignedIntFormat(format)) {
+                            resolved = ClearColorValue::Type::INT;
+                        }
+                    }
+                } else if (attachment) {
+                    [[maybe_unused]] TextureFormat const format = attachment->texture->format;
+                    assert_invariant(
+                            (resolved == ClearColorValue::Type::UINT &&
+                                isUnsignedIntFormat(format)) ||
+                            (resolved == ClearColorValue::Type::INT &&
+                                isSignedIntFormat(format)) ||
+                            (resolved == ClearColorValue::Type::FLOAT &&
+                                !isUnsignedIntFormat(format) &&
+                                !isSignedIntFormat(format)));
+                }
+
+                switch (resolved) {
+                    case ClearColorValue::Type::AUTO: {
+                        // Unreachable. AUTO was resolved above.
+                        assert_invariant(false);
+                        break;
+                    }
+                    case ClearColorValue::Type::FLOAT: {
+                        clearValue.color.float32[0] = static_cast<float>(params.clearColor.color[0]);
+                        clearValue.color.float32[1] = static_cast<float>(params.clearColor.color[1]);
+                        clearValue.color.float32[2] = static_cast<float>(params.clearColor.color[2]);
+                        clearValue.color.float32[3] = static_cast<float>(params.clearColor.color[3]);
+                        break;
+                    }
+                    case ClearColorValue::Type::INT: {
+                        clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor.color[0]);
+                        clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor.color[1]);
+                        clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor.color[2]);
+                        clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor.color[3]);
+                        break;
+                    }
+                    case ClearColorValue::Type::UINT: {
+                        clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor.color[0]);
+                        clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor.color[1]);
+                        clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor.color[2]);
+                        clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor.color[3]);
+                        break;
+                    }
+                }
             }
         }
         // Resolve attachments are not cleared but still have entries in the list, so skip over them.
