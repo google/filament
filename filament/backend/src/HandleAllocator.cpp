@@ -116,6 +116,41 @@ void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) 
     return nullptr;
 }
 
+template<size_t P0, size_t P1, size_t P2>
+UTILS_NOINLINE
+void* HandleAllocator<P0, P1, P2>::handleCast(HandleBase::HandleId id) const {
+    auto [p, tag] = handleToPointer(id);
+    if (isPoolHandle(id)) {
+        // check for pool handle use-after-free
+        if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            auto const pNode = static_cast<typename Allocator::Node*>(p);
+            uint8_t const expectedAge = pNode[-1].age;
+            // getHandleTag() is only called if the check fails.
+            FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
+                    << "use-after-free of Handle with id=" << id
+                    << ", tag=" << getHandleTag(id).c_str_safe();
+        }
+    } else {
+        // check for heap handle use-after-free
+        if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+            HandleBase::HandleId const index = (id & HANDLE_INDEX_MASK);
+            // if we've already handed out this handle index before, it's definitely a
+            // use-after-free, otherwise it's probably just a corrupted handle
+            if (index < mId.load(std::memory_order_relaxed)) {
+                FILAMENT_CHECK_POSTCONDITION(p != nullptr)
+                        << "use-after-free of heap Handle with id=" << id
+                        << ", tag=" << getHandleTag(id).c_str_safe();
+            } else {
+                FILAMENT_CHECK_POSTCONDITION(p != nullptr)
+                        << "corrupted heap Handle with id=" << id
+                        << ", tag=" << getHandleTag(id).c_str_safe();
+            }
+        }
+    }
+    return p;
+}
+
 template <size_t P0, size_t P1, size_t P2>
 HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size) {
     void* p = ::malloc(size);
@@ -165,6 +200,25 @@ ImmutableCString HandleAllocator<P0, P1, P2>::getHandleTag(HandleBase::HandleId 
     }
     return findHandleTag(key);
 }
+
+template<size_t P0, size_t P1, size_t P2>
+void HandleAllocator<P0, P1, P2>::associateTagToHandle(HandleBase::HandleId id, ImmutableCString&& tag) noexcept {
+    if (tag.empty()) {
+        return;
+    }
+    uint32_t key = id;
+    if (UTILS_LIKELY(isPoolHandle(id))) {
+        // Truncate the age to get the debug tag
+        key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
+        writePoolHandleTag(key, std::move(tag));
+    } else {
+        if (!mHeapHandleTagsDisabled) {
+            writeHeapHandleTag(key, std::move(tag));
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 DebugTag::DebugTag() {
     // Reserve initial space for debug tags. This prevents excessive calls to malloc when the first

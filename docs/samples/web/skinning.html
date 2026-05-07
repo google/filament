@@ -202,17 +202,28 @@ This demo is heavily inspired by gltfTutorial_019_SimpleSkin:
 */
 const ibl_url = '../../web/assets/skinning/default_env/default_env_ibl.ktx';
 const sky_url = '../../web/assets/skinning/default_env/default_env_skybox.ktx';
-Filament.init([ '../../web/assets/skinning/skinning.filamat', ibl_url, sky_url ], () => {
-    window.AttributeType = Filament.VertexBuffer$AttributeType;
-    window.Fov = Filament.Camera$Fov;
-    window.Projection = Filament.Camera$Projection;
-    window.VertexAttribute = Filament.VertexAttribute;
-    window.app = new App(document.getElementsByTagName('canvas')[0]);
-});
+const initFilament = (backend) => () => {
+    Filament.init([ '../../web/assets/skinning/skinning.filamat', ibl_url, sky_url ], () => {
+        window.AttributeType = Filament.VertexBuffer$AttributeType;
+        window.Fov = Filament.Camera$Fov;
+        window.Projection = Filament.Camera$Projection;
+        window.VertexAttribute = Filament.VertexAttribute;
+        let options = {};
+        if (backend == 'webgpu') {
+            options = {backend: Filament.Backend.WEBGPU};
+        }
+        window.app = new App(document.getElementsByTagName('canvas')[0], options);
+    });
+};
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
 class App {
-    constructor(canvas) {
+    constructor(canvas, options) {
         this.canvas = canvas;
-        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const engine = this.engine = Filament.Engine.create(this.canvas, options);
         this.scene = engine.createScene();
         const indirectLight = engine.createIblFromKtx1(ibl_url);
         indirectLight.setIntensity(50000);

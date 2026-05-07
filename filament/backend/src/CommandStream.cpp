@@ -127,7 +127,7 @@ void CommandStream::execute(void* buffer) {
 }
 
 void CommandStream::queueCommand(std::function<void()> command) {
-    new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(std::move(command));
+    new(allocateCommand(sizeof(CustomCommand))) CustomCommand(std::move(command));
 }
 
 template<typename... ARGS>
@@ -167,7 +167,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 // ------------------------------------------------------------------------------------------------
 
 void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) {
-    *next = align(sizeof(CustomCommand));
+    *next = sizeof(CustomCommand);
     static_cast<CustomCommand*>(base)->mCommand();
     static_cast<CustomCommand*>(base)->~CustomCommand();
 }
