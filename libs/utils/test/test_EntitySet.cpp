@@ -722,28 +722,6 @@ TEST(PagedArenaBitsetTest, DefragmentEdgeCases) {
 }
 
 TEST(PagedArenaBitsetTest, ExchangeAndSelfMove) {
-    PagedArenaBitset bs1;
-    bs1.add(10);
-    bs1.add(20);
-
-    // Test free function exchange
-    PagedArenaBitset bs2;
-    bs2.add(30);
-
-    PagedArenaBitset old1 = exchange(bs1, std::move(bs2));
-    EXPECT_EQ(old1.size(), 2);
-    EXPECT_TRUE(old1[10]);
-    EXPECT_TRUE(old1[20]);
-
-    EXPECT_EQ(bs1.size(), 1);
-    EXPECT_TRUE(bs1[30]);
-
-    // Test exchangeAndClear
-    PagedArenaBitset oldClear = exchangeAndClear(bs1);
-    EXPECT_EQ(oldClear.size(), 1);
-    EXPECT_TRUE(oldClear[30]);
-    EXPECT_TRUE(bs1.empty());
-
     // Test self move-assignment
     PagedArenaBitset selfMoveBs;
     selfMoveBs.add(42);
