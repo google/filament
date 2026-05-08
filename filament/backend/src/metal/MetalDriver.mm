@@ -123,6 +123,8 @@ MetalDriver::MetalDriver(
       mStereoscopicType(driverConfig.stereoscopicType),
       mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
+    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
+    mContext->driverLifetimeTracker->driver = this;
 
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
@@ -261,6 +263,10 @@ MetalDriver::MetalDriver(
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    {
+        std::lock_guard<std::mutex> lock(mContext->driverLifetimeTracker->mutex);
+        mContext->driverLifetimeTracker->driver = nullptr;
+    }
     TrackedMetalBuffer::setPlatform(nullptr);
     ScopedAllocationTimer::setPlatform(nullptr);
     mContext->device = nil;
