@@ -358,15 +358,6 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
 #endif
 
 //------------------------------------------------------------------------------
-// Exposure
-//------------------------------------------------------------------------------
-
-UTILS_ALWAYS_INLINE
-static float3 adjustExposure(float3 const v, float const exposure) noexcept {
-    return v * std::exp2(exposure);
-}
-
-//------------------------------------------------------------------------------
 // Purkinje shift/scotopic vision
 //------------------------------------------------------------------------------
 
@@ -495,11 +486,6 @@ static constexpr mat3f adaptationTransform(float2 const whiteBalance) noexcept {
     return LMS_CAT16_to_Rec2020 * mat3f{ILLUMINANT_D65_LMS_CAT16 / lms} * Rec2020_to_LMS_CAT16;
 }
 
-UTILS_ALWAYS_INLINE
-static float3 chromaticAdaptation(float3 const v, mat3f const& adaptationTransform) noexcept {
-    return adaptationTransform * v;
-}
-
 //------------------------------------------------------------------------------
 // General color grading
 //------------------------------------------------------------------------------
@@ -545,9 +531,9 @@ static float3 colorDecisionList(float3 v, float3 slope, float3 offset, float3 po
 }
 
 UTILS_ALWAYS_INLINE
-static constexpr float3 contrast(float3 const v, float const contrast) noexcept {
+static constexpr float3 contrast(float3 const v, float const contrast, float const offset) noexcept {
     // Matches contrast as applied in DaVinci Resolve
-    return MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
+    return v * contrast + offset;
 }
 
 UTILS_ALWAYS_INLINE
@@ -569,9 +555,8 @@ static float3 vibrance(float3 v, float3 luminance, float vibrance) noexcept {
 }
 
 UTILS_ALWAYS_INLINE
-static float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) noexcept {
+static float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale, float3 d) noexcept {
     // "Practical HDR and Wide Color Techniques in Gran Turismo SPORT", Uchimura 2018
-    float3 const  d = 1.0f / (pow(midPoint, shadowGamma - 1.0f));
     float3 const  dark = pow(v, shadowGamma) * d;
     float3 const  light = highlightScale * (v - midPoint) + midPoint;
     return float3{
@@ -720,6 +705,14 @@ struct FColorGrading::Config {
     mat3f  colorGradingOut;
     float3 colorGradingLuminance{};
     ColorTransform oetf;
+
+    float precomputedLinear[512]{};
+    float3 precomputedInR[512]{};
+    float3 precomputedInG[512]{};
+    float3 precomputedInB[512]{};
+    mat3f combinedInTransform;
+    float3 curvesDenominator{1.0f};
+    float contrastOffset{0.0f};
 };
 
 // Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
@@ -740,14 +733,30 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
             && engine.features.engine.color_grading.use_1d_lut;
     mIsLDR = mIsOneDimensional && builder->toneMapper->isLDR();
 
-    const Config config = {
+    Config config = {
         mIsOneDimensional ? 512u : builder->dimension,
         adaptationTransform(builder->whiteBalance),
         selectColorGradingTransformIn(builder->toneMapping),
         selectColorGradingTransformOut(builder->toneMapping),
         selectColorGradingLuminance(builder->toneMapping),
         selectOETF(builder->outputColorSpace),
-};
+    };
+
+    float const expScale = builder->hasAdjustments ? std::exp2(builder->exposure) : 1.0f;
+    for (size_t i = 0; i < config.lutDimension; i++) {
+        float val = float(i) * (1.0f / float(config.lutDimension - 1u));
+        val = LogC_to_linear(float3{val}).x;
+        val = std::max(val, 0.0f);
+        config.precomputedLinear[i] = val * expScale;
+
+        config.precomputedInR[i] = config.colorGradingIn[0] * val;
+        config.precomputedInG[i] = config.colorGradingIn[1] * val;
+        config.precomputedInB[i] = config.colorGradingIn[2] * val;
+    }
+
+    config.combinedInTransform = config.adaptationTransform * config.colorGradingIn;
+    config.curvesDenominator = 1.0f / pow(builder->midPoint, builder->shadowGamma - 1.0f);
+    config.contrastOffset = MIDDLE_GRAY_ACEScct * (1.0f - builder->contrast);
 
     mDimension = config.lutDimension;
 
@@ -773,22 +782,15 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     assert_invariant(FTexture::isTextureFormatSupported(engine, textureFormat));
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
-    void* converted = nullptr;
-    if (type == PixelDataType::UINT_2_10_10_10_REV) {
-        // convert input to UINT_2_10_10_10_REV if needed
-        converted = malloc(lutElementCount * sizeof(uint32_t));
-    }
-    //auto now = std::chrono::steady_clock::now();
-
     if (mIsOneDimensional) {
         // 1D LUT currently always use fp16
-        assert_invariant(!converted);
         half* UTILS_RESTRICT p = static_cast<half*>(data);
         if (mIsLDR) {
-            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
+            auto toneMapper = builder->toneMapper;
+            for (uint32_t rgb = 0, c = config.lutDimension; rgb < c; rgb++) {
                 float3 v = float3(rgb) * (1.0f / float(config.lutDimension - 1u));
 
-                v = (*builder->toneMapper)(float3(v));
+                v = (*toneMapper)(float3(v));
 
                 // We need to clamp for the output transfer function
                 v = saturate(v);
@@ -799,35 +801,40 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 *p++ = half(v.r);
             }
         } else {
-            for (size_t rgb = 0; rgb < config.lutDimension; rgb++) {
+            for (uint32_t rgb = 0, c = config.lutDimension; rgb < c; rgb++) {
                 *p++ = half(hdrColorAt(builder, config, rgb, rgb, rgb).r);
             }
         }
     } else {
-        // Multithreadedly generate the tone mapping 3D look-up table using 32 jobs
-        // Slices are 8 KiB (128 cache lines) apart.
-        // This takes about 3-6ms on Android in Release
+        void* converted = nullptr;
+        if (type == PixelDataType::UINT_2_10_10_10_REV) {
+            // convert input to UINT_2_10_10_10_REV if needed
+            converted = malloc(lutElementCount * sizeof(uint32_t));
+        }
+
         JobSystem& js = engine.getJobSystem();
         auto *slices = js.createJob();
-        for (size_t b = 0; b < config.lutDimension; b++) {
-            auto* job = js.createJob(slices,
-                    [data, converted, b, &config, builder](JobSystem&, JobSystem::Job*) {
-                half4* UTILS_RESTRICT p = static_cast<half4*>(data) + b * config.lutDimension * config.lutDimension;
-                for (size_t g = 0; g < config.lutDimension; g++) {
-                    for (size_t r = 0; r < config.lutDimension; r++) {
-                        *p++ = half4{hdrColorAt(builder, config, r, g, b), 0.0f};
+        uint32_t const dim = config.lutDimension;
+
+        for (uint32_t b = 0; b < dim; b++) {
+            auto work = [data, converted, b, &config, builder](JobSystem&, JobSystem::Job*) {
+                FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::job");
+                uint32_t const dim = config.lutDimension;
+                half4* UTILS_RESTRICT const p = static_cast<half4*>(data) + (b * dim * dim);
+                for (uint32_t g = 0; g < dim; g++) {
+                    for (uint32_t r = 0; r < dim; r++) {
+                        p[g * dim + r] = half4{hdrColorAt(builder, config, r, g, b)};
                     }
                 }
 
                 if (converted) {
-                    uint32_t* const UTILS_RESTRICT dst = static_cast<uint32_t*>(converted) +
-                            b * config.lutDimension * config.lutDimension;
-                    half4 const* UTILS_RESTRICT src = static_cast<half4*>(data) +
-                            b * config.lutDimension * config.lutDimension;
+                    uint32_t const count = dim * dim;
+                    uint32_t const offset = b * count;
+                    uint32_t* const UTILS_RESTRICT dst = static_cast<uint32_t*>(converted) + offset;
+                    half4 const* UTILS_RESTRICT src = static_cast<half4*>(data) + offset;
                     // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to
                     // write eight 32-bits results in one go. The compiler will automatically generate
                     // a scalar epilogue loop for any remainder elements.
-                    const size_t count = config.lutDimension * config.lutDimension;
 #if defined(__clang__)
 #pragma clang loop vectorize_width(8)
 #endif
@@ -839,22 +846,25 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                         dst[i] = (pb << 20u) | (pg << 10u) | pr;
                     }
                 }
-            });
-            js.run(job);
+            };
+
+            // It doesn't seem to be worth it to spin up the jobsystem for 32^3 LUTs, we do get a benefit
+            // in mobile (e.g. ~6ms to ~4ms), but at the price of spinning all medium cores.
+            // For 64^3 however, we're improving from 112ms to 40ms (Pixel 8)
+            if (UTILS_UNLIKELY(dim > 32)) {
+                auto* job = js.createJob(slices, work);
+                js.run(job);
+            } else {
+                work(js, nullptr);
+            }
         }
-
-        // TODO: Should we do a runAndRetain() and defer the wait() + texture creation until
-        //       getHwHandle() is invoked?
         js.runAndWait(slices);
-    }
 
-    //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
-    //DLOG(INFO) << "LUT generation time: " << duration.count() << " ms";
-
-    if (converted) {
-        free(data);
-        data = converted;
-        elementSize = sizeof(uint32_t);
+        if (converted) {
+            free(data);
+            data = converted;
+            elementSize = sizeof(uint32_t);
+        }
     }
 
     // Create texture.
@@ -877,29 +887,18 @@ void FColorGrading::terminate(FEngine& engine) {
     driver.destroyTexture(mLutHandle);
 }
 
-float3 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
+float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
         size_t r, size_t g, size_t b) noexcept {
 
-    float3 v = float3{r, g, b} * (1.0f / float(config.lutDimension - 1u));
-
-    // LogC encoding
-    v = LogC_to_linear(v);
-
-    // Kill negative values near 0.0f due to imprecision in the log conversion
-    v = max(v, 0.0f);
-
+    float3 v;
     if (UTILS_UNLIKELY(builder->hasAdjustments)) {
-        // Exposure
-        v = adjustExposure(v, builder->exposure);
+        v = float3{config.precomputedLinear[r], config.precomputedLinear[g], config.precomputedLinear[b]};
 
         // Purkinje shift ("low-light" vision)
         v = scotopicAdaptation(v, builder->nightAdaptation);
 
-        // Move to color grading color space
-        v = config.colorGradingIn * v;
-
-        // White balance
-        v = chromaticAdaptation(v, config.adaptationTransform);
+        // Move to color grading color space and white balance (fused)
+        v = config.combinedInTransform * v;
 
         // Kill negative values before the next transforms
         v = max(v, 0.0f);
@@ -919,7 +918,7 @@ float3 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
         v = colorDecisionList(v, builder->slope, builder->offset, builder->power);
 
         // Contrast in log space
-        v = contrast(v, builder->contrast);
+        v = contrast(v, builder->contrast, config.contrastOffset);
 
         // Back to linear space
         v = LogC_to_linear(v);
@@ -934,10 +933,9 @@ float3 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
         v = max(v, 0.0f);
 
         // RGB curves
-        v = curves(v, builder->shadowGamma, builder->midPoint, builder->highlightScale);
+        v = curves(v, builder->shadowGamma, builder->midPoint, builder->highlightScale, config.curvesDenominator);
     } else {
-        // Move to color grading color space
-        v = config.colorGradingIn * v;
+        v = config.precomputedInR[r] + config.precomputedInG[g] + config.precomputedInB[b];
     }
 
     // Tone mapping
@@ -970,7 +968,7 @@ float3 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
         v = applyCustomLut(v, builder->customLutData.data(), builder->customLutDimension);
     }
 
-    return v;
+    return {v, 0.0f};
 }
 
 } //namespace filament

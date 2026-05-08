@@ -50,7 +50,7 @@ public:
 
 private:
     struct Config;
-    static math::float3 hdrColorAt(Builder const& builder, Config const& config,
+    static math::float4 hdrColorAt(Builder const& builder, Config const& config,
             size_t r, size_t g, size_t b) noexcept;
 
     backend::TextureHandle mLutHandle;
