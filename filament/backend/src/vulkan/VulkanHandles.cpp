@@ -494,7 +494,15 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
 VulkanVertexBufferInfo::VulkanVertexBufferInfo(
         uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes)
     : HwVertexBufferInfo(bufferCount, attributeCount),
-      mInfo(attributes.size()) {
+      mInfo(attributeCount == 0 ? 0 : attributes.size()) {
+    // Attribute-less rendering: when there are no declared attributes (and therefore no buffers),
+    // skip the per-attribute setup entirely. Pipeline creation, VulkanPipelineCache::createPipeline,
+    // will then have vertexAttributeDescriptionCount == 0 and vertexBindingDescriptionCount == 0,
+    // which is what Vulkan wants for attribute-less draws.
+    if (attributeCount == 0) {
+        return;
+    }
+
     auto attribDesc = mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
     auto bufferDesc = mInfo.mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
     auto offsets = mInfo.mSoa.data<PipelineInfo::OFFSETS>();

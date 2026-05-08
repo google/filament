@@ -197,7 +197,7 @@ public:
         /**
          * Specifies the geometry data for a primitive.
          *
-         * Filament primitives must have an associated VertexBuffer and IndexBuffer. Typically, each
+         * Associates a vertex buffer and an index buffer with a primitive. Typically, each
          * primitive is specified with a pair of daisy-chained calls: \c geometry(...) and \c
          * material(...).
          *
@@ -223,6 +223,37 @@ public:
         Builder& geometry(size_t index, PrimitiveType type,
                 VertexBuffer* UTILS_NONNULL vertices,
                 IndexBuffer* UTILS_NONNULL indices) noexcept; //!< \overload
+
+        /**
+         * Specifies the geometry data for a primitive. (non-indexed version)
+         *
+         * Filament primitives normally have an associated vertex buffer and index buffer. Typically,
+         * each primitive is specified with a pair of daisy-chained calls: \c geometry(...) and
+         * \c material(...).
+         *
+         * Non-indexed rendering: when \p indices is not provided, the primitive is treated as a
+         * non-indexed draw and \p offset / \p count refer to vertex offset and vertex count
+         * respectively.
+         *
+         * Attribute-less rendering: This can be used for procedural rendering, where the vertex
+         * shader generates positions, UVs, etc procedurally, typically from \c gl_VertexIndex /
+         * \c gl_VertexID / and \c [[vertex_id]], which can be accessed by calling `getVertexIndex()`
+         * in vertex shader. The associated VertexBuffer may have \c bufferCount == 0 with
+         * no declared attributes (see \c VertexBuffer::Builder). Attribute-less rendering requires
+         * \c FEATURE_LEVEL_1 or higher as GLES2 has no `gl_VertexID` and is incompatible with
+         * skinning and morphing.
+         *
+         * @param index zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param type specifies the topology of the primitive (e.g., \c RenderableManager::PrimitiveType::TRIANGLES)
+         * @param vertices specifies the vertex buffer, which in turn specifies a set of attributes
+         * @param offset specifies where in the vertex buffer to start reading (expressed as a number of vertices)
+         * @param count number of vertices to read (for triangles, this should be a multiple of 3)
+         */
+        Builder& geometry(size_t index, PrimitiveType type,
+                VertexBuffer* UTILS_NONNULL vertices, size_t offset, size_t count) noexcept; //!< \overload
+
+        Builder& geometry(size_t index, PrimitiveType type,
+                VertexBuffer* UTILS_NONNULL vertices) noexcept; //!< \overload
 
 
         /**
@@ -870,6 +901,15 @@ public:
     void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
             VertexBuffer* UTILS_NONNULL vertices,
             IndexBuffer* UTILS_NONNULL indices,
+            size_t offset, size_t count) noexcept;
+
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * \see Builder::geometry()
+     */
+    void setGeometryAt(Instance instance, size_t primitiveIndex, PrimitiveType type,
+            VertexBuffer* UTILS_NONNULL vertices,
             size_t offset, size_t count) noexcept;
 
     /**

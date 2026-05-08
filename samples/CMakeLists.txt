@@ -27,6 +27,8 @@ set(MATERIAL_SRCS
         materials/image.mat
         materials/mirror.mat
         materials/overdraw.mat
+        materials/proceduralEffect.mat
+        materials/proceduralTextureQuad.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
@@ -289,6 +291,8 @@ if (NOT ANDROID)
     if (NOT FILAMENT_SUPPORTS_WEBGPU)
         add_demo(point_sprites)
     endif ()
+    add_demo(procedural_effect)
+    add_demo(procedural_texture_quad)
     add_demo(rendertarget)
     add_demo(sample_cloth)
     add_demo(sample_full_pbr)

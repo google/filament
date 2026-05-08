@@ -54,14 +54,19 @@ public:
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::RenderPrimitiveHandle getHwHandle() const noexcept { return mHandle; }
     backend::VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
-    uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
-    uint32_t getIndexCount() const noexcept { return mIndexCount; }
+    // For indexed primitives, this is the index offset; for non-indexed primitives, this is the
+    // vertex offset of the draw call. See `isIndexed() and mIsIndexed`.
+    uint32_t getOffset() const noexcept { return mOffset; }
+    // For indexed primitives, this is the index count; for non-indexed primitives, the vertex
+    // count of the draw call.
+    uint32_t getCount() const noexcept { return mCount; }
     uint32_t getMorphingBufferOffset() const noexcept { return mMorphingBufferOffset; }
 
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
     bool isGlobalBlendOrderEnabled() const noexcept { return mGlobalBlendOrderEnabled; }
+    bool isIndexed() const noexcept { return mIsIndexed; }
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
 
@@ -82,14 +87,17 @@ private:
     FMaterialInstance const* mMaterialInstance = nullptr;
     backend::Handle<backend::HwRenderPrimitive> mHandle = {};
     backend::Handle<backend::HwVertexBufferInfo> mVertexBufferInfoHandle = {};
-    uint32_t mIndexOffset = 0;
-    uint32_t mIndexCount = 0;
+    uint32_t mOffset = 0;
+    uint32_t mCount = 0;
     uint32_t mMorphingBufferOffset = 0;
     // End PrimitiveInfo fields.
 
     AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
     bool mGlobalBlendOrderEnabled = false;
+    // True for the standard indexed draw path; false when the primitive was set up without an
+    // IndexBuffer (attribute-less / non-indexed rendering).
+    bool mIsIndexed = true;
     backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
 };
 
