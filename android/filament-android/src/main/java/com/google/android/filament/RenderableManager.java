@@ -176,6 +176,26 @@ public class RenderableManager {
         }
 
         /**
+         * For details, see the {@link RenderableManager.Builder#geometry} primary overload. (non-indexed version)
+         */
+        @NonNull
+        public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
+                @NonNull VertexBuffer vertices, @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
+            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject(), offset, count);
+            return this;
+        }
+
+        /**
+         * For details, see the {@link RenderableManager.Builder#geometry} primary overload. (non-indexed version)
+         */
+        @NonNull
+        public Builder geometry(@IntRange(from = 0) int index, @NonNull PrimitiveType type,
+                @NonNull VertexBuffer vertices) {
+            nBuilderGeometry(mNativeBuilder, index, type.getValue(), vertices.getNativeObject());
+            return this;
+        }
+
+        /**
          * Type of geometry for a Renderable
          */
         public enum GeometryType {
@@ -934,6 +954,28 @@ public class RenderableManager {
                 0, indices.getIndexCount());
     }
 
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * @see Builder#geometry Builder.geometry
+     */
+    public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
+            @NonNull PrimitiveType type, @NonNull VertexBuffer vertices, @IntRange(from = 0) int offset,
+            @IntRange(from = 0) int count) {
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(), offset, count);
+    }
+
+    /**
+     * Changes the geometry for the given primitive. (non-indexed version)
+     *
+     * @see Builder#geometry Builder.geometry
+     */
+    public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
+            @NonNull PrimitiveType type, @NonNull VertexBuffer vertices) {
+        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), vertices.getNativeObject(),
+                0, vertices.getVertexCount());
+    }
+
      /**
      * Changes the drawing order for blended primitives. The drawing order is either global or
      * local (default) to this Renderable. In either case, the Renderable priority takes precedence.
@@ -1006,6 +1048,8 @@ public class RenderableManager {
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer);
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int minIndex, int maxIndex, int count);
+    private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, int offset, int count);
+    private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer);
     private static native void nBuilderGeometryType(long nativeBuilder, int type);
     private static native void nBuilderMaterial(long nativeBuilder, int index, long nativeMaterialInstance);
     private static native void nBuilderBlendOrder(long nativeBuilder, int index, int blendOrder);
@@ -1060,6 +1104,7 @@ public class RenderableManager {
     private static native void nClearMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
+    private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);
     private static native int nGetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex, boolean enabled);

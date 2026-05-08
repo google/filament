@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'com.google.android.filament-tools'
+}
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+filament {
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+}
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    namespace 'com.google.android.filament.proceduraleffect'
+
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.proceduraleffect"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+    }
+
+    aaptOptions {
+        noCompress 'filamat', 'ktx'
+    }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation project(':filament-android')
+    implementation project(':filament-utils-android')
+}

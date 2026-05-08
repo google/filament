@@ -900,13 +900,8 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     auto& gl = getBackendState();
 
-    GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
-    assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
-
     GLVertexBuffer const* const vb = handle_cast<GLVertexBuffer*>(vbh);
     GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
-    rp->gl.indicesShift = (ib->elementSize == 4u) ? 2u : 1u;
-    rp->gl.indicesType  = (ib->elementSize == 4u) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
     rp->vbih = vb->vbih;
@@ -924,8 +919,17 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     // later in draw() or bindRenderPrimitive(). At this point, the HwVertexBuffer might not
     // have all its buffers set.
 
-    // this records the index buffer into the currently bound VAO
-    gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+    // The index buffer handle is optional: a null `ibh` indicates an attribute-less /
+    // non-indexed render primitive. In that case we leave the VAO's GL_ELEMENT_ARRAY_BUFFER
+    // unbound and skip the indexShift/Type setup — the draw call will use glDrawArrays*.
+    if (ibh) {
+        GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
+        assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
+        rp->gl.indicesShift = (ib->elementSize == 4u) ? 2u : 1u;
+        rp->gl.indicesType  = (ib->elementSize == 4u) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        // this records the index buffer into the currently bound VAO
+        gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+    }
 
     CHECK_GL_ERROR()
     mHandleAllocator.associateTagToHandle(rph.getId(), std::move(tag));
@@ -4919,6 +4923,41 @@ void OpenGLDriver::draw2(uint32_t const indexOffset, uint32_t const indexCount, 
     glDrawElementsInstanced(GLenum(rp->type), GLsizei(indexCount),
             rp->gl.getIndicesType(),
             reinterpret_cast<const void*>(indexOffset << rp->gl.indicesShift),
+            GLsizei(instanceCount));
+#endif
+
+#if FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL()
+#else
+    CHECK_GL_ERROR()
+#endif
+}
+
+void OpenGLDriver::drawArrays(uint32_t const vertexOffset, uint32_t const vertexCount,
+        uint32_t const instanceCount) {
+    DEBUG_MARKER()
+    // Attribute-less rendering depends on gl_VertexID, which is unavailable on GLES2 /
+    // FEATURE_LEVEL_0. The frontend (VertexBuffer::Builder::build) rejects attribute-less
+    // VertexBuffers at FEATURE_LEVEL_0, so this path should never execute on ES2.
+    assert_invariant(!mContext.isES2());
+    assert_invariant(mBoundRenderPrimitive);
+#if FILAMENT_ENABLE_MATDBG
+    if (UTILS_UNLIKELY(!mValidProgram)) {
+        return;
+    }
+#endif
+    assert_invariant(mBoundProgram);
+    assert_invariant(mValidProgram);
+
+    auto const invalidDescriptorSets =
+            mInvalidDescriptorSetBindings | mInvalidDescriptorSetBindingOffsets;
+    if (UTILS_UNLIKELY(invalidDescriptorSets.any())) {
+        updateDescriptors(invalidDescriptorSets);
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    glDrawArraysInstanced(GLenum(rp->type), GLint(vertexOffset), GLsizei(vertexCount),
             GLsizei(instanceCount));
 #endif
 
