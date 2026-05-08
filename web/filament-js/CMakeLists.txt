@@ -62,7 +62,7 @@ target_link_libraries(filament-js PRIVATE filament math utils ktxreader filamesh
 # artifacts that it needs.
 
 set(RESOURCES )
-foreach (RESOURCE package.json README.md filament.d.ts filament-viewer.js)
+foreach (RESOURCE package.json README.md filament.d.ts)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/${RESOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE}

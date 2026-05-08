@@ -21,11 +21,35 @@ import { LitElement, html, css } from "https://unpkg.com/lit@2.8.0?module";
 // If so, it immediately calls the given function. If not, it asks the Filament
 // loader to call it as soon as the module becomes ready.
 class FilamentTasks {
+    constructor() {
+        const params = new URLSearchParams(location.search);
+        this.webgpu = params.get('backend') === 'webgpu';
+        this.pending = [];
+        this.initialized = false;
+    }
+
     add(callback) {
         if (Filament.isReady) {
-            callback();
-        } else {
-            Filament.init([], callback);
+            callback(this.webgpu ? {backend: Filament.Backend.WEBGPU} : {});
+            return;
+        }
+
+        this.pending.push(callback);
+
+        if (!this.initialized) {
+            this.initialized = true;
+            const runInit = () => {
+                Filament.init([], () => {
+                    const options = this.webgpu ? {backend: Filament.Backend.WEBGPU} : {};
+                    this.pending.forEach(cb => cb(options));
+                    this.pending = [];
+                });
+            };
+            if (this.webgpu) {
+                Filament.initWebGPU().then(runInit);
+            } else {
+                runInit();
+            }
         }
     }
 }
@@ -88,12 +112,6 @@ class FilamentViewer extends LitElement {
         // At this point in the lit-element lifecycle, the "render" has taken place, which simply
         // means the canvas element now exists. However the Filament wasm module may or may not be
         // fully loaded, which is why we use the task manager.
-        const canvas = this.shadowRoot.getElementById(this.canvasId);
-        if (canvas.parentNode.host.parentElement.tagName === "FILAMENT-VIEWER") {
-            console.error("Do not nest FilamentViewer, this is unsupported.");
-            console.error("Try placing each viewer in a wrapper element.");
-            return;
-        }
         this.filamentTasks.add(this._startFilament.bind(this));
 
         const overlay = this.shadowRoot.getElementById(this.overlayId);
@@ -125,10 +143,7 @@ class FilamentViewer extends LitElement {
                 border: solid 1px black;
                 position: relative;
             }
-            canvas {
-                background: #D9D9D9; /* This is consistent with the default clear color. */
-            }
-            canvas, .overlay {
+            .overlay {
                 width: 100%;
                 height: 100%;
                 position: absolute;
@@ -141,7 +156,7 @@ class FilamentViewer extends LitElement {
 
     render() {
         return html`
-            <canvas part="canvas" alt="${this.alt}" id="${this.canvasId}"></canvas>
+            <slot name="output-area"></slot>
             <div class="overlay" part="overlay" id="${this.overlayId}"></div>
         `;
     }
@@ -173,13 +188,13 @@ class FilamentViewer extends LitElement {
         }
     }
 
-    _startFilament() {
+    _startFilament(engineOptions) {
         const LightType = Filament.LightManager$Type;
 
-        const canvas = this.shadowRoot.getElementById(this.canvasId);
+        const canvas = document.getElementById(this.canvasId);
         const overlay = this.shadowRoot.getElementById(this.overlayId);
 
-        this.engine = Filament.Engine.create(canvas);
+        this.engine = Filament.Engine.create(canvas, engineOptions);
         this.scene = this.engine.createScene();
         this.sunlight = Filament.EntityManager.get().create();
         this.scene.addEntity(this.sunlight);
@@ -223,7 +238,7 @@ class FilamentViewer extends LitElement {
 
     _onResized(width, height) {
         const Fov = Filament.Camera$Fov;
-        const canvas = this.shadowRoot.getElementById(this.canvasId);
+        const canvas = document.getElementById(this.canvasId);
         canvas.width = width;
         canvas.height = height;
         this.view.setViewport([0, 0, width, height]);

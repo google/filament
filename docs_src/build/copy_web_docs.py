@@ -66,7 +66,10 @@ def fix_paths():
     files (which assume assets are alongside them) need to be patched to point to the correct
     relative paths based on their nesting depth.
     """
-    files_to_fix = glob.glob(f"{BOOK_DIR}/samples/web/*.html") + glob.glob(f"{BOOK_DIR}/remote/*.html") + glob.glob(f"{BOOK_DIR}/web/*.html")
+    files_to_fix = glob.glob(f"{BOOK_DIR}/samples/web/*.html") + \
+                   glob.glob(f"{BOOK_DIR}/remote/*.html") + \
+                   glob.glob(f"{BOOK_DIR}/web/*.html") + \
+                   glob.glob(f"{BOOK_DIR}/viewer/*.html")
 
     exts = "filamat|filamesh|ktx|ktx2|png|jpg|bin|glb|gltf|hdr|css|js"
     asset_pattern = r'([\'"`])((?:\.\.\/)?(?:[\w\-\/]+\.)(?:' + exts + r'))\1'
@@ -76,6 +79,10 @@ def fix_paths():
             text = file.read()
 
         sample_name = os.path.splitext(os.path.basename(f))[0]
+
+        # For /viewer/index.html
+        if sample_name == "index":
+            sample_name = os.path.basename(os.path.dirname(f))
 
         # Compute the relative depth prefix depending on where the HTML is located
         if "samples/web/" in f:

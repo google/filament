@@ -79,14 +79,19 @@ def pull_duplicates():
       content = in_file.read()
 
     if fpath.endswith('.html') and new_fpath.endswith('.md'):
-      # We replace double newlines so mdbook does not treat it as separated markdown paragraphs
-      content = content.replace("\n\n", "\n")
-      import re
+      # We replace multiple newlines so mdbook does not treat it as separated markdown paragraphs
+      content = re.sub(r'\n\s*\n+', '\n', content)
       style_match = re.search(r'<style>(.*?)</style>', content, re.DOTALL | re.IGNORECASE)
       style_str = f"<style>{style_match.group(1)}</style>\n" if style_match else ""
       body_match = re.search(r'<body[^>]*>(.*?)</body>', content, re.DOTALL | re.IGNORECASE)
       if body_match:
         content = style_str + body_match.group(1)
+
+    if new_fpath.endswith('.md'):
+      def repl_empty_lines(m):
+        return re.sub(r'\n\s*\n+', '\n', m.group(0))
+      content = re.sub(r'<script.*?>.*?</script>', repl_empty_lines, content, flags=re.DOTALL | re.IGNORECASE)
+      content = re.sub(r'<style.*?>.*?</style>', repl_empty_lines, content, flags=re.DOTALL | re.IGNORECASE)
 
     replacements = config[fin].get('replacements', {})
     for old, new in replacements.items():
