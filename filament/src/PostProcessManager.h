@@ -422,18 +422,13 @@ public:
 
     void resetForRender();
 
-    MaterialInstanceManager& getMaterialInstanceManager() noexcept {
-            return mMaterialInstanceManager;
-    }
-
     static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
-
-private:
 
     // Helpers to get MaterialInstances.
     //
-    // These funcions additionally ensure that the necessary shader programs are compiled via
+    // These functions additionally ensure that the necessary shader programs are compiled via
     // prepareProgram().
+
     FMaterialInstance* getMaterialInstance(backend::DriverApi& driver, FMaterial const* ma,
             Variant::type_t variant) const;
 
@@ -452,17 +447,17 @@ private:
             uint32_t tag, Variant::type_t variant) const;
 
     FMaterialInstance* getMaterialInstanceWithTag(backend::DriverApi& driver, FMaterial const* ma,
-            uint32_t tag, PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
+            uint32_t const tag, PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
         return getMaterialInstanceWithTag(driver, ma, tag, Variant::type_t(variant));
     }
 
     FMaterialInstance* getMaterialInstanceWithTag(FEngine& engine, backend::DriverApi& driver,
-            PostProcessMaterial const& material, uint32_t tag,
+            PostProcessMaterial const& material, uint32_t const tag,
             PostProcessVariant variant = PostProcessVariant::OPAQUE) const {
-        return getMaterialInstanceWithTag(driver, material.getMaterial(engine), tag,
-                Variant::type_t(variant));
+        return getMaterialInstanceWithTag(driver, material.getMaterial(engine), tag, Variant::type_t(variant));
     }
 
+private:
     UboManager* getUboManager() const noexcept;
 
     backend::RenderPrimitiveHandle mFullScreenQuadRph;

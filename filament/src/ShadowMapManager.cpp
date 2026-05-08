@@ -663,7 +663,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianBlurSeparatedPass(
                 generateGaussianWeights(kernel, radius, sigma);
 
                 backend::Viewport const scissor = shadowMap->getScissor();
-                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
+                auto const mi = ppm.getMaterialInstance(driver, ma);
+
                 mi->setScissor(scissor);
                 mi->setParameter("input", hwIn, SamplerParams{
                     .filterMag = SamplerMagFilter::NEAREST,
@@ -734,7 +735,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
 
                 auto& material = ppm.getPostProcessMaterial("vsmMipmap");
                 FMaterial const* const ma = material.getMaterial(engine);
-                auto const mi = ppm.getMaterialInstanceManager().getMaterialInstance(ma);
+                auto const mi = ppm.getMaterialInstance(driver, ma);
 
                 auto const pipeline = ppm.getPipelineState(mi);
                 backend::Viewport const scissor = { 0, 0, dim, dim };
