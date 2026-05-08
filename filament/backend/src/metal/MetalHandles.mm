@@ -1417,6 +1417,8 @@ void MetalFence::encode() {
                       atValue:value
                         block:^(id<MTLSharedEvent> o, uint64_t value) {
                           auto s = weakState.lock();
+                          // weakDriverLifetime ensures that the Driver is still alive before
+                          // accessing it.
                           auto lifetime = weakDriverLifetime.lock();
                           if (s && lifetime) {
                               std::lock_guard<std::mutex> lock(lifetime->mutex);
