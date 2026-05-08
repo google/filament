@@ -20,6 +20,8 @@
 
 
 #include <filament/Box.h>
+#include <filament/ColorGrading.h>
+#include <filament/Engine.h>
 #include <filament/Frustum.h>
 #include "Culler.h"
 
@@ -76,7 +78,7 @@ public:
     }
 
     ~FilamentCullingFixture() override {
-        utils::aligned_free(visibles);
+        aligned_free(visibles);
     }
 };
 
@@ -103,3 +105,139 @@ BENCHMARK_F(FilamentCullingFixture, sphereCulling)(benchmark::State& state) {
         state.SetItemsProcessed(state.iterations() * BATCH_SIZE);
     }
 }
+
+class ColorGradingFixture : public benchmark::Fixture {
+protected:
+    Engine* engine = nullptr;
+
+public:
+    static constexpr size_t kMaxAccumulatedLuts = 100;
+
+    void SetUp(const benchmark::State& state) override {
+        Engine::Config config;
+        config.commandBufferSizeMB = 8;
+        engine = Engine::create(Engine::Backend::NOOP, nullptr, nullptr, &config);
+    }
+
+    void TearDown(const benchmark::State& state) override {
+        Engine::destroy(&engine);
+    }
+};
+
+BENCHMARK_F(ColorGradingFixture, lutGenerationDefault)(benchmark::State& state) {
+    {
+        ColorGrading::Builder builder;
+        std::vector<ColorGrading*> cgs;
+        cgs.reserve(kMaxAccumulatedLuts);
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            cgs.push_back(builder.build(*engine));
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        for (ColorGrading* cg : cgs) {
+            engine->destroy(cg);
+        }
+        engine->flush();
+        state.SetItemsProcessed(state.iterations() * 32 * 32 * 32);
+    }
+}
+
+BENCHMARK_F(ColorGradingFixture, lutGenerationWithAdjustments)(benchmark::State& state) {
+    {
+        ColorGrading::Builder builder;
+        builder.exposure(0.5f)
+               .contrast(1.1f)
+               .saturation(1.05f);
+        std::vector<ColorGrading*> cgs;
+        cgs.reserve(kMaxAccumulatedLuts);
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            cgs.push_back(builder.build(*engine));
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        for (ColorGrading* cg : cgs) {
+            engine->destroy(cg);
+        }
+        engine->flush();
+        state.SetItemsProcessed(state.iterations() * 32 * 32 * 32);
+    }
+}
+
+BENCHMARK_F(ColorGradingFixture, lutGenerationUltraQuality)(benchmark::State& state) {
+    {
+        ColorGrading::Builder builder;
+        builder.quality(ColorGrading::QualityLevel::ULTRA)
+               .exposure(0.5f)
+               .contrast(1.1f);
+        std::vector<ColorGrading*> cgs;
+        cgs.reserve(kMaxAccumulatedLuts);
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            cgs.push_back(builder.build(*engine));
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        for (ColorGrading* cg : cgs) {
+            engine->destroy(cg);
+        }
+        engine->flush();
+        state.SetItemsProcessed(state.iterations() * 64 * 64 * 64);
+    }
+}
+
+BENCHMARK_F(ColorGradingFixture, lutGeneration1DLDR)(benchmark::State& state) {
+    {
+        ColorGrading::Builder builder;
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+        builder.toneMapping(ColorGrading::ToneMapping::LINEAR);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+        std::vector<ColorGrading*> cgs;
+        cgs.reserve(kMaxAccumulatedLuts);
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            cgs.push_back(builder.build(*engine));
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        for (ColorGrading* cg : cgs) {
+            engine->destroy(cg);
+        }
+        engine->flush();
+        state.SetItemsProcessed(state.iterations() * 512);
+    }
+}
+
+BENCHMARK_F(ColorGradingFixture, lutGeneration1DHDR)(benchmark::State& state) {
+    {
+        ColorGrading::Builder builder;
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+        builder.toneMapping(ColorGrading::ToneMapping::FILMIC);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+        std::vector<ColorGrading*> cgs;
+        cgs.reserve(kMaxAccumulatedLuts);
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            cgs.push_back(builder.build(*engine));
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        for (ColorGrading* cg : cgs) {
+            engine->destroy(cg);
+        }
+        engine->flush();
+        state.SetItemsProcessed(state.iterations() * 512);
+    }
+}
+

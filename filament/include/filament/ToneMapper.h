@@ -94,7 +94,7 @@ struct UTILS_PUBLIC ToneMapper {
  */
 struct UTILS_PUBLIC LinearToneMapper final : public ToneMapper {
     LinearToneMapper() noexcept;
-    ~LinearToneMapper() noexcept final;
+    ~LinearToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override;
     bool isOneDimensional() const noexcept override { return true; }
@@ -108,7 +108,7 @@ struct UTILS_PUBLIC LinearToneMapper final : public ToneMapper {
  */
 struct UTILS_PUBLIC ACESToneMapper final : public ToneMapper {
     ACESToneMapper() noexcept;
-    ~ACESToneMapper() noexcept final;
+    ~ACESToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override;
     bool isOneDimensional() const noexcept override { return false; }
@@ -123,7 +123,7 @@ struct UTILS_PUBLIC ACESToneMapper final : public ToneMapper {
  */
 struct UTILS_PUBLIC ACESLegacyToneMapper final : public ToneMapper {
     ACESLegacyToneMapper() noexcept;
-    ~ACESLegacyToneMapper() noexcept final;
+    ~ACESLegacyToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override;
     bool isOneDimensional() const noexcept override { return false; }
@@ -138,7 +138,7 @@ struct UTILS_PUBLIC ACESLegacyToneMapper final : public ToneMapper {
  */
 struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
     FilmicToneMapper() noexcept;
-    ~FilmicToneMapper() noexcept final;
+    ~FilmicToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 x) const noexcept override;
     bool isOneDimensional() const noexcept override { return true; }
@@ -152,9 +152,9 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
  */
 struct UTILS_PUBLIC PBRNeutralToneMapper final : public ToneMapper {
     PBRNeutralToneMapper() noexcept;
-    ~PBRNeutralToneMapper() noexcept final;
+    ~PBRNeutralToneMapper() noexcept override;
 
-    math::float3 operator()(math::float3 x) const noexcept override;
+    math::float3 operator()(math::float3 color) const noexcept override;
     bool isOneDimensional() const noexcept override { return false; }
     bool isLDR() const noexcept override { return false; }
 };
@@ -168,9 +168,9 @@ struct UTILS_PUBLIC PBRNeutralToneMapper final : public ToneMapper {
  */
 struct UTILS_PUBLIC GT7ToneMapper final : public ToneMapper {
     GT7ToneMapper() noexcept;
-    ~GT7ToneMapper() noexcept final;
+    ~GT7ToneMapper() noexcept override;
 
-    math::float3 operator()(math::float3 x) const noexcept override;
+    math::float3 operator()(math::float3 color) const noexcept override;
     bool isOneDimensional() const noexcept override { return false; }
     bool isLDR() const noexcept override { return false; }
 
@@ -195,9 +195,9 @@ struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
      * @param look an optional creative adjustment to contrast and saturation
      */
     explicit AgxToneMapper(AgxLook look = AgxLook::NONE) noexcept;
-    ~AgxToneMapper() noexcept final;
+    ~AgxToneMapper() noexcept override;
 
-    math::float3 operator()(math::float3 x) const noexcept override;
+    math::float3 operator()(math::float3 v) const noexcept override;
     bool isOneDimensional() const noexcept override { return false; }
     bool isLDR() const noexcept override { return false; }
 
@@ -236,7 +236,7 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
             float midGrayOut = 0.215f,
             float hdrMax = 10.0f
     ) noexcept;
-    ~GenericToneMapper() noexcept final;
+    ~GenericToneMapper() noexcept override;
 
     GenericToneMapper(GenericToneMapper const&) = delete;
     GenericToneMapper& operator=(GenericToneMapper const&) = delete;

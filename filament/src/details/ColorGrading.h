@@ -19,12 +19,11 @@
 
 #include "downcast.h"
 
-#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <filament/ColorGrading.h>
 
-#include <math/mathfwd.h>
+#include <cstdint>
 
 namespace filament {
 
