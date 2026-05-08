@@ -297,7 +297,8 @@ public:
         // allocate enough space for "capacity" elements of each array
         // capacity cannot change when optional storage is specified
         if (capacity >= mSize) {
-            // TODO: not entirely sure if "max" of all alignments is always correct
+            // Because all alignments are powers of two, the maximum alignment is equivalent 
+            // to the Least Common Multiple.
             constexpr size_t align = std::max({ std::max(alignof(std::max_align_t), alignof(Elements))... });
             const size_t sizeNeeded = getNeededSize(capacity);
             void* buffer = mAllocator.alloc(sizeNeeded, align);

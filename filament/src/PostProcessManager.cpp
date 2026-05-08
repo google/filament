@@ -2596,7 +2596,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     auto const ma = material.getMaterial(mEngine);
-    auto* const mi = getMaterialInstance(driver, ma, 0);
+    auto* const mi = getMaterialInstanceWithTag(driver, ma, 0, 0);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver, getUboManager());
 }
@@ -2608,7 +2608,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine);
     // the UBO has been set and committed in customResolvePrepareSubpass()
-    FMaterialInstance const* mi = getMaterialInstance(driver, ma, 0);
+    FMaterialInstance const* mi = getMaterialInstanceWithTag(driver, ma, 0, 0);
     mi->use(driver);
 
     auto const pipeline = getPipelineState(mi);

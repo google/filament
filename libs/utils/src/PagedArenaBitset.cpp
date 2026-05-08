@@ -71,6 +71,7 @@ namespace utils {
 
  */
 
+UTILS_NOINLINE
 PagedArenaBitset::PagedArenaBitset()
     : mSummaryMask(MASK_WORDS, 0),          // All bits 0 (512 * u64 ->  4KiB)
       mDirectory(DIR_SIZE, INVALID_PAGE),   // All entries 0xFFFF (32768 * u16 -> 64KiB)
@@ -90,10 +91,24 @@ PagedArenaBitset::PagedArenaBitset()
     // We only reserve mArena in intersect() where we know the size.
 }
 
-PagedArenaBitset::~PagedArenaBitset() = default;
-PagedArenaBitset::PagedArenaBitset(PagedArenaBitset&&) noexcept = default;
-PagedArenaBitset::PagedArenaBitset(PagedArenaBitset const&) = default;
+PagedArenaBitset::PagedArenaBitset(NoInit) noexcept {
+    // Leaves mSummaryMask, mDirectory, mArena, and mFreePages as empty vectors.
+}
 
+UTILS_NOINLINE
+PagedArenaBitset::~PagedArenaBitset() = default;
+
+PagedArenaBitset::PagedArenaBitset(PagedArenaBitset&& UTILS_RESTRICT rhs) noexcept
+    : mSummaryMask(std::move(rhs.mSummaryMask)),
+      mDirectory(std::move(rhs.mDirectory)),
+      mArena(std::move(rhs.mArena)),
+      mFreePages(std::move(rhs.mFreePages)),
+      mMasterMask(rhs.mMasterMask),
+      mSize(rhs.mSize) {
+    // manual ctor avoids generation of memcpy, and UTILS_RESTRICT allows very fast copy
+}
+
+UTILS_NOINLINE
 uint16_t PagedArenaBitset::allocatePage() {
     if (!mFreePages.empty()) {
         uint16_t const idx = mFreePages.back();
@@ -109,6 +124,7 @@ uint16_t PagedArenaBitset::allocatePage() {
     return idx;
 }
 
+UTILS_NOINLINE
 void PagedArenaBitset::freePage(uint32_t const dirIdx) {
     assert(dirIdx < PagedArenaBitset::DIR_SIZE && "Directory index out of bounds");
     uint16_t const pageIdx = mDirectory[dirIdx];
@@ -121,26 +137,53 @@ void PagedArenaBitset::freePage(uint32_t const dirIdx) {
     mSummaryMask[dirIdx >> WORD_SHIFT] &= ~(1ULL << (dirIdx & WORD_MASK));
 }
 
+UTILS_NOINLINE
 void PagedArenaBitset::reserve(size_t const size) {
     mArena.reserve(size);
 }
 
-PagedArenaBitset& PagedArenaBitset::copyFrom(const PagedArenaBitset& other) {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
-
-    if (this == &other) return *this;
-
-    mArena = other.mArena;
-    mDirectory = other.mDirectory;
-    mSummaryMask = other.mSummaryMask;
-
-    // Simple scalar copies
-    mMasterMask = other.mMasterMask;
-    mSize = other.mSize;
+UTILS_NOINLINE
+PagedArenaBitset& PagedArenaBitset::copyFrom(PagedArenaBitset const& other) {
+    assert((mSummaryMask.empty() || mSummaryMask.size() == MASK_WORDS) && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+    if (UTILS_VERY_LIKELY(this != &other)) {
+        mArena = other.mArena;
+        mDirectory = other.mDirectory;
+        mSummaryMask = other.mSummaryMask;
+        mMasterMask = other.mMasterMask;
+        mSize = other.mSize;
+    }
     return *this;
 }
 
-bool PagedArenaBitset::operator[](uint32_t const index) const {
+PagedArenaBitset& PagedArenaBitset::operator=(PagedArenaBitset&& rhs) noexcept {
+    if (UTILS_VERY_LIKELY(this != &rhs)) {
+        PagedArenaBitset temp(std::move(rhs));
+        swap(temp);
+    }
+    return *this;
+}
+
+UTILS_NOINLINE
+PagedArenaBitset& PagedArenaBitset::swap(PagedArenaBitset& UTILS_RESTRICT other) noexcept {
+    if (UTILS_VERY_LIKELY(this != &other)) {
+        mSummaryMask.swap(other.mSummaryMask);
+        mDirectory.swap(other.mDirectory);
+        mArena.swap(other.mArena);
+        mFreePages.swap(other.mFreePages);
+        std::swap(mSize, other.mSize);
+        std::swap(mMasterMask, other.mMasterMask);
+    }
+    return *this;
+}
+
+PagedArenaBitset PagedArenaBitset::clone() const {
+    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
+    PagedArenaBitset out(NoInit{});
+    out.copyFrom(*this);
+    return out;
+}
+
+bool PagedArenaBitset::operator[](uint32_t const index) const noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
@@ -156,6 +199,7 @@ bool PagedArenaBitset::operator[](uint32_t const index) const {
     return (mArena[pageIdx].words[wordIdx] >> bitIdx) & 1ULL;
 }
 
+UTILS_NOINLINE
 bool PagedArenaBitset::fetchAdd(uint32_t const index) {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
@@ -190,7 +234,8 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
     return wasSet;
 }
 
-bool PagedArenaBitset::fetchRemove(uint32_t const index) {
+UTILS_NOINLINE
+bool PagedArenaBitset::fetchRemove(uint32_t const index) noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
@@ -220,15 +265,15 @@ bool PagedArenaBitset::fetchRemove(uint32_t const index) {
     return wasSet;
 }
 
-PagedArenaBitset& PagedArenaBitset::intersect(const PagedArenaBitset& other) {
+PagedArenaBitset& PagedArenaBitset::intersect(const PagedArenaBitset& other) noexcept {
     // Assert moved-from state check (adjust macro based on your framework)
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
 
     // Algorithmic Early Exits
-    if (empty()) {
+    if (UTILS_UNLIKELY(empty())) {
         return *this;
     }
-    if (other.empty()) {
+    if (UTILS_UNLIKELY(other.empty())) {
         clear();
         return *this;
     }
@@ -338,10 +383,10 @@ PagedArenaBitset& PagedArenaBitset::intersect(const PagedArenaBitset& other) {
     return *this;
 }
 
-PagedArenaBitset& PagedArenaBitset::difference(const PagedArenaBitset& other) {
+PagedArenaBitset& PagedArenaBitset::difference(const PagedArenaBitset& other) noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
 
-    if (empty() || other.empty()) {
+    if (UTILS_UNLIKELY(empty() || other.empty())) {
         return *this;
     }
 
@@ -404,13 +449,12 @@ PagedArenaBitset& PagedArenaBitset::difference(const PagedArenaBitset& other) {
 PagedArenaBitset& PagedArenaBitset::merge(const PagedArenaBitset& other) {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
 
-    if (other.empty() || this == &other) {
+    if (UTILS_UNLIKELY(other.empty()) || UTILS_VERY_UNLIKELY(this == &other)) {
         return *this;
     }
 
     if (empty() && !other.empty()) {
-        copyFrom(other);
-        return *this;
+        return copyFrom(other);
     }
 
     for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
@@ -576,14 +620,14 @@ void PagedArenaBitset::extractTo(std::vector<uint32_t>& outBuffer) const {
     }
 }
 
-void PagedArenaBitset::Page::clear() {
+void PagedArenaBitset::Page::clear() noexcept {
     for (int i = 0; i < WORDS_PER_PAGE; ++i) {
         words[i] = 0;
     }
     activeWordsMask = 0;
 }
 
-uint32_t PagedArenaBitset::Page::popcount() const {
+uint32_t PagedArenaBitset::Page::popcount() const noexcept {
     uint32_t count = 0;
     uint64_t mask = activeWordsMask;
     while (mask != 0) {
@@ -594,17 +638,8 @@ uint32_t PagedArenaBitset::Page::popcount() const {
     return count;
 }
 
-size_t PagedArenaBitset::size() const {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
-    return mSize;
-}
-
-bool PagedArenaBitset::empty() const {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
-    return mSize == 0;
-}
-
-void PagedArenaBitset::clear() {
+UTILS_NOINLINE
+void PagedArenaBitset::clear() noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     std::fill(mSummaryMask.begin(), mSummaryMask.end(), 0);
     std::fill(mMasterMask.begin(), mMasterMask.end(), 0);
@@ -613,34 +648,7 @@ void PagedArenaBitset::clear() {
     mSize = 0;
 }
 
-void PagedArenaBitset::add(uint32_t const index) {
-    fetchAdd(index);
-}
-
-void PagedArenaBitset::remove(uint32_t const index) {
-    fetchRemove(index);
-}
-
-PagedArenaBitset& PagedArenaBitset::operator=(PagedArenaBitset&& rhs) noexcept {
-    if (this != &rhs) {
-        mSummaryMask = std::move(rhs.mSummaryMask);
-        mDirectory = std::move(rhs.mDirectory);
-        mArena = std::move(rhs.mArena);
-        mFreePages = std::move(rhs.mFreePages);
-        mSize = rhs.mSize;
-        mMasterMask = rhs.mMasterMask;
-
-        rhs.mSize = 0;
-        std::fill(rhs.mMasterMask.begin(), rhs.mMasterMask.end(), 0);
-    }
-    return *this;
-}
-
-PagedArenaBitset PagedArenaBitset::clone() const {
-    assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
-    return *this;
-}
-
+UTILS_NOINLINE
 bool PagedArenaBitset::isSubset(const PagedArenaBitset& subset, const PagedArenaBitset& superset) noexcept {
     // 1. Trivial Size & Identity Checks
     if (subset.mSize > superset.mSize) return false;
@@ -734,7 +742,7 @@ bool PagedArenaBitset::isSubset(const PagedArenaBitset& subset, const PagedArena
 // - If Collection is utils::Slice: Compiler generates a standard loop (Dynamic Path).
 
 template<typename Collection>
-PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RESTRICT out, const Collection& inputs) {
+PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out, const Collection& inputs) {
     assert(std::size(inputs) <= MAX_MULTI_WAY_INPUTS && "FATAL: Exceeded maximum multi-way bitset inputs!");
 
     out->clear();
@@ -905,7 +913,7 @@ uint32_t PagedArenaBitset::intersectSizeInternal(const Collection& inputs) {
  * Result: Observed 3.4x speedup over N-way traversal in 6-way merge tests.
  */
 template<typename Collection>
-PagedArenaBitset& PagedArenaBitset::mergeInternal(PagedArenaBitset* UTILS_RESTRICT out, const Collection& inputs) {
+PagedArenaBitset& PagedArenaBitset::mergeInternal(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out, const Collection& inputs) {
     out->clear();
     if (std::empty(inputs)) return *out;
 
@@ -998,11 +1006,12 @@ uint32_t PagedArenaBitset::mergeSizeInternal(const Collection& inputs) {
 
 // ----------------------------------------------------------------------------------------------------------------
 
-PagedArenaBitset& PagedArenaBitset::intersect(PagedArenaBitset* UTILS_RESTRICT out,
+UTILS_NOINLINE
+PagedArenaBitset& PagedArenaBitset::intersect(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
         const PagedArenaBitset& a, const PagedArenaBitset& b) {
     assert(out != &a && out != &b);
     out->clear();
-    if (a.empty() || b.empty()) {
+    if (UTILS_UNLIKELY(a.empty() || b.empty())) {
         return *out;
     }
 
@@ -1067,7 +1076,7 @@ PagedArenaBitset PagedArenaBitset::intersect(const PagedArenaBitset& a, const Pa
     return out;
 }
 
-PagedArenaBitset& PagedArenaBitset::intersectSpan(PagedArenaBitset* UTILS_RESTRICT out,
+PagedArenaBitset& PagedArenaBitset::intersectSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
         Slice<const PagedArenaBitset* const> const inputs) {
     return intersectInternal(out, inputs);
 }
@@ -1079,11 +1088,12 @@ uint32_t PagedArenaBitset::intersectSizeSpan(Slice<const PagedArenaBitset* const
 
 // ----------------------------------------------------------------------------------------------------------------
 
-PagedArenaBitset& PagedArenaBitset::difference(PagedArenaBitset* UTILS_RESTRICT out,
+UTILS_NOINLINE
+PagedArenaBitset& PagedArenaBitset::difference(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
         const PagedArenaBitset& a, const PagedArenaBitset& b) {
     assert(out != &a && out != &b);
     out->clear();
-    if (a.empty() || &a == &b) {
+    if (UTILS_UNLIKELY(a.empty()) || UTILS_VERY_UNLIKELY(&a == &b)) {
         return *out;
     }
 
@@ -1174,7 +1184,7 @@ PagedArenaBitset PagedArenaBitset::difference(const PagedArenaBitset& a, const P
 }
 
 uint32_t PagedArenaBitset::differenceSize(const PagedArenaBitset& a, const PagedArenaBitset& b) noexcept {
-    if (a.empty() || &a == &b) {
+    if (UTILS_UNLIKELY(a.empty()) || UTILS_VERY_UNLIKELY(&a == &b)) {
         return 0;
     }
     if (b.empty()) {
@@ -1240,17 +1250,16 @@ uint32_t PagedArenaBitset::differenceSize(const PagedArenaBitset& a, const Paged
 
 // ----------------------------------------------------------------------------------------------------------------
 
-PagedArenaBitset& PagedArenaBitset::merge(PagedArenaBitset* UTILS_RESTRICT out,
+UTILS_NOINLINE
+PagedArenaBitset& PagedArenaBitset::merge(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
         const PagedArenaBitset& a, const PagedArenaBitset& b) {
     assert(out != &a && out != &b);
 
-    if (a.empty()) {
-        out->copyFrom(b);
-        return *out;
+    if (UTILS_UNLIKELY(a.empty())) {
+        return out->copyFrom(b);
     }
     if (b.empty()) {
-        out->copyFrom(a);
-        return *out;
+        return out->copyFrom(a);
     }
 
     out->clear();
@@ -1296,7 +1305,7 @@ PagedArenaBitset& PagedArenaBitset::merge(PagedArenaBitset* UTILS_RESTRICT out,
                     pop = source.popcount(); // Ensure this uses std::popcount loop
                 }
 
-                if (pop > 0) {
+                if (UTILS_LIKELY(pop > 0)) {
                     // Only update masks and directory if the page actually contains data
                     uint16_t const newPageIdx = static_cast<uint16_t>(out->mArena.size() - 1);
                     out->mDirectory[dirIdx] = newPageIdx;
@@ -1322,7 +1331,7 @@ PagedArenaBitset PagedArenaBitset::merge(const PagedArenaBitset& a, const PagedA
     return out;
 }
 
-PagedArenaBitset& PagedArenaBitset::mergeSpan(PagedArenaBitset* UTILS_RESTRICT out,
+PagedArenaBitset& PagedArenaBitset::mergeSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
         Slice<const PagedArenaBitset* const> const inputs) {
     return mergeInternal(out, inputs);
 }
@@ -1330,24 +1339,6 @@ PagedArenaBitset& PagedArenaBitset::mergeSpan(PagedArenaBitset* UTILS_RESTRICT o
 uint32_t PagedArenaBitset::mergeSizeSpan(Slice<const PagedArenaBitset* const> const inputs) {
     // Passes as a dynamic runtime span. The compiler will preserve the loops in `intersectSizeInternal`.
     return mergeSizeInternal(inputs);
-}
-
-void PagedArenaBitset::swap(PagedArenaBitset& other) noexcept {
-    mSummaryMask.swap(other.mSummaryMask);
-    mDirectory.swap(other.mDirectory);
-    mArena.swap(other.mArena);
-    mFreePages.swap(other.mFreePages);
-    std::swap(mSize, other.mSize);
-    std::swap(mMasterMask, other.mMasterMask);
-}
-
-PagedArenaBitset exchange(PagedArenaBitset& object, PagedArenaBitset&& newValue) {
-    return std::exchange(object, std::move(newValue));
-}
-
-PagedArenaBitset exchangeAndClear(PagedArenaBitset& object) {
-    // this is similar to std::move() but this leaves the object in the default constructed state (cleared)
-    return std::exchange(object, {});
 }
 
 } // namespace utils
