@@ -1626,23 +1626,16 @@ struct ClearColorValue {
               color{ static_cast<double>(u.r), static_cast<double>(u.g), static_cast<double>(u.b),
                   static_cast<double>(u.a) } {}
 
-    // Support for math::double4
-    constexpr ClearColorValue(math::double4 const& d, Type t = Type::FLOAT) noexcept
+    // Support for math::double4. Defaults to AUTO because a double4 carries no type-family
+    // information by itself; the backend should resolve against the attachment format unless the
+    // caller explicitly tags an integer family.
+    constexpr ClearColorValue(math::double4 const& d, Type t = Type::AUTO) noexcept
             : type(t),
               color(d) {}
 
-    // Convenience to keep `{r, g, b, a}` brace-init syntax working at call sites.
-    constexpr ClearColorValue(float r, float g, float b, float a) noexcept
-            : type(Type::FLOAT),
-              color{ r, g, b, a } {}
-    constexpr ClearColorValue(int32_t r, int32_t g, int32_t b, int32_t a) noexcept
-            : type(Type::INT),
-              color{ static_cast<double>(r), static_cast<double>(g), static_cast<double>(b),
-                  static_cast<double>(a) } {}
-    constexpr ClearColorValue(uint32_t r, uint32_t g, uint32_t b, uint32_t a) noexcept
-            : type(Type::UINT),
-              color{ static_cast<double>(r), static_cast<double>(g), static_cast<double>(b),
-                  static_cast<double>(a) } {}
+    // Note: `{r, g, b, a}` brace-init is intentionally not supported. It picks an overload by
+    // literal type (1 -> INT, 1.f -> FLOAT, 1.0 -> ambiguous), which silently changes the type
+    // tag in ways the caller cannot see. Use math::float4 / int4 / uint4 / double4 explicitly.
 
     Type type;
     math::double4 color;

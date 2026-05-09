@@ -3818,7 +3818,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             // It's important to clear the framebuffer before drawing, as it resets
             // the fb to a known state (resets fb compression and possibly other things).
             // So we use glClear instead of glInvalidateFramebuffer
-            clearWithRasterPipe(discardOnlyFlags, { 0.0f, 0.0f, 0.0f, 0.0f }, 0.0f, 0);
+            clearWithRasterPipe(discardOnlyFlags, math::double4{ 0.0, 0.0, 0.0, 0.0 }, 0.0f, 0);
         }
     }
 
@@ -3840,7 +3840,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    clearWithRasterPipe(discardOnlyFlags, { 1, 0, 0, 1 }, 1.0, 0);
+    clearWithRasterPipe(discardOnlyFlags, math::double4{ 1.0, 0.0, 0.0, 1.0 }, 1.0, 0);
 #endif
 }
 
@@ -3897,7 +3897,7 @@ void OpenGLDriver::endRenderPass(int) {
     getBackendState().bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     getBackendState().disable(GL_SCISSOR_TEST);
     clearWithRasterPipe(discardFlags,
-            { 0, 1, 0, 1 }, 1.0, 0);
+            math::double4{ 0.0, 1.0, 0.0, 1.0 }, 1.0, 0);
 #endif
 
     mRenderPassTarget.clear();

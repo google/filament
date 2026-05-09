@@ -65,9 +65,11 @@ protected:
 
     // Gets the full back buffer's viewport
     filament::backend::Viewport getFullViewport() const;
-    // If color is unset this defaults to using opaque cyan
+    // If color is unset this defaults to using opaque cyan. Takes a double4 so the resulting
+    // ClearColorValue is AUTO-tagged (backend-resolved per attachment format) instead of forcing
+    // FLOAT onto integer attachments.
     static filament::backend::RenderPassParams getClearColorRenderPass(
-            filament::math::float4 color = filament::math::float4(0, 1, 1, 1));
+            filament::math::double4 color = filament::math::double4(0, 1, 1, 1));
     static filament::backend::RenderPassParams getNoClearRenderPass();
 
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
