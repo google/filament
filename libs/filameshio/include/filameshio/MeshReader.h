@@ -100,18 +100,42 @@ public:
      * file cannot be matched to a material in the registry, a default material is
      * used instead. The default material can be overridden by adding a material
      * named "DefaultMaterial" to the registry.
+     *
+     * This overload does NOT validate reads against the buffer size. Prefer the
+     * overload that accepts dataSize when loading data from an untrusted source.
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
             MaterialRegistry& materials);
 
     /**
+     * Loads a filamesh renderable from an in-memory buffer, validating that all
+     * reads stay within dataSize bytes of data. Returns an empty Mesh on any
+     * malformed header field or truncated payload.
+     */
+    static Mesh loadMeshFromBuffer(filament::Engine* engine,
+            void const* data, size_t dataSize, Callback destructor, void* user,
+            MaterialRegistry& materials);
+
+    /**
      * Loads a filamesh renderable from an in-memory buffer. The material registry
      * can be used to provide named materials. All the primitives of the decoded
      * renderable are assigned the specified default material.
+     *
+     * This overload does NOT validate reads against the buffer size. Prefer the
+     * overload that accepts dataSize when loading data from an untrusted source.
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
+            filament::MaterialInstance* defaultMaterial);
+
+    /**
+     * Loads a filamesh renderable from an in-memory buffer, validating that all
+     * reads stay within dataSize bytes of data. All the primitives of the decoded
+     * renderable are assigned the specified default material.
+     */
+    static Mesh loadMeshFromBuffer(filament::Engine* engine,
+            void const* data, size_t dataSize, Callback destructor, void* user,
             filament::MaterialInstance* defaultMaterial);
 };
 
