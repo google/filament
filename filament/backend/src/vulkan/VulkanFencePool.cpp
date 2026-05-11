@@ -17,6 +17,7 @@
 #include "VulkanConstants.h"
 #include "VulkanFencePool.h"
 
+#include <algorithm>
 #include <deque>
 #include <mutex>
 #include <utility>
@@ -64,13 +65,11 @@ std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
 
 void VulkanFencePool::gc() noexcept {
     // Clear any fence statuses that no longer exist.
-    for (auto it = mFenceStatuses.begin(); it != mFenceStatuses.end();) {
-        if (it->expired()) {
-            it = mFenceStatuses.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    auto expiredStatuses = std::remove_if(mFenceStatuses.begin(), mFenceStatuses.end(),
+        [](const auto& fenceStatus) {
+            return fenceStatus.expired();
+        });
+    mFenceStatuses.erase(expiredStatuses, mFenceStatuses.end());
 
     if (++mCurrFrame <= TIME_BEFORE_EVICTION) {
         return;

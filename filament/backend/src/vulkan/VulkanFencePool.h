@@ -45,10 +45,10 @@ public:
     void terminate() noexcept;
 
 private:
-    std::mutex mFenceListMutex;
     VulkanContext const& mContext;
-    VkDevice mDevice;
-    uint32_t mMinPoolSize;
+    const VkDevice mDevice;
+    const uint32_t mMinPoolSize;
+    std::mutex mFenceListMutex;
     std::deque<std::pair<uint64_t, VkFence>> mFences;
     std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
     uint32_t mNumFences = 0;

@@ -179,7 +179,7 @@ struct VulkanCmdFence {
 
     // This is safe to use in the backend thread, as the backend
     // thread is the only thread that will be calling clearFence().
-    inline VkFence getVkFence() {
+    inline VkFence getVkFence() const {
         return mFence;
     }
 
@@ -187,12 +187,6 @@ struct VulkanCmdFence {
         std::shared_lock const l(mLock);
         return mStatus;
     }
-
-    // Clears the fence from this struct. It assumes that either
-    // a) the recycleFn was defined in the ctor, and knows how to
-    // dispose of the fence, or b) the creator of this object owns
-    // the fence.
-    void clearFence();
 
     template <typename T>
     T lockAndUseFence(std::function<T(VkFence)> cb) {
@@ -212,6 +206,11 @@ struct VulkanCmdFence {
     }
 
 private:
+    // The lifecycle of this object will often be managed by a
+    // VulkanFencePool. This allows it to clear fence handles before
+    // Filament is shut down, etc.
+    friend class VulkanFencePool;
+
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
     std::condition_variable_any mCond;
     bool mCanceled = false;
@@ -222,6 +221,12 @@ private:
     VkFence mFence;
 
     std::function<void(VkFence)> mRecycleFn;
+
+    // Clears the fence from this struct. It assumes that either
+    // a) the recycleFn was defined in the ctor, and knows how to
+    // dispose of the fence, or b) the creator of this object owns
+    // the fence.
+    void clearFence();
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
