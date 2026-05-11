@@ -115,20 +115,16 @@ VkFence VulkanFencePool::acquireFence() noexcept {
         return fence;
     } else {
         VkFence fence = allocateFence();
-        if (fence != VK_NULL_HANDLE) {
-            ++mNumFences;
-        }
+        FILAMENT_CHECK_POSTCONDITION(fence != VK_NULL_HANDLE);
+        ++mNumFences;
         return fence;
     }
 }
 
 void VulkanFencePool::releaseFence(VkFence fence) noexcept {
     // This only happens if fence allocation failed, which is a fairly
-    // major issue. 
-    assert_invariant(fence != VK_NULL_HANDLE);
-    if (fence == VK_NULL_HANDLE) {
-        return;
-    }
+    // major issue.
+    FILAMENT_CHECK_PRECONDITION(fence != VK_NULL_HANDLE);
 
     // Reset the fence before returning it to the pool of available
     // fences.

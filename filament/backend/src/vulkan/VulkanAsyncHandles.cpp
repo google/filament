@@ -200,6 +200,21 @@ std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
     return cmdFence;
 }
 
+VkResult VulkanCmdFence::updateStatus(VkDevice device) {
+    VkResult status = mStatus;
+    {
+        std::shared_lock rl(mLock);
+        if (mFence != VK_NULL_HANDLE) {
+            status = vkGetFenceStatus(device, mFence);
+        }
+    }
+
+    if (status == VK_SUCCESS) {
+        setStatus(status);
+    }
+    return mStatus;
+}
+
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     std::chrono::steady_clock::time_point const until) {
 

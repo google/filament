@@ -171,11 +171,15 @@ struct VulkanCmdFence {
     // and is not in the expected state anyway.
     static std::shared_ptr<VulkanCmdFence> completed() noexcept;
 
-    void setStatus(VkResult const value) {
-        std::lock_guard const l(mLock);
-        mStatus = value;
-        mCond.notify_all();
+    // Updates the status to reflect the fact that the underlying fence was
+    // used in a submission.
+    inline void markSubmitted() {
+        setStatus(VK_NOT_READY);
     }
+
+    // Checks the underlying fence to see if the underlying process is complete.
+    // Updates the underlying status, and returns it.
+    VkResult updateStatus(VkDevice device);
 
     // This is safe to use in the backend thread, as the backend
     // thread is the only thread that will be calling clearFence().
@@ -183,17 +187,12 @@ struct VulkanCmdFence {
         return mFence;
     }
 
+    // Checks what the status of the fence is. Note: this assumes that, in the
+    // most recent tick(), checkAndUpdateStatus() has been called. Otherwise,
+    // this may be out of date.
     VkResult getStatus() {
         std::shared_lock const l(mLock);
         return mStatus;
-    }
-
-    template <typename T>
-    T lockAndUseFence(std::function<T(VkFence)> cb) {
-        std::shared_lock const rl(mLock);
-        assert_invariant(cb != nullptr);
-        // Note - mFence *can* be nullptr.
-        return cb(mFence);
     }
 
     FenceStatus wait(VkDevice device, uint64_t timeout,
@@ -227,6 +226,14 @@ private:
     // dispose of the fence, or b) the creator of this object owns
     // the fence.
     void clearFence();
+
+    // Updates the status of the fence, notifying all listeners of
+    // mCond.
+    void setStatus(VkResult const value) {
+        std::lock_guard const l(mLock);
+        mStatus = value;
+        mCond.notify_all();
+    }
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {

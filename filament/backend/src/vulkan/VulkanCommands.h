@@ -94,8 +94,8 @@ struct VulkanCommandBuffer {
     void begin() noexcept;
     fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
-    inline void setComplete() {
-        mFenceStatus->setStatus(VK_SUCCESS);
+    inline void checkAndUpdateStatus(VkDevice device) {
+        mFenceStatus->updateStatus(device);
     }
 
     VkResult getStatus() {

@@ -474,27 +474,25 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const
 
     VkDevice device = getDevice();
     VkExternalFenceHandleTypeFlagBits exportFlags = getFenceExportFlags();
-    auto convertFence = [&fd, device, exportFlags](VkFence fence) {
-        if (fence == VK_NULL_HANDLE) {
-            *fd = -1;
-            return true;
-        }
 
-        VkFenceGetFdInfoKHR getFdInfo = {
-            .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
-            .fence = fence,
-            .handleType = exportFlags,
-        };
-        VkResult res = vkGetFenceFdKHR(device, &getFdInfo, fd);
-        if (res != VK_SUCCESS) {
-            LOG(ERROR) << "Failed to convert sync to fd: " << res;
-            return false;
-        }
-
+    VkFence fence = vulkanSync.fenceStatus->getVkFence();
+    if (fence == VK_NULL_HANDLE) {
+        *fd = -1;
         return true;
-    };
+    }
 
-    return vulkanSync.fenceStatus->lockAndUseFence<bool>(convertFence);
+    VkFenceGetFdInfoKHR getFdInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
+        .fence = fence,
+        .handleType = exportFlags,
+    };
+    VkResult res = vkGetFenceFdKHR(device, &getFdInfo, fd);
+    if (res != VK_SUCCESS) {
+        LOG(ERROR) << "Failed to convert sync to fd: " << res;
+        return false;
+    }
+
+    return true;
 }
 
 VkExternalFenceHandleTypeFlagBits VulkanPlatformAndroid::getFenceExportFlags() const noexcept {

@@ -220,7 +220,7 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
 
     UTILS_UNUSED_IN_RELEASE VkResult result =
         vkQueueSubmit(mQueue, 1, &submitInfo, getVkFence());
-    mFenceStatus->setStatus(VK_NOT_READY);
+    mFenceStatus->markSubmitted();
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -315,10 +315,9 @@ void CommandBufferPool::gc() {
 void CommandBufferPool::update() {
     mSubmitted.forEachSetBit([this] (size_t index) {
         auto& buffer = mBuffers[index];
-        VkResult status = vkGetFenceStatus(mDevice, buffer->getVkFence());
-        if (status == VK_SUCCESS) {
-            buffer->setComplete();
-        }
+        // Updates the buffer's status, and marks it complete
+        // if the fence has signaled.
+        buffer->checkAndUpdateStatus(mDevice);
     });
 }
 
