@@ -51,8 +51,6 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
 
     CodeGenerator::generateDefine(out, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
             litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(out, "VARIANT_HAS_DYNAMIC_LIGHTING",
-            litVariants && variant.hasDynamicLighting());
     CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING",
             litVariants && filament::Variant::isShadowReceiverVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
@@ -287,8 +285,8 @@ void ShaderGenerator::appendShader(io::sstream& ss,
 
 void ShaderGenerator::generateUserSpecConstants(
         const CodeGenerator& cg, io::sstream& fs, MaterialBuilder::ConstantList const& constants) {
-    // Constants 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1 are reserved by Filament.
-    size_t index = CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    // Constants 0 to CONFIG_MAX_INTERNAL_SPEC_CONSTANTS - 1 are reserved by Filament.
+    size_t index = CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
     for (const auto& constant : constants) {
         std::string const fullName = std::string("materialConstants_") + constant.name.c_str();
         switch (constant.type) {
@@ -576,31 +574,25 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
             +PerRenderableBindingPoints::OBJECT_UNIFORMS,
             UibGenerator::getPerRenderableUib());
 
-    if (variant.hasDynamicLighting()) {
-        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                DescriptorSetBindingPoints::PER_VIEW,
-                +PerViewBindingPoints::LIGHTS,
-                UibGenerator::getLightsUib());
-    }
-
     bool const litVariants = material.isLit || material.hasShadowMultiplier;
-    if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
-        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                DescriptorSetBindingPoints::PER_VIEW,
-                +PerViewBindingPoints::SHADOWS,
-                UibGenerator::getShadowUib());
-    }
+    if (!filament::Variant::isValidDepthVariant(variant)) {
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::LIGHTS, UibGenerator::getLightsUib());
 
-    if (variant.hasDynamicLighting()) {
-        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                DescriptorSetBindingPoints::PER_VIEW,
-                +PerViewBindingPoints::RECORD_BUFFER,
-                UibGenerator::getFroxelRecordUib());
+        if (filament::Variant::isShadowReceiverVariant(variant)) {
+            cg.generateUniforms(fs, ShaderStage::FRAGMENT,
+                        DescriptorSetBindingPoints::PER_VIEW,
+                        +PerViewBindingPoints::SHADOWS,
+                        UibGenerator::getShadowUib());
+        }
 
-        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                DescriptorSetBindingPoints::PER_VIEW,
-                +PerViewBindingPoints::FROXEL_BUFFER,
-                UibGenerator::getFroxelsUib());
+        if (litVariants) {
+            cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                    +PerViewBindingPoints::RECORD_BUFFER, UibGenerator::getFroxelRecordUib());
+
+            cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                    +PerViewBindingPoints::FROXEL_BUFFER, UibGenerator::getFroxelsUib());
+        }
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,

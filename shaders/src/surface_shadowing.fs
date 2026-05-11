@@ -520,11 +520,9 @@ highp vec4 getShadowPosition(const int cascade) {
 }
 #endif
 
-#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
 highp vec4 getShadowPosition(const int index,  const highp vec3 dir, const highp float zLight) {
     return getSpotLightSpacePosition(index, dir, zLight);
 }
-#endif
 
 int getPointLightFace(const highp vec3 r) {
     highp vec4 tc;

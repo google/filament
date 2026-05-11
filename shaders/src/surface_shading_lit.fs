@@ -293,9 +293,9 @@ vec4 evaluateLights(const MaterialInputs material) {
     evaluateDirectionalLight(material, pixel, color);
 #endif
 
-#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-    evaluatePunctualLights(material, pixel, color);
-#endif
+    if (RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING) {
+        evaluatePunctualLights(material, pixel, color);
+    }
 
 #if defined(BLEND_MODE_FADE) && !defined(SHADING_MODEL_UNLIT)
     // In fade mode we un-premultiply baseColor early on, so we need to

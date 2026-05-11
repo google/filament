@@ -18,6 +18,7 @@
 
 #include "MaterialInfo.h"
 #include "../PushConstantDefinitions.h"
+#include <private/filament/Variant.h>
 
 #include "generated/shaders.h"
 
@@ -320,6 +321,17 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // when it's not supported.
         generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION",
                 +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION, false);
+    }
+
+    bool const isDepthVariant = filament::Variant::isValidDepthVariant(v);
+    if (isDepthVariant) {
+        out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
+    } else {
+        bool const litVariants = material.isLit || material.hasShadowMultiplier;
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                        +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING,
+                litVariants);
     }
 
     out << '\n';
@@ -1104,10 +1116,8 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
         if (variant.hasDirectionalLighting()) {
             out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
         }
-        if (variant.hasDynamicLighting()) {
-            out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
-        }
 
+        out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
         out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
     }
     return out;

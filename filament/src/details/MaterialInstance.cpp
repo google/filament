@@ -473,7 +473,9 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                    prepareProgram(driver, variant, priority);
+                    for (auto const specKey: DynamicSpecConstKey::getKeys()) {
+                        prepareProgram(driver, variant, specKey, priority);
+                    }
                 }
             }
         }
