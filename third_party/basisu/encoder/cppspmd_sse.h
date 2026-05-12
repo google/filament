@@ -131,8 +131,8 @@ CPPSPMD_DECL(const uint32_t, g_x_128[4]) = { UINT32_MAX, 0, 0, 0 };
 CPPSPMD_DECL(const float, g_onef_128[4]) = { 1.0f, 1.0f, 1.0f, 1.0f };
 CPPSPMD_DECL(const uint32_t, g_oneu_128[4]) = { 1, 1, 1, 1 };
 
-CPPSPMD_DECL(const uint32_t, g_lane_masks_128[4][4]) = 
-{ 
+CPPSPMD_DECL(const uint32_t, g_lane_masks_128[4][4]) =
+{
 	{ UINT32_MAX, 0, 0, 0 },
 	{ 0, UINT32_MAX, 0, 0 },
 	{ 0, 0, UINT32_MAX, 0 },
@@ -237,7 +237,7 @@ inline __m128i shuffle_epi8(const __m128i& a, const __m128i& b)
 	// Just emulate _mm_shuffle_epi8. This is very slow, but what else can we do?
 	CPPSPMD_ALIGN(16) uint8_t av[16];
 	_mm_store_si128((__m128i*)av, a);
-		
+
 	CPPSPMD_ALIGN(16) uint8_t bvi[16];
 	_mm_store_ps((float*)bvi, _mm_and_ps(_mm_castsi128_ps(b), _mm_castsi128_ps(_mm_set1_epi32(0x0F0F0F0F))));
 
@@ -247,7 +247,7 @@ inline __m128i shuffle_epi8(const __m128i& a, const __m128i& b)
 	result[1] = av[bvi[1]];
 	result[2] = av[bvi[2]];
 	result[3] = av[bvi[3]];
-	
+
 	result[4] = av[bvi[4]];
 	result[5] = av[bvi[5]];
 	result[6] = av[bvi[6]];
@@ -266,9 +266,9 @@ inline __m128i shuffle_epi8(const __m128i& a, const __m128i& b)
 	return _mm_andnot_si128(_mm_cmplt_epi8(b, _mm_setzero_si128()), _mm_load_si128((__m128i*)result));
 }
 #else
-CPPSPMD_FORCE_INLINE __m128i shuffle_epi8(const __m128i& a, const __m128i& b) 
-{ 
-	return _mm_shuffle_epi8(a, b); 
+CPPSPMD_FORCE_INLINE __m128i shuffle_epi8(const __m128i& a, const __m128i& b)
+{
+	return _mm_shuffle_epi8(a, b);
 }
 #endif
 
@@ -387,7 +387,7 @@ struct spmd_kernel
 	typedef int int_t;
 	typedef vint vint_t;
 	typedef lint lint_t;
-		
+
 	// Exec mask
 	struct exec_mask
 	{
@@ -399,7 +399,7 @@ struct spmd_kernel
 		CPPSPMD_FORCE_INLINE explicit exec_mask(const __m128i& mask) : m_mask(mask) { }
 
 		CPPSPMD_FORCE_INLINE void enable_lane(uint32_t lane) { m_mask = _mm_load_si128((const __m128i *)&g_lane_masks_128[lane][0]); }
-				
+
 		static CPPSPMD_FORCE_INLINE exec_mask all_on()	{ return exec_mask{ _mm_load_si128((const __m128i*)g_allones_128) };	}
 		static CPPSPMD_FORCE_INLINE exec_mask all_off() { return exec_mask{ _mm_setzero_si128() }; }
 
@@ -422,20 +422,20 @@ struct spmd_kernel
 	friend CPPSPMD_FORCE_INLINE exec_mask operator^ (const exec_mask& a, const exec_mask& b);
 	friend CPPSPMD_FORCE_INLINE exec_mask operator& (const exec_mask& a, const exec_mask& b);
 	friend CPPSPMD_FORCE_INLINE exec_mask operator| (const exec_mask& a, const exec_mask& b);
-		
+
 	exec_mask m_exec;
 	exec_mask m_kernel_exec;
 	exec_mask m_continue_mask;
 #ifdef _DEBUG
 	bool m_in_loop;
 #endif
-		
+
 	CPPSPMD_FORCE_INLINE uint32_t get_movemask() const { return m_exec.get_movemask(); }
-		
+
 	void init(const exec_mask& kernel_exec);
-	
+
 	// Varying bool
-		
+
 	struct vbool
 	{
 		__m128i m_value;
@@ -448,25 +448,25 @@ struct spmd_kernel
 
 		CPPSPMD_FORCE_INLINE explicit operator vfloat() const;
 		CPPSPMD_FORCE_INLINE explicit operator vint() const;
-								
+
 	private:
-		vbool& operator=(const vbool&);
+		//vbool& operator=(const vbool&);
 	};
 
 	friend vbool operator!(const vbool& v);
-		
+
 	CPPSPMD_FORCE_INLINE vbool& store(vbool& dst, const vbool& src)
 	{
 		dst.m_value = blendv_mask_epi32(dst.m_value, src.m_value, m_exec.m_mask);
 		return dst;
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vbool& store_all(vbool& dst, const vbool& src)
 	{
 		dst.m_value = src.m_value;
 		return dst;
 	}
-	
+
 	// Varying float
 	struct vfloat
 	{
@@ -481,7 +481,7 @@ struct spmd_kernel
 		CPPSPMD_FORCE_INLINE explicit vfloat(int value) : m_value(_mm_set1_ps((float)value)) { }
 
 	private:
-		vfloat& operator=(const vfloat&);
+		//vfloat& operator=(const vfloat&);
 	};
 
 	CPPSPMD_FORCE_INLINE vfloat& store(vfloat& dst, const vfloat& src)
@@ -495,7 +495,7 @@ struct spmd_kernel
 		dst.m_value = blendv_mask_ps(dst.m_value, src.m_value, _mm_castsi128_ps(m_exec.m_mask));
 		return dst;
 	}
-	
+
 	CPPSPMD_FORCE_INLINE vfloat& store_all(vfloat& dst, const vfloat& src)
 	{
 		dst.m_value = src.m_value;
@@ -514,7 +514,7 @@ struct spmd_kernel
 		float* m_pValue;
 
 	private:
-		float_lref& operator=(const float_lref&);
+		//float_lref& operator=(const float_lref&);
 	};
 
 	CPPSPMD_FORCE_INLINE const float_lref& store(const float_lref& dst, const vfloat& src)
@@ -536,7 +536,7 @@ struct spmd_kernel
 			_mm_storeu_ps(dst.m_pValue, blendv_mask_ps(_mm_loadu_ps(dst.m_pValue), src.m_value, _mm_castsi128_ps(m_exec.m_mask)));
 		return dst;
 	}
-	
+
 	CPPSPMD_FORCE_INLINE const float_lref& store_all(const float_lref& dst, const vfloat& src)
 	{
 		_mm_storeu_ps(dst.m_pValue, src.m_value);
@@ -553,15 +553,15 @@ struct spmd_kernel
 	{
 		return vfloat{ _mm_and_ps(_mm_loadu_ps(src.m_pValue), _mm_castsi128_ps(m_exec.m_mask)) };
 	}
-		
+
 	// Varying ref to floats
 	struct float_vref
 	{
 		__m128i m_vindex;
 		float* m_pValue;
-		
+
 	private:
-		float_vref& operator=(const float_vref&);
+		//float_vref& operator=(const float_vref&);
 	};
 
 	// Varying ref to varying float
@@ -569,9 +569,9 @@ struct spmd_kernel
 	{
 		__m128i m_vindex;
 		vfloat* m_pValue;
-		
+
 	private:
-		vfloat_vref& operator=(const vfloat_vref&);
+		//vfloat_vref& operator=(const vfloat_vref&);
 	};
 
 	// Varying ref to varying int
@@ -579,14 +579,14 @@ struct spmd_kernel
 	{
 		__m128i m_vindex;
 		vint* m_pValue;
-		
+
 	private:
-		vint_vref& operator=(const vint_vref&);
+		//vint_vref& operator=(const vint_vref&);
 	};
 
 	CPPSPMD_FORCE_INLINE const float_vref& store(const float_vref& dst, const vfloat& src);
 	CPPSPMD_FORCE_INLINE const float_vref& store(const float_vref&& dst, const vfloat& src);
-		
+
 	CPPSPMD_FORCE_INLINE const float_vref& store_all(const float_vref& dst, const vfloat& src);
 	CPPSPMD_FORCE_INLINE const float_vref& store_all(const float_vref&& dst, const vfloat& src);
 
@@ -624,9 +624,9 @@ struct spmd_kernel
 		int* m_pValue;
 
 	private:
-		int_lref& operator=(const int_lref&);
+		//int_lref& operator=(const int_lref&);
 	};
-		
+
 	CPPSPMD_FORCE_INLINE const int_lref& store(const int_lref& dst, const vint& src)
 	{
 		int mask = _mm_movemask_ps(_mm_castsi128_ps(m_exec.m_mask));
@@ -663,7 +663,7 @@ struct spmd_kernel
 		int16_t* m_pValue;
 
 	private:
-		int16_lref& operator=(const int16_lref&);
+		//int16_lref& operator=(const int16_lref&);
 	};
 
 	CPPSPMD_FORCE_INLINE const int16_lref& store(const int16_lref& dst, const vint& src)
@@ -689,7 +689,7 @@ struct spmd_kernel
 			dst.m_pValue[i] = static_cast<int16_t>(stored[i]);
 		return dst;
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vint load(const int16_lref& src)
 	{
 		CPPSPMD_ALIGN(16) int values[4];
@@ -713,14 +713,14 @@ struct spmd_kernel
 
 		return vint{ t };
 	}
-		
+
 	// Linear ref to constant ints
 	struct cint_lref
 	{
 		const int* m_pValue;
 
 	private:
-		cint_lref& operator=(const cint_lref&);
+		//cint_lref& operator=(const cint_lref&);
 	};
 
 	CPPSPMD_FORCE_INLINE vint load(const cint_lref& src)
@@ -734,7 +734,7 @@ struct spmd_kernel
 	{
 		return vint{ _mm_loadu_si128((const __m128i *)src.m_pValue) };
 	}
-	
+
 	// Varying ref to ints
 	struct int_vref
 	{
@@ -742,7 +742,7 @@ struct spmd_kernel
 		int* m_pValue;
 
 	private:
-		int_vref& operator=(const int_vref&);
+		//int_vref& operator=(const int_vref&);
 	};
 
 	// Varying ref to constant ints
@@ -752,7 +752,7 @@ struct spmd_kernel
 		const int* m_pValue;
 
 	private:
-		cint_vref& operator=(const cint_vref&);
+		//cint_vref& operator=(const cint_vref&);
 	};
 
 	// Varying int
@@ -774,7 +774,7 @@ struct spmd_kernel
 
 		CPPSPMD_FORCE_INLINE explicit vint(const vfloat& other) : m_value(_mm_cvttps_epi32(other.m_value)) { }
 
-		CPPSPMD_FORCE_INLINE explicit operator vbool() const 
+		CPPSPMD_FORCE_INLINE explicit operator vbool() const
 		{
 			return vbool{ _mm_xor_si128( _mm_load_si128((const __m128i*)g_allones_128), _mm_cmpeq_epi32(m_value, _mm_setzero_si128())) };
 		}
@@ -810,7 +810,7 @@ struct spmd_kernel
 		}
 
 	private:
-		vint& operator=(const vint&);
+		//vint& operator=(const vint&);
 	};
 
 	// Load/store linear int
@@ -837,7 +837,7 @@ struct spmd_kernel
 	{
 		_mm_store_si128((__m128i*)pDst, src.m_value);
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vint loadu_linear(const int *pSrc)
 	{
 		__m128i v = _mm_loadu_si128((const __m128i*)pSrc);
@@ -882,7 +882,7 @@ struct spmd_kernel
 	{
 		_mm_store_ps((float*)pDst, src.m_value);
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vfloat loadu_linear(const float *pSrc)
 	{
 		__m128 v = _mm_loadu_ps((const float*)pSrc);
@@ -901,7 +901,7 @@ struct spmd_kernel
 	{
 		return vfloat{ _mm_load_ps((float*)pSrc) };
 	}
-	
+
 	CPPSPMD_FORCE_INLINE vint& store(vint& dst, const vint& src)
 	{
 		dst.m_value = blendv_mask_epi32(dst.m_value, src.m_value, m_exec.m_mask);
@@ -924,13 +924,13 @@ struct spmd_kernel
 		}
 		return dst;
 	}
-	
+
 	CPPSPMD_FORCE_INLINE vint& store_all(vint& dst, const vint& src)
 	{
 		dst.m_value = src.m_value;
 		return dst;
 	}
-				
+
 	CPPSPMD_FORCE_INLINE const int_vref& store_all(const int_vref& dst, const vint& src)
 	{
 		CPPSPMD_ALIGN(16) int vindex[4];
@@ -961,7 +961,7 @@ struct spmd_kernel
 
 		return vint{ _mm_castps_si128(_mm_and_ps(_mm_castsi128_ps(m_exec.m_mask), _mm_load_ps((const float*)values))) };
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vint load_all(const int_vref& src)
 	{
 		CPPSPMD_ALIGN(16) int values[4];
@@ -974,7 +974,7 @@ struct spmd_kernel
 
 		return vint{ _mm_castps_si128( _mm_load_ps((const float*)values)) };
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vint load(const cint_vref& src)
 	{
 		CPPSPMD_ALIGN(16) int values[4];
@@ -991,7 +991,7 @@ struct spmd_kernel
 
 		return vint{ _mm_castps_si128(_mm_and_ps(_mm_castsi128_ps(m_exec.m_mask), _mm_load_ps((const float*)values))) };
 	}
-		
+
 	CPPSPMD_FORCE_INLINE vint load_all(const cint_vref& src)
 	{
 		CPPSPMD_ALIGN(16) int values[4];
@@ -1034,7 +1034,7 @@ struct spmd_kernel
 	CPPSPMD_FORCE_INLINE void store_strided(int *pDst, uint32_t stride, const vint &v)
 	{
 		int mask = _mm_movemask_ps(_mm_castsi128_ps(m_exec.m_mask));
-		
+
 		if (mask & 1) pDst[0] = extract_x(v.m_value);
 		if (mask & 2) pDst[stride] = extract_y(v.m_value);
 		if (mask & 4) pDst[stride*2] = extract_z(v.m_value);
@@ -1070,7 +1070,7 @@ struct spmd_kernel
 	CPPSPMD_FORCE_INLINE vint load_strided(const int *pSrc, uint32_t stride)
 	{
 		int mask = _mm_movemask_ps(_mm_castsi128_ps(m_exec.m_mask));
-								
+
 #if CPPSPMD_SSE2
 		CPPSPMD_ALIGN(16) int vals[4] = { 0, 0, 0, 0 };
 		if (mask & 1) vals[0] = pSrc[0];
@@ -1119,7 +1119,7 @@ struct spmd_kernel
 		vals[2] = pSrc[stride * 2];
 		vals[3] = pSrc[stride * 3];
 		return vint{ _mm_load_si128((__m128i*)vals) };
-#else		
+#else
 		const float* pSrcF = (const float*)pSrc;
 		__m128 v = _mm_load_ss(pSrcF);
 		v = _mm_insert_ps(v, _mm_load_ss(pSrcF + stride), 0x10);
@@ -1151,7 +1151,7 @@ struct spmd_kernel
 	{
 		// TODO: There's surely a better way
 		int mask = _mm_movemask_ps(_mm_castsi128_ps(m_exec.m_mask));
-		
+
 		if (mask & 1) ((int *)(&dst.m_pValue[extract_x(dst.m_vindex)]))[0] = extract_x(_mm_castps_si128(src.m_value));
 		if (mask & 2) ((int *)(&dst.m_pValue[extract_y(dst.m_vindex)]))[1] = extract_y(_mm_castps_si128(src.m_value));
 		if (mask & 4) ((int *)(&dst.m_pValue[extract_z(dst.m_vindex)]))[2] = extract_z(_mm_castps_si128(src.m_value));
@@ -1179,7 +1179,7 @@ struct spmd_kernel
 	{
 		// TODO: There's surely a better way
 		int mask = _mm_movemask_ps(_mm_castsi128_ps(m_exec.m_mask));
-		
+
 		if (mask & 1) ((int *)(&dst.m_pValue[extract_x(dst.m_vindex)]))[0] = extract_x(src.m_value);
 		if (mask & 2) ((int *)(&dst.m_pValue[extract_y(dst.m_vindex)]))[1] = extract_y(src.m_value);
 		if (mask & 4) ((int *)(&dst.m_pValue[extract_z(dst.m_vindex)]))[2] = extract_z(src.m_value);
@@ -1206,7 +1206,7 @@ struct spmd_kernel
 	CPPSPMD_FORCE_INLINE vint load_all(const vint_vref& src)
 	{
 		// TODO: There's surely a better way
-		__m128i k;
+		__m128i k = _mm_setzero_si128();
 
 		k = insert_x(k, ((int*)(&src.m_pValue[extract_x(src.m_vindex)]))[0]);
 		k = insert_y(k, ((int*)(&src.m_pValue[extract_y(src.m_vindex)]))[1]);
@@ -1215,7 +1215,7 @@ struct spmd_kernel
 
 		return vint{ k };
 	}
-			
+
 	// Linear integer
 	struct lint
 	{
@@ -1235,7 +1235,7 @@ struct spmd_kernel
 			return vint{ m_value };
 		}
 
-		CPPSPMD_FORCE_INLINE int get_first_value() const 
+		CPPSPMD_FORCE_INLINE int get_first_value() const
 		{
 			return _mm_cvtsi128_si32(m_value);
 		}
@@ -1261,7 +1261,7 @@ struct spmd_kernel
 		}
 
 	private:
-		lint& operator=(const lint&);
+		//lint& operator=(const lint&);
 	};
 
 	CPPSPMD_FORCE_INLINE lint& store_all(lint& dst, const lint& src)
@@ -1269,9 +1269,9 @@ struct spmd_kernel
 		dst.m_value = src.m_value;
 		return dst;
 	}
-	
+
 	const lint program_index = lint{ _mm_set_epi32( 3, 2, 1, 0 ) };
-	
+
 	// SPMD condition helpers
 
 	template<typename IfBody>
@@ -1298,7 +1298,7 @@ struct spmd_kernel
 
 	template<typename ForeachBody>
 	CPPSPMD_FORCE_INLINE void spmd_foreach(int begin, int end, const ForeachBody& foreachBody);
-		
+
 #ifdef _DEBUG
 	CPPSPMD_FORCE_INLINE void check_masks();
 #else
@@ -1307,9 +1307,9 @@ struct spmd_kernel
 
 	CPPSPMD_FORCE_INLINE void spmd_break();
 	CPPSPMD_FORCE_INLINE void spmd_continue();
-	
+
 	CPPSPMD_FORCE_INLINE void spmd_return();
-	
+
 	template<typename UnmaskedBody>
 	CPPSPMD_FORCE_INLINE void spmd_unmasked(const UnmaskedBody& unmaskedBody);
 
@@ -1321,8 +1321,8 @@ struct spmd_kernel
 	CPPSPMD_FORCE_INLINE void swap(vfloat &a, vfloat &b) { vfloat temp = a; store(a, b); store(b, temp); }
 	CPPSPMD_FORCE_INLINE void swap(vbool &a, vbool &b) { vbool temp = a; store(a, b); store(b, temp); }
 
-	CPPSPMD_FORCE_INLINE float reduce_add(vfloat v)	
-	{ 
+	CPPSPMD_FORCE_INLINE float reduce_add(vfloat v)
+	{
 		__m128 k3210 = _mm_castsi128_ps(blendv_mask_epi32(_mm_setzero_si128(), _mm_castps_si128(v.m_value), m_exec.m_mask));
 		__m128 temp = _mm_add_ps(_mm_shuffle_ps(k3210, k3210, _MM_SHUFFLE(0, 1, 2, 3)), k3210);
 		return _mm_cvtss_f32(_mm_add_ss(_mm_movehl_ps(temp, temp), temp));
@@ -1353,14 +1353,14 @@ using float_vref = spmd_kernel::float_vref;
 using vfloat_vref = spmd_kernel::vfloat_vref;
 using vint_vref = spmd_kernel::vint_vref;
 
-CPPSPMD_FORCE_INLINE spmd_kernel::vbool::operator vfloat() const 
-{ 
-	return vfloat { _mm_and_ps( _mm_castsi128_ps(m_value), *(const __m128 *)g_onef_128 ) }; 
+CPPSPMD_FORCE_INLINE spmd_kernel::vbool::operator vfloat() const
+{
+	return vfloat { _mm_and_ps( _mm_castsi128_ps(m_value), *(const __m128 *)g_onef_128 ) };
 }
-	
+
 // Returns UINT32_MAX's for true, 0 for false. (Should it return 1's?)
-CPPSPMD_FORCE_INLINE spmd_kernel::vbool::operator vint() const 
-{ 
+CPPSPMD_FORCE_INLINE spmd_kernel::vbool::operator vint() const
+{
 	return vint { m_value };
 }
 
@@ -1441,9 +1441,9 @@ CPPSPMD_FORCE_INLINE vfloat round_truncate(const vfloat& a)
 {
 	__m128i abs_a = _mm_and_si128(_mm_castps_si128(a.m_value), _mm_set1_epi32(0x7FFFFFFFU) );
 	__m128i has_fractional = _mm_cmplt_epi32(abs_a, _mm_castps_si128(_mm_set1_ps(8388608.0f)));
-		
+
 	__m128i ai = _mm_cvttps_epi32(a.m_value);
-	
+
 	__m128 af = _mm_cvtepi32_ps(ai);
 	return vfloat{ blendv_mask_ps(a.m_value, af, _mm_castsi128_ps(has_fractional)) };
 }
@@ -1466,11 +1466,11 @@ CPPSPMD_FORCE_INLINE vfloat ceil(const vfloat& a)
 {
 	__m128i abs_a = _mm_and_si128(_mm_castps_si128(a.m_value), _mm_set1_epi32(0x7FFFFFFFU));
 	__m128i has_fractional = _mm_cmplt_epi32(abs_a, _mm_castps_si128(_mm_set1_ps(8388608.0f)));
-	
+
 	__m128i ai = _mm_cvtps_epi32(a.m_value);
 	__m128 af = _mm_cvtepi32_ps(ai);
 	__m128 changed = _mm_cvtepi32_ps(_mm_castps_si128(_mm_cmplt_ps(af, a.m_value)));
-	
+
 	af = _mm_sub_ps(af, changed);
 
 	return vfloat{ blendv_mask_ps(a.m_value, af, _mm_castsi128_ps(has_fractional)) };
@@ -1503,12 +1503,12 @@ CPPSPMD_FORCE_INLINE vfloat round_nearest(const vfloat& a)
 
 	__m128i sign_a = _mm_and_si128(_mm_castps_si128(a.m_value), _mm_set1_epi32(0x80000000U));
 	__m128 force_int = _mm_castsi128_ps(_mm_or_si128(no_fract_fp_bits, sign_a));
-	
+
 	// Can't use individual _mm_add_ps/_mm_sub_ps - this will be optimized out with /fp:fast by clang and probably other compilers.
 	//__m128 temp1 = _mm_add_ps(a.m_value, force_int);
 	//__m128 temp2 = _mm_sub_ps(temp1, force_int);
 	__m128 temp2 = add_sub(a.m_value, force_int);
-	
+
 	__m128i abs_a = _mm_and_si128(_mm_castps_si128(a.m_value), _mm_set1_epi32(0x7FFFFFFFU));
 	__m128i has_fractional = _mm_cmplt_epi32(abs_a, no_fract_fp_bits);
 	return vfloat{ blendv_mask_ps(a.m_value, temp2, _mm_castsi128_ps(has_fractional)) };
@@ -1824,7 +1824,7 @@ CPPSPMD_FORCE_INLINE vint vuint_shift_right(const vint& a, const vint& b)
 #else
 	//vint inv_shift = 32 - b;
 	//vfloat f = cast_vint_to_vfloat(vint(_mm_slli_epi32(inv_shift.m_value, 23)) + cast_vfloat_to_vint(vfloat(1.0f)));
-	
+
 	// Take float rep of 1.0f (0x3f800000), subtract (32<<23), subtract (shift<<23), cast to float.
 	vfloat f = cast_vint_to_vfloat(vint(_mm_sub_epi32(_mm_set1_epi32(0x4f800000), _mm_slli_epi32(b.m_value, 23))));
 
@@ -1843,7 +1843,7 @@ CPPSPMD_FORCE_INLINE vint vuint_shift_right_not_zero(const vint& a, const vint& 
 {
 	//vint inv_shift = 32 - b;
 	//vfloat f = cast_vint_to_vfloat(vint(_mm_slli_epi32(inv_shift.m_value, 23)) + cast_vfloat_to_vint(vfloat(1.0f)));
-	
+
 	// Take float rep of 1.0f (0x3f800000), subtract (32<<23), subtract (shift<<23), cast to float.
 	vfloat f = cast_vint_to_vfloat(vint(_mm_sub_epi32(_mm_set1_epi32(0x4f800000), _mm_slli_epi32(b.m_value, 23))));
 
@@ -1887,7 +1887,7 @@ CPPSPMD_FORCE_INLINE vint operator>> (const vint& a, const vint& b)
 
 // Shift left/right by a uniform immediate constant
 #define VINT_SHIFT_LEFT(a, b) vint(_mm_slli_epi32( (a).m_value, (b) ) )
-#define VINT_SHIFT_RIGHT(a, b) vint( _mm_srai_epi32( (a).m_value, (b) ) ) 
+#define VINT_SHIFT_RIGHT(a, b) vint( _mm_srai_epi32( (a).m_value, (b) ) )
 #define VUINT_SHIFT_RIGHT(a, b) vint( _mm_srli_epi32( (a).m_value, (b) ) )
 #define VINT_ROT(x, k) (VINT_SHIFT_LEFT((x), (k)) | VUINT_SHIFT_RIGHT((x), 32 - (k)))
 
@@ -2102,4 +2102,3 @@ CPPSPMD_FORCE_INLINE const float_vref& spmd_kernel::store_all(const float_vref&&
 #include "cppspmd_math.h"
 
 } // namespace cppspmd_sse41
-

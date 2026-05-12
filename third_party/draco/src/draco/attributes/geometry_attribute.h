@@ -397,8 +397,8 @@ class GeometryAttribute {
 
         // Make sure the floating point |in_value| fits within the range of
         // values that integral type OutT is able to represent.
-        if (in_value < std::numeric_limits<OutT>::min() ||
-            in_value >= std::numeric_limits<OutT>::max()) {
+        if (in_value < static_cast<T>(std::numeric_limits<OutT>::min()) ||
+            in_value >= static_cast<T>(std::numeric_limits<OutT>::max())) {
           return false;
         }
       }

@@ -169,7 +169,7 @@ BasisEncoder* Builder::build() {
     // an annotation that gets stored in the KTX2 file, which enables the app to choose the right
     // format when it loads and transcodes the texture. Technically however, the transcoder
     // SHOULD know about this, since in some scenarios it needs to interpolate between colors.
-    params.m_ktx2_srgb_transfer_func = !mImpl->linear;
+    params.m_ktx2_and_basis_srgb_transfer_function = !mImpl->linear;
 
     // Select the same quality that the basis tool selects by default (midpoint of range).
     params.m_quality_level = 128;
@@ -181,7 +181,7 @@ BasisEncoder* Builder::build() {
     params.m_read_source_images = false;
 
     // We do not want basis to write the file, we want to manually dump "get_output_ktx2_file()"
-    params.m_write_output_basis_files = false;
+    params.m_write_output_basis_or_ktx2_files = false;
 
     basisu::basis_compressor* encoder = new basisu::basis_compressor();
 
@@ -238,7 +238,7 @@ bool BasisEncoder::encode() {
     case basis_compressor::cECFailedFrontEnd:
         puts("Compressor frontend stage failed!");
         break;
-    case basis_compressor::cECFailedFontendExtract:
+    case basis_compressor::cECFailedFrontendExtract:
         puts("Compressor frontend data extraction failed!");
         break;
     case basis_compressor::cECFailedBackend:

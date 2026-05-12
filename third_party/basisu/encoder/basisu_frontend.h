@@ -1,5 +1,5 @@
 // basisu_frontend.h
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,8 +37,10 @@ namespace basisu
 		uint32_t &operator[] (uint32_t i) { assert(i < 2); return m_comps[i]; }
 	};
 
-	const uint32_t BASISU_DEFAULT_COMPRESSION_LEVEL = 2;
-	const uint32_t BASISU_MAX_COMPRESSION_LEVEL = 6;
+	// rg [11/25/25] - The command line tool defaults to ETC1S level 1, but the API 2. Changing this breaks backwards compatibility for anyone using the API and our test suite.
+	const uint32_t BASISU_DEFAULT_ETC1S_COMPRESSION_LEVEL = 2; 
+
+	const uint32_t BASISU_MAX_ETC1S_COMPRESSION_LEVEL = 6;
 
 	class basisu_frontend
 	{
@@ -72,7 +74,7 @@ namespace basisu
 				m_pSource_blocks(NULL),
 				m_max_endpoint_clusters(256),
 				m_max_selector_clusters(256),
-				m_compression_level(BASISU_DEFAULT_COMPRESSION_LEVEL),
+				m_compression_level(BASISU_DEFAULT_ETC1S_COMPRESSION_LEVEL),
 				m_perceptual(true),
 				m_debug_stats(false),
 				m_debug_images(false),

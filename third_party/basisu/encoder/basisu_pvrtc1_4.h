@@ -1,5 +1,5 @@
 // basisu_pvrtc1_4.cpp
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 namespace basisu
 {
-	enum 
-	{ 
-		PVRTC2_MIN_WIDTH = 16, 
-		PVRTC2_MIN_HEIGHT = 8, 
-		PVRTC4_MIN_WIDTH = 8, 
-		PVRTC4_MIN_HEIGHT = 8 
+	enum
+	{
+		PVRTC2_MIN_WIDTH = 16,
+		PVRTC2_MIN_HEIGHT = 8,
+		PVRTC4_MIN_WIDTH = 8,
+		PVRTC4_MIN_HEIGHT = 8
 	};
-	
+
 	struct pvrtc4_block
 	{
 		uint32_t m_modulation;
@@ -56,9 +56,9 @@ namespace basisu
 
 		// Returns raw endpoint or 8888
 		color_rgba get_endpoint(uint32_t endpoint_index, bool unpack) const;
-		
+
 		color_rgba get_endpoint_5554(uint32_t endpoint_index) const;
-		
+
 		static uint32_t get_component_precision_in_bits(uint32_t c, uint32_t endpoint_index, bool opaque_endpoint)
 		{
 			static const uint32_t s_comp_prec[4][4] =
@@ -80,7 +80,7 @@ namespace basisu
 			};
 			return s_color_prec[open_range_check(endpoint_index, 2U) + (opaque_endpoint * 2)];
 		}
-		
+
 		inline uint32_t get_modulation(uint32_t x, uint32_t y) const
 		{
 			assert((x < 4) && (y < 4));
@@ -121,7 +121,7 @@ namespace basisu
 			assert(endpoint_index < 2);
 			const uint32_t m = m_endpoints & 1;
 			uint32_t r = c[0], g = c[1], b = c[2], a = c[3];
-						
+
 			uint32_t packed;
 
 			if (opaque_endpoint)
@@ -231,7 +231,15 @@ namespace basisu
 
 		inline void set_to_black()
 		{
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+
 			memset(m_blocks.get_ptr(), 0, m_blocks.size_in_bytes());
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 		}
 
 		inline bool get_block_uses_transparent_modulation(uint32_t bx, uint32_t by) const
@@ -243,7 +251,7 @@ namespace basisu
 		{
 			return m_blocks(bx, by).is_endpoint_opaque(endpoint_index);
 		}
-				
+
 		color_rgba get_endpoint(uint32_t bx, uint32_t by, uint32_t endpoint_index, bool unpack) const
 		{
 			assert((bx < m_block_width) && (by < m_block_height));
@@ -255,12 +263,12 @@ namespace basisu
 			assert((x < m_width) && (y < m_height));
 			return m_blocks(x >> 2, y >> 2).get_modulation(x & 3, y & 3);
 		}
-				
+
 		// Returns true if the block uses transparent modulation.
 		bool get_interpolated_colors(uint32_t x, uint32_t y, color_rgba* pColors) const;
-		
+
 		color_rgba get_pixel(uint32_t x, uint32_t y, uint32_t m) const;
-		
+
 		inline color_rgba get_pixel(uint32_t x, uint32_t y) const
 		{
 			assert((x < m_width) && (y < m_height));
@@ -445,12 +453,12 @@ namespace basisu
 
 			return total_error;
 		}
-	
-	public:						
+
+	public:
 		uint32_t m_width, m_height;
 		pvrtc4_block_vector2D m_blocks;
 		uint32_t m_block_width, m_block_height;
-						
+
 		bool m_uses_alpha;
 	};
 
