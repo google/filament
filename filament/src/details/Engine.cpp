@@ -177,6 +177,7 @@ struct Engine::BuilderDetails {
     void* mSharedContext = nullptr;
     bool mPaused = false;
     std::unordered_map<CString, bool> mFeatureFlags;
+    ColorGrading::Builder mColorGradingBuilder;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -313,7 +314,8 @@ FEngine::FEngine(Builder const& builder) :
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(ThreadUtils::getThreadId()),
-        mConfig(builder->mConfig)
+        mConfig(builder->mConfig),
+        mColorGradingBuilder(builder->mColorGradingBuilder)
 {
     // update all the features flags specified in the builder
     for (auto const& [feature, value] : builder->mFeatureFlags) {
@@ -523,7 +525,7 @@ void FEngine::init() {
             mUboManager = new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
         }
 
-        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
+        mDefaultColorGrading = downcast(mColorGradingBuilder.build(*this));
 
         constexpr float3 dummyPositions[1] = {};
         constexpr short4 dummyTangents[1] = {};
@@ -1883,6 +1885,11 @@ Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> c
             feature(name, true);
         }
     }
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::colorGrading(ColorGrading::Builder const& colorGrading) noexcept {
+    mImpl->mColorGradingBuilder = colorGrading;
     return *this;
 }
 

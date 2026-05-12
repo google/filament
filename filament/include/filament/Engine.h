@@ -19,6 +19,7 @@
 
 
 #include <filament/FilamentAPI.h>
+#include <filament/ColorGrading.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -569,6 +570,13 @@ public:
          * @return A reference to this Builder for chaining calls.
          */
         Builder& features(std::initializer_list<char const *> list) noexcept;
+
+        /**
+         * Sets the builder used to create the default ColorGrading object.
+         * @param colorGrading Builder used to create the default color grading.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& colorGrading(ColorGrading::Builder const& colorGrading) noexcept;
 
 #if UTILS_HAS_THREADING
         /**

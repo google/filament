@@ -152,6 +152,10 @@ public class ColorGrading {
             mFinalizer = new BuilderFinalizer(mNativeBuilder);
         }
 
+        long getNativeBuilder() {
+            return mNativeBuilder;
+        }
+
         /**
          * Sets the quality level of the color grading. When color grading is implemented using
          * a 3D LUT, the quality level may impact the resolution and bit depth of the backing
