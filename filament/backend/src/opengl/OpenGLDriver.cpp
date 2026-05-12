@@ -2020,6 +2020,10 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 assert_invariant(color[i].handle);
                 rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                TextureFormat const format = rt->gl.color[i]->format;
+                rt->gl.colorClearKind[i] = isUnsignedIntFormat(format) ?
+                        ColorClearKind::UnsignedInt : isSignedIntFormat(format) ?
+                                ColorClearKind::SignedInt : ColorClearKind::Float;
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i, layerCount);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
                 checkDimensions(rt->gl.color[i], color[i].level);
@@ -4530,31 +4534,36 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
             if (!any(clearFlags & flag)) {
                 return;
             }
-            // Pick the glClearBuffer*v variant from the attachment's format. Calling the wrong
-            // variant on an integer attachment is undefined behavior in GL.
-            TextureFormat const format = rt->gl.color[i] ? rt->gl.color[i]->format
-                                                         : TextureFormat::RGBA8;
-            if (isUnsignedIntFormat(format)) {
-                GLuint const v[4] = {
-                        static_cast<GLuint>(clearColor[0]),
-                        static_cast<GLuint>(clearColor[1]),
-                        static_cast<GLuint>(clearColor[2]),
-                        static_cast<GLuint>(clearColor[3]) };
-                glClearBufferuiv(GL_COLOR, i, v);
-            } else if (isSignedIntFormat(format)) {
-                GLint const v[4] = {
-                        static_cast<GLint>(clearColor[0]),
-                        static_cast<GLint>(clearColor[1]),
-                        static_cast<GLint>(clearColor[2]),
-                        static_cast<GLint>(clearColor[3]) };
-                glClearBufferiv(GL_COLOR, i, v);
-            } else {
-                GLfloat const v[4] = {
-                        static_cast<GLfloat>(clearColor[0]),
-                        static_cast<GLfloat>(clearColor[1]),
-                        static_cast<GLfloat>(clearColor[2]),
-                        static_cast<GLfloat>(clearColor[3]) };
-                glClearBufferfv(GL_COLOR, i, v);
+            // Dispatch by the kind cached on the render target at attachment-set time. Calling
+            // the wrong glClearBuffer*v variant on an integer attachment is undefined in GL.
+            switch (rt->gl.colorClearKind[i]) {
+                case ColorClearKind::Float: {
+                    GLfloat const v[4] = {
+                            static_cast<GLfloat>(clearColor[0]),
+                            static_cast<GLfloat>(clearColor[1]),
+                            static_cast<GLfloat>(clearColor[2]),
+                            static_cast<GLfloat>(clearColor[3]) };
+                    glClearBufferfv(GL_COLOR, i, v);
+                    break;
+                }
+                case ColorClearKind::SignedInt: {
+                    GLint const v[4] = {
+                            static_cast<GLint>(clearColor[0]),
+                            static_cast<GLint>(clearColor[1]),
+                            static_cast<GLint>(clearColor[2]),
+                            static_cast<GLint>(clearColor[3]) };
+                    glClearBufferiv(GL_COLOR, i, v);
+                    break;
+                }
+                case ColorClearKind::UnsignedInt: {
+                    GLuint const v[4] = {
+                            static_cast<GLuint>(clearColor[0]),
+                            static_cast<GLuint>(clearColor[1]),
+                            static_cast<GLuint>(clearColor[2]),
+                            static_cast<GLuint>(clearColor[3]) };
+                    glClearBufferuiv(GL_COLOR, i, v);
+                    break;
+                }
             }
         };
         clearColorBuffer(0, TargetBufferFlags::COLOR0);

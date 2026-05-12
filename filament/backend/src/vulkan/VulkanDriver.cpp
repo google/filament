@@ -2070,24 +2070,30 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             if (fbkey.color[i]) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
                 // VkClearColorValue is a union the driver reads according to the attachment's
-                // format. Pick the matching arm from the attachment's TextureFormat -- writing the
-                // wrong arm produces silent corruption.
-                TextureFormat const format = rt->getColor(colorIdx++).texture->format;
-                if (isUnsignedIntFormat(format)) {
-                    clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor[0]);
-                    clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor[1]);
-                    clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor[2]);
-                    clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor[3]);
-                } else if (isSignedIntFormat(format)) {
-                    clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor[0]);
-                    clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor[1]);
-                    clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor[2]);
-                    clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor[3]);
-                } else {
-                    clearValue.color.float32[0] = static_cast<float>(params.clearColor[0]);
-                    clearValue.color.float32[1] = static_cast<float>(params.clearColor[1]);
-                    clearValue.color.float32[2] = static_cast<float>(params.clearColor[2]);
-                    clearValue.color.float32[3] = static_cast<float>(params.clearColor[3]);
+                // format. Dispatch on the kind cached on the render target at construction time.
+                // Writing the wrong arm produces silent corruption.
+                switch (rt->getColorClearKind(colorIdx++)) {
+                    case VulkanRenderTarget::ColorClearKind::Float: {
+                        clearValue.color.float32[0] = static_cast<float>(params.clearColor[0]);
+                        clearValue.color.float32[1] = static_cast<float>(params.clearColor[1]);
+                        clearValue.color.float32[2] = static_cast<float>(params.clearColor[2]);
+                        clearValue.color.float32[3] = static_cast<float>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::SignedInt: {
+                        clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor[0]);
+                        clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor[1]);
+                        clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor[2]);
+                        clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::UnsignedInt: {
+                        clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor[0]);
+                        clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor[1]);
+                        clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor[2]);
+                        clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor[3]);
+                        break;
+                    }
                 }
             }
         }

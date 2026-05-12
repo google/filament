@@ -279,10 +279,20 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return {width, height};
     }
 
+    // Cached classification of each color attachment's clear semantics. Computed once when the
+    // attachment is bound to the render target and used on the clear path.
+    enum class ColorClearKind : uint8_t { Float, SignedInt, UnsignedInt };
+
     // Returns the i-th color attachment, packed at the start of `attachments` in MRT-slot order.
     inline VulkanAttachment& getColor(uint32_t idx) const {
         assert_invariant(idx < mInfo->colors.count());
         return mInfo->attachments[idx];
+    }
+
+    // Returns the cached clear-kind for the i-th color attachment.
+    inline ColorClearKind getColorClearKind(uint32_t idx) const {
+        assert_invariant(idx < mInfo->colors.count());
+        return mInfo->colorClearKinds[idx];
     }
 
     inline VulkanAttachment& getDepthStencil() const {
@@ -341,6 +351,8 @@ private:
         VulkanFboCache::RenderPassKey rpkey = {};
         VulkanFboCache::FboKey fbkey = {};
         std::vector<VulkanAttachment> attachments;
+        // Parallel to attachments[0..colors.count()-1]: cached clear-kind per color attachment.
+        std::array<ColorClearKind, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorClearKinds = {};
         utils::bitset32 colors;
         int8_t depthStencilIndex = UNDEFINED_INDEX;
         int8_t msaaDepthStencilIndex = UNDEFINED_INDEX;
