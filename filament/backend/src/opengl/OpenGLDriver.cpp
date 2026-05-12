@@ -4530,63 +4530,31 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
             if (!any(clearFlags & flag)) {
                 return;
             }
-            // Resolve the type family. AUTO defers to the attachment format. Explicit FLOAT/INT/
-            // UINT are trusted at runtime, with a debug-only check that they match the attachment.
-            ClearColorValue::Type resolved = clearColor.type;
-            if (resolved == ClearColorValue::Type::AUTO) {
-                resolved = ClearColorValue::Type::FLOAT;
-                if (rt->gl.color[i]) {
-                    TextureFormat const format = rt->gl.color[i]->format;
-                    if (isUnsignedIntFormat(format)) {
-                        resolved = ClearColorValue::Type::UINT;
-                    } else if (isSignedIntFormat(format)) {
-                        resolved = ClearColorValue::Type::INT;
-                    }
-                }
-            } else if (rt->gl.color[i]) {
-                // Calling the wrong glClearBuffer*v variant for an attachment is UB and crashes
-                // some drivers. Catch mismatches early when a debug-only check is cheap.
-                [[maybe_unused]] TextureFormat const format = rt->gl.color[i]->format;
-                assert_invariant(
-                        (resolved == ClearColorValue::Type::UINT  && isUnsignedIntFormat(format)) ||
-                        (resolved == ClearColorValue::Type::INT   && isSignedIntFormat(format)) ||
-                        (resolved == ClearColorValue::Type::FLOAT && !isUnsignedIntFormat(format)
-                                && !isSignedIntFormat(format)));
-            }
-
-            switch (resolved) {
-                case ClearColorValue::Type::AUTO: {
-                    // Unreachable. AUTO was resolved above.
-                    assert_invariant(false);
-                    break;
-                }
-                case ClearColorValue::Type::FLOAT: {
-                    GLfloat const v[4] = {
-                            static_cast<GLfloat>(clearColor.color[0]),
-                            static_cast<GLfloat>(clearColor.color[1]),
-                            static_cast<GLfloat>(clearColor.color[2]),
-                            static_cast<GLfloat>(clearColor.color[3]) };
-                    glClearBufferfv(GL_COLOR, i, v);
-                    break;
-                }
-                case ClearColorValue::Type::INT: {
-                    GLint const v[4] = {
-                            static_cast<GLint>(clearColor.color[0]),
-                            static_cast<GLint>(clearColor.color[1]),
-                            static_cast<GLint>(clearColor.color[2]),
-                            static_cast<GLint>(clearColor.color[3]) };
-                    glClearBufferiv(GL_COLOR, i, v);
-                    break;
-                }
-                case ClearColorValue::Type::UINT: {
-                    GLuint const v[4] = {
-                            static_cast<GLuint>(clearColor.color[0]),
-                            static_cast<GLuint>(clearColor.color[1]),
-                            static_cast<GLuint>(clearColor.color[2]),
-                            static_cast<GLuint>(clearColor.color[3]) };
-                    glClearBufferuiv(GL_COLOR, i, v);
-                    break;
-                }
+            // Pick the glClearBuffer*v variant from the attachment's format. Calling the wrong
+            // variant on an integer attachment is undefined behavior in GL.
+            TextureFormat const format = rt->gl.color[i] ? rt->gl.color[i]->format
+                                                         : TextureFormat::RGBA8;
+            if (isUnsignedIntFormat(format)) {
+                GLuint const v[4] = {
+                        static_cast<GLuint>(clearColor[0]),
+                        static_cast<GLuint>(clearColor[1]),
+                        static_cast<GLuint>(clearColor[2]),
+                        static_cast<GLuint>(clearColor[3]) };
+                glClearBufferuiv(GL_COLOR, i, v);
+            } else if (isSignedIntFormat(format)) {
+                GLint const v[4] = {
+                        static_cast<GLint>(clearColor[0]),
+                        static_cast<GLint>(clearColor[1]),
+                        static_cast<GLint>(clearColor[2]),
+                        static_cast<GLint>(clearColor[3]) };
+                glClearBufferiv(GL_COLOR, i, v);
+            } else {
+                GLfloat const v[4] = {
+                        static_cast<GLfloat>(clearColor[0]),
+                        static_cast<GLfloat>(clearColor[1]),
+                        static_cast<GLfloat>(clearColor[2]),
+                        static_cast<GLfloat>(clearColor[3]) };
+                glClearBufferfv(GL_COLOR, i, v);
             }
         };
         clearColorBuffer(0, TargetBufferFlags::COLOR0);
@@ -4612,15 +4580,13 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
 #endif
     {
         // ES2 has no integer-format color attachments, so a float clear is always correct here.
-        assert_invariant(clearColor.type == ClearColorValue::Type::FLOAT
-                || clearColor.type == ClearColorValue::Type::AUTO);
         GLbitfield mask = 0;
         if (any(clearFlags & TargetBufferFlags::COLOR0)) {
             glClearColor(
-                    static_cast<float>(clearColor.color[0]),
-                    static_cast<float>(clearColor.color[1]),
-                    static_cast<float>(clearColor.color[2]),
-                    static_cast<float>(clearColor.color[3]));
+                    static_cast<float>(clearColor[0]),
+                    static_cast<float>(clearColor[1]),
+                    static_cast<float>(clearColor[2]),
+                    static_cast<float>(clearColor[3]));
             mask |= GL_COLOR_BUFFER_BIT;
         }
         if (any(clearFlags & TargetBufferFlags::DEPTH)) {

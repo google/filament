@@ -126,7 +126,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         OnReadCompleteFunction const& readCompleteFunc) {
     bool const isDepthStencil = pbd.format == PixelDataFormat::DEPTH_COMPONENT ||
                          pbd.format == PixelDataFormat::DEPTH_STENCIL;
-    VulkanAttachment const srcAttachment = isDepthStencil ? srcTarget->getDepthStencil() : srcTarget->getColor0();
+    VulkanAttachment const srcAttachment = isDepthStencil ? srcTarget->getDepthStencil() : srcTarget->getColor(0);
     run(srcAttachment.texture, srcAttachment.level, srcAttachment.layer, x, y, width, height,
             graphicsQueueFamilyIndex, std::move(pbd), selectMemoryFunc, readCompleteFunc);
 }

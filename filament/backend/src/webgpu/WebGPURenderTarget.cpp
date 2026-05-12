@@ -114,7 +114,7 @@ namespace {
     // wgpu::Color is always 4 doubles. The texture's pixel format determines whether they are
     // interpreted as floats, signed ints, or unsigned ints. A double has a 53-bit mantissa, so any
     // int32_t / uint32_t value round-trips exactly.
-    return { .r = c.color[0], .g = c.color[1], .b = c.color[2], .a = c.color[3] };
+    return { .r = c[0], .g = c[1], .b = c[2], .a = c[3] };
 }
 
 }  // namespace

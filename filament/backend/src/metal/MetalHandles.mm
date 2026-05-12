@@ -1204,8 +1204,8 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         // Metal's MTLClearColor is always 4 doubles. The texture's pixel format determines whether
         // those doubles are interpreted as floats, signed ints, or unsigned ints. A double has a
         // 53-bit mantissa, so any int32_t / uint32_t value round-trips exactly.
-        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(params.clearColor.color[0],
-                params.clearColor.color[1], params.clearColor.color[2], params.clearColor.color[3]);
+        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(params.clearColor[0],
+                params.clearColor[1], params.clearColor[2], params.clearColor[3]);
 
         if (attachment.getMsaaTexture()) {
             // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.

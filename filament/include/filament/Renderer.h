@@ -161,24 +161,16 @@ public:
      */
     struct ClearOptions {
         /**
-         * Type family of the clear color value.
-         *
-         * `AUTO` (the default) lets the backend inspect the target attachment format and pick the
-         * matching family at clear time. Use `FLOAT` / `INT` / `UINT` only when you specifically
-         * need to override the default type with a non-zero clear color value.
-         */
-        enum class Type : uint8_t {
-            AUTO,   //!< Auto-detect based on attachment format
-            FLOAT,  //!< Float / normalized
-            INT,    //!< Signed integer
-            UINT    //!< Unsigned integer
-        };
-
-        /**
-         * Color (sRGB linear) to use to clear the RenderTarget (typically the SwapChain).
+         * Color to use to clear the RenderTarget (typically the SwapChain).
          *
          * The RenderTarget is cleared using this color, which won't be tone-mapped since
          * tone-mapping is part of View rendering (this is not).
+         *
+         * The value is stored as four doubles. The backend converts them as-is into the
+         * matching native clear entry-point based on the attachment's format -- so the
+         * caller is responsible for putting a value here that makes sense for the
+         * attachment family (e.g. for a UINT attachment, a value in [0, UINT32_MAX]).
+         * int32_t / uint32_t values round-trip exactly because double has a 53-bit mantissa.
          *
          * When a View is rendered, there are 3 scenarios to consider:
          * - Pixels rendered by the View replace the clear color (or blend with it in
@@ -195,9 +187,6 @@ public:
          * background, or to use black or fully-transparent (i.e. {0,0,0,0}) as the clear color.
          */
         math::double4 clearColor = {};
-
-        /** Type of the clear color value */
-        Type type = Type::AUTO;
 
         /** Value to clear the stencil buffer */
         uint8_t clearStencil = 0u;

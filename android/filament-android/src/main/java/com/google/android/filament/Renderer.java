@@ -147,12 +147,6 @@ public class Renderer {
         public double[] clearColor = { 0.0, 0.0, 0.0, 0.0 };
 
         /**
-         * Type of the clear color value.
-         * 0: AUTO (let the backend infer from the attachment format), 1: FLOAT, 2: INT, 3: UINT
-         */
-        public int type = 0;
-
-        /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
          * View will be drawn, for instance.
          */
@@ -247,7 +241,7 @@ public class Renderer {
         mClearOptions = options;
         nSetClearOptions(getNativeObject(),
                 options.clearColor[0], options.clearColor[1], options.clearColor[2], options.clearColor[3],
-                options.type, options.clear, options.discard);
+                options.clear, options.discard);
     }
 
     /**
@@ -800,7 +794,7 @@ public class Renderer {
     private static native void nSetFrameRateOptions(long nativeRenderer,
             float interval, float headRoomRatio, float scaleRate, int history);
     private static native void nSetClearOptions(long nativeRenderer,
-            double r, double g, double b, double a, int type, boolean clear, boolean discard);
+            double r, double g, double b, double a, boolean clear, boolean discard);
 
     private static native void nSkipNextFrames(long nativeObject, int frameCount);
     private static native int nGetFrameToSkipCount(long nativeObject);

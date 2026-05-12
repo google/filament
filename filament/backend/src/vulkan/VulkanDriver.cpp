@@ -2065,64 +2065,29 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
         // actually clearing that particular target.
+        uint32_t colorIdx = 0;
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
-                // Resolve the type family. AUTO defers to the attachment format. Explicit types
-                // are trusted at runtime, with a debug-only check that they match the attachment
-                // (mismatch produces silent corruption in Vulkan since VkClearColorValue is a
-                // union the driver reads according to the attachment format).
-                VulkanAttachment const* const attachment = rt->getColorAttachment(i);
-                ClearColorValue::Type resolved = params.clearColor.type;
-                if (resolved == ClearColorValue::Type::AUTO) {
-                    resolved = ClearColorValue::Type::FLOAT;
-                    if (attachment) {
-                        TextureFormat const format = attachment->texture->format;
-                        if (isUnsignedIntFormat(format)) {
-                            resolved = ClearColorValue::Type::UINT;
-                        } else if (isSignedIntFormat(format)) {
-                            resolved = ClearColorValue::Type::INT;
-                        }
-                    }
-                } else if (attachment) {
-                    [[maybe_unused]] TextureFormat const format = attachment->texture->format;
-                    assert_invariant(
-                            (resolved == ClearColorValue::Type::UINT &&
-                                isUnsignedIntFormat(format)) ||
-                            (resolved == ClearColorValue::Type::INT &&
-                                isSignedIntFormat(format)) ||
-                            (resolved == ClearColorValue::Type::FLOAT &&
-                                !isUnsignedIntFormat(format) &&
-                                !isSignedIntFormat(format)));
-                }
-
-                switch (resolved) {
-                    case ClearColorValue::Type::AUTO: {
-                        // Unreachable. AUTO was resolved above.
-                        assert_invariant(false);
-                        break;
-                    }
-                    case ClearColorValue::Type::FLOAT: {
-                        clearValue.color.float32[0] = static_cast<float>(params.clearColor.color[0]);
-                        clearValue.color.float32[1] = static_cast<float>(params.clearColor.color[1]);
-                        clearValue.color.float32[2] = static_cast<float>(params.clearColor.color[2]);
-                        clearValue.color.float32[3] = static_cast<float>(params.clearColor.color[3]);
-                        break;
-                    }
-                    case ClearColorValue::Type::INT: {
-                        clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor.color[0]);
-                        clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor.color[1]);
-                        clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor.color[2]);
-                        clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor.color[3]);
-                        break;
-                    }
-                    case ClearColorValue::Type::UINT: {
-                        clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor.color[0]);
-                        clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor.color[1]);
-                        clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor.color[2]);
-                        clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor.color[3]);
-                        break;
-                    }
+                // VkClearColorValue is a union the driver reads according to the attachment's
+                // format. Pick the matching arm from the attachment's TextureFormat -- writing the
+                // wrong arm produces silent corruption.
+                TextureFormat const format = rt->getColor(colorIdx++).texture->format;
+                if (isUnsignedIntFormat(format)) {
+                    clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor[0]);
+                    clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor[1]);
+                    clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor[2]);
+                    clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor[3]);
+                } else if (isSignedIntFormat(format)) {
+                    clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor[0]);
+                    clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor[1]);
+                    clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor[2]);
+                    clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor[3]);
+                } else {
+                    clearValue.color.float32[0] = static_cast<float>(params.clearColor[0]);
+                    clearValue.color.float32[1] = static_cast<float>(params.clearColor[1]);
+                    clearValue.color.float32[2] = static_cast<float>(params.clearColor[2]);
+                    clearValue.color.float32[3] = static_cast<float>(params.clearColor[3]);
                 }
             }
         }
@@ -2202,7 +2167,7 @@ void VulkanDriver::nextSubpass(int) {
             ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
-        VulkanAttachment& subpassInput = renderTarget->getColor0();
+        VulkanAttachment& subpassInput = renderTarget->getColor(0);
         mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
 }
@@ -2476,8 +2441,8 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    auto const& dstAttachment = dstTarget->getColor0();
-    auto const& srcAttachment = srcTarget->getColor0();
+    auto const& dstAttachment = dstTarget->getColor(0);
+    auto const& srcAttachment = srcTarget->getColor(0);
 
     if (srcAttachment.texture->samples > 1) {
         mBlitter.resolve(dstAttachment, srcAttachment);

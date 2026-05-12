@@ -377,11 +377,12 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     flushAndWait();
 }
 
-TEST_F(ReadPixelsTest, ReadPixelsExplicitUintClear) {
+TEST_F(ReadPixelsTest, ReadPixelsUintClear) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    // Explicit UINT-tagged ClearColorValue must land bit-exact on a UINT attachment. Exercises the
-    // explicit branch of the type-resolve logic in OpenGL/Vulkan backends, which is asserted in
-    // debug to require attachment-format match.
+    // Exercises the integer-format clear path end-to-end: verifies that a uint32 value placed into
+    // the `double4` clearColor round-trips bit-exact onto a `R32UI` attachment (i.e., the GL /
+    // Vulkan backend selects the matching `glClearBufferuiv` / `VkClearColorValue::uint32` arm
+    // based on the attachment's TextureFormat).
     constexpr size_t renderTargetSize = 16;
     uint32_t const expectedValue = 0xCAFEBABEu;
 
@@ -434,10 +435,10 @@ TEST_F(ReadPixelsTest, ReadPixelsExplicitUintClear) {
     flushAndWait();
 }
 
-TEST_F(ReadPixelsTest, ReadPixelsExplicitIntClear) {
+TEST_F(ReadPixelsTest, ReadPixelsIntClear) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    // Sibling of ReadPixelsExplicitUintClear: explicit INT clear into a R32I attachment, using
-    // INT_MIN so the value cannot accidentally round-trip through a UINT or FLOAT path.
+    // Sibling of ReadPixelsUintClear: INT clear into a R32I attachment, using INT_MIN so the value
+    // cannot accidentally round-trip through a UINT or FLOAT path.
     constexpr size_t renderTargetSize = 16;
     int32_t const expectedValue = std::numeric_limits<int32_t>::min();
 

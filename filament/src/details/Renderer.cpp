@@ -1011,9 +1011,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     //        into a temporary buffer (common case), the clearColor is color-graded. A problem
     //        arises when transparent views are used, in this case the clear color is not
     //        color-graded.
-    const ClearColorValue clearColor(
-            mClearOptions.clearColor,
-            static_cast<ClearColorValue::Type>(mClearOptions.type));
+    const ClearColorValue clearColor = mClearOptions.clearColor;
 
     const uint8_t clearStencil = mClearOptions.clearStencil;
     const TargetBufferFlags clearFlags = mClearFlags;

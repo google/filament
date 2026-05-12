@@ -64,7 +64,6 @@ if (FILAMENT_BUILD_TESTING)
                 test_BufferAllocator.cpp
                 test_BufferAllocatorStress.cpp
                 test_CircularQueue.cpp
-                test_ClearColorValue.cpp
                 test_compact.cpp
                 test_FenceManager.cpp
                 test_UboManager.cpp
