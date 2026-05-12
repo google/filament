@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- engine: Optimize Color Grading with NEON on armv8+ devices. Performance improvements between 1.3x and 4.5x
