@@ -29,11 +29,21 @@ constexpr static bool isPowerOfTwo(uint32_t n) {
 }
 #endif
 
+constexpr static uint8_t getShiftFromPowerOfTwo(uint32_t n) noexcept {
+    uint8_t shift = 0;
+    while (n > 1) {
+        n >>= 1;
+        ++shift;
+    }
+    return shift;
+}
+
 } // anonymous namespace
 
 BufferAllocator::BufferAllocator(allocation_size_t totalSize, allocation_size_t slotSize)
     : mTotalSize(totalSize),
-      mSlotSize(slotSize) {
+      mSlotSize(slotSize),
+      mSlotSizeShift(getShiftFromPowerOfTwo(slotSize)) {
     assert_invariant(mSlotSize > 0);
     assert_invariant(isPowerOfTwo(mSlotSize));
 
@@ -47,7 +57,7 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     mFreeList.clear();
 
     // Resize mNodes to the number of slots
-    const size_t slotCount = mTotalSize / mSlotSize;
+    const size_t slotCount = mTotalSize >> mSlotSizeShift;
     mNodes.clear();
     mNodes.reserve(slotCount);
     mNodes.resize(slotCount);
@@ -94,7 +104,7 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         targetNode->slot.slotSize = alignedSize;
 
         // Update Tail block
-        const size_t endSlotIndex = (offset + alignedSize) / mSlotSize - 1;
+        const size_t endSlotIndex = slotIndexFromOffset(offset + alignedSize) - 1;
         mNodes[endSlotIndex] = *targetNode; // Copy Head to Tail
 
         // The Head of remaining free block
@@ -107,12 +117,14 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         nextNode->freeListIterator = mFreeList.emplace(remainingSize, nextNode);
 
         // Update the Tail of remaining free block
-        const size_t nextEndSlotIndex = (nextNode->slot.offset + nextNode->slot.slotSize) / mSlotSize - 1;
+        const size_t nextEndSlotIndex =
+                slotIndexFromOffset(nextNode->slot.offset + nextNode->slot.slotSize) - 1;
         mNodes[nextEndSlotIndex] = *nextNode; // Copy Head to Tail
     } else {
         // Allocate the whole block
         // Update Tail block
-        const size_t endSlotIndex = (offset + targetNode->slot.slotSize) / mSlotSize - 1;
+        const size_t endSlotIndex =
+                slotIndexFromOffset(offset + targetNode->slot.slotSize) - 1;
         mNodes[endSlotIndex] = *targetNode;
     }
 
@@ -169,13 +181,13 @@ void BufferAllocator::releaseGpu(AllocationId id) {
 }
 
 void BufferAllocator::freeSlot(InternalSlotNode* node) {
-    size_t currentStartIdx = node->slot.offset / mSlotSize;
-    size_t currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
+    size_t currentStartIdx = slotIndexFromOffset(node->slot.offset);
+    size_t currentEndIdx = slotIndexFromOffset(node->slot.offset + node->slot.slotSize) - 1;
 
     // Check Previous (Left Neighbor)
     if (currentStartIdx > 0) {
         InternalSlotNode* prev = &mNodes[currentStartIdx - 1];
-        size_t prevHeadIdx = prev->slot.offset / mSlotSize;
+        size_t prevHeadIdx = slotIndexFromOffset(prev->slot.offset);
         InternalSlotNode* prevHead = &mNodes[prevHeadIdx];
 
         if (prevHead->slot.isFree()) {
@@ -207,11 +219,11 @@ void BufferAllocator::freeSlot(InternalSlotNode* node) {
             assert_invariant(node->slot.slotSize % mSlotSize == 0);
 
             // currentEndIdx increases
-            currentEndIdx = (node->slot.offset + node->slot.slotSize) / mSlotSize - 1;
+            currentEndIdx = slotIndexFromOffset(node->slot.offset + node->slot.slotSize) - 1;
         }
     }
 
-    assert_invariant(node->slot.offset / mSlotSize == currentStartIdx);
+    assert_invariant(slotIndexFromOffset(node->slot.offset) == currentStartIdx);
 
     // Push merged free block to the list
     node->freeListIterator = mFreeList.emplace(node->slot.slotSize, node);
@@ -234,12 +246,17 @@ bool BufferAllocator::isLockedByGpu(AllocationId id) const {
     return targetNode->slot.gpuUseCount > 0;
 }
 
+BufferAllocator::allocation_size_t BufferAllocator::slotIndexFromOffset(
+        allocation_size_t offset) const noexcept {
+    return offset >> mSlotSizeShift;
+}
+
 BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
         allocation_size_t offset) const {
     assert_invariant(offset % mSlotSize == 0);
 
     // The ID is 1-based since we use 0 for UNALLOCATED.
-    return (offset / mSlotSize) + 1;
+    return slotIndexFromOffset(offset) + 1;
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getAllocationSize(AllocationId id) const {

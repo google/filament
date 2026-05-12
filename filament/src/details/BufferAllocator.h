@@ -97,6 +97,7 @@ public:
     [[nodiscard]] static bool isValid(AllocationId id);
 
 private:
+    [[nodiscard]] allocation_size_t slotIndexFromOffset(allocation_size_t offset) const noexcept;
     [[nodiscard]] AllocationId calculateIdByOffset(allocation_size_t offset) const;
 
     // Having an internal node type holding the base slot node and additional information.
@@ -112,6 +113,7 @@ private:
 
     allocation_size_t mTotalSize;
     const allocation_size_t mSlotSize; // Size of a single slot in bytes
+    const uint8_t mSlotSizeShift;
     utils::FixedCapacityVector<InternalSlotNode> mNodes;
     std::multimap</*slot size*/ allocation_size_t, InternalSlotNode*> mFreeList;
 };
