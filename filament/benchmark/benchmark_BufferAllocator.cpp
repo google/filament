@@ -46,7 +46,7 @@ void retireValid(BufferAllocator& allocator, AllocationId id) {
 
 class BufferAllocatorFixture : public benchmark::Fixture {};
 
-BENCHMARK_F(BufferAllocatorFixture, allocateRetire)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateRetire)(benchmark::State& state) {
     auto const size = static_cast<allocation_size_t>(state.range(0));
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
@@ -62,7 +62,7 @@ BENCHMARK_F(BufferAllocatorFixture, allocateRetire)(benchmark::State& state) {
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK_F(BufferAllocatorFixture, allocateGpuRetireRelease)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateGpuRetireRelease)(benchmark::State& state) {
     auto const size = static_cast<allocation_size_t>(state.range(0));
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
@@ -79,7 +79,7 @@ BENCHMARK_F(BufferAllocatorFixture, allocateGpuRetireRelease)(benchmark::State& 
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK_F(BufferAllocatorFixture, allocateBatchAndRetire)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateBatchAndRetire)(benchmark::State& state) {
     auto const size = static_cast<allocation_size_t>(state.range(0));
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
     std::array<AllocationId, BATCH_SIZE> ids{};
@@ -100,7 +100,7 @@ BENCHMARK_F(BufferAllocatorFixture, allocateBatchAndRetire)(benchmark::State& st
     state.SetItemsProcessed(state.iterations() * BATCH_SIZE);
 }
 
-BENCHMARK_F(BufferAllocatorFixture, allocateFragmented)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateFragmented)(benchmark::State& state) {
     auto const size = static_cast<allocation_size_t>(state.range(0));
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
     std::array<AllocationId, BATCH_SIZE> ids{};
@@ -123,7 +123,7 @@ BENCHMARK_F(BufferAllocatorFixture, allocateFragmented)(benchmark::State& state)
     state.SetItemsProcessed(state.iterations());
 }
 
-BENCHMARK_F(BufferAllocatorFixture, reset)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BufferAllocatorFixture, reset)(benchmark::State& state) {
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
     PerformanceCounters pc(state);

@@ -71,7 +71,7 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     node->freeListIterator = mFreeList.emplace(mTotalSize, node);
 
     // Set the tail tag
-    mNodes[slotCount - 1] = *node;
+    copySlotToTail(slotCount - 1, node);
 }
 
 std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
@@ -105,7 +105,7 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
 
         // Update Tail block
         const size_t endSlotIndex = slotIndexFromOffset(offset + alignedSize) - 1;
-        mNodes[endSlotIndex] = *targetNode; // Copy Head to Tail
+        copySlotToTail(endSlotIndex, targetNode);
 
         // The Head of remaining free block
         const size_t nextSlotIndex = endSlotIndex + 1;
@@ -119,13 +119,13 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         // Update the Tail of remaining free block
         const size_t nextEndSlotIndex =
                 slotIndexFromOffset(nextNode->slot.offset + nextNode->slot.slotSize) - 1;
-        mNodes[nextEndSlotIndex] = *nextNode; // Copy Head to Tail
+        copySlotToTail(nextEndSlotIndex, nextNode);
     } else {
         // Allocate the whole block
         // Update Tail block
         const size_t endSlotIndex =
                 slotIndexFromOffset(offset + targetNode->slot.slotSize) - 1;
-        mNodes[endSlotIndex] = *targetNode;
+        copySlotToTail(endSlotIndex, targetNode);
     }
 
     return { calculateIdByOffset(offset), offset };
@@ -142,6 +142,11 @@ const BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
     assert_invariant(id > 0);
     assert_invariant(id <= mNodes.size());
     return &mNodes[id - 1];
+}
+
+void BufferAllocator::copySlotToTail(allocation_size_t tailIndex,
+        const InternalSlotNode* head) noexcept {
+    mNodes[tailIndex].slot = head->slot;
 }
 
 void BufferAllocator::retire(AllocationId id) {
@@ -229,7 +234,7 @@ void BufferAllocator::freeSlot(InternalSlotNode* node) {
     node->freeListIterator = mFreeList.emplace(node->slot.slotSize, node);
 
     // Copy Head to Tail
-    mNodes[currentEndIdx] = *node;
+    copySlotToTail(currentEndIdx, node);
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcept {

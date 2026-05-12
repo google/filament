@@ -109,6 +109,7 @@ private:
     [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id);
     [[nodiscard]] const InternalSlotNode* getNodeById(AllocationId id) const;
 
+    void copySlotToTail(allocation_size_t tailIndex, const InternalSlotNode* head) noexcept;
     void freeSlot(InternalSlotNode* node);
 
     allocation_size_t mTotalSize;
