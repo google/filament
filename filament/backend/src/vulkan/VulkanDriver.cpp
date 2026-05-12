@@ -619,6 +619,12 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vert
     mResourceManager.associateHandle(vbh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (!vbh) {
         return;
@@ -1134,6 +1140,10 @@ Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
+    return mResourceManager.allocHandle<VulkanVertexBuffer>();
+}
+
+Handle<HwVertexBuffer> VulkanDriver::createVertexBufferAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBuffer>();
 }
 

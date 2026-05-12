@@ -122,8 +122,8 @@ public:
 
     struct GLVertexBuffer : public HwVertexBuffer {
         GLVertexBuffer() noexcept = default;
-        GLVertexBuffer(uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
-                : HwVertexBuffer(vertexCount), vbih(vbih) {
+        GLVertexBuffer(uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih, bool async = false)
+                : HwVertexBuffer(vertexCount, async), vbih(vbih) {
         }
         Handle<HwVertexBufferInfo> vbih;
         struct {
@@ -408,6 +408,7 @@ private:
     void destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th);
     void destroyBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh);
     void destroyIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh);
+    void destroyVertexBufferCommon(Handle<HwVertexBuffer> vbh);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;
