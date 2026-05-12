@@ -21,12 +21,15 @@
 #include "VulkanContext.h"
 
 #include <deque>
-#include <mutex>
 #include <utility>
 #include <vector>
 
 namespace filament::backend {
 
+/**
+ * Manages the lifecycle for VkFence objects. This is not thread-safe, and all fences
+ * acquired from this pool must be acquired and freed on the backend thread.
+ */
 class VulkanFencePool {
 public:
     VulkanFencePool(VulkanContext const& context, VkDevice device, uint32_t minPoolSize);
@@ -35,6 +38,9 @@ public:
     // a fence acquired from the pool. The fence status will
     // be cleared, and the fence reclaimed, once the shared_ptr
     // goes out of scope.
+    // TODO: this is not thread-safe, and should only be allowed to
+    // go out of scope on the backend thread. We should move away
+    // from shared_ptr.
     std::shared_ptr<VulkanCmdFence> acquireFenceStatus() noexcept;
 
     // Clears idle fences, as well as cmdFences that are no longer alive.
@@ -48,7 +54,6 @@ private:
     VulkanContext const& mContext;
     const VkDevice mDevice;
     const uint32_t mMinPoolSize;
-    std::mutex mFenceListMutex;
     std::deque<std::pair<uint64_t, VkFence>> mFences;
     std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
     uint32_t mNumFences = 0;

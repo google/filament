@@ -472,10 +472,7 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const
     VulkanSync& vulkanSync = static_cast<VulkanSync&>(*sync);
     assert_invariant(vulkanSync.fenceStatus);
 
-    VkDevice device = getDevice();
-    VkExternalFenceHandleTypeFlagBits exportFlags = getFenceExportFlags();
-
-    VkFence fence = vulkanSync.fenceStatus->getVkFence();
+    const auto fence = vulkanSync.fenceStatus->getVkFence();
     if (fence == VK_NULL_HANDLE) {
         *fd = -1;
         return true;
@@ -484,14 +481,13 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const
     VkFenceGetFdInfoKHR getFdInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
         .fence = fence,
-        .handleType = exportFlags,
+        .handleType = getFenceExportFlags(),
     };
-    VkResult res = vkGetFenceFdKHR(device, &getFdInfo, fd);
+    VkResult res = vkGetFenceFdKHR(getDevice(), &getFdInfo, fd);
     if (res != VK_SUCCESS) {
         LOG(ERROR) << "Failed to convert sync to fd: " << res;
         return false;
     }
-
     return true;
 }
 

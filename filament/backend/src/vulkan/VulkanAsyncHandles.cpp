@@ -187,9 +187,7 @@ VulkanCmdFence::VulkanCmdFence(VkFence fence, std::function<void(VkFence)> recyc
 }
 
 VulkanCmdFence::~VulkanCmdFence() {
-    // Ensure the fence can't be cleared during this operation.
-    std::shared_lock rl(mLock);
-    if (mFence != VK_NULL_HANDLE && mRecycleFn != nullptr) {
+    if (mRecycleFn != nullptr) {
         mRecycleFn(mFence);
     }
 }
@@ -201,24 +199,19 @@ std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
 }
 
 VkResult VulkanCmdFence::updateStatus(VkDevice device) {
-    VkResult status = mStatus;
-    {
-        std::shared_lock rl(mLock);
-        if (mFence != VK_NULL_HANDLE) {
-            status = vkGetFenceStatus(device, mFence);
+    if (mFence != VK_NULL_HANDLE) {
+        VkResult status = vkGetFenceStatus(device, mFence);
+        if (status == VK_SUCCESS) {
+            setStatus(status);
         }
-    }
-
-    if (status == VK_SUCCESS) {
-        setStatus(status);
     }
     return mStatus;
 }
 
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     std::chrono::steady_clock::time_point const until) {
-
-    // this lock MUST be held for READ when calling vkWaitForFences()
+    // Hold the fence until we've determined we've checked the status, and
+    // want to wait on the fence.
     std::shared_lock rl(mLock);
 
     // If the vulkan fence has not been submitted yet, we need to wait for that before we
@@ -247,40 +240,26 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
 
     // If we're here, we know that vkQueueSubmit has been called (because it sets the status
     // to VK_NOT_READY).
-    // Now really wait for the fence while holding the shared_lock, this allows several
-    // threads to call vkWaitForFences(), but will prevent vkResetFence from taking
-    // place simultaneously. vkResetFence is only called once it knows the fence has signaled,
-    // which guaranties that vkResetFence won't have to wait too long, just enough for
-    // all the vkWaitForFences() to return.
-    if (mFence == VK_NULL_HANDLE) {
-        // This can happen if this is a 'completed' fence, or if
-        // the fence has been cleared because Filament is being
-        // terminated.
-        return FenceStatus::CONDITION_SATISFIED;
-    }
+    // However, since we're going to wait on the fence, and because the fence is guaranteed
+    // to stay in scope as long as this reference is still alive, we can unlock the lock here.
+    rl.unlock();
+
+    // Wait on the fence, without any lock.
     VkResult const status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
     if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
 
     if (status == VK_SUCCESS) {
-        rl.unlock();
-        std::lock_guard const wl(mLock);
-        mStatus = status;
+        setStatus(status);
         return FenceStatus::CONDITION_SATISFIED;
     }
 
     return FenceStatus::ERROR; // not supported
 }
 
-void VulkanCmdFence::clearFence() {
-    std::lock_guard const l(mLock);
-    if (mRecycleFn != nullptr) {
-        mRecycleFn(mFence);
-    }
-
-    mFence = VK_NULL_HANDLE;
-    mRecycleFn = nullptr;
+void VulkanCmdFence::swapRecycleFn(std::function<void(VkFence)> recycleFn) {
+    mRecycleFn = recycleFn;
 }
 
 } // namespace filament::backend

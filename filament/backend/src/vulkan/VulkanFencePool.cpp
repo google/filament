@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <deque>
-#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -52,9 +51,7 @@ VulkanFencePool::VulkanFencePool(VulkanContext const& context,
 std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
     VkFence fence = acquireFence();
     std::function<void(VkFence)> recycleFn = [this](VkFence fence) {
-        if (fence != VK_NULL_HANDLE) {
-            this->releaseFence(fence);
-        }
+        this->releaseFence(fence);
     };
     const auto fenceStatus = std::make_shared<VulkanCmdFence>(fence, recycleFn);
     // Store a weak pointer to the fence status, so we can clear the fence
@@ -78,7 +75,6 @@ void VulkanFencePool::gc() noexcept {
     // Lock now to avoid race conditions with other threads that may be
     // clearing fenceStatus objects, and trying to return fences to the
     // pool.
-    std::unique_lock<std::mutex> lock (mFenceListMutex);
     while (mNumFences > mMinPoolSize && !mFences.empty() &&
            mFences.front().first + TIME_BEFORE_EVICTION < mCurrFrame) {
         destroyFence(mFences.front().second);
@@ -90,9 +86,11 @@ void VulkanFencePool::gc() noexcept {
 void VulkanFencePool::terminate() noexcept {
     for (const auto& weakFenceStatus : mFenceStatuses) {
         if (const auto fenceStatus = weakFenceStatus.lock()) {
-            // Indirectly, this will return the fence to the pool,
-            // using the recycleFn.
-            fenceStatus->clearFence();
+            // Swap out the recycle function for the fence status, so that
+            // it doesn't try to return the fence to this pool.
+            fenceStatus->swapRecycleFn([device = mDevice](VkFence fence) {
+                vkDestroyFence(device, fence, VKALLOC);
+            });
         }
     }
     mFenceStatuses.clear();
@@ -108,7 +106,6 @@ void VulkanFencePool::terminate() noexcept {
 }
 
 VkFence VulkanFencePool::acquireFence() noexcept {
-    std::unique_lock<std::mutex> lock (mFenceListMutex);
     if (!mFences.empty()) {
         VkFence fence = mFences.back().second;
         mFences.pop_back();
@@ -131,7 +128,6 @@ void VulkanFencePool::releaseFence(VkFence fence) noexcept {
     vkResetFences(mDevice, 1, &fence);
 
     // Since fences may be released concurrently, make sure we lock.
-    std::unique_lock<std::mutex> lock (mFenceListMutex);
     mFences.push_back(std::make_pair(mCurrFrame, fence));
 }
 

@@ -178,12 +178,11 @@ struct VulkanCmdFence {
     }
 
     // Checks the underlying fence to see if the underlying process is complete.
-    // Updates the underlying status, and returns it.
+    // Updates the underlying status if the fence has signaled, and returns
+    // the current status.
     VkResult updateStatus(VkDevice device);
 
-    // This is safe to use in the backend thread, as the backend
-    // thread is the only thread that will be calling clearFence().
-    inline VkFence getVkFence() const {
+    inline VkFence getVkFence() {
         return mFence;
     }
 
@@ -191,7 +190,7 @@ struct VulkanCmdFence {
     // most recent tick(), checkAndUpdateStatus() has been called. Otherwise,
     // this may be out of date.
     VkResult getStatus() {
-        std::shared_lock const l(mLock);
+        std::shared_lock const rl(mLock);
         return mStatus;
     }
 
@@ -206,8 +205,8 @@ struct VulkanCmdFence {
 
 private:
     // The lifecycle of this object will often be managed by a
-    // VulkanFencePool. This allows it to clear fence handles before
-    // Filament is shut down, etc.
+    // VulkanFencePool. This allows it to update the recycle function
+    // when the pool is being terminated.
     friend class VulkanFencePool;
 
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
@@ -221,12 +220,6 @@ private:
 
     std::function<void(VkFence)> mRecycleFn;
 
-    // Clears the fence from this struct. It assumes that either
-    // a) the recycleFn was defined in the ctor, and knows how to
-    // dispose of the fence, or b) the creator of this object owns
-    // the fence.
-    void clearFence();
-
     // Updates the status of the fence, notifying all listeners of
     // mCond.
     void setStatus(VkResult const value) {
@@ -234,6 +227,11 @@ private:
         mStatus = value;
         mCond.notify_all();
     }
+
+    // Used by the fence pool when it terminates, essentially
+    // used to transfer ownership of the VkFence from the fence pool
+    // to this VulkanCmdFence.
+    void swapRecycleFn(std::function<void(VkFence)> recycleFn);
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
