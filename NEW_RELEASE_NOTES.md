@@ -6,6 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- Support attribute-less procedural rendering
 - New `coloredPenumbra` material property can be used to simulate light scattering in shadow 
   transitions. See Filament's material guide for more information
