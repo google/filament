@@ -210,41 +210,41 @@ VkResult VulkanCmdFence::updateStatus(VkDevice device) {
 
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     std::chrono::steady_clock::time_point const until) {
-    // Hold the fence until we've determined we've checked the status, and
-    // want to wait on the fence.
-    std::shared_lock rl(mLock);
+    {
+        // Hold the fence until we've determined we've checked the status, and
+        // want to wait on the fence.
+        std::shared_lock rl(mLock);
 
-    // If the vulkan fence has not been submitted yet, we need to wait for that before we
-    // can use vkWaitForFences()
-    if (mStatus == VK_INCOMPLETE) {
-        bool const success = mCond.wait_until(rl, until, [this] {
-            // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
-            // When this fence gets submitted, its status changes to VK_NOT_READY.
-            return mStatus != VK_INCOMPLETE || mCanceled;
-        });
-        if (!success) {
-            // !success indicates a timeout or cancel
-            return mCanceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
+        // If the vulkan fence has not been submitted yet, we need to wait for that before we
+        // can use vkWaitForFences()
+        if (mStatus == VK_INCOMPLETE) {
+            bool const success = mCond.wait_until(rl, until, [this] {
+                // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
+                // When this fence gets submitted, its status changes to VK_NOT_READY.
+                return mStatus != VK_INCOMPLETE || mCanceled;
+            });
+            if (!success) {
+                // !success indicates a timeout or cancel
+                return mCanceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
+            }
         }
-    }
 
-    // The fence could have already signaled, avoid calling into vkWaitForFences()
-    if (mStatus == VK_SUCCESS) {
-        return FenceStatus::CONDITION_SATISFIED;
-    }
+        // The fence could have already signaled, avoid calling into vkWaitForFences()
+        if (mStatus == VK_SUCCESS) {
+            return FenceStatus::CONDITION_SATISFIED;
+        }
 
-    // Or it could have been canceled, return immediately
-    if (mCanceled) {
-        return FenceStatus::ERROR;
+        // Or it could have been canceled, return immediately
+        if (mCanceled) {
+            return FenceStatus::ERROR;
+        }
     }
 
     // If we're here, we know that vkQueueSubmit has been called (because it sets the status
     // to VK_NOT_READY).
     // However, since we're going to wait on the fence, and because the fence is guaranteed
-    // to stay in scope as long as this reference is still alive, we can unlock the lock here.
-    rl.unlock();
-
-    // Wait on the fence, without any lock.
+    // to stay in scope as long as this VulkanCmdFence is still alive, we do not need a lock
+    // here.
     VkResult const status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
     if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
