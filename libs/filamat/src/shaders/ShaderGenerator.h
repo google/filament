@@ -20,8 +20,6 @@
 
 #include "MaterialInfo.h"
 
-#include "UibGenerator.h"
-
 #include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
@@ -35,9 +33,6 @@
 #include <utils/sstream.h>
 
 #include <string>
-
-#include <stdint.h>
-#include <stddef.h>
 
 namespace filamat {
 

@@ -26,7 +26,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float diffuse = diffuse(pixel.roughness, shading_NoV, NoL, LoH);
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Energy conservative wrap diffuse to simulate subsurface scattering
-    diffuse *= Fd_Wrap(dot(shading_normal, light.l), 0.5);
+    diffuse *= Fd_Wrap(NoL, 0.5);
 #endif
 
     // We do not multiply the diffuse term by the Fresnel term as discussed in
@@ -37,11 +37,22 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Cheap subsurface scatter
     Fd *= saturate(pixel.subsurfaceColor + NoL);
+
+#if defined(HAS_COLORED_PENUMBRA)
+    vec3 penumbraColor = Fd * saturate(pixel.subsurfaceColor);
+    Fd = mix(penumbraColor, Fd, pow4(occlusion));
+#endif
+
     // We need to apply NoL separately to the specular lobe since we already took
     // it into account in the diffuse lobe
     vec3 color = Fd + Fr * NoL;
     color *= light.colorIntensity.rgb * (light.colorIntensity.w * light.attenuation * occlusion);
 #else
+#if defined(HAS_COLORED_PENUMBRA)
+    vec3 penumbraColor = min(vec3(1.0 / PI), Fd / (2.0 * (1.0 - pixel.diffuseColor)));
+    Fd = mix(penumbraColor, Fd, pow4(occlusion));
+#endif
+
     vec3 color = Fd + Fr;
     color *= light.colorIntensity.rgb * (light.colorIntensity.w * light.attenuation * NoL * occlusion);
 #endif
