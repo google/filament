@@ -65,10 +65,14 @@ struct HwVertexBufferInfo : public HwBase {
 struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount{};               //   4
     uint8_t bufferObjectsVersion{0xff};   //   1
-    bool padding[3]{};                    //   2
-    HwVertexBuffer() noexcept = default;
-    explicit HwVertexBuffer(uint32_t vertextCount) noexcept
-            : vertexCount(vertextCount) {
+    struct {
+        uint8_t asynchronous : 1;
+        uint8_t reserved : 7;
+    };
+    bool padding[2]{};                    //   2
+    HwVertexBuffer() noexcept : asynchronous{}, reserved{} {}
+    explicit HwVertexBuffer(uint32_t vertexCount, bool async = false) noexcept
+            : vertexCount(vertexCount), asynchronous(async), reserved{} {
     }
 };
 
@@ -224,14 +228,14 @@ public:
         std::unique_lock lock(mFenceMutex);
         bool errorObserved = false;
         bool success = mFenceCondition.wait_until(lock, until, [&]() {
-            return predicate() || 
+            return predicate() ||
                     (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
         });
-        
+
         if (UTILS_VERY_UNLIKELY(errorObserved)) {
             return FenceStatus::ERROR;
         }
-        
+
         return success ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
     }
 
@@ -244,10 +248,10 @@ public:
         std::unique_lock lock(mFenceMutex);
         bool errorObserved = false;
         mFenceCondition.wait(lock, [&]() {
-            return predicate() || 
+            return predicate() ||
                     (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
         });
-        
+
         if (UTILS_VERY_UNLIKELY(errorObserved)) {
             return FenceStatus::ERROR;
         }
