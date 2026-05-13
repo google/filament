@@ -20,15 +20,29 @@
 
 /// initWebGPU ::function:: Asynchronously initializes the WebGPU adapter and device.
 /// This must be awaited before initializing the Filament Engine with the WebGPU backend.
+///
+/// WebGPU initialization is performed here in JS because the browser APIs (requestAdapter, requestDevice)
+/// are asynchronous and return Promises, which are difficult to handle synchronously within WASM.
 /// ::retval:: Promise that resolves when WebGPU is ready.
 Filament.initWebGPU = async function() {
     if (!navigator.gpu) {
         throw new Error("WebGPU is not supported by this browser.");
     }
-    const adapter = await navigator.gpu.requestAdapter();
+    const adapter = await navigator.gpu.requestAdapter({ requestAdapterInfo: true });
     if (!adapter) {
         throw new Error("No appropriate WebGPU adapter found.");
     }
+
+    // Print adapter information (equivalent to printAdapterDetails in C++)
+    if (adapter.info) {
+        console.log("WebGPU adapter info:", {
+            vendor: adapter.info.vendor,
+            architecture: adapter.info.architecture,
+            device: adapter.info.device,
+            description: adapter.info.description
+        });
+    }
+
     const requiredFeatures = [];
     const optionalFeatures = [
         'immediates',
