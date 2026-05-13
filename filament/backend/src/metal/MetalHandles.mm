@@ -634,8 +634,8 @@ MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t buff
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
-        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih, bool async)
+    : HwVertexBuffer(vertexCount, async), vbih(vbih), buffers(bufferCount, nullptr) {
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,

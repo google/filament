@@ -426,6 +426,10 @@ Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
     return allocHandle<WebGPUVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferAsyncS() noexcept {
+    return allocHandle<WebGPUVertexBuffer>();
+}
+
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
     return allocHandle<WebGPUDescriptorSet>();
 }
@@ -537,6 +541,13 @@ void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle
     constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
             vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
     setDebugTag(vertexBufferHandle.getId(), std::move(tag));
+}
+
+void WebGPUDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
