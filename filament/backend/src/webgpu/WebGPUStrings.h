@@ -36,10 +36,7 @@
 
 namespace filament::backend {
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
-        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
-        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)\
-        || FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+#ifndef NDEBUG
 template<typename WebGPUPrintable>
 [[nodiscard]] inline std::string webGPUPrintableToString(const WebGPUPrintable printable) {
     std::stringstream out;

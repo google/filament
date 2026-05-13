@@ -683,12 +683,8 @@ endif()
 if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
-
-# WebGPU has a proposal to add push constants at https://github.com/gpuweb/gpuweb/blob/main/proposals/push-constants.md
-# With WebGPU, Tint does not support ClipDistance which is used in Stereo.  Mentioned in comment
-# https://github.com/google/dawn/blob/855d17b08abdf02f9142bf5a8f14d0ea088810a4/src/tint/lang/spirv/reader/ast_parser/function.cc#L4434
 if (FILAMENT_SUPPORTS_WEBGPU)
-    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu --variant-filter=stereo)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu)
 endif()
 
 # Enable debug info (preserves names in SPIR-V)
