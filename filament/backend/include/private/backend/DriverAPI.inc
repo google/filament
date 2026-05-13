@@ -189,6 +189,13 @@ DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferHandle, createVertexBuffer,
         uint32_t, vertexCount,
         backend::VertexBufferInfoHandle, vbih)
 
+DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferHandle, createVertexBufferAsync,
+        uint32_t, vertexCount,
+        backend::VertexBufferInfoHandle, vbih,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
 DECL_DRIVER_API_TAGGED_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
         uint32_t, indexCount,

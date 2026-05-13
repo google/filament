@@ -1,1 +1,3 @@
 textual>=0.52.0
+Pillow
+numpy
