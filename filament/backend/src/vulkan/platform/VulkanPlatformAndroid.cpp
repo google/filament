@@ -76,6 +76,16 @@ bool isFormatSrgb(VkFormat format) {
   return format == VK_FORMAT_R8G8B8A8_SRGB || format == VK_FORMAT_R8G8B8_SRGB;
 }
 
+#ifndef AHARDWAREBUFFER_FORMAT_YV12
+#define AHARDWAREBUFFER_FORMAT_YV12 0x32315659 //842094169
+#endif
+bool isSoftwareDecodedYUV(uint32_t format, uint64_t usage){
+    bool const isYV12 = (format == AHARDWAREBUFFER_FORMAT_YV12);
+    bool const isFlexYUV = (format == AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420);
+    bool const hasCpuWrite = (usage & AHARDWAREBUFFER_USAGE_CPU_WRITE_MASK) != 0;
+    return (isYV12||isFlexYUV) && hasCpuWrite;
+}
+
 bool isProtectedFromUsage(uint64_t usage) {
     return usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
 }
@@ -268,22 +278,86 @@ VulkanPlatformAndroid::ExternalImageDescAndroid VulkanPlatformAndroid::getExtern
     };
 }
 
-VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImageMetadata(
-        ExternalImageHandleRef image) const {
-    auto const* fvkExternalImage = static_cast<ExternalImageVulkanAndroid const*>(image.get());
+bool VulkanPlatformAndroid::copyExternalImageToMemory(
+        ExternalImageHandleRef image, void* dstData, uint32_t w, uint32_t h) const {
 
-    ExternalImageMetadata metadata = {};
+    auto const* fvkExternalImage = static_cast<ExternalImageVulkanAndroid const*>(image.get());
     AHardwareBuffer* buffer = fvkExternalImage->aHardwareBuffer;
+    if (!buffer) return false;
+
+    uint32_t const yPlaneSize = w * h;
+    uint32_t const chromaWidth = w / 2;
+    uint32_t const chromaHeight = h / 2;
+
+    uint8_t* dstBytes = static_cast<uint8_t*>(dstData);
+    uint8_t* yDst = dstBytes;
+    uint8_t* uvDst = dstBytes + yPlaneSize;
+
+    //https://developer.android.com/ndk/reference/group/a-hardware-buffer#ahardwarebuffer_lockplanes:
+    // YUV formats are always represented by three separate planes of data, one for each color plane.
+    // The order of planes in the array is guaranteed such that plane #0 is always Y,
+    // plane #1 is always U (Cb), and plane #2 is always V (Cr).
+    // All other formats are represented by a single plane.
+    if (__builtin_available(android 29, *)) {
+        AHardwareBuffer_Planes planes;
+        if (AHardwareBuffer_lockPlanes(buffer, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, nullptr, &planes) == 0) {
+
+            // Copy luminance
+            uint8_t* ySrc = static_cast<uint8_t*>(planes.planes[0].data);
+            uint32_t yRowStride = planes.planes[0].rowStride;
+            for (uint32_t row = 0; row < h; ++row) {
+                memcpy(yDst + (row * w), ySrc + (row * yRowStride), w);
+            }
+
+            // Encode packed Cb/Cr based on NV12 spec
+            uint8_t* uSrc = static_cast<uint8_t*>(planes.planes[1].data);
+            uint32_t uRowStride = planes.planes[1].rowStride;
+            uint32_t uPixelStride = planes.planes[1].pixelStride;
+
+            uint8_t* vSrc = static_cast<uint8_t*>(planes.planes[2].data);
+            uint32_t vRowStride = planes.planes[2].rowStride;
+            uint32_t vPixelStride = planes.planes[2].pixelStride;
+
+            for (uint32_t row = 0; row < chromaHeight; ++row) {
+                uint8_t* uvRowDst = uvDst + (row * w);
+                uint8_t* uRowSrc = uSrc + (row * uRowStride);
+                uint8_t* vRowSrc = vSrc + (row * vRowStride);
+
+                for (uint32_t col = 0; col < chromaWidth; ++col) {
+                    uvRowDst[col * 2 + 0] = uRowSrc[col * uPixelStride];
+                    uvRowDst[col * 2 + 1] = vRowSrc[col * vPixelStride];
+                }
+            }
+            AHardwareBuffer_unlock(buffer, nullptr);
+            return true;
+        }
+        LOG(ERROR) << "[VulkanPlatformAndroid::copyExternalImageToMemory] AHardwareBuffer_lockPlanes failed";
+    } else {
+        LOG(ERROR) << "no fallback path in extractExternalImageMetadata [Android 26]";
+    }
+    return false;
+}
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImageMetadata(
+    ExternalImageHandleRef image) const {
     if (__builtin_available(android 26, *)) {
+        auto const *fvkExternalImage = static_cast<ExternalImageVulkanAndroid const *>(image.get());
+        AHardwareBuffer *buffer = fvkExternalImage->aHardwareBuffer;
+        ExternalImageMetadata metadata = {};
+
         AHardwareBuffer_Desc bufferDesc;
         AHardwareBuffer_describe(buffer, &bufferDesc);
+
         metadata.width = bufferDesc.width;
         metadata.height = bufferDesc.height;
         metadata.layers = bufferDesc.layers;
+        metadata.samples = VK_SAMPLE_COUNT_1_BIT;
+        metadata.isSoftwareDecodedYUV = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
+
         std::tie(metadata.format, metadata.usage) =
-                getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
+            getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
         std::tie(metadata.filamentFormat, metadata.filamentUsage) =
-                getFilamentFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
+            getFilamentFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
 
         if (isProtectedFromUsage(bufferDesc.usage)) {
             metadata.filamentUsage |= TextureUsage::PROTECTED;
@@ -294,55 +368,87 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         if (any(metadata.filamentUsage & TextureUsage::BLIT_SRC)) {
             metadata.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         }
-
         if (any(metadata.filamentUsage & (TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE))) {
             metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         }
-    }
-    metadata.samples = VK_SAMPLE_COUNT_1_BIT;
 
-    VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
-        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
-    };
-    VkAndroidHardwareBufferPropertiesANDROID properties = {
-        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
-        .pNext = &formatInfo,
-    };
-    VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &properties);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
+            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
+        };
+        VkAndroidHardwareBufferPropertiesANDROID properties = {
+            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+            .pNext = &formatInfo,
+        };
+        VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &properties);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkGetAndroidHardwareBufferProperties failed with error="
             << static_cast<int32_t>(result);
-    VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
-    FILAMENT_CHECK_POSTCONDITION(metadata.format == bufferPropertiesFormat)
+
+        VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
+        FILAMENT_CHECK_POSTCONDITION(metadata.format == bufferPropertiesFormat)
             << "mismatched image format( " << metadata.format << ") and queried format("
             << bufferPropertiesFormat << ") for external image (AHB)";
 
-    bool const requiresConversion =
-        metadata.format == VK_FORMAT_UNDEFINED ||
-        fvkutils::isVKYcbcrConversionFormat(metadata.format);
-    if (requiresConversion) {
-      metadata.format = VK_FORMAT_UNDEFINED;
-      metadata.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-      metadata.externalFormat = formatInfo.externalFormat;
-    } else {
-      metadata.externalFormat = 0;
+        metadata.allocationSize = properties.allocationSize;
+        metadata.memoryTypeBits = properties.memoryTypeBits;
+
+        metadata.isChromaConversionRequired =
+            metadata.format == VK_FORMAT_UNDEFINED ||
+            fvkutils::isVKYcbcrConversionFormat(metadata.format);
+
+        // After more discussion we decided to take the driver's suggestion for these fields.
+        // Note: It is unclear how the driver are getting this information as in the use case
+        // we are looking into for this YV12 the Qualcomm driver isn't involved in the decoding
+        // of the data. My assumption is that it is looking at the gralloc/AHB* metadata.
+        metadata.ycbcrModel = formatInfo.suggestedYcbcrModel;
+        metadata.ycbcrRange = formatInfo.suggestedYcbcrRange;
+        metadata.ycbcrConversionComponents = formatInfo.samplerYcbcrConversionComponents;
+        metadata.xChromaOffset = formatInfo.suggestedXChromaOffset;
+        metadata.yChromaOffset = formatInfo.suggestedYChromaOffset;
+
+        // Although both HW and SW require YUV --> RGB conversion, the sw path relies on
+        // standards ones. The hardware path is more platform specific.
+        if (metadata.isSoftwareDecodedYUV) {
+
+            // We use  metadata.usage when we crate the final image in the staged path
+            // so we do need to encode the VK_IMAGE_USAGE_TRANSFER_DST_BIT on top of usual SAMPLED_BIT
+            metadata.format = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM;
+            metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            metadata.externalFormat = 0;
+        } else if (metadata.isChromaConversionRequired) {
+
+            // In the YUV hardware path we do not require the staging data so no T_DST
+            // also VkAndroidHardwareBufferFormatPropertiesANDROID supplies most of the conversion
+            // details.
+            metadata.format = VK_FORMAT_UNDEFINED;
+            metadata.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+            metadata.externalFormat = formatInfo.externalFormat;
+        } else {
+
+            // Non YUV path
+            metadata.externalFormat = 0;
+        }
+
+        return metadata;
     }
-
-    metadata.allocationSize = properties.allocationSize;
-    metadata.memoryTypeBits = properties.memoryTypeBits;
-
-    metadata.ycbcrConversionComponents = formatInfo.samplerYcbcrConversionComponents;
-    metadata.ycbcrModel = formatInfo.suggestedYcbcrModel;
-    metadata.ycbcrRange = formatInfo.suggestedYcbcrRange;
-    metadata.xChromaOffset = formatInfo.suggestedXChromaOffset;
-    metadata.yChromaOffset = formatInfo.suggestedYChromaOffset;
-
-    return metadata;
+    else {
+        LOG(ERROR) << "no fallback path in extractExternalImageMetadata [Android 26]";
+        return {};
+    }
 }
 
 VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
-        ExternalImageHandleRef externalImage) const {
+        ExternalImageHandleRef externalImage,
+        uint32_t logicalWidth, uint32_t logicalHeight) const {
     auto metadata = extractExternalImageMetadata(externalImage);
+    if(metadata.isSoftwareDecodedYUV) {
+        // Note: This might be contencious since we need to know who we can trust,
+        // is it the ExternalImageHandleRef or the caller to the Filament API?
+        // What is clear is that in the software decoded path, on Android, the
+        // ExternalImageHandleRef advertises the padded width allocation.
+        metadata.width = logicalWidth;
+        metadata.height = logicalHeight;
+    }
 
     auto const* fvkExternalImage =
             static_cast<ExternalImageVulkanAndroid const*>(externalImage.get());
@@ -351,7 +457,8 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     VkDevice const device = getDevice();
     VkPhysicalDevice const physicalDevice = getPhysicalDevice();
     auto buildImage = [&](ExternalImageMetadata const& metadata) {
-        bool const isExternal = metadata.externalFormat != 0;
+        bool const isExternalFormat = metadata.isChromaConversionRequired &&
+            !metadata.isSoftwareDecodedYUV;
         VkExternalFormatANDROID const externalFormat = {
             .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
             .pNext = nullptr,
@@ -359,7 +466,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         };
         VkExternalMemoryImageCreateInfo externalCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
-            .pNext = isExternal ? &externalFormat : nullptr,
+            .pNext = isExternalFormat ? &externalFormat : nullptr,
             .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
         };
 
@@ -409,8 +516,8 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     };
 
     auto allocMem = [&](VkImage image, ExternalImageMetadata const& metadata) {
-        bool const isExternal = metadata.externalFormat != 0;
-        // Allocate the memory
+    bool const isExternalFormat = metadata.isChromaConversionRequired &&
+            !metadata.isSoftwareDecodedYUV;
         VkImportAndroidHardwareBufferInfoANDROID const androidHardwareBufferInfo = {
             .sType = VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
             .buffer = buffer,
@@ -421,8 +528,9 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .image = image,
             .buffer = VK_NULL_HANDLE,
         };
+
         VkMemoryPropertyFlags requiredMemoryFlags =
-                !isExternal && any(metadata.filamentUsage & TextureUsage::UPLOADABLE)
+                !isExternalFormat && any(metadata.filamentUsage & TextureUsage::UPLOADABLE)
                         ? VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                         : VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
@@ -442,22 +550,104 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         VkDeviceMemory memory;
         VkResult result = vkAllocateMemory(device, &allocInfo, VKALLOC, &memory);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "vkAllocateMemory failed with error=" << static_cast<int32_t>(result);
-        result = vkBindImageMemory(getDevice(), image, memory, 0);
+            << "vkAllocateMemory failed with error=" << static_cast<int32_t>(result);
+        result = vkBindImageMemory(device, image, memory, 0);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "vkBindImageMemory error=" << static_cast<int32_t>(result);
+            << "vkBindImageMemory error=" << static_cast<int32_t>(result);
+
         return memory;
     };
 
     VulkanPlatform::ImageData::Bundle internal = {}, external = {};
-    auto img = buildImage(metadata);
-    auto mem = allocMem(img, metadata);
+    if (metadata.isSoftwareDecodedYUV) {
 
-    // Note that we're always choosing a non-externally sampled format if it exists.
-    if (metadata.externalFormat == 0) {
-        internal = { img, mem };
+        uint32_t const w = metadata.width;
+        uint32_t const h = metadata.height;
+        uint32_t const yPlaneSize = w * h;
+        uint32_t const chromaPlaneSize = (w / 2) * (h / 2);
+        uint32_t const totalBufferSize = yPlaneSize + (chromaPlaneSize * 2);
+
+        // Staging buffer used as a source for the buffer to image blit AND AHB* cpu copy
+        VkBufferCreateInfo const bufferInfo = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = totalBufferSize,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        };
+        VkBuffer stagingBuffer;
+        vkCreateBuffer(device, &bufferInfo, VKALLOC, &stagingBuffer);
+
+        // Allocate standard Host-Visible memory for the buffer
+        VkMemoryRequirements bufMemReqs;
+        vkGetBufferMemoryRequirements(device, stagingBuffer, &bufMemReqs);
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+        uint32_t const bufMemTypeIndex =
+                VulkanContext::selectMemoryType(memoryProperties, bufMemReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        VkMemoryAllocateInfo const bufAllocInfo = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = bufMemReqs.size,
+            .memoryTypeIndex = bufMemTypeIndex,
+        };
+        VkDeviceMemory stagingMemory;
+        // @TODO: When this CL gets stubmitted to github, we need to revisit this
+        vkAllocateMemory(device, &bufAllocInfo, VKALLOC, &stagingMemory);
+        vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
+
+        // metadata.format, will be packed accordingly if YV12 (in extractExternalImageMetadata)
+        VkImageCreateInfo const imageInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .flags = 0,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = metadata.format,
+            .extent = { w, h, 1u },
+            .mipLevels = 1,
+            .arrayLayers = metadata.layers,
+            .samples = metadata.samples,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = metadata.usage, // Correctly contains DST | SAMPLED based on our metadata tweak
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+        VkImage finalTextureImage;
+        vkCreateImage(device, &imageInfo, VKALLOC, &finalTextureImage);
+
+        // The final image is a normal YUV sampled source extractExternalImageMetadata encoded the details
+        VkMemoryRequirements imgMemReqs;
+        vkGetImageMemoryRequirements(device, finalTextureImage, &imgMemReqs);
+        uint32_t const imgMemTypeIndex =
+                VulkanContext::selectMemoryType(memoryProperties, imgMemReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        VkMemoryAllocateInfo const imgAllocInfo = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = imgMemReqs.size,
+            .memoryTypeIndex = imgMemTypeIndex,
+        };
+        VkDeviceMemory finalTextureMem;
+        vkAllocateMemory(device, &imgAllocInfo, VKALLOC, &finalTextureMem);
+        vkBindImageMemory(device, finalTextureImage, finalTextureMem, 0);
+
+        // Pack the result
+        internal.image = finalTextureImage;
+        internal.memory = finalTextureMem;
+        internal.stagingBuffer = stagingBuffer;
+        internal.stagingMemory = stagingMemory;
+
     } else {
-        external = { img, mem };
+        // Fall in this case for hardware decoded frames
+        auto img = buildImage(metadata);
+        auto mem = allocMem(img, metadata);
+
+        if (metadata.externalFormat == 0) {
+            internal.image = img;
+            internal.memory = mem;
+        } else {
+            external.image = img;
+            external.memory = mem;
+        }
     }
 
     return {

@@ -64,6 +64,69 @@ namespace filament::backend {
 
 namespace {
 
+void updateYUVStagingTexture(VulkanPlatform* platform, VulkanCommandBuffer& commands,
+        resource_ptr<VulkanTexture> texture) {
+    Platform::ExternalImageHandle externalHandle = texture->getYUVStagingHandle();
+
+    uint32_t const w = texture->width;
+    uint32_t const h = texture->height;
+    uint32_t const yPlaneSize = w * h;
+    uint32_t const chromaWidth = w / 2;
+    uint32_t const chromaHeight = h / 2;
+    uint32_t const totalBufferSize = yPlaneSize + (chromaWidth * chromaHeight * 2);
+
+    VkBuffer stagingBuffer = texture->getYUVStagingBuffer();
+    VkDeviceMemory stagingMemory = texture->getYUVStagingMemory();
+    VkDevice device = platform->getDevice();
+
+    // CPU mapped data
+    void* mappedData;
+    vkMapMemory(device, stagingMemory, 0, totalBufferSize, 0, &mappedData);
+
+    // Rely on platform code for the copy from the internal handle.
+    // we assumed NV12 encoding, and Android we rely on per place access API which means we are free
+    // to pick the encoding into the VkBuffer and we choose the NV12 format.
+    if (platform->copyExternalImageToMemory(externalHandle, mappedData, w, h)) {
+        // Just making sure it has not memory coherency issues
+        VkMappedMemoryRange flushRange = {
+            .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+            .pNext = nullptr,
+            .memory = stagingMemory,
+            .offset = 0,
+            .size = VK_WHOLE_SIZE,
+        };
+        vkFlushMappedMemoryRanges(device, 1, &flushRange);
+    }
+    vkUnmapMemory(device, stagingMemory);
+
+    // Set the barrier to transfer destination
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::TRANSFER_DST);
+    VkCommandBuffer cmdbuf = commands.buffer();
+
+    VkBufferImageCopy regions[2] = {};
+
+    // Offset zero is luma
+    regions[0].bufferOffset = 0;
+    regions[0].imageSubresource = {VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1};
+    regions[0].imageExtent = {w, h, 1};
+
+    // We know the chroma packing (see comments near copyExternalImageToMemory)
+    regions[1].bufferOffset = yPlaneSize;
+    regions[1].imageSubresource = {VK_IMAGE_ASPECT_PLANE_1_BIT, 0, 0, 1};
+    regions[1].imageExtent = {chromaWidth, chromaHeight, 1};
+
+    commands.acquire(texture);
+
+    // Split copies because of some issue copying both places at once.
+    // @TODO: When this CL gets stubmitted to github, we need to revisit this
+    vkCmdCopyBufferToImage(cmdbuf, stagingBuffer, texture->getVkImage(),
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &regions[0]);
+    vkCmdCopyBufferToImage(cmdbuf, stagingBuffer, texture->getVkImage(),
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &regions[1]);
+
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
+}
+
 VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevice,
         VkDevice device) {
     VmaAllocator allocator;
@@ -513,6 +576,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         mAppState.hasBoundExternalImages = true;
         set->isAnExternalSamplerBound = true;
         set->isLayoutDirty = true;
+
+        // For YUV staging we need to perform a copy each time the descriptor set is updated
+        // not that this is brittle and should the video patch change,  this will break.
+        if(texture->isYUVStaging()) {
+            updateYUVStagingTexture(mPlatform, mCommands.get(), texture);
+        }
+
     } else if (bool(texture->getStream())) {
         mStreamedImageManager.bindStreamedTexture(set, binding, texture, params);
         // TODO: Fix the stream flow!! In this case the binded image doesnt have to be one
@@ -746,7 +816,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // assert_invariant(format == metadata.filamentFormat);
     // assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+    auto imgData = mPlatform->createVkImageFromExternal(externalImage, width, height);
 
     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -767,14 +837,16 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
             mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
-            vkformat, conversion, metadata.samples, metadata.width, metadata.height,
+            vkformat, conversion,
+            imgData.internal.stagingMemory, imgData.internal.stagingBuffer, externalImage,
+            metadata.samples, metadata.width, metadata.height,
             metadata.layers, usage, mStagePool);
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
     texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
-    if (imgData.external.valid()) {
+    if (imgData.external.valid() || texture->isYUVStaging()) {
         mExternalImageManager.addExternallySampledTexture(texture, conversion);
     }
 
@@ -1399,7 +1471,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 if (!texture) {
                     auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-                    auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage, texture->width, texture->height);
 
                     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -1421,7 +1493,9 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
                     auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager,
                             mContext, mPlatform->getDevice(), mAllocator, &mResourceManager,
-                            &mCommands, vkimage, memory, vkformat, conversion, metadata.samples,
+                            &mCommands, vkimage, memory, vkformat, conversion,
+                            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+                            metadata.samples,
                             metadata.width, metadata.height, metadata.layers,
                             metadata.filamentUsage, mStagePool);
 

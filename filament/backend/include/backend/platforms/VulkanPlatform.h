@@ -425,6 +425,17 @@ public:
          * Ycbcr y chroma offset
          */
         VkChromaLocation yChromaOffset;
+
+        /*
+         * YUV is software decoded (YV12 or 8Cb8Cr8_420)
+         */
+       bool isSoftwareDecodedYUV;
+
+       /*
+        * Adding an explicit field for chroma conversion
+        * requirement.
+        */
+       bool isChromaConversionRequired;
     };
 
 
@@ -434,10 +445,19 @@ public:
         return {};
     }
 
+    // We need a platform agnostic way to copy from ExternalImageHandleRef for the YUV staging path
+    virtual bool copyExternalImageToMemory(ExternalImageHandleRef image, void* dstData,
+            uint32_t width, uint32_t height) const {
+        return false;
+    }
+
     struct ImageData {
         struct Bundle {
             VkImage image = VK_NULL_HANDLE;
             VkDeviceMemory memory = VK_NULL_HANDLE;
+            // For CPU decoded YUV images we need a CPU staging buffer
+            VkBuffer stagingBuffer = VK_NULL_HANDLE;
+            VkDeviceMemory stagingMemory = VK_NULL_HANDLE;
 
             inline bool valid() const noexcept {
                 return image != VK_NULL_HANDLE;
@@ -452,7 +472,8 @@ public:
         Bundle external;
     };
 
-    virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const {
+    virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image,
+            uint32_t logicalWidth, uint32_t logicalHeight) const {
         return {};
     }
 
