@@ -302,7 +302,19 @@ static_assert(ABSL_INTERNAL_INLINE_NAMESPACE_STR[0] != 'h' ||
 #if (defined(__clang__) && !defined(_WIN32)) ||           \
     (defined(__CUDACC__) && __CUDACC_VER_MAJOR__ >= 9) || \
     (defined(__GNUC__) && !defined(__clang__) && !defined(__CUDACC__))
-#define ABSL_HAVE_INTRINSIC_INT128 1
+
+// Disable int128 instrinsic on arm when asan is enabled
+#if defined(__arm__) || defined(__aarch64__)
+    #if defined(__has_feature) || defined(__SANITIZE_ADDRESS__)
+        #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+            #define ABSL_ASAN_ON_ARM_DISABLE_INT128 1
+        #endif
+    #endif
+#endif
+#ifndef ABSL_ASAN_ON_ARM_DISABLE_INT128
+    #define ABSL_HAVE_INTRINSIC_INT128 1
+#endif
+
 #elif defined(__CUDACC__)
 // __CUDACC_VER__ is a full version number before CUDA 9, and is defined to a
 // string explaining that it has been removed starting with CUDA 9. We use

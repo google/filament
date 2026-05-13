@@ -124,7 +124,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
             list(APPEND SRCS src/opengl/platforms/CocoaExternalImage.mm)
         endif()
-    elseif (WEBGL)
+    elseif (WASM)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
         if (FILAMENT_SUPPORTS_X11)
@@ -358,6 +358,11 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatformAndroid.h
             src/webgpu/platform/WebGPUPlatformAndroid.cpp
         )
+    elseif (WASM)
+        list(APPEND SRCS
+            include/backend/platforms/WebGPUPlatformWasm.h
+            src/webgpu/platform/WebGPUPlatformWasm.cpp
+        )
     endif()
 
     if (TNT_DEV)
@@ -431,8 +436,8 @@ if (FILAMENT_USE_ABSEIL_LOGGING)
     target_link_libraries(${TARGET} PRIVATE absl::log)
 endif()
 
-# Android, iOS, and WebGL do not use bluegl.
-if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
+# Android, iOS, and WASM do not use bluegl.
+if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WASM)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
 
@@ -441,7 +446,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
     target_link_libraries(${TARGET} PRIVATE webgpu_dawn dawncpp_headers)
 endif()
 
@@ -463,7 +468,7 @@ if (MSVC)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
-elseif(WEBGL)
+elseif(WASM)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
 elseif(FILAMENT_USING_GCC)
@@ -559,7 +564,7 @@ install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 
-if (FILAMENT_SUPPORTS_WEBGPU)
+if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
     install(TARGETS webgpu_dawn ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 endif()
 
@@ -699,7 +704,7 @@ if (FILAMENT_BUILD_TESTING)
     # ==================================================================================================
     # Compute tests
     #
-    #if (NOT IOS AND NOT WEBGL)
+    #if (NOT IOS AND NOT WASM)
     #
     #add_executable(compute_test
     #        test/ComputeTest.cpp

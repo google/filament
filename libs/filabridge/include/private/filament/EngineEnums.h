@@ -138,7 +138,7 @@ constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
 //     https://crbug.com/1348363 Lighting looks wrong with D3D11 but not OpenGL
 // Note that __EMSCRIPTEN__ is not defined when running matc, but that's okay because we're
 // actually using a specification constant.
-#if defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__) && !defined(FILAMENT_SUPPORTS_WEBGPU)
 constexpr size_t CONFIG_MAX_INSTANCES = 8;
 #else
 constexpr size_t CONFIG_MAX_INSTANCES = 64;

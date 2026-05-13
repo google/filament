@@ -19,6 +19,11 @@
 #include <utils/StructureOfArrays.h>
 #include <math/vec4.h>
 
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <utility>
+
 using namespace filament::math;
 using namespace utils;
 
@@ -71,7 +76,7 @@ TEST(StructureOfArraysTest, Iterator) {
     EXPECT_EQ(soa.elementAt<0>(2), 3.0f);
 
     for (size_t i = 0; i < 8; i++) {
-        soa.elementAt<0>(i) = (float)std::rand();
+        soa.elementAt<0>(i) = float(std::rand());
         soa.elementAt<1>(i) = soa.elementAt<0>(i) * 2;
         soa.elementAt<2>(i) = soa.elementAt<0>(i) * 4;
     }
@@ -103,7 +108,7 @@ TEST(StructureOfArraysTest, Simple) {
         soa.elementAt<2>(i) = i * 4;
     }
 
-    size_t capacity = soa.capacity();
+    size_t const capacity = soa.capacity();
 
     // check that each array doesn't overlap the previous one
     EXPECT_TRUE((void*)soa.data<1>() >= (void*)(soa.data<0>() + capacity));
@@ -181,5 +186,44 @@ TEST(StructureOfArraysTest, MoveOnly) {
     EXPECT_EQ(soa.size(), 2);
     EXPECT_EQ(*soa.elementAt<1>(0).get(), 1);
     EXPECT_EQ(*soa.elementAt<1>(1).get(), 2);
+}
+
+TEST(StructureOfArraysTest, CopyRange) {
+    StructureOfArrays<float, double, TestFloat4> soa1;
+    StructureOfArrays<float, double, TestFloat4> soa2;
+
+    soa1.setCapacity(10);
+    soa1.resize(5);
+    for (size_t i = 0; i < 5; i++) {
+        soa1.elementAt<0>(i) = i;
+        soa1.elementAt<1>(i) = i * 2;
+        soa1.elementAt<2>(i) = i * 4;
+    }
+
+    soa2.setCapacity(10);
+    soa2.resize(5);
+
+    soa2.copyRange(1, soa1, 1, 3);
+
+    EXPECT_EQ(soa2.elementAt<0>(1), 1.0f);
+    EXPECT_EQ(soa2.elementAt<1>(1), 2.0);
+    EXPECT_EQ(soa2.elementAt<2>(1), TestFloat4{ 4.0f });
+
+    EXPECT_EQ(soa2.elementAt<0>(3), 3.0f);
+    EXPECT_EQ(soa2.elementAt<1>(3), 6.0);
+    EXPECT_EQ(soa2.elementAt<2>(3), TestFloat4{ 12.0f });
+}
+
+TEST(StructureOfArraysTest, AssignTuple) {
+    StructureOfArrays<float, double, TestFloat4> soa;
+    soa.setCapacity(10);
+    soa.resize(5);
+
+    auto tuple = std::make_tuple(1.0f, 2.0, TestFloat4{4.0f});
+    soa[2] = tuple;
+
+    EXPECT_EQ(soa.elementAt<0>(2), 1.0f);
+    EXPECT_EQ(soa.elementAt<1>(2), 2.0);
+    EXPECT_EQ(soa.elementAt<2>(2), TestFloat4{ 4.0f });
 }
 

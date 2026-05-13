@@ -30,6 +30,8 @@
         #include "backend/platforms/WebGPUPlatformLinux.h"
     #elif defined(WIN32)
         #include "backend/platforms/WebGPUPlatformWindows.h"
+    #elif defined(__EMSCRIPTEN__)
+        #include "backend/platforms/WebGPUPlatformWasm.h"
     #endif
 #endif
 
@@ -152,6 +154,8 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
                 return new WebGPUPlatformLinux();
             #elif defined(WIN32)
                 return new WebGPUPlatformWindows();
+            #elif defined(__EMSCRIPTEN__)
+                return new WebGPUPlatformWasm();
             #else
                  return nullptr;
             #endif
@@ -209,3 +213,4 @@ void PlatformFactory::destroy(Platform** platform) noexcept {
 }
 
 } // namespace filament::backend
+

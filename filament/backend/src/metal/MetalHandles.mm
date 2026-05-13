@@ -1401,25 +1401,44 @@ MetalFence::MetalFence(MetalContext& context) : context(context), value(context.
 
 void MetalFence::encode() {
     if (@available(iOS 12, *)) {
+        // newSharedEvent can very seldomly return nil if the GPU is busy or in a bad state.
         event = [context.device newSharedEvent];
+        if (UTILS_VERY_UNLIKELY(event == nil)) {
+            context.driver->signalFence([&] { state->status = FenceStatus::ERROR; });
+            return;
+        }
         [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
-        // Using a weak_ptr here because the Fence could be deleted before the block executes.
+        // Using a weak_ptr for the Fence state and driver lifetime because the Fence could be
+        // deleted, or the driver could be shut down, before this block executes asynchronously.
         std::weak_ptr<State> weakState = state;
-        MetalDriver* driver = context.driver;
-        [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
-                uint64_t value) {
-            if (auto s = weakState.lock()) {
-                driver->signalFence([&] {
-                    s->status = FenceStatus::CONDITION_SATISFIED;
-                });
-            }
-        }];
+        std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
+        [event notifyListener:context.eventListener
+                      atValue:value
+                        block:^(id<MTLSharedEvent> o, uint64_t value) {
+                          auto s = weakState.lock();
+                          // weakDriverLifetime ensures that the Driver is still alive before
+                          // accessing it.
+                          auto lifetime = weakDriverLifetime.lock();
+                          if (s && lifetime) {
+                              std::lock_guard<std::mutex> lock(lifetime->mutex);
+                              if (lifetime->driver) {
+                                  lifetime->driver->signalFence(
+                                          [&] { s->status = FenceStatus::CONDITION_SATISFIED; });
+                              }
+                          }
+                        }];
     }
 }
 
 void MetalFence::onSignal(MetalFenceSignalBlock block) {
-    [event notifyListener:context.eventListener atValue:value block:block];
+    if (UTILS_VERY_LIKELY(event)) {
+        if (@available(iOS 12, *)) {
+            [event notifyListener:context.eventListener atValue:value block:block];
+        }
+    } else {
+        block(nil, value);
+    }
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {

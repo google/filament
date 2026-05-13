@@ -26,6 +26,22 @@ import * as glm from "gl-matrix";
 export as namespace Filament;
 
 export function getSupportedFormatSuffix(desired: string): void;
+
+/**
+ * Asynchronously initializes the WebGPU adapter and device.
+ * This must be awaited before initializing the Filament Engine with the WebGPU backend.
+ */
+export function initWebGPU(): Promise<void>;
+
+export enum Backend {
+    DEFAULT,
+    OPENGL,
+    VULKAN,
+    METAL,
+    WEBGPU,
+    NOOP,
+}
+
 export function init(assets: string[], onready?: (() => void) | null): void;
 export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?: ((name: string) => void) | null): void;
 export function clearAssetCache(): void;
@@ -542,7 +558,7 @@ interface Filamesh {
 }
 
 export class Engine {
-    public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
+    public static create(canvas: HTMLCanvasElement, options?: { backend?: Backend }): Engine;
     public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;

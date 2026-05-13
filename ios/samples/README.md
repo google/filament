@@ -47,14 +47,16 @@ build Filament in Release mode, replace `debug` with `release` in the above `bui
 
 If you also want to be able to run on the iOS simulator, add the `-s` flag to the `build.sh`
 command. For example, the following command will build for both devices (ARM64) and the simulator
-(x86_64) in Debug mode:
+(both Apple silicon `arm64` and Intel `x86_64`) in Debug mode:
 
 ```
 $ ./build.sh -s -p ios -i debug
 ```
 
-When building for the simulator, the sample will then link against the libraries present in
-`out/ios-debug/filament/lib/x86_64`.
+When building for the simulator, the samples link against the libraries present in
+`out/ios-debug/filament/lib/arm64` (Apple silicon simulators) or
+`out/ios-debug/filament/lib/x86_64` (Intel simulators). The Filament `.xcframework`s expose both
+slices, so Xcode automatically picks the right one for the active simulator runtime.
 
 ## Xcode
 
@@ -88,17 +90,20 @@ from scratch.
 
 ## XcodeGen
 
-[XcodeGen](https://github.com/yonaskolb/XcodeGen) version 2.43.0 is used to generate the Xcode
-projects. While not required to run the samples, XcodeGen makes modifying them easier. Each sample
-folder contains the `project.yml` file used for the sample, which includes a global
-`app-template.yml` file. Simply run
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) is used to generate the Xcode projects. While not
+required to run the samples, XcodeGen makes modifying them easier. Each sample folder contains the
+`project.yml` file used for the sample, which includes a global `app-template.yml` file. Either run
 
 ```
 $ xcodegen
 ```
 
-within a sample folder to re-generate the Xcode project. You may need to close and re-open the
-project in Xcode to see changes take effect.
+within a sample folder, or run `./generate-samples.sh` from this directory to regenerate all of
+them at once.
+
+The committed `project.pbxproj` files use `objectVersion = 77`, which requires **Xcode 16 or newer**
+to open. CI pins Xcode 16.2 for this reason. You may need to close and re-open the project in Xcode
+to see changes take effect.
 
 ## Building iOS Samples with ASan / UBSan
 

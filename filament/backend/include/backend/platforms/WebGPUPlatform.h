@@ -31,6 +31,11 @@
 #endif
 #include <webgpu/webgpu_cpp.h>
 
+#if defined(__EMSCRIPTEN__)
+// We need to polyfill some Dawn extensions that are not in Emscripten.
+#include "WebGPUWasmPolyfill.h"
+#endif
+
 #include <cstdint>
 #include <vector>
 
@@ -61,9 +66,9 @@ public:
     // either returns a valid surface or panics
     [[nodiscard]] virtual wgpu::Surface createSurface(void* nativeWindow, uint64_t flags) = 0;
     // either returns a valid adapter or panics
-    [[nodiscard]] wgpu::Adapter requestAdapter(wgpu::Surface const& surface);
+    [[nodiscard]] virtual wgpu::Adapter requestAdapter(wgpu::Surface const& surface);
     // either returns a valid device or panics
-    [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
+    [[nodiscard]] virtual wgpu::Device requestDevice(wgpu::Adapter const& adapter);
 
     struct Configuration {
         wgpu::BackendType forceBackendType =  wgpu::BackendType::Undefined;

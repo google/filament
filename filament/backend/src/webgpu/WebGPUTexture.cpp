@@ -41,6 +41,14 @@ namespace filament::backend {
 
 namespace {
 
+bool supportsTransientAttachment(wgpu::Device const& device) {
+#if !defined(__EMSCRIPTEN__)
+    return device.HasFeature(wgpu::FeatureName::TransientAttachments);
+#else
+    return false;
+#endif
+}
+
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
     // TODO will be helpful to get more useful info than this
     switch (target) {
@@ -209,9 +217,9 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mWebGPUUsage{ fToWGPUTextureUsage(usage, samples,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS,
-              device.HasFeature(wgpu::FeatureName::TransientAttachments)) },
+              supportsTransientAttachment(device)) },
       mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false,
-              device.HasFeature(wgpu::FeatureName::TransientAttachments)) },
+              supportsTransientAttachment(device)) },
       mDimension{ toWebGPUTextureViewDimension(samplerType) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
@@ -291,10 +299,7 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         mDefaultTextureView = makeTextureView(mDefaultMipLevel, levelCount, 0,
                 mDefaultBaseArrayLayer, src->getViewDimension());
     } else {
-        wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
-        swizzleDesc.swizzle = mSwizzle;
-        const wgpu::TextureViewDescriptor viewDesc{
-            .nextInChain = &swizzleDesc,
+        wgpu::TextureViewDescriptor viewDesc{
             .label = "swizzled_texture_view",
             .format = mTexture.GetFormat(),
             .dimension = src->getViewDimension(),
@@ -303,6 +308,12 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
             .baseArrayLayer = 0,
             .arrayLayerCount = mDefaultBaseArrayLayer,
         };
+        // b/508270158
+#if !defined(__EMSCRIPTEN__)
+        wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
+        swizzleDesc.swizzle = mSwizzle;
+        viewDesc.nextInChain = &swizzleDesc,
+#endif
         mDefaultTextureView = mTexture.CreateView(&viewDesc);
         FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
                 << "Failed to create swizzled Texture view";
@@ -327,15 +338,18 @@ WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
       mDefaultBaseArrayLayer{ 0 },
       mMsaaSidecarTexture{src->mMsaaSidecarTexture},
       mSwizzle{ composeSwizzle(src->getSwizzle(), nextSwizzle) } {
-    wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
-    swizzleDesc.swizzle = mSwizzle;
 
-    const wgpu::TextureViewDescriptor viewDesc{
-        .nextInChain = &swizzleDesc,
+    wgpu::TextureViewDescriptor viewDesc{
         .label = "swizzled_texture_view",
         .format = mTexture.GetFormat(),
         .dimension = src->getViewDimension(),
     };
+    // b/508270158
+#if !defined(__EMSCRIPTEN__)
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
+    swizzleDesc.swizzle = mSwizzle;
+    viewDesc.nextInChain = &swizzleDesc,
+#endif
     mDefaultTextureView = mTexture.CreateView(&viewDesc);
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView) << "Failed to create swizzled Texture view";
 }

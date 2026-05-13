@@ -21,6 +21,10 @@
 
 #include <backend/DriverEnums.h>
 
+#if defined(__EMSCRIPTEN__)
+#include <backend/platforms/WebGPUWasmPolyfill.h>
+#endif
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <string_view>
@@ -597,7 +601,7 @@ namespace filament::backend {
     }
 
     wgpu::TextureUsage transientAttachmentNeeded{ wgpu::TextureUsage::None };
-    const bool useTransientAttachment {
+    bool const useTransientAttachment =
             deviceSupportsTransientAttachments &&
             // Usage consists of attachment flags only.
             none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
@@ -608,9 +612,12 @@ namespace filament::backend {
             // restriction.
             // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
             // and above to be able to support stencil resolve (along with depth).
-            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1)};
+            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
+
     if (useTransientAttachment) {
+#if !defined(__EMSCRIPTEN__)
         transientAttachmentNeeded |= wgpu::TextureUsage::TransientAttachment;
+#endif
     }
 
     // A texture that is a blit destination or render attachment will often need to be

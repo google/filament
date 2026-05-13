@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <TargetConditionals.h>
 #include "backend/PresentCallable.h"
 #include "private/backend/CommandStream.h"
 #include "CommandStreamDispatcher.h"
@@ -122,6 +123,8 @@ MetalDriver::MetalDriver(
       mStereoscopicType(driverConfig.stereoscopicType),
       mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
+    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
+    mContext->driverLifetimeTracker->driver = this;
 
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
@@ -160,9 +163,11 @@ MetalDriver::MetalDriver(
     }
 
     mContext->supportsDepthClamp = false;
+#if !TARGET_OS_SIMULATOR
     if (@available(macOS 10.11, iOS 11.0, *)) {
         mContext->supportsDepthClamp = true;
     }
+#endif
 
     // In order to support resolve store action on depth attachment, the GPU needs to support it.
     // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
@@ -258,6 +263,12 @@ MetalDriver::MetalDriver(
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    // Notify any pending asynchronous MTLSharedEvent listener blocks that the MetalDriver
+    // is being destroyed. This avoids executing blocks accessing a dangling driver pointer.
+    {
+        std::lock_guard<std::mutex> lock(mContext->driverLifetimeTracker->mutex);
+        mContext->driverLifetimeTracker->driver = nullptr;
+    }
     TrackedMetalBuffer::setPlatform(nullptr);
     ScopedAllocationTimer::setPlatform(nullptr);
     mContext->device = nil;

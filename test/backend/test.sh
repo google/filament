@@ -14,6 +14,7 @@ if [ ! -d "${PROJECT_ROOT_DIR}/mesa/out" ]; then
 fi
 
 BACKEND_TEST_TARGET=''
+ASAN_FLAG=''
 
 # Set environment variables to use Mesa drivers.
 os_name=$(uname -s)
@@ -27,15 +28,18 @@ if [[ "$os_name" == "Linux" ]]; then
         export VK_ICD_FILENAMES="${PROJECT_ROOT_DIR}/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json"
     fi
     BACKEND_TEST_TARGET=backend_test_linux
+    ASAN_FLAG="-b"
 elif [[ "$os_name" == "Darwin" ]]; then
     export DYLD_LIBRARY_PATH="${PROJECT_ROOT_DIR}/mesa/out/lib"
     export VK_ICD_FILENAMES="${PROJECT_ROOT_DIR}/mesa/out/share/vulkan/icd.d/lvp_icd.aarch64.json"
     BACKEND_TEST_TARGET=backend_test_mac
+    # asan is too slow for macOs build of the backend test
+    ASAN_FLAG=""
 fi
 
-# Build backend_test_mac
-echo "Building backend_test_mac..."
-"${PROJECT_ROOT_DIR}/build.sh" -W -p desktop -X "${PROJECT_ROOT_DIR}/mesa" debug ${BACKEND_TEST_TARGET}
+# Build backend test
+echo "Building ${BACKEND_TEST_TARGET}..."
+"${PROJECT_ROOT_DIR}/build.sh" ${ASAN_FLAG} -W -y release -p desktop -X "${PROJECT_ROOT_DIR}/mesa" debug ${BACKEND_TEST_TARGET}
 
 set +e
 
@@ -51,10 +55,20 @@ do
     fi
 done
 
+# Mesa OSMesa is known to leak part of the context.
+LSAN_CMD_PREFIX=""
+if [[ "${ASAN_FLAG}" == "-b" ]]; then
+    echo "leak:PlatformOSMesa.cpp" > leak_skip.txt
+    export LSAN_OPTIONS=suppressions=leak_skip.txt
+fi
+
 FINAL_RESULT=0
 for BACKEND in ${BACKENDS[@]}; do
     echo "----- ${BACKEND} backend test -----"
-    ${PROJECT_ROOT_DIR}/out/cmake-debug/filament/backend/${BACKEND_TEST_TARGET} -a ${BACKEND} --ci --headless_only ${GTEST_FILTER_ARG}
+
+    ${PROJECT_ROOT_DIR}/out/cmake-debug/filament/backend/${BACKEND_TEST_TARGET} \
+                           -a ${BACKEND} --ci --headless_only ${GTEST_FILTER_ARG}
+
     RESULT=$(echo $?)
     if [ ${RESULT} -gt 0 ]; then
         echo "----- Error: backend ${BACKEND} test failed with result ${RESULT} -----"

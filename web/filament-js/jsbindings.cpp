@@ -422,15 +422,17 @@ enum_<Engine::Config::ShaderLanguage>("ShaderLanguage")
 
 /// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
-    .class_function("_create", (Engine* (*)(Engine::Config)) [] (Engine::Config config) {
-        EM_ASM_INT({
-            const options = window.filament_glOptions;
-            const context = window.filament_glContext;
-            const handle = GL.registerContext(context, options);
-            window.filament_contextHandle = handle;
-            GL.makeContextCurrent(handle);
-        });
-        return Engine::create(Engine::Backend::DEFAULT, nullptr, nullptr, &config);
+    .class_function("_create", (Engine* (*)(backend::Backend, Engine::Config)) [] (backend::Backend backend, Engine::Config config) {
+        if (backend == backend::Backend::DEFAULT || backend == backend::Backend::OPENGL) {
+            EM_ASM_INT({
+                const options = window.filament_glOptions;
+                const context = window.filament_glContext;
+                const handle = GL.registerContext(context, options);
+                window.filament_contextHandle = handle;
+                GL.makeContextCurrent(handle);
+            });
+        }
+        return Engine::create(backend, nullptr, nullptr, &config);
     }, allow_raw_pointers())
 
     // Create a default Engine configuration. This is for internal use to ensure that engine
@@ -503,8 +505,16 @@ class_<Engine>("Engine")
 
     /// createSwapChain ::method::
     /// ::retval:: an instance of [SwapChain]
-    .function("createSwapChain", (SwapChain* (*)(Engine*)) []
+    .function("_createSwapChain", (SwapChain* (*)(Engine*)) []
             (Engine* engine) { return engine->createSwapChain(nullptr); },
+            allow_raw_pointers())
+    .function("_createSwapChainForCanvas", (SwapChain* (*)(Engine*, std::string)) []
+            (Engine* engine, std::string canvasId) {
+                // Allocate on the heap because nativeWindow is passed asynchronously through the
+                // driver command buffer to the backend thread.
+                std::string* persistentCanvasId = new std::string(canvasId);
+                return engine->createSwapChain((void*)persistentCanvasId->c_str());
+            },
             allow_raw_pointers())
     /// destroySwapChain ::method::
     /// swapChain ::argument:: an instance of [SwapChain]
@@ -2147,7 +2157,7 @@ class_<Ktx2Provider>("gltfio$Ktx2Provider")
 class_<WebpProvider>("gltfio$WebpProvider")
     .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
         return WebpProvider { createWebpProvider(engine) };
-    }))    
+    }))
     .class_function("isWebpSupported", &isWebpSupported);
 
 class_<AssetLoader>("gltfio$AssetLoader")
