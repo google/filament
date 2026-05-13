@@ -1583,6 +1583,14 @@ struct RenderPassFlags {
     TargetBufferFlags discardEnd;
 };
 
+// A clear-color value for a color attachment, stored as four doubles. The actual type family
+// (float / signed-int / unsigned-int) is inferred from the attachment's TextureFormat at clear
+// time, and the doubles are converted as-is into the matching GL/Vulkan/Metal/WebGPU call.
+// The caller must put a value into this double4 that is meaningful for the attachment family --
+// e.g., for a UINT attachment, put a value in [0, UINT32_MAX]. int32/uint32 round-trip through a
+// double exactly because double has a 53-bit mantissa.
+using ClearColorValue = math::double4;
+
 /**
  * Parameters of a render pass.
  */
@@ -1592,8 +1600,11 @@ struct RenderPassParams {
     Viewport viewport{};        //!< viewport for this pass
     DepthRange depthRange{};    //!< depth range for this pass
 
-    //! Color to use to clear the COLOR buffer. RenderPassFlags::clear must be set.
-    math::float4 clearColor = {};
+    //! Value used to clear the COLOR attachments. RenderPassFlags::clear must be set.
+    //! For integer-format attachments, put a value in the matching range (e.g., values in
+    //! [0, UINT32_MAX] for a UINT attachment); the backend converts the doubles as-is into the
+    //! matching native clear entry-point based on the attachment's TextureFormat.
+    ClearColorValue clearColor{};
 
     //! Depth value to clear the depth buffer with
     double clearDepth = 0.0;

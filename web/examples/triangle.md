@@ -100,7 +100,6 @@ if (location.search === '?backend=webgpu') {
         } );
     });
 } else {
-     console.log("here.....!!!!!!");
     Filament.init(['triangle.filamat'], () => { window.app = new App() } );
 }
 })();
