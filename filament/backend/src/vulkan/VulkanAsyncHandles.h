@@ -209,17 +209,6 @@ private:
     // when the pool is being terminated.
     friend class VulkanFencePool;
 
-    std::shared_mutex mLock; // NOLINT(*-include-cleaner)
-    std::condition_variable_any mCond;
-    bool mCanceled = false;
-    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
-    // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
-    // finishes executing the command buffer, the status changes to VK_SUCCESS.
-    VkResult mStatus{ VK_INCOMPLETE };
-    VkFence mFence;
-
-    std::function<void(VkFence)> mRecycleFn;
-
     // Updates the status of the fence, notifying all listeners of
     // mCond.
     void setStatus(VkResult const value) {
@@ -232,6 +221,17 @@ private:
     // used to transfer ownership of the VkFence from the fence pool
     // to this VulkanCmdFence.
     void swapRecycleFn(std::function<void(VkFence)> recycleFn);
+
+    std::shared_mutex mLock; // NOLINT(*-include-cleaner)
+    std::condition_variable_any mCond;
+    bool mCanceled = false;
+    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
+    // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
+    // finishes executing the command buffer, the status changes to VK_SUCCESS.
+    VkResult mStatus{ VK_INCOMPLETE };
+    VkFence const mFence;
+
+    std::function<void(VkFence)> mRecycleFn;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {

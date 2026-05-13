@@ -72,9 +72,6 @@ void VulkanFencePool::gc() noexcept {
         return;
     }
 
-    // Lock now to avoid race conditions with other threads that may be
-    // clearing fenceStatus objects, and trying to return fences to the
-    // pool.
     while (mNumFences > mMinPoolSize && !mFences.empty() &&
            mFences.front().first + TIME_BEFORE_EVICTION < mCurrFrame) {
         destroyFence(mFences.front().second);
@@ -95,9 +92,6 @@ void VulkanFencePool::terminate() noexcept {
     }
     mFenceStatuses.clear();
 
-    // No need to lock. We do not allow usages of fences aside from
-    // the ones provided in fenceStatuses, and we have reclaimed
-    // fences from all fenceStatus objects.
     for (const auto& fence : mFences) {
         destroyFence(fence.second);
     }
@@ -126,8 +120,6 @@ void VulkanFencePool::releaseFence(VkFence fence) noexcept {
     // Reset the fence before returning it to the pool of available
     // fences.
     vkResetFences(mDevice, 1, &fence);
-
-    // Since fences may be released concurrently, make sure we lock.
     mFences.push_back(std::make_pair(mCurrFrame, fence));
 }
 

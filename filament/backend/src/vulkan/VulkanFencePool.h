@@ -51,14 +51,6 @@ public:
     void terminate() noexcept;
 
 private:
-    VulkanContext const& mContext;
-    const VkDevice mDevice;
-    const uint32_t mMinPoolSize;
-    std::deque<std::pair<uint64_t, VkFence>> mFences;
-    std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
-    uint32_t mNumFences = 0;
-    uint64_t mCurrFrame = 0;
-
     // Acquires a fence from the pool. This is private because we need mechanisms
     // to ensure that all fences are returned *during* terminate. Instead, users
     // can use acquireFenceStatus(), which tracks fences.
@@ -75,6 +67,14 @@ private:
     // Releases a fence from the pool. This is done when there are many idle fences,
     // as well as when the pool is terminated.
     void destroyFence(VkFence fence) const noexcept;
+
+    VulkanContext const& mContext;
+    const VkDevice mDevice;
+    const uint32_t mMinPoolSize;
+    std::deque<std::pair<uint64_t, VkFence>> mFences;
+    std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
+    uint32_t mNumFences = 0;
+    uint64_t mCurrFrame = 0;
 };
 
 } // namespace filament::backend
