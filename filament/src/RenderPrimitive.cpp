@@ -41,7 +41,10 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
     mBlendOrder = entry.blendOrder;
     mGlobalBlendOrderEnabled = entry.globalBlendOrderEnabled;
 
-    if (entry.indices && entry.vertices) {
+    // We require a VertexBuffer to set up the primitive, but the IndexBuffer is optional.
+    // When entry.indices is null, the primitive is configured for non-indexed (attribute-less)
+    // rendering: offset/count are interpreted as vertexOffset/vertexCount.
+    if (entry.vertices) {
         FVertexBuffer const* vertexBuffer = downcast(entry.vertices);
         FIndexBuffer const* indexBuffer = downcast(entry.indices);
         set(factory, driver, entry.type, vertexBuffer, indexBuffer, entry.offset, entry.count);
@@ -65,15 +68,17 @@ void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi
     AttributeBitset const enabledAttributes = vertexBuffer->getDeclaredAttributes();
 
     auto const& ebh = vertexBuffer->getHwHandle();
-    auto const& ibh = indexBuffer->getHwHandle();
+    // A null IndexBuffer is permitted for non-indexed (attribute-less) rendering.
+    auto const ibh = indexBuffer ? indexBuffer->getHwHandle() : backend::IndexBufferHandle{};
 
     mHandle = factory.create(driver, ebh, ibh, type);
     mVertexBufferInfoHandle = vertexBuffer->getVertexBufferInfoHandle();
 
     mPrimitiveType = type;
-    mIndexOffset = offset;
-    mIndexCount = count;
+    mOffset = offset;
+    mCount = count;
     mEnabledAttributes = enabledAttributes;
+    mIsIndexed = (indexBuffer != nullptr);
 }
 
 } // namespace filament

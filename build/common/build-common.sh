@@ -36,7 +36,9 @@ fi
 
 if [[ "$TARGET" == "presubmit-with-test" ]]; then
     BUILD_RELEASE=release
-    RUN_TESTS=-u
+    # -b enables asan, -y release will try to build the tools in release without asan
+    # while while test itself will be compiled with asan+ubsan
+    RUN_TESTS="-u -b -y release"
 fi
 
 if [[ "$TARGET" == "presubmit-with-archive" ]]; then

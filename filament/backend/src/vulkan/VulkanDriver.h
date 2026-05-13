@@ -129,6 +129,10 @@ private:
     void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask descriptorSetMask);
 
+    // Common preamble for indexed and non-indexed draws: handles deferred pipeline-layout
+    // binding (for external samplers) and commits descriptor sets.
+    void prepareDraw();
+
     // Flush the current command buffer and reset the pipeline state.
     void endCommandRecording();
 

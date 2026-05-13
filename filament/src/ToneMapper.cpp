@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
+#include <cstddef>
 #include <filament/ToneMapper.h>
 
 #include "ColorSpaceUtils.h"
 
-#include <math/vec3.h>
+#include <math/half.h>
 #include <math/scalar.h>
+#include <math/mat3.h>
+#include <math/vec3.h>
 
 #include <cmath>
+#include <limits>
+#include <new>
+
 
 namespace filament {
 
@@ -29,16 +35,16 @@ using namespace math;
 
 namespace aces {
 
-inline float rgb_2_saturation(float3 const rgb) {
+static float rgb_2_saturation(float3 const rgb) noexcept {
     // Input:  ACES
     // Output: OCES
     constexpr float TINY = 1e-5f;
-    float mi = min(rgb);
-    float ma = max(rgb);
+    float const mi = min(rgb);
+    float const ma = max(rgb);
     return (max(ma, TINY) - max(mi, TINY)) / max(ma, 1e-2f);
 }
 
-inline float rgb_2_yc(float3 const rgb) {
+static float rgb_2_yc(float3 const rgb) noexcept {
     constexpr float ycRadiusWeight = 1.75f;
 
     // Converts RGB to a luminance proxy, here called YC
@@ -47,30 +53,30 @@ inline float rgb_2_yc(float3 const rgb) {
     // neutral axis, towards white.
     // YC is normalized: RGB 1 1 1 maps to YC = 1
     //
-    // ycRadiusWeight defaults to 1.75, although can be overridden in function
+    // ycRadiusWeight defaults to 1.75, although it can be overridden in function
     // call to rgb_2_yc
     // ycRadiusWeight = 1 -> YC for pure cyan, magenta, yellow == YC for neutral
     // of same value
     // ycRadiusWeight = 2 -> YC for pure red, green, blue  == YC for  neutral of
     // same value.
 
-    float r = rgb.r;
-    float g = rgb.g;
-    float b = rgb.b;
+    float const r = rgb.r;
+    float const g = rgb.g;
+    float const b = rgb.b;
 
-    float chroma = std::sqrt(b * (b - g) + g * (g - r) + r * (r - b));
+    float const chroma = std::sqrt(b * (b - g) + g * (g - r) + r * (r - b));
 
     return (b + g + r + ycRadiusWeight * chroma) / 3.0f;
 }
 
-inline float sigmoid_shaper(float const x) {
+static float sigmoid_shaper(float const x) noexcept {
     // Sigmoid function in the range 0 to 1 spanning -2 to +2.
-    float t = max(1.0f - std::abs(x / 2.0f), 0.0f);
-    float y = 1.0f + sign(x) * (1.0f - t * t);
+    float const t = max(1.0f - std::abs(x / 2.0f), 0.0f);
+    float const y = 1.0f + sign(x) * (1.0f - t * t);
     return y / 2.0f;
 }
 
-inline float glow_fwd(float const ycIn, float const glowGainIn, float const glowMid) {
+static float glow_fwd(float const ycIn, float const glowGainIn, float const glowMid) noexcept {
     float glowGainOut;
 
     if (ycIn <= 2.0f / 3.0f * glowMid) {
@@ -84,7 +90,7 @@ inline float glow_fwd(float const ycIn, float const glowGainIn, float const glow
     return glowGainOut;
 }
 
-inline float rgb_2_hue(float3 const rgb) {
+static float rgb_2_hue(float3 const rgb) noexcept {
     // Returns a geometric hue angle in degrees (0-360) based on RGB values.
     // For neutral colors, hue is undefined and the function will return a quiet NaN value.
     float hue = 0.0f;
@@ -97,7 +103,7 @@ inline float rgb_2_hue(float3 const rgb) {
     return (hue < 0.0f) ? hue + 360.0f : hue;
 }
 
-inline float center_hue(float const hue, float const centerH) {
+static float center_hue(float const hue, float const centerH) noexcept {
     float hueCentered = hue - centerH;
     if (hueCentered < -180.0f) {
         hueCentered = hueCentered + 360.0f;
@@ -107,20 +113,20 @@ inline float center_hue(float const hue, float const centerH) {
     return hueCentered;
 }
 
-inline float3 darkSurround_to_dimSurround(float3 linearCV) {
+static float3 darkSurround_to_dimSurround(float3 linearCV) noexcept {
     constexpr float DIM_SURROUND_GAMMA = 0.9811f;
 
     float3 XYZ = AP1_to_XYZ * linearCV;
     float3 xyY = XYZ_to_xyY(XYZ);
 
-    xyY.z = clamp(xyY.z, 0.0f, (float) std::numeric_limits<half>::max());
+    xyY.z = clamp(xyY.z, 0.0f, float(std::numeric_limits<half>::max()));
     xyY.z = std::pow(xyY.z, DIM_SURROUND_GAMMA);
 
     XYZ = xyY_to_XYZ(xyY);
     return XYZ_to_AP1 * XYZ;
 }
 
-float3 ACES(float3 color, float brightness) noexcept {
+static float3 ACES(float3 color, float brightness) noexcept {
     // Some bits were removed to adapt to our desired output
 
     // "Glow" module constants
@@ -140,15 +146,15 @@ float3 ACES(float3 color, float brightness) noexcept {
     float3 ap0 = Rec2020_to_AP0 * color;
 
     // Glow module
-    float saturation = rgb_2_saturation(ap0);
-    float ycIn = rgb_2_yc(ap0);
-    float s = sigmoid_shaper((saturation - 0.4f) / 0.2f);
-    float addedGlow = 1.0f + glow_fwd(ycIn, RRT_GLOW_GAIN * s, RRT_GLOW_MID);
+    float const saturation = rgb_2_saturation(ap0);
+    float const ycIn = rgb_2_yc(ap0);
+    float const s = sigmoid_shaper((saturation - 0.4f) / 0.2f);
+    float const addedGlow = 1.0f + glow_fwd(ycIn, RRT_GLOW_GAIN * s, RRT_GLOW_MID);
     ap0 *= addedGlow;
 
     // Red modifier
-    float hue = rgb_2_hue(ap0);
-    float centeredHue = center_hue(hue, RRT_RED_HUE);
+    float const hue = rgb_2_hue(ap0);
+    float const centeredHue = center_hue(hue, RRT_RED_HUE);
     float hueWeight = smoothstep(0.0f, 1.0f, 1.0f - std::abs(2.0f * centeredHue / RRT_RED_WIDTH));
     hueWeight *= hueWeight;
 
@@ -171,7 +177,7 @@ float3 ACES(float3 color, float brightness) noexcept {
     constexpr float c = 2.936045f;
     constexpr float d = 0.887122f;
     constexpr float e = 0.806889f;
-    float3 rgbPost = (ap1 * (a * ap1 + b)) / (ap1 * (c * ap1 + d) + e);
+    float3 const rgbPost = (ap1 * (a * ap1 + b)) / (ap1 * (c * ap1 + d) + e);
 
     // Apply gamma adjustment to compensate for dim surround
     float3 linearCV = darkSurround_to_dimSurround(rgbPost);
@@ -200,8 +206,8 @@ DEFAULT_CONSTRUCTORS(ToneMapper)
 
 DEFAULT_CONSTRUCTORS(LinearToneMapper)
 
-float3 LinearToneMapper::operator()(float3 const v) const noexcept {
-    return saturate(v);
+float3 LinearToneMapper::operator()(float3 const c) const noexcept {
+    return saturate(c);
 }
 
 //------------------------------------------------------------------------------
@@ -243,18 +249,18 @@ float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
     constexpr float startCompression = 0.8f - 0.04f;
     constexpr float desaturation = 0.15f;
 
-    float x = min(color.r, min(color.g, color.b));
-    float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+    float const x = min(color.r, min(color.g, color.b));
+    float const offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
     color -= offset;
 
-    float peak = max(color.r, max(color.g, color.b));
+    float const peak = max(color.r, max(color.g, color.b));
     if (peak < startCompression) return color;
 
-    float d = 1.0f - startCompression;
-    float newPeak = 1.0f - d * d / (peak + d - startCompression);
+    constexpr float d = 1.0f - startCompression;
+    float const newPeak = 1.0f - d * d / (peak + d - startCompression);
     color *= newPeak / peak;
 
-    float g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
+    float const g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
     return mix(color, float3(newPeak), g);
 }
 
@@ -293,25 +299,28 @@ float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
 constexpr float ReferenceLuminance = 100.0f; // 100 cd/m^2 equals a value of 1 in the framebuffer
 constexpr float SdrPaperWhite = 250.0f; // Paper white target of 250 nits
 
-inline float frameBufferValueToPhysicalValue(float v) {
+UTILS_UNUSED
+static float frameBufferValueToPhysicalValue(float const v) noexcept {
     // Converts a linear framebuffer value to physical luminance (cd/m^2)
     // where 1.0 corresponds to the reference luminance.
     return v * ReferenceLuminance;
 }
 
-inline float3 frameBufferValueToPhysicalValue(float3 v) {
+static float3 frameBufferValueToPhysicalValue(float3 const v) noexcept {
     return v * ReferenceLuminance;
 }
 
-inline float physicalValueToFrameBufferValue(float v) {
+static float physicalValueToFrameBufferValue(float const v) noexcept {
     // Converts a physical luminance (cd/m^2) to a linear framebuffer value,
     // where 1.0 corresponds to the reference luminance.
     return v / ReferenceLuminance;
 }
 
-inline float3 physicalValueToFrameBufferValue(float3 v) {
+static float3 physicalValueToFrameBufferValue(float3 const v) noexcept {
     return v / ReferenceLuminance;
 }
+
+namespace {
 
 class GT7Curve {
 public:
@@ -362,6 +371,8 @@ private:
     float mKc{};
 };
 
+} // anonymous namespace
+
 struct GT7ToneMapper::State {
     float sdrCorrectionFactor;
     float framebufferLuminanceTarget;
@@ -375,7 +386,7 @@ struct GT7ToneMapper::State {
 
     // The display target luminance should be ~250 nits for SDR displays,
     // and whatever peak luminance an HDR display supports (700, 1000, etc.).
-    void initializeParameters(float sdrCorrection, float displayTargetLuminance) {
+    void initializeParameters(float const sdrCorrection, float const displayTargetLuminance) {
         sdrCorrectionFactor = sdrCorrection;
         framebufferLuminanceTarget = physicalValueToFrameBufferValue(displayTargetLuminance);
 
@@ -393,7 +404,7 @@ struct GT7ToneMapper::State {
 };
 
 GT7ToneMapper::GT7ToneMapper() noexcept {
-    mState = new State();
+    mState = new(std::nothrow) State();
 
     // Initialize for an SDR target
     mState->initializeParameters(
@@ -409,7 +420,8 @@ GT7ToneMapper::~GT7ToneMapper() noexcept {
     delete mState;
 }
 
-inline float chromaCurve(float a, float b, float x) {
+
+static float chromaCurve(float const a, float const b, float const x) noexcept {
     return 1.0f - smoothstep(a, b, x);
 }
 
@@ -417,17 +429,17 @@ float3 GT7ToneMapper::operator()(float3 color) const noexcept {
     const State& state = *mState;
     const GT7Curve& curve = state.curve;
 
-    float3 ucs = Rec2020_to_ICtCp(frameBufferValueToPhysicalValue(color));
-    float3 skewedRgb{
+    float3 const ucs = Rec2020_to_ICtCp(frameBufferValueToPhysicalValue(color));
+    float3 const skewedRgb{
         curve.evaluate(color.r),
         curve.evaluate(color.g),
         curve.evaluate(color.b)
     };
-    float3 skewedUcs = Rec2020_to_ICtCp(frameBufferValueToPhysicalValue(skewedRgb));
+    float3 const skewedUcs = Rec2020_to_ICtCp(frameBufferValueToPhysicalValue(skewedRgb));
 
-    float chromaScale = chromaCurve(
+    float const chromaScale = chromaCurve(
         state.fadeStart, state.fadeEnd, ucs.x / state.framebufferLuminanceTargetUcs);
-    float3 scaledRgb = physicalValueToFrameBufferValue(ICtCp_to_Rec2020(float3{
+    float3 const scaledRgb = physicalValueToFrameBufferValue(ICtCp_to_Rec2020(float3{
         skewedUcs.x,
         ucs.y * chromaScale,
         ucs.z * chromaScale
@@ -436,7 +448,7 @@ float3 GT7ToneMapper::operator()(float3 color) const noexcept {
     const float blendRatio = state.blendRatio;
     const float sdrFactor = state.sdrCorrectionFactor;
 
-    float3 luminanceTarget{state.framebufferLuminanceTarget};
+    float3 const luminanceTarget{state.framebufferLuminanceTarget};
     return sdrFactor * min(mix(skewedRgb, scaledRgb, blendRatio), luminanceTarget);
 }
 
@@ -464,14 +476,14 @@ constexpr mat3f AgXOutsetMatrix { inverse(AgXOutsetMatrixInv) };
 // LOG2_MIN      = -10.0
 // LOG2_MAX      =  +6.5
 // MIDDLE_GRAY   =  0.18
-const float AgxMinEv = -12.47393f;      // log2(pow(2, LOG2_MIN) * MIDDLE_GRAY)
-const float AgxMaxEv = 4.026069f;       // log2(pow(2, LOG2_MAX) * MIDDLE_GRAY)
+constexpr float AgxMinEv = -12.47393f;      // log2(pow(2, LOG2_MIN) * MIDDLE_GRAY)
+constexpr float AgxMaxEv = 4.026069f;       // log2(pow(2, LOG2_MAX) * MIDDLE_GRAY)
 
 // Adapted from https://iolite-engine.com/blog_posts/minimal_agx_implementation
-float3 agxDefaultContrastApprox(float3 x) {
-    float3 x2 = x * x;
-    float3 x4 = x2 * x2;
-    float3 x6 = x4 * x2;
+static float3 agxDefaultContrastApprox(float3 x) noexcept {
+    float3 const x2 = x * x;
+    float3 const x4 = x2 * x2;
+    float3 const x6 = x4 * x2;
     return  - 17.86f    * x6 * x
             + 78.01f    * x6
             - 126.7f    * x4 * x
@@ -483,16 +495,16 @@ float3 agxDefaultContrastApprox(float3 x) {
 }
 
 // Adapted from https://iolite-engine.com/blog_posts/minimal_agx_implementation
-float3 agxLook(float3 val, AgxToneMapper::AgxLook look) {
+static float3 agxLook(float3 val, AgxToneMapper::AgxLook look) noexcept {
     if (look == AgxToneMapper::AgxLook::NONE) {
         return val;
     }
 
-    const float3 lw = float3(0.2126f, 0.7152f, 0.0722f);
-    float luma = dot(val, lw);
+    constexpr float3 lw = float3(0.2126f, 0.7152f, 0.0722f);
+    float const luma = dot(val, lw);
 
     // Default
-    float3 offset = float3(0.0f);
+    constexpr float3 offset = float3(0.0f);
     float3 slope = float3(1.0f);
     float3 power = float3(1.0f);
     float sat = 1.0f;
@@ -574,7 +586,7 @@ float3 DisplayRangeToneMapper::operator()(float3 const c) const noexcept {
     float v = log2(dot(c, LUMINANCE_Rec2020) / 0.18f);
     v = clamp(v + 5.0f, 0.0f, 15.0f);
 
-    size_t index = size_t(v);
+    size_t const index = size_t(v);
     return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
 }
 
@@ -603,9 +615,9 @@ struct GenericToneMapper::Options {
         this->midGrayOut = midGrayOut;
         this->hdrMax = hdrMax;
 
-        float a = pow(midGrayIn, contrast);
-        float b = pow(hdrMax, contrast);
-        float c = a - midGrayOut * b;
+        float const a = pow(midGrayIn, contrast);
+        float const b = pow(hdrMax, contrast);
+        float const c = a - midGrayOut * b;
 
         inputScale = (a * b * (midGrayOut - 1.0f)) / c;
         outputScale = midGrayOut * (a - b) / c;
@@ -630,7 +642,7 @@ GenericToneMapper::GenericToneMapper(
         float const midGrayOut,
         float const hdrMax
 ) noexcept {
-    mOptions = new Options();
+    mOptions = new(std::nothrow) Options();
     mOptions->setParameters(contrast, midGrayIn, midGrayOut, hdrMax);
 }
 

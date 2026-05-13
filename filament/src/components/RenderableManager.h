@@ -234,6 +234,9 @@ public:
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
             PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,
             size_t offset, size_t count) noexcept;
+    void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            PrimitiveType type, FVertexBuffer* vertices,
+            size_t offset, size_t count) noexcept;
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
     uint16_t getBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;

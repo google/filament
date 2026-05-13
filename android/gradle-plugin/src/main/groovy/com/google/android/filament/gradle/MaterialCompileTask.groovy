@@ -114,10 +114,6 @@ abstract class MaterialCompileTask extends DefaultTask {
                     args += ['-a', 'vulkan']
                 }
 
-                if (includeWebGpu) {
-                    args += ['-a', 'webgpu', '--variant-filter=stereo']
-                }
-
                 if (matNoOpt) {
                     args += ['-g']
                 }

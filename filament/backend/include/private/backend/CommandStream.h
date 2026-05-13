@@ -55,16 +55,15 @@
 namespace filament::backend {
 
 class CommandBase {
-    static constexpr size_t FILAMENT_OBJECT_ALIGNMENT = alignof(std::max_align_t);
-
 protected:
     using Execute = Dispatcher::Execute;
 
     constexpr explicit CommandBase(Execute const execute) noexcept : mExecute(execute) {}
 
 public:
+    static constexpr size_t FILAMENT_OBJECT_ALIGNMENT = alignof(std::max_align_t);
     // alignment of all Commands in the CommandStream
-    static constexpr size_t align(size_t v) {
+    static constexpr size_t align(size_t const v) {
         return (v + (FILAMENT_OBJECT_ALIGNMENT - 1)) & -FILAMENT_OBJECT_ALIGNMENT;
     }
 
@@ -87,22 +86,11 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
-template<typename T, typename Type, typename D, typename ... ARGS>
-constexpr decltype(auto) invoke(Type T::* m, D&& d, ARGS&& ... args) {
-    static_assert(std::is_base_of<T, std::decay_t<D>>::value,
-            "member function and object not related");
-    return (std::forward<D>(d).*m)(std::forward<ARGS>(args)...);
-}
-
-template<typename M, typename D, typename T, std::size_t... I>
-constexpr decltype(auto) trampoline(M&& m, D&& d, T&& t, std::index_sequence<I...>) {
-    return invoke(std::forward<M>(m), std::forward<D>(d), std::get<I>(std::forward<T>(t))...);
-}
-
 template<typename M, typename D, typename T>
 constexpr decltype(auto) apply(M&& m, D&& d, T&& t) {
-    return trampoline(std::forward<M>(m), std::forward<D>(d), std::forward<T>(t),
-            std::make_index_sequence< std::tuple_size<std::remove_reference_t<T>>::value >{});
+    return std::apply([&](auto&&... args) {
+        return (std::forward<D>(d).*std::forward<M>(m))(std::forward<decltype(args)>(args)...);
+    }, std::forward<T>(t));
 }
 
 /*
@@ -124,7 +112,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
      * template parameter below). The actual call is made through Command::execute().
      */
     template<void(Driver::*)(ARGS...)>
-    class Command : public CommandBase {
+    class alignas(CommandBase::FILAMENT_OBJECT_ALIGNMENT) Command : public CommandBase {
         // We use a std::tuple<> to record the arguments passed to the constructor
         using SavedParameters = std::tuple<std::remove_reference_t<ARGS>...>;
         SavedParameters mArgs;
@@ -135,8 +123,10 @@ struct CommandType<void (Driver::*)(ARGS...)> {
     public:
         template<typename M, typename D>
         static void execute(M&& method, D&& driver, CommandBase* base, intptr_t* next) {
+            static_assert(alignof(Command) <= FILAMENT_OBJECT_ALIGNMENT);
+            static_assert((sizeof(Command) % FILAMENT_OBJECT_ALIGNMENT) == 0);
             Command* self = static_cast<Command*>(base);
-            *next = align(sizeof(Command));
+            *next = sizeof(Command); // align() not needed here, since we can ensure at compile time
 #if DEBUG_COMMAND_STREAM
                 // must call this before invoking the method
                 self->log();
@@ -166,7 +156,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
 // ------------------------------------------------------------------------------------------------
 
-class CustomCommand : public CommandBase {
+class alignas(CommandBase::FILAMENT_OBJECT_ALIGNMENT) CustomCommand : public CommandBase {
     std::function<void()> mCommand;
     static void execute(Driver&, CommandBase* base, intptr_t* next);
 public:
@@ -178,7 +168,7 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-class NoopCommand : public CommandBase {
+class alignas(CommandBase::FILAMENT_OBJECT_ALIGNMENT)NoopCommand : public CommandBase {
     intptr_t mNext;
     static void execute(Driver&, CommandBase* self, intptr_t* next) noexcept {
         *next = static_cast<NoopCommand*>(self)->mNext;
@@ -192,7 +182,7 @@ public:
 
 #if !defined(NDEBUG) || (FILAMENT_DEBUG_COMMANDS >= FILAMENT_DEBUG_COMMANDS_ENABLE)
     // For now, simply pass the method name down as a string and throw away the parameters.
-    // This is good enough for certain debugging needs and we can improve this later.
+    // This is good enough for certain debugging needs, and we can improve this later.
     #define DEBUG_COMMAND_BEGIN(methodName, sync, ...) mDriver.debugCommandBegin(this, sync, #methodName)
     #define DEBUG_COMMAND_END(methodName, sync) mDriver.debugCommandEnd(this, sync, #methodName)
 #else
@@ -219,12 +209,11 @@ public:
 
     CircularBuffer const& getCircularBuffer() const noexcept { return mCurrentBuffer; }
 
-public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
     inline void methodName(paramsDecl) noexcept {                                               \
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         using Cmd = COMMAND_TYPE(methodName);                                                   \
-        void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
+        void* const p = allocateCommand(sizeof(Cmd));                                           \
         new(p) Cmd(mDispatcher.methodName##_, APPLY(std::move, params));                        \
         DEBUG_COMMAND_END(methodName, false);                                                   \
     }
@@ -243,7 +232,7 @@ public:
         DEBUG_COMMAND_BEGIN(methodName, false, params);                                         \
         RetType result = mDriver.methodName##S();                                               \
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
-        void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
+        void* const p = allocateCommand(sizeof(Cmd));                                           \
         new(p) Cmd(mDispatcher.methodName##_, RetType(result), APPLY(std::move, params));       \
         DEBUG_COMMAND_END(methodName, false);                                                   \
         return result;                                                                          \
@@ -251,7 +240,6 @@ public:
 
 #include "DriverAPI.inc"
 
-public:
     // This is for debugging only. Currently, CircularBuffer can only be written from a
     // single thread. In debug builds we assert this condition.
     // Call this first in the render loop.
@@ -280,7 +268,7 @@ public:
      * Helper to allocate an array of trivially destructible objects
      */
     template<typename PodType,
-            typename = typename std::enable_if<std::is_trivially_destructible<PodType>::value>::type>
+            typename = std::enable_if_t<std::is_trivially_destructible_v<PodType>>>
     PodType* allocatePod(
             size_t count = 1, size_t alignment = alignof(PodType)) noexcept;
 
@@ -304,7 +292,7 @@ private:
     bool mUsePerformanceCounter = false;
 };
 
-void* CommandStream::allocate(size_t size, size_t alignment) noexcept {
+void* CommandStream::allocate(size_t const size, size_t const alignment) noexcept {
     // make sure alignment is a power of two
     assert_invariant(alignment && !(alignment & alignment-1));
 
@@ -312,17 +300,17 @@ void* CommandStream::allocate(size_t size, size_t alignment) noexcept {
     const size_t s = CustomCommand::align(sizeof(NoopCommand) + size + alignment - 1);
 
     // allocate space in the command stream and insert a NoopCommand
-    char* const p = (char *)allocateCommand(s);
+    char* const p = static_cast<char*>(allocateCommand(s));
     new(p) NoopCommand(p + s);
 
     // calculate the "user" data pointer
-    void* data = (void *)((uintptr_t(p) + sizeof(NoopCommand) + alignment - 1) & ~(alignment - 1));
+    void* data = reinterpret_cast<void*>((uintptr_t(p) + sizeof(NoopCommand) + alignment - 1) & ~(alignment - 1));
     assert_invariant(data >= p + sizeof(NoopCommand));
     return data;
 }
 
 template<typename PodType, typename>
-PodType* CommandStream::allocatePod(size_t count, size_t alignment) noexcept {
+PodType* CommandStream::allocatePod(size_t const count, size_t const alignment) noexcept {
     return static_cast<PodType*>(allocate(count * sizeof(PodType), alignment));
 }
 

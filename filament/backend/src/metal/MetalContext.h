@@ -45,6 +45,12 @@ namespace filament {
 namespace backend {
 
 class MetalDriver;
+
+struct DriverLifetimeTracker {
+    std::mutex mutex;
+    MetalDriver* driver = nullptr;
+};
+
 class MetalBlitter;
 class MetalBufferPool;
 class MetalBumpAllocator;
@@ -210,6 +216,7 @@ struct MetalContext {
     // Fences, only supported on macOS 10.14 and iOS 12 and above.
     API_AVAILABLE(macos(10.14), ios(12.0))
     MTLSharedEventListener* eventListener = nil;
+    std::shared_ptr<DriverLifetimeTracker> driverLifetimeTracker;
     // signalId is incremented in the MetalFence constructor, which is called on
     // both the driver (MetalTimerQueryFence::beginTimeElapsedQuery) and main
     // threads (in createFenceS), so an atomic is necessary.

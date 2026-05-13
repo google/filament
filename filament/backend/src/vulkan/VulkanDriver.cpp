@@ -570,7 +570,13 @@ void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         PrimitiveType pt, utils::ImmutableCString&& tag) {
     FVK_SYSTRACE_SCOPE();
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
-    auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
+    // A null `ibh` is permitted for attribute-less / non-indexed primitives. In that case the
+    // primitive holds an empty resource_ptr for its index buffer and the draw site uses
+    // vkCmdDraw rather than vkCmdDrawIndexed.
+    resource_ptr<VulkanIndexBuffer> ib;
+    if (ibh) {
+        ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
+    }
     auto ptr = resource_ptr<VulkanRenderPrimitive>::make(&mResourceManager, rph, pt, vb, ib);
     ptr.inc();
     mResourceManager.associateHandle(rph.getId(), std::move(tag));
@@ -2570,9 +2576,15 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
-    vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->getVkBuffer(), 0,
-            prim->indexBuffer->indexType);
+    // Both bindings are conditional: attribute-less primitives have 0 vertex buffers, and
+    // non-indexed primitives have no IndexBuffer at all.
+    if (bufferCount > 0) {
+        vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
+    }
+    if (prim->indexBuffer) {
+        vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->getVkBuffer(), 0,
+                prim->indexBuffer->indexType);
+    }
 }
 
 void VulkanDriver::bindDescriptorSet(
@@ -2607,16 +2619,12 @@ void VulkanDriver::bindDescriptorSet(
     }
 }
 
-void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
-    FVK_SYSTRACE_SCOPE();
+void VulkanDriver::prepareDraw() {
     if (skipDueToEmptyRenderPass()) {
         return;
     }
 
-    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     auto const& [doBindInDraw, bundle] = mPipelineState.bindInDraw;
-
-    fvkutils::DescriptorSetMask setsWithExternalSamplers = {};
     if (doBindInDraw) {
         // Create the new pipeline layout from the current bounded descriptor sets.
         // The layout of the descriptor sets at this point should have the final one taking into account
@@ -2648,13 +2656,30 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     }
     mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout,
             mPipelineState.descriptorSetMask);
+}
+
+void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    FVK_SYSTRACE_SCOPE();
+    prepareDraw();
 
     // Finally, make the actual draw call. TODO: support subranges
     uint32_t const firstIndex = indexOffset;
     constexpr int32_t vertexOffset = 0;
     constexpr uint32_t firstInstId = 0;
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
+}
+
+void VulkanDriver::drawArrays(uint32_t vertexOffset, uint32_t vertexCount,
+        uint32_t instanceCount) {
+    FVK_SYSTRACE_SCOPE();
+    prepareDraw();
+
+    constexpr uint32_t firstInstId = 0;
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
+
+    vkCmdDraw(cmdbuffer, vertexCount, instanceCount, vertexOffset, firstInstId);
 }
 
 void VulkanDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
