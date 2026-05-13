@@ -342,8 +342,15 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
         mProtected |= texture->getIsProtected();
 
+        size_t const compactIdx = attachments.size();
         attachments.push_back(attachment);
         mInfo->colors.set(index);
+
+        TextureFormat const fmt = texture->format;
+        mInfo->colorClearKinds[compactIdx] = isUnsignedIntFormat(fmt) ?
+                VulkanRenderTarget::ColorClearKind::UnsignedInt : isSignedIntFormat(fmt) ?
+                        VulkanRenderTarget::ColorClearKind::SignedInt :
+                        VulkanRenderTarget::ColorClearKind::Float;
 
         rpkey.colorFormat[index] = attachment.getFormat();
         fbkey.color[index] = attachment.getImageView();
