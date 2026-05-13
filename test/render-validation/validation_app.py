@@ -1,3 +1,17 @@
+# Copyright (C) 2026 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import sys
 import shutil
@@ -135,11 +149,8 @@ class FileItem(Static):
             with Horizontal(id="file_row", classes="file-item-row"):
                 yield Label(self.filename, id="lbl_filename", classes="file-name")
 
-                # Only show Load button for test configurations, not results
                 if not self.filename.startswith("results_"):
                     yield Button("▶", id="btn_load", variant="success", classes="compact-btn", tooltip="Load this test on device")
-                else:
-                    yield Button("🌐", id="btn_serve", variant="success", classes="compact-btn", tooltip="Serve and view results locally")
 
                 yield Button("↓", id="btn_download", variant="primary", classes="compact-btn", tooltip="Download to PC")
                 yield Button("✎", id="btn_start_rename", variant="warning", classes="compact-btn", tooltip="Rename on device")
@@ -148,11 +159,9 @@ class FileItem(Static):
                 yield Input(value=self.filename, id="inp_rename", classes="rename-input")
                 yield Button("Save", id="btn_save_rename", variant="success", classes="compact-btn")
                 yield Button("Cancel", id="btn_cancel_rename", classes="compact-btn")
-            yield Label("", id="lbl_server_url", classes="server-url")
 
     def on_mount(self):
         self.query_one("#rename_row").display = False
-        self.query_one("#lbl_server_url").display = False
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
@@ -210,81 +219,8 @@ class FileItem(Static):
             self.app.notify(f"Loading {self.filename} on device...", title="Load Test")
             self.run_worker(self.load_on_device(), exclusive=True)
 
-        elif btn_id == "btn_serve":
-            if hasattr(self, "server_proc") and self.server_proc:
-                self.stop_server(event.button)
-            else:
-                event.button.disabled = True
-                self.run_worker(self.start_server(event.button), exclusive=True)
-
-    async def start_server(self, button: Button) -> None:
-        try:
-            # Create a tmp directory for the results
-            tmp_dir = os.path.join(os.getcwd(), "tmp")
-            os.makedirs(tmp_dir, exist_ok=True)
-            dest = os.path.join(tmp_dir, self.filename)
-
-            # Download file to tmp
-            if not os.path.exists(dest):
-                self.app.notify(f"Downloading {self.filename} for viewer...", title="Preparing Server")
-                if self.is_internal:
-                    cmd = f"adb -s {self.serial} shell \"run-as {PACKAGE} cat {self.filepath}\" > \"{dest}\""
-                    proc = await asyncio.create_subprocess_shell(cmd)
-                    await proc.communicate()
-                else:
-                    await run_adb_cmd("-s", self.serial, "pull", self.filepath, dest)
-
-            # Find unoccupied port
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("", 0))
-            port = s.getsockname()[1]
-            s.close()
-
-            # Start server
-            server_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "result-viewer", "server.py")
-            self.server_proc = await asyncio.create_subprocess_exec(
-                "python3", server_script, dest, "--port", str(port)
-            )
-
-            button.label = "🛑"
-            button.variant = "error"
-            button.tooltip = "Stop Server"
-
-            lbl_url = self.query_one("#lbl_server_url", Label)
-            lbl_url.update(f"  ↳ Server: http://localhost:{port}")
-            lbl_url.display = True
-
-            self.app.notify(f"Result viewer started on http://localhost:{port}", title="Server Started")
-        except Exception as e:
-            self.app.notify(f"Failed to start server: {e}", title="Server Error", severity="error")
-            button.label = "🌐"
-            button.variant = "success"
-            button.tooltip = "Serve and view results locally"
-            self.query_one("#lbl_server_url", Label).display = False
-            self.server_proc = None
-        finally:
-            button.disabled = False
-
-    def stop_server(self, button: Button = None) -> None:
-        if hasattr(self, "server_proc") and self.server_proc:
-            try:
-                self.server_proc.terminate()
-            except ProcessLookupError:
-                pass
-            self.server_proc = None
-            if button:
-                button.label = "🌐"
-                button.variant = "success"
-                button.tooltip = "Serve and view results locally"
-            try:
-                self.query_one("#lbl_server_url", Label).display = False
-            except Exception:
-                pass
-            self.app.notify("Server stopped", title="Server Stopped")
-
     def on_unmount(self) -> None:
-        self.stop_server()
+        pass
 
     async def load_on_device(self) -> None:
         cmd_args = [
