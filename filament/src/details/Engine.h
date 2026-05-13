@@ -745,6 +745,7 @@ private:
 
     // Creation parameters
     Config mConfig;
+    ColorGrading::Builder mColorGradingBuilder;
 
     std::vector<std::function<bool()>> mDeferredAsyncObjectDestruction;
 
