@@ -262,12 +262,10 @@ public:
     /**
      * Creates a Platform::Sync object, which tracks a fence and its status,
      * and allows conversion to an external sync.
-     * @param fence         The underlying VkFence to use for synchronization.
-     * @param fenceStatus   An object tracking the fence's state
+     * @param fenceStatus   An object tracking the fence and its current state.
      * @return              A Platform::Sync object tracking the provided fence.
      */
-    virtual Platform::Sync* createSync(VkFence fence,
-            std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
+    virtual Platform::Sync* createSync(std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
 
     /**
      * Destroys a sync. If called with a sync not created by this platform
@@ -458,7 +456,6 @@ public:
 
 protected:
     struct VulkanSync : public Platform::Sync {
-        VkFence fence;
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
 
