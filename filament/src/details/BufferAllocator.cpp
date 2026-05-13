@@ -18,7 +18,10 @@
 
 #include <private/utils/Tracing.h>
 #include <utils/Panic.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
+
+#include <bit>
 
 namespace filament {
 namespace {
@@ -29,13 +32,11 @@ constexpr static bool isPowerOfTwo(uint32_t n) {
 }
 #endif
 
-constexpr static uint8_t getShiftFromPowerOfTwo(uint32_t n) noexcept {
-    uint8_t shift = 0;
-    while (n > 1) {
-        n >>= 1;
-        ++shift;
+constexpr static uint8_t powerOfTwoShift(uint32_t n) noexcept {
+    if (UTILS_VERY_UNLIKELY(n == 0)) {
+        return 0;
     }
-    return shift;
+    return 31 - std::countl_zero(n);
 }
 
 } // anonymous namespace
@@ -43,7 +44,7 @@ constexpr static uint8_t getShiftFromPowerOfTwo(uint32_t n) noexcept {
 BufferAllocator::BufferAllocator(allocation_size_t totalSize, allocation_size_t slotSize)
     : mTotalSize(totalSize),
       mSlotSize(slotSize),
-      mSlotSizeShift(getShiftFromPowerOfTwo(slotSize)) {
+      mSlotSizeShift(powerOfTwoShift(slotSize)) {
     assert_invariant(mSlotSize > 0);
     assert_invariant(isPowerOfTwo(mSlotSize));
 
