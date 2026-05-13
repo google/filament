@@ -109,7 +109,7 @@ std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
 static void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
     // Assert that a single bit is set.
-    UTILS_UNUSED uint8_t const bits = static_cast<uint8_t>(api);
+    UTILS_UNUSED uint8_t const bits = uint8_t(api);
     assert_invariant(bits && !(bits & bits - 1u));
 }
 
@@ -258,8 +258,8 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
         case Variable::CUSTOM4:
-            assert_invariant(static_cast<size_t>(v) < MATERIAL_VARIABLES_COUNT);
-            mVariables[static_cast<size_t>(v)] = { CString(name), Precision::DEFAULT, false };
+            assert_invariant(size_t(v) < MATERIAL_VARIABLES_COUNT);
+            mVariables[size_t(v)] = { CString(name), Precision::DEFAULT, false };
             break;
     }
     return *this;
@@ -273,8 +273,8 @@ MaterialBuilder& MaterialBuilder::variable(Variable v,
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
         case Variable::CUSTOM4:
-            assert_invariant(static_cast<size_t>(v) < MATERIAL_VARIABLES_COUNT);
-            mVariables[static_cast<size_t>(v)] = { CString(name), precision, true };
+            assert_invariant(size_t(v) < MATERIAL_VARIABLES_COUNT);
+            mVariables[size_t(v)] = { CString(name), precision, true };
             break;
     }
     return *this;
@@ -662,19 +662,19 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
-            const ShaderStageFlags stages = param.stages.value_or(defaultShaderStages);
+            ShaderStageFlags const stages = param.stages.value_or(defaultShaderStages);
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
                     param.format, param.precision, param.filterable, param.multisample,
                     { param.transformName.data(), param.transformName.size() }, stages);
             if (!param.transformName.empty()) {
                 ibb.add({ { { param.transformName.data(), param.transformName.size() },
-                    static_cast<uint8_t>(binding), 0, UniformType::MAT3, Precision::DEFAULT,
+                    uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,
                     FeatureLevel::FEATURE_LEVEL_0 } });
             }
             binding++;
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
-                      static_cast<uint32_t>(param.size == 1u ? 0u : param.size), param.uniformType,
+                      uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
                       param.precision, FeatureLevel::FEATURE_LEVEL_0 }});
         }
     }
@@ -768,7 +768,7 @@ void MaterialBuilder::initPushConstants() noexcept {
 bool MaterialBuilder::findProperties(backend::ShaderStage const type,
         PropertyList const& allProperties,
         CodeGenParams const& semanticCodeGenParams) noexcept {
-    constexpr GLSLTools glslTools;
+    GLSLTools const glslTools;
     std::string const shaderCodeAllProperties = peek(type, semanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
     if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
@@ -1036,7 +1036,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     };
                     char filename[256];
                     snprintf(filename, sizeof(filename), "%s_0x%02x_fl%d.%s",
-                            mMaterialName.c_str_safe(), variantKey, static_cast<int>(featureLevel),
+                            mMaterialName.c_str_safe(), variantKey, int(featureLevel),
                             getExtension(v.stage));
                     printf("Writing variant 0x%02x to %s\n", variantKey, filename);
                     std::ofstream file(filename);
@@ -1159,13 +1159,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         static_assert(sizeof(decltype(a.variant.key)) == 1);
         static_assert(sizeof(decltype(b.variant.key)) == 1);
         const uint32_t akey =
-            (static_cast<uint32_t>(a.shaderModel) << 16) |
-            (static_cast<uint32_t>(a.variant.key) << 8)  |
-             static_cast<uint32_t>(a.stage);
+            (uint32_t(a.shaderModel) << 16) | (uint32_t(a.variant.key) << 8)  | uint32_t(a.stage);
         const uint32_t bkey =
-            (static_cast<uint32_t>(b.shaderModel) << 16) |
-            (static_cast<uint32_t>(b.variant.key) << 8)  |
-             static_cast<uint32_t>(b.stage);
+            (uint32_t(b.shaderModel) << 16) | (uint32_t(b.variant.key) << 8)  | uint32_t(b.stage);
         return akey < bkey;
     };
     std::sort(glslEntries.begin(), glslEntries.end(), compare);
@@ -1290,12 +1286,12 @@ MaterialBuilder& MaterialBuilder::useLegacyMorphing() noexcept {
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::materialSource(const std::string_view source) noexcept {
+MaterialBuilder& MaterialBuilder::materialSource(std::string_view const source) noexcept {
     mMaterialSource = source;
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::setApiLevel(const uint32_t apiLevel) noexcept {
+MaterialBuilder& MaterialBuilder::setApiLevel(uint32_t const apiLevel) noexcept {
     mApiLevel = apiLevel;
     return *this;
 }
@@ -1341,7 +1337,7 @@ error:
 
     if (mMaterialDomain == MaterialDomain::SURFACE) {
         if (mRequiredAttributes[COLOR] &&
-            !mVariables[static_cast<int>(Variable::CUSTOM4)].name.empty()) {
+            !mVariables[int(Variable::CUSTOM4)].name.empty()) {
             // both the color attribute and the custom4 variable are present, that's not supported
             LOG(ERROR) << "Error: when the 'color' attribute is required 'Variable::CUSTOM4' is not supported.";
             goto error;
@@ -1429,11 +1425,11 @@ error:
 
     Package package(signedContainerSize);
     Flattener f{ package.getData() };
-    const size_t flattenSize = container.flatten(f);
+    size_t const flattenSize = container.flatten(f);
 
     std::vector<uint32_t> crc32Table;
     hash::crc32GenerateTable(crc32Table);
-    const uint32_t crc = hash::crc32Update(0, f.getStartPtr(), flattenSize, crc32Table);
+    uint32_t const crc = hash::crc32Update(0, f.getStartPtr(), flattenSize, crc32Table);
     f.writeUint64(MaterialCrc32);
     f.writeUint32(sizeof(crc));
     f.writeUint32(crc);
@@ -1502,7 +1498,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 info.refractionMode == RefractionMode::SCREEN_SPACE) {
                 textureUsedByFilamentCount += 1;        // ssr
             }
-            if (mVariantFilter & static_cast<uint32_t>(UserVariantFilterBit::FOG)) {
+            if (mVariantFilter & uint32_t(UserVariantFilterBit::FOG)) {
                 textureUsedByFilamentCount -= 1;        // fog texture
             }
 
@@ -1611,7 +1607,7 @@ static Program::UniformInfo extractUniforms(BufferInterfaceBlock const& uib) noe
         uniforms.push_back({
             { qualified.data(), qualified.size() },
             item.offset,
-            static_cast<uint8_t>(item.size < 1u ? 1u : item.size),
+            uint8_t(item.size < 1u ? 1u : item.size),
             item.type
         });
     }
@@ -1620,7 +1616,7 @@ static Program::UniformInfo extractUniforms(BufferInterfaceBlock const& uib) noe
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
     container.emplace<uint32_t>(MaterialVersion, MATERIAL_VERSION);
-    container.emplace<uint8_t>(MaterialFeatureLevel, static_cast<uint8_t>(info.featureLevel));
+    container.emplace<uint8_t>(MaterialFeatureLevel, (uint8_t)info.featureLevel);
     container.emplace<const char*>(MaterialName, mMaterialName.c_str_safe());
     container.emplace<const char*>(MaterialCompilationParameters,
             mCompilationParameters.c_str_safe());
@@ -1720,10 +1716,10 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
         if (mBlendingMode == BlendingMode::CUSTOM) {
             uint32_t const blendFunctions =
-                    (static_cast<uint32_t>(mCustomBlendFunctions[0]) << 24) |
-                    (static_cast<uint32_t>(mCustomBlendFunctions[1]) << 16) |
-                    (static_cast<uint32_t>(mCustomBlendFunctions[2]) <<  8) |
-                    (static_cast<uint32_t>(mCustomBlendFunctions[3]) <<  0);
+                    (uint32_t(mCustomBlendFunctions[0]) << 24) |
+                    (uint32_t(mCustomBlendFunctions[1]) << 16) |
+                    (uint32_t(mCustomBlendFunctions[2]) <<  8) |
+                    (uint32_t(mCustomBlendFunctions[3]) <<  0);
             container.emplace< uint32_t >(MaterialBlendFunction, blendFunctions);
         }
 
@@ -1745,7 +1741,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         UTILS_NOUNROLL
         for (size_t i = 0; i < MATERIAL_PROPERTIES_COUNT; i++) {
             if (mProperties[i]) {
-                properties |= static_cast<uint64_t>(1u) << i;
+                properties |= uint64_t(1u) << i;
             }
         }
         container.emplace<uint64_t>(MaterialProperties, properties);
@@ -1755,7 +1751,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     // create a unique material id
     auto const& vert = mMaterialVertexCode.getCode();
     auto const& frag = mMaterialFragmentCode.getCode();
-    constexpr std::hash<std::string_view> hasher;
+    std::hash<std::string_view> const hasher;
     size_t const materialId = hash::combine(
             MATERIAL_VERSION,
             hash::combine(

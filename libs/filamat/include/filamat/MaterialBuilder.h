@@ -889,7 +889,7 @@ private:
 
     bool generateShaders(
             utils::JobSystem& jobSystem,
-            const std::vector<Variant>& variants, ChunkContainer& container,
+            const std::vector<filamat::Variant>& variants, ChunkContainer& container,
             const MaterialInfo& info) const noexcept;
 
     bool hasCustomVaryings() const noexcept;
@@ -902,7 +902,7 @@ private:
 
     class ShaderCode {
     public:
-        void setLineOffset(const size_t offset) noexcept { mLineOffset = offset; }
+        void setLineOffset(size_t const offset) noexcept { mLineOffset = offset; }
         void setCode(const utils::CString& code) noexcept {
             mCode = code;
         }

@@ -104,9 +104,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
                 material.refractionMode != RefractionMode::NONE);
         if (material.refractionMode != RefractionMode::NONE) {
             CodeGenerator::generateDefine(out, "REFRACTION_MODE_CUBEMAP",
-                    static_cast<uint32_t>(RefractionMode::CUBEMAP));
+                    uint32_t(RefractionMode::CUBEMAP));
             CodeGenerator::generateDefine(out, "REFRACTION_MODE_SCREEN_SPACE",
-                    static_cast<uint32_t>(RefractionMode::SCREEN_SPACE));
+                    uint32_t(RefractionMode::SCREEN_SPACE));
             switch (material.refractionMode) {
                 case RefractionMode::NONE:
                     // can't be here
@@ -121,9 +121,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
                     break;
             }
             CodeGenerator::generateDefine(out, "REFRACTION_TYPE_SOLID",
-                    static_cast<uint32_t>(RefractionType::SOLID));
+                    uint32_t(RefractionType::SOLID));
             CodeGenerator::generateDefine(out, "REFRACTION_TYPE_THIN",
-                    static_cast<uint32_t>(RefractionType::THIN));
+                    uint32_t(RefractionType::THIN));
             switch (material.refractionType) {
                 case RefractionType::SOLID:
                     CodeGenerator::generateDefine(out, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
@@ -249,8 +249,7 @@ void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain
 void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out,
         ShaderStage const, MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const&, PostProcessVariant const variant) noexcept {
-    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL",
-        static_cast<uint32_t>(featureLevel));
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
     switch (variant) {
         case PostProcessVariant::OPAQUE:
             CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 1u);
@@ -538,8 +537,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     auto const defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
-    CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION",
-        static_cast<uint32_t>(specularAO));
+    CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
     bool const multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : shaderModel == ShaderModel::DESKTOP;
@@ -629,8 +627,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
         bool const isLit = material.isLit || material.hasShadowMultiplier;
         bool const isSSR = material.reflectionMode == ReflectionMode::SCREEN_SPACE ||
                 material.refractionMode == RefractionMode::SCREEN_SPACE;
-        bool const hasFog =
-            !(variantFilter & static_cast<UserVariantFilterMask>(UserVariantFilterBit::FOG));
+        bool const hasFog = !(variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG));
 
         auto const list = SamplerInterfaceBlock::filterSamplerList(
                 SibGenerator::getPerViewSib(variant).getSamplerInfoList(),
@@ -705,8 +702,7 @@ std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shade
 
     generateUserSpecConstants(cg, s, mConstants);
 
-    CodeGenerator::generateDefine(s, "MATERIAL_FEATURE_LEVEL",
-        static_cast<uint32_t>(featureLevel));
+    CodeGenerator::generateDefine(s, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
 
     CodeGenerator::generateSurfaceTypes(s, ShaderStage::COMPUTE);
 
@@ -751,7 +747,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 
     generateUserSpecConstants(cg, vs, mConstants);
 
-    CodeGenerator::generateDefine(vs, "LOCATION_POSITION", static_cast<uint32_t>(POSITION));
+    CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
     // custom material variables
     size_t variableIndex = 0;
@@ -761,7 +757,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 
     CodeGenerator::generatePostProcessInputs(vs, ShaderStage::VERTEX);
     generatePostProcessMaterialVariantDefines(vs, ShaderStage::VERTEX,
-            featureLevel, material, static_cast<PostProcessVariant>(variantKey));
+            featureLevel, material, PostProcessVariant(variantKey));
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
             DescriptorSetBindingPoints::PER_VIEW,
@@ -800,7 +796,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
     generateUserSpecConstants(cg, fs, mConstants);
 
     generatePostProcessMaterialVariantDefines(fs, ShaderStage::FRAGMENT,
-            featureLevel, material, static_cast<PostProcessVariant>(variantKey));
+            featureLevel, material, PostProcessVariant(variantKey));
 
     // custom material variables
     size_t variableIndex = 0;
