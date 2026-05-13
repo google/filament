@@ -61,6 +61,9 @@ std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
 }
 
 void VulkanFencePool::gc() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("vulkanfencepool::gc");
+
     // Clear any fence statuses that no longer exist.
     auto expiredStatuses = std::remove_if(mFenceStatuses.begin(), mFenceStatuses.end(),
         [](const auto& fenceStatus) {
@@ -78,6 +81,8 @@ void VulkanFencePool::gc() noexcept {
         mFences.pop_front();
         --mNumFences;
     }
+
+    FVK_SYSTRACE_END();
 }
 
 void VulkanFencePool::terminate() noexcept {
