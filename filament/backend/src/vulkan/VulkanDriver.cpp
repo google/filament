@@ -1022,23 +1022,20 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
-    VkFence fence = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fenceStatus;
     if (mCurrentRenderPass.commandBuffer) {
         VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
-        fence = cmdBuff->getVkFence();
         fenceStatus = cmdBuff->getFenceStatus();
         // If we're currently recording, flush so that the fence only applies
         // to commands already issued.
         mCommands.flush();
     } else {
-        fence = mCommands.getMostRecentFence();
         fenceStatus = mCommands.getMostRecentFenceStatus();
     }
 
     {
         std::lock_guard<std::mutex> guard(sync->lock);
-        sync->sync = mPlatform->createSync(fence, fenceStatus);
+        sync->sync = mPlatform->createSync(fenceStatus);
     }
 
     for (auto& cbData : sync->conversionCallbacks) {

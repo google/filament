@@ -24,6 +24,7 @@
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
+#include "VulkanFencePool.h"
 #include "VulkanSemaphoreManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
@@ -65,13 +66,11 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext const& mContext, VkDevice device, VkQueue queue,
+    VulkanCommandBuffer(VulkanContext const& context, VulkanFencePool& fencePool, VkDevice device, VkQueue queue,
             VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
-
-    ~VulkanCommandBuffer();
 
     template <typename T,
               typename = std::enable_if_t<
@@ -95,8 +94,8 @@ struct VulkanCommandBuffer {
     void begin() noexcept;
     fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
-    inline void setComplete() {
-        mFenceStatus->setStatus(VK_SUCCESS);
+    inline void checkAndUpdateStatus(VkDevice device) {
+        mFenceStatus->updateStatus(device);
     }
 
     VkResult getStatus() {
@@ -108,7 +107,7 @@ struct VulkanCommandBuffer {
     }
 
     VkFence getVkFence() const {
-        return mFence;
+        return mFenceStatus->getVkFence();
     }
 
     VkCommandBuffer buffer() const {
@@ -126,16 +125,15 @@ private:
     static uint32_t sAgeCounter;
 
     VulkanContext const& mContext;
+    VulkanFencePool& mFencePool;
     uint8_t mMarkerCount;
     bool const isProtected;
-    VkDevice mDevice;
     VkQueue mQueue;
     VulkanSemaphoreManager* mSemaphoreManager;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
     fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
     fvkmemory::resource_ptr<VulkanSemaphore> mSubmission;
-    VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<HeldResource> mResources;
     uint32_t mAge;
@@ -181,6 +179,7 @@ private:
     ActiveBuffers mSubmitted;
     std::vector<std::unique_ptr<VulkanCommandBuffer>> mBuffers;
     int8_t mRecording;
+    VulkanFencePool mFencePool;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
@@ -238,10 +237,6 @@ public:
         return sem;
     }
 
-    VkFence getMostRecentFence() {
-        return mLastFence;
-    }
-
     std::shared_ptr<VulkanCmdFence> getMostRecentFenceStatus() {
         return mLastFenceStatus;
     }
@@ -284,7 +279,6 @@ private:
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
 
-    VkFence mLastFence = VK_NULL_HANDLE;
     // Start out with a completed fence, because if no commands have
     // been queued or submited, then by definition, all pending work
     // is complete.
