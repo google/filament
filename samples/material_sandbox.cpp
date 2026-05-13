@@ -116,11 +116,11 @@ static void printUsage(char* name) {
             "           A / D: left / right\n"
             "           E / Q: up / down\n"
     );
-    constexpr std::string from("SAMPLE_MATERIAL");
+    const std::string from("SAMPLE_MATERIAL");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
-    constexpr std::string apiUsage("API_USAGE");
+    const std::string apiUsage("API_USAGE");
     for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
         usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
