@@ -210,6 +210,8 @@ private:
     uint8_t const mStereoscopicEyeCount;
     backend::AsynchronousMode const mAsynchronousMode;
 
+    uint8_t mTicksSinceLastGc = 0;
+
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
     // data to process it at call time. So we store it and process it during updateStreams.
     std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
