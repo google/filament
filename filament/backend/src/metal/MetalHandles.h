@@ -256,7 +256,8 @@ struct MetalVertexBufferInfo : public HwVertexBufferInfo {
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context,
-            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih);
+            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih,
+            bool async = false);
 
     Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<MetalBuffer*> buffers;
