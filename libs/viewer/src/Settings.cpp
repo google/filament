@@ -680,6 +680,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->history);
         } else if (compare(tok, jsonChunk, "scaleRate") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->scaleRate);
+        } else if (compare(tok, jsonChunk, "interval") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->interval);
         } else {
             slog.w << "Invalid frame rate options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1002,7 +1004,7 @@ static utils::FixedCapacityVector<math::float3> generateCustomLut(CustomLut type
     using namespace filament::math;
     size_t count = size_t(dim) * dim * dim;
     auto lut = utils::FixedCapacityVector<float3>::with_capacity(count);
-    
+
     for (size_t b = 0; b < dim; ++b) {
         for (size_t g = 0; g < dim; ++g) {
             for (size_t r = 0; r < dim; ++r) {
