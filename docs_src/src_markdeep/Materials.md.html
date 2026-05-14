@@ -1956,6 +1956,63 @@ fragment {
 radius of 4. Model [Bottle of Water](https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff)
 by [T-Art](https://sketchfab.com/person-x).](images/screenshot_transparent_shadows.jpg)
 
+### Lighting: coloredPenumbra
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:     Enables colored penumbrae on shadows cast on this material. When this effect is enabled, the
+      transition zone from full shadow to fully lit (the penumbra) is tinted using a color assumed
+      to be the result of subsurface scattering. How this color is defined depends on the shading
+      model (see below for details). To maximize the visual appearance of this effect, see the
+      material and lighting setup recommendations below.
+
+The color of the penumbra varies based on the `shadingModel`:
+- `lit`: the color is derived by saturating the computed diffuse color, itself based on `baseColor`
+- `subsurface`: the color is based on `subsurfaceColor`
+- `cloth`: the color is based on `subsurfaceColor`
+- `unlit`: does not apply
+- `specularGlossiness`: same as `lit`
+
+Setting up the material:
+- The material should be a rough material for the effect to be physically plausible
+- The material should be non-metallic for the effect to be physically plausible
+- The material's `baseColor` should be fairly reflective (i.e. not dark)
+- The effect works better with a fairly saturated `baseColor`
+- The `baseColor` should not be fully satured for the extra saturation to take effect
+
+Setting up the lighting:
+- Use strong direct lighting
+- Indirect lighting should be ideally dark and/or desaturated to create contrast with direct lighting
+- Use shadow techniques that create large penumbrae (VSM with a blur radius or PCSS for instance)
+
+!!! Note: Subsurface materials
+    This property has no effect on materials using the `subsurface` `shadingModel`. Colored
+    penumbrae are always enabled for these materials.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Grass",
+    coloredPenumbra : true
+    // ...
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, getUV0());
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [coloredPenumbra]: Colored penumbrae rendered using VSM shadows with a blur radius of 6.
+Model [Game Pirate Adventure Map](https://sketchfab.com/3d-models/game-pirate-adventure-map-696dfa212fda4240817615bdccb373d0)
+by [noyou](https://sketchfab.com/zsm123).](images/screenshot_colored_penumbra.jpg)
+
 ### Lighting: clearCoatIorChange
 
 Type
