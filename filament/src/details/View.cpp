@@ -421,7 +421,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     ShadowMapManager::Builder builder;
 
     // dominant directional light is always as index 0
-    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
@@ -441,7 +442,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
+        FLightManager::Instance const li = lcm.getInstance(entity);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -528,7 +530,8 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      * Directional light (always at index 0)
      */
 
-    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
@@ -776,7 +779,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         // we also know if we have a directional light
         FLightManager::Instance const directionalLight =
-                lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+                engine.getLightManager().getInstance(lightData.elementAt<FScene::LIGHT_ENTITY>(0));
         mHasDirectionalLighting = directionalLight.isValid();
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
@@ -899,8 +902,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
             // FIXME: when only one is active the UBO handle of the other is null
             //        (probably a problem on vulkan)
             if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
-                auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
                 FRenderableManager& rcm = engine.getRenderableManager();
+                auto const ci = rcm.getInstance(sceneData.elementAt<FScene::RENDERABLE_ENTITY>(i));
                 auto& descriptorSet = rcm.getDescriptorSet(ci);
 
                 auto const& layout = engine.getPerRenderableDescriptorSetLayout();
@@ -1344,7 +1347,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT instanceArray   = lightData.data<FScene::LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT entityArray   = lightData.data<FScene::LIGHT_ENTITY>();
     auto      * UTILS_RESTRICT visibleArray    = lightData.data<FScene::VISIBILITY>();
 
     Culler::intersects(visibleArray, frustum, sphereArray, lightData.size());
@@ -1354,7 +1357,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     size_t visibleLightCount = FScene::DIRECTIONAL_LIGHTS_COUNT;
     // skip directional light
     for (size_t i = FScene::DIRECTIONAL_LIGHTS_COUNT; i < lightData.size(); i++) {
-        FLightManager::Instance const li = instanceArray[i];
+        FLightManager::Instance const li = lcm.getInstance(entityArray[i]);
         if (visibleArray[i]) {
             if (!lcm.isLightCaster(li)) {
                 visibleArray[i] = 0;
@@ -1449,7 +1452,7 @@ void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
     FRenderableManager const& rcm = engine.getRenderableManager();
     for (uint32_t const index : visible) {
         uint8_t const level = 0; // TODO: pick the proper level of detail
-        auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
+        auto ri = rcm.getInstance(renderableData.elementAt<FScene::RENDERABLE_ENTITY>(index));
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
     }
 }
