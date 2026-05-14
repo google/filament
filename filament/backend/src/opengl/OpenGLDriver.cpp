@@ -625,6 +625,10 @@ Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferAsyncS() noexcept {
+    return initHandle<GLVertexBuffer>();
+}
+
 Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferS() noexcept {
     return initHandle<GLIndexBuffer>();
 }
@@ -775,8 +779,29 @@ void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBufferInfo> vbih,
         ImmutableCString&& tag) {
     DEBUG_MARKER()
-    construct<GLVertexBuffer>(vbh, vertexCount, vbih);
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih, false);
     mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+}
+
+void OpenGLDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih,
+        CallbackHandler* handler, CallbackHandler::Callback const callback,
+        void* user, ImmutableCString&& tag) {
+    // For object creation, the object should be constructed first to determine the initial settings
+    // early. For example, the `asynchronous` field needs to be decided at this stage so that
+    // subsequent backend APIs can handle operations based on this setting.
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih, true);
+    mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+
+    assert_invariant(getJobQueue());
+
+    // The job push is ordering-only: no GL commands are issued in the worker
+    // thread (createVertexBuffer doesn't allocate GPU memory). The push exists
+    // to fire the callback after any previously-queued worker jobs.
+    getJobQueue()->push([this, handler, callback, user]() mutable {
+        DEBUG_MARKER_NAME("createVertexBufferAsyncR")
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void OpenGLDriver::createIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh, ElementType const elementType,
@@ -2232,11 +2257,22 @@ void OpenGLDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     }
 }
 
+void OpenGLDriver::destroyVertexBufferCommon(Handle<HwVertexBuffer> vbh) {
+    GLVertexBuffer const* vb = handle_cast<const GLVertexBuffer*>(vbh);
+    destruct(vbh, vb);
+}
+
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
     if (vbh) {
         GLVertexBuffer const* vb = handle_cast<const GLVertexBuffer*>(vbh);
-        destruct(vbh, vb);
+        if (vb->asynchronous) {
+            getJobQueue()->push([this, vbh]() {
+                destroyVertexBufferCommon(vbh);
+            });
+        } else {
+            destroyVertexBufferCommon(vbh);
+        }
     }
 }
 
