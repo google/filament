@@ -634,8 +634,8 @@ MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t buff
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
-        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih, bool async)
+    : HwVertexBuffer(vertexCount, async), vbih(vbih), buffers(bufferCount, nullptr) {
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
@@ -1201,8 +1201,11 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].storeAction = getStoreAction(params,
                 getTargetBufferFlagsAt(i));
-        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
-                params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
+        // Metal's MTLClearColor is always 4 doubles. The texture's pixel format determines whether
+        // those doubles are interpreted as floats, signed ints, or unsigned ints. A double has a
+        // 53-bit mantissa, so any int32_t / uint32_t value round-trips exactly.
+        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(params.clearColor[0],
+                params.clearColor[1], params.clearColor[2], params.clearColor[3]);
 
         if (attachment.getMsaaTexture()) {
             // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.
@@ -1460,7 +1463,7 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
             auto const until = std::chrono::steady_clock::now() + ns(timeoutNs);
             status = context.driver->waitForFence(predicate, until);
         }
-        
+
         if (status == FenceStatus::ERROR) {
             return FenceStatus::ERROR;
         }

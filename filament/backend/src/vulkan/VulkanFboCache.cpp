@@ -259,13 +259,14 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
 
         const TargetBufferFlags flag = TargetBufferFlags(int(TargetBufferFlags::COLOR0) << i);
         const bool clear = any(config.clear & flag);
-        const bool discard = any(config.discardStart & flag);
+        const bool discardStart = any(config.discardStart & flag);
+        const bool discardEnd = any(config.discardEnd & flag);
 
         attachments[attachmentIndex++] = {
             .format = config.colorFormat[i],
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discard ? kDontCare : kKeep),
-            .storeOp = (config.usesLazilyAllocatedMemory & (1 << i)) ? kDisableStore : kEnableStore,
+            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
+            .storeOp = (discardEnd || (config.usesLazilyAllocatedMemory & (1 << i))) ? kDisableStore : kEnableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
             .initialLayout = fvkutils::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),

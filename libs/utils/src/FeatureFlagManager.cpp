@@ -68,7 +68,7 @@ void overrideFeatureDefaults(Slice<FeatureFlagManager::FeatureFlag> const& featu
             } else if (value == "0" || value == "false") {
                 *const_cast<bool*>(feature.value) = false;
             }
-            DLOG(INFO) << "overriding " << feature.name << " to " << *feature.value;
+            LOG(INFO) << "FeatureFlagManager: overriding " << feature.name << " to " << *feature.value;
         }
     }
 }

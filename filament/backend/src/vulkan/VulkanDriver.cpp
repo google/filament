@@ -619,6 +619,12 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vert
     mResourceManager.associateHandle(vbh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (!vbh) {
         return;
@@ -1016,23 +1022,20 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
-    VkFence fence = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fenceStatus;
     if (mCurrentRenderPass.commandBuffer) {
         VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
-        fence = cmdBuff->getVkFence();
         fenceStatus = cmdBuff->getFenceStatus();
         // If we're currently recording, flush so that the fence only applies
         // to commands already issued.
         mCommands.flush();
     } else {
-        fence = mCommands.getMostRecentFence();
         fenceStatus = mCommands.getMostRecentFenceStatus();
     }
 
     {
         std::lock_guard<std::mutex> guard(sync->lock);
-        sync->sync = mPlatform->createSync(fence, fenceStatus);
+        sync->sync = mPlatform->createSync(fenceStatus);
     }
 
     for (auto& cbData : sync->conversionCallbacks) {
@@ -1134,6 +1137,10 @@ Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
+    return mResourceManager.allocHandle<VulkanVertexBuffer>();
+}
+
+Handle<HwVertexBuffer> VulkanDriver::createVertexBufferAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBuffer>();
 }
 
@@ -2065,13 +2072,36 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
         // actually clearing that particular target.
+        uint32_t colorIdx = 0;
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
-                clearValue.color.float32[0] = params.clearColor.r;
-                clearValue.color.float32[1] = params.clearColor.g;
-                clearValue.color.float32[2] = params.clearColor.b;
-                clearValue.color.float32[3] = params.clearColor.a;
+                // VkClearColorValue is a union the driver reads according to the attachment's
+                // format. Dispatch on the kind cached on the render target at construction time.
+                // Writing the wrong arm produces silent corruption.
+                switch (rt->getColorClearKind(colorIdx++)) {
+                    case VulkanRenderTarget::ColorClearKind::Float: {
+                        clearValue.color.float32[0] = static_cast<float>(params.clearColor[0]);
+                        clearValue.color.float32[1] = static_cast<float>(params.clearColor[1]);
+                        clearValue.color.float32[2] = static_cast<float>(params.clearColor[2]);
+                        clearValue.color.float32[3] = static_cast<float>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::SignedInt: {
+                        clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor[0]);
+                        clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor[1]);
+                        clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor[2]);
+                        clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::UnsignedInt: {
+                        clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor[0]);
+                        clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor[1]);
+                        clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor[2]);
+                        clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor[3]);
+                        break;
+                    }
+                }
             }
         }
         // Resolve attachments are not cleared but still have entries in the list, so skip over them.
@@ -2150,7 +2180,7 @@ void VulkanDriver::nextSubpass(int) {
             ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
-        VulkanAttachment& subpassInput = renderTarget->getColor0();
+        VulkanAttachment& subpassInput = renderTarget->getColor(0);
         mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
 }
@@ -2424,8 +2454,8 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    auto const& dstAttachment = dstTarget->getColor0();
-    auto const& srcAttachment = srcTarget->getColor0();
+    auto const& dstAttachment = dstTarget->getColor(0);
+    auto const& srcAttachment = srcTarget->getColor(0);
 
     if (srcAttachment.texture->samples > 1) {
         mBlitter.resolve(dstAttachment, srcAttachment);

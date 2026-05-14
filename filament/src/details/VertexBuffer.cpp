@@ -312,10 +312,6 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     mVertexBufferInfoHandle = engine.getVertexBufferInfoFactory().create(driver,
             mBufferCount, mDeclaredAttributes.count(), mAttributes);
 
-    // This function call doesn't allocate GPU memory, so the `async` version is not needed.
-    mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
-            utils::ImmutableCString{ builder.getName() });
-
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
 
@@ -366,6 +362,11 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                 },
                 /* driver */ &engine.getDriver());
 
+        mHandle = driver.createVertexBufferAsync(mVertexCount, mVertexBufferInfoHandle,
+                cdHandler, &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
+                utils::ImmutableCString{ builder.getName() });
+        cdHandler->increaseCountdown();
+
         // create buffers (asynchronous)
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {
@@ -382,6 +383,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             mBufferObjects[i] = bo;
         }
     } else {
+        mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
+                utils::ImmutableCString{ builder.getName() });
+
         // create buffers
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {
