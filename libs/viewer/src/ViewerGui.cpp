@@ -974,7 +974,7 @@ void ViewerGui::updateUserInterface() {
         if (ImGui::CollapsingHeader("Shadows")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
             int mapSize = light.sunlight.shadowOptions.mapSize;
-            ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);
+            ImGui::SliderInt("Shadow map size", &mapSize, 32, 2048);
             light.sunlight.shadowOptions.mapSize = mapSize;
             ImGui::Checkbox("Stable Shadows", &light.sunlight.shadowOptions.stable);
             ImGui::Checkbox("Enable LiSPSM", &light.sunlight.shadowOptions.lispsm);
