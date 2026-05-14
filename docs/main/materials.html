@@ -264,13 +264,14 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:reflections" class="level3"><span class="tocNumber">4.2.31&nbsp; </span>Lighting: reflections</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.32&nbsp; </span>Lighting: shadowMultiplier</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:transparentshadow" class="level3"><span class="tocNumber">4.2.33&nbsp; </span>Lighting: transparentShadow</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.34&nbsp; </span>Lighting: clearCoatIorChange</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.35&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.36&nbsp; </span>Lighting: specularAmbientOcclusion</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.37&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.38&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.39&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.40&nbsp; </span>Shading: customSurfaceShading</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:coloredpenumbra" class="level3"><span class="tocNumber">4.2.34&nbsp; </span>Lighting: coloredPenumbra</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.35&nbsp; </span>Lighting: clearCoatIorChange</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.36&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.37&nbsp; </span>Lighting: specularAmbientOcclusion</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.38&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.39&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.40&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.41&nbsp; </span>Shading: customSurfaceShading</a><br/>
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/customvertexattributes" class="level3"><span class="tocNumber">4.3.2&nbsp; </span>Custom vertex attributes</a><br/>
@@ -758,7 +759,7 @@ and with (right)</span></center></div></center>
 <p>
 <p>The <code>bentNormal</code> property defines the average unoccluded direction at a point on the surface. It is
 used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
-specular ambient occlusion (see section  <a href="#toc4.2.36">4.2.36</a> about
+specular ambient occlusion (see section  <a href="#toc4.2.37">4.2.37</a> about
 <code>specularAmbientOcclusion</code>).</p>
 </p><p>
 Bent normals can greatly increase the visual fidelity of an asset with various cavities and concave
@@ -1946,42 +1947,106 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 radius of 4. Model <a href="https://sketchfab.com/3d-models/bottle-of-water-48fd4f6e90d84d89b5740ee78587d0ff">Bottle of Water</a>
 by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></center>
 </p>
-<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.34">&nbsp;</a><h3 id="lighting-clearcoatiorchange"><a class="header" href="#lighting-clearcoatiorchange">Lighting: clearCoatIorChange</a></h3>
+<a class="target" name="lighting:coloredpenumbra">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:coloredpenumbra">&nbsp;</a><a class="target" name="toc4.2.34">&nbsp;</a><h3 id="lighting-coloredpenumbra"><a class="header" href="#lighting-coloredpenumbra">Lighting: coloredPenumbra</a></h3>
+<p>
+<dl><dt>Type</dt><dd><p>     <code>boolean</code>
+</p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
+</p></dd><dt>Description</dt><dd><p>      Enables colored penumbrae on shadows cast on this material. When this effect is enabled, the
+      transition zone from full shadow to fully lit (the penumbra) is tinted using a color assumed
+      to be the result of subsurface scattering. How this color is defined depends on the shading
+      model (see below for details). To maximize the visual appearance of this effect, see the
+      material and lighting setup recommendations below.
+</p></dd></dl>The color of the penumbra varies based on the <code>shadingModel</code>:
+</p><p>
+<ul>
+<li class="minus"><code>lit</code>: the color is derived by saturating the computed diffuse color, itself based on <code>baseColor</code>
+</li>
+<li class="minus"><code>subsurface</code>: the color is based on <code>subsurfaceColor</code>
+</li>
+<li class="minus"><code>cloth</code>: the color is based on <code>subsurfaceColor</code>
+</li>
+<li class="minus"><code>unlit</code>: does not apply
+</li>
+<li class="minus"><code>specularGlossiness</code>: same as <code>lit</code></li></ul>
+</p><p>
+Setting up the material:
+</p><p>
+<ul>
+<li class="minus">The material should be a rough material for the effect to be physically plausible
+</li>
+<li class="minus">The material should be non-metallic for the effect to be physically plausible
+</li>
+<li class="minus">The material's <code>baseColor</code> should be fairly reflective (i.e. not dark)
+</li>
+<li class="minus">The effect works better with a fairly saturated <code>baseColor</code>
+</li>
+<li class="minus">The <code>baseColor</code> should not be fully satured for the extra saturation to take effect</li></ul>
+</p><p>
+Setting up the lighting:
+</p><p>
+<ul>
+<li class="minus">Use strong direct lighting
+</li>
+<li class="minus">Indirect lighting should be ideally dark and/or desaturated to create contrast with direct lighting
+</li>
+<li class="minus">Use shadow techniques that create large penumbrae (VSM with a blur radius or PCSS for instance)</li></ul>
+</p><p>
+<div class="admonition note"><div class="admonition-title"> Subsurface materials</div>
+</p><p>
+    This property has no effect on materials using the <code>subsurface</code> <code>shadingModel</code>. Colored
+    penumbrae are always enabled for these materials.</div>
+</p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
+<span class="line">    name <span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Grass&quot;</span><span class="hljs-punctuation">,</span></span>
+<span class="line">    coloredPenumbra <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span></span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">fragment <span class="hljs-punctuation">{</span></span>
+<span class="line">    void material(inout MaterialInputs material) <span class="hljs-punctuation">{</span></span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        material.baseColor = texture(materialParams_baseColor<span class="hljs-punctuation">,</span> getUV0());</span>
+<span class="line">    <span class="hljs-punctuation">}</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
+<center><div class="image" style=""><a href="../images/screenshot_colored_penumbra.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_colored_penumbra.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_coloredpenumbra">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;38:</b> Colored penumbrae rendered using VSM shadows with a blur radius of 6.
+Model <a href="https://sketchfab.com/3d-models/game-pirate-adventure-map-696dfa212fda4240817615bdccb373d0">Game Pirate Adventure Map</a>
+by <a href="https://sketchfab.com/zsm123">noyou</a>.</span></center></div></center>
+</p>
+<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.35">&nbsp;</a><h3 id="lighting-clearcoatiorchange"><a class="header" href="#lighting-clearcoatiorchange">Lighting: clearCoatIorChange</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>boolean</code>
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>true</code>.
 </p></dd><dt>Description</dt><dd><p>     When adding a clear coat layer, the change in index of refraction (IoR) is taken into account
      to modify the specular color of the base layer. This appears to darken <code>baseColor</code>. When this
-     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&nbsp;38</a> for an
+     effect is disabled, <code>baseColor</code> is left unmodified. See <a href="#figure_clearcoatiorchange">figure&nbsp;39</a> for an
      example of how this property can affect a red metallic base layer.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    clearCoatIorChange <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_clear_coat_ior_change.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;38:</b> The same rough metallic ball with a clear coat layer rendered
+<center><div class="image" style=""><a href="../images/screenshot_clear_coat_ior_change.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_clear_coat_ior_change.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_clearcoatiorchange">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;39:</b> The same rough metallic ball with a clear coat layer rendered
 with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</span></center></div></center>
 </p>
-<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.35">&nbsp;</a><h3 id="lighting-multibounceambientocclusion"><a class="header" href="#lighting-multibounceambientocclusion">Lighting: multiBounceAmbientOcclusion</a></h3>
+<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.36">&nbsp;</a><h3 id="lighting-multibounceambientocclusion"><a class="header" href="#lighting-multibounceambientocclusion">Lighting: multiBounceAmbientOcclusion</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>boolean</code>
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code> on mobile, <code>true</code> on desktop.
 </p></dd><dt>Description</dt><dd><p>     Multi-bounce ambient occlusion takes into account interreflections when applying ambient
      occlusion to image-based lighting. Turning this feature on avoids over-darkening occluded
      areas. It also takes the surface color into account to generate colored ambient occlusion.
-     <a href="#figure_multibounceao">Figure&nbsp;39</a> compares the ambient occlusion term of a surface with and without
+     <a href="#figure_multibounceao">Figure&nbsp;40</a> compares the ambient occlusion term of a surface with and without
      multi-bounce ambient occlusion. Notice how multi-bounce ambient occlusion introduces color
-     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&nbsp;40</a> toggles between multi-bounce ambient
+     in the occluded areas. <a href="#figure_multibounceaoanimated">Figure&nbsp;41</a> toggles between multi-bounce ambient
      occlusion on and off on a lit brick material to highlight the effects of this property.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    multiBounceAmbientOcclusion <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;39:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
+<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.jpg" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.jpg" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;40:</b> Brick texture amient occlusion map rendered with multi-bounce ambient
 occclusion enabled (left) and disabled (right).</span></center></div></center>
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;40:</b> Brick texture rendered with multi-bounce ambient
+<center><div class="image" style=""><a href="../images/screenshot_multi_bounce_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_multi_bounce_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_multibounceaoanimated">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;41:</b> Brick texture rendered with multi-bounce ambient
 occclusion enabled and disabled.</span></center></div></center>
 </p>
-<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.36">&nbsp;</a><h3 id="lighting-specularambientocclusion"><a class="header" href="#lighting-specularambientocclusion">Lighting: specularAmbientOcclusion</a></h3>
+<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.37">&nbsp;</a><h3 id="lighting-specularambientocclusion"><a class="header" href="#lighting-specularambientocclusion">Lighting: specularAmbientOcclusion</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>string</code>
 </p></dd><dt>Value</dt><dd><p>      <code>none</code>, <code>simple</code> or <code>bentNormals</code>. Defaults to <code>none</code> on mobile, <code>simple</code> on desktop. For
@@ -1990,17 +2055,17 @@ occclusion enabled and disabled.</span></center></div></center>
 </p></dd><dt>Description</dt><dd><p>     Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
      indirect lighting. When setting this property to other than <code>none</code>, a new ambient occlusion
      term is derived from the surface roughness and applied to specular indirect lighting.
-     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;41</a>.
+     This effect helps remove unwanted specular reflections as shown in <a href="#figure_specularao">figure&nbsp;42</a>.
      When this value is set to <code>simple</code>, Filament uses a cheap but approximate method of computing
      the specular ambient occlusion term. If this value is set to <code>bentNormals</code>, Filament will use
      a much more accurate but much more expensive method.
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    specularAmbientOcclusion <span class="hljs-punctuation">:</span> simple</span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
-<center><div class="image" style=""><a href="../images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_specular_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_specularao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;41:</b> Comparison of specular ambient occlusion on and off. The effect is
+<center><div class="image" style=""><a href="../images/screenshot_specular_ao.gif" target="_blank"><img class="markdeep" src="../images/screenshot_specular_ao.gif" /></a><center><span class="imagecaption"><a class="target" name="figure_specularao">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;42:</b> Comparison of specular ambient occlusion on and off. The effect is
 particularly visible under the hose.</span></center></div></center>
 </p>
-<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.37">&nbsp;</a><h3 id="anti-aliasing-specularantialiasing"><a class="header" href="#anti-aliasing-specularantialiasing">Anti-aliasing: specularAntiAliasing</a></h3>
+<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.38">&nbsp;</a><h3 id="anti-aliasing-specularantialiasing"><a class="header" href="#anti-aliasing-specularantialiasing">Anti-aliasing: specularAntiAliasing</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>boolean</code>
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
@@ -2012,7 +2077,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    specularAntiAliasing <span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.38">&nbsp;</a><h3 id="anti-aliasing-specularantialiasingvariance"><a class="header" href="#anti-aliasing-specularantialiasingvariance">Anti-aliasing: specularAntiAliasingVariance</a></h3>
+<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.39">&nbsp;</a><h3 id="anti-aliasing-specularantialiasingvariance"><a class="header" href="#anti-aliasing-specularantialiasingvariance">Anti-aliasing: specularAntiAliasingVariance</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>float</code>
 </p></dd><dt>Value</dt><dd><p>      A value between 0 and 1, set to 0.15 by default.
@@ -2022,7 +2087,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    specularAntiAliasingVariance <span class="hljs-punctuation">:</span> <span class="hljs-number">0.2</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.39">&nbsp;</a><h3 id="anti-aliasing-specularantialiasingthreshold"><a class="header" href="#anti-aliasing-specularantialiasingthreshold">Anti-aliasing: specularAntiAliasingThreshold</a></h3>
+<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.40">&nbsp;</a><h3 id="anti-aliasing-specularantialiasingthreshold"><a class="header" href="#anti-aliasing-specularantialiasingthreshold">Anti-aliasing: specularAntiAliasingThreshold</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>float</code>
 </p></dd><dt>Value</dt><dd><p>      A value between 0 and 1, set to 0.2 by default.
@@ -2031,7 +2096,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl></p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    specularAntiAliasingThreshold <span class="hljs-punctuation">:</span> <span class="hljs-number">0.1</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
-<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.40">&nbsp;</a><h3 id="shading-customsurfaceshading"><a class="header" href="#shading-customsurfaceshading">Shading: customSurfaceShading</a></h3>
+<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.41">&nbsp;</a><h3 id="shading-customsurfaceshading"><a class="header" href="#shading-customsurfaceshading">Shading: customSurfaceShading</a></h3>
 <p>
 <dl><dt>Type</dt><dd><p>     <code>bool</code>
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
@@ -2360,9 +2425,9 @@ masking are handled outside of this function and must therefore be ignored.
 <span class="line">        <span class="hljs-keyword">return</span> shadingData.diffuseColor * light * toon;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre><p>
-The result can be seen in <a href="#figure_toonshading">figure&nbsp;42</a>.
+The result can be seen in <a href="#figure_toonshading">figure&nbsp;43</a>.
 </p><p>
-<center><div class="image" style=""><a href="../images/screenshot_toon_shading.png" target="_blank"><img class="markdeep" src="../images/screenshot_toon_shading.png" /></a><center><span class="imagecaption"><a class="target" name="figure_toonshading">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;42:</b> simple toon shading implemented with custom
+<center><div class="image" style=""><a href="../images/screenshot_toon_shading.png" target="_blank"><img class="markdeep" src="../images/screenshot_toon_shading.png" /></a><center><span class="imagecaption"><a class="target" name="figure_toonshading">&nbsp;</a><b style="font-style:normal;">Figure&nbsp;43:</b> simple toon shading implemented with custom
 surface shading</span></center></div></center>
 </p>
 <a class="target" name="shaderpublicapis">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis">&nbsp;</a><a class="target" name="toc4.5">&nbsp;</a><h2 id="shader-public-apis"><a class="header" href="#shader-public-apis">Shader public APIs</a></h2>
