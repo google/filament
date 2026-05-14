@@ -18,10 +18,9 @@
 
 #include <private/utils/Tracing.h>
 #include <utils/Panic.h>
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <bit>
 
 namespace filament {
 namespace {
@@ -36,7 +35,7 @@ constexpr static uint8_t powerOfTwoShift(uint32_t n) noexcept {
     if (UTILS_VERY_UNLIKELY(n == 0)) {
         return 0;
     }
-    return 31 - std::countl_zero(n);
+    return 31 - utils::clz(n);
 }
 
 } // anonymous namespace
