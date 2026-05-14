@@ -426,6 +426,10 @@ Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
     return allocHandle<WebGPUVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferAsyncS() noexcept {
+    return allocHandle<WebGPUVertexBuffer>();
+}
+
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
     return allocHandle<WebGPUDescriptorSet>();
 }
@@ -537,6 +541,13 @@ void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle
     constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
             vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
     setDebugTag(vertexBufferHandle.getId(), std::move(tag));
+}
+
+void WebGPUDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
@@ -1322,8 +1333,14 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
 
     mCurrentRenderTarget = renderTarget;
     if (renderTarget->isDefaultRenderTarget()) {
-        assert_invariant(mSwapChain && mTextureView);
-        defaultColorView = mTextureView;
+        assert_invariant(mSwapChain);
+
+        if (!mSwapChainView) {
+            mSwapChainView = mSwapChain->isHeadless() ?
+                mSwapChain->getNextTextureView() :
+                mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
+        }
+        defaultColorView  = mSwapChainView;
         defaultDepthStencilView = mSwapChain->getDepthTextureView();
         defaultDepthStencilFormat = mSwapChain->getDepthFormat();
 
@@ -1481,18 +1498,11 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSwapChain,
     auto swapChain = handleCast<WebGPUSwapChain>(drawSwapChain);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-
-    if (mSwapChain->isHeadless()) {
-        mTextureView = mSwapChain->getNextTextureView();
-    } else {
-        mTextureView = mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
-    }
-    assert_invariant(mTextureView);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mQueueManager.flush();
-    mTextureView = nullptr;
+    mSwapChainView = nullptr;
     assert_invariant(mSwapChain);
     mSwapChain->present(*this);
 }

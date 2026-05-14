@@ -298,7 +298,7 @@ void printInstanceDetails(wgpu::Instance const& instance) {
     return instance;
 }
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#ifndef NDEBUG
 void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> value) {
     static constexpr std::string_view indent = "  ";
     bool undefined = true;
@@ -317,9 +317,7 @@ void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> va
         FWGPU_LOGI << indent << name.data() << ": UNDEFINED";
     }
 }
-#endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printLimits(wgpu::Limits const& limits) {
     printLimit("maxTextureDimension1D", limits.maxTextureDimension1D);
     printLimit("maxTextureDimension2D", limits.maxTextureDimension2D);
@@ -400,11 +398,12 @@ struct AdapterDetails final {
     return out.str();
 }
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printAdapterDetails(AdapterDetails const& details) {
-    FWGPU_LOGI << "Selected WebGPU adapter info: " << toString(details);
+    FWGPU_LOGD << "Selected WebGPU adapter info: " << toString(details);
     wgpu::SupportedFeatures supportedFeatures{};
     details.adapter.GetFeatures(&supportedFeatures);
+
+#ifndef NDEBUG
     FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount
                << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
@@ -414,15 +413,16 @@ void printAdapterDetails(AdapterDetails const& details) {
                     FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
                 });
     }
+#endif
     wgpu::Limits supportedLimits{};
     if (!details.adapter.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits";
-    } else {
-        FWGPU_LOGI << "WebGPU adapter supported limits:";
-        printLimits(supportedLimits);
+        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits. Request limits:";
     }
-}
+#ifndef NDEBUG
+    FWGPU_LOGI << "WebGPU adapter supported limits:";
+    printLimits(supportedLimits);
 #endif
+}
 
 struct AdapterDetailsHash final {
     size_t operator()(AdapterDetails const& details) const {
@@ -579,9 +579,7 @@ wgpu::Adapter selectPreferredAdapter(
     }
     FILAMENT_CHECK_POSTCONDITION(selectedAdapter != nullptr)
             << "Could not find a WebGPU adapter that meets the minimum requirements.";
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printAdapterDetails(*selectedAdapter);
-#endif
     return selectedAdapter->adapter;
 }
 

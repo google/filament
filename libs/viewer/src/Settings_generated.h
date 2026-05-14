@@ -13,9 +13,11 @@ namespace filament::viewer {
 int compare(jsmntok_t tok, const char* jsonChunk, const char* str);
 
 std::ostream& writeJson(std::ostream& oss, const float* v, int count);
+std::ostream& writeJson(std::ostream& oss, const double* v, int count);
 std::ostream& operator<<(std::ostream& out, math::float2 v);
 std::ostream& operator<<(std::ostream& out, math::float3 v);
 std::ostream& operator<<(std::ostream& out, math::float4 v);
+std::ostream& operator<<(std::ostream& out, math::double4 v);
 
 const char* to_string(bool b);
 
@@ -25,10 +27,13 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint32_t* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, float* vals, int size);
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, double* val);
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, double* vals, int size);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, bool* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float2* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float3* val);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::float4* val);
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, math::double4* val);
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, QualityLevel* out);
 std::ostream& operator<<(std::ostream& out, QualityLevel in);

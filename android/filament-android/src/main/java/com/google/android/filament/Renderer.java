@@ -144,7 +144,7 @@ public class Renderer {
          * background, or to use black or fully-transparent (i.e. {0,0,0,0}) as the clear color.
          */
         @NonNull
-        public float[] clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+        public double[] clearColor = { 0.0, 0.0, 0.0, 0.0 };
 
         /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
@@ -794,7 +794,7 @@ public class Renderer {
     private static native void nSetFrameRateOptions(long nativeRenderer,
             float interval, float headRoomRatio, float scaleRate, int history);
     private static native void nSetClearOptions(long nativeRenderer,
-            float r, float g, float b, float a, boolean clear, boolean discard);
+            double r, double g, double b, double a, boolean clear, boolean discard);
 
     private static native void nSkipNextFrames(long nativeObject, int frameCount);
     private static native int nGetFrameToSkipCount(long nativeObject);

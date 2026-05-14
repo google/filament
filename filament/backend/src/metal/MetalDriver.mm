@@ -479,6 +479,16 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
     // No actual GPU memory is allocated here, so no need to check for allocation success.
 }
 
+void MetalDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih,
+        CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
+    construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih, true);
+    mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+    scheduleCallback(handler, user, callback);
+}
+
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage, utils::ImmutableCString&& tag) {
     auto elementSize = (uint8_t)getElementTypeSize(elementType);
@@ -930,6 +940,10 @@ Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> MetalDriver::createVertexBufferAsyncS() noexcept {
+    return alloc_handle<MetalVertexBuffer>();
+}
+
 Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer>();
 }
@@ -1066,7 +1080,13 @@ void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
-    if (vbh) {
+    if (UTILS_UNLIKELY(!vbh)) {
+        return;
+    }
+    auto* vb = handle_cast<MetalVertexBuffer>(vbh);
+    if (vb->asynchronous) {
+        getJobQueue()->push([this, vbh]() mutable { destruct_handle<MetalVertexBuffer>(vbh); });
+    } else {
         destruct_handle<MetalVertexBuffer>(vbh);
     }
 }
@@ -1349,7 +1369,7 @@ bool MetalDriver::isTextureFormatFilterable(TextureFormat format) {
         return mContext->highestSupportedGpuFamily.apple >= 7 ||
                mContext->highestSupportedGpuFamily.mac >= 1;
     }
-    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) ||
         isDepthFormat(format) || isStencilFormat(format)) {
         return false;
     }

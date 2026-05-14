@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -37,6 +38,8 @@
 #include <vector>
 
 namespace filament::backend {
+
+class VulkanFencePool;
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
@@ -157,8 +160,9 @@ private:
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
-    ~VulkanCmdFence() = default;
+    explicit VulkanCmdFence(VkFence fence,
+                            std::function<void(VkFence)> recycleFn = nullptr);
+    ~VulkanCmdFence();
 
     // Creates a VulkanCmdFence with its status set to VK_SUCCESS. It holds
     // a null handle; it is assumed that any user of this object will avoid
@@ -167,18 +171,28 @@ struct VulkanCmdFence {
     // and is not in the expected state anyway.
     static std::shared_ptr<VulkanCmdFence> completed() noexcept;
 
-    void setStatus(VkResult const value) {
-        std::lock_guard const l(mLock);
-        mStatus = value;
-        mCond.notify_all();
+    // Updates the status to reflect the fact that the underlying fence was
+    // used in a submission.
+    inline void markSubmitted() {
+        setStatus(VK_NOT_READY);
     }
 
+    // Checks the underlying fence to see if the underlying process is complete.
+    // Updates the underlying status if the fence has signaled, and returns
+    // the current status.
+    VkResult updateStatus(VkDevice device);
+
+    inline VkFence getVkFence() {
+        return mFence;
+    }
+
+    // Checks what the status of the fence is. Note: this assumes that, in the
+    // most recent tick(), checkAndUpdateStatus() has been called. Otherwise,
+    // this may be out of date.
     VkResult getStatus() {
-        std::shared_lock const l(mLock);
+        std::shared_lock const rl(mLock);
         return mStatus;
     }
-
-    void resetFence(VkDevice device);
 
     FenceStatus wait(VkDevice device, uint64_t timeout,
         std::chrono::steady_clock::time_point until);
@@ -190,6 +204,24 @@ struct VulkanCmdFence {
     }
 
 private:
+    // The lifecycle of this object will often be managed by a
+    // VulkanFencePool. This allows it to update the recycle function
+    // when the pool is being terminated.
+    friend class VulkanFencePool;
+
+    // Updates the status of the fence, notifying all listeners of
+    // mCond.
+    void setStatus(VkResult const value) {
+        std::lock_guard const l(mLock);
+        mStatus = value;
+        mCond.notify_all();
+    }
+
+    // Used by the fence pool when it terminates, essentially
+    // used to transfer ownership of the VkFence from the fence pool
+    // to this VulkanCmdFence.
+    void swapRecycleFn(std::function<void(VkFence)> recycleFn);
+
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
     std::condition_variable_any mCond;
     bool mCanceled = false;
@@ -197,7 +229,9 @@ private:
     // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
     VkResult mStatus{ VK_INCOMPLETE };
-    VkFence mFence;
+    VkFence const mFence;
+
+    std::function<void(VkFence)> mRecycleFn;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
