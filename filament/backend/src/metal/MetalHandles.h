@@ -314,7 +314,7 @@ public:
     MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
             uint8_t levelCount) noexcept;
     MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r, TextureSwizzle g,
-            TextureSwizzle b, TextureSwizzle a) noexcept;
+            TextureSwizzle b, TextureSwizzle a, bool async = false) noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
