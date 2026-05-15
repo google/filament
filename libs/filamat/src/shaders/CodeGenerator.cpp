@@ -272,7 +272,13 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
         out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
-        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 16384;\n";
+        // In WebGPU, Dawn enforces that the descriptor binding size must be >= the shader's
+        // declared minBindingSize (height * 16 bytes). On the host side, Froxelizer queries the
+        // driver's max UBO binding size (which is 65536 bytes / 64 KiB in WebGPU specifications)
+        // and caps the buffer at 65535 bytes due to uint16_t offset limits. Therefore, height
+        // can be at most 4095 (65520 bytes). We set height to 2048 (32 KiB) to stay safely within
+        // the 64 KiB limit.
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 2048;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
