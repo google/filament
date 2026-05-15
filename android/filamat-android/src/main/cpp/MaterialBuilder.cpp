@@ -272,6 +272,13 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTranspa
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderColoredPenumbra(
+        JNIEnv*, jclass, jlong nativeBuilder, jboolean coloredPenumbra) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->coloredPenumbra(coloredPenumbra);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSpecularAntiAliasing(
         JNIEnv*, jclass, jlong nativeBuilder, jboolean specularAntiAliasing) {
     auto builder = (MaterialBuilder*) nativeBuilder;
