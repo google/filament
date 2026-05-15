@@ -70,13 +70,24 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
         }
     };
 
-    uint8_t* data;
-    uint32_t size;
+    // Initialize defensively: getBlob leaves out-params uninitialized on zero-sized mip.
+    uint8_t* data = nullptr;
+    uint32_t size = 0;
+
+    // Account for per-level callback when skipping a mip to prevent memory leaks.
+    auto skipLevel = [&]() {
+        if (--cbuser->remainingBuffers == 0) {
+            if (cbuser->callback) {
+                cbuser->callback(cbuser->userdata);
+            }
+            delete cbuser;
+        }
+    };
 
     if (isCompressed(ktxinfo)) {
         if (ktx.isCubemap()) {
             for (uint32_t level = 0; level < nmips; ++level) {
-                ktx.getBlob({ level, 0, 0 }, &data, &size);
+                if (!ktx.getBlob({ level, 0, 0 }, &data, &size)) { skipLevel(); continue; }
                 const uint32_t dim = texture->getWidth(level);
                 texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
                         data, size * 6, cdatatype, size, cb, cbuser
@@ -85,7 +96,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
             return texture;
         }
         for (uint32_t level = 0; level < nmips; ++level) {
-            ktx.getBlob({ level, 0, 0 }, &data, &size);
+            if (!ktx.getBlob({ level, 0, 0 }, &data, &size)) { skipLevel(); continue; }
             texture->setImage(*engine, level, {
                     data, size, cdatatype, size, cb, cbuser
             });
@@ -95,7 +106,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
 
     if (ktx.isCubemap()) {
         for (uint32_t level = 0; level < nmips; ++level) {
-            ktx.getBlob({ level, 0, 0 }, &data, &size);
+            if (!ktx.getBlob({ level, 0, 0 }, &data, &size)) { skipLevel(); continue; }
             const uint32_t dim = texture->getWidth(level);
             texture->setImage(*engine, level, 0, 0, 0, dim, dim, 6, {
                     data, size * 6, dataformat, datatype, cb, cbuser
@@ -105,7 +116,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
     }
 
     for (uint32_t level = 0; level < nmips; ++level) {
-        ktx.getBlob({level, 0, 0}, &data, &size);
+        if (!ktx.getBlob({level, 0, 0}, &data, &size)) { skipLevel(); continue; }
         PixelBufferDescriptor pbd(data, size, dataformat, datatype, cb, cbuser);
         texture->setImage(*engine, level, std::move(pbd));
     }
