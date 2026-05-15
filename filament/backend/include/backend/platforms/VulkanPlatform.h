@@ -427,13 +427,16 @@ public:
         VkChromaLocation yChromaOffset;
 
         /*
-         * YUV is software decoded (YV12 or 8Cb8Cr8_420)
+         * YUV is software decoded (YV12 or 8Cb8Cr8_420) for use to 
+         * copy from staging to a GPU sampleable tiled YUV image
          */
-       bool isSoftwareDecodedYUV;
+       bool isStagingRequired;
 
        /*
         * Adding an explicit field for chroma conversion
         * requirement.
+        * Per Vulkan requirement all YUV texture require the creation of a VkSamplerYcbcrModelConversion
+        * https://docs.vulkan.org/refpages/latest/refpages/source/VkSamplerYcbcrModelConversion.html
         */
        bool isChromaConversionRequired;
     };
@@ -446,7 +449,7 @@ public:
     }
 
     // We need a platform agnostic way to copy from ExternalImageHandleRef for the YUV staging path
-    virtual bool copyExternalImageToMemory(ExternalImageHandleRef image, void* dstData,
+    virtual bool copyExternalImageToMemoryYUV(ExternalImageHandleRef image, void* dstData,
             uint32_t width, uint32_t height) const {
         return false;
     }

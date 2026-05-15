@@ -81,12 +81,15 @@ void updateYUVStagingTexture(VulkanPlatform* platform, VulkanCommandBuffer& comm
 
     // CPU mapped data
     void* mappedData;
-    vkMapMemory(device, stagingMemory, 0, totalBufferSize, 0, &mappedData);
+    VkResult result = vkMapMemory(device, stagingMemory, 0, totalBufferSize, 0, &mappedData);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "vkMapMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+
 
     // Rely on platform code for the copy from the internal handle.
     // we assumed NV12 encoding, and Android we rely on per place access API which means we are free
     // to pick the encoding into the VkBuffer and we choose the NV12 format.
-    if (platform->copyExternalImageToMemory(externalHandle, mappedData, w, h)) {
+    if (platform->copyExternalImageToMemoryYUV(externalHandle, mappedData, w, h)) {
         // Just making sure it has not memory coherency issues
         VkMappedMemoryRange flushRange = {
             .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
@@ -110,7 +113,7 @@ void updateYUVStagingTexture(VulkanPlatform* platform, VulkanCommandBuffer& comm
     regions[0].imageSubresource = {VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1};
     regions[0].imageExtent = {w, h, 1};
 
-    // We know the chroma packing (see comments near copyExternalImageToMemory)
+    // We know the chroma packing (see comments near copyExternalImageToMemoryYUV)
     regions[1].bufferOffset = yPlaneSize;
     regions[1].imageSubresource = {VK_IMAGE_ASPECT_PLANE_1_BIT, 0, 0, 1};
     regions[1].imageExtent = {chromaWidth, chromaHeight, 1};
@@ -1453,6 +1456,7 @@ int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
+// This is currently broken, internal bug 513573228 is tracking the fix.
 void VulkanDriver::updateStreams(CommandStream* driver) {
     FVK_SYSTRACE_SCOPE();
     if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {

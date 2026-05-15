@@ -49,7 +49,7 @@ public:
 
     ExternalImageMetadata extractExternalImageMetadata(
             ExternalImageHandleRef image) const override;
-    bool copyExternalImageToMemory(ExternalImageHandleRef image, void* dstData,
+    bool copyExternalImageToMemoryYUV(ExternalImageHandleRef image, void* dstData,
                                    uint32_t width, uint32_t height) const override;
 
     ImageData createVkImageFromExternal(ExternalImageHandleRef image,

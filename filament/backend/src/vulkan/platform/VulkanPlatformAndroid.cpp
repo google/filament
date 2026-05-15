@@ -278,7 +278,7 @@ VulkanPlatformAndroid::ExternalImageDescAndroid VulkanPlatformAndroid::getExtern
     };
 }
 
-bool VulkanPlatformAndroid::copyExternalImageToMemory(
+bool VulkanPlatformAndroid::copyExternalImageToMemoryYUV(
         ExternalImageHandleRef image, void* dstData, uint32_t w, uint32_t h) const {
 
     auto const* fvkExternalImage = static_cast<ExternalImageVulkanAndroid const*>(image.get());
@@ -331,9 +331,9 @@ bool VulkanPlatformAndroid::copyExternalImageToMemory(
             AHardwareBuffer_unlock(buffer, nullptr);
             return true;
         }
-        LOG(ERROR) << "[VulkanPlatformAndroid::copyExternalImageToMemory] AHardwareBuffer_lockPlanes failed";
+        LOG(ERROR) << "[VulkanPlatformAndroid::copyExternalImageToMemoryYUV] AHardwareBuffer_lockPlanes failed";
     } else {
-        LOG(ERROR) << "no fallback path in extractExternalImageMetadata [Android 26]";
+        LOG(ERROR) << "no fallback path in copyExternalImageToMemoryYUV [Android 26]";
     }
     return false;
 }
@@ -352,7 +352,7 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         metadata.height = bufferDesc.height;
         metadata.layers = bufferDesc.layers;
         metadata.samples = VK_SAMPLE_COUNT_1_BIT;
-        metadata.isSoftwareDecodedYUV = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
+        metadata.isStagingRequired = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
 
         std::tie(metadata.format, metadata.usage) =
             getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
@@ -396,7 +396,6 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
             metadata.format == VK_FORMAT_UNDEFINED ||
             fvkutils::isVKYcbcrConversionFormat(metadata.format);
 
-        // After more discussion we decided to take the driver's suggestion for these fields.
         // Note: It is unclear how the driver are getting this information as in the use case
         // we are looking into for this YV12 the Qualcomm driver isn't involved in the decoding
         // of the data. My assumption is that it is looking at the gralloc/AHB* metadata.
@@ -408,7 +407,7 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
 
         // Although both HW and SW require YUV --> RGB conversion, the sw path relies on
         // standards ones. The hardware path is more platform specific.
-        if (metadata.isSoftwareDecodedYUV) {
+        if (metadata.isStagingRequired) {
 
             // We use  metadata.usage when we crate the final image in the staged path
             // so we do need to encode the VK_IMAGE_USAGE_TRANSFER_DST_BIT on top of usual SAMPLED_BIT
@@ -441,7 +440,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         ExternalImageHandleRef externalImage,
         uint32_t logicalWidth, uint32_t logicalHeight) const {
     auto metadata = extractExternalImageMetadata(externalImage);
-    if(metadata.isSoftwareDecodedYUV) {
+    if(metadata.isStagingRequired) {
         // Note: This might be contencious since we need to know who we can trust,
         // is it the ExternalImageHandleRef or the caller to the Filament API?
         // What is clear is that in the software decoded path, on Android, the
@@ -458,7 +457,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     VkPhysicalDevice const physicalDevice = getPhysicalDevice();
     auto buildImage = [&](ExternalImageMetadata const& metadata) {
         bool const isExternalFormat = metadata.isChromaConversionRequired &&
-            !metadata.isSoftwareDecodedYUV;
+            !metadata.isStagingRequired;
         VkExternalFormatANDROID const externalFormat = {
             .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
             .pNext = nullptr,
@@ -517,7 +516,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
 
     auto allocMem = [&](VkImage image, ExternalImageMetadata const& metadata) {
     bool const isExternalFormat = metadata.isChromaConversionRequired &&
-            !metadata.isSoftwareDecodedYUV;
+            !metadata.isStagingRequired;
         VkImportAndroidHardwareBufferInfoANDROID const androidHardwareBufferInfo = {
             .sType = VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
             .buffer = buffer,
@@ -558,25 +557,23 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
         return memory;
     };
 
-    VulkanPlatform::ImageData::Bundle internal = {}, external = {};
-    if (metadata.isSoftwareDecodedYUV) {
-
-        uint32_t const w = metadata.width;
-        uint32_t const h = metadata.height;
-        uint32_t const yPlaneSize = w * h;
-        uint32_t const chromaPlaneSize = (w / 2) * (h / 2);
-        uint32_t const totalBufferSize = yPlaneSize + (chromaPlaneSize * 2);
-
+    // Software Decoded (Staging) Path Lambdas (following desing pattern from buildImage)
+    auto buildStagingBuffer = [&](uint32_t size) {
         // Staging buffer used as a source for the buffer to image blit AND AHB* cpu copy
         VkBufferCreateInfo const bufferInfo = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = totalBufferSize,
+            .size = size,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         };
         VkBuffer stagingBuffer;
-        vkCreateBuffer(device, &bufferInfo, VKALLOC, &stagingBuffer);
+        VkResult result = vkCreateBuffer(device, &bufferInfo, VKALLOC, &stagingBuffer);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkCreateBuffer failed YUV staging with error=" << static_cast<int32_t>(result);
+        return stagingBuffer;
+    };
 
+    auto allocStagingBufferMem = [&](VkBuffer stagingBuffer) {
         // Allocate standard Host-Visible memory for the buffer
         VkMemoryRequirements bufMemReqs;
         vkGetBufferMemoryRequirements(device, stagingBuffer, &bufMemReqs);
@@ -592,31 +589,45 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .memoryTypeIndex = bufMemTypeIndex,
         };
         VkDeviceMemory stagingMemory;
-        // @TODO: When this CL gets stubmitted to github, we need to revisit this
-        vkAllocateMemory(device, &bufAllocInfo, VKALLOC, &stagingMemory);
-        vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
+        // @TODO: When this CL gets submitted to github, we need to revisit this
+        VkResult result = vkAllocateMemory(device, &bufAllocInfo, VKALLOC, &stagingMemory);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkAllocateMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+        result = vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkBindBufferMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+        return stagingMemory;
+    };
 
+    auto buildStagingImage = [&](ExternalImageMetadata const& meta) {
         // metadata.format, will be packed accordingly if YV12 (in extractExternalImageMetadata)
         VkImageCreateInfo const imageInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .flags = 0,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = metadata.format,
-            .extent = { w, h, 1u },
+            .format = meta.format,
+            .extent = { meta.width, meta.height, 1u },
             .mipLevels = 1,
-            .arrayLayers = metadata.layers,
-            .samples = metadata.samples,
+            .arrayLayers = meta.layers,
+            .samples = meta.samples,
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = metadata.usage, // Correctly contains DST | SAMPLED based on our metadata tweak
+            .usage = meta.usage, // Correctly contains DST | SAMPLED based on our metadata tweak
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
         VkImage finalTextureImage;
-        vkCreateImage(device, &imageInfo, VKALLOC, &finalTextureImage);
+        VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &finalTextureImage);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkCreateImage failed with error=" << static_cast<int32_t>(result);
+        return finalTextureImage;
+    };
 
+    auto allocStagingImageMem = [&](VkImage image) {
         // The final image is a normal YUV sampled source extractExternalImageMetadata encoded the details
         VkMemoryRequirements imgMemReqs;
-        vkGetImageMemoryRequirements(device, finalTextureImage, &imgMemReqs);
+        vkGetImageMemoryRequirements(device, image, &imgMemReqs);
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
         uint32_t const imgMemTypeIndex =
                 VulkanContext::selectMemoryType(memoryProperties, imgMemReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -627,14 +638,29 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
             .memoryTypeIndex = imgMemTypeIndex,
         };
         VkDeviceMemory finalTextureMem;
-        vkAllocateMemory(device, &imgAllocInfo, VKALLOC, &finalTextureMem);
-        vkBindImageMemory(device, finalTextureImage, finalTextureMem, 0);
+        VkResult result = vkAllocateMemory(device, &imgAllocInfo, VKALLOC, &finalTextureMem);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkAllocateMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+        result = vkBindImageMemory(device, image, finalTextureMem, 0);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkBindImageMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+        return finalTextureMem;
+    };
 
-        // Pack the result
-        internal.image = finalTextureImage;
-        internal.memory = finalTextureMem;
-        internal.stagingBuffer = stagingBuffer;
-        internal.stagingMemory = stagingMemory;
+    VulkanPlatform::ImageData::Bundle internal = {}, external = {};
+    if (metadata.isStagingRequired) {
+        uint32_t const w = metadata.width;
+        uint32_t const h = metadata.height;
+        uint32_t const yPlaneSize = w * h;
+        uint32_t const chromaPlaneSize = (w / 2) * (h / 2);
+        uint32_t const totalBufferSize = yPlaneSize + (chromaPlaneSize * 2);
+
+        // Build and pack the results
+        internal.stagingBuffer = buildStagingBuffer(totalBufferSize);
+        internal.stagingMemory = allocStagingBufferMem(internal.stagingBuffer);
+        
+        internal.image = buildStagingImage(metadata);
+        internal.memory = allocStagingImageMem(internal.image);
 
     } else {
         // Fall in this case for hardware decoded frames
