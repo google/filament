@@ -534,7 +534,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightDef
         } else if (compare(tok, jsonChunk, "sunHaloFalloff") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunHaloFalloff);
         } else if (compare(tok, jsonChunk, "sunAngularRadius") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunAngularRadius);
+            i = parse(tokens, i + 1, jsonChunk, &out->sunAngularRadiusDeg);
         } else if (compare(tok, jsonChunk, "castShadows") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->castShadows);
         } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
@@ -885,7 +885,7 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         lm->setIntensity(light, settings.sunlight.intensity);
         lm->setSunHaloSize(light, settings.sunlight.sunHaloSize);
         lm->setSunHaloFalloff(light, settings.sunlight.sunHaloFalloff);
-        lm->setSunAngularRadius(light, settings.sunlight.sunAngularRadius);
+        lm->setSunAngularRadius(light, settings.sunlight.sunAngularRadiusDeg);
         lm->setDirection(light, normalize(settings.sunlight.direction));
         lm->setColor(light, settings.sunlight.color);
         lm->setShadowCaster(light, settings.sunlight.castShadows && settings.enableShadows);
@@ -1275,7 +1275,7 @@ static std::ostream& operator<<(std::ostream& out, const LightDefinition& in) {
                << "\"spotOuter\": " << in.spotOuter << ",\n"
                << "\"sunHaloSize\": " << in.sunHaloSize << ",\n"
                << "\"sunHaloFalloff\": " << in.sunHaloFalloff << ",\n"
-               << "\"sunAngularRadius\": " << in.sunAngularRadius << ",\n"
+               << "\"sunAngularRadius\": " << in.sunAngularRadiusDeg << ",\n"
                << "\"castShadows\": " << to_string(in.castShadows) << ",\n"
                << "\"shadowOptions\": " << in.shadowOptions << "\n"
                << "}";

@@ -438,7 +438,7 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
         .intensity(mSettings.lighting.sunlight.intensity)
         .direction(normalize(mSettings.lighting.sunlight.direction))
         .castShadows(true)
-        .sunAngularRadius(mSettings.lighting.sunlight.sunAngularRadius)
+        .sunAngularRadius(mSettings.lighting.sunlight.sunAngularRadiusDeg)
         .sunHaloSize(mSettings.lighting.sunlight.sunHaloSize)
         .sunHaloFalloff(mSettings.lighting.sunlight.sunHaloFalloff)
         .build(*engine, mSunlight);
@@ -954,9 +954,9 @@ void ViewerGui::updateUserInterface() {
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
             ImGui::SliderFloat("Sun intensity", &light.sunlight.intensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat("Halo size", &light.sunlight.sunHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("Halo falloff", &light.sunlight.sunHaloFalloff, 4.0f, 1024.0f);
-            ImGui::SliderFloat("Sun radius", &light.sunlight.sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("Sun radius [deg]", &light.sunlight.sunAngularRadiusDeg, 0.25f, 20.0f);
+            ImGui::SliderFloat("Halo size", &light.sunlight.sunHaloSize, 1.0f, 100.0f);
+            ImGui::SliderFloat("Halo falloff", &light.sunlight.sunHaloFalloff, 1.0f, 1000.0f);
             ImGuiExt::DirectionWidget("Sun direction", light.sunlight.direction.v);
             ImGui::SliderFloat("Shadow Far", &light.sunlight.shadowOptions.shadowFar, 0.0f,
                     mSettings.camera.far);
