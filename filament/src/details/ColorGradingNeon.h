@@ -25,6 +25,34 @@
 
 namespace filament {
 
+#if !defined(__aarch64__)
+/**
+ * ARMv7 NEON compatibility wrappers for ARMv8-A / AArch64 intrinsics.
+ */
+UTILS_ALWAYS_INLINE
+inline float32x4_t vdivq_f32(float32x4_t const a, float32x4_t const b) {
+    float32x4_t recip = vrecpeq_f32(b);
+    recip = vmulq_f32(recip, vrecpsq_f32(b, recip));
+    recip = vmulq_f32(recip, vrecpsq_f32(b, recip));
+    return vmulq_f32(a, recip);
+}
+
+UTILS_ALWAYS_INLINE
+inline float32x4_t vsqrtq_f32(float32x4_t const x) {
+    float32x4_t rsqrt = vrsqrteq_f32(x);
+    rsqrt = vmulq_f32(rsqrt, vrsqrtsq_f32(x, vmulq_f32(rsqrt, rsqrt)));
+    rsqrt = vmulq_f32(rsqrt, vrsqrtsq_f32(x, vmulq_f32(rsqrt, rsqrt)));
+    float32x4_t const res = vmulq_f32(x, rsqrt);
+    uint32x4_t const cmp = vceqq_f32(x, vdupq_n_f32(0.0f));
+    return vbslq_f32(cmp, vdupq_n_f32(0.0f), res);
+}
+
+UTILS_ALWAYS_INLINE
+inline uint32x4_t vcvtnq_u32_f32(float32x4_t const x) {
+    return vcvtq_u32_f32(vaddq_f32(x, vdupq_n_f32(0.5f)));
+}
+#endif
+
 /**
  * Computes the base-2 logarithm for four 32-bit floating point values simultaneously.
  * Uses IEEE-754 bit manipulation to extract the exponent and mantissa, followed by a
