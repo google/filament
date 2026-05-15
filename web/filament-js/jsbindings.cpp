@@ -988,6 +988,10 @@ class_<ColorBuilder>("ColorGrading$Builder")
     .BUILDER_FUNCTION("curves", ColorBuilder, (ColorBuilder* builder, math::float3 shadowGamma,
             math::float3 midPoint, math::float3 highlightScale), {
         return &builder->curves(shadowGamma, midPoint, highlightScale);
+    })
+
+    .BUILDER_FUNCTION("fastMath", ColorBuilder, (ColorBuilder* builder, bool fastMath), {
+        return &builder->fastMath(fastMath);
     });
 
 class_<RenderTargetBuilder>("RenderTarget$Builder")
