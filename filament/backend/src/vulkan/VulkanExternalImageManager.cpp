@@ -108,6 +108,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
 VkSamplerYcbcrConversion VulkanExternalImageManager::getVkSamplerYcbcrConversion(
         VulkanPlatform::ExternalImageMetadata const& metadata) {
     // The platform now explicitly tells us if this image needs YCbCr conversion
+    // This needs to be replaced by `if (!metadata.isChromaConversionRequired)` once it's in
     if (metadata.externalFormat == 0 && !fvkutils::isVKYcbcrConversionFormat(metadata.format)) {
         return VK_NULL_HANDLE;
     }
