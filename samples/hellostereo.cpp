@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
 
         // Add a monkey and a light source into the main scene.
         app.monkeyMesh = MeshReader::loadMeshFromBuffer(
-                engine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
+                engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
         auto ti = tcm.getInstance(app.monkeyMesh.renderable);
         app.monkeyTransform = mat4f{mat3f(1), monkeyPosition } * tcm.getWorldTransform(ti);
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
