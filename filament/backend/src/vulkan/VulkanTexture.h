@@ -75,8 +75,9 @@ private:
 
 struct VulkanTextureState : public fvkmemory::Resource {
     VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands, VmaAllocator allocator,
-            VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VkFormat format,
-            VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
+            VkDevice device, VkImage image, VkDeviceMemory deviceMemory,
+            VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
+            VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
             VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected);
 
     ~VulkanTextureState();
@@ -135,6 +136,17 @@ private:
 
     } mYcbcr;
 
+    // Note: In the case of a software decoded YUV frame we introduced a staging buffer
+    // we need to copy the data from this source every time the data changes
+    struct SoftwareYUVStaging{
+        VkDeviceMemory memory;
+        VkBuffer buffer;
+        // Note: this may or may not be acceptable on one hand this is a platform object
+        // by definition it is platform agnostic. On the other hand this would be the
+        // only place where a platform specific object is tied to the VulkanTexture.
+        Platform::ExternalImageHandle ahbuffer;
+    } mSoftwareYUVStaging;
+
     VulkanLayout const mDefaultLayout;
     VkImageUsageFlags const mUsage;
     bool const mIsProtected;
@@ -160,6 +172,7 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     VulkanTexture(VulkanContext const& context, VkDevice device, VmaAllocator allocator,
             fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
             VkDeviceMemory memory, VkFormat format, VkSamplerYcbcrConversion conversion,
+            VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage tusage, VulkanStagePool& stagePool);
 
@@ -240,6 +253,22 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     bool getIsProtected() const {
         return mState->mIsProtected;
+    }
+
+    bool isYUVStaging() {
+        return (mState->mSoftwareYUVStaging.buffer != VK_NULL_HANDLE);
+    }
+
+    VkDeviceMemory getYUVStagingMemory() {
+        return mState->mSoftwareYUVStaging.memory;
+    }
+
+    VkBuffer getYUVStagingBuffer() {
+        return mState->mSoftwareYUVStaging.buffer;
+    }
+
+    Platform::ExternalImageHandle getYUVStagingHandle() {
+        return mState->mSoftwareYUVStaging.ahbuffer;
     }
 
     bool transitionLayout(VulkanCommandBuffer* commands, VkImageSubresourceRange const& range,
