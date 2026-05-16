@@ -280,6 +280,7 @@ uint8_t getAlignmentForBufferToImageCopy(VkFormat format) {
 
 VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands,
         VmaAllocator allocator, VkDevice device, VkImage image, VkDeviceMemory deviceMemory,
+        VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
         VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
         VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected)
     : mStagePool(stagePool),
@@ -292,6 +293,7 @@ VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommand
       mViewType(viewType),
       mFullViewRange{ fvkutils::getImageAspect(format), 0, levels, 0, layerCount },
       mYcbcr{ ycbcrConversion },
+      mSoftwareYUVStaging {stagingMemory, stagingBuffer, ahBuffer},
       mDefaultLayout(getDefaultLayoutImpl(usage)),
       mUsage(usage),
       mIsProtected(isProtected) {}
@@ -301,6 +303,11 @@ VulkanTextureState::~VulkanTextureState() {
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
         vkFreeMemory(mDevice, mTextureImageMemory, VKALLOC);
+        if(mSoftwareYUVStaging.buffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(mDevice, mSoftwareYUVStaging.buffer, VKALLOC);
+            vkFreeMemory(mDevice, mSoftwareYUVStaging.memory, VKALLOC);
+            mSoftwareYUVStaging.ahbuffer = Platform::ExternalImageHandle();
+        }
     }
 }
 
@@ -343,13 +350,15 @@ VkImageView VulkanTextureState::getImageView(VkImageSubresourceRange range, VkIm
 VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaAllocator allocator,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
         VkDeviceMemory memory, VkFormat format, VkSamplerYcbcrConversion conversion,
+        VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage tusage,
         VulkanStagePool& stagePool)
     : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth,
               TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
-              commands, allocator, device, image, memory, format,
-              fvkutils::getViewType(SamplerType::SAMPLER_2D),
+              commands, allocator, device, image, memory,
+              stagingMemory, stagingBuffer, ahBuffer,
+              format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
               /*mipLevels=*/1, getLayerCountFromDepth(depth), conversion,
               getUsage(context, samples, VK_NULL_HANDLE, format, tusage),
               any(usage & TextureUsage::PROTECTED))) {
@@ -478,9 +487,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image."
                                                        << " error=" << static_cast<int32_t>(result);
 
+
     mState = fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
-            commands, allocator, device, textureImage, textureImageMemory, vkFormat,
-            fvkutils::getViewType(target), levels, getLayerCount(target, depth),
+            commands, allocator, device, textureImage, textureImageMemory,
+            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+            vkFormat, fvkutils::getViewType(target), levels, getLayerCount(target, depth),
             VK_NULL_HANDLE /* ycbcrConversion */, imageInfo.usage, isProtected);
 
     // Spec out the "primary" VkImageView that shaders use to sample from the image.
