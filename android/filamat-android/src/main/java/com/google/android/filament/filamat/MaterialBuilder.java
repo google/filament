@@ -384,6 +384,17 @@ public class MaterialBuilder {
         return this;
     }
 
+    /**
+     * Enables or disables colored penumbrae for any shadows cast on this material. The material
+     * must be set on a shadow receiver for this parameter to take effect. This property is
+     * always enabled when the shading model is set to `Shading.SUBSURFACE`.
+     */
+    @NonNull
+    public MaterialBuilder coloredPenumbra(boolean coloredPenumbra) {
+        nMaterialBuilderColoredPenumbra(mNativeObject, coloredPenumbra);
+        return this;
+    }
+
     @NonNull
     public MaterialBuilder specularAntiAliasing(boolean specularAntiAliasing) {
         nMaterialBuilderSpecularAntiAliasing(mNativeObject, specularAntiAliasing);
@@ -608,6 +619,8 @@ public class MaterialBuilder {
             boolean shadowMultiplier);
     private static native void nMaterialBuilderTransparentShadow(long mNativeObject,
             boolean transparentShadow);
+    private static native void nMaterialBuilderColoredPenumbra(long mNativeObject,
+            boolean coloredPenumbra);
     private static native void nMaterialBuilderSpecularAntiAliasing(long mNativeObject,
             boolean specularAntiAliasing);
     private static native void nMaterialBuilderSpecularAntiAliasingVariance(long mNativeObject,

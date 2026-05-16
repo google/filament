@@ -49,8 +49,11 @@ public:
 
     ExternalImageMetadata extractExternalImageMetadata(
             ExternalImageHandleRef image) const override;
+    bool copyExternalImageToMemoryYUV(ExternalImageHandleRef image, void* dstData,
+                                   uint32_t width, uint32_t height) const override;
 
-    ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
+    ImageData createVkImageFromExternal(ExternalImageHandleRef image,
+            uint32_t logicalWidth, uint32_t logicalHeight) const override;
 
     /**
      * Converts a sync to an external file descriptor, if possible. Accepts an

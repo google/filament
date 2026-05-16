@@ -48,6 +48,7 @@ public:
         struct {
             struct {
                 bool use_1d_lut = false;
+                bool use_optimized_default_builder = false;
             } color_grading;
             struct {
                 bool use_shadow_atlas = false;

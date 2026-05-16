@@ -243,3 +243,10 @@ Java_com_google_android_filament_ColorGrading_nBuilderCustomLut(JNIEnv *env, jcl
     
     builder->customLut(std::move(lut), (uint8_t)dimension);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_ColorGrading_nBuilderFastMath(JNIEnv*, jclass,
+        jlong nativeBuilder, jboolean fastMath) {
+    ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
+    builder->fastMath(fastMath);
+}
