@@ -376,7 +376,10 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
             continue;
         } else if (slot.indexBuffer) {
             if (accessor->component_type == cgltf_component_type_r_8u) {
-                const size_t size16 = size * 2;
+                if (size > SIZE_MAX / 2) {
+                    continue;
+                }
+                const size_t size16 = (size_t)size * 2;
                 uint16_t* data16 = (uint16_t*) malloc(size16);
                 utility::convertBytesToShorts(data16, data, size);
                 IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
