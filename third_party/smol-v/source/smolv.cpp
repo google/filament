@@ -1116,6 +1116,15 @@ static void smolv_Write4(uint8_t*& buf, uint32_t v)
 	buf += 4;
 }
 
+static bool smolv_Write4Safe(uint8_t*& buf, const uint8_t* bufEnd, uint32_t v)
+{
+	if (buf + 4 > bufEnd)
+		return false;
+	memcpy(buf, &v, 4);
+	buf += 4;
+	return true;
+}
+
 
 static bool smolv_Read4(const uint8_t*& data, const uint8_t* dataEnd, uint32_t& outv)
 {
@@ -1471,15 +1480,16 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 	const uint8_t* bytesEnd = bytes + smolvSize;
 
 	uint8_t* outSpirv = (uint8_t*)spirvOutputBuffer;
-	
+	const uint8_t* outSpirvEnd = (const uint8_t*)spirvOutputBuffer + spirvOutputBufferSize;
+
 	uint32_t val;
 
 	// header
-	smolv_Write4(outSpirv, kSpirVHeaderMagic); bytes += 4;
-	smolv_Read4(bytes, bytesEnd, val); smolv_Write4(outSpirv, val); // version
-	smolv_Read4(bytes, bytesEnd, val); smolv_Write4(outSpirv, val); // generator
-	smolv_Read4(bytes, bytesEnd, val); smolv_Write4(outSpirv, val); // bound
-	smolv_Read4(bytes, bytesEnd, val); smolv_Write4(outSpirv, val); // schema
+	if (!smolv_Write4Safe(outSpirv, outSpirvEnd, kSpirVHeaderMagic)) return false; bytes += 4;
+	if (!smolv_Read4(bytes, bytesEnd, val)) return false; if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false; // version
+	if (!smolv_Read4(bytes, bytesEnd, val)) return false; if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false; // generator
+	if (!smolv_Read4(bytes, bytesEnd, val)) return false; if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false; // bound
+	if (!smolv_Read4(bytes, bytesEnd, val)) return false; if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false; // schema
 	bytes += 4; // decode buffer size
 
 	uint32_t prevResult = 0;
@@ -1495,7 +1505,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 		const bool wasSwizzle = (op == SpvOpVectorShuffleCompact);
 		if (wasSwizzle)
 			op = SpvOpVectorShuffle;
-		smolv_Write4(outSpirv, (instrLen << 16) | op);
+		if (!smolv_Write4Safe(outSpirv, outSpirvEnd, (instrLen << 16) | op)) return false;
 
 		size_t ioffs = 1;
 
@@ -1503,7 +1513,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 		if (smolv_OpHasType(op))
 		{
 			if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
-			smolv_Write4(outSpirv, val);
+			if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 			ioffs++;
 		}
 		// read result as delta+varint, if we have it
@@ -1511,17 +1521,17 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 		{
 			if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
 			val = prevResult + smolv_ZigDecode(val);
-			smolv_Write4(outSpirv, val);
+			if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 			prevResult = val;
 			ioffs++;
 		}
-		
+
 		// Decorate: IDs relative to previous decorate
 		if (op == SpvOpDecorate || op == SpvOpMemberDecorate)
 		{
 			if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
 			val = prevDecorate + smolv_ZigDecode(val);
-			smolv_Write4(outSpirv, val);
+			if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 			prevDecorate = val;
 			ioffs++;
 		}
@@ -1541,7 +1551,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 				if (!smolv_ReadVarint(bytes, bytesEnd, memberIndex)) return false;
 				memberIndex += prevIndex;
 				prevIndex = memberIndex;
-				
+
 				// decoration (and length if not common/known)
 				uint32_t memberDec;
 				if (!smolv_ReadVarint(bytes, bytesEnd, memberDec)) return false;
@@ -1558,11 +1568,11 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 				// write SPIR-V op+length (unless it's first member decoration, in which case it was written before)
 				if (m != 0)
 				{
-					smolv_Write4(outSpirv, (memberLen << 16) | op);
-					smolv_Write4(outSpirv, prevDecorate);
+					if (!smolv_Write4Safe(outSpirv, outSpirvEnd, (memberLen << 16) | op)) return false;
+					if (!smolv_Write4Safe(outSpirv, outSpirvEnd, prevDecorate)) return false;
 				}
-				smolv_Write4(outSpirv, memberIndex);
-				smolv_Write4(outSpirv, memberDec);
+				if (!smolv_Write4Safe(outSpirv, outSpirvEnd, memberIndex)) return false;
+				if (!smolv_Write4Safe(outSpirv, outSpirvEnd, memberDec)) return false;
 				// Special case for Offset decorations
 				if (memberDec == 35) // Offset
 				{
@@ -1570,7 +1580,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 						return false;
 					if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
 					val += prevOffset;
-					smolv_Write4(outSpirv, val);
+					if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 					prevOffset = val;
 				}
 				else
@@ -1578,7 +1588,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 					for (int i = 4; i < memberLen; ++i)
 					{
 						if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
-						smolv_Write4(outSpirv, val);
+						if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 					}
 				}
 			}
@@ -1591,16 +1601,17 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 		{
 			if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
 			val = smolv_ZigDecode(val);
-			smolv_Write4(outSpirv, prevResult - val);
+			if (!smolv_Write4Safe(outSpirv, outSpirvEnd, prevResult - val)) return false;
 		}
 
 		if (wasSwizzle && instrLen <= 9)
 		{
+			if (bytes >= bytesEnd) return false;
 			uint32_t swizzle = *bytes++;
-			if (instrLen > 5) smolv_Write4(outSpirv, (swizzle >> 6) & 3);
-			if (instrLen > 6) smolv_Write4(outSpirv, (swizzle >> 4) & 3);
-			if (instrLen > 7) smolv_Write4(outSpirv, (swizzle >> 2) & 3);
-			if (instrLen > 8) smolv_Write4(outSpirv, swizzle & 3);
+			if (instrLen > 5) { if (!smolv_Write4Safe(outSpirv, outSpirvEnd, (swizzle >> 6) & 3)) return false; }
+			if (instrLen > 6) { if (!smolv_Write4Safe(outSpirv, outSpirvEnd, (swizzle >> 4) & 3)) return false; }
+			if (instrLen > 7) { if (!smolv_Write4Safe(outSpirv, outSpirvEnd, (swizzle >> 2) & 3)) return false; }
+			if (instrLen > 8) { if (!smolv_Write4Safe(outSpirv, outSpirvEnd, swizzle & 3)) return false; }
 		}
 		else if (smolv_OpVarRest(op))
 		{
@@ -1608,7 +1619,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 			for (; ioffs < instrLen; ++ioffs)
 			{
 				if (!smolv_ReadVarint(bytes, bytesEnd, val)) return false;
-				smolv_Write4(outSpirv, val);
+				if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 			}
 		}
 		else
@@ -1617,7 +1628,7 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 			for (; ioffs < instrLen; ++ioffs)
 			{
 				if (!smolv_Read4(bytes, bytesEnd, val)) return false;
-				smolv_Write4(outSpirv, val);
+				if (!smolv_Write4Safe(outSpirv, outSpirvEnd, val)) return false;
 			}
 		}
 	}
