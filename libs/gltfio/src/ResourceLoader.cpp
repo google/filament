@@ -238,19 +238,35 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
         }
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
         FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
-        if (srcMatrices) {
+        if (srcMatrices && srcMatrices->buffer_view) {
             uint8_t* bytes = nullptr;
             uint8_t* srcBuffer = nullptr;
+            cgltf_size bufferSize = 0;
+            cgltf_size srcOffset = 0;
             if (srcMatrices->buffer_view->has_meshopt_compression) {
                 bytes = (uint8_t*) srcMatrices->buffer_view->data;
-                srcBuffer = bytes + srcMatrices->offset;
+                bufferSize = srcMatrices->buffer_view->size;
+                srcOffset = srcMatrices->offset;
+                srcBuffer = bytes + srcOffset;
             } else {
+                if (!srcMatrices->buffer_view->buffer ||
+                        !srcMatrices->buffer_view->buffer->data) {
+                    continue;
+                }
                 bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-                srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
+                bufferSize = srcMatrices->buffer_view->buffer->size;
+                srcOffset = srcMatrices->offset + srcMatrices->buffer_view->offset;
+                srcBuffer = bytes + srcOffset;
             }
             assert_invariant(bytes);
+            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
+            if (srcOffset > bufferSize || requiredBytes > bufferSize - srcOffset) {
+                LOG(WARNING) << "Inverse bind matrices buffer too small for skin \""
+                             << (srcSkin.name ? srcSkin.name : "") << "\", skipping.";
+                continue;
+            }
             memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer,
-                    srcSkin.joints_count * sizeof(mat4f));
+                    requiredBytes);
         }
         FFilamentAsset::Skin skin{
                 .name = std::move(name),
