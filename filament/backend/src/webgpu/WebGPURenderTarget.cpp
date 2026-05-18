@@ -140,6 +140,7 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
     mColorAttachmentDesc.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 
     auto checkTransient = [&](TargetBufferFlags flag, Handle<HwTexture> handle) {
+#if !defined(__EMSCRIPTEN__)
         if (any(mTargetFlags & flag) && handle) {
             if (auto* texture = getWebGPUTexture(handle)) {
                 if ((texture->getUsage() & wgpu::TextureUsage::TransientAttachment) !=
@@ -148,6 +149,7 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
                 }
             }
         }
+#endif
     };
     checkTransient(TargetBufferFlags::DEPTH, mDepthAttachment.handle);
     checkTransient(TargetBufferFlags::STENCIL, mStencilAttachment.handle);
