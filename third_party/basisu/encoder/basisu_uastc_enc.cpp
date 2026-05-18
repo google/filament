@@ -1,5 +1,5 @@
 // basisu_uastc_enc.cpp
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "basisu_uastc_enc.h"
-
-#if BASISU_USE_ASTC_DECOMPRESS
-#include "basisu_astc_decomp.h"
-#endif
-
+#include "3rdparty/android_astc_decomp.h"
 #include "basisu_gpu_texture.h"
 #include "basisu_bc7enc.h"
 
@@ -323,7 +319,15 @@ namespace basisu
 							const uint32_t comp_plane = (total_comps == 2) ? c : ((c == result.m_astc.m_ccs) ? 1 : 0);
 
 							if (comp_plane == plane_index)
-								std::swap(endpoints[c * 2 + 0], endpoints[c * 2 + 1]);
+							{
+								// shut up a useless gcc warning
+								assert((c * 2 + 1) < (int)sizeof(endpoints));
+
+								if ((c * 2 + 1) < (int)sizeof(endpoints))
+								{
+									std::swap(endpoints[c * 2 + 0], endpoints[c * 2 + 1]);
+								}
+							}
 						}
 					}
 					else
@@ -384,6 +388,7 @@ namespace basisu
 		}
 
 		uint32_t total_endpoint_bits = 0;
+		(void)total_endpoint_bits;
 
 		for (uint32_t i = 0; i < total_tq_values; i++)
 		{
@@ -428,6 +433,8 @@ namespace basisu
 #endif
 
 		uint32_t total_weight_bits = 0;
+		(void)total_weight_bits;
+
 		const uint32_t plane_shift = (total_planes == 2) ? 1 : 0;
 		for (uint32_t i = 0; i < 16 * total_planes; i++)
 		{
@@ -2543,7 +2550,7 @@ namespace basisu
 		color_rgba tblock_bc1[4][4];
 		dxt1_block tbc1_block[8];
 		basist::encode_bc1(tbc1_block, (const uint8_t*)&decoded_uastc_block[0][0], 0);
-		unpack_block(texture_format::cBC1, tbc1_block, &tblock_bc1[0][0]);
+		unpack_block(texture_format::cBC1, tbc1_block, &tblock_bc1[0][0], false);
 
 		color_rgba tblock_hint0_bc1[4][4];
 		color_rgba tblock_hint1_bc1[4][4];
@@ -2580,7 +2587,7 @@ namespace basisu
 		{
 			transcode_uastc_to_bc1_hint1(ublock, (color32 (*)[4]) decoded_uastc_block, &b, false);
 
-			unpack_block(texture_format::cBC1, &b, &tblock_hint1_bc1[0][0]);
+			unpack_block(texture_format::cBC1, &b, &tblock_hint1_bc1[0][0], false);
 		}
 
 		// HINT0
@@ -2592,7 +2599,7 @@ namespace basisu
 		{
 			transcode_uastc_to_bc1_hint0(ublock, &b);
 			
-			unpack_block(texture_format::cBC1, &b, &tblock_hint0_bc1[0][0]);
+			unpack_block(texture_format::cBC1, &b, &tblock_hint0_bc1[0][0], false);
 		}
 
 		// Compute block errors
@@ -3175,6 +3182,7 @@ namespace basisu
 		const bool favor_bc7_error = !favor_uastc_error && ((flags & cPackUASTCFavorBC7Error) != 0);
 		//const bool etc1_perceptual = true;
 		
+		// TODO: This uses 64KB of stack space!
 		uastc_encode_results results[MAX_ENCODE_RESULTS];
 						
 		level = clampi(level, cPackUASTCLevelFastest, cPackUASTCLevelVerySlow);
@@ -3447,7 +3455,7 @@ namespace basisu
 				encode_bc7_block(&bc7_data, &bc7_results);
 
 				color_rgba decoded_bc7_block[4][4];
-				unpack_block(texture_format::cBC7, &bc7_data, &decoded_bc7_block[0][0]);
+				unpack_block(texture_format::cBC7, &bc7_data, &decoded_bc7_block[0][0], false);
 
 				// Compute BC7 error
 				uint64_t total_bc7_la_err, total_bc7_rgb_err, total_bc7_rgba_err;
@@ -3567,7 +3575,6 @@ namespace basisu
 			success = basist::unpack_uastc(temp_block, (basist::color32 *)temp_block_unpacked, false);
 			VALIDATE(success);
 
-#if BASISU_USE_ASTC_DECOMPRESS
 			// Now round trip to packed ASTC and back, then decode to pixels.
 			uint32_t astc_data[4];
 			
@@ -3580,7 +3587,7 @@ namespace basisu
 			}
 
 			color_rgba decoded_astc_block[4][4];
-			success = basisu_astc::astc::decompress((uint8_t*)decoded_astc_block, (uint8_t*)&astc_data, false, 4, 4);
+			success = basisu_astc::astc::decompress_ldr((uint8_t*)decoded_astc_block, (uint8_t*)&astc_data, false, 4, 4);
 			VALIDATE(success);
 
 			for (uint32_t y = 0; y < 4; y++)
@@ -3595,7 +3602,6 @@ namespace basisu
 					VALIDATE(temp_block_unpacked[y][x].c[3] == decoded_uastc_block[y][x].a);
 				}
 			}
-#endif
 		}
 #endif
 
@@ -3789,8 +3795,9 @@ namespace basisu
 	{
 		uint64_t m_sel;
 		uint32_t m_ofs;
+		uint32_t m_pad; // avoid implicit padding for selector_bitsequence_hash
 		selector_bitsequence() { }
-		selector_bitsequence(uint32_t bit_ofs, uint64_t sel) : m_sel(sel), m_ofs(bit_ofs) { }
+		selector_bitsequence(uint32_t bit_ofs, uint64_t sel) : m_sel(sel), m_ofs(bit_ofs), m_pad(0) { }
 		bool operator== (const selector_bitsequence& other) const
 		{
 			return (m_ofs == other.m_ofs) && (m_sel == other.m_sel);
@@ -3811,35 +3818,10 @@ namespace basisu
 	{
 		std::size_t operator()(selector_bitsequence const& s) const noexcept
 		{
-			return static_cast<std::size_t>(hash_hsieh((uint8_t *)&s, sizeof(s)) ^ s.m_sel);
+			return basist::hash_hsieh((const uint8_t*)&s, sizeof(s));
 		}
 	};
-
-	class tracked_stat
-	{
-	public:
-		tracked_stat() { clear(); }
-
-		void clear() { m_num = 0; m_total = 0; m_total2 = 0; }
-
-		void update(uint32_t val) { m_num++; m_total += val; m_total2 += val * val; }
-
-		tracked_stat& operator += (uint32_t val) { update(val); return *this; }
-
-		uint32_t get_number_of_values() { return m_num; }
-		uint64_t get_total() const { return m_total; }
-		uint64_t get_total2() const { return m_total2; }
-
-		float get_average() const { return m_num ? (float)m_total / m_num : 0.0f; };
-		float get_std_dev() const { return m_num ? sqrtf((float)(m_num * m_total2 - m_total * m_total)) / m_num : 0.0f; }
-		float get_variance() const { float s = get_std_dev(); return s * s; }
-
-	private:
-		uint32_t m_num;
-		uint64_t m_total;
-		uint64_t m_total2;
-	};
-		
+				
 	static bool uastc_rdo_blocks(uint32_t first_index, uint32_t last_index, basist::uastc_block* pBlocks, const color_rgba* pBlock_pixels, const uastc_rdo_params& params, uint32_t flags, 
 		uint32_t &total_skipped, uint32_t &total_refined, uint32_t &total_modified, uint32_t &total_smooth)
 	{
@@ -3898,7 +3880,7 @@ namespace basisu
 			basist::encode_bc7_block(&b7_block, &b7_results);
 
 			color_rgba decoded_b7_blk[4][4];
-			unpack_block(texture_format::cBC7, &b7_block, &decoded_b7_blk[0][0]);
+			unpack_block(texture_format::cBC7, &b7_block, &decoded_b7_blk[0][0], false);
 						
 			uint64_t bc7_err = 0;
 			for (uint32_t i = 0; i < 16; i++)
@@ -4007,7 +3989,7 @@ namespace basisu
 				basist::encode_bc7_block(&trial_b7_block, &trial_b7_results);
 
 				color_rgba decoded_trial_b7_blk[4][4];
-				unpack_block(texture_format::cBC7, &trial_b7_block, &decoded_trial_b7_blk[0][0]);
+				unpack_block(texture_format::cBC7, &trial_b7_block, &decoded_trial_b7_blk[0][0], false);
 
 				uint64_t trial_bc7_err = 0;
 				for (uint32_t i = 0; i < 16; i++)
@@ -4151,9 +4133,7 @@ namespace basisu
 				const uint32_t first_index = block_index_iter;
 				const uint32_t last_index = minimum<uint32_t>(num_blocks, block_index_iter + blocks_per_job);
 
-#ifndef __EMSCRIPTEN__
 				pJob_pool->add_job([first_index, last_index, pBlocks, pBlock_pixels, &params, flags, &total_skipped, &total_modified, &total_refined, &total_smooth, &all_succeeded, &stat_mutex] {
-#endif
 
 					uint32_t job_skipped = 0, job_modified = 0, job_refined = 0, job_smooth = 0;
 
@@ -4169,16 +4149,12 @@ namespace basisu
 						total_smooth += job_smooth;
 					}
 
-#ifndef __EMSCRIPTEN__
 					}
 				);
-#endif
 
 			} // block_index_iter
 
-#ifndef __EMSCRIPTEN__
 			pJob_pool->wait_for_all();
-#endif
 
 			status = all_succeeded;
 		}

@@ -1,6 +1,6 @@
 // Do not include this header directly.
 //
-// Copyright 2020-2021 Binomial LLC
+// Copyright 2020-2024 Binomial LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,21 +15,21 @@
 // limitations under the License.
 
 // The general goal of these vectorized estimated math functions is scalability/performance.
-// There are explictly no checks NaN's/Inf's on the input arguments. There are no assertions either. 
-// These are fast estimate functions - if you need more than that, use stdlib. Please do a proper 
+// There are explictly no checks NaN's/Inf's on the input arguments. There are no assertions either.
+// These are fast estimate functions - if you need more than that, use stdlib. Please do a proper
 // engineering analysis before relying on them.
 // I have chosen functions written by others, ported them to CppSPMD, then measured their abs/rel errors.
 // I compared each to the ones in DirectXMath and stdlib's for accuracy/performance.
 
-CPPSPMD_FORCE_INLINE vfloat fmod_inv(const vfloat& a, const vfloat& b, const vfloat& b_inv) 
-{ 
-	vfloat c = frac(abs(a * b_inv)) * abs(b); 
-	return spmd_ternaryf(a < 0, -c, c); 
+CPPSPMD_FORCE_INLINE vfloat fmod_inv(const vfloat& a, const vfloat& b, const vfloat& b_inv)
+{
+	vfloat c = frac(abs(a * b_inv)) * abs(b);
+	return spmd_ternaryf(a < 0, -c, c);
 }
 
-CPPSPMD_FORCE_INLINE vfloat fmod_inv_p(const vfloat& a, const vfloat& b, const vfloat& b_inv) 
-{ 
-	return frac(a * b_inv) * b; 
+CPPSPMD_FORCE_INLINE vfloat fmod_inv_p(const vfloat& a, const vfloat& b, const vfloat& b_inv)
+{
+	return frac(a * b_inv) * b;
 }
 
 // Avoids dividing by zero or very small values.
@@ -87,13 +87,13 @@ inline vfloat spmd_kernel::log2_est(vfloat v)
 	vint greater = ux1_i & 0x00400000;  // true if signif > 1.5
 	SPMD_SIF(greater != 0)
 	{
-		// signif >= 1.5 so need to divide by 2.  Accomplish this by stuffing exp = 126 which corresponds to an exponent of -1 
+		// signif >= 1.5 so need to divide by 2.  Accomplish this by stuffing exp = 126 which corresponds to an exponent of -1
 		store_all(ux2_i, (ux1_i & 0x007FFFFF) | 0x3f000000);
 
 		store_all(ux2_f, cast_vint_to_vfloat(ux2_i));
 
 		// 126 instead of 127 compensates for division by 2
-		store_all(fexp, vfloat(exp - 126));    
+		store_all(fexp, vfloat(exp - 126));
 	}
 	SPMD_SELSE(greater != 0)
 	{
@@ -113,9 +113,9 @@ inline vfloat spmd_kernel::log2_est(vfloat v)
 
 	vfloat xm1 = signif;
 	vfloat xm1sqr = xm1 * xm1;
-		
+
 	return fexp + ((a * (xm1sqr * xm1) + b * xm1sqr + c * xm1) / (xm1sqr + d * xm1 + e));
-	
+
 	// fma lowers accuracy for SSE4.1 - no idea why (compiler reordering?)
 	//return fexp + ((vfma(a, (xm1sqr * xm1), vfma(b, xm1sqr, c * xm1))) / (xm1sqr + vfma(d, xm1, e)));
 }
@@ -130,15 +130,15 @@ CPPSPMD_FORCE_INLINE void spmd_kernel::reduce_expb(vfloat& arg, vfloat& two_int_
 {
 	// Assume we're using equation (2)
 	store_all(adjustment, 0);
-	
+
 	// integer part of the input argument
 	vint int_arg = (vint)arg;
-	
+
 	// if frac(arg) is in [0.5, 1.0]...
-	SPMD_SIF((arg - int_arg) > 0.5f)   
+	SPMD_SIF((arg - int_arg) > 0.5f)
 	{
 		store(adjustment, 1);
-		
+
 		// then change it to [0.0, 0.5]
 		store(arg, arg - 0.5f);
 	}
@@ -146,17 +146,17 @@ CPPSPMD_FORCE_INLINE void spmd_kernel::reduce_expb(vfloat& arg, vfloat& two_int_
 
 	// arg == just the fractional part
 	store_all(arg, arg - (vfloat)int_arg);
-   
-	// Now compute 2** (int) arg. 
+
+	// Now compute 2** (int) arg.
 	store_all(int_arg, min(int_arg + 127, 254));
-	
+
 	store_all(two_int_a, cast_vint_to_vfloat(VINT_SHIFT_LEFT(int_arg, 23)));
 }
 
 /*
 	clang 9.0.0 for win /fp:precise release
 	f range : -50.0000000000000000 49.9999940395355225, vals : 16777216
-	
+
 	exp2_est():
 	Total passed near - zero check : 16777216
 	Total sign diffs : 0
@@ -164,7 +164,7 @@ CPPSPMD_FORCE_INLINE void spmd_kernel::reduce_expb(vfloat& arg, vfloat& two_int_
 	max rel err: 0.0000015642030031
 	avg abs err: 10793794.4007573910057545
 	avg rel err: 0.0000003890893282
-	 
+
 	XMVectorExp2():
 	Total passed near-zero check: 16777216
 	Total sign diffs: 0
@@ -191,11 +191,11 @@ inline vfloat spmd_kernel::exp2_est(vfloat arg)
 	const vfloat P01 = +0.0576900723731f;
 	const vfloat Q00 = +20.8189237930062f;
 	const vfloat Q01 = +1.0f;
-	const vfloat sqrt2 = 1.4142135623730950488f; // sqrt(2) for scaling 
+	const vfloat sqrt2 = 1.4142135623730950488f; // sqrt(2) for scaling
 
 	vfloat result = 0.0f;
 
-	// Return 0 if arg is too large. 
+	// Return 0 if arg is too large.
 	// We're not introducing inf/nan's into calculations, or risk doing so by returning huge default values.
 	SPMD_IF(abs(arg) > 126.0f)
 	{
@@ -204,13 +204,13 @@ inline vfloat spmd_kernel::exp2_est(vfloat arg)
 	SPMD_END_IF
 
 	// 2**(int(a))
-	vfloat two_int_a;                
-	
+	vfloat two_int_a;
+
 	// set to 1 by reduce_expb
 	vint adjustment;
-	
+
 	// 0 if arg is +; 1 if negative
-	vint negative = 0;                 
+	vint negative = 0;
 
 	// If the input is negative, invert it. At the end we'll take the reciprocal, since n**(-1) = 1/(n**x).
 	SPMD_SIF(arg < 0.0f)
@@ -232,15 +232,15 @@ inline vfloat spmd_kernel::exp2_est(vfloat arg)
 
 	// Q(x**2)
 	vfloat Q = vfma(Q01, (arg * arg), Q00);
-	
+
 	// x*P(x**2)
 	vfloat x_P = arg * (vfma(P01, arg * arg, P00));
-	
+
 	vfloat answer = (Q + x_P) / (Q - x_P);
 
 	// Now correct for the scaling factor of 2**(int(a))
 	store_all(answer, answer * two_int_a);
-			
+
 	// If the result had a fractional part > 0.5, correct for that
 	store_all(answer, spmd_ternaryf(adjustment != 0, answer * sqrt2, answer));
 
@@ -295,35 +295,35 @@ inline vfloat spmd_kernel::sincos_est_a(vfloat a, bool sin_flag)
 
 	store_all(r1_x, sin_flag ? vfms(c1_w, a, c1_x) : c1_w * a);
 
-	store_all(r1_y, frac(r1_x));                   
-	
-	store_all(r2_x, (vfloat)(r1_y < c1_x));        
+	store_all(r1_y, frac(r1_x));
 
-	store_all(r2_y, (vfloat)(r1_y >= c1_y));    
-	store_all(r2_z, (vfloat)(r1_y >= c1_z));    
+	store_all(r2_x, (vfloat)(r1_y < c1_x));
+
+	store_all(r2_y, (vfloat)(r1_y >= c1_y));
+	store_all(r2_z, (vfloat)(r1_y >= c1_z));
 
 	store_all(r2_y, vfma(r2_x, c4_z, vfma(r2_y, c4_w, r2_z * c4_z)));
 
-	store_all(r0_x, c0_x - r1_y);                
-	store_all(r0_y, c0_y - r1_y);                
-	store_all(r0_z, c0_z - r1_y);                
-	
+	store_all(r0_x, c0_x - r1_y);
+	store_all(r0_y, c0_y - r1_y);
+	store_all(r0_z, c0_z - r1_y);
+
 	store_all(r0_x, r0_x * r0_x);
 	store_all(r0_y, r0_y * r0_y);
 	store_all(r0_z, r0_z * r0_z);
 
-	store_all(r1_x, vfma(c2_x, r0_x, c2_z));           
-	store_all(r1_y, vfma(c2_y, r0_y, c2_w));           
-	store_all(r1_z, vfma(c2_x, r0_z, c2_z));           
-	
+	store_all(r1_x, vfma(c2_x, r0_x, c2_z));
+	store_all(r1_y, vfma(c2_y, r0_y, c2_w));
+	store_all(r1_z, vfma(c2_x, r0_z, c2_z));
+
 	store_all(r1_x, vfma(r1_x, r0_x, c3_x));
 	store_all(r1_y, vfma(r1_y, r0_y, c3_y));
 	store_all(r1_z, vfma(r1_z, r0_z, c3_x));
-		
+
 	store_all(r1_x, vfma(r1_x, r0_x, c3_z));
 	store_all(r1_y, vfma(r1_y, r0_y, c3_w));
 	store_all(r1_z, vfma(r1_z, r0_z, c3_z));
-	
+
 	store_all(r1_x, vfma(r1_x, r0_x, c4_x));
 	store_all(r1_y, vfma(r1_y, r0_y, c4_y));
 	store_all(r1_z, vfma(r1_z, r0_z, c4_x));
@@ -347,9 +347,9 @@ CPPSPMD_FORCE_INLINE vfloat spmd_kernel::recip_est1(const vfloat& q)
 	vfloat l = spmd_ternaryf(q >= fMinThresh, q, cast_vint_to_vfloat(vint(mag)));
 
 	vint x_l = vint(mag) - cast_vfloat_to_vint(l);
-	
+
 	vfloat rcp_l = cast_vint_to_vfloat(x_l);
-	
+
 	return rcp_l * vfnma(rcp_l, q, 2.0f);
 }
 
@@ -395,12 +395,12 @@ CPPSPMD_FORCE_INLINE vfloat spmd_kernel::atan2_est(vfloat y, vfloat x)
 {
 	vfloat t1 = abs(y);
 	vfloat t3 = abs(x);
-	
+
 	vfloat t0 = max(t3, t1);
 	store_all(t1, min(t3, t1));
 
 	store_all(t3, t1 / t0);
-	
+
 	vfloat t4 = t3 * t3;
 	store_all(t0, vfma(-0.013480470f, t4, 0.057477314f));
 	store_all(t0, vfms(t0, t4, 0.121239071f));
@@ -452,7 +452,7 @@ CPPSPMD_FORCE_INLINE vfloat spmd_kernel::atan2_est(vfloat y, vfloat x)
 	max abs err: 0.8989131818294709
 	max rel err: 0.0573181403173166
 	avg rel err: 0.0000030791301203
-	
+
 	Originally from:
 	http://www.ganssle.com/approx.htm
 */
@@ -495,7 +495,7 @@ inline vfloat spmd_kernel::tan_est(vfloat x)
 	vfloat z = tan82(y);
 
 	vfloat r;
-	
+
 	vbool octant_one_or_two = (octant == 1) || (octant == 2);
 
 	// SPMD optimization - skip costly divide if we can
@@ -503,7 +503,7 @@ inline vfloat spmd_kernel::tan_est(vfloat x)
 	{
 		const float fDivThresh = .4371e-7f;
 		vfloat one_over_z = 1.0f / spmd_ternaryf(abs(z) > fDivThresh, z, spmd_ternaryf(z < 0.0f, -fDivThresh, fDivThresh));
-				
+
 		vfloat b = spmd_ternaryf(octant_one_or_two, one_over_z, z);
 		store_all(r, spmd_ternaryf((octant & 2) != 0, -b, b));
 	}
@@ -511,7 +511,7 @@ inline vfloat spmd_kernel::tan_est(vfloat x)
 	{
 		store_all(r, spmd_ternaryf(octant == 0, z, -z));
 	}
-		
+
 	// Small angle approximation, to decrease the max rel error near Pi.
 	SPMD_SIF(x >= (1.0f - .0003125f*4.0f))
 	{
@@ -523,25 +523,25 @@ inline vfloat spmd_kernel::tan_est(vfloat x)
 }
 
 inline void spmd_kernel::seed_rand(rand_context& x, vint seed)
-{ 
-	store(x.a, 0xf1ea5eed); 
-	store(x.b, seed ^ 0xd8487b1f); 
-	store(x.c, seed ^ 0xdbadef9a); 
-	store(x.d, seed); 
-	for (int i = 0; i < 20; ++i) 
-		(void)get_randu(x); 
+{
+	store(x.a, 0xf1ea5eed);
+	store(x.b, seed ^ 0xd8487b1f);
+	store(x.c, seed ^ 0xdbadef9a);
+	store(x.d, seed);
+	for (int i = 0; i < 20; ++i)
+		(void)get_randu(x);
 }
 
 // https://burtleburtle.net/bob/rand/smallprng.html
 // Returns 32-bit unsigned random numbers.
 inline vint spmd_kernel::get_randu(rand_context& x)
-{ 
-	vint e = x.a - VINT_ROT(x.b, 27); 
-	store(x.a, x.b ^ VINT_ROT(x.c, 17)); 
-	store(x.b, x.c + x.d); 
-	store(x.c, x.d + e); 
-	store(x.d, e + x.a);	
-	return x.d; 
+{
+	vint e = x.a - VINT_ROT(x.b, 27);
+	store(x.a, x.b ^ VINT_ROT(x.c, 17));
+	store(x.b, x.c + x.d);
+	store(x.c, x.d + e);
+	store(x.d, e + x.a);
+	return x.d;
 }
 
 // Returns random numbers between [low, high), or low if low >= high
@@ -552,7 +552,7 @@ inline vint spmd_kernel::get_randi(rand_context& x, vint low, vint high)
 	vint range = high - low;
 
 	vint rnd_range = mulhiu(rnd, range);
-	
+
 	return spmd_ternaryi(low < high, low + rnd_range, low);
 }
 
@@ -637,25 +637,25 @@ CPPSPMD_FORCE_INLINE vint spmd_kernel::count_trailing_zeros(vint x)
 {
 	// cast the least significant bit in v to a float
 	vfloat f = (vfloat)(x & -x);
-	
+
 	// extract exponent and adjust
 	return VUINT_SHIFT_RIGHT(cast_vfloat_to_vint(f), 23) - 0x7F;
 }
 
 CPPSPMD_FORCE_INLINE vint spmd_kernel::count_set_bits(vint x)
 {
-	vint v = x - (VUINT_SHIFT_RIGHT(x, 1) & 0x55555555);                    
-	vint v1 = (v & 0x33333333) + (VUINT_SHIFT_RIGHT(v, 2) & 0x33333333);     
-	return VUINT_SHIFT_RIGHT(((v1 + VUINT_SHIFT_RIGHT(v1, 4) & 0xF0F0F0F) * 0x1010101), 24);
+	vint v = x - (VUINT_SHIFT_RIGHT(x, 1) & 0x55555555);
+	vint v1 = (v & 0x33333333) + (VUINT_SHIFT_RIGHT(v, 2) & 0x33333333);
+	return VUINT_SHIFT_RIGHT(((v1 + (VUINT_SHIFT_RIGHT(v1, 4) & 0xF0F0F0F)) * 0x1010101), 24);
 }
 
-CPPSPMD_FORCE_INLINE vint cmple_epu16(const vint &a, const vint &b) 
-{ 
-	return cmpeq_epi16(subs_epu16(a, b), vint(0)); 
+CPPSPMD_FORCE_INLINE vint cmple_epu16(const vint &a, const vint &b)
+{
+	return cmpeq_epi16(subs_epu16(a, b), vint(0));
 }
 
-CPPSPMD_FORCE_INLINE vint cmpge_epu16(const vint &a, const vint &b) 
-{ 
+CPPSPMD_FORCE_INLINE vint cmpge_epu16(const vint &a, const vint &b)
+{
 	return cmple_epu16(b, a);
 }
 
@@ -679,29 +679,29 @@ CPPSPMD_FORCE_INLINE vint cmple_epi16(const vint &a, const vint &b)
 	return cmpge_epi16(b, a);
 }
 
-void spmd_kernel::print_vint(vint v) 
-{ 
-	for (uint32_t i = 0; i < PROGRAM_COUNT; i++) 
-		printf("%i ", extract(v, i)); 
-	printf("\n"); 
+void spmd_kernel::print_vint(vint v)
+{
+	for (uint32_t i = 0; i < PROGRAM_COUNT; i++)
+		printf("%i ", extract(v, i));
+	printf("\n");
 }
 
-void spmd_kernel::print_vbool(vbool v) 
-{ 
-	for (uint32_t i = 0; i < PROGRAM_COUNT; i++) 
-		printf("%i ", extract(v, i) ? 1 : 0); 
-	printf("\n"); 
-}
-	
-void spmd_kernel::print_vint_hex(vint v) 
-{ 
-	for (uint32_t i = 0; i < PROGRAM_COUNT; i++) 
-		printf("0x%X ", extract(v, i)); 
-	printf("\n"); 
+void spmd_kernel::print_vbool(vbool v)
+{
+	for (uint32_t i = 0; i < PROGRAM_COUNT; i++)
+		printf("%i ", extract(v, i) ? 1 : 0);
+	printf("\n");
 }
 
-void spmd_kernel::print_active_lanes(const char *pPrefix) 
-{ 
+void spmd_kernel::print_vint_hex(vint v)
+{
+	for (uint32_t i = 0; i < PROGRAM_COUNT; i++)
+		printf("0x%X ", extract(v, i));
+	printf("\n");
+}
+
+void spmd_kernel::print_active_lanes(const char *pPrefix)
+{
 	CPPSPMD_DECL(int, flags[PROGRAM_COUNT]);
 	memset(flags, 0, sizeof(flags));
 	storeu_linear(flags, vint(1));
@@ -709,17 +709,17 @@ void spmd_kernel::print_active_lanes(const char *pPrefix)
 	if (pPrefix)
 		printf("%s", pPrefix);
 
-	for (uint32_t i = 0; i < PROGRAM_COUNT; i++) 
+	for (uint32_t i = 0; i < PROGRAM_COUNT; i++)
 	{
 		if (flags[i])
 			printf("%u ", i);
 	}
 	printf("\n");
 }
-	
-void spmd_kernel::print_vfloat(vfloat v) 
-{ 
-	for (uint32_t i = 0; i < PROGRAM_COUNT; i++) 
-		printf("%f ", extract(v, i)); 
-	printf("\n"); 
+
+void spmd_kernel::print_vfloat(vfloat v)
+{
+	for (uint32_t i = 0; i < PROGRAM_COUNT; i++)
+		printf("%f ", extract(v, i));
+	printf("\n");
 }
