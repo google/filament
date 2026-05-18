@@ -208,14 +208,14 @@ Java_com_google_android_filament_Renderer_nSetFrameRateOptions(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSetClearOptions(JNIEnv *env, jclass ,
-        jlong nativeRenderer, jfloat r, jfloat g, jfloat b, jfloat a,
-        jboolean clear, jboolean discard) {
+Java_com_google_android_filament_Renderer_nSetClearOptions(
+    JNIEnv* env, jclass, jlong nativeRenderer, jdouble r, jdouble g, jdouble b, jdouble a,
+    jboolean clear, jboolean discard) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     wrapJni(env, [=]() {
-        renderer->setClearOptions({ .clearColor = {r, g, b, a},
+        renderer->setClearOptions({ .clearColor = { r, g, b, a },
                                     .clear = (bool) clear,
-                                    .discard = (bool) discard});
+                                    .discard = (bool) discard });
     });
 }
 

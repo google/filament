@@ -64,6 +64,22 @@
 
 using namespace std::chrono_literals;
 
+
+// https://issues.chromium.org/issues/507581790
+// Manual polyfill pending upstream fix.
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/em_js.h>
+
+EM_JS(void, wgpuRenderPassEncoderSetImmediates, (WGPURenderPassEncoder passEncoder,
+                uint32_t offset, void const * data, size_t size), {
+    const encoder = WebGPU.Internals.jsObjects[passEncoder];
+    if (encoder && encoder.setImmediates) {
+        const buffer = HEAPU8.slice(data, data + size);
+        encoder.setImmediates(offset, buffer);
+    }
+})
+#endif
+
 namespace filament::backend {
 
 namespace {
@@ -147,8 +163,10 @@ void WebGPUDriver::terminate() {
 }
 
 void WebGPUDriver::tick(int) {
+#if !defined(__EMSCRIPTEN__)
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
+#endif
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -198,7 +216,9 @@ void WebGPUDriver::finish(int /* dummy */) {
     // processed. Note that blocking with mReadPixelMapsCounter.waitForAllToFinish will only
     // deadlock since we could not advance the counter.
     while (!mReadPixelMapsCounter.isIdle()) {
+#if !defined(__EMSCRIPTEN__)
         mAdapter.GetInstance().ProcessEvents();
+#endif
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -406,6 +426,10 @@ Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
     return allocHandle<WebGPUVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferAsyncS() noexcept {
+    return allocHandle<WebGPUVertexBuffer>();
+}
+
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
     return allocHandle<WebGPUDescriptorSet>();
 }
@@ -517,6 +541,13 @@ void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle
     constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
             vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
     setDebugTag(vertexBufferHandle.getId(), std::move(tag));
+}
+
+void WebGPUDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
@@ -659,7 +690,9 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimit
     assert_invariant(mDevice);
     const auto renderPrimitive = constructHandle<WebGPURenderPrimitive>(renderPrimitiveHandle);
     const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
-    const auto indexBuffer = handleCast<WebGPUIndexBuffer>(indexBufferHandle);
+    // Non-indexed (attribute-less) primitives have no IndexBuffer.
+    const auto indexBuffer =
+            indexBufferHandle ? handleCast<WebGPUIndexBuffer>(indexBufferHandle) : nullptr;
     renderPrimitive->vertexBuffer = vertexBuffer;
     renderPrimitive->indexBuffer = indexBuffer;
     renderPrimitive->type = primitiveType;
@@ -782,7 +815,7 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    
+
     using namespace std::chrono;
     auto now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
@@ -800,15 +833,15 @@ FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const time
         state = fence->getState();
         return bool(state);
     }, until);
-    
+
     if (status == FenceStatus::ERROR) {
         return FenceStatus::ERROR;
     }
-    
+
     if (status == FenceStatus::TIMEOUT_EXPIRED) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
-    
+
     auto duration_ns = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
                     .count());
@@ -837,7 +870,11 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
+#if defined(__EMSCRIPTEN__)
+    return false;
+#else
     return mDevice.HasFeature(wgpu::FeatureName::TextureComponentSwizzle);
+#endif
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
@@ -859,7 +896,7 @@ bool WebGPUDriver::isTextureFormatFilterable(TextureFormat format) {
     if (isFp32ColorFormat(format)) {
         return mDevice.HasFeature(wgpu::FeatureName::Float32Filterable);
     }
-    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) ||
         isDepthFormat(format) || isStencilFormat(format)) {
         return false;
     }
@@ -1296,8 +1333,14 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
 
     mCurrentRenderTarget = renderTarget;
     if (renderTarget->isDefaultRenderTarget()) {
-        assert_invariant(mSwapChain && mTextureView);
-        defaultColorView = mTextureView;
+        assert_invariant(mSwapChain);
+
+        if (!mSwapChainView) {
+            mSwapChainView = mSwapChain->isHeadless() ?
+                mSwapChain->getNextTextureView() :
+                mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
+        }
+        defaultColorView  = mSwapChainView;
         defaultDepthStencilView = mSwapChain->getDepthTextureView();
         defaultDepthStencilFormat = mSwapChain->getDepthFormat();
 
@@ -1324,7 +1367,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
                     customColorViews[customColorViewCount] =
-                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer, renderTarget->getLayerCount());
+                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer,
+                                    renderTarget->getLayerCount());
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -1454,18 +1498,11 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSwapChain,
     auto swapChain = handleCast<WebGPUSwapChain>(drawSwapChain);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-
-    if (mSwapChain->isHeadless()) {
-        mTextureView = mSwapChain->getNextTextureView();
-    } else {
-        mTextureView = mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
-    }
-    assert_invariant(mTextureView);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mQueueManager.flush();
-    mTextureView = nullptr;
+    mSwapChainView = nullptr;
     assert_invariant(mSwapChain);
     mSwapChain->present(*this);
 }
@@ -1483,7 +1520,12 @@ void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     } else if (std::holds_alternative<bool>(value)) {
         data = std::get<bool>(value) ? 1 : 0;
     }
+#if defined(__EMSCRIPTEN__)
+    wgpuRenderPassEncoderSetImmediates(mRenderPassEncoder.Get(), index * sizeof(uint32_t), &data,
+            sizeof(uint32_t));
+#else
     mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
+#endif
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {
@@ -1990,8 +2032,11 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
                 renderPrimitive->vertexBuffer->getBuffers()[bindingInfo.sourceBufferIndex],
                 bindingInfo.bufferOffset);
     }
-    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
-            renderPrimitive->indexBuffer->getIndexFormat());
+    // Index buffer is optional: non-indexed (attribute-less) primitives have none.
+    if (renderPrimitive->indexBuffer) {
+        mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
+                renderPrimitive->indexBuffer->getIndexFormat());
+    }
 }
 
 void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
@@ -2007,6 +2052,21 @@ void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
     }
 
     mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
+}
+
+void WebGPUDriver::drawArrays(const uint32_t vertexOffset, const uint32_t vertexCount,
+        const uint32_t instanceCount) {
+    FWGPU_SYSTRACE_SCOPE();
+    // Bind groups are deferred until the actual draw call (mirrors draw2).
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto& binding = mCurrentDescriptorSets[i];
+        if (binding.bindGroup) {
+            mRenderPassEncoder.SetBindGroup(i, binding.bindGroup, binding.offsetCount,
+                    binding.offsets.data());
+        }
+    }
+
+    mRenderPassEncoder.Draw(vertexCount, instanceCount, vertexOffset, 0);
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState,

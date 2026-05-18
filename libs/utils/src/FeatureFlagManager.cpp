@@ -68,7 +68,7 @@ void overrideFeatureDefaults(Slice<FeatureFlagManager::FeatureFlag> const& featu
             } else if (value == "0" || value == "false") {
                 *const_cast<bool*>(feature.value) = false;
             }
-            DLOG(INFO) << "overriding " << feature.name << " to " << *feature.value;
+            LOG(INFO) << "FeatureFlagManager: overriding " << feature.name << " to " << *feature.value;
         }
     }
 }
@@ -97,6 +97,9 @@ FeatureFlagManager::FeatureFlagManager() : mFeatures{{
         { "engine.color_grading.use_1d_lut",
           "Uses a 1D LUT for color grading.",
           &features.engine.color_grading.use_1d_lut, false },
+        { "engine.color_grading.use_optimized_default_builder",
+          "Uses NEON fast math for color grading LUT generation.",
+          &features.engine.color_grading.use_optimized_default_builder, false },
         { "engine.shadows.use_shadow_atlas",
           "Uses an array of atlases to store shadow maps.",
           &features.engine.shadows.use_shadow_atlas, false },

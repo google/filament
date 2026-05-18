@@ -46,6 +46,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool flipUV;
     bool linearFog;
     bool shadowFarAttenuation;
+    bool hasColoredPenumbra;
     bool multiBounceAO;
     bool multiBounceAOSet;
     bool specularAOSet;

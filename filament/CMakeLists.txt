@@ -442,10 +442,8 @@ foreach(mat_dir ${MATERIAL_DIRS})
 
         check_in_list(MATERIAL_VULKAN_METAL_SRCS ${mat_src} is_vk_metal)
         if (is_vk_metal)
-            # Remove webgpu and related parameters
-            # The variant-filter=stereo is added in the root folder's CMakeLists.txt for webgpu
-            # Context is that webgpu does not support the stereo variant
-            string(REPLACE "-a;webgpu;--variant-filter=stereo" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
+            # Remove webgpu
+            string(REPLACE "-a;webgpu" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
 
             # Remove gl
             string(REPLACE "-a;opengl" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
@@ -744,10 +742,10 @@ if (MSVC)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
-elseif(WEBGL)
+elseif (WASM)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-elseif(FILAMENT_USING_GCC)
+elseif (FILAMENT_USING_GCC)
     set(OPTIMIZATION_FLAGS
         -ffast-math
         -fno-finite-math-only

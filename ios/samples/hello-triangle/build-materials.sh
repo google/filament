@@ -1,7 +1,7 @@
 # Compile bakedColor material.
 
 HOST_TOOLS_PATH="${HOST_TOOLS_PATH:-../../../out/release/filament/bin}"
-matc_path=`find ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`
+matc_path=`find -L ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`
 
 if [[ ! -e "${matc_path}" ]]; then
   echo "No matc binary could be found in ${HOST_TOOLS_PATH}."

@@ -168,8 +168,10 @@ private:
             wgpu::TextureFormat::Undefined                                              //
         };                                                                                  // 32   : 328
     };
+#if !defined(__EMSCRIPTEN__)
     static_assert(sizeof(RenderPipelineKey) == 360,
             "RenderPipelineKey must not have implicit padding.");
+#endif
     static_assert(std::is_trivially_copyable<RenderPipelineKey>::value,
             "RenderPipelineKey must be a trivially copyable POD for fast hashing.");
 

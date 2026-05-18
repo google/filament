@@ -87,7 +87,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="../../images/filament_logo_small.png"></img>
+                <img class="flogo" src="../../images/filament_logo_small.png"/>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
@@ -171,90 +171,88 @@
         if (tag === 'canvas') return [document.getElementById('demo-canvas')];
         return originalGetElementsByTagName.call(document, tag);
     };
-//
 class App {
-  constructor() {
-this.canvas = document.getElementsByTagName('canvas')[0];
-const engine = this.engine = Filament.Engine.create(this.canvas);
-this.scene = engine.createScene();
-this.triangle = Filament.EntityManager.get().create();
-this.scene.addEntity(this.triangle);
-const TRIANGLE_POSITIONS = new Float32Array([
-    1, 0,
-    Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
-    Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
-]);
-//
-const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
-const VertexAttribute = Filament.VertexAttribute;
-const AttributeType = Filament.VertexBuffer$AttributeType;
-this.vb = Filament.VertexBuffer.Builder()
-    .vertexCount(3)
-    .bufferCount(2)
-    .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
-    .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
-    .normalized(VertexAttribute.COLOR)
-    .build(engine);
-//
-this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
-this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
-this.ib = Filament.IndexBuffer.Builder()
-    .indexCount(3)
-    .bufferType(Filament.IndexBuffer$IndexType.USHORT)
-    .build(engine);
-//
-this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
-const mat = engine.createMaterial('../../web/assets/triangle/triangle.filamat');
-const matinst = mat.getDefaultInstance();
-Filament.RenderableManager.Builder(1)
-    .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
-    .material(0, matinst)
-    .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
-    .build(engine, this.triangle);
-this.swapChain = engine.createSwapChain();
-this.renderer = engine.createRenderer();
-this.camera = engine.createCamera(Filament.EntityManager.get().create());
-this.view = engine.createView();
-this.view.setCamera(this.camera);
-this.view.setScene(this.scene);
-//
-// Set up a blue-green background:
-this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
-//
-// Adjust the initial viewport:
-this.resize();
+  constructor(options) {
+    this.canvas = document.getElementsByTagName('canvas')[0];
+    const engine = this.engine = Filament.Engine.create(this.canvas, options);
+    this.scene = engine.createScene();
+    this.triangle = Filament.EntityManager.get().create();
+    this.scene.addEntity(this.triangle);
+    const TRIANGLE_POSITIONS = new Float32Array([
+        1, 0,
+        Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
+        Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
+    ]);
+    const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
+    const VertexAttribute = Filament.VertexAttribute;
+    const AttributeType = Filament.VertexBuffer$AttributeType;
+    this.vb = Filament.VertexBuffer.Builder()
+        .vertexCount(3)
+        .bufferCount(2)
+        .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
+        .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
+        .normalized(VertexAttribute.COLOR)
+        .build(engine);
+    this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
+    this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
+    this.ib = Filament.IndexBuffer.Builder()
+        .indexCount(3)
+        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+        .build(engine);
+    this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
+    const mat = engine.createMaterial('../../web/assets/triangle/triangle.filamat');
+    const matinst = mat.getDefaultInstance();
+    Filament.RenderableManager.Builder(1)
+        .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+        .material(0, matinst)
+        .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+        .build(engine, this.triangle);
+    this.swapChain = engine.createSwapChain();
+    this.renderer = engine.createRenderer();
+    this.camera = engine.createCamera(Filament.EntityManager.get().create());
+    this.view = engine.createView();
+    this.view.setCamera(this.camera);
+    this.view.setScene(this.scene);
+    // Set up a blue-green background:
+    this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+    // Adjust the initial viewport:
+    this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
   render() {
-// Rotate the triangle.
-const radians = Date.now() / 1000;
-const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
-const tcm = this.engine.getTransformManager();
-const inst = tcm.getInstance(this.triangle);
-tcm.setTransform(inst, transform);
-inst.delete();
-//
-// Render the frame.
-this.renderer.render(this.swapChain, this.view);
+    // Rotate the triangle.
+    const radians = Date.now() / 1000;
+    const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
+    const tcm = this.engine.getTransformManager();
+    const inst = tcm.getInstance(this.triangle);
+    tcm.setTransform(inst, transform);
+    inst.delete();
+    // Render the frame.
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
   resize() {
-const dpr = window.devicePixelRatio;
-const width = this.canvas.width = this.canvas.clientWidth * dpr;
-const height = this.canvas.height = this.canvas.clientHeight * dpr;
-this.view.setViewport([0, 0, width, height]);
-//
-const aspect = width / height;
-const Projection = Filament.Camera$Projection;
-this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
+    const dpr = window.devicePixelRatio;
+    const width = this.canvas.width = this.canvas.clientWidth * dpr;
+    const height = this.canvas.height = this.canvas.clientHeight * dpr;
+    this.view.setViewport([0, 0, width, height]);
+    const aspect = width / height;
+    const Projection = Filament.Camera$Projection;
+    this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
   }
 }
-//
-Filament.init(['../../web/assets/triangle/triangle.filamat'], () => { window.app = new App() } );
-//
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(() => {
+        Filament.init(['../../web/assets/triangle/triangle.filamat'], () => {
+            window.app = new App({backend: Filament.Backend ? Filament.Backend.WEBGPU : 4})
+        } );
+    });
+} else {
+    Filament.init(['../../web/assets/triangle/triangle.filamat'], () => { window.app = new App() } );
+}
 })();
 </script>
 <h2 id="start-your-project"><a class="header" href="#start-your-project">Start your project</a></h2>
@@ -292,9 +290,9 @@ a mobile-friendly page with a full-screen canvas.</p>
 </ul>
 <p>Go ahead and create <code>triangle.js</code> with the following content.</p>
 <pre><code class="language-js">class App {
-  constructor() {
+  constructor(options) {
     this.canvas = document.getElementsByTagName('canvas')[0];
-    const engine = this.engine = Filament.Engine.create(this.canvas);
+    const engine = this.engine = Filament.Engine.create(this.canvas, options);
     this.scene = engine.createScene();
     this.triangle = Filament.EntityManager.get().create();
     this.scene.addEntity(this.triangle);
@@ -303,7 +301,7 @@ a mobile-friendly page with a full-screen canvas.</p>
         Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
         Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
     ]);
-    
+
     const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
     const VertexAttribute = Filament.VertexAttribute;
     const AttributeType = Filament.VertexBuffer$AttributeType;
@@ -314,14 +312,14 @@ a mobile-friendly page with a full-screen canvas.</p>
         .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
         .normalized(VertexAttribute.COLOR)
         .build(engine);
-    
+
     this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
     this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
     this.ib = Filament.IndexBuffer.Builder()
         .indexCount(3)
         .bufferType(Filament.IndexBuffer$IndexType.USHORT)
         .build(engine);
-    
+
     this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
     const mat = engine.createMaterial('../../web/assets/triangle/triangle.filamat');
     const matinst = mat.getDefaultInstance();
@@ -336,10 +334,10 @@ a mobile-friendly page with a full-screen canvas.</p>
     this.view = engine.createView();
     this.view.setCamera(this.camera);
     this.view.setScene(this.scene);
-    
+
     // Set up a blue-green background:
     this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
-    
+
     // Adjust the initial viewport:
     this.resize();
     this.render = this.render.bind(this);
@@ -355,7 +353,7 @@ a mobile-friendly page with a full-screen canvas.</p>
     const inst = tcm.getInstance(this.triangle);
     tcm.setTransform(inst, transform);
     inst.delete();
-    
+
     // Render the frame.
     this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
@@ -365,14 +363,22 @@ a mobile-friendly page with a full-screen canvas.</p>
     const width = this.canvas.width = this.canvas.clientWidth * dpr;
     const height = this.canvas.height = this.canvas.clientHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
-    
+
     const aspect = width / height;
     const Projection = Filament.Camera$Projection;
     this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
   }
 }
 
-Filament.init(['../../web/assets/triangle/triangle.filamat'], () =&gt; { window.app = new App() } );
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(() =&gt; {
+        Filament.init(['../../web/assets/triangle/triangle.filamat'], () =&gt; {
+            window.app = new App({backend: Filament.Backend ? Filament.Backend.WEBGPU : 4})
+        } );
+    });
+} else {
+    Filament.init(['../../web/assets/triangle/triangle.filamat'], () =&gt; { window.app = new App() } );
+}
 </code></pre>
 <p>The two calls to <code>bind()</code> allow us to pass instance methods as callbacks for animation and resize
 events.</p>
@@ -503,7 +509,7 @@ to repaint. Often this is 60 times a second.</p>
     const inst = tcm.getInstance(this.triangle);
     tcm.setTransform(inst, transform);
     inst.delete();
-    
+
     // Render the frame.
     this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);

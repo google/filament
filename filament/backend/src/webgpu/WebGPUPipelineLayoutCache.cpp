@@ -28,6 +28,33 @@
 #include <array>
 #include <cstring>
 
+
+// https://issues.chromium.org/issues/507581790
+// Manual polyfill pending upstream fix.
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/em_js.h>
+
+EM_JS(WGPUPipelineLayout, filamentCreatePipelineLayoutWithImmediateData,
+        (WGPUDevice devicePtr, WGPUPipelineLayoutDescriptor const* descriptor), {
+    const bglCount = HEAPU32[(descriptor >> 2) + 3];
+    const bglPtr = HEAPU32[(descriptor >> 2) + 4];
+    const bgls = [];
+    for (let i = 0; i < bglCount; ++i) {
+        bgls.push(WebGPU.getJsObject(HEAPU32[(bglPtr >> 2) + i]));
+    }
+    const desc = {
+        "label": WebGPU.makeStringFromOptionalStringView(descriptor + 4),
+        "bindGroupLayouts": bgls,
+        "immediateSize": HEAPU32[(descriptor >> 2) + 5],
+    };
+
+    const device = WebGPU.getJsObject(devicePtr);
+    const ptr = _emwgpuCreatePipelineLayout(0);
+    WebGPU.Internals.jsObjectInsert(ptr, device.createPipelineLayout(desc));
+    return ptr;
+})
+#endif
+
 namespace filament::backend {
 
 WebGPUPipelineLayoutCache::WebGPUPipelineLayoutCache(wgpu::Device const& device)
@@ -72,13 +99,28 @@ wgpu::PipelineLayout WebGPUPipelineLayoutCache::createPipelineLayout(
     wgpu::Limits supportedLimits{};
     mDevice.GetLimits(&supportedLimits);
 
+    uint32_t immediateSize = supportedLimits.maxImmediateSize;
+    if (immediateSize == 0) {
+        // Fallback: WebGPU implementations that support 'chromium-experimental-immediate-data'
+        // might not expose 'maxImmediateSize' via JS limits yet, so we assume 64.
+        immediateSize = 64;
+    }
+
     const wgpu::PipelineLayoutDescriptor descriptor{
         .label = wgpu::StringView(request.label.c_str_safe()),
         .bindGroupLayoutCount = request.bindGroupLayoutCount,
         .bindGroupLayouts = request.bindGroupLayouts.data(),
-        .immediateSize = supportedLimits.maxImmediateSize,
+        .immediateSize = immediateSize,
     };
-    const wgpu::PipelineLayout layout{ mDevice.CreatePipelineLayout(&descriptor) };
+
+    const wgpu::PipelineLayout layout =
+#if defined(__EMSCRIPTEN__)
+            wgpu::PipelineLayout::Acquire(
+                    filamentCreatePipelineLayoutWithImmediateData(mDevice.Get(),
+                            reinterpret_cast<WGPUPipelineLayoutDescriptor const*>(&descriptor)));
+#else
+            mDevice.CreatePipelineLayout(&descriptor);
+#endif
     FILAMENT_CHECK_POSTCONDITION(layout)
             << "Failed to create pipeline layout " << descriptor.label << ".";
     return layout;

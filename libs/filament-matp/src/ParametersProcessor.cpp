@@ -17,9 +17,8 @@
 #include "ParametersProcessor.h"
 
 #include <filamat/Enums.h>
-#include <utils/CString.h>
-#include <utils/sstream.h>
 #include <utils/Status.h>
+#include <utils/sstream.h>
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/Variant.h>
@@ -1149,6 +1148,11 @@ static Status processTransparentShadow(MaterialBuilder& builder, const JsonishVa
     return Status::ok();;
 }
 
+static Status processColoredPenumbra(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.coloredPenumbra(value.toJsonBool()->getBool());
+    return Status::ok();;
+}
+
 static Status processSpecularAntiAliasing(MaterialBuilder& builder, const JsonishValue& value) {
     builder.specularAntiAliasing(value.toJsonBool()->getBool());
     return Status::ok();;
@@ -1384,6 +1388,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["alphaToCoverage"]               = { &processAlphaToCoverage, Type::BOOL };
     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
     mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
+    mParameters["coloredPenumbra"]               = { &processColoredPenumbra, Type::BOOL };
     mParameters["shadingModel"]                  = { &processShading, Type::STRING };
     mParameters["variantFilter"]                 = { &processVariantFilter, Type::ARRAY };
     mParameters["specularAntiAliasing"]          = { &processSpecularAntiAliasing, Type::BOOL };

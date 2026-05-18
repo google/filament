@@ -38,6 +38,7 @@ struct AsyncState {
     bool bufferObjectCreated = false;
     bool textureCreated = false;
     bool textureViewSwizzledCreated = false;
+    bool vertexBufferCreated = false;
     bool indexBufferUpdated = false;
     bool bufferObjectUpdated = false;
     bool textureUpdated = false;
@@ -157,7 +158,8 @@ TEST_F(BackendTest, BasicAsyncFlow) {
         .type = ElementType::FLOAT2,
         .flags = 0 } };
     VertexBufferInfoHandle vbih = addCleanup(api.createVertexBufferInfo(1, 1, attributes));
-    VertexBufferHandle vbh = addCleanup(api.createVertexBuffer(3, vbih));
+    VertexBufferHandle vbh = addCleanup(api.createVertexBufferAsync(3, vbih, nullptr,
+            signalCallback, &state.vertexBufferCreated));
 
     // Set Vertex Buffer Object Asynchronously
     api.setVertexBufferObjectAsync(vbh, 0, boh, nullptr, signalCallback, &state.vertexBufferSet);
@@ -173,6 +175,7 @@ TEST_F(BackendTest, BasicAsyncFlow) {
     waitFor(state.indexBufferUpdated);
     waitFor(state.bufferObjectUpdated);
     waitFor(state.textureUpdated);
+    waitFor(state.vertexBufferCreated);
     waitFor(state.vertexBufferSet);
     waitFor(state.commandQueued);
 

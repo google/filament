@@ -256,7 +256,8 @@ struct MetalVertexBufferInfo : public HwVertexBufferInfo {
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(MetalContext& context,
-            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih);
+            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih,
+            bool async = false);
 
     Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<MetalBuffer*> buffers;
@@ -314,7 +315,7 @@ public:
     MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
             uint8_t levelCount) noexcept;
     MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r, TextureSwizzle g,
-            TextureSwizzle b, TextureSwizzle a) noexcept;
+            TextureSwizzle b, TextureSwizzle a, bool async = false) noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,

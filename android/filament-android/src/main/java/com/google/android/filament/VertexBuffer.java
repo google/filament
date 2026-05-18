@@ -147,6 +147,10 @@ public class VertexBuffer {
          * Defines how many buffers will be created in this vertex buffer set. These buffers are
          * later referenced by index from 0 to <code>bufferCount</code> - 1.
          *
+         * <p>For non-indexed / attribute-less (procedural) rendering, <code>bufferCount</code> can
+         * be set to 0 if no vertex attributes are declared. This requires <code>FEATURE_LEVEL_1</code>
+         * or higher.</p>
+         *
          * This call is mandatory. The default is 0.
          *
          * @param bufferCount number of buffers in this vertex buffer set. The maximum value is 8.
@@ -154,7 +158,7 @@ public class VertexBuffer {
          * @return this <code>Builder</code> for chaining calls
          */
         @NonNull
-        public Builder bufferCount(@IntRange(from = 1) int bufferCount) {
+        public Builder bufferCount(@IntRange(from = 0) int bufferCount) {
             nBuilderBufferCount(mNativeBuilder, bufferCount);
             return this;
         }

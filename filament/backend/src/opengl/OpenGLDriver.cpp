@@ -403,6 +403,9 @@ void OpenGLDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
+    // wait for the GPU again because JobWorker might have queued more work.
+    glFinish();
+
     if constexpr (UTILS_HAS_THREADING) {
         stopServiceThread();
     }
@@ -622,6 +625,10 @@ Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferAsyncS() noexcept {
+    return initHandle<GLVertexBuffer>();
+}
+
 Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferS() noexcept {
     return initHandle<GLIndexBuffer>();
 }
@@ -772,8 +779,29 @@ void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBufferInfo> vbih,
         ImmutableCString&& tag) {
     DEBUG_MARKER()
-    construct<GLVertexBuffer>(vbh, vertexCount, vbih);
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih, false);
     mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+}
+
+void OpenGLDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih,
+        CallbackHandler* handler, CallbackHandler::Callback const callback,
+        void* user, ImmutableCString&& tag) {
+    // For object creation, the object should be constructed first to determine the initial settings
+    // early. For example, the `asynchronous` field needs to be decided at this stage so that
+    // subsequent backend APIs can handle operations based on this setting.
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih, true);
+    mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+
+    assert_invariant(getJobQueue());
+
+    // The job push is ordering-only: no GL commands are issued in the worker
+    // thread (createVertexBuffer doesn't allocate GPU memory). The push exists
+    // to fire the callback after any previously-queued worker jobs.
+    getJobQueue()->push([this, handler, callback, user]() mutable {
+        DEBUG_MARKER_NAME("createVertexBufferAsyncR")
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void OpenGLDriver::createIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh, ElementType const elementType,
@@ -897,13 +925,8 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     auto& gl = getBackendState();
 
-    GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
-    assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
-
     GLVertexBuffer const* const vb = handle_cast<GLVertexBuffer*>(vbh);
     GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
-    rp->gl.indicesShift = (ib->elementSize == 4u) ? 2u : 1u;
-    rp->gl.indicesType  = (ib->elementSize == 4u) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
     rp->vbih = vb->vbih;
@@ -921,8 +944,17 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     // later in draw() or bindRenderPrimitive(). At this point, the HwVertexBuffer might not
     // have all its buffers set.
 
-    // this records the index buffer into the currently bound VAO
-    gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+    // The index buffer handle is optional: a null `ibh` indicates an attribute-less /
+    // non-indexed render primitive. In that case we leave the VAO's GL_ELEMENT_ARRAY_BUFFER
+    // unbound and skip the indexShift/Type setup — the draw call will use glDrawArrays*.
+    if (ibh) {
+        GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
+        assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
+        rp->gl.indicesShift = (ib->elementSize == 4u) ? 2u : 1u;
+        rp->gl.indicesType  = (ib->elementSize == 4u) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        // this records the index buffer into the currently bound VAO
+        gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
+    }
 
     CHECK_GL_ERROR()
     mHandleAllocator.associateTagToHandle(rph.getId(), std::move(tag));
@@ -2013,6 +2045,10 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 assert_invariant(color[i].handle);
                 rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
+                TextureFormat const format = rt->gl.color[i]->format;
+                rt->gl.colorClearKind[i] = isUnsignedIntFormat(format) ?
+                        ColorClearKind::UnsignedInt : isSignedIntFormat(format) ?
+                                ColorClearKind::SignedInt : ColorClearKind::Float;
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i, layerCount);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
                 checkDimensions(rt->gl.color[i], color[i].level);
@@ -2221,11 +2257,22 @@ void OpenGLDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     }
 }
 
+void OpenGLDriver::destroyVertexBufferCommon(Handle<HwVertexBuffer> vbh) {
+    GLVertexBuffer const* vb = handle_cast<const GLVertexBuffer*>(vbh);
+    destruct(vbh, vb);
+}
+
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
     if (vbh) {
         GLVertexBuffer const* vb = handle_cast<const GLVertexBuffer*>(vbh);
-        destruct(vbh, vb);
+        if (vb->asynchronous) {
+            getJobQueue()->push([this, vbh]() {
+                destroyVertexBufferCommon(vbh);
+            });
+        } else {
+            destroyVertexBufferCommon(vbh);
+        }
     }
 }
 
@@ -3811,7 +3858,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             // It's important to clear the framebuffer before drawing, as it resets
             // the fb to a known state (resets fb compression and possibly other things).
             // So we use glClear instead of glInvalidateFramebuffer
-            clearWithRasterPipe(discardOnlyFlags, { 0.0f }, 0.0f, 0);
+            clearWithRasterPipe(discardOnlyFlags, math::double4{ 0.0, 0.0, 0.0, 0.0 }, 0.0f, 0);
         }
     }
 
@@ -3833,7 +3880,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    clearWithRasterPipe(discardOnlyFlags, { 1, 0, 0, 1 }, 1.0, 0);
+    clearWithRasterPipe(discardOnlyFlags, math::double4{ 1.0, 0.0, 0.0, 1.0 }, 1.0, 0);
 #endif
 }
 
@@ -3890,7 +3937,7 @@ void OpenGLDriver::endRenderPass(int) {
     getBackendState().bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     getBackendState().disable(GL_SCISSOR_TEST);
     clearWithRasterPipe(discardFlags,
-            { 0, 1, 0, 1 }, 1.0, 0);
+            math::double4{ 0.0, 1.0, 0.0, 1.0 }, 1.0, 0);
 #endif
 
     mRenderPassTarget.clear();
@@ -4504,7 +4551,7 @@ void OpenGLDriver::finish(int) {
 
 UTILS_NOINLINE
 void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
-        float4 const& linearColor, GLfloat const depth, GLint const stencil) noexcept {
+        ClearColorValue const& clearColor, GLfloat const depth, GLint const stencil) noexcept {
 
     if (any(clearFlags & TargetBufferFlags::COLOR_ALL)) {
         getBackendState().colorMask(GL_TRUE);
@@ -4518,30 +4565,52 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (UTILS_LIKELY(!mContext.isES2())) {
-        if (any(clearFlags & TargetBufferFlags::COLOR0)) {
-            glClearBufferfv(GL_COLOR, 0, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR1)) {
-            glClearBufferfv(GL_COLOR, 1, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR2)) {
-            glClearBufferfv(GL_COLOR, 2, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR3)) {
-            glClearBufferfv(GL_COLOR, 3, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR4)) {
-            glClearBufferfv(GL_COLOR, 4, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR5)) {
-            glClearBufferfv(GL_COLOR, 5, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR6)) {
-            glClearBufferfv(GL_COLOR, 6, linearColor.v);
-        }
-        if (any(clearFlags & TargetBufferFlags::COLOR7)) {
-            glClearBufferfv(GL_COLOR, 7, linearColor.v);
-        }
+        GLRenderTarget const* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
+        auto clearColorBuffer = [&](int i, TargetBufferFlags flag) {
+            if (!any(clearFlags & flag)) {
+                return;
+            }
+            // Dispatch by the kind cached on the render target at attachment-set time. Calling
+            // the wrong glClearBuffer*v variant on an integer attachment is undefined in GL.
+            switch (rt->gl.colorClearKind[i]) {
+                case ColorClearKind::Float: {
+                    GLfloat const v[4] = {
+                            static_cast<GLfloat>(clearColor[0]),
+                            static_cast<GLfloat>(clearColor[1]),
+                            static_cast<GLfloat>(clearColor[2]),
+                            static_cast<GLfloat>(clearColor[3]) };
+                    glClearBufferfv(GL_COLOR, i, v);
+                    break;
+                }
+                case ColorClearKind::SignedInt: {
+                    GLint const v[4] = {
+                            static_cast<GLint>(clearColor[0]),
+                            static_cast<GLint>(clearColor[1]),
+                            static_cast<GLint>(clearColor[2]),
+                            static_cast<GLint>(clearColor[3]) };
+                    glClearBufferiv(GL_COLOR, i, v);
+                    break;
+                }
+                case ColorClearKind::UnsignedInt: {
+                    GLuint const v[4] = {
+                            static_cast<GLuint>(clearColor[0]),
+                            static_cast<GLuint>(clearColor[1]),
+                            static_cast<GLuint>(clearColor[2]),
+                            static_cast<GLuint>(clearColor[3]) };
+                    glClearBufferuiv(GL_COLOR, i, v);
+                    break;
+                }
+            }
+        };
+        clearColorBuffer(0, TargetBufferFlags::COLOR0);
+        clearColorBuffer(1, TargetBufferFlags::COLOR1);
+        clearColorBuffer(2, TargetBufferFlags::COLOR2);
+        clearColorBuffer(3, TargetBufferFlags::COLOR3);
+        clearColorBuffer(4, TargetBufferFlags::COLOR4);
+        clearColorBuffer(5, TargetBufferFlags::COLOR5);
+        clearColorBuffer(6, TargetBufferFlags::COLOR6);
+        clearColorBuffer(7, TargetBufferFlags::COLOR7);
+
         if ((clearFlags & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
             glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
         } else {
@@ -4555,9 +4624,14 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags const clearFlags,
     } else
 #endif
     {
+        // ES2 has no integer-format color attachments, so a float clear is always correct here.
         GLbitfield mask = 0;
         if (any(clearFlags & TargetBufferFlags::COLOR0)) {
-            glClearColor(linearColor.r, linearColor.g, linearColor.b, linearColor.a);
+            glClearColor(
+                    static_cast<float>(clearColor[0]),
+                    static_cast<float>(clearColor[1]),
+                    static_cast<float>(clearColor[2]),
+                    static_cast<float>(clearColor[3]));
             mask |= GL_COLOR_BUFFER_BIT;
         }
         if (any(clearFlags & TargetBufferFlags::DEPTH)) {
@@ -4916,6 +4990,41 @@ void OpenGLDriver::draw2(uint32_t const indexOffset, uint32_t const indexCount, 
     glDrawElementsInstanced(GLenum(rp->type), GLsizei(indexCount),
             rp->gl.getIndicesType(),
             reinterpret_cast<const void*>(indexOffset << rp->gl.indicesShift),
+            GLsizei(instanceCount));
+#endif
+
+#if FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL()
+#else
+    CHECK_GL_ERROR()
+#endif
+}
+
+void OpenGLDriver::drawArrays(uint32_t const vertexOffset, uint32_t const vertexCount,
+        uint32_t const instanceCount) {
+    DEBUG_MARKER()
+    // Attribute-less rendering depends on gl_VertexID, which is unavailable on GLES2 /
+    // FEATURE_LEVEL_0. The frontend (VertexBuffer::Builder::build) rejects attribute-less
+    // VertexBuffers at FEATURE_LEVEL_0, so this path should never execute on ES2.
+    assert_invariant(!mContext.isES2());
+    assert_invariant(mBoundRenderPrimitive);
+#if FILAMENT_ENABLE_MATDBG
+    if (UTILS_UNLIKELY(!mValidProgram)) {
+        return;
+    }
+#endif
+    assert_invariant(mBoundProgram);
+    assert_invariant(mValidProgram);
+
+    auto const invalidDescriptorSets =
+            mInvalidDescriptorSetBindings | mInvalidDescriptorSetBindingOffsets;
+    if (UTILS_UNLIKELY(invalidDescriptorSets.any())) {
+        updateDescriptors(invalidDescriptorSets);
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    glDrawArraysInstanced(GLenum(rp->type), GLint(vertexOffset), GLsizei(vertexCount),
             GLsizei(instanceCount));
 #endif
 

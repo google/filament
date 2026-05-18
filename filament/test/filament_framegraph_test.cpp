@@ -90,6 +90,8 @@ protected:
         //utils::io::sstream graphviz;
         //fg.export_graphviz(graphviz);
         //DLOG(INFO) << graphviz.c_str();
+
+        PlatformFactory::destroy(&platform);
     }
 
     Backend backend = Backend::NOOP;

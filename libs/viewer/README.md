@@ -1,17 +1,22 @@
 # Viewer Library
 
-The **Viewer Library** (`libs/viewer`) provides a high-level abstraction for configuring and rendering Filament scenes. It is used by tools like `gltf_viewer` to load assets, manage settings, and drive the rendering loop.
+The **Viewer Library** (`libs/viewer`) provides a high-level abstraction for configuring and
+rendering Filament scenes. It is used by tools like `gltf_viewer` to load assets, manage settings,
+and drive the rendering loop.
 
 ## Features
 
-- **Settings Management**: Centralized configuration for View, Camera, Lights, and Materials via the `Settings` struct.
+- **Settings Management**: Centralized configuration for View, Camera, Lights, and Materials via
+  the `Settings` struct.
 - **JSON Serialization**: Full support for loading and saving settings via JSON.
-- **Automation**: `AutomationEngine` allows scripting the viewer with a sequence of JSON-based test cases (batch mode).
+- **Automation**: `AutomationEngine` allows scripting the viewer with a sequence of JSON-based test
+  cases (batch mode).
 - **GUI Integration**: Built-in support for `imgui` via `ViewerGui` and `Settings` binding.
 
 ## JSON Settings Schema
 
-The viewer settings can be configured using a JSON object. This is used for `gltf_viewer --settings` or in automation specs.
+The viewer settings can be configured using a JSON object. This is used for `gltf_viewer --settings`
+or in automation specs.
 
 ### Root Object
 
@@ -30,7 +35,8 @@ The root object contains the following categories:
 
 ### Camera Settings (`camera`)
 
-Allows explicit control over the camera. If `enabled` is false, the viewer uses its default orbit camera logic (auto-scaling/centering).
+Allows explicit control over the camera. If `enabled` is false, the viewer uses its default orbit
+camera logic (auto-scaling/centering).
 
 ```json
 "camera": {

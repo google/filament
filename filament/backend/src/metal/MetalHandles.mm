@@ -634,8 +634,8 @@ MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t buff
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
-        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih, bool async)
+    : HwVertexBuffer(vertexCount, async), vbih(vbih), buffers(bufferCount, nullptr) {
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
@@ -771,12 +771,12 @@ MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8
 }
 
 MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r,
-        TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept
-    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage, false),
-      context(context),
-      devicePixelFormat(src->devicePixelFormat),
-      externalImage(src->externalImage) {
+        TextureSwizzle g, TextureSwizzle b, TextureSwizzle a, bool async) noexcept
+        : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+                  src->format, src->usage, async),
+          context(context),
+          devicePixelFormat(src->devicePixelFormat),
+          externalImage(src->externalImage) {
     texture = src->getMtlTextureForRead();
     if (context.supportsTextureSwizzling) {
         // Even though we've already checked context.supportsTextureSwizzling, we still need to
@@ -1201,8 +1201,11 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].storeAction = getStoreAction(params,
                 getTargetBufferFlagsAt(i));
-        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(
-                params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
+        // Metal's MTLClearColor is always 4 doubles. The texture's pixel format determines whether
+        // those doubles are interpreted as floats, signed ints, or unsigned ints. A double has a
+        // 53-bit mantissa, so any int32_t / uint32_t value round-trips exactly.
+        descriptor.colorAttachments[i].clearColor = MTLClearColorMake(params.clearColor[0],
+                params.clearColor[1], params.clearColor[2], params.clearColor[3]);
 
         if (attachment.getMsaaTexture()) {
             // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.
@@ -1401,25 +1404,44 @@ MetalFence::MetalFence(MetalContext& context) : context(context), value(context.
 
 void MetalFence::encode() {
     if (@available(iOS 12, *)) {
+        // newSharedEvent can very seldomly return nil if the GPU is busy or in a bad state.
         event = [context.device newSharedEvent];
+        if (UTILS_VERY_UNLIKELY(event == nil)) {
+            context.driver->signalFence([&] { state->status = FenceStatus::ERROR; });
+            return;
+        }
         [getPendingCommandBuffer(&context) encodeSignalEvent:event value:value];
 
-        // Using a weak_ptr here because the Fence could be deleted before the block executes.
+        // Using a weak_ptr for the Fence state and driver lifetime because the Fence could be
+        // deleted, or the driver could be shut down, before this block executes asynchronously.
         std::weak_ptr<State> weakState = state;
-        MetalDriver* driver = context.driver;
-        [event notifyListener:context.eventListener atValue:value block:^(id <MTLSharedEvent> o,
-                uint64_t value) {
-            if (auto s = weakState.lock()) {
-                driver->signalFence([&] {
-                    s->status = FenceStatus::CONDITION_SATISFIED;
-                });
-            }
-        }];
+        std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
+        [event notifyListener:context.eventListener
+                      atValue:value
+                        block:^(id<MTLSharedEvent> o, uint64_t value) {
+                          auto s = weakState.lock();
+                          // weakDriverLifetime ensures that the Driver is still alive before
+                          // accessing it.
+                          auto lifetime = weakDriverLifetime.lock();
+                          if (s && lifetime) {
+                              std::lock_guard<std::mutex> lock(lifetime->mutex);
+                              if (lifetime->driver) {
+                                  lifetime->driver->signalFence(
+                                          [&] { s->status = FenceStatus::CONDITION_SATISFIED; });
+                              }
+                          }
+                        }];
     }
 }
 
 void MetalFence::onSignal(MetalFenceSignalBlock block) {
-    [event notifyListener:context.eventListener atValue:value block:block];
+    if (UTILS_VERY_LIKELY(event)) {
+        if (@available(iOS 12, *)) {
+            [event notifyListener:context.eventListener atValue:value block:block];
+        }
+    } else {
+        block(nil, value);
+    }
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
@@ -1441,7 +1463,7 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
             auto const until = std::chrono::steady_clock::now() + ns(timeoutNs);
             status = context.driver->waitForFence(predicate, until);
         }
-        
+
         if (status == FenceStatus::ERROR) {
             return FenceStatus::ERROR;
         }

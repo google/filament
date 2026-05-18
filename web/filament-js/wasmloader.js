@@ -66,7 +66,12 @@ Filament.init = (assets, onready) => {
     // Emscripten creates a global function called "Filament" that returns a promise that
     // resolves to a module. Here we replace the function with the module. Note that our
     // TypeScript bindings assume that Filament is a namespace, not a function.
-    Filament().then(module => {
+    const moduleConfig = {};
+    if (Filament.preinitializedWebGPUDevice) {
+        moduleConfig.preinitializedWebGPUDevice = Filament.preinitializedWebGPUDevice;
+    }
+
+    Filament(moduleConfig).then(module => {
 
         // Merge our extension functions into the emscripten module, not the other
         // way around, because Emscripten potentially replaces the HEAPU8 views in

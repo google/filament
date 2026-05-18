@@ -168,7 +168,22 @@ VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
-    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
+
+    // Attribute-less rendering: allow bufferCount(0) only when no attributes are declared.
+    // This is used for procedural geometry that reads gl_VertexID/gl_VertexIndex/[[vertex_id]].
+    bool const isAttributeless =
+            mImpl->mBufferCount == 0 && mImpl->mDeclaredAttributes.none();
+
+    if (!isAttributeless) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
+    } else {
+        FILAMENT_CHECK_PRECONDITION(
+                engine.getActiveFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0)
+                << "Attribute-less vertex buffers (bufferCount == 0) are not supported at "
+                   "FEATURE_LEVEL_0"; // GLES2 has no `gl_VertexID`
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mAdvancedSkinningEnabled)
+                << "Attribute-less vertex buffers are incompatible with advanced skinning";
+    }
 
     static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
 
@@ -297,10 +312,6 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     mVertexBufferInfoHandle = engine.getVertexBufferInfoFactory().create(driver,
             mBufferCount, mDeclaredAttributes.count(), mAttributes);
 
-    // This function call doesn't allocate GPU memory, so the `async` version is not needed.
-    mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
-            utils::ImmutableCString{ builder.getName() });
-
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
 
@@ -351,6 +362,11 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                 },
                 /* driver */ &engine.getDriver());
 
+        mHandle = driver.createVertexBufferAsync(mVertexCount, mVertexBufferInfoHandle,
+                cdHandler, &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
+                utils::ImmutableCString{ builder.getName() });
+        cdHandler->increaseCountdown();
+
         // create buffers (asynchronous)
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {
@@ -367,6 +383,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             mBufferObjects[i] = bo;
         }
     } else {
+        mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
+                utils::ImmutableCString{ builder.getName() });
+
         // create buffers
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {

@@ -36,10 +36,7 @@
 
 namespace filament::backend {
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
-        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
-        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)\
-        || FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+#ifndef NDEBUG
 template<typename WebGPUPrintable>
 [[nodiscard]] inline std::string webGPUPrintableToString(const WebGPUPrintable printable) {
     std::stringstream out;
@@ -67,10 +64,12 @@ template<typename WebGPUPrintable>
     }
 }
 
+#if !defined(__EMSCRIPTEN__)
 [[nodiscard]] static inline std::string_view powerPreferenceToString(
         const wgpu::DawnAdapterPropertiesPowerPreference powerPreference) {
     return powerPreferenceToString(powerPreference.powerPreference);
 }
+#endif
 
 [[nodiscard]] constexpr std::string_view backendTypeToString(const wgpu::BackendType backendType) {
     switch (backendType) {
@@ -231,6 +230,7 @@ template<typename WebGPUPrintable>
         case wgpu::TextureFormat::R16Snorm:                    return "R16Snorm";
         case wgpu::TextureFormat::RG16Snorm:                   return "RG16Snorm";
         case wgpu::TextureFormat::RGBA16Snorm:                 return "RGBA16Snorm";
+#if !defined(__EMSCRIPTEN__)
         case wgpu::TextureFormat::R8BG8Biplanar420Unorm:       return "R8BG8Biplanar420Unorm";
         case wgpu::TextureFormat::R10X6BG10X6Biplanar420Unorm: return "R10X6BG10X6Biplanar420Unorm";
         case wgpu::TextureFormat::R8BG8A8Triplanar420Unorm:    return "R8BG8A8Triplanar420Unorm";
@@ -239,6 +239,7 @@ template<typename WebGPUPrintable>
         case wgpu::TextureFormat::R10X6BG10X6Biplanar422Unorm: return "R10X6BG10X6Biplanar422Unorm";
         case wgpu::TextureFormat::R10X6BG10X6Biplanar444Unorm: return "R10X6BG10X6Biplanar444Unorm";
         case wgpu::TextureFormat::OpaqueYCbCrAndroid:          return "OpaqueYCbCrAndroid";
+#endif
         default: return "Unknown";
     }
 }

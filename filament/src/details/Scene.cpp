@@ -124,8 +124,8 @@ void FScene::prepare(JobSystem& js,
      * First compute the exact number of renderables and lights in the scene.
      * Also find the main directional light.
      */
-
-    for (Entity const e: entities) {
+    entities.forEachSetBit([&](uint32_t id) {
+        Entity const e = Entity::import(int32_t(id));
         if (UTILS_LIKELY(em.isAlive(e))) {
             auto ti = tcm.getInstance(e);
             auto li = lcm.getInstance(e);
@@ -146,7 +146,7 @@ void FScene::prepare(JobSystem& js,
                 renderableInstances.emplace_back(ri, ti);
             }
         }
-    }
+    });
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -224,7 +224,7 @@ void FScene::prepare(JobSystem& js,
             size_t const index = std::distance(first, p) + i;
             assert_invariant(index < sceneData.size());
 
-            sceneData.elementAt<RENDERABLE_INSTANCE>(index) = ri;
+            sceneData.elementAt<RENDERABLE_ENTITY>(index) = rcm.getEntity(ri);
             sceneData.elementAt<WORLD_TRANSFORM>(index)     = shaderWorldTransform;
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
@@ -245,8 +245,7 @@ void FScene::prepare(JobSystem& js,
         }
     };
 
-    auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldTransform,
-            &lightData](auto* p, auto c) {
+    auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldTransform, &lightData](auto* p, auto c) {
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "lightWork");
         for (size_t i = 0; i < c; i++) {
             auto [li, ti] = p[i];
@@ -264,7 +263,8 @@ void FScene::prepare(JobSystem& js,
             assert_invariant(index < lightData.size());
             lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, lcm.getRadius(li) };
             lightData.elementAt<DIRECTION>(index) = d;
-            lightData.elementAt<LIGHT_INSTANCE>(index) = li;
+            lightData.elementAt<SPOT_PARAMS>(index) = float2{lcm.getCosOuterSquared(li), lcm.getSinInverse(li)};
+            lightData.elementAt<LIGHT_ENTITY>(index) = li ? lcm.getEntity(li) : utils::Entity{};
         }
     };
 
@@ -326,9 +326,9 @@ void FScene::prepare(JobSystem& js,
         lightData.elementAt<DIRECTION>(0) = normalize(d);
         lightData.elementAt<SHADOW_DIRECTION>(0) = normalize(s);
         lightData.elementAt<SHADOW_REF>(0) = lsReferencePoint;
-        lightData.elementAt<LIGHT_INSTANCE>(0) = li;
+        lightData.elementAt<LIGHT_ENTITY>(0) = li ? lcm.getEntity(li) : utils::Entity{};
     } else {
-        lightData.elementAt<LIGHT_INSTANCE>(0) = 0;
+        lightData.elementAt<LIGHT_ENTITY>(0) = utils::Entity{};
     }
 
     // some elements past the end of the array will be accessed by SIMD code, we need to make
@@ -366,7 +366,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         auto const skinning = sceneData.elementAt<SKINNING_STATE>(i);
         auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
-        auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
+        auto const ri = mEngine.getRenderableManager().getInstance(sceneData.elementAt<RENDERABLE_ENTITY>(i));
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -438,11 +438,11 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     LightsUib* const lp = driver.allocatePod<LightsUib>(positionalLightCount);
 
     auto const* UTILS_RESTRICT directions       = lightData.data<DIRECTION>();
-    auto const* UTILS_RESTRICT instances        = lightData.data<LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT entities         = lightData.data<LIGHT_ENTITY>();
     auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
-        auto const li = instances[i];
+        auto const li = lcm.getInstance(entities[i]);
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].direction            = directions[i];
         lp[gpuIndex].reserved1            = {};
@@ -459,7 +459,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
                 shadowInfo[i].castsShadows);
     }
 
-    driver.updateBufferObject(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) }, 0);
+    driver.updateBufferObject(lightUbh, {lp, positionalLightCount * sizeof(LightsUib)}, 0);
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
@@ -470,13 +470,12 @@ inline void FScene::computeLightRanges(
         float2* UTILS_RESTRICT const zrange,
         CameraInfo const& UTILS_RESTRICT camera,
         float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
-
     // without this clang seems to assume the src and dst might overlap even if they're
     // restricted.
     // we're guaranteed to have a multiple of 4 lights (at least)
     count = uint32_t(count + 3u) & ~3u;
 
-    for (size_t i = 0 ; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         // this loop gets vectorized x4
         const float4 sphere = spheres[i];
         const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
@@ -487,7 +486,7 @@ inline void FScene::computeLightRanges(
         f = camera.projection * f;
         // convert to NDC
         const float min = (n.w > camera.zn) ? (n.z / n.w) : -1.0f;
-        const float max = (f.w < camera.zf) ? (f.z / f.w) :  1.0f;
+        const float max = (f.w < camera.zf) ? (f.z / f.w) : 1.0f;
         // convert to screen space
         zrange[i].x = (min + 1.0f) * 0.5f;
         zrange[i].y = (max + 1.0f) * 0.5f;
@@ -496,17 +495,19 @@ inline void FScene::computeLightRanges(
 
 UTILS_NOINLINE
 void FScene::addEntity(Entity const entity) {
-    mEntities.insert(entity);
+    mEntities.add(entity.getId());
 }
 
 UTILS_NOINLINE
 void FScene::addEntities(const Entity* entities, size_t const count) {
-    mEntities.insert(entities, entities + count);
+    for (size_t i = 0; i < count; ++i, ++entities) {
+        addEntity(*entities);
+    }
 }
 
 UTILS_NOINLINE
 void FScene::remove(Entity const entity) {
-    mEntities.erase(entity);
+    mEntities.remove(entity.getId());
 }
 
 UTILS_NOINLINE
@@ -526,12 +527,7 @@ size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FRenderableManager const& rcm = engine.getRenderableManager();
-    size_t count = 0;
-    auto const& entities = mEntities;
-    for (Entity const e : entities) {
-        count += em.isAlive(e) && rcm.getInstance(e) ? 1 : 0;
-    }
-    return count;
+    return PagedArenaBitset::intersectSize(em.getAliveEntities(), rcm.getEntityBitset(), mEntities);
 }
 
 UTILS_NOINLINE
@@ -539,17 +535,12 @@ size_t FScene::getLightCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FLightManager const& lcm = engine.getLightManager();
-    size_t count = 0;
-    auto const& entities = mEntities;
-    for (Entity const e : entities) {
-        count += em.isAlive(e) && lcm.getInstance(e) ? 1 : 0;
-    }
-    return count;
+    return PagedArenaBitset::intersectSize(em.getAliveEntities(), lcm.getEntityBitset(), mEntities);
 }
 
 UTILS_NOINLINE
 bool FScene::hasEntity(Entity const entity) const noexcept {
-    return mEntities.find(entity) != mEntities.end();
+    return mEntities[entity.getId()];
 }
 
 UTILS_NOINLINE
@@ -573,11 +564,11 @@ bool FScene::hasContactShadows() const noexcept {
     // find out if at least one light has contact-shadow enabled
     // TODO: we could cache the result of this Loop in the LightManager
     auto const& lcm = mEngine.getLightManager();
-    const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
-    const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
+    const auto *pFirst = mLightData.begin<LIGHT_ENTITY>();
+    const auto *pLast = mLightData.end<LIGHT_ENTITY>();
     while (pFirst != pLast) {
-        if (pFirst->isValid()) {
-            auto const& shadowOptions = lcm.getShadowOptions(*pFirst);
+        if (!pFirst->isNull()) {
+            auto const& shadowOptions = lcm.getShadowOptions(lcm.getInstance(*pFirst));
             if (shadowOptions.screenSpaceContactShadows) {
                 return true;
             }
@@ -589,7 +580,9 @@ bool FScene::hasContactShadows() const noexcept {
 
 UTILS_NOINLINE
 void FScene::forEach(Invocable<void(Entity)>&& functor) const noexcept {
-    std::for_each(mEntities.begin(), mEntities.end(), std::move(functor));
+    mEntities.forEachSetBit([&](uint32_t const bit) {
+        functor(Entity::import(int32_t(bit)));
+    });
 }
 
 } // namespace filament

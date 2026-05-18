@@ -20,6 +20,7 @@
 #include <utils/Entity.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
+#include <utils/PagedArenaBitset.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -51,7 +52,7 @@ public:
         virtual ~Listener() noexcept;
     };
 
-    using ChangeCallback = std::function<void(utils::Slice<const Entity>)>;
+    using ChangeCallback = std::function<void(Slice<const Entity>)>;
 
     /**
      * Registers a callback to be triggered when entities are destroyed.
@@ -105,10 +106,7 @@ public:
 
     // Return whether the given Entity has been destroyed (false) or not (true).
     // Thread safe.
-    bool isAlive(Entity const e) const noexcept {
-        assert(getIndex(e) < RAW_INDEX_COUNT);
-        return (!e.isNull()) && (getGeneration(e) == mGens[getIndex(e)]);
-    }
+    bool isAlive(Entity e) const noexcept;
 
     // Registers a listener to be called when an entity is destroyed. Thread safe.
     // If the listener is already registered, this method has no effect.
@@ -117,13 +115,11 @@ public:
     // unregisters a listener.
     void unregisterListener(Listener* l) noexcept;
 
+    // Returns the bitset of alive entities.
+    PagedArenaBitset getAliveEntities() const noexcept;
+
 
     /* no user serviceable parts below */
-
-    // current generation of the given index. Use for debugging and testing.
-    uint8_t getGenerationForIndex(size_t const index) const noexcept {
-        return mGens[index];
-    }
 
     // singleton, can't be copied
     EntityManager(const EntityManager& rhs) = delete;
@@ -146,9 +142,13 @@ private:
 
     // GENERATION_SHIFT determines how many simultaneous Entities are available, the
     // minimum memory requirement is 2^GENERATION_SHIFT bytes.
-    static constexpr int GENERATION_SHIFT = 17;
-    static constexpr size_t RAW_INDEX_COUNT = (1 << GENERATION_SHIFT);
-    static constexpr Entity::Type INDEX_MASK = (1 << GENERATION_SHIFT) - 1u;
+    // **IMPORTANT**
+    // These constants must stay consistent with PagedArenaBitset.h
+    static constexpr size_t GENERATION_SHIFT    = Entity::GENERATION_SHIFT;
+    static constexpr size_t GENERATION_BITS     = Entity::GENERATION_BITS;
+    static constexpr size_t RAW_INDEX_COUNT     = Entity::RAW_INDEX_COUNT;
+    static constexpr Entity::Type INDEX_MASK    = Entity::INDEX_MASK;
+    static constexpr Entity::Type MAX_IDENTITY  = Entity::MAX_IDENTITY;
 
     static Entity::Type getGeneration(Entity const e) noexcept {
         return e.getId() >> GENERATION_SHIFT;
@@ -157,9 +157,6 @@ private:
     static Entity::Type makeIdentity(Entity::Type const g, Entity::Type const i) noexcept {
         return (g << GENERATION_SHIFT) | (i & INDEX_MASK);
     }
-
-    // stores the generation of each index.
-    uint8_t* const mGens;
 };
 
 } // namespace utils

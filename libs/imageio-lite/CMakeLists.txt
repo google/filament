@@ -45,7 +45,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/imageio-lite DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (NOT ANDROID AND NOT WASM AND NOT IOS)
     add_executable(test_${TARGET} tests/test_imageio-lite.cpp)
     target_link_libraries(test_${TARGET} PRIVATE ${TARGET} image gtest)
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)

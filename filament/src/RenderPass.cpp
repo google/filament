@@ -243,8 +243,8 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(driver, first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
+            first->info.mi->prepareProgram(driver, first->info.materialVariant,
+                    CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -314,8 +314,8 @@ RenderPass::Command* RenderPass::instanceify(
         return lhs.info.mi == rhs.info.mi &&
                lhs.info.rph == rhs.info.rph &&
                lhs.info.vbih == rhs.info.vbih &&
-               lhs.info.indexOffset == rhs.info.indexOffset &&
-               lhs.info.indexCount == rhs.info.indexCount &&
+               lhs.info.offset == rhs.info.offset &&
+               lhs.info.count == rhs.info.count &&
                lhs.info.rasterState == rhs.info.rasterState;
     };
 
@@ -426,16 +426,18 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     bool const isBlendingCommand = !hasScreenSpaceRefraction &&
             (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
 
+    RasterState rasterState = mi->getRasterState();
+
     uint64_t keyDraw = cmdDraw.key;
     keyDraw &= ~(PASS_MASK | BLENDING_MASK | MATERIAL_MASK);
     keyDraw |= uint64_t(hasScreenSpaceRefraction ? Pass::REFRACT : Pass::COLOR);
     keyDraw |= uint64_t(CustomCommand::PASS);
     keyDraw |= mi->getSortingKey(); // already all set-up for direct or'ing
     keyDraw |= makeField(variant.key, MATERIAL_VARIANT_KEY_MASK, MATERIAL_VARIANT_KEY_SHIFT);
-    keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
+    keyDraw |= makeField(rasterState.alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
-    cmdDraw.info.rasterState = ma->getRasterState();
+    cmdDraw.info.rasterState = rasterState;
 
     // for SSR pass, the blending mode of opaques (including MASKED) must be off
     // see Material.cpp.
@@ -446,10 +448,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
             BlendFunction::ZERO : cmdDraw.info.rasterState.blendFunctionDstAlpha;
 
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
-    cmdDraw.info.rasterState.culling = mi->getCullingMode();
-    cmdDraw.info.rasterState.colorWrite = mi->isColorWriteEnabled();
-    cmdDraw.info.rasterState.depthWrite = mi->isDepthWriteEnabled();
-    cmdDraw.info.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
@@ -694,9 +692,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
             cmd.info.mi = mi;
             cmd.info.rph = primitive.getHwHandle();
             cmd.info.vbih = primitive.getVertexBufferInfoHandle();
-            cmd.info.indexOffset = primitive.getIndexOffset();
-            cmd.info.indexCount = primitive.getIndexCount();
+            cmd.info.offset = primitive.getOffset();
+            cmd.info.count = primitive.getCount();
             cmd.info.type = primitive.getPrimitiveType();
+            cmd.info.isIndexed = primitive.isIndexed();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 // FIXME: morphtarget buffer
 //            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
@@ -1090,8 +1089,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     mi->use(driver, info.materialVariant);
                 }
 
-                assert_invariant(ma);
-                pipeline.program = ma->getProgram(info.materialVariant);
+                pipeline.program = mi->getProgram(info.materialVariant);
 
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;
@@ -1117,7 +1115,13 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                             +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
-                driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
+                if (UTILS_LIKELY(info.isIndexed)) {
+                    // For indexed draws, offset/count carry indexOffset/indexCount.
+                    driver.draw2(info.offset, info.count, info.instanceCount);
+                } else {
+                    // For non-indexed draws, offset/count carry vertexOffset/vertexCount.
+                    driver.drawArrays(info.offset, info.count, info.instanceCount);
+                }
             }
         }
 

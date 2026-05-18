@@ -49,6 +49,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
     SKIP_IF(Backend::VULKAN, "b/453776730");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
+    SKIP_IF(Backend::OPENGL, "b//510158903");
     auto& api = getDriverApi();
 
     TrianglePrimitive triangle(api);
@@ -112,6 +113,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
     SKIP_IF(Backend::VULKAN, "b/453777319");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
+    SKIP_IF(Backend::OPENGL, "b//510158903");
     SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758594");
     auto& api = getDriverApi();
 

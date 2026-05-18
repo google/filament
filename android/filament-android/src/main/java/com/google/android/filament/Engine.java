@@ -315,6 +315,17 @@ public class Engine {
         }
 
         /**
+         * Sets the builder used to create the default ColorGrading object.
+         * @param colorGrading Builder used to create the default color grading.
+         * @return A reference to this Builder for chaining calls.
+         */
+        @NonNull
+        public Builder colorGrading(@NonNull ColorGrading.Builder colorGrading) {
+            nSetBuilderColorGrading(mNativeBuilder, colorGrading.getNativeBuilder());
+            return this;
+        }
+
+        /**
          * Creates an instance of Engine
          *
          * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
@@ -1617,5 +1628,6 @@ public class Engine {
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
     private static native void nSetBuilderFeature(long nativeBuilder, String name, boolean value);
+    private static native void nSetBuilderColorGrading(long nativeBuilder, long nativeColorGradingBuilder);
     private static native long nBuilderBuild(long nativeBuilder);
 }

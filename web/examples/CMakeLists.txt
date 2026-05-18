@@ -17,6 +17,9 @@ function(build_material MAT_FILE TARGET_DIR MAT_NAME OUT_LIST)
     if (NOT CMAKE_BUILD_TYPE MATCHES Release)
         set(MATC_FLAGS -g ${MATC_FLAGS})
     endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        set(MATC_FLAGS -a webgpu ${MATC_FLAGS})
+    endif()
     set(mat_src "${CMAKE_CURRENT_SOURCE_DIR}/${MAT_FILE}")
     set(output_path "${SERVER_DIR}/${TARGET_DIR}/${MAT_NAME}.filamat")
     add_custom_command(
@@ -87,7 +90,7 @@ function(add_envmap SOURCE TARGET TARGET_DIR OUT_LIST)
         WORKING_DIRECTORY "${SERVER_DIR}/${TARGET_DIR}"
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
-        
+
     set(${OUT_LIST} ${${OUT_LIST}} ${target_skybox} ${target_skybox_tiny} ${target_envmap} PARENT_SCOPE)
 endfunction()
 
@@ -175,6 +178,10 @@ add_envmap("third_party/environments/lightroom_14b.hdr" "default_env" ${TARGET_D
 
 set(TARGET_DIR "remote")
 add_localfile("remote.html" "remote.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
+
+set(TARGET_DIR "viewer")
+add_localfile("viewer.html" "viewer.html" ${TARGET_DIR} ALL_DEMO_ASSETS)
+add_localfile("viewer.js" "viewer.js" ${TARGET_DIR} ALL_DEMO_ASSETS)
 
 set(TARGET_DIR "sky")
 add_localfile("sky.html" "sky.html" ${TARGET_DIR} ALL_DEMO_ASSETS)

@@ -17,10 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
 #define TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
 
-#include <webgpu/webgpu_cpp.h>
-
 #include "DriverBase.h"
 #include <backend/Platform.h>
+
+#if defined(__EMSCRIPTEN__)
+#include <backend/platforms/WebGPUWasmPolyfill.h>
+#endif
+
+#include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
 #include <memory>

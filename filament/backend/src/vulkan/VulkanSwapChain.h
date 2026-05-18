@@ -48,9 +48,10 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
 
     void present(DriverBase& driver);
 
-    // Acquire a new image from the swapchain. If the image is not available it would wait until it
-    // is.
-    void acquire(bool& resized);
+    // Acquire a new image from the swapchain. Returns a pair:
+    //   1. whether an acquire is successful.
+    //   2. whether the backing images have changed (due to resize or other factors).
+    std::pair<bool, bool> acquire();
 
     fvkmemory::resource_ptr<VulkanTexture> getCurrentColor() const noexcept {
         uint32_t const imageIndex = mCurrentSwapIndex;

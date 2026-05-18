@@ -574,13 +574,15 @@ void MaterialDefinition::processPushConstants() {
             [&](MaterialPushConstant const& constant) {
                 snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
 
+                CString const cs(buf, strlen(buf));
+
                 switch (constant.stage) {
                     case ShaderStage::VERTEX:
-                        vertexConstants.push_back({CString(buf), constant.type});
+                        vertexConstants.push_back({cs, constant.type});
                         vertexCount++;
                         break;
                     case ShaderStage::FRAGMENT:
-                        fragmentConstants.push_back({CString(buf), constant.type});
+                        fragmentConstants.push_back({cs, constant.type});
                         fragmentCount++;
                         break;
                     case ShaderStage::COMPUTE:

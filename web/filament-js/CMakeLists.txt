@@ -17,7 +17,7 @@ set(CPP_SRC
 # The emcc options are not documented well, the best place to find them is the source:
 # https://github.com/kripken/emscripten/blob/main/src/settings.js
 
-if (WEBGL_PTHREADS)
+if (WASM_PTHREADS)
   set(COPTS "${COPTS} -pthread")
   set(LOPTS "${LOPTS} -pthread")
 endif()
@@ -31,12 +31,17 @@ set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 set(LOPTS "${LOPTS} --bind")
 set(LOPTS "${LOPTS} -s ALLOW_MEMORY_GROWTH=1")
 set(LOPTS "${LOPTS} -s EXPORTED_FUNCTIONS=['_malloc','_free']")
+set(LOPTS "${LOPTS} -s EXPORTED_RUNTIME_METHODS=['HEAP8','HEAP16','HEAP32','HEAPU8','HEAPU16','HEAPU32','HEAPF32','HEAPF64']")
 set(LOPTS "${LOPTS} -s MODULARIZE=1")
 set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
 set(LOPTS "${LOPTS} -s USE_WEBGL2=1")
 set(LOPTS "${LOPTS} -s FULL_ES3")
 set(LOPTS "${LOPTS} -s MIN_WEBGL_VERSION=2")
 set(LOPTS "${LOPTS} -s MAX_WEBGL_VERSION=2")
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    set(LOPTS "${LOPTS} --use-port=emdawnwebgpu")
+endif()
 
 foreach (JS_FILENAME ${EXTERN_POSTJS_SRC})
   set(LOPTS "${LOPTS} --extern-post-js ${JS_FILENAME}")
@@ -57,7 +62,7 @@ target_link_libraries(filament-js PRIVATE filament math utils ktxreader filamesh
 # artifacts that it needs.
 
 set(RESOURCES )
-foreach (RESOURCE package.json README.md filament.d.ts filament-viewer.js)
+foreach (RESOURCE package.json README.md filament.d.ts)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/${RESOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE}

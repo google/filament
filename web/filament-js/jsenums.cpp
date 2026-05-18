@@ -452,6 +452,7 @@ enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
         .value("OPENGL", backend::Backend::OPENGL)
         .value("VULKAN", backend::Backend::VULKAN)
         .value("METAL", backend::Backend::METAL)
+        .value("WEBGPU", backend::Backend::WEBGPU)
         .value("NOOP", backend::Backend::NOOP);
 
 }

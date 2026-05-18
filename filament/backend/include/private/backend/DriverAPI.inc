@@ -189,6 +189,13 @@ DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferHandle, createVertexBuffer,
         uint32_t, vertexCount,
         backend::VertexBufferInfoHandle, vbih)
 
+DECL_DRIVER_API_TAGGED_R_N(backend::VertexBufferHandle, createVertexBufferAsync,
+        uint32_t, vertexCount,
+        backend::VertexBufferInfoHandle, vbih,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
+
 DECL_DRIVER_API_TAGGED_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
         uint32_t, indexCount,
@@ -665,6 +672,14 @@ DECL_DRIVER_API_N(blit,
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,
         uint32_t, indexCount,
+        uint32_t, instanceCount)
+
+// Non-indexed draw. Used for attribute-less / procedural rendering where the GPU generates
+// vertex data from gl_VertexID / gl_VertexIndex / [[vertex_id]]. The currently bound render
+// primitive must have been created without an IndexBuffer.
+DECL_DRIVER_API_N(drawArrays,
+        uint32_t, vertexOffset,
+        uint32_t, vertexCount,
         uint32_t, instanceCount)
 
 DECL_DRIVER_API_N(draw,

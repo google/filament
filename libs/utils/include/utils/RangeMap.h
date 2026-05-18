@@ -252,8 +252,12 @@ private:
     // Checks if there is range to the left that touches the given range.
     // If so, erases it, extends the given range leftwards, and returns true.
     bool mergeLeft(Iterator iter) {
+        if (iter == begin()) {
+            return false;
+        }
         Iterator prev = iter;
-        if (--prev == end() || getValue(prev) != getValue(iter)) {
+        --prev;
+        if (getValue(prev) != getValue(iter)) {
             return false;
         }
         if (getRange(prev).last != getRange(iter).first) {
