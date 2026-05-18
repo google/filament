@@ -295,17 +295,10 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     mi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
 
     for (size_t i = 0; i < 2; i++) {
-        // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
-        // TODO: properly address the bug and remove this workaround.
-#if defined(__EMSCRIPTEN__)
-        MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
-#else
-        MaterialInstance *const tempMi = mi;
-#endif
-        rcm.setMaterialInstanceAt(ci, 0, tempMi);
+        rcm.setMaterialInstanceAt(ci, 0, mi);
 
-        tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-        tempMi->commit(engine);
+        mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        mi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -315,10 +308,6 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         view->setRenderTarget(rt);
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
-
-#if defined(__EMSCRIPTEN__)
-        cleanupMaterialInstance(tempMi, engine, rcm, ci);
-#endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
@@ -484,17 +473,10 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     view->setViewport({ 0, 0, dim, dim });
 
     for (size_t i = 0; i < 2; i++) {
-        // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
-        // TODO: properly address the bug and remove this workaround.
-#if defined(__EMSCRIPTEN__)
-        MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
-#else
-        MaterialInstance *const tempMi = mi;
-#endif
-        rcm.setMaterialInstanceAt(ci, 0, tempMi);
+        rcm.setMaterialInstanceAt(ci, 0, mi);
 
-        tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-        tempMi->commit(engine);
+        mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        mi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -504,10 +486,6 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
         view->setRenderTarget(rt);
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
-
-#if defined(__EMSCRIPTEN__)
-        cleanupMaterialInstance(tempMi, engine, rcm, ci);
-#endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
@@ -731,17 +709,10 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         view->setViewport({ 0, 0, dim, dim });
 
         for (size_t i = 0; i < 2; i++) {
-            // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
-            // TODO: properly address the bug and remove this workaround.
-#if defined(__EMSCRIPTEN__)
-            MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
-#else
-            MaterialInstance *const tempMi = mi;
-#endif
-            rcm.setMaterialInstanceAt(ci, 0, tempMi);
+            rcm.setMaterialInstanceAt(ci, 0, mi);
 
-            tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-            tempMi->commit(engine);
+            mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+            mi->commit(engine);
 
             builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                    .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -751,10 +722,6 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
             view->setRenderTarget(rt);
             renderer->renderStandaloneView(view);
             engine.destroy(rt);
-
-#if defined(__EMSCRIPTEN__)
-            cleanupMaterialInstance(tempMi, engine, rcm, ci);
-#endif
         }
 
         dim >>= 1;
