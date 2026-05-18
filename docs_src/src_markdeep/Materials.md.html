@@ -2259,15 +2259,6 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### Non-indexed rendering
-
-For geometries where indexing is unnecessary (such as triangle strips, continuous lines, or point clouds), Filament supports non-indexed rendering. 
-
-When the `IndexBuffer` parameter is omitted from `RenderableManager::Builder::geometry(...)` (or its Java/Kotlin equivalent), the primitive is drawn without index mapping. In this case:
-
-* The builder's `offset` and `count` arguments refer to the starting vertex offset and the total vertex count in the `VertexBuffer` respectively.
-* Vertex assembly proceeds directly in the sequential order declared inside the `VertexBuffer`.
-
 ### Procedural and attribute-less rendering
 
 Filament supports procedural or "attribute-less" rendering. This allows you to render objects whose geometry is generated entirely inside the vertex shader (for example, a procedural quad, a sphere, or particle effects), avoiding the memory and processing overhead of transferring traditional vertex and index attribute buffers.
