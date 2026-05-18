@@ -1,7 +1,8 @@
-name: CocoaPods Deploy
+name: CocoaPods Manual Deploy
 
-# This must be run after the iOS release job has finished, and the iOS release
-# asset has been uploaded to Github.
+# Manual fallback for the CocoaPods deploy that normally runs as part of the
+# Release workflow. Use this if the automatic deploy was skipped or failed.
+# The iOS release asset must already be uploaded to GitHub before running.
 on:
   workflow_dispatch:
     inputs:
@@ -11,8 +12,8 @@ on:
         default: 'v1.42.2'
 
 jobs:
-  cocoapods-deploy:
-    name: cocoapods-deploy
+  cocoapods-manual-deploy:
+    name: cocoapods-manual-deploy
     runs-on: macos-14
     steps:
       - name: Check out iOS/CocoaPods directory
