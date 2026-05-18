@@ -129,8 +129,8 @@ void ColorPassDescriptorSet::init(
         auto const& layout = mDescriptorSetLayout[i];
         descriptorSet.setBuffer(layout, +PerViewBindingPoints::LIGHTS,
                 lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
-        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER,
-                recordBuffer, 0, sizeof(FroxelRecordUib));
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER, recordBuffer, 0,
+                Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()));
         descriptorSet.setBuffer(layout, +PerViewBindingPoints::FROXEL_BUFFER,
                 froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }
