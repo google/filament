@@ -14,33 +14,44 @@
  * limitations under the License.
  */
 
+#include <array>
+#include <cmath>
+#include <cstring>
+#include <functional>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <limits>
 #include <random>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
-#include <math/vec3.h>
-#include <math/vec4.h>
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/quat.h>
 #include <math/scalar.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/half.h>
 
 #include <filament/Box.h>
 #include <filament/Camera.h>
 #include <filament/Color.h>
+#include <filament/ColorGrading.h>
 #include <filament/Frustum.h>
 #include <filament/Material.h>
 #include <filament/Engine.h>
+#include <filament/ToneMapper.h>
 
 #include <private/filament/BufferInterfaceBlock.h>
-#include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
-#include <utils/Invocable.h>
 #include <utils/Slice.h>
 
 #include "Allocators.h"
-#include "details/Material.h"
+#include "backend/DriverEnums.h"
 #include "details/Camera.h"
 #include "Froxelizer.h"
 #include "details/Engine.h"
@@ -53,13 +64,13 @@ using namespace filament;
 using namespace filament::math;
 using namespace utils;
 
-static bool isGray(float3 v) {
+static bool isGray(float3 const v) {
     return v.r == v.g && v.g == v.b;
 }
 
-static bool almostEqualUlps(float a, float b, int maxUlps) {
+static bool almostEqualUlps(float a, float b, int const maxUlps) {
     if (a == b) return true;
-    int intDiff = abs(*reinterpret_cast<int32_t*>(&a) - *reinterpret_cast<int32_t*>(&b));
+    int const intDiff = abs(*reinterpret_cast<int32_t*>(&a) - *reinterpret_cast<int32_t*>(&b));
     return intDiff <= maxUlps;
 }
 
@@ -151,7 +162,7 @@ TEST(FilamentTest, SkinningMath) {
     };
 
     mat4f m;
-    float3 v = {1, 2, 3};
+    constexpr float3 v = {1, 2, 3};
 
     m = mat4f::translation(float3{1, 2, 3});
     check(m, v);
@@ -170,8 +181,8 @@ TEST(FilamentTest, SkinningMath) {
 
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<float> distribution(-4, 4);
-    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    std::uniform_real_distribution<float> const distribution(-4, 4);
+    std::uniform_real_distribution dangle(-f::TAU, f::TAU);
     auto rand_gen = std::bind(distribution, generator);
 
     for (size_t i = 0; i < 100; ++i) {
@@ -184,24 +195,24 @@ TEST(FilamentTest, SkinningMath) {
 }
 
 TEST(FilamentTest, TransformManagerSimple) {
-    filament::FTransformManager tcm;
+    FTransformManager tcm;
     EntityManager& em = EntityManager::get();
-    Entity root = em.create();
+    Entity const root = em.create();
     tcm.create(root);
 
-    auto ti = tcm.getInstance(root);
+    auto const ti = tcm.getInstance(root);
 
-    auto t = mat4f::translation(float3{ 1, 2, 3 });
-    auto prev = tcm.getWorldTransform(ti);
+    constexpr auto t = mat4f::translation(float3{ 1, 2, 3 });
+    auto const prev = tcm.getWorldTransform(ti);
     tcm.setTransform(ti, t);
-    auto updated = tcm.getWorldTransform(ti);
+    auto const updated = tcm.getWorldTransform(ti);
 
     EXPECT_NE(prev, t);
     EXPECT_EQ(updated, t);
 }
 
 TEST(FilamentTest, TransformManager) {
-    filament::FTransformManager tcm;
+    FTransformManager tcm;
     tcm.setAccurateTranslationsEnabled(true);
     EntityManager& em = EntityManager::get();
     std::array<Entity, 3> entities;
@@ -267,7 +278,7 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
     // local transaction reorders parent/child
-    auto const t = mat4::translation(double3(1.0 / 3.0));
+    constexpr auto t = mat4::translation(double3(1.0 / 3.0));
     tcm.openLocalTransformTransaction();
     tcm.setTransform(newParent, t);
     tcm.commitLocalTransformTransaction();
@@ -284,7 +295,7 @@ TEST(FilamentTest, TransformManager) {
 
     // our "high precision" mode only preserves 48 bits of the double mantissa (out of 53).
     // This constant loses 5 bits out of 1/3
-    const mat4 PRECISION_KILLER_5BITS = mat4::translation(double3(16.0));
+    constexpr mat4 PRECISION_KILLER_5BITS = mat4::translation(double3(16.0));
     EXPECT_EQ(tcm.getTransformAccurate(newParent)      + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
     EXPECT_EQ(tcm.getWorldTransformAccurate(newParent) + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
     EXPECT_EQ(tcm.getWorldTransformAccurate(child)     + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
@@ -308,7 +319,7 @@ TEST(FilamentTest, RenderableManagerCallback) {
     FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& rm = engine->getRenderableManager();
     EntityManager& em = EntityManager::get();
-    Entity e = em.create();
+    Entity const e = em.create();
     
     int callbackCount = 0;
     auto callback = [&](Slice<const Entity> entities) {
@@ -325,7 +336,7 @@ TEST(FilamentTest, RenderableManagerCallback) {
     callbackCount = 0;
     
     // Test modify
-    auto instance = rm.getInstance(e);
+    auto const instance = rm.getInstance(e);
     rm.setLayerMask(instance, 0x2);
     rm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
@@ -346,7 +357,7 @@ TEST(FilamentTest, LightManagerCallback) {
     FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& lm = engine->getLightManager();
     EntityManager& em = EntityManager::get();
-    Entity e = em.create();
+    Entity const e = em.create();
     
     int callbackCount = 0;
     auto callback = [&](Slice<const Entity> entities) {
@@ -363,7 +374,7 @@ TEST(FilamentTest, LightManagerCallback) {
     callbackCount = 0;
     
     // Test modify
-    auto instance = lm.getInstance(e);
+    auto const instance = lm.getInstance(e);
     lm.setIntensity(instance, 2000.0f, FLightManager::IntensityUnit::LUMEN_LUX);
     lm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
@@ -384,7 +395,7 @@ TEST(FilamentTest, TransformManagerCallback) {
     FEngine* engine = downcast(Engine::create(Engine::Backend::NOOP));
     auto& tcm = engine->getTransformManager();
     EntityManager& em = EntityManager::get();
-    Entity e = em.create();
+    Entity const e = em.create();
     
     int callbackCount = 0;
     auto callback = [&](Slice<const Entity> entities) {
@@ -401,8 +412,8 @@ TEST(FilamentTest, TransformManagerCallback) {
     callbackCount = 0;
     
     // Test modify without transaction
-    auto instance = tcm.getInstance(e);
-    auto t = mat4f::translation(float3{ 1, 2, 3 });
+    auto const instance = tcm.getInstance(e);
+    constexpr auto t = mat4f::translation(float3{ 1, 2, 3 });
     tcm.setTransform(instance, t);
     tcm.flushNotifications();
     EXPECT_EQ(callbackCount, 1);
@@ -568,7 +579,7 @@ TEST(FilamentTest, UniformBuffer) {
         { "a_mat3_0",  0, BufferInterfaceBlock::Type::MAT3 },
         { "a_mat4_0",  0, BufferInterfaceBlock::Type::MAT4 },
     });
-    BufferInterfaceBlock ib(b.build());
+    BufferInterfaceBlock const ib(b.build());
 
     CHECK2(ib.getFieldInfoList());
 
@@ -785,7 +796,7 @@ TEST(FilamentTest, FroxelData) {
     FEngine* engine = downcast(Engine::Builder().backend(Engine::Backend::NOOP).build());
 
     LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
-    utils::ArenaScope<LinearAllocatorArena> scope(arena);
+    ArenaScope scope(arena);
 
 
     // view-port size is chosen so that we fit exactly a integer # of froxels horizontally
@@ -899,7 +910,7 @@ TEST(FilamentTest, GoogleLineDirective) {
         char s[512] =
             "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
             "#line 10 \"foobar\"";
-        filament::backend::removeGoogleLineDirectives(&s[0], strlen(s));
+        backend::removeGoogleLineDirectives(&s[0], strlen(s));
         EXPECT_STREQ(s,
             "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
             "#line 10         ");
@@ -915,7 +926,7 @@ TEST(FilamentTest, GoogleLineDirective) {
             "// valid quote: \"\n"
             "#line 100 \"baz\"\n"
             "#line";
-        filament::backend::removeGoogleLineDirectives(&s[0], strlen(s));
+        backend::removeGoogleLineDirectives(&s[0], strlen(s));
         EXPECT_STREQ(s,
             "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
             "#line 10         \n"
@@ -933,7 +944,7 @@ TEST(FilamentTest, GridSnapping) {
     FEngine* engine = downcast(Engine::create(backend::Backend::NOOP));
     FView* view = downcast(engine->createView());
     FScene* scene = downcast(engine->createScene());
-    Entity cameraEntity = engine->getEntityManager().create();
+    Entity const cameraEntity = engine->getEntityManager().create();
     FCamera* camera = downcast(engine->createCamera(cameraEntity));
 
     view->setScene(scene);
@@ -1006,7 +1017,555 @@ TEST(FilamentTest, GridSnapping) {
     Engine::destroy((Engine **)&engine);
 }
 
+#if defined(__ARM_NEON)
+TEST(FilamentTest, ColorGradingNeonValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+
+    struct LutData {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                       backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutData*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutData neonLut, scalarLut;
+
+    // 1. Generate Vectorized LUT (fastMath = true)
+    ColorGrading const* cgNeon = ColorGrading::Builder()
+            .fastMath(true)
+            .exportLut(exporter, &neonLut)
+            .build(*engine);
+
+    // 2. Generate Scalar LUT (fastMath = false)
+    ColorGrading const* cgScalar = ColorGrading::Builder()
+            .fastMath(false)
+            .exportLut(exporter, &scalarLut)
+            .build(*engine);
+
+    // 3. Verify Metadata and Pixels
+    ASSERT_EQ(neonLut.width, scalarLut.width);
+    ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
+
+    for (size_t i = 0; i < neonLut.pixels.size(); i++) {
+        uint32_t const cn = neonLut.pixels[i];
+        uint32_t const cs = scalarLut.pixels[i];
+
+        // Unpack 10-bit channels and verify with ±5 tolerance
+        EXPECT_NEAR(int(cn & 0x3FF), int(cs & 0x3FF), 5);
+        EXPECT_NEAR(int((cn >> 10) & 0x3FF), int((cs >> 10) & 0x3FF), 5);
+        EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 5);
+    }
+
+
+    engine->destroy(cgNeon);
+    engine->destroy(cgScalar);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, ColorGradingMediumNeonValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+
+    struct LutData {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                       backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutData*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutData neonLut, scalarLut;
+
+    // 1. Generate Vectorized Medium LUT (fastMath = true, hasAdjustments = true)
+    ColorGrading const* cgNeon = ColorGrading::Builder()
+            .fastMath(true)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .vibrance(1.15f)
+            .exposure(0.1f)
+            .shadowsMidtonesHighlights(
+                    {0.95f, 1.0f, 1.05f, 0.0f},
+                    {1.0f, 1.05f, 1.0f, 0.0f},
+                    {1.05f, 1.0f, 0.95f, 0.0f},
+                    {0.0f, 0.33f, 0.55f, 1.0f})
+            .exportLut(exporter, &neonLut)
+            .build(*engine);
+
+    // 2. Generate Scalar Medium LUT (fastMath = false, hasAdjustments = true)
+    ColorGrading const* cgScalar = ColorGrading::Builder()
+            .fastMath(false)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .vibrance(1.15f)
+            .exposure(0.1f)
+            .shadowsMidtonesHighlights(
+                    {0.95f, 1.0f, 1.05f, 0.0f},
+                    {1.0f, 1.05f, 1.0f, 0.0f},
+                    {1.05f, 1.0f, 0.95f, 0.0f},
+                    {0.0f, 0.33f, 0.55f, 1.0f})
+            .exportLut(exporter, &scalarLut)
+            .build(*engine);
+
+    // 3. Verify Metadata and Pixels
+    ASSERT_EQ(neonLut.width, scalarLut.width);
+    ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
+
+    for (size_t i = 0; i < neonLut.pixels.size(); i++) {
+        uint32_t const cn = neonLut.pixels[i];
+        uint32_t const cs = scalarLut.pixels[i];
+
+        // Unpack 10-bit channels and verify with ±125 tolerance for chained Remez vs exact math
+        EXPECT_NEAR(int(cn & 0x3FF), int(cs & 0x3FF), 125);
+        EXPECT_NEAR(int((cn >> 10) & 0x3FF), int((cs >> 10) & 0x3FF), 125);
+        EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 125);
+    }
+
+
+    engine->destroy(cgNeon);
+    engine->destroy(cgScalar);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+
+    struct LutData {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                       backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutData*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutData neonLut, scalarLut;
+
+    // 1. Generate Vectorized Advanced LUT (fastMath = true, nightAdaptation, luminanceScaling, gamutMapping)
+    ColorGrading const* cgNeon = ColorGrading::Builder()
+            .fastMath(true)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .nightAdaptation(0.5f)
+            .luminanceScaling(true)
+            .gamutMapping(true)
+            .exportLut(exporter, &neonLut)
+            .build(*engine);
+
+    // 2. Generate Scalar Advanced LUT (fastMath = false, nightAdaptation, luminanceScaling, gamutMapping)
+    ColorGrading const* cgScalar = ColorGrading::Builder()
+            .fastMath(false)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .nightAdaptation(0.5f)
+            .luminanceScaling(true)
+            .gamutMapping(true)
+            .exportLut(exporter, &scalarLut)
+            .build(*engine);
+
+    // 3. Verify Metadata and Pixels
+    ASSERT_EQ(neonLut.width, scalarLut.width);
+    ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
+
+    for (size_t i = 0; i < neonLut.pixels.size(); i++) {
+        uint32_t const cn = neonLut.pixels[i];
+        uint32_t const cs = scalarLut.pixels[i];
+
+        EXPECT_NEAR(int(cn & 0x3FF), int(cs & 0x3FF), 225);
+        EXPECT_NEAR(int((cn >> 10) & 0x3FF), int((cs >> 10) & 0x3FF), 225);
+        EXPECT_NEAR(int((cn >> 20) & 0x3FF), int((cs >> 20) & 0x3FF), 225);
+    }
+
+    engine->destroy(cgNeon);
+    engine->destroy(cgScalar);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, ColorGradingHalfNeonValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+
+    struct LutDataHalf {
+        std::vector<half> pixels;
+        uint32_t width, height, depth;
+    };
+
+    struct LutDataInt {
+        std::vector<uint32_t> pixels;
+        uint32_t width, height, depth;
+    };
+
+    auto exporterHalf = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                           backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutDataHalf*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(half));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    auto exporterInt = [](void const* data, size_t const size, backend::PixelDataFormat format,
+                          backend::PixelDataType type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* target = static_cast<LutDataInt*>(user);
+        target->width = w; target->height = h; target->depth = d;
+        target->pixels.resize(size / sizeof(uint32_t));
+        memcpy(target->pixels.data(), data, size);
+    };
+
+    LutDataHalf neonHalfLut, scalarHalfLut;
+    LutDataInt neonIntLut, scalarIntLut;
+
+    // 1. Generate Vectorized Medium LUT in FLOAT/FP16 format (fastMath = true)
+    ColorGrading* cgNeonHalf = ColorGrading::Builder()
+            .fastMath(true)
+            .format(ColorGrading::LutFormat::FLOAT)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .exportLut(exporterHalf, &neonHalfLut)
+            .build(*engine);
+
+    // 2. Generate Vectorized Medium LUT in INTEGER format (fastMath = true)
+    ColorGrading* cgNeonInt = ColorGrading::Builder()
+            .fastMath(true)
+            .format(ColorGrading::LutFormat::INTEGER)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .exportLut(exporterInt, &neonIntLut)
+            .build(*engine);
+
+    // 3. Generate Scalar Medium LUT in FLOAT/FP16 format (fastMath = false)
+    ColorGrading* cgScalarHalf = ColorGrading::Builder()
+            .fastMath(false)
+            .format(ColorGrading::LutFormat::FLOAT)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .exportLut(exporterHalf, &scalarHalfLut)
+            .build(*engine);
+
+    // 4. Generate Scalar Medium LUT in INTEGER format (fastMath = false)
+    ColorGrading* cgScalarInt = ColorGrading::Builder()
+            .fastMath(false)
+            .format(ColorGrading::LutFormat::INTEGER)
+            .contrast(1.2f)
+            .saturation(1.1f)
+            .exportLut(exporterInt, &scalarIntLut)
+            .build(*engine);
+
+    ASSERT_EQ(neonHalfLut.width, scalarHalfLut.width);
+    ASSERT_EQ(neonHalfLut.pixels.size(), scalarHalfLut.pixels.size());
+    ASSERT_EQ(neonHalfLut.pixels.size() / 4, neonIntLut.pixels.size());
+    ASSERT_EQ(neonIntLut.pixels.size(), scalarIntLut.pixels.size());
+
+    float maxErrHalfOverall = 0.0f;
+    float maxErrIntOverall = 0.0f;
+    float maxErrScalarIntOverall = 0.0f;
+    double sumErrHalf = 0.0;
+    double sumErrInt = 0.0;
+    double sumErrScalarInt = 0.0;
+
+    float maxErrHalfNearZero = 0.0f;
+    float maxErrIntNearZero = 0.0f;
+    float maxErrScalarIntNearZero = 0.0f;
+    double sumErrHalfNearZero = 0.0;
+    double sumErrIntNearZero = 0.0;
+    double sumErrScalarIntNearZero = 0.0;
+    size_t countNearZero = 0;
+
+    for (size_t i = 0, p = 0; i < neonHalfLut.pixels.size(); i += 4, ++p) {
+        uint32_t const packedInt = neonIntLut.pixels[p];
+        float const rInt = float(packedInt & 0x3FF) * (1.0f / 1023.0f);
+        float const gInt = float((packedInt >> 10) & 0x3FF) * (1.0f / 1023.0f);
+        float const bInt = float((packedInt >> 20) & 0x3FF) * (1.0f / 1023.0f);
+        float const rgbInt[3] = {rInt, gInt, bInt};
+
+        uint32_t const packedScalarInt = scalarIntLut.pixels[p];
+        float const rScalarInt = float(packedScalarInt & 0x3FF) * (1.0f / 1023.0f);
+        float const gScalarInt = float((packedScalarInt >> 10) & 0x3FF) * (1.0f / 1023.0f);
+        float const bScalarInt = float((packedScalarInt >> 20) & 0x3FF) * (1.0f / 1023.0f);
+        float const rgbScalarInt[3] = {rScalarInt, gScalarInt, bScalarInt};
+
+        for (size_t c = 0; c < 3; ++c) { // RGB channels
+            float const fn = float(neonHalfLut.pixels[i + c]);
+            float const fi = rgbInt[c];
+            float const fsi = rgbScalarInt[c];
+            float const fs = float(scalarHalfLut.pixels[i + c]);
+
+            float const errHalf = std::abs(fn - fs);
+            float const errInt = std::abs(fi - fs);
+            float const errScalarInt = std::abs(fsi - fs);
+
+            maxErrHalfOverall = std::max(maxErrHalfOverall, errHalf);
+            maxErrIntOverall = std::max(maxErrIntOverall, errInt);
+            maxErrScalarIntOverall = std::max(maxErrScalarIntOverall, errScalarInt);
+            sumErrHalf += errHalf;
+            sumErrInt += errInt;
+            sumErrScalarInt += errScalarInt;
+
+            // Evaluate shadow detail near zero
+            if (fs < 0.05f) {
+                maxErrHalfNearZero = std::max(maxErrHalfNearZero, errHalf);
+                maxErrIntNearZero = std::max(maxErrIntNearZero, errInt);
+                maxErrScalarIntNearZero = std::max(maxErrScalarIntNearZero, errScalarInt);
+                sumErrHalfNearZero += errHalf;
+                sumErrIntNearZero += errInt;
+                sumErrScalarIntNearZero += errScalarInt;
+                countNearZero++;
+            }
+        }
+    }
+
+    std::cout << "\n====================================================================\n";
+    std::cout << "      EXHAUSTIVE ACCURACY BENCHMARK: NEON 10-BIT INT vs SCALAR FP16 \n";
+    std::cout << "====================================================================\n";
+    std::cout << "Total Channels Evaluated: " << (neonHalfLut.pixels.size() / 4) * 3 << "\n\n";
+
+    std::cout << "--- OVERALL DYNAMIC RANGE [0.0, 1.0] ---\n";
+    std::cout << "SCALAR Fallback (FP16) - Max Err: " << maxErrHalfOverall << ", Avg Err: " << (sumErrHalf / double((neonHalfLut.pixels.size() / 4) * 3)) << "\n";
+    std::cout << "SCALAR 10-Bit (INTEGER)- Max Err: " << maxErrScalarIntOverall << ", Avg Err: " << (sumErrScalarInt / double((neonHalfLut.pixels.size() / 4) * 3)) << "\n\n";
+    std::cout << "NEON 10-Bit (INTEGER)  - Max Err: " << maxErrIntOverall << ", Avg Err: " << (sumErrInt / double((neonHalfLut.pixels.size() / 4) * 3)) << "\n";
+
+    std::cout << "--- SHADOW DETAIL NEAR ZERO (< 0.05) (" << countNearZero << " samples) ---\n";
+    std::cout << "SCALAR Fallback (FP16) - Max Err: " << maxErrHalfNearZero << ", Avg Err: " << (sumErrHalfNearZero / double(countNearZero)) << "\n";
+    std::cout << "SCALAR 10-Bit (INTEGER)- Max Err: " << maxErrScalarIntNearZero << ", Avg Err: " << (sumErrScalarIntNearZero / double(countNearZero)) << "\n";
+    std::cout << "NEON 10-Bit (INTEGER)  - Max Err: " << maxErrIntNearZero << ", Avg Err: " << (sumErrIntNearZero / double(countNearZero)) << "\n";
+    std::cout << "====================================================================\n\n";
+
+    EXPECT_EQ(maxErrHalfOverall, 0.0f); // Proves exact scalar fallback when FP16 is requested
+    EXPECT_LT(maxErrIntOverall, 0.12f);
+
+    engine->destroy(cgNeonHalf);
+    engine->destroy(cgNeonInt);
+    engine->destroy(cgScalarHalf);
+    engine->destroy(cgScalarInt);
+    Engine::destroy((Engine**)&engine);
+}
+
+TEST(FilamentTest, ToneMapperNeonValidation) {
+    Engine* engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .feature("engine.color_grading.use_optimized_default_builder", true)
+            .build();
+
+    std::vector<ToneMapper*> toneMappers;
+    toneMappers.push_back(new LinearToneMapper());
+    toneMappers.push_back(new ACESToneMapper());
+    toneMappers.push_back(new ACESLegacyToneMapper());
+    toneMappers.push_back(new FilmicToneMapper());
+    toneMappers.push_back(new PBRNeutralToneMapper());
+    toneMappers.push_back(new GT7ToneMapper());
+    toneMappers.push_back(new AgxToneMapper());
+    toneMappers.push_back(new GenericToneMapper());
+    toneMappers.push_back(new DisplayRangeToneMapper());
+
+    // Exhaustively survey all 32K positive half-precision floating point values (0x0000 to 0x7BFF)
+    // Segregating LDR [0.0, 1.0] and HDR (1.0, 65504.0] separately
+    std::vector<float3> inputsLDR;
+    std::vector<float3> inputsHDR;
+
+    for (uint16_t bits = 0; bits < 0x7C00; ++bits) {
+        float const v = static_cast<float>(filament::math::makeHalf(bits));
+        if (v <= 1.0f) {
+            inputsLDR.push_back(float3{v, v, v});
+            inputsLDR.push_back(float3{v, v * 0.5f, v * 0.1f});
+            inputsLDR.push_back(float3{v * 0.1f, v, v * 0.5f});
+            inputsLDR.push_back(float3{v * 0.5f, v * 0.1f, v});
+        } else {
+            inputsHDR.push_back(float3{v, v, v});
+            inputsHDR.push_back(float3{v, v * 0.5f, v * 0.1f});
+            inputsHDR.push_back(float3{v * 0.1f, v, v * 0.5f});
+            inputsHDR.push_back(float3{v * 0.5f, v * 0.1f, v});
+        }
+    }
+
+    while (inputsLDR.size() % 4 != 0) {
+        inputsLDR.push_back(float3{0.18f, 0.18f, 0.18f});
+    }
+    while (inputsHDR.size() % 4 != 0) {
+        inputsHDR.push_back(float3{2.0f, 2.0f, 2.0f});
+    }
+
+    std::cout << "\n====================================================================\n";
+    std::cout << "          TONEMAPPER NEON vs SCALAR ACCURACY VALIDATION             \n";
+    std::cout << "====================================================================\n";
+    std::cout << "LDR Samples per ToneMapper: " << inputsLDR.size() << "\n";
+    std::cout << "HDR Samples per ToneMapper: " << inputsHDR.size() << "\n\n";
+
+    constexpr char const* const names[] = {
+        "LinearToneMapper", "ACESToneMapper", "ACESLegacyToneMapper", "FilmicToneMapper",
+        "PBRNeutralToneMapper", "GT7ToneMapper", "AgxToneMapper", "GenericToneMapper", "DisplayRangeToneMapper"
+    };
+
+    auto evaluateInputs = [](ToneMapper const* tm, std::vector<float3> const& inputs, float& maxErr, double& sumErr) {
+        maxErr = 0.0f;
+        sumErr = 0.0;
+        for (size_t i = 0; i < inputs.size(); i += 4) {
+            float3 const s0 = (*tm)(inputs[i + 0]);
+            float3 const s1 = (*tm)(inputs[i + 1]);
+            float3 const s2 = (*tm)(inputs[i + 2]);
+            float3 const s3 = (*tm)(inputs[i + 3]);
+
+            float const in_r[4] = {inputs[i+0].r, inputs[i+1].r, inputs[i+2].r, inputs[i+3].r};
+            float const in_g[4] = {inputs[i+0].g, inputs[i+1].g, inputs[i+2].g, inputs[i+3].g};
+            float const in_b[4] = {inputs[i+0].b, inputs[i+1].b, inputs[i+2].b, inputs[i+3].b};
+
+            float32x4_t vr = vld1q_f32(in_r);
+            float32x4_t vg = vld1q_f32(in_g);
+            float32x4_t vb = vld1q_f32(in_b);
+
+            (*tm)(vr, vg, vb);
+
+            float nr[4], ng[4], nb[4];
+            vst1q_f32(nr, vr);
+            vst1q_f32(ng, vg);
+            vst1q_f32(nb, vb);
+
+            float3 const n0{nr[0], ng[0], nb[0]};
+            float3 const n1{nr[1], ng[1], nb[1]};
+            float3 const n2{nr[2], ng[2], nb[2]};
+            float3 const n3{nr[3], ng[3], nb[3]};
+
+            float const err0 = std::max({std::abs(s0.r - n0.r), std::abs(s0.g - n0.g), std::abs(s0.b - n0.b)});
+            float const err1 = std::max({std::abs(s1.r - n1.r), std::abs(s1.g - n1.g), std::abs(s1.b - n1.b)});
+            float const err2 = std::max({std::abs(s2.r - n2.r), std::abs(s2.g - n2.g), std::abs(s2.b - n2.b)});
+            float const err3 = std::max({std::abs(s3.r - n3.r), std::abs(s3.g - n3.g), std::abs(s3.b - n3.b)});
+
+            maxErr = std::max({maxErr, err0, err1, err2, err3});
+            sumErr += err0 + err1 + err2 + err3;
+        }
+    };
+
+    for (size_t tmIdx = 0; tmIdx < toneMappers.size(); ++tmIdx) {
+        ToneMapper const* tm = toneMappers[tmIdx];
+        float maxErrLDR = 0.0f;
+        double sumErrLDR = 0.0;
+        evaluateInputs(tm, inputsLDR, maxErrLDR, sumErrLDR);
+
+        float maxErrHDR = 0.0f;
+        double sumErrHDR = 0.0;
+        evaluateInputs(tm, inputsHDR, maxErrHDR, sumErrHDR);
+
+        std::cout << names[tmIdx] << "\n"
+                  << "  LDR [0.0, 1.0]     - Max Err: " << (maxErrLDR * 1023.0f) << " LSB (" << maxErrLDR << "), Avg Err: " << ((sumErrLDR / double(inputsLDR.size())) * 1023.0) << " LSB\n"
+                  << "  HDR (1.0, 65504.0] - Max Err: " << (maxErrHDR * 1023.0f) << " LSB (" << maxErrHDR << "), Avg Err: " << ((sumErrHDR / double(inputsHDR.size())) * 1023.0) << " LSB\n";
+
+        EXPECT_LT(maxErrLDR, 1e-3f);
+        EXPECT_LT(maxErrHDR, 1e-3f);
+
+        delete tm;
+    }
+    std::cout << "====================================================================\n\n";
+
+    Engine::destroy((Engine**)&engine);
+}
+#endif
+
+TEST(FilamentTest, ColorGradingExportLutValidation) {
+    Engine* engine = Engine::Builder()
+        .backend(Engine::Backend::NOOP)
+        .feature("engine.color_grading.use_1d_lut", true)
+        .build();
+
+
+    struct LutMetadata {
+        size_t size = 0;
+        backend::PixelDataFormat format{};
+        backend::PixelDataType type{};
+        uint32_t width = 0, height = 0, depth = 0;
+        bool called = false;
+    };
+
+    auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat const format,
+                       backend::PixelDataType const type, uint32_t const w, uint32_t const h, uint32_t const d, void* user) {
+        auto* meta = static_cast<LutMetadata*>(user);
+        meta->size = size;
+        meta->format = format;
+        meta->type = type;
+        meta->width = w;
+        meta->height = h;
+        meta->depth = d;
+        meta->called = true;
+    };
+
+    // 1. Test 1D LUT (LinearToneMapper is one-dimensional)
+    LinearToneMapper linearMapper;
+    LutMetadata meta1D;
+    ColorGrading* cg1D = ColorGrading::Builder()
+            .toneMapper(&linearMapper)
+            .dimensions(32)
+            .exportLut(exporter, &meta1D)
+            .build(*engine);
+
+    ASSERT_TRUE(meta1D.called);
+    EXPECT_EQ(meta1D.width, 512);
+    EXPECT_EQ(meta1D.height, 1);
+    EXPECT_EQ(meta1D.depth, 1);
+    EXPECT_EQ(meta1D.format, backend::PixelDataFormat::R);
+    EXPECT_EQ(meta1D.type, backend::PixelDataType::HALF);
+    EXPECT_EQ(meta1D.size, 512 * sizeof(uint16_t));
+
+    // 2. Test 3D LUT Integer format
+    LutMetadata meta3DInt;
+    ColorGrading* cg3DInt = ColorGrading::Builder()
+            .format(ColorGrading::LutFormat::INTEGER)
+            .dimensions(32)
+            .exportLut(exporter, &meta3DInt)
+            .build(*engine);
+
+    ASSERT_TRUE(meta3DInt.called);
+    EXPECT_EQ(meta3DInt.width, 32);
+    EXPECT_EQ(meta3DInt.height, 32);
+    EXPECT_EQ(meta3DInt.depth, 32);
+    EXPECT_EQ(meta3DInt.format, backend::PixelDataFormat::RGBA);
+    EXPECT_EQ(meta3DInt.type, backend::PixelDataType::UINT_2_10_10_10_REV);
+    EXPECT_EQ(meta3DInt.size, 32 * 32 * 32 * sizeof(uint32_t));
+
+    // 3. Test 3D LUT Float format
+    LutMetadata meta3DFloat;
+    ColorGrading* cg3DFloat = ColorGrading::Builder()
+            .format(ColorGrading::LutFormat::FLOAT)
+            .dimensions(16)
+            .exportLut(exporter, &meta3DFloat)
+            .build(*engine);
+
+    ASSERT_TRUE(meta3DFloat.called);
+    EXPECT_EQ(meta3DFloat.width, 16);
+    EXPECT_EQ(meta3DFloat.height, 16);
+    EXPECT_EQ(meta3DFloat.depth, 16);
+    EXPECT_EQ(meta3DFloat.format, backend::PixelDataFormat::RGBA);
+    EXPECT_EQ(meta3DFloat.type, backend::PixelDataType::HALF);
+    EXPECT_EQ(meta3DFloat.size, 16 * 16 * 16 * 4 * sizeof(uint16_t));
+
+    engine->destroy(downcast(cg1D));
+    engine->destroy(downcast(cg3DInt));
+    engine->destroy(downcast(cg3DFloat));
+    Engine* baseEngine = engine;
+    Engine::destroy(&baseEngine);
+}
+
 int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
+    testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

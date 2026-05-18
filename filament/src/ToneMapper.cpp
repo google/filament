@@ -28,6 +28,10 @@
 #include <limits>
 #include <new>
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#include "details/ColorGradingNeon.h"
+#endif
 
 namespace filament {
 
@@ -200,6 +204,26 @@ static float3 ACES(float3 color, float brightness) noexcept {
 
 DEFAULT_CONSTRUCTORS(ToneMapper)
 
+#if defined(__ARM_NEON)
+void ToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    alignas(16) float r[4];
+    alignas(16) float g[4];
+    alignas(16) float b[4];
+    vst1q_f32(r, vr);
+    vst1q_f32(g, vg);
+    vst1q_f32(b, vb);
+
+    float3 const c0 = (*this)(float3{r[0], g[0], b[0]});
+    float3 const c1 = (*this)(float3{r[1], g[1], b[1]});
+    float3 const c2 = (*this)(float3{r[2], g[2], b[2]});
+    float3 const c3 = (*this)(float3{r[3], g[3], b[3]});
+
+    vr = float32x4_t{c0.r, c1.r, c2.r, c3.r};
+    vg = float32x4_t{c0.g, c1.g, c2.g, c3.g};
+    vb = float32x4_t{c0.b, c1.b, c2.b, c3.b};
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Linear tone mapper
 //------------------------------------------------------------------------------
@@ -210,9 +234,145 @@ float3 LinearToneMapper::operator()(float3 const c) const noexcept {
     return saturate(c);
 }
 
+#if defined(__ARM_NEON)
+void LinearToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    float32x4_t const zero = vdupq_n_f32(0.0f);
+    float32x4_t const one = vdupq_n_f32(1.0f);
+    vr = vmaxq_f32(vminq_f32(vr, one), zero);
+    vg = vmaxq_f32(vminq_f32(vg, one), zero);
+    vb = vmaxq_f32(vminq_f32(vb, one), zero);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // ACES tone mappers
 //------------------------------------------------------------------------------
+
+#if defined(__ARM_NEON)
+static void v_toneMappingACES(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb, float const brightness) noexcept {
+    // Rec2020_to_AP0
+    float32x4_t ap0_r = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, Rec2020_to_AP0[0][0]), vmulq_n_f32(vg, Rec2020_to_AP0[1][0])), vmulq_n_f32(vb, Rec2020_to_AP0[2][0]));
+    float32x4_t ap0_g = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, Rec2020_to_AP0[0][1]), vmulq_n_f32(vg, Rec2020_to_AP0[1][1])), vmulq_n_f32(vb, Rec2020_to_AP0[2][1]));
+    float32x4_t ap0_b = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, Rec2020_to_AP0[0][2]), vmulq_n_f32(vg, Rec2020_to_AP0[1][2])), vmulq_n_f32(vb, Rec2020_to_AP0[2][2]));
+
+    float32x4_t const mi = vminq_f32(vminq_f32(ap0_r, ap0_g), ap0_b);
+    float32x4_t const ma = vmaxq_f32(vmaxq_f32(ap0_r, ap0_g), ap0_b);
+    float32x4_t const sat = vdivq_f32(vsubq_f32(vmaxq_f32(ma, vdupq_n_f32(1e-5f)), vmaxq_f32(mi, vdupq_n_f32(1e-5f))), vmaxq_f32(ma, vdupq_n_f32(1e-2f)));
+
+    float32x4_t const chroma_sq = vaddq_f32(vaddq_f32(
+            vmulq_f32(ap0_b, vsubq_f32(ap0_b, ap0_g)),
+            vmulq_f32(ap0_g, vsubq_f32(ap0_g, ap0_r))),
+            vmulq_f32(ap0_r, vsubq_f32(ap0_r, ap0_b)));
+    float32x4_t const chroma = vsqrtq_f32(vmaxq_f32(chroma_sq, vdupq_n_f32(0.0f)));
+    float32x4_t const ycIn = vmulq_n_f32(vaddq_f32(vaddq_f32(ap0_b, ap0_g), vaddq_f32(ap0_r, vmulq_n_f32(chroma, 1.75f))), 1.0f / 3.0f);
+
+    float32x4_t const x = vmulq_n_f32(vsubq_f32(sat, vdupq_n_f32(0.4f)), 5.0f); // / 0.2f
+    float32x4_t const t = vmaxq_f32(vsubq_f32(vdupq_n_f32(1.0f), vabsq_f32(vmulq_n_f32(x, 0.5f))), vdupq_n_f32(0.0f));
+
+    // sign(x)
+    float32x4_t const x_sign = vbslq_f32(vcltq_f32(x, vdupq_n_f32(0.0f)), vdupq_n_f32(-1.0f),
+            vbslq_f32(vcgtq_f32(x, vdupq_n_f32(0.0f)), vdupq_n_f32(1.0f), vdupq_n_f32(0.0f)));
+    float32x4_t const s = vmulq_n_f32(vaddq_f32(vdupq_n_f32(1.0f),
+            vmulq_f32(x_sign, vsubq_f32(vdupq_n_f32(1.0f), vmulq_f32(t, t)))), 0.5f);
+
+    float32x4_t addedGlow = vdupq_n_f32(1.0f);
+    uint32x4_t const cond1 = vcleq_f32(ycIn, vdupq_n_f32(2.0f / 3.0f * 0.08f));
+    uint32x4_t const cond2 = vandq_u32(vmvnq_u32(cond1), vcltq_f32(ycIn, vdupq_n_f32(2.0f * 0.08f)));
+
+    float32x4_t const glow1 = vmulq_n_f32(s, 0.05f);
+    float32x4_t const glow2 = vmulq_f32(glow1, vsubq_f32(vdivq_f32(vdupq_n_f32(0.08f), ycIn), vdupq_n_f32(0.5f)));
+
+    addedGlow = vaddq_f32(addedGlow, vbslq_f32(cond1, glow1, vbslq_f32(cond2, glow2, vdupq_n_f32(0.0f))));
+
+    ap0_r = vmulq_f32(ap0_r, addedGlow);
+    ap0_g = vmulq_f32(ap0_g, addedGlow);
+    ap0_b = vmulq_f32(ap0_b, addedGlow);
+
+    float32x4_t hue = vmulq_n_f32(v_atan2q_f32(vmulq_n_f32(vsubq_f32(ap0_g, ap0_b), 1.73205081f),
+                                  vsubq_f32(vsubq_f32(vmulq_n_f32(ap0_r, 2.0f), ap0_g), ap0_b)), 57.29577951308f);
+
+    uint32x4_t const eq_mask = vandq_u32(vceqq_f32(ap0_r, ap0_g), vceqq_f32(ap0_g, ap0_b));
+    hue = vbslq_f32(eq_mask, vdupq_n_f32(0.0f), hue);
+    hue = vbslq_f32(vcltq_f32(hue, vdupq_n_f32(0.0f)), vaddq_f32(hue, vdupq_n_f32(360.0f)), hue);
+
+    float32x4_t centeredHue = hue; // - 0.0f
+    centeredHue = vbslq_f32(vcltq_f32(centeredHue, vdupq_n_f32(-180.0f)), vaddq_f32(centeredHue, vdupq_n_f32(360.0f)), centeredHue);
+    centeredHue = vbslq_f32(vcgtq_f32(centeredHue, vdupq_n_f32(180.0f)), vsubq_f32(centeredHue, vdupq_n_f32(360.0f)), centeredHue);
+
+    // smoothstep(0, 1, 1 - abs(2*ch/135))
+    float32x4_t const st = vmaxq_f32(vminq_f32(vsubq_f32(vdupq_n_f32(1.0f), vabsq_f32(vmulq_n_f32(centeredHue, 2.0f / 135.0f))), vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
+    float32x4_t hueWeight = vmulq_f32(vmulq_f32(st, st), vsubq_f32(vdupq_n_f32(3.0f), vmulq_n_f32(st, 2.0f)));
+    hueWeight = vmulq_f32(hueWeight, hueWeight);
+
+    ap0_r = vaddq_f32(ap0_r, vmulq_n_f32(vmulq_f32(vmulq_f32(hueWeight, sat), vsubq_f32(vdupq_n_f32(0.03f), ap0_r)), 0.18f)); // 1-0.82
+
+    // AP0_to_AP1
+    float32x4_t ap1_r = vaddq_f32(vaddq_f32(vmulq_n_f32(ap0_r, AP0_to_AP1[0][0]), vmulq_n_f32(ap0_g, AP0_to_AP1[1][0])), vmulq_n_f32(ap0_b, AP0_to_AP1[2][0]));
+    float32x4_t ap1_g = vaddq_f32(vaddq_f32(vmulq_n_f32(ap0_r, AP0_to_AP1[0][1]), vmulq_n_f32(ap0_g, AP0_to_AP1[1][1])), vmulq_n_f32(ap0_b, AP0_to_AP1[2][1]));
+    float32x4_t ap1_b = vaddq_f32(vaddq_f32(vmulq_n_f32(ap0_r, AP0_to_AP1[0][2]), vmulq_n_f32(ap0_g, AP0_to_AP1[1][2])), vmulq_n_f32(ap0_b, AP0_to_AP1[2][2]));
+
+    float32x4_t const max_half = vdupq_n_f32(65504.0f);
+    ap1_r = vmaxq_f32(vminq_f32(ap1_r, max_half), vdupq_n_f32(0.0f));
+    ap1_g = vmaxq_f32(vminq_f32(ap1_g, max_half), vdupq_n_f32(0.0f));
+    ap1_b = vmaxq_f32(vminq_f32(ap1_b, max_half), vdupq_n_f32(0.0f));
+
+    float32x4_t luma = vaddq_f32(vaddq_f32(vmulq_n_f32(ap1_r, LUMINANCE_AP1.r), vmulq_n_f32(ap1_g, LUMINANCE_AP1.g)), vmulq_n_f32(ap1_b, LUMINANCE_AP1.b));
+    ap1_r = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(ap1_r, luma), 0.96f));
+    ap1_g = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(ap1_g, luma), 0.96f));
+    ap1_b = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(ap1_b, luma), 0.96f));
+
+    ap1_r = vmulq_n_f32(ap1_r, brightness);
+    ap1_g = vmulq_n_f32(ap1_g, brightness);
+    ap1_b = vmulq_n_f32(ap1_b, brightness);
+
+    // a=2.785085, b=0.107772, c=2.936045, d=0.887122, e=0.806889
+    float32x4_t const num_r = vmulq_f32(ap1_r, vaddq_f32(vmulq_n_f32(ap1_r, 2.785085f), vdupq_n_f32(0.107772f)));
+    float32x4_t const num_g = vmulq_f32(ap1_g, vaddq_f32(vmulq_n_f32(ap1_g, 2.785085f), vdupq_n_f32(0.107772f)));
+    float32x4_t const num_b = vmulq_f32(ap1_b, vaddq_f32(vmulq_n_f32(ap1_b, 2.785085f), vdupq_n_f32(0.107772f)));
+
+    float32x4_t const den_r = vaddq_f32(vmulq_f32(ap1_r, vaddq_f32(vmulq_n_f32(ap1_r, 2.936045f), vdupq_n_f32(0.887122f))), vdupq_n_f32(0.806889f));
+    float32x4_t const den_g = vaddq_f32(vmulq_f32(ap1_g, vaddq_f32(vmulq_n_f32(ap1_g, 2.936045f), vdupq_n_f32(0.887122f))), vdupq_n_f32(0.806889f));
+    float32x4_t const den_b = vaddq_f32(vmulq_f32(ap1_b, vaddq_f32(vmulq_n_f32(ap1_b, 2.936045f), vdupq_n_f32(0.887122f))), vdupq_n_f32(0.806889f));
+
+    float32x4_t const post_r = vdivq_f32(num_r, den_r);
+    float32x4_t const post_g = vdivq_f32(num_g, den_g);
+    float32x4_t const post_b = vdivq_f32(num_b, den_b);
+
+    // AP1_to_XYZ
+    float32x4_t xyz_x = vaddq_f32(vaddq_f32(vmulq_n_f32(post_r, AP1_to_XYZ[0][0]), vmulq_n_f32(post_g, AP1_to_XYZ[1][0])), vmulq_n_f32(post_b, AP1_to_XYZ[2][0]));
+    float32x4_t xyz_y = vaddq_f32(vaddq_f32(vmulq_n_f32(post_r, AP1_to_XYZ[0][1]), vmulq_n_f32(post_g, AP1_to_XYZ[1][1])), vmulq_n_f32(post_b, AP1_to_XYZ[2][1]));
+    float32x4_t xyz_z = vaddq_f32(vaddq_f32(vmulq_n_f32(post_r, AP1_to_XYZ[0][2]), vmulq_n_f32(post_g, AP1_to_XYZ[1][2])), vmulq_n_f32(post_b, AP1_to_XYZ[2][2]));
+
+    // XYZ_to_xyY
+    float32x4_t const inv_sum = vdivq_f32(vdupq_n_f32(1.0f), vmaxq_f32(vaddq_f32(vaddq_f32(xyz_x, xyz_y), xyz_z), vdupq_n_f32(1e-5f)));
+    float32x4_t const xyy_x = vmulq_f32(xyz_x, inv_sum);
+    float32x4_t const xyy_y = vmulq_f32(xyz_y, inv_sum);
+    float32x4_t xyy_z = xyz_y;
+
+    xyy_z = vmaxq_f32(vminq_f32(xyy_z, max_half), vdupq_n_f32(0.0f));
+    xyy_z = v_powq_f32(xyy_z, 0.9811f);
+
+    // xyY_to_XYZ
+    xyz_y = xyy_z;
+    xyz_x = vmulq_f32(vdivq_f32(xyy_z, vmaxq_f32(xyy_y, vdupq_n_f32(1e-5f))), xyy_x);
+    xyz_z = vmulq_f32(vdivq_f32(xyy_z, vmaxq_f32(xyy_y, vdupq_n_f32(1e-5f))), vsubq_f32(vsubq_f32(vdupq_n_f32(1.0f), xyy_x), xyy_y));
+
+    // XYZ_to_AP1
+    float32x4_t lin_r = vaddq_f32(vaddq_f32(vmulq_n_f32(xyz_x, XYZ_to_AP1[0][0]), vmulq_n_f32(xyz_y, XYZ_to_AP1[1][0])), vmulq_n_f32(xyz_z, XYZ_to_AP1[2][0]));
+    float32x4_t lin_g = vaddq_f32(vaddq_f32(vmulq_n_f32(xyz_x, XYZ_to_AP1[0][1]), vmulq_n_f32(xyz_y, XYZ_to_AP1[1][1])), vmulq_n_f32(xyz_z, XYZ_to_AP1[2][1]));
+    float32x4_t lin_b = vaddq_f32(vaddq_f32(vmulq_n_f32(xyz_x, XYZ_to_AP1[0][2]), vmulq_n_f32(xyz_y, XYZ_to_AP1[1][2])), vmulq_n_f32(xyz_z, XYZ_to_AP1[2][2]));
+
+    luma = vaddq_f32(vaddq_f32(vmulq_n_f32(lin_r, LUMINANCE_AP1.r), vmulq_n_f32(lin_g, LUMINANCE_AP1.g)), vmulq_n_f32(lin_b, LUMINANCE_AP1.b));
+    lin_r = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(lin_r, luma), 0.93f));
+    lin_g = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(lin_g, luma), 0.93f));
+    lin_b = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(lin_b, luma), 0.93f));
+
+    // AP1_to_Rec2020
+    vr = vaddq_f32(vaddq_f32(vmulq_n_f32(lin_r, AP1_to_Rec2020[0][0]), vmulq_n_f32(lin_g, AP1_to_Rec2020[1][0])), vmulq_n_f32(lin_b, AP1_to_Rec2020[2][0]));
+    vg = vaddq_f32(vaddq_f32(vmulq_n_f32(lin_r, AP1_to_Rec2020[0][1]), vmulq_n_f32(lin_g, AP1_to_Rec2020[1][1])), vmulq_n_f32(lin_b, AP1_to_Rec2020[2][1]));
+    vb = vaddq_f32(vaddq_f32(vmulq_n_f32(lin_r, AP1_to_Rec2020[0][2]), vmulq_n_f32(lin_g, AP1_to_Rec2020[1][2])), vmulq_n_f32(lin_b, AP1_to_Rec2020[2][2]));
+}
+#endif
 
 DEFAULT_CONSTRUCTORS(ACESToneMapper)
 
@@ -220,11 +380,23 @@ float3 ACESToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f);
 }
 
+#if defined(__ARM_NEON)
+void ACESToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    v_toneMappingACES(vr, vg, vb, 1.0f);
+}
+#endif
+
 DEFAULT_CONSTRUCTORS(ACESLegacyToneMapper)
 
 float3 ACESLegacyToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f / 0.6f);
 }
+
+#if defined(__ARM_NEON)
+void ACESLegacyToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    v_toneMappingACES(vr, vg, vb, 1.66666667f);
+}
+#endif
 
 DEFAULT_CONSTRUCTORS(FilmicToneMapper)
 
@@ -237,6 +409,33 @@ float3 FilmicToneMapper::operator()(float3 const x) const noexcept {
     constexpr float e = 0.14f;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
+
+#if defined(__ARM_NEON)
+void FilmicToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
+    constexpr float a = 2.51f;
+    constexpr float b = 0.03f;
+    constexpr float c = 2.43f;
+    constexpr float d = 0.59f;
+    constexpr float e = 0.14f;
+
+    float32x4_t const b_vec = vdupq_n_f32(b);
+    float32x4_t const d_vec = vdupq_n_f32(d);
+    float32x4_t const e_vec = vdupq_n_f32(e);
+
+    float32x4_t const num_r = vmulq_f32(vr, vmlaq_n_f32(b_vec, vr, a));
+    float32x4_t const num_g = vmulq_f32(vg, vmlaq_n_f32(b_vec, vg, a));
+    float32x4_t const num_b = vmulq_f32(vb, vmlaq_n_f32(b_vec, vb, a));
+
+    float32x4_t const den_r = vmlaq_f32(e_vec, vr, vmlaq_n_f32(d_vec, vr, c));
+    float32x4_t const den_g = vmlaq_f32(e_vec, vg, vmlaq_n_f32(d_vec, vg, c));
+    float32x4_t const den_b = vmlaq_f32(e_vec, vb, vmlaq_n_f32(d_vec, vb, c));
+
+    vr = vdivq_f32(num_r, den_r);
+    vg = vdivq_f32(num_g, den_g);
+    vb = vdivq_f32(num_b, den_b);
+}
+#endif
 
 //------------------------------------------------------------------------------
 // PBR Neutral tone mapper
@@ -263,6 +462,42 @@ float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
     float const g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
     return mix(color, float3(newPeak), g);
 }
+
+#if defined(__ARM_NEON)
+void PBRNeutralToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    constexpr float startCompression = 0.8f - 0.04f;
+    constexpr float desaturation = 0.15f;
+
+    float32x4_t const x = vminq_f32(vr, vminq_f32(vg, vb));
+    float32x4_t const quad = vsubq_f32(x, vmulq_n_f32(vmulq_f32(x, x), 6.25f));
+    uint32x4_t const mask_offset = vcltq_f32(x, vdupq_n_f32(0.08f));
+    float32x4_t const offset = vbslq_f32(mask_offset, quad, vdupq_n_f32(0.04f));
+
+    float32x4_t const c_r = vsubq_f32(vr, offset);
+    float32x4_t const c_g = vsubq_f32(vg, offset);
+    float32x4_t const c_b = vsubq_f32(vb, offset);
+
+    float32x4_t const peak = vmaxq_f32(c_r, vmaxq_f32(c_g, c_b));
+    uint32x4_t const cmp_peak = vcgeq_f32(peak, vdupq_n_f32(startCompression));
+
+    constexpr float d = 1.0f - startCompression;
+    constexpr float d_sq = d * d;
+    float32x4_t const newPeak = vsubq_f32(vdupq_n_f32(1.0f), vdivq_f32(vdupq_n_f32(d_sq), vaddq_f32(peak, vdupq_n_f32(d - startCompression))));
+    float32x4_t const ratio = vdivq_f32(newPeak, peak);
+    float32x4_t const r_r = vmulq_f32(c_r, ratio);
+    float32x4_t const r_g = vmulq_f32(c_g, ratio);
+    float32x4_t const r_b = vmulq_f32(c_b, ratio);
+
+    float32x4_t const g = vsubq_f32(vdupq_n_f32(1.0f), vdivq_f32(vdupq_n_f32(1.0f), vmlaq_n_f32(vdupq_n_f32(1.0f), vsubq_f32(peak, newPeak), desaturation)));
+    float32x4_t const res_r = vaddq_f32(r_r, vmulq_f32(g, vsubq_f32(newPeak, r_r)));
+    float32x4_t const res_g = vaddq_f32(r_g, vmulq_f32(g, vsubq_f32(newPeak, r_g)));
+    float32x4_t const res_b = vaddq_f32(r_b, vmulq_f32(g, vsubq_f32(newPeak, r_b)));
+
+    vr = vbslq_f32(cmp_peak, res_r, c_r);
+    vg = vbslq_f32(cmp_peak, res_g, c_g);
+    vb = vbslq_f32(cmp_peak, res_b, c_b);
+}
+#endif
 
 //------------------------------------------------------------------------------
 // GT7 tone mapper
@@ -552,6 +787,97 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
     return v;
 }
 
+#if defined(__ARM_NEON)
+static float32x4_t v_agxDefaultContrastApprox(float32x4_t const x) noexcept {
+    float32x4_t const x2 = vmulq_f32(x, x);
+    float32x4_t const x4 = vmulq_f32(x2, x2);
+    float32x4_t const x6 = vmulq_f32(x4, x2);
+
+    float32x4_t res = vdupq_n_f32(0.002857f);
+    res = vmlaq_n_f32(res, x, -0.1718f);
+    res = vmlaq_n_f32(res, x2, 4.361f);
+    res = vmlaq_f32(res, vmulq_f32(x2, x), vdupq_n_f32(-28.72f));
+    res = vmlaq_n_f32(res, x4, 92.06f);
+    res = vmlaq_f32(res, vmulq_f32(x4, x), vdupq_n_f32(-126.7f));
+    res = vmlaq_n_f32(res, x6, 78.01f);
+    res = vmlaq_f32(res, vmulq_f32(x6, x), vdupq_n_f32(-17.86f));
+    return res;
+}
+
+static void v_agxLook(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb, AgxToneMapper::AgxLook look) noexcept {
+    if (look == AgxToneMapper::AgxLook::NONE) {
+        return;
+    }
+
+    float32x4_t const luma = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, 0.2126f), vmulq_n_f32(vg, 0.7152f)), vmulq_n_f32(vb, 0.0722f));
+
+    float slope_r = 1.0f, slope_g = 1.0f, slope_b = 1.0f;
+    float power_r = 1.0f, power_g = 1.0f, power_b = 1.0f;
+    float sat = 1.0f;
+
+    if (look == AgxToneMapper::AgxLook::GOLDEN) {
+        slope_r = 1.0f; slope_g = 0.9f; slope_b = 0.5f;
+        power_r = 0.8f; power_g = 0.8f; power_b = 0.8f;
+        sat = 1.3f;
+    } else if (look == AgxToneMapper::AgxLook::PUNCHY) {
+        slope_r = 1.0f; slope_g = 1.0f; slope_b = 1.0f;
+        power_r = 1.35f; power_g = 1.35f; power_b = 1.35f;
+        sat = 1.4f;
+    }
+
+    vr = v_powq_f32(vmulq_n_f32(vr, slope_r), power_r);
+    vg = v_powq_f32(vmulq_n_f32(vg, slope_g), power_g);
+    vb = v_powq_f32(vmulq_n_f32(vb, slope_b), power_b);
+
+    vr = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(vr, luma), sat));
+    vg = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(vg, luma), sat));
+    vb = vaddq_f32(luma, vmulq_n_f32(vsubq_f32(vb, luma), sat));
+}
+
+void AgxToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    float32x4_t const zero = vdupq_n_f32(0.0f);
+    vr = vmaxq_f32(zero, vr);
+    vg = vmaxq_f32(zero, vg);
+    vb = vmaxq_f32(zero, vb);
+
+    // AgXInsetMatrix
+    float32x4_t in_r = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, AgXInsetMatrix[0][0]), vmulq_n_f32(vg, AgXInsetMatrix[1][0])), vmulq_n_f32(vb, AgXInsetMatrix[2][0]));
+    float32x4_t in_g = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, AgXInsetMatrix[0][1]), vmulq_n_f32(vg, AgXInsetMatrix[1][1])), vmulq_n_f32(vb, AgXInsetMatrix[2][1]));
+    float32x4_t in_b = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, AgXInsetMatrix[0][2]), vmulq_n_f32(vg, AgXInsetMatrix[1][2])), vmulq_n_f32(vb, AgXInsetMatrix[2][2]));
+
+    float32x4_t const tiny = vdupq_n_f32(1E-10f);
+    in_r = v_log2q_f32(vmaxq_f32(in_r, tiny));
+    in_g = v_log2q_f32(vmaxq_f32(in_g, tiny));
+    in_b = v_log2q_f32(vmaxq_f32(in_b, tiny));
+
+    float const inv_range = 1.0f / (AgxMaxEv - AgxMinEv);
+    float32x4_t const min_ev = vdupq_n_f32(AgxMinEv);
+    in_r = vmulq_n_f32(vsubq_f32(in_r, min_ev), inv_range);
+    in_g = vmulq_n_f32(vsubq_f32(in_g, min_ev), inv_range);
+    in_b = vmulq_n_f32(vsubq_f32(in_b, min_ev), inv_range);
+
+    float32x4_t const one = vdupq_n_f32(1.0f);
+    in_r = vmaxq_f32(vminq_f32(in_r, one), zero);
+    in_g = vmaxq_f32(vminq_f32(in_g, one), zero);
+    in_b = vmaxq_f32(vminq_f32(in_b, one), zero);
+
+    in_r = v_agxDefaultContrastApprox(in_r);
+    in_g = v_agxDefaultContrastApprox(in_g);
+    in_b = v_agxDefaultContrastApprox(in_b);
+
+    v_agxLook(in_r, in_g, in_b, look);
+
+    // AgXOutsetMatrix
+    vr = vaddq_f32(vaddq_f32(vmulq_n_f32(in_r, AgXOutsetMatrix[0][0]), vmulq_n_f32(in_g, AgXOutsetMatrix[1][0])), vmulq_n_f32(in_b, AgXOutsetMatrix[2][0]));
+    vg = vaddq_f32(vaddq_f32(vmulq_n_f32(in_r, AgXOutsetMatrix[0][1]), vmulq_n_f32(in_g, AgXOutsetMatrix[1][1])), vmulq_n_f32(in_b, AgXOutsetMatrix[2][1]));
+    vb = vaddq_f32(vaddq_f32(vmulq_n_f32(in_r, AgXOutsetMatrix[0][2]), vmulq_n_f32(in_g, AgXOutsetMatrix[1][2])), vmulq_n_f32(in_b, AgXOutsetMatrix[2][2]));
+
+    vr = v_powq_f32(vmaxq_f32(zero, vr), 2.2f);
+    vg = v_powq_f32(vmaxq_f32(zero, vg), 2.2f);
+    vb = v_powq_f32(vmaxq_f32(zero, vb), 2.2f);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Display range tone mapper
 //------------------------------------------------------------------------------
@@ -664,6 +990,22 @@ float3 GenericToneMapper::operator()(float3 x) const noexcept {
     x = pow(x, mOptions->contrast);
     return mOptions->outputScale * x / (x + mOptions->inputScale);
 }
+
+#if defined(__ARM_NEON)
+void GenericToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
+    float const contrast = mOptions->contrast;
+    float32x4_t const outScale = vdupq_n_f32(mOptions->outputScale);
+    float32x4_t const inScale = vdupq_n_f32(mOptions->inputScale);
+
+    vr = v_powq_f32(vr, contrast);
+    vg = v_powq_f32(vg, contrast);
+    vb = v_powq_f32(vb, contrast);
+
+    vr = vdivq_f32(vmulq_f32(outScale, vr), vaddq_f32(vr, inScale));
+    vg = vdivq_f32(vmulq_f32(outScale, vg), vaddq_f32(vg, inScale));
+    vb = vdivq_f32(vmulq_f32(outScale, vb), vaddq_f32(vb, inScale));
+}
+#endif
 
 float GenericToneMapper::getContrast() const noexcept { return  mOptions->contrast; }
 float GenericToneMapper::getMidGrayIn() const noexcept { return  mOptions->midGrayIn; }

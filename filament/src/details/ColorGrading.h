@@ -28,6 +28,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
 namespace filament {
 
 class FEngine;
@@ -57,6 +61,15 @@ private:
     uint32_t mDimension;
     bool mIsOneDimensional;
     bool mIsLDR;
+
+#if defined(__ARM_NEON)
+    static void generateDefaultLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
+    static void generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
+    static void colorGradingAdjustmentsNeon(
+            float32x4_t& vr, float32x4_t& vg, float32x4_t& vb,
+            Config const& config, Builder const& builder) noexcept;
+#endif
+
 };
 
 FILAMENT_DOWNCAST(ColorGrading)
