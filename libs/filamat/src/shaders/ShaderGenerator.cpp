@@ -85,6 +85,8 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
 
+    CodeGenerator::generateDefine(out, "MATERIAL_HAS_LIGHTING", hasLighting(material, variant));
+
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_INSTANCES", material.instanced);
 
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
@@ -574,25 +576,20 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
             +PerRenderableBindingPoints::OBJECT_UNIFORMS,
             UibGenerator::getPerRenderableUib());
 
-    bool const litVariants = material.isLit || material.hasShadowMultiplier;
-    if (!filament::Variant::isValidDepthVariant(variant)) {
+    if (hasLighting(material, variant) && !filament::Variant::isValidDepthVariant(variant)) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
                 +PerViewBindingPoints::LIGHTS, UibGenerator::getLightsUib());
 
         if (filament::Variant::isShadowReceiverVariant(variant)) {
-            cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                        DescriptorSetBindingPoints::PER_VIEW,
-                        +PerViewBindingPoints::SHADOWS,
-                        UibGenerator::getShadowUib());
+            cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                    +PerViewBindingPoints::SHADOWS, UibGenerator::getShadowUib());
         }
 
-        if (litVariants) {
-            cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
-                    +PerViewBindingPoints::RECORD_BUFFER, UibGenerator::getFroxelRecordUib());
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::RECORD_BUFFER, UibGenerator::getFroxelRecordUib());
 
-            cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
-                    +PerViewBindingPoints::FROXEL_BUFFER, UibGenerator::getFroxelsUib());
-        }
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::FROXEL_BUFFER, UibGenerator::getFroxelsUib());
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
@@ -853,6 +850,12 @@ bool ShaderGenerator::hasStereo(filament::Variant const variant,
             // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
             // system in matc which allows the set of included variants to differ per-feature level.
             && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
+}
+
+bool ShaderGenerator::hasLighting(MaterialInfo const& material,
+        filament::Variant const variant) noexcept {
+    return (material.isLit || material.hasShadowMultiplier) &&
+           !filament::Variant::isSSRVariant(variant);
 }
 
 } // namespace filament
