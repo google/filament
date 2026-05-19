@@ -998,7 +998,10 @@ uint8_t WebGPUDriver::getMaxDrawBuffers() {
 }
 
 size_t WebGPUDriver::getMaxUniformBufferSize() {
-    return mDeviceLimits.maxUniformBufferBindingSize;
+    // TODO: We hardcode to WebGPU minspec (64 KiB) until we support specialization constants for
+    // UBO binding sizes.
+    return 65536;
+    // return mDeviceLimits.maxUniformBufferBindingSize;
 }
 
 size_t WebGPUDriver::getMaxTextureSize(const SamplerType target) {
