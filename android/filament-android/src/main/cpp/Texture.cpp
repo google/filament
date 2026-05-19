@@ -403,7 +403,14 @@ Java_com_google_android_filament_Texture_nSetExternalImage(JNIEnv* env, jclass, 
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
     wrapJni(env, [=]() {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         texture->setExternalImage(*engine, (void*)eglImage);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
     });
 }
 
@@ -426,6 +433,10 @@ Java_com_google_android_filament_Texture_nSetExternalImageByAHB(JNIEnv *env, jcl
     }
 
     return wrapJni<jboolean>(env, [=]() {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         if (engine->getBackend() == Backend::OPENGL) {
             // CAVEAT: we assume that Backend::OPENGL on Android implies PlatformEGLAndroid.
 #if UTILS_HAS_RTTI
@@ -453,6 +464,9 @@ Java_com_google_android_filament_Texture_nSetExternalImageByAHB(JNIEnv *env, jcl
 #endif // FILAMENT_SUPPORTS_VULKAN
         // success!
         return JNI_TRUE;
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
     });
 #else
     // other platforms could come here

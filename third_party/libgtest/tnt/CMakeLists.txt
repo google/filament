@@ -42,6 +42,7 @@ if (LINUX)
     target_link_libraries(${TARGET} Threads::Threads)
 endif()
 
+
 # specify where the public headers of this library are
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIRS})
+target_include_directories(${TARGET} SYSTEM PUBLIC ${PUBLIC_HDR_DIRS})
 set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
