@@ -81,8 +81,9 @@ function print_help {
     echo "        Enable perfetto traces on Android. Disabled by default on the Release build, enabled otherwise."
     echo "    -y build_type"
     echo "        Build the filament dependent tools (matc, resgen) separately from the project. This will set"
-    echo "        the tools as prebuilts that filament target will then use to build. The built_type option"
-    echo "        (debug|release) is meant to indicate the type of build of the resulting prebuilts."
+    echo "        the tools as prebuilts that filament target will then use to build. The build_type option"
+    echo "        (debug|release|none) is meant to indicate the type of build of the resulting prebuilts,"
+    echo "        or 'none' to disable the split build."
     echo "        Defaults to 'release' (tools are always prebuilt as release unless overridden)."
     echo ""
     echo "Build types:"
@@ -1086,14 +1087,17 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
         X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
             ;;
         y)
-            ISSUE_SPLIT_BUILD=true
             SPLIT_BUILD_TYPE=${OPTARG}
             case $(echo "${SPLIT_BUILD_TYPE}" | tr '[:upper:]' '[:lower:]') in
                 debug|release)
+                    ISSUE_SPLIT_BUILD=true
+                    ;;
+                none)
+                    ISSUE_SPLIT_BUILD=false
                     ;;
                 *)
                     echo "Unknown build type for -y: ${SPLIT_BUILD_TYPE}"
-                    echo "Build type must be one of [debug|release]"
+                    echo "Build type must be one of [debug|release|none]"
                     echo ""
                     exit 1
                     ;;
