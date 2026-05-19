@@ -1,7 +1,7 @@
 // Do not include this header directly.
 // This header defines shared struct spmd_kernel helpers.
 //
-// Copyright 2020-2021 Binomial LLC
+// Copyright 2020-2024 Binomial LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ CPPSPMD_FORCE_INLINE vfloat atan2_est(vfloat y, vfloat x);
 
 CPPSPMD_FORCE_INLINE vfloat atan_est(vfloat x) { return atan2_est(x, vfloat(1.0f)); }
 
-// Don't call this for angles close to 90/270! 
+// Don't call this for angles close to 90/270!
 inline vfloat tan_est(vfloat x);
 
 // https://burtleburtle.net/bob/rand/smallprng.html
@@ -86,4 +86,3 @@ void print_vbool(vbool v);
 void print_vint_hex(vint v);
 void print_active_lanes(const char *pPrefix);
 void print_vfloat(vfloat v);
-

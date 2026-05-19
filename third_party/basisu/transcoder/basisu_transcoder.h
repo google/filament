@@ -1,5 +1,5 @@
 // basisu_transcoder.h
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 // Important: If compiling with gcc, be sure strict aliasing is disabled: -fno-strict-aliasing
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// Also see basis_tex_format in basisu_file_headers.h (TODO: Perhaps move key definitions into here.)
 #pragma once
 
 // By default KTX2 support is enabled to simplify compilation. This implies the need for the Zstandard library (which we distribute as a single source file in the "zstd" directory) by default.
@@ -25,11 +27,6 @@
 // Set BASISD_SUPPORT_KTX2_ZSTD to 0 to disable Zstd usage and KTX2 UASTC Zstd supercompression support 
 #ifndef BASISD_SUPPORT_KTX2_ZSTD
 	#define BASISD_SUPPORT_KTX2_ZSTD 1
-#endif
-
-// Set BASISU_FORCE_DEVEL_MESSAGES to 1 to enable debug printf()'s whenever an error occurs, for easier debugging during development.
-#ifndef BASISU_FORCE_DEVEL_MESSAGES
-	#define BASISU_FORCE_DEVEL_MESSAGES 0
 #endif
 
 #include "basisu_transcoder_internal.h"
@@ -55,7 +52,7 @@ namespace basist
 		cTFETC2_RGBA = 1,							// Opaque+alpha, ETC2_EAC_A8 block followed by a ETC1 block, alpha channel will be opaque for opaque .basis files
 
 		// BC1-5, BC7 (desktop, some mobile devices)
-		cTFBC1_RGB = 2,							// Opaque only, no punchthrough alpha support yet, transcodes alpha slice if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified
+		cTFBC1_RGB = 2,								// Opaque only, no punchthrough alpha support yet, transcodes alpha slice if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified
 		cTFBC3_RGBA = 3, 							// Opaque+alpha, BC4 followed by a BC1 block, alpha channel will be opaque for opaque .basis files
 		cTFBC4_R = 4,								// Red only, alpha slice is transcoded to output if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified
 		cTFBC5_RG = 5,								// XY: Two BC4 blocks, X=R and Y=Alpha, .basis file should have alpha data (if not Y will be all 255's)
@@ -63,10 +60,11 @@ namespace basist
 
 		// PVRTC1 4bpp (mobile, PowerVR devices)
 		cTFPVRTC1_4_RGB = 8,						// Opaque only, RGB or alpha if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified, nearly lowest quality of any texture format.
-		cTFPVRTC1_4_RGBA = 9,					// Opaque+alpha, most useful for simple opacity maps. If .basis file doesn't have alpha cTFPVRTC1_4_RGB will be used instead. Lowest quality of any supported texture format.
+		cTFPVRTC1_4_RGBA = 9,						// Opaque+alpha, most useful for simple opacity maps. If .basis file doesn't have alpha cTFPVRTC1_4_RGB will be used instead. Lowest quality of any supported texture format.
 
-		// ASTC (mobile, Intel devices, hopefully all desktop GPU's one day)
-		cTFASTC_4x4_RGBA = 10,					// Opaque+alpha, ASTC 4x4, alpha channel will be opaque for opaque .basis files. Transcoder uses RGB/RGBA/L/LA modes, void extent, and up to two ([0,47] and [0,255]) endpoint precisions.
+		// ASTC (mobile, some Intel CPU's, hopefully all desktop GPU's one day)
+		cTFASTC_LDR_4x4_RGBA = 10,					// LDR. Opaque+alpha, ASTC 4x4, alpha channel will be opaque for opaque .basis files. 
+													// LDR: Transcoder uses RGB/RGBA/L/LA modes, void extent, and up to two ([0,47] and [0,255]) endpoint precisions.
 
 		// ATC (mobile, Adreno devices, this is a niche format)
 		cTFATC_RGB = 11,							// Opaque, RGB or alpha if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified. ATI ATC (GL_ATC_RGB_AMD)
@@ -74,24 +72,51 @@ namespace basist
 
 		// FXT1 (desktop, Intel devices, this is a super obscure format)
 		cTFFXT1_RGB = 17,							// Opaque only, uses exclusively CC_MIXED blocks. Notable for having a 8x4 block size. GL_3DFX_texture_compression_FXT1 is supported on Intel integrated GPU's (such as HD 630).
-														// Punch-through alpha is relatively easy to support, but full alpha is harder. This format is only here for completeness so opaque-only is fine for now.
-														// See the BASISU_USE_ORIGINAL_3DFX_FXT1_ENCODING macro in basisu_transcoder_internal.h.
+													// Punch-through alpha is relatively easy to support, but full alpha is harder. This format is only here for completeness so opaque-only is fine for now.
+													// See the BASISU_USE_ORIGINAL_3DFX_FXT1_ENCODING macro in basisu_transcoder_internal.h.
 
-		cTFPVRTC2_4_RGB = 18,					// Opaque-only, almost BC1 quality, much faster to transcode and supports arbitrary texture dimensions (unlike PVRTC1 RGB).
-		cTFPVRTC2_4_RGBA = 19,					// Opaque+alpha, slower to encode than cTFPVRTC2_4_RGB. Premultiplied alpha is highly recommended, otherwise the color channel can leak into the alpha channel on transparent blocks.
+		cTFPVRTC2_4_RGB = 18,						// Opaque-only, almost BC1 quality, much faster to transcode and supports arbitrary texture dimensions (unlike PVRTC1 RGB).
+		cTFPVRTC2_4_RGBA = 19,						// Opaque+alpha, slower to encode than cTFPVRTC2_4_RGB. Premultiplied alpha is highly recommended, otherwise the color channel can leak into the alpha channel on transparent blocks.
 
-		cTFETC2_EAC_R11 = 20,					// R only (ETC2 EAC R11 unsigned)
-		cTFETC2_EAC_RG11 = 21,					// RG only (ETC2 EAC RG11 unsigned), R=opaque.r, G=alpha - for tangent space normal maps
+		cTFETC2_EAC_R11 = 20,						// R only (ETC2 EAC R11 unsigned)
+		cTFETC2_EAC_RG11 = 21,						// RG only (ETC2 EAC RG11 unsigned), R=opaque.r, G=alpha - for tangent space normal maps
+
+		cTFBC6H = 22,								// HDR, RGB only, unsigned
+		cTFASTC_HDR_4x4_RGBA = 23,					// HDR, RGBA (currently UASTC HDR 4x4 encoders are only RGB), unsigned
 
 		// Uncompressed (raw pixel) formats
-		cTFRGBA32 = 13,							// 32bpp RGBA image stored in raster (not block) order in memory, R is first byte, A is last byte.
-		cTFRGB565 = 14,							// 16bpp RGB image stored in raster (not block) order in memory, R at bit position 11
-		cTFBGR565 = 15,							// 16bpp RGB image stored in raster (not block) order in memory, R at bit position 0
+		// Note these uncompressed formats (RGBA32, 565, and 4444) can only be transcoded to from LDR input files (ETC1S or UASTC LDR).
+		cTFRGBA32 = 13,								// 32bpp RGBA image stored in raster (not block) order in memory, R is first byte, A is last byte.
+		cTFRGB565 = 14,								// 16bpp RGB image stored in raster (not block) order in memory, R at bit position 11
+		cTFBGR565 = 15,								// 16bpp RGB image stored in raster (not block) order in memory, R at bit position 0
 		cTFRGBA4444 = 16,							// 16bpp RGBA image stored in raster (not block) order in memory, R at bit position 12, A at bit position 0
+		
+		// Note these uncompressed formats (HALF and 9E5) can only be transcoded to from HDR input files (UASTC HDR 4x4 or ASTC HDR 6x6).
+		cTFRGB_HALF = 24,							// 48bpp RGB half (16-bits/component, 3 components)
+		cTFRGBA_HALF = 25,							// 64bpp RGBA half (16-bits/component, 4 components) (A will always currently 1.0, UASTC_HDR doesn't support alpha)
+		cTFRGB_9E5 = 26,							// 32bpp RGB 9E5 (shared exponent, positive only, see GL_EXT_texture_shared_exponent)
 
-		cTFTotalTextureFormats = 22,
+		cTFASTC_HDR_6x6_RGBA = 27,					// HDR, RGBA (currently our ASTC HDR 6x6 encodes are only RGB), unsigned
 
-		// Old enums for compatibility with code compiled against previous versions
+		
+		// The remaining LDR ASTC block sizes, excluding 4x4 (which is above). There are 14 total valid ASTC LDR/HDR block sizes.
+		cTFASTC_LDR_5x4_RGBA = 28,
+		cTFASTC_LDR_5x5_RGBA = 29,
+		cTFASTC_LDR_6x5_RGBA = 30,
+		cTFASTC_LDR_6x6_RGBA = 31,
+		cTFASTC_LDR_8x5_RGBA = 32,
+		cTFASTC_LDR_8x6_RGBA = 33,
+		cTFASTC_LDR_10x5_RGBA = 34,
+		cTFASTC_LDR_10x6_RGBA = 35,
+		cTFASTC_LDR_8x8_RGBA = 36,
+		cTFASTC_LDR_10x8_RGBA = 37,
+		cTFASTC_LDR_10x10_RGBA = 38,
+		cTFASTC_LDR_12x10_RGBA = 39,
+		cTFASTC_LDR_12x12_RGBA = 40,
+
+		cTFTotalTextureFormats = 41,
+
+		// ----- The following are old/legacy enums for compatibility with code compiled against previous versions
 		cTFETC1 = cTFETC1_RGB,
 		cTFETC2 = cTFETC2_RGBA,
 		cTFBC1 = cTFBC1_RGB,
@@ -99,30 +124,44 @@ namespace basist
 		cTFBC4 = cTFBC4_R,
 		cTFBC5 = cTFBC5_RG,
 
-		// Previously, the caller had some control over which BC7 mode the transcoder output. We've simplified this due to UASTC, which supports numerous modes.
-		cTFBC7_M6_RGB = cTFBC7_RGBA,			// Opaque only, RGB or alpha if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified. Highest quality of all the non-ETC1 formats.
-		cTFBC7_M5_RGBA = cTFBC7_RGBA,			// Opaque+alpha, alpha channel will be opaque for opaque .basis files
+		// Previously, the caller had some control over which BC7 mode the transcoder output. We've simplified this due to UASTC LDR 4x4, which supports numerous modes.
+		cTFBC7_M6_RGB = cTFBC7_RGBA,				// Opaque only, RGB or alpha if cDecodeFlagsTranscodeAlphaDataToOpaqueFormats flag is specified. Highest quality of all the non-ETC1 formats.
+		cTFBC7_M5_RGBA = cTFBC7_RGBA,				// Opaque+alpha, alpha channel will be opaque for opaque .basis files
 		cTFBC7_M6_OPAQUE_ONLY = cTFBC7_RGBA,
 		cTFBC7_M5 = cTFBC7_RGBA,
 		cTFBC7_ALT = 7,
 
-		cTFASTC_4x4 = cTFASTC_4x4_RGBA,
+		cTFASTC_4x4 = cTFASTC_LDR_4x4_RGBA,
 
 		cTFATC_RGBA_INTERPOLATED_ALPHA = cTFATC_RGBA,
+
+		cTFASTC_4x4_RGBA = cTFASTC_LDR_4x4_RGBA
 	};
 
 	// For compressed texture formats, this returns the # of bytes per block. For uncompressed, it returns the # of bytes per pixel.
 	// NOTE: Previously, this function was called basis_get_bytes_per_block(), and it always returned 16*bytes_per_pixel for uncompressed formats which was confusing.
 	uint32_t basis_get_bytes_per_block_or_pixel(transcoder_texture_format fmt);
 
-	// Returns format's name in ASCII
+	// Returns the transcoder texture format's name in ASCII
 	const char* basis_get_format_name(transcoder_texture_format fmt);
+
+	// Returns basis texture format name in ASCII
+	const char* basis_get_tex_format_name(basis_tex_format fmt);
 
 	// Returns block format name in ASCII
 	const char* basis_get_block_format_name(block_format fmt);
 
 	// Returns true if the format supports an alpha channel.
 	bool basis_transcoder_format_has_alpha(transcoder_texture_format fmt);
+
+	// Returns true if the format is HDR.
+	bool basis_transcoder_format_is_hdr(transcoder_texture_format fmt);
+
+	// Returns true if the format is LDR.
+	inline bool basis_transcoder_format_is_ldr(transcoder_texture_format fmt) { return !basis_transcoder_format_is_hdr(fmt); }
+
+	// Returns true if the format is an LDR or HDR ASTC format.
+	bool basis_is_transcoder_texture_format_astc(transcoder_texture_format fmt);
 
 	// Returns the basisu::texture_format corresponding to the specified transcoder_texture_format.
 	basisu::texture_format basis_get_basisu_texture_format(transcoder_texture_format fmt);
@@ -137,22 +176,42 @@ namespace basist
 	uint32_t basis_get_uncompressed_bytes_per_pixel(transcoder_texture_format fmt);
 
 	// Returns the block width for the specified texture format, which is currently either 4 or 8 for FXT1.
-	uint32_t basis_get_block_width(transcoder_texture_format tex_type);
+	uint32_t basis_get_block_width(transcoder_texture_format fmt);
 
 	// Returns the block height for the specified texture format, which is currently always 4.
-	uint32_t basis_get_block_height(transcoder_texture_format tex_type);
+	uint32_t basis_get_block_height(transcoder_texture_format fmt);
+		
+	// ASTC/XUASTC LDR formats only: Given a basis_tex_format (mode or codec), return the corresponding ASTC basisu::texture_format with the proper block size from 4x4-12x12.
+	basisu::texture_format basis_get_texture_format_from_xuastc_or_astc_ldr_basis_tex_format(basis_tex_format fmt);
+		
+	// For any given basis_tex_format (mode or codec), return the LDR/HDR ASTC transcoder texture format with the proper block size.
+	transcoder_texture_format basis_get_transcoder_texture_format_from_basis_tex_format(basis_tex_format fmt);
+	// basis_get_transcoder_texture_format_from_xuastc_or_astc_ldr_basis_tex_format: same as basis_get_transcoder_texture_format_from_basis_tex_format (TODO: remove)
+	transcoder_texture_format basis_get_transcoder_texture_format_from_xuastc_or_astc_ldr_basis_tex_format(basis_tex_format fmt);
 
-	// Returns true if the specified format was enabled at compile time.
+	// Returns true if the specified format was enabled at compile time, and is supported for the specific basis/ktx2 texture format (ETC1S, UASTC, or UASTC HDR, or XUASTC LDR 4x4-12x12).
+	// For XUASTC the ASTC block size must match the transcoder_texture_format's ASTC block size.
 	bool basis_is_format_supported(transcoder_texture_format tex_type, basis_tex_format fmt = basis_tex_format::cETC1S);
 
+	// Returns the block width/height for the specified basis texture file format.
+	uint32_t basis_tex_format_get_block_width(basis_tex_format fmt);
+	uint32_t basis_tex_format_get_block_height(basis_tex_format fmt);
+		
+	bool basis_tex_format_is_hdr(basis_tex_format fmt);
+	inline bool basis_tex_format_is_ldr(basis_tex_format fmt) { return !basis_tex_format_is_hdr(fmt); }
+		
 	// Validates that the output buffer is large enough to hold the entire transcoded texture.
-	// For uncompressed texture formats, most input parameters are in pixels, not blocks. Blocks are 4x4 pixels.
+	// For uncompressed texture formats, most input parameters are in pixels, not blocks.
 	bool basis_validate_output_buffer_size(transcoder_texture_format target_format,
 		uint32_t output_blocks_buf_size_in_blocks_or_pixels,
 		uint32_t orig_width, uint32_t orig_height,
 		uint32_t output_row_pitch_in_blocks_or_pixels,
-		uint32_t output_rows_in_pixels,
-		uint32_t total_slice_blocks);
+		uint32_t output_rows_in_pixels);
+
+	// Computes the size in bytes of a transcoded image or texture, taking into account the format's block width/height and any minimum size PVRTC1 requirements required by OpenGL.
+	// Note the returned value is not necessarily the # of bytes a transcoder could write to the output buffer due to these minimum PVRTC1 requirements.
+	// (These PVRTC1 requirements are not ours, but OpenGL's.)
+	uint32_t basis_compute_transcoded_image_size_in_bytes(transcoder_texture_format target_format, uint32_t orig_width, uint32_t orig_height);
 
 	class basisu_transcoder;
 
@@ -183,7 +242,48 @@ namespace basist
 		}
 	};
 
-	// Low-level helper class that does the actual transcoding.
+	// Low-level helper classes that do the actual transcoding.
+	enum basisu_decode_flags
+	{
+		// PVRTC1: decode non-pow2 ETC1S texture level to the next larger power of 2 (not implemented yet, but we're going to support it). Ignored if the slice's dimensions are already a power of 2.
+		cDecodeFlagsPVRTCDecodeToNextPow2 = 2,
+
+		// When decoding to an opaque texture format, if the basis file has alpha, decode the alpha slice instead of the color slice to the output texture format.
+		// This is primarily to allow decoding of textures with alpha to multiple ETC1 textures (one for color, another for alpha).
+		cDecodeFlagsTranscodeAlphaDataToOpaqueFormats = 4,
+
+		// Forbid usage of BC1 3 color blocks (we don't support BC1 punchthrough alpha yet).
+		// This flag is used internally when decoding to BC3.
+		cDecodeFlagsBC1ForbidThreeColorBlocks = 8,
+
+		// The output buffer contains alpha endpoint/selector indices. 
+		// Used internally when decoding formats like ASTC that require both color and alpha data to be available when transcoding to the output format.
+		cDecodeFlagsOutputHasAlphaIndices = 16,
+
+		// Enable slower, but higher quality transcoding for some formats.
+		// For ASTC/XUASTC->BC7, this enables partially analytical encoding vs. fully analytical.
+		cDecodeFlagsHighQuality = 32,
+
+		// Disable ETC1S->BC7 adaptive chroma filtering, for much faster transcoding to BC7.
+		cDecodeFlagsNoETC1SChromaFiltering = 64,
+
+		// Disable deblock filtering for XUASTC LDR transcoding to non-ASTC formats. 
+		// For ASTC 8x6 or smaller block sizes, deblocking is always disabled unless you force it on using cDecodeFlagsForceDeblockFiltering.
+		cDecodeFlagsNoDeblockFiltering = 128,
+		
+		// More aggressive deblock filtering (only used when it's enabled)
+		cDecodeFlagsStrongerDeblockFiltering = 256,
+		
+		// Always apply deblocking, even for smaller ASTC block sizes (4x4-8x6).
+		cDecodeFlagsForceDeblockFiltering = 512, 
+
+		// By default XUASTC LDR 4x4, 6x6 and 8x6 are directly transcoded to BC7 without always requiring a full ASTC block unpack and analytical BC7 encode. This is 1.4x up to 3x faster in WASM.
+		// This trade offs some quality. The largest transcoding speed gain is achieved when the source XUASTC data isn't dual plane and only uses 1 subset. Otherwise the actual perf. gain is variable.
+		// To disable this optimization for all XUASTC block sizes and always use the fallback encoder, specify cDecodeFlagXUASTCLDRDisableFastBC7Transcoding.
+		cDecodeFlagXUASTCLDRDisableFastBC7Transcoding = 1024
+	};
+	
+	// ETC1S
 	class basisu_lowlevel_etc1s_transcoder
 	{
 		friend class basisu_transcoder;
@@ -202,18 +302,18 @@ namespace basist
 
 		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
 			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const bool is_video, const bool is_alpha_slice, const uint32_t level_index, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
-			basisu_transcoder_state* pState = nullptr, bool astc_transcode_alpha = false, void* pAlpha_blocks = nullptr, uint32_t output_rows_in_pixels = 0);
+			basisu_transcoder_state* pState = nullptr, bool astc_transcode_alpha = false, void* pAlpha_blocks = nullptr, uint32_t output_rows_in_pixels = 0, uint32_t decode_flags = 0);
 
 		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
 			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const basis_file_header& header, const basis_slice_desc& slice_desc, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
-			basisu_transcoder_state* pState = nullptr, bool astc_transcode_alpha = false, void* pAlpha_blocks = nullptr, uint32_t output_rows_in_pixels = 0)
+			basisu_transcoder_state* pState = nullptr, bool astc_transcode_alpha = false, void* pAlpha_blocks = nullptr, uint32_t output_rows_in_pixels = 0, uint32_t decode_flags = 0)
 		{
 			return transcode_slice(pDst_blocks, num_blocks_x, num_blocks_y, pImage_data, image_data_size, fmt, output_block_or_pixel_stride_in_bytes, bc1_allow_threecolor_blocks,
 				header.m_tex_type == cBASISTexTypeVideoFrames, (slice_desc.m_flags & cSliceDescFlagsHasAlpha) != 0, slice_desc.m_level_index,
 				slice_desc.m_orig_width, slice_desc.m_orig_height, output_row_pitch_in_blocks_or_pixels, pState,
 				astc_transcode_alpha,
 				pAlpha_blocks,
-				output_rows_in_pixels);
+				output_rows_in_pixels, decode_flags);
 		}
 
 		// Container independent transcoding
@@ -222,7 +322,7 @@ namespace basist
 			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
 			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
 			uint32_t num_blocks_x, uint32_t num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
-			uint32_t rgb_offset, uint32_t rgb_length, uint32_t alpha_offset, uint32_t alpha_length,
+			uint64_t rgb_offset, uint32_t rgb_length, uint64_t alpha_offset, uint32_t alpha_length,
 			uint32_t decode_flags = 0,
 			bool basis_file_has_alpha_slices = false,
 			bool is_video = false,
@@ -260,33 +360,14 @@ namespace basist
 
 		basisu_transcoder_state m_def_state;
 	};
-
-	enum basisu_decode_flags
-	{
-		// PVRTC1: decode non-pow2 ETC1S texture level to the next larger power of 2 (not implemented yet, but we're going to support it). Ignored if the slice's dimensions are already a power of 2.
-		cDecodeFlagsPVRTCDecodeToNextPow2 = 2,
-
-		// When decoding to an opaque texture format, if the basis file has alpha, decode the alpha slice instead of the color slice to the output texture format.
-		// This is primarily to allow decoding of textures with alpha to multiple ETC1 textures (one for color, another for alpha).
-		cDecodeFlagsTranscodeAlphaDataToOpaqueFormats = 4,
-
-		// Forbid usage of BC1 3 color blocks (we don't support BC1 punchthrough alpha yet).
-		// This flag is used internally when decoding to BC3.
-		cDecodeFlagsBC1ForbidThreeColorBlocks = 8,
-
-		// The output buffer contains alpha endpoint/selector indices. 
-		// Used internally when decoding formats like ASTC that require both color and alpha data to be available when transcoding to the output format.
-		cDecodeFlagsOutputHasAlphaIndices = 16,
-
-		cDecodeFlagsHighQuality = 32
-	};
-
-	class basisu_lowlevel_uastc_transcoder
+		
+	// UASTC LDR 4x4
+	class basisu_lowlevel_uastc_ldr_4x4_transcoder
 	{
 		friend class basisu_transcoder;
 
 	public:
-		basisu_lowlevel_uastc_transcoder();
+		basisu_lowlevel_uastc_ldr_4x4_transcoder();
 
 		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
 			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, bool has_alpha, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
@@ -307,7 +388,189 @@ namespace basist
 			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
 			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
 			uint32_t num_blocks_x, uint32_t num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
-			uint32_t slice_offset, uint32_t slice_length,
+			uint64_t slice_offset, uint32_t slice_length,
+			uint32_t decode_flags = 0,
+			bool has_alpha = false,
+			bool is_video = false,
+			uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr,
+			uint32_t output_rows_in_pixels = 0,
+			int channel0 = -1, int channel1 = -1);
+	};
+
+#if BASISD_SUPPORT_XUASTC
+	// XUASTC LDR 4x4-12x12 or ASTC LDR 4x4-12x12
+	struct xuastc_decoded_image
+	{
+		uint32_t m_actual_block_width = 0, m_actual_block_height = 0, m_actual_width = 0, m_actual_height = 0;
+		bool m_actual_has_alpha = false, m_uses_srgb_astc_decode_mode = false;
+				
+		bool decode(const uint8_t* pImage_data, uint32_t image_data_size, 
+			astc_ldr_t::xuastc_decomp_image_init_callback_ptr pInit_callback, void* pInit_callback_data,
+			astc_ldr_t::xuastc_decomp_image_block_callback_ptr pBlock_callback, void* pBlock_callback_data)
+		{
+			const bool decomp_flag = astc_ldr_t::xuastc_ldr_decompress_image(pImage_data, image_data_size, 
+				m_actual_block_width, m_actual_block_height,
+				m_actual_width, m_actual_height,
+				m_actual_has_alpha, m_uses_srgb_astc_decode_mode, basisu::g_debug_printf, 
+				pInit_callback, pInit_callback_data, 
+				pBlock_callback, pBlock_callback_data);
+
+			return decomp_flag;
+		}
+				
+		void clear()
+		{
+			m_actual_block_width = 0;
+			m_actual_block_height = 0;
+			m_actual_width = 0;
+			m_actual_height = 0;
+			m_actual_has_alpha = false;
+			m_uses_srgb_astc_decode_mode = false;
+		}
+	};
+#endif
+
+	// This is both ASTC LDR 4x4-12x12 and XUASTC LDR 4x4-12x12.
+	class basisu_lowlevel_xuastc_ldr_transcoder
+	{
+		friend class basisu_transcoder;
+
+	public:
+		basisu_lowlevel_xuastc_ldr_transcoder();
+
+		bool transcode_slice(basis_tex_format src_format, bool use_astc_srgb_decode_profile, void* pDst_blocks, uint32_t src_num_blocks_x, uint32_t src_num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, bool has_alpha, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0);
+
+		bool transcode_slice(basis_tex_format src_format, bool use_astc_srgb_decode_profile, void* pDst_blocks, uint32_t src_num_blocks_x, uint32_t src_num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const basis_file_header& header, const basis_slice_desc& slice_desc, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0)
+		{
+			return transcode_slice(src_format, use_astc_srgb_decode_profile, pDst_blocks, src_num_blocks_x, src_num_blocks_y, pImage_data, image_data_size, fmt,
+				output_block_or_pixel_stride_in_bytes, bc1_allow_threecolor_blocks, (header.m_flags & cBASISHeaderFlagHasAlphaSlices) != 0, slice_desc.m_orig_width, slice_desc.m_orig_height, output_row_pitch_in_blocks_or_pixels,
+				pState, output_rows_in_pixels, channel0, channel1, decode_flags);
+		}
+
+		// Container independent transcoding
+		bool transcode_image(
+			basis_tex_format src_format, bool use_astc_srgb_decode_profile,
+			transcoder_texture_format target_format,
+			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
+			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
+			uint32_t src_num_blocks_x, uint32_t src_num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
+			uint64_t slice_offset, uint32_t slice_length,
+			uint32_t decode_flags = 0,
+			bool has_alpha = false,
+			bool is_video = false,
+			uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr,
+			uint32_t output_rows_in_pixels = 0,
+			int channel0 = -1, int channel1 = -1);
+	};
+
+	// UASTC HDR 4x4
+	class basisu_lowlevel_uastc_hdr_4x4_transcoder
+	{
+		friend class basisu_transcoder;
+
+	public:
+		basisu_lowlevel_uastc_hdr_4x4_transcoder();
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, bool has_alpha, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0);
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const basis_file_header& header, const basis_slice_desc& slice_desc, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0)
+		{
+			return transcode_slice(pDst_blocks, num_blocks_x, num_blocks_y, pImage_data, image_data_size, fmt,
+				output_block_or_pixel_stride_in_bytes, bc1_allow_threecolor_blocks, (header.m_flags & cBASISHeaderFlagHasAlphaSlices) != 0, slice_desc.m_orig_width, slice_desc.m_orig_height, output_row_pitch_in_blocks_or_pixels,
+				pState, output_rows_in_pixels, channel0, channel1, decode_flags);
+		}
+
+		// Container independent transcoding
+		bool transcode_image(
+			transcoder_texture_format target_format,
+			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
+			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
+			uint32_t num_blocks_x, uint32_t num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
+			uint64_t slice_offset, uint32_t slice_length,
+			uint32_t decode_flags = 0,
+			bool has_alpha = false,
+			bool is_video = false,
+			uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr,
+			uint32_t output_rows_in_pixels = 0,
+			int channel0 = -1, int channel1 = -1);
+	};
+
+	// ASTC HDR 6x6
+	class basisu_lowlevel_astc_hdr_6x6_transcoder
+	{
+		friend class basisu_transcoder;
+
+	public:
+		basisu_lowlevel_astc_hdr_6x6_transcoder();
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, bool has_alpha, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0);
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const basis_file_header& header, const basis_slice_desc& slice_desc, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0)
+		{
+			return transcode_slice(pDst_blocks, num_blocks_x, num_blocks_y, pImage_data, image_data_size, fmt,
+				output_block_or_pixel_stride_in_bytes, bc1_allow_threecolor_blocks, (header.m_flags & cBASISHeaderFlagHasAlphaSlices) != 0, slice_desc.m_orig_width, slice_desc.m_orig_height, output_row_pitch_in_blocks_or_pixels,
+				pState, output_rows_in_pixels, channel0, channel1, decode_flags);
+		}
+
+		// Container independent transcoding
+		bool transcode_image(
+			transcoder_texture_format target_format,
+			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
+			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
+			uint32_t num_blocks_x, uint32_t num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
+			uint64_t slice_offset, uint32_t slice_length,
+			uint32_t decode_flags = 0,
+			bool has_alpha = false,
+			bool is_video = false,
+			uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr,
+			uint32_t output_rows_in_pixels = 0,
+			int channel0 = -1, int channel1 = -1);
+	};
+
+	// UASTC HDR 6x6 intermediate
+	class basisu_lowlevel_uastc_hdr_6x6_intermediate_transcoder
+	{
+		friend class basisu_transcoder;
+
+	public:
+		basisu_lowlevel_uastc_hdr_6x6_intermediate_transcoder();
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, bool has_alpha, const uint32_t orig_width, const uint32_t orig_height, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0);
+
+		bool transcode_slice(void* pDst_blocks, uint32_t num_blocks_x, uint32_t num_blocks_y, const uint8_t* pImage_data, uint32_t image_data_size, block_format fmt,
+			uint32_t output_block_or_pixel_stride_in_bytes, bool bc1_allow_threecolor_blocks, const basis_file_header& header, const basis_slice_desc& slice_desc, uint32_t output_row_pitch_in_blocks_or_pixels = 0,
+			basisu_transcoder_state* pState = nullptr, uint32_t output_rows_in_pixels = 0, int channel0 = -1, int channel1 = -1, uint32_t decode_flags = 0)
+		{
+			return transcode_slice(pDst_blocks, num_blocks_x, num_blocks_y, pImage_data, image_data_size, fmt,
+				output_block_or_pixel_stride_in_bytes, bc1_allow_threecolor_blocks, (header.m_flags & cBASISHeaderFlagHasAlphaSlices) != 0, slice_desc.m_orig_width, slice_desc.m_orig_height, output_row_pitch_in_blocks_or_pixels,
+				pState, output_rows_in_pixels, channel0, channel1, decode_flags);
+		}
+
+		// Container independent transcoding
+		bool transcode_image(
+			transcoder_texture_format target_format,
+			void* pOutput_blocks, uint32_t output_blocks_buf_size_in_blocks_or_pixels,
+			const uint8_t* pCompressed_data, uint32_t compressed_data_length,
+			uint32_t num_blocks_x, uint32_t num_blocks_y, uint32_t orig_width, uint32_t orig_height, uint32_t level_index,
+			uint64_t slice_offset, uint32_t slice_length,
 			uint32_t decode_flags = 0,
 			bool has_alpha = false,
 			bool is_video = false,
@@ -319,15 +582,20 @@ namespace basist
 
 	struct basisu_slice_info
 	{
+		// The image's ACTUAL dimensions in texels.
 		uint32_t m_orig_width;
 		uint32_t m_orig_height;
 
+		// The texture's dimensions in texels - always a multiple of the texture's underlying block size (4x4-12x12).
 		uint32_t m_width;
 		uint32_t m_height;
 
 		uint32_t m_num_blocks_x;
 		uint32_t m_num_blocks_y;
 		uint32_t m_total_blocks;
+
+		uint32_t m_block_width;
+		uint32_t m_block_height;
 
 		uint32_t m_compressed_size;
 
@@ -348,11 +616,16 @@ namespace basist
 		uint32_t m_image_index;
 		uint32_t m_total_levels;
 
+		// The image's ACTUAL dimensions in texels.
 		uint32_t m_orig_width;
 		uint32_t m_orig_height;
-
+				
+		// The texture's dimensions in texels - always a multiple of the texture's underlying block size (4x4-12x12).
 		uint32_t m_width;
 		uint32_t m_height;
+
+		uint32_t m_block_width;
+		uint32_t m_block_height;
 
 		uint32_t m_num_blocks_x;
 		uint32_t m_num_blocks_y;
@@ -374,6 +647,9 @@ namespace basist
 
 		uint32_t m_width;
 		uint32_t m_height;
+
+		uint32_t m_block_width;
+		uint32_t m_block_height;
 
 		uint32_t m_num_blocks_x;
 		uint32_t m_num_blocks_y;
@@ -424,13 +700,17 @@ namespace basist
 
 		basis_tex_format m_tex_format; // ETC1S, UASTC, etc.
 
+		uint32_t m_block_width;
+		uint32_t m_block_height;
+
 		bool m_y_flipped;				// true if the image was Y flipped
+		bool m_srgb;					// true if the image is sRGB, false if linear
 		bool m_etc1s;					// true if the file is ETC1S
 		bool m_has_alpha_slices;	// true if the texture has alpha slices (for ETC1S: even slices RGB, odd slices alpha)
 	};
 
 	// High-level transcoder class which accepts .basis file data and allows the caller to query information about the file and transcode image levels to various texture formats.
-	// If you're just starting out this is the class you care about.
+	// If you're just starting out this is the class you care about (or see the KTX2 transcoder below).
 	class basisu_transcoder
 	{
 		basisu_transcoder(basisu_transcoder&);
@@ -452,7 +732,7 @@ namespace basist
 		// Note that the number of mipmap levels for each image may differ, and that images may have different resolutions.
 		uint32_t get_total_images(const void* pData, uint32_t data_size) const;
 
-		basis_tex_format get_tex_format(const void* pData, uint32_t data_size) const;
+		basis_tex_format get_basis_tex_format(const void* pData, uint32_t data_size) const;
 
 		// Returns the number of mipmap levels in an image.
 		uint32_t get_total_image_levels(const void* pData, uint32_t data_size, uint32_t image_index) const;
@@ -482,7 +762,7 @@ namespace basist
 		// It'll first find the slice(s) to transcode, then call transcode_slice() one or two times to decode both the color and alpha texture data (or RG texture data from two slices for BC5).
 		// If the .basis file doesn't have alpha slices, the output alpha blocks will be set to fully opaque (all 255's).
 		// Currently, to decode to PVRTC1 the basis texture's dimensions in pixels must be a power of 2, due to PVRTC1 format requirements. 
-		// output_blocks_buf_size_in_blocks_or_pixels should be at least the image level's total_blocks (num_blocks_x * num_blocks_y), or the total number of output pixels if fmt==cTFRGBA32.
+		// output_blocks_buf_size_in_blocks_or_pixels should be at least the image level's total_blocks (num_blocks_x * num_blocks_y), or the total number of output pixels if fmt==cTFRGBA32 etc.
 		// output_row_pitch_in_blocks_or_pixels: Number of blocks or pixels per row. If 0, the transcoder uses the slice's num_blocks_x or orig_width (NOT num_blocks_x * 4). Ignored for PVRTC1 (due to texture swizzling).
 		// output_rows_in_pixels: Ignored unless fmt is uncompressed (cRGBA32, etc.). The total number of output rows in the output buffer. If 0, the transcoder assumes the slice's orig_height (NOT num_blocks_y * 4).
 		// Notes: 
@@ -524,12 +804,16 @@ namespace basist
 		const basisu_lowlevel_etc1s_transcoder& get_lowlevel_etc1s_decoder() const { return m_lowlevel_etc1s_decoder; }
 		basisu_lowlevel_etc1s_transcoder& get_lowlevel_etc1s_decoder() { return m_lowlevel_etc1s_decoder; }
 
-		const basisu_lowlevel_uastc_transcoder& get_lowlevel_uastc_decoder() const { return m_lowlevel_uastc_decoder; }
-		basisu_lowlevel_uastc_transcoder& get_lowlevel_uastc_decoder() { return m_lowlevel_uastc_decoder; }
+		const basisu_lowlevel_uastc_ldr_4x4_transcoder& get_lowlevel_uastc_decoder() const { return m_lowlevel_uastc_ldr_4x4_decoder; }
+		basisu_lowlevel_uastc_ldr_4x4_transcoder& get_lowlevel_uastc_decoder() { return m_lowlevel_uastc_ldr_4x4_decoder; }
 
 	private:
 		mutable basisu_lowlevel_etc1s_transcoder m_lowlevel_etc1s_decoder;
-		mutable basisu_lowlevel_uastc_transcoder m_lowlevel_uastc_decoder;
+		mutable basisu_lowlevel_uastc_ldr_4x4_transcoder m_lowlevel_uastc_ldr_4x4_decoder;
+		mutable basisu_lowlevel_xuastc_ldr_transcoder m_lowlevel_xuastc_ldr_decoder;
+		mutable basisu_lowlevel_uastc_hdr_4x4_transcoder m_lowlevel_uastc_4x4_hdr_decoder;
+		mutable basisu_lowlevel_astc_hdr_6x6_transcoder m_lowlevel_astc_6x6_hdr_decoder;
+		mutable basisu_lowlevel_uastc_hdr_6x6_intermediate_transcoder m_lowlevel_astc_6x6_hdr_intermediate_decoder;
 
 		bool m_ready_to_transcode;
 
@@ -603,6 +887,21 @@ namespace basist
 		basisu::packed_uint<4> m_alpha_slice_byte_length;
 	};
 
+	// The initial v1.6 release (for backwards compatibility only with our older .KTX2 files)
+	struct ktx2_slice_offset_len_desc_orig
+	{
+		basisu::packed_uint<4> m_slice_byte_offset; // byte offset relative to the KTX2 mipmap level
+		basisu::packed_uint<4> m_slice_byte_length;
+	};
+
+	// The Khronos KTX2 spec standard
+	struct ktx2_slice_offset_len_desc_std
+	{
+		basisu::packed_uint<4> m_slice_byte_offset; // byte offset relative to the KTX2 mipmap level
+		basisu::packed_uint<4> m_slice_byte_length;
+		basisu::packed_uint<4> m_profile;
+	};
+
 	struct ktx2_animdata
 	{
 		basisu::packed_uint<4> m_duration;
@@ -612,10 +911,40 @@ namespace basist
 #pragma pack(pop)
 
 	const uint32_t KTX2_VK_FORMAT_UNDEFINED = 0;
-	const uint32_t KTX2_KDF_DF_MODEL_UASTC = 166;
-	const uint32_t KTX2_KDF_DF_MODEL_ETC1S = 163;
+	
+	// These are standard Vulkan texture VkFormat ID's, see https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkFormat.html
+	const uint32_t KTX2_FORMAT_ASTC_4x4_SFLOAT_BLOCK = 1000066000;
+	const uint32_t KTX2_FORMAT_ASTC_5x4_SFLOAT_BLOCK = 1000066001;
+	const uint32_t KTX2_FORMAT_ASTC_5x5_SFLOAT_BLOCK = 1000066002;
+	const uint32_t KTX2_FORMAT_ASTC_6x5_SFLOAT_BLOCK = 1000066003;
+	const uint32_t KTX2_FORMAT_ASTC_6x6_SFLOAT_BLOCK = 1000066004;
+	const uint32_t KTX2_FORMAT_ASTC_8x5_SFLOAT_BLOCK = 1000066005;
+	const uint32_t KTX2_FORMAT_ASTC_8x6_SFLOAT_BLOCK = 1000066006;
+
+	const uint32_t KTX2_FORMAT_ASTC_4x4_UNORM_BLOCK = 157, KTX2_FORMAT_ASTC_4x4_SRGB_BLOCK = 158;
+	const uint32_t KTX2_FORMAT_ASTC_5x4_UNORM_BLOCK = 159, KTX2_FORMAT_ASTC_5x4_SRGB_BLOCK = 160;
+	const uint32_t KTX2_FORMAT_ASTC_5x5_UNORM_BLOCK = 161, KTX2_FORMAT_ASTC_5x5_SRGB_BLOCK = 162;
+	const uint32_t KTX2_FORMAT_ASTC_6x5_UNORM_BLOCK = 163, KTX2_FORMAT_ASTC_6x5_SRGB_BLOCK = 164;
+	const uint32_t KTX2_FORMAT_ASTC_6x6_UNORM_BLOCK = 165, KTX2_FORMAT_ASTC_6x6_SRGB_BLOCK = 166;
+	const uint32_t KTX2_FORMAT_ASTC_8x5_UNORM_BLOCK = 167, KTX2_FORMAT_ASTC_8x5_SRGB_BLOCK = 168;
+	const uint32_t KTX2_FORMAT_ASTC_8x6_UNORM_BLOCK = 169, KTX2_FORMAT_ASTC_8x6_SRGB_BLOCK = 170;
+	const uint32_t KTX2_FORMAT_ASTC_10x5_UNORM_BLOCK = 173, KTX2_FORMAT_ASTC_10x5_SRGB_BLOCK = 174;
+	const uint32_t KTX2_FORMAT_ASTC_10x6_UNORM_BLOCK = 175, KTX2_FORMAT_ASTC_10x6_SRGB_BLOCK = 176;
+	const uint32_t KTX2_FORMAT_ASTC_8x8_UNORM_BLOCK = 171, KTX2_FORMAT_ASTC_8x8_SRGB_BLOCK = 172;  // note the ASTC block size order is off in the vkFormat definitions
+	const uint32_t KTX2_FORMAT_ASTC_10x8_UNORM_BLOCK = 177, KTX2_FORMAT_ASTC_10x8_SRGB_BLOCK = 178;
+	const uint32_t KTX2_FORMAT_ASTC_10x10_UNORM_BLOCK = 179, KTX2_FORMAT_ASTC_10x10_SRGB_BLOCK = 180;
+	const uint32_t KTX2_FORMAT_ASTC_12x10_UNORM_BLOCK = 181, KTX2_FORMAT_ASTC_12x10_SRGB_BLOCK = 182;
+	const uint32_t KTX2_FORMAT_ASTC_12x12_UNORM_BLOCK = 183, KTX2_FORMAT_ASTC_12x12_SRGB_BLOCK = 184;
+
+	const uint32_t KTX2_KDF_DF_MODEL_ASTC = 162; // 0xA2
+	const uint32_t KTX2_KDF_DF_MODEL_ETC1S = 163; // 0xA3
+	const uint32_t KTX2_KDF_DF_MODEL_UASTC_LDR_4X4 = 166; // 0xA6
+	const uint32_t KTX2_KDF_DF_MODEL_UASTC_HDR_4X4 = 167; // 0xA7
+	const uint32_t KTX2_KDF_DF_MODEL_UASTC_HDR_6X6_INTERMEDIATE = 168; // 0xA8, TODO - coordinate with Khronos on this
+	const uint32_t KTX2_KDF_DF_MODEL_XUASTC_LDR_INTERMEDIATE = 169; // 0xA9, TODO - coordinate with Khronos on this
+	
 	const uint32_t KTX2_IMAGE_IS_P_FRAME = 2;
-	const uint32_t KTX2_UASTC_BLOCK_SIZE = 16;
+	const uint32_t KTX2_UASTC_BLOCK_SIZE = 16; // also the block size for UASTC_HDR
 	const uint32_t KTX2_MAX_SUPPORTED_LEVEL_COUNT = 16; // this is an implementation specific constraint and can be increased
 
 	// The KTX2 transfer functions supported by KTX2
@@ -625,8 +954,11 @@ namespace basist
 	enum ktx2_supercompression
 	{
 		KTX2_SS_NONE = 0,
-		KTX2_SS_BASISLZ = 1,
-		KTX2_SS_ZSTANDARD = 2
+		KTX2_SS_BASISLZ = 1, // actually ETC1S
+		KTX2_SS_ZSTANDARD = 2,
+		KTX2_SS_DEFLATE = 3, // currently unsupported by us
+		KTX2_SS_UASTC_HDR_6x6I = 4, // UASTC HDR 6x6i (picked by Khronos, in KTX-Software as of 2/19/2026)
+		KTX2_SS_XUASTC_LDR = 5 // XUASTC LDR 4x4-12x12 (coordinate with Khronos, not in KTX-Software yet as of 2/19/2026)
 	};
 
 	extern const uint8_t g_ktx2_file_identifier[12];
@@ -719,17 +1051,21 @@ namespace basist
 		uint32_t m_layer_index;
 		uint32_t m_face_index;
 
-		// The image's actual (or the original source image's) width/height in pixels, which may not be divisible by 4 pixels.
+		// The image's ACTUAL (or the original source image's) width/height in pixels, which may not be divisible by the block size (4-12 pixels).
 		uint32_t m_orig_width;
 		uint32_t m_orig_height;
 
-		// The image's physical width/height, which will always be divisible by 4 pixels.
+		// The image's physical width/height, which will always be divisible by the format's block size (4-12 pixels).
 		uint32_t m_width;
 		uint32_t m_height;
-
-		// The texture's dimensions in 4x4 texel blocks.
+				
+		// The texture's dimensions in 4x4-12x12 texel blocks.
 		uint32_t m_num_blocks_x;
 		uint32_t m_num_blocks_y;
+
+		// The format's block width/height (4-12).
+		uint32_t m_block_width;
+		uint32_t m_block_height;
 
 		// The total number of blocks
 		uint32_t m_total_blocks;
@@ -759,7 +1095,7 @@ namespace basist
 	// This class is quite similar to basisu_transcoder. It treats KTX2 files as a simple container for ETC1S/UASTC texture data.
 	// It does not support 1D or 3D textures.
 	// It only supports 2D and cubemap textures, with or without mipmaps, texture arrays of 2D/cubemap textures, and texture video files. 
-	// It only supports raw non-supercompressed UASTC, ETC1S, UASTC+Zstd, or UASTC+zlib compressed files.
+	// It only supports our codec formats: ETC1S, UASTC LDR 4x4, UASTC HDR 4x4, etc.
 	// DFD (Data Format Descriptor) parsing is purposely as simple as possible. 
 	// If you need to know how to interpret the texture channels you'll need to parse the DFD yourself after calling get_dfd().
 	class ktx2_transcoder
@@ -785,10 +1121,10 @@ namespace basist
 		// Returns the KTX2 level index array. There will be one entry for each mipmap level. Valid after init().
 		const basisu::vector<ktx2_level_index>& get_level_index() const { return m_levels; }
 
-		// Returns the texture's width in texels. Always non-zero, might not be divisible by 4. Valid after init().
+		// Returns the texture's width in texels. Always non-zero, might not be divisible by the block size. Valid after init().
 		uint32_t get_width() const { return m_header.m_pixel_width; }
 
-		// Returns the texture's height in texels. Always non-zero, might not be divisible by 4. Valid after init().
+		// Returns the texture's height in texels. Always non-zero, might not be divisible by the block size. Valid after init().
 		uint32_t get_height() const { return m_header.m_pixel_height; }
 
 		// Returns the texture's number of mipmap levels. Always returns 1 or higher. Valid after init().
@@ -800,12 +1136,46 @@ namespace basist
 		// Returns 0 or the number of layers in the texture array or texture video. Valid after init().
 		uint32_t get_layers() const { return m_header.m_layer_count; }
 
-		// Returns cETC1S or cUASTC4x4. Valid after init().
-		basist::basis_tex_format get_format() const { return m_format; } 
+		// Returns cETC1S, cUASTC4x4, cUASTC_HDR_4x4, cASTC_HDR_6x6, cUASTC_HDR_6x6_INTERMEDIATE, etc. Valid after init().
+		basist::basis_tex_format get_basis_tex_format() const { return m_format; }
 
-		bool is_etc1s() const { return get_format() == basist::basis_tex_format::cETC1S; }
+		// ETC1S LDR 4x4
+		bool is_etc1s() const { return get_basis_tex_format() == basist::basis_tex_format::cETC1S; }
 
-		bool is_uastc() const { return get_format() == basist::basis_tex_format::cUASTC4x4; }
+		// UASTC LDR 4x4 (only)
+		bool is_uastc() const { return get_basis_tex_format() == basist::basis_tex_format::cUASTC_LDR_4x4; }
+				
+		// Is ASTC HDR 4x4 or 6x6
+		bool is_hdr() const
+		{
+			return basis_tex_format_is_hdr(get_basis_tex_format());
+		}
+
+		bool is_ldr() const
+		{
+			return !is_hdr();
+		}
+
+		// is UASTC HDR 4x4 (which is also standard ASTC HDR 4x4 data)
+		bool is_hdr_4x4() const
+		{
+			return (get_basis_tex_format() == basist::basis_tex_format::cUASTC_HDR_4x4);
+		}
+
+		// is ASTC HDR 6x6 or UASTC HDR 6x6 intermediate (only)
+		bool is_hdr_6x6() const
+		{
+			return (get_basis_tex_format() == basist::basis_tex_format::cASTC_HDR_6x6) || (get_basis_tex_format() == basist::basis_tex_format::cUASTC_HDR_6x6_INTERMEDIATE);
+		}
+				
+		// is ASTC LDR 4x4-12x12 (only)
+		bool is_astc_ldr() const { return basis_tex_format_is_astc_ldr(get_basis_tex_format()); }
+
+		// is XUASTC LDR 4x4-12x12 (only)
+		bool is_xuastc_ldr() const { return basis_tex_format_is_xuastc_ldr(get_basis_tex_format()); }
+
+		uint32_t get_block_width() const { return basis_tex_format_get_block_width(get_basis_tex_format()); }
+		uint32_t get_block_height() const { return basis_tex_format_get_block_height(get_basis_tex_format()); }
 
 		// Returns true if the ETC1S file has two planes (typically RGBA, or RRRG), or true if the UASTC file has alpha data. Valid after init().
 		uint32_t get_has_alpha() const { return m_has_alpha; }
@@ -824,6 +1194,8 @@ namespace basist
 		// Returns KTX2_KHR_DF_TRANSFER_LINEAR or KTX2_KHR_DF_TRANSFER_SRGB.
 		uint32_t get_dfd_transfer_func() const { return m_dfd_transfer_func; }
 
+		bool is_srgb() const { return (get_dfd_transfer_func() == KTX2_KHR_DF_TRANSFER_SRGB); }
+
 		uint32_t get_dfd_flags() const { return m_dfd_flags; }
 
 		// Returns 1 (ETC1S/UASTC) or 2 (ETC1S with an internal alpha channel).
@@ -838,10 +1210,12 @@ namespace basist
 		// Key value field data.
 		struct key_value
 		{
-			// The key field is UTF8 and always zero terminated.
+			// The key field is UTF8 and always zero terminated. 
+			// In memory we always append a zero terminator to the key.
 			basisu::uint8_vec m_key;
 
-			// The value may be empty. It consists of raw bytes which may or may not be zero terminated.
+			// The value may be empty. In the KTX2 file it consists of raw bytes which may or may not be zero terminated. 
+			// In memory we always append a zero terminator to the value.
 			basisu::uint8_vec m_value;
 
 			bool operator< (const key_value& rhs) const { return strcmp((const char*)m_key.data(), (const char *)rhs.m_key.data()) < 0; }
@@ -862,14 +1236,19 @@ namespace basist
 		// Returns the array of ETC1S image descriptors, which is only valid after get_etc1s_image_descs() is called.
 		const basisu::vector<ktx2_etc1s_image_desc>& get_etc1s_image_descs() const { return m_etc1s_image_descs; }
 
+		const basisu::vector<ktx2_slice_offset_len_desc_orig>& get_slice_offset_len_descs() const { return m_slice_offset_len_descs; }
+
 		// Must have called startTranscoding() first
 		uint32_t get_etc1s_image_descs_image_flags(uint32_t level_index, uint32_t layer_index, uint32_t face_index) const;
 
 		// is_video() is only valid after start_transcoding() is called.
 		// For ETC1S data, if this returns true you must currently transcode the file from first to last frame, in order, without skipping any frames.
 		bool is_video() const { return m_is_video; }
+		
+		// Defaults to 0, only non-zero if the key existed in the source KTX2 file.
+		float get_ldr_hdr_upconversion_nit_multiplier() const { return m_ldr_hdr_upconversion_nit_multiplier; }
 				
-		// start_transcoding() MUST be called before calling transcode_image().
+		// start_transcoding() MUST be called before calling transcode_image_level().
 		// This method decompresses the ETC1S global endpoint/selector codebooks, which is not free, so try to avoid calling it excessively.
 		bool start_transcoding();
 								
@@ -901,28 +1280,69 @@ namespace basist
 		
 		ktx2_etc1s_global_data_header m_etc1s_header;
 		basisu::vector<ktx2_etc1s_image_desc> m_etc1s_image_descs;
+		basisu::vector<ktx2_slice_offset_len_desc_orig> m_slice_offset_len_descs;
 
 		basist::basis_tex_format m_format;
 					
 		uint32_t m_dfd_color_model;
 		ktx2_df_color_primaries m_dfd_color_prims;
-		uint32_t m_dfd_transfer_func;
+		
+		// KTX2_KHR_DF_TRANSFER_LINEAR vs. KTX2_KHR_DF_TRANSFER_SRGB (for XUASTC LDR: which profile was used during encoding)
+		uint32_t m_dfd_transfer_func; 
+
 		uint32_t m_dfd_flags;
 		uint32_t m_dfd_samples;
 		ktx2_df_channel_id m_dfd_chan0, m_dfd_chan1;
 								
 		basist::basisu_lowlevel_etc1s_transcoder m_etc1s_transcoder;
-		basist::basisu_lowlevel_uastc_transcoder m_uastc_transcoder;
+		basist::basisu_lowlevel_uastc_ldr_4x4_transcoder m_uastc_ldr_transcoder;
+		basist::basisu_lowlevel_xuastc_ldr_transcoder m_xuastc_ldr_transcoder;
+		basist::basisu_lowlevel_uastc_hdr_4x4_transcoder m_uastc_hdr_transcoder;
+		basist::basisu_lowlevel_astc_hdr_6x6_transcoder m_astc_hdr_6x6_transcoder;
+		basist::basisu_lowlevel_uastc_hdr_6x6_intermediate_transcoder m_astc_hdr_6x6_intermediate_transcoder;
 				
 		ktx2_transcoder_state m_def_transcoder_state;
 
 		bool m_has_alpha;
 		bool m_is_video;
+		float m_ldr_hdr_upconversion_nit_multiplier;
 
 		bool decompress_level_data(uint32_t level_index, basisu::uint8_vec& uncomp_data);
+		bool read_slice_offset_len_global_data(bool read_std_structs);
 		bool decompress_etc1s_global_data();
 		bool read_key_values();
 	};
+
+	// Replaces if the key already exists
+	inline void ktx2_add_key_value(ktx2_transcoder::key_value_vec& key_values, const std::string& key, const std::string& val)
+	{
+		assert(key.size());
+
+		basist::ktx2_transcoder::key_value* p = nullptr;
+
+		// Try to find an existing key
+		for (size_t i = 0; i < key_values.size(); i++)
+		{
+			if (strcmp((const char*)key_values[i].m_key.data(), key.c_str()) == 0)
+			{
+				p = &key_values[i];
+				break;
+			}
+		}
+		
+		if (!p)
+			p = key_values.enlarge(1);
+
+		p->m_key.resize(0);
+		p->m_value.resize(0);
+
+		p->m_key.resize(key.size() + 1);
+		memcpy(p->m_key.data(), key.c_str(), key.size());
+
+		p->m_value.resize(val.size() + 1);
+		if (val.size())
+			memcpy(p->m_value.data(), val.c_str(), val.size());
+	}
 
 #endif // BASISD_SUPPORT_KTX2
 
