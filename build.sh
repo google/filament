@@ -83,6 +83,7 @@ function print_help {
     echo "        Build the filament dependent tools (matc, resgen) separately from the project. This will set"
     echo "        the tools as prebuilts that filament target will then use to build. The built_type option"
     echo "        (debug|release) is meant to indicate the type of build of the resulting prebuilts."
+    echo "        Defaults to 'release' (tools are always prebuilt as release unless overridden)."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -223,8 +224,8 @@ OSMESA_OPTION=""
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
-ISSUE_SPLIT_BUILD=false
-SPLIT_BUILD_TYPE=""
+ISSUE_SPLIT_BUILD=true
+SPLIT_BUILD_TYPE="release"
 PREBUILT_TOOLS_DIR=""
 IMPORT_EXECUTABLES_DIR_OPTION="-DIMPORT_EXECUTABLES_DIR=out"
 
@@ -1132,19 +1133,22 @@ done
 
 validate_build_command
 
-if [[ "${ISSUE_SPLIT_BUILD}" == "true" ]]; then
-    # Capitalize first letter of SPLIT_BUILD_TYPE
-    SPLIT_BUILD_TYPE_CAPITALIZED="$(echo ${SPLIT_BUILD_TYPE:0:1} | tr '[:lower:]' '[:upper:]')${SPLIT_BUILD_TYPE:1}"
-    build_tools_for_split_build "${SPLIT_BUILD_TYPE_CAPITALIZED}"
-    IMPORT_EXECUTABLES_DIR_OPTION="-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR}"
-fi
-
 if [[ "${ISSUE_CLEAN}" == "true" ]]; then
     build_clean
 fi
 
 if [[ "${ISSUE_CLEAN_AGGRESSIVE}" == "true" ]]; then
     build_clean_aggressive
+fi
+
+# Only runs the split build for tools if an actual debug or release build is requested.
+# This prevents the split build from being triggered when a clean (-c or -C) is requested.
+if [[ "${ISSUE_SPLIT_BUILD}" == "true" ]] && \
+   [[ "${ISSUE_DEBUG_BUILD}" == "true" || "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+    # Capitalize first letter of SPLIT_BUILD_TYPE
+    SPLIT_BUILD_TYPE_CAPITALIZED="$(echo ${SPLIT_BUILD_TYPE:0:1} | tr '[:lower:]' '[:upper:]')${SPLIT_BUILD_TYPE:1}"
+    build_tools_for_split_build "${SPLIT_BUILD_TYPE_CAPITALIZED}"
+    IMPORT_EXECUTABLES_DIR_OPTION="-DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=${PREBUILT_TOOLS_DIR}"
 fi
 
 if [[ "${ISSUE_DESKTOP_BUILD}" == "true" ]]; then
