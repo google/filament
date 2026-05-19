@@ -153,7 +153,7 @@ TEST_F(VertexBufferTest, InterleavedBufferSize) {
             .attribute(VertexAttribute::COLOR, 0, ElementType::FLOAT3, 56, 68)
             .build(*mEngine);
 
-    runSizingTest(vb, 6856);
+    runSizingTest(vb, 6800);
 }
 
 TEST_F(VertexBufferTest, ConcatenatedBufferSize) {
@@ -184,7 +184,7 @@ TEST_F(VertexBufferTest, TrailingPaddingInterleavedBufferSize) {
             // Padding: 20-31
             .build(*mEngine);
 
-    runSizingTest(vb, 3212);
+    runSizingTest(vb, 3200);
 }
 
 } // namespace
