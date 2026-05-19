@@ -282,7 +282,7 @@ void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
                         getPrograms().getSpecializationConstants());
     }
 
-    uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
     mPendingSpecializationConstants[id] = value;
 }
 
@@ -292,7 +292,7 @@ T FMaterialInstance::getConstantImpl(std::string_view name) const {
     auto it = constants.find(name);
     FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
 
-    uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
 
     if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
         return std::get<T>(mPendingSpecializationConstants[id]);
