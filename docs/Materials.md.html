@@ -2259,6 +2259,95 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Procedural and attribute-less rendering
+
+Filament supports procedural or "attribute-less" rendering. This allows you to render objects whose geometry is generated entirely inside the vertex shader (for example, a procedural quad, a sphere, or particle effects), avoiding the memory and processing overhead of transferring traditional vertex and index attribute buffers.
+
+To implement procedural rendering:
+
+1. **Shader API**: In the vertex block of your material definition, call the built-in `getVertexIndex()` API to retrieve the index of the current vertex. This function automatically maps to the graphics backend's native vertex ID variable (`gl_VertexID` in OpenGL ES, `gl_VertexIndex` in Vulkan, or `[[vertex_id]]` in Metal/MSL).
+2. **Material Definition**: Omit the `requires` array (or do not declare any vertex attribute requirements inside it). If you need to pass procedural properties to the fragment shader, declare them under the `variables` property as custom interpolants.
+3. **C++ VertexBuffer**: Construct a `VertexBuffer` with `bufferCount(0)` and a non-zero `vertexCount(...)` matching the number of vertices you wish to generate. No buffers need to be set using `setBufferAt()`.
+4. **C++ RenderableManager**: Build the geometry using the non-indexed overload of `geometry()` by omitting the `IndexBuffer` parameter.
+
+!!! Note: Compatibility and requirements
+    * **Feature Levels**: Attribute-less rendering requires `featureLevel : 1` or higher. GLES 2.0 (feature level 0) does not support vertex ID query interfaces and is incompatible.
+    * **Skinning and Morphing**: It is incompatible with features that rely on pre-shader vertex processing (such as skinning and morphing).
+
+#### Example: Procedural Centered Quad
+
+Below is a complete, working example demonstrating how to render a textured quad using 6 vertices forming 2 triangles without supplying any vertex buffer objects.
+
+##### Material definition (`.mat`)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : ProceduralQuad,
+    shadingModel : unlit,
+    culling : none,
+    parameters : [
+        {
+            type : sampler2d,
+            name : albedo
+        }
+    ],
+    variables : [
+        quadUV
+    ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        const vec2 positions[6] = vec2[6](
+            vec2(-0.5, -0.5),
+            vec2( 0.5, -0.5),
+            vec2(-0.5,  0.5),
+            vec2( 0.5, -0.5),
+            vec2( 0.5,  0.5),
+            vec2(-0.5,  0.5)
+        );
+        const vec2 uvs[6] = vec2[6](
+            vec2(0.0, 0.0),
+            vec2(1.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 0.0),
+            vec2(1.0, 1.0),
+            vec2(0.0, 1.0)
+        );
+
+        int vid = getVertexIndex();
+        material.worldPosition = vec4(positions[vid], 0.0, 1.0);
+        material.quadUV        = vec4(uvs[vid], 0.0, 0.0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_albedo, variable_quadUV.xy);
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+##### C++ client code
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+// 1. Create an attribute-less vertex buffer with 6 vertices and 0 buffer slots
+VertexBuffer* vb = VertexBuffer::Builder()
+        .vertexCount(6)
+        .bufferCount(0)
+        .build(*engine);
+
+// 2. Register the renderable with the non-indexed geometry overload
+utils::Entity renderable = utils::EntityManager::get().create();
+RenderableManager::Builder(1)
+        .boundingBox({{ -0.5f, -0.5f, -0.01f }, { 0.5f, 0.5f, 0.01f }})
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb)
+        .material(0, matInstance)
+        .culling(false)
+        .build(*engine, renderable);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ## Fragment block
 
 The fragment block must be used to control the fragment shading stage of the material. The fragment
