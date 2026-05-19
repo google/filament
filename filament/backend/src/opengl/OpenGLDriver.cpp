@@ -1574,8 +1574,12 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
         if (bi != Attribute::BUFFER_UNUSED) {
-            // if a buffer is defined it must not be invalid.
-            assert_invariant(vb->gl.buffers[bi]);
+            if (UTILS_VERY_UNLIKELY(!vb->gl.buffers[bi])) {
+                // if a buffer is defined it must not be invalid, we try to gracefully handle it though
+                // since it is a situation the user can easily create, and can't be easily caught on
+                // the filament frontend.
+                continue;
+            }
 
             // if we're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
