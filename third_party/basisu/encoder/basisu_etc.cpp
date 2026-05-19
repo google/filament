@@ -1,5 +1,5 @@
 // basis_etc.cpp
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -811,7 +811,8 @@ namespace basisu
 
 #if defined(DEBUG) || defined(_DEBUG)
 		{
-			// sanity check the returned error
+			// Ultimate sanity check on the returned error. 
+			// If this check fails, it likely means the SSE code diverged from C++ somehow, or there was an overflow somewhere.
 			color_rgba block_colors[4];
 			m_best_solution.m_coords.get_block_colors(block_colors);
 
@@ -826,7 +827,7 @@ namespace basisu
 						
 			for (uint32_t i = 0; i < n; i++)
 				actual_error += color_distance(perceptual, pSrc_pixels[i], block_colors[pSelectors[i]], false);
-
+			
 			assert(actual_error == m_best_solution.m_error);
 		}
 #endif      
@@ -1071,7 +1072,7 @@ namespace basisu
 	bool etc1_optimizer::check_for_redundant_solution(const etc1_solution_coordinates& coords)
 	{
 		// Hash first 3 bytes of color (RGB)
-		uint32_t kh = hash_hsieh((uint8_t*)&coords.m_unscaled_color.r, 3);
+		uint32_t kh = basist::hash_hsieh((uint8_t*)&coords.m_unscaled_color.r, 3);
 
 		uint32_t h0 = kh & cSolutionsTriedHashMask;
 		uint32_t h1 = (kh >> cSolutionsTriedHashBits) & cSolutionsTriedHashMask;
@@ -1177,7 +1178,7 @@ namespace basisu
 			uint64_t total_error = 0;
 
 			const color_rgba* pSrc_pixels = m_pParams->m_pSrc_pixels;
-
+						
 			if (!g_cpu_supports_sse41)
 			{
 				for (uint32_t c = 0; c < n; c++)
@@ -1234,6 +1235,9 @@ namespace basisu
 						perceptual_distance_rgb_4_N_sse41((int64_t*)&total_error, pSelectors_to_use, block_colors, pSrc_pixels, n, trial_solution.m_error);
 					else
 						linear_distance_rgb_4_N_sse41((int64_t*)&total_error, pSelectors_to_use, block_colors, pSrc_pixels, n, trial_solution.m_error);
+					
+					for (uint32_t i = 0; i < n; i++)
+						m_temp_selectors[i] = pSelectors_to_use[i];
 				}
 				else
 				{
@@ -1255,7 +1259,7 @@ namespace basisu
 		}
 		trial_solution.m_coords.m_unscaled_color = coords.m_unscaled_color;
 		trial_solution.m_coords.m_color4 = m_pParams->m_use_color4;
-				
+								
 #if BASISU_DEBUG_ETC_ENCODER_DEEPER
 		printf("Eval done: %u error: %I64u best error so far: %I64u\n", (trial_solution.m_error < pBest_solution->m_error), trial_solution.m_error, pBest_solution->m_error);
 #endif
