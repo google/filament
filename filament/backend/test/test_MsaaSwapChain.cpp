@@ -38,6 +38,7 @@ struct MsaaSwapChainTest : public BackendTest, public testing::WithParamInterfac
 TEST_P(MsaaSwapChainTest, Basic) {
     SKIP_IF(Backend::OPENGL, "OpenGL does not support MSAA SwapChain on all platforms.");
     SKIP_IF(Backend::VULKAN, "Vulkan does not support MSAA SwapChain on all platforms.");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support MSAA SwapChain.");
 
     constexpr int kRenderTargetSize = 512;
 

@@ -295,14 +295,12 @@ GLSLPostProcessor::GLSLPostProcessor(
 GLSLPostProcessor::~GLSLPostProcessor() = default;
 
 static bool filterSpvOptimizerMessage(spv_message_level_t level) {
-#ifdef NDEBUG
-    // In release builds, only log errors.
+    // Only log errors.
     if (level == SPV_MSG_WARNING ||
         level == SPV_MSG_INFO ||
         level == SPV_MSG_DEBUG) {
         return false;
     }
-#endif
     return true;
 }
 

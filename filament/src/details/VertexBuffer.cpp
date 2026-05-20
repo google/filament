@@ -22,24 +22,24 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 #include <filament/VertexBuffer.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
 
-#include <utils/CString.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <algorithm>
 #include <array>
-#include <iterator>
+#include <atomic>
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -153,7 +153,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t cons
     return BuilderNameMixin::name(name, len);
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& name) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::name(StaticString const& name) noexcept {
     return BuilderNameMixin::name(name);
 }
 
@@ -166,13 +166,12 @@ VertexBuffer::Builder& VertexBuffer::Builder::async(CallbackHandler* handler,
     return *this;
 }
 
-VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
+VertexBuffer* VertexBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
 
     // Attribute-less rendering: allow bufferCount(0) only when no attributes are declared.
     // This is used for procedural geometry that reads gl_VertexID/gl_VertexIndex/[[vertex_id]].
-    bool const isAttributeless =
-            mImpl->mBufferCount == 0 && mImpl->mDeclaredAttributes.none();
+    bool const isAttributeless = mImpl->mBufferCount == 0 && mImpl->mDeclaredAttributes.none();
 
     if (!isAttributeless) {
         FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
@@ -197,7 +196,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     // because uploading to an unused slot can trigger undefined behavior in the backend.
     auto const& declaredAttributes = mImpl->mDeclaredAttributes;
     auto const& attributes = mImpl->mAttributes;
-    utils::bitset32 attributedBuffers;
+    bitset32 attributedBuffers;
 
     declaredAttributes.forEachSetBit([&](size_t const j) {
 
@@ -262,7 +261,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount),
           mBufferObjectsEnabled(builder->mBufferObjectsEnabled),
           mAdvancedSkinningEnabled(builder->mAdvancedSkinningEnabled){
-    std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
+    std::ranges::copy(builder->mAttributes, mAttributes.begin());
     mDeclaredAttributes = builder->mDeclaredAttributes;
 
     if (mAdvancedSkinningEnabled) {
@@ -315,17 +314,17 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
 
-    auto shouldCreateBuffer = [this](size_t attributeIndex) {
+    auto shouldCreateBuffer = [this](size_t const attributeIndex) {
         const uint8_t slot = mAttributes[attributeIndex].buffer;
         return mDeclaredAttributes[attributeIndex] && slot != Attribute::BUFFER_UNUSED &&
                 !mBufferObjects[slot];
     };
-    auto updateBufferSize = [&bufferSizes, this](size_t attributeIndex) {
+    auto updateBufferSize = [&bufferSizes, this](size_t const attributeIndex) {
         const uint32_t offset = mAttributes[attributeIndex].offset;
         const uint8_t stride = mAttributes[attributeIndex].stride;
         const uint8_t slot = mAttributes[attributeIndex].buffer;
         const size_t end = offset + mVertexCount * stride;
-        assert_invariant(slot < MAX_VERTEX_BUFFER_COUNT);
+        assert_invariant(slot < mBufferCount);
         bufferSizes[slot] = std::max(bufferSizes[slot], end);
     };
 
@@ -355,7 +354,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                 /* userCallback */ std::move(copiedCompletionCallback),
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
-                /* onCountdownComplete */ [this]() {
+                /* onCountdownComplete */ [this] {
                     // `std::memory_order_relaxed` should be sufficient because no other variables
                     // need to be visible to other threads in a strict sequence.
                     mCreationComplete.store(true, std::memory_order_relaxed);
@@ -364,7 +363,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
         mHandle = driver.createVertexBufferAsync(mVertexCount, mVertexBufferInfoHandle,
                 cdHandler, &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
-                utils::ImmutableCString{ builder.getName() });
+                ImmutableCString{ builder.getName() });
         cdHandler->increaseCountdown();
 
         // create buffers (asynchronous)
@@ -372,30 +371,30 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {
                 continue;
             }
-            BufferObjectHandle const bo = driver.createBufferObjectAsync(bufferSizes[i],
+            BufferObjectHandle const boh = driver.createBufferObjectAsync(bufferSizes[i],
                     BufferObjectBinding::VERTEX, BufferUsage::STATIC, cdHandler,
                     &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
-                    utils::ImmutableCString{ builder.getName() });
+                    ImmutableCString{ builder.getName() });
             cdHandler->increaseCountdown();
-            driver.setVertexBufferObjectAsync(mHandle, i, bo, cdHandler,
+            driver.setVertexBufferObjectAsync(mHandle, i, boh, cdHandler,
                     &VertexBufferCountdownCallbackHandler::countdownCallback, cdHandler);
             cdHandler->increaseCountdown();
-            mBufferObjects[i] = bo;
+            mBufferObjects[i] = boh;
         }
     } else {
         mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
-                utils::ImmutableCString{ builder.getName() });
+                ImmutableCString{ builder.getName() });
 
         // create buffers
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] == 0 || mBufferObjects[i]) {
                 continue;
             }
-            BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
+            BufferObjectHandle const boh = driver.createBufferObject(bufferSizes[i],
                     BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                    utils::ImmutableCString{ builder.getName() });
-            driver.setVertexBufferObject(mHandle, i, bo);
-            mBufferObjects[i] = bo;
+                    ImmutableCString{ builder.getName() });
+            driver.setVertexBufferObject(mHandle, i, boh);
+            mBufferObjects[i] = boh;
         }
         // In regular (non-asynchronous) mode, we know creation is complete as soon as all
         // creation-relevant API calls are recorded into the command stream, because subsequent API
@@ -449,7 +448,7 @@ AsyncCallId FVertexBuffer::setBufferAtAsync(FEngine& engine, uint8_t const buffe
 }
 
 void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex,
-        FBufferObject const * bufferObject) {
+        FBufferObject const* bufferObject) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
@@ -458,15 +457,15 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
             << "bufferIndex must be < bufferCount";
 
-    auto const hwBufferObject = bufferObject->getHwHandle();
-    engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
+    auto const boh = bufferObject->getHwHandle();
+    engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, boh);
     // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
     // used only in buffer object mode
-    mBufferObjects[bufferIndex] = hwBufferObject;
+    mBufferObjects[bufferIndex] = boh;
 }
 
 AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const bufferIndex,
-        FBufferObject const * bufferObject, CallbackHandler* handler,
+        FBufferObject const* bufferObject, CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
             << "buffer objects disabled, use setBufferAt() instead";
@@ -476,16 +475,16 @@ AsyncCallId FVertexBuffer::setBufferObjectAtAsync(FEngine& engine, uint8_t const
     FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
             << "bufferIndex must be < bufferCount";
 
-    auto const hwBufferObject = bufferObject->getHwHandle();
+    auto const boh = bufferObject->getHwHandle();
 
     using VertexBufferCallbackAdapter = CallbackAdapter<VertexBuffer>;
     auto* const cbWrapper = VertexBufferCallbackAdapter::make(std::move(callback), this, user);
-    AsyncCallId id = engine.getDriverApi().setVertexBufferObjectAsync(mHandle, bufferIndex,
-            hwBufferObject, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
+    AsyncCallId const id = engine.getDriverApi().setVertexBufferObjectAsync(mHandle, bufferIndex,
+            boh, handler, &VertexBufferCallbackAdapter::func, cbWrapper);
 
     // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
     // used only in buffer object mode
-    mBufferObjects[bufferIndex] = hwBufferObject;
+    mBufferObjects[bufferIndex] = boh;
     return id;
 }
 
@@ -495,17 +494,17 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     FILAMENT_CHECK_PRECONDITION(mAdvancedSkinningEnabled) << "No advanced skinning enabled";
     auto jointsData = skinJoints.release();
     uint8_t const indicesIndex = mAttributes[BONE_INDICES].buffer;
-    engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex],
-            { jointsData, mVertexCount * 8,
-              [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); } },
-            0);
+    engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex], {
+                jointsData, size_t(mVertexCount) * 8u,
+                [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); }
+            }, 0);
 
     auto weightsData = skinWeights.release();
     uint8_t const weightsIndex = mAttributes[BONE_WEIGHTS].buffer;
-    engine.getDriverApi().updateBufferObject(mBufferObjects[weightsIndex],
-            { weightsData, mVertexCount * 16,
-              [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); } },
-            0);
+    engine.getDriverApi().updateBufferObject(mBufferObjects[weightsIndex], {
+                weightsData, size_t(mVertexCount) * 16u,
+                [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); }
+            }, 0);
 }
 
 } // namespace filament

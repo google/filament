@@ -1013,6 +1013,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
 
         const size_t indexDataSize = vertexCount * sizeof(uint32_t);
         uint32_t* indexData = (uint32_t*) malloc(indexDataSize);
+        if (!indexData) {
+            utils::slog.e << "Out of memory allocating generated index buffer." << utils::io::endl;
+            return false;
+        }
         for (size_t i = 0; i < vertexCount; ++i) {
             indexData[i] = i;
         }
@@ -1286,6 +1290,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
             fAsset->mBufferObjects.push_back(mDummyBufferObject);
             uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
+            if (!dummyData) {
+                utils::slog.e << "Out of memory allocating dummy vertex data." << utils::io::endl;
+                return false;
+            }
             memset(dummyData, 0xff, requiredSize);
             VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
             mDummyBufferObject->setBuffer(mEngine, std::move(bd));
