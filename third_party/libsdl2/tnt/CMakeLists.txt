@@ -206,6 +206,7 @@ if(NOT MSVC)
         PRIVATE -Wno-switch
         PRIVATE -Wno-tautological-pointer-compare
         PRIVATE -Wno-parentheses-equality
+        PRIVATE -Wno-gnu-folding-constant
     )
 endif()
 
