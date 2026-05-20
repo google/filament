@@ -1774,9 +1774,8 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
                     char* const pDstStart = dst + p.left * bpp + p.top * dstBpr;
 
                     // If padding was added for alignment, we need to copy row by row.
-                    if (data->paddedBytesPerRow == data->unpaddedBytesPerRow &&
-                            dstBpr == data->unpaddedBytesPerRow) {
-                        memcpy(pDstStart, src, data->unpaddedBytesPerRow * data->height);
+                    if (dstBpr == data->paddedBytesPerRow) {
+                        memcpy(pDstStart, src, dstBpr * data->height);
                     } else {
                         for (uint32_t i{ 0 }; i < data->height; ++i) {
                             memcpy(pDstStart + i * dstBpr, src + i * data->paddedBytesPerRow,
