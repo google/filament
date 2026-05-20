@@ -213,7 +213,8 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     const uint8_t* p = (const uint8_t*) data;
     const uint8_t* end = p + dataSize;
     if (end < p) { // check pointer wraparound
-        end = (const uint8_t*) std::numeric_limits<uintptr_t>::max();
+        utils::slog.e << "Invalid (too large) dataSize: " << dataSize << utils::io::endl;
+        return {};
     }
 
     if (dataSize < 8 || strncmp(MAGICID, (const char *) p, 8)) {
@@ -240,12 +241,19 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     }
     const size_t partsBytes = header.parts * sizeof(Part);
 
-    // Aligned payload verification
-    const size_t requiredSize = size_t(header.vertexSize) + size_t(header.indexSize) + partsBytes;
-    if (requiredSize < header.vertexSize || requiredSize < header.indexSize) {
+    // Aligned payload verification (mathematically foolproof subtraction checks)
+    size_t requiredSize = header.vertexSize;
+    if (std::numeric_limits<size_t>::max() - requiredSize < header.indexSize) {
         utils::slog.e << "Payload sizes overflow." << utils::io::endl;
         return {};
     }
+    requiredSize += header.indexSize;
+
+    if (std::numeric_limits<size_t>::max() - requiredSize < partsBytes) {
+        utils::slog.e << "Payload sizes overflow." << utils::io::endl;
+        return {};
+    }
+    requiredSize += partsBytes;
 
     if (size_t(end - p) < requiredSize) {
         utils::slog.e << "Buffer truncation in mesh payload." << utils::io::endl;
@@ -307,12 +315,14 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         
         if (indexCount > std::numeric_limits<size_t>::max() / indexSize) {
             utils::slog.e << "Uncompressed index count overflow." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         size_t uncompressedSize = indexSize * indexCount;
         void* uncompressed = malloc(uncompressedSize);
         if (!uncompressed) {
             utils::slog.e << "Out of memory allocating uncompressed index buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
 
@@ -321,6 +331,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         if (err) {
             utils::slog.e << "Unable to decode index buffer." << utils::io::endl;
             free(uncompressed);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         if (destructor) {
@@ -374,18 +385,24 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
         if (vertexCount > std::numeric_limits<size_t>::max() / vertexSize) {
             utils::slog.e << "Uncompressed vertex count overflow." << utils::io::endl;
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         size_t uncompressedSize = vertexSize * vertexCount;
         void* uncompressed = malloc(uncompressedSize);
         if (!uncompressed) {
             utils::slog.e << "Out of memory allocating uncompressed vertex buffer." << utils::io::endl;
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
 
         if (verticesSize < sizeof(CompressionHeader)) {
             utils::slog.e << "Compressed vertex buffer too small for header." << utils::io::endl;
             free(uncompressed);
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
 
@@ -407,6 +424,8 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
             if (compressedSum > verticesSize) {
                 utils::slog.e << "Compressed vertex buffer elements exceed bounds." << utils::io::endl;
                 free(uncompressed);
+                engine->destroy(mesh.vertexBuffer);
+                engine->destroy(mesh.indexBuffer);
                 return {};
             }
 
@@ -436,6 +455,8 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         if (err) {
             utils::slog.e << "Unable to decode vertex buffer." << utils::io::endl;
             free(uncompressed);
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         if (destructor) {
