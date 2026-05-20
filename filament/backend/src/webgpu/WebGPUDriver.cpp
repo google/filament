@@ -1765,16 +1765,23 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
                     const char *src {static_cast<const char *>(
                             data->buffer.GetConstMappedRange(0, data->buffer.GetSize()))};
                     char* dst{ static_cast<char*>(data->pixelBufferDescriptor.buffer) };
-
                     PixelBufferDescriptor& p = data->pixelBufferDescriptor;
                     size_t const stride = p.stride ? p.stride : data->width;
-                    size_t const bpp = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
-                    size_t const dstBpr = PixelBufferDescriptor::computeDataSize(p.format, p.type, stride, 1, p.alignment);
+                    size_t const bpp =
+                            PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
+                    size_t const dstBpr = PixelBufferDescriptor::computeDataSize(p.format, p.type,
+                            stride, 1, p.alignment);
                     char* const pDstStart = dst + p.left * bpp + p.top * dstBpr;
 
-                    for (uint32_t i{ 0 }; i < data->height; ++i) {
-                        memcpy(pDstStart + i * dstBpr,
-                                src + i * data->paddedBytesPerRow, data->unpaddedBytesPerRow);
+                    // If padding was added for alignment, we need to copy row by row.
+                    if (data->paddedBytesPerRow == data->unpaddedBytesPerRow &&
+                            dstBpr == data->unpaddedBytesPerRow) {
+                        memcpy(pDstStart, src, data->unpaddedBytesPerRow * data->height);
+                    } else {
+                        for (uint32_t i{ 0 }; i < data->height; ++i) {
+                            memcpy(pDstStart + i * dstBpr, src + i * data->paddedBytesPerRow,
+                                    data->unpaddedBytesPerRow);
+                        }
                     }
                     data->buffer.Unmap();
                 } else {
