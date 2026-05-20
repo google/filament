@@ -273,7 +273,11 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
         out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
-        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 16384;\n";
+        // In WebGPU, Dawn enforces that the descriptor binding size must be >= the shader's
+        // declared minBindingSize (height * 16 bytes). Since WebGPU doesn't support specialization
+        // constants for UBO sizes, we must hardcode WebGPU minspec in both places.
+        // With a WebGPU UBO minspec of 64 KiB (65536 bytes), height is set to 65536 / 16 = 4096.
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 4096;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -282,8 +286,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
 
+        // With a GLES UBO minspec of 16 KiB (16384 bytes), height is set to 16384 / 16 = 1024.
         generateSpecializationConstant(out, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT",
-                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 16384);
+                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 1024);
     }
 
     // directional shadowmap visualization
