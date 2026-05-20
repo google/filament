@@ -187,7 +187,7 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
         .baseMipLevel = args.source.mipLevel,
         .mipLevelCount = 1,
         .baseArrayLayer = args.source.texture.GetDimension() == wgpu::TextureDimension::e3D
-                                  ? 1
+                                  ? 0
                                   : args.source.layerOrDepth,
         .arrayLayerCount = 1,
         .aspect = args.source.aspect,
@@ -207,7 +207,7 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
         .baseMipLevel = args.destination.mipLevel,
         .mipLevelCount = 1,
         .baseArrayLayer = args.destination.texture.GetDimension() == wgpu::TextureDimension::e3D
-                                  ? 1
+                                  ? 0
                                   : args.destination.layerOrDepth,
         .arrayLayerCount = 1,
         .aspect = args.destination.aspect,
@@ -502,7 +502,7 @@ wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(RenderPipelineKey const
         },
         .depthStencil = depthDestination ? &depthStencilState : nullptr,
         .multisample = {
-            .count = key.sourceSampleCount,
+            .count = 1,
             .mask = 0xFFFFFFFF,
             .alphaToCoverageEnabled = false,
         },

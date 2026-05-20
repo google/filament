@@ -86,6 +86,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
+    // Ensure command encoder and submission state are created before acquiring staging buffer
+    wgpu::CommandEncoder commandEncoder = webGPUQueueManager->getCommandEncoder();
+
     wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize,
             webGPUQueueManager->getLatestSubmissionState());
 
@@ -103,10 +106,10 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
-            byteOffset,
-            remainder == 0 ? bufferDescriptor.size
-                           : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
+    commandEncoder.CopyBufferToBuffer(
+        stagingBuffer, 0, mBuffer, byteOffset,
+        remainder == 0 ? bufferDescriptor.size
+                       : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
 }
 
 } // namespace filament::backend

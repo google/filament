@@ -1824,31 +1824,58 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
                                 destinationViewport.left >= 0 && destinationViewport.bottom >= 0)
             << "Source and destination viewports must be positive.";
 
-    // We always blit from/to the COLOR0 attachment.
-    auto sourceAttachment {sourceTarget->getColorAttachmentInfos()[0]};
-    Handle<HwTexture> sourceTextureHandle{ sourceAttachment.handle };
-    auto destinationAttachment {destinationTarget->getColorAttachmentInfos()[0]};
-    Handle<HwTexture> destinationTextureHandle{
-        destinationAttachment.handle
+    wgpu::Texture srcTexture{ nullptr };
+    wgpu::Texture dstTexture{ nullptr };
+    uint32_t srcLevel = 0;
+    uint32_t srcLayer = 0;
+    uint32_t dstLevel = 0;
+    uint32_t dstLayer = 0;
+    wgpu::TextureAspect srcAspect = wgpu::TextureAspect::All;
+    wgpu::TextureAspect dstAspect = wgpu::TextureAspect::All;
+
+    auto extractTextureInfo = [&](const WebGPURenderTarget* target, wgpu::Texture& outTexture,
+                                      wgpu::TextureAspect& outAspect, uint32_t& outLevel,
+                                      uint32_t& outLayer) {
+        if (target->isDefaultRenderTarget()) {
+            assert_invariant(mSwapChain);
+            if (UTILS_UNLIKELY(!mSwapChainView)) {
+                mSwapChainView = mSwapChain->isHeadless()
+                                         ? mSwapChain->getNextTextureView()
+                                         : mSwapChain->getNextTextureView(
+                                                   mPlatform.getSurfaceExtent(mNativeWindow));
+            }
+            outTexture = mSwapChain->getCurrentTexture();
+            outAspect = wgpu::TextureAspect::All;
+            outLevel = 0;
+            outLayer = 0;
+        } else {
+            auto const& info = target->getColorAttachmentInfos()[0];
+            auto const& handle = info.handle;
+            if (UTILS_LIKELY(handle)) {
+                auto const tex{ handleCast<WebGPUTexture>(handle) };
+                outTexture = tex->getTexture();
+                outAspect = tex->getAspect();
+                outLevel = info.level;
+                outLayer = info.layer;
+            }
+        }
     };
 
-    if (UTILS_UNLIKELY(!sourceTextureHandle || !destinationTextureHandle)) {
+    extractTextureInfo(sourceTarget, srcTexture, srcAspect, srcLevel, srcLayer);
+    extractTextureInfo(destinationTarget, dstTexture, dstAspect, dstLevel, dstLayer);
+
+    if (UTILS_UNLIKELY(!srcTexture || !dstTexture)) {
         FWGPU_LOGE << "blitDEPRECATED could not find a valid color attachment to blit.";
         return;
     }
 
     // WebGPU's texture coordinates are top-left, while Filament's are bottom-left.
     // We need to flip the y-coordinate for both source and destination.
-    auto const sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
-    auto const destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+    const uint32_t srcLevelHeight = std::max(1u, srcTexture.GetHeight() >> srcLevel);
+    const uint32_t flippedSourceY{ srcLevelHeight - sourceViewport.bottom - sourceViewport.height };
 
-    const uint32_t sourceTextureHeight{ sourceTexture->height };
-    const uint32_t flippedSourceY{ sourceTextureHeight - sourceViewport.bottom -
-                                   sourceViewport.height };
-
-    const uint32_t destinationTextureHeight{ destinationTexture->height };
-    const uint32_t flippedDestinationY{ destinationTextureHeight - destinationViewport.bottom -
-                                        destinationViewport.height };
+    const uint32_t dstLevelHeight = std::max(1u, dstTexture.GetHeight() >> dstLevel);
+    const uint32_t flippedDestinationY{ dstLevelHeight - destinationViewport.bottom - destinationViewport.height };
 
     const wgpu::Origin2D sourceOrigin{ static_cast<uint32_t>(sourceViewport.left), flippedSourceY };
     const wgpu::Origin2D destinationOrigin{ static_cast<uint32_t>(destinationViewport.left),
@@ -1861,19 +1888,19 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     wgpu::CommandEncoder commandEncoder = mQueueManager.getCommandEncoder();
     const WebGPUBlitter::BlitArgs blitArgs{
-        .source = { .texture = sourceTexture->getTexture(),
-                    .aspect = sourceTexture->getAspect(),
+        .source = { .texture = srcTexture,
+                    .aspect = srcAspect,
                     .origin = sourceOrigin,
                     .extent = sourceSize,
-                    .mipLevel = sourceAttachment.level,
-                    .layerOrDepth = sourceAttachment.layer,
+                    .mipLevel = srcLevel,
+                    .layerOrDepth = srcLayer,
         },
-        .destination = { .texture = destinationTexture->getTexture(),
-                         .aspect = destinationTexture->getAspect(),
+        .destination = { .texture = dstTexture,
+                         .aspect = dstAspect,
                          .origin = destinationOrigin,
                          .extent = destinationSize,
-                         .mipLevel = destinationAttachment.level,
-                         .layerOrDepth = destinationAttachment.layer,
+                         .mipLevel = dstLevel,
+                         .layerOrDepth = dstLayer,
         },
         .filter = filter,
     };
