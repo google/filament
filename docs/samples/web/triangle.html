@@ -87,7 +87,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="../../images/filament_logo_small.png"></img>
+                <img class="flogo" src="../../images/filament_logo_small.png"/>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
@@ -251,7 +251,6 @@ if (location.search === '?backend=webgpu') {
         } );
     });
 } else {
-     console.log("here.....!!!!!!");
     Filament.init(['../../web/assets/triangle/triangle.filamat'], () => { window.app = new App() } );
 }
 })();

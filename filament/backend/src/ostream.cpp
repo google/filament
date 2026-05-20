@@ -467,7 +467,8 @@ io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     << ", bottom=" << params.viewport.bottom
     << ", width=" << params.viewport.width
     << ", height=" << params.viewport.height
-    << ", clearColor=" << params.clearColor
+    << ", clearColor={" << params.clearColor[0] << ", " << params.clearColor[1] << ", "
+                        << params.clearColor[2] << ", " << params.clearColor[3] << "}"
     << ", clearDepth=" << params.clearDepth
     << ", clearStencil=" << params.clearStencil << "}";
     return out;

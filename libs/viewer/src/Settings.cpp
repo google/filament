@@ -534,7 +534,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightDef
         } else if (compare(tok, jsonChunk, "sunHaloFalloff") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunHaloFalloff);
         } else if (compare(tok, jsonChunk, "sunAngularRadius") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->sunAngularRadius);
+            i = parse(tokens, i + 1, jsonChunk, &out->sunAngularRadiusDeg);
         } else if (compare(tok, jsonChunk, "castShadows") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->castShadows);
         } else if (compare(tok, jsonChunk, "shadowOptions") == 0) {
@@ -680,6 +680,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->history);
         } else if (compare(tok, jsonChunk, "scaleRate") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->scaleRate);
+        } else if (compare(tok, jsonChunk, "interval") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->interval);
         } else {
             slog.w << "Invalid frame rate options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -883,7 +885,7 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         lm->setIntensity(light, settings.sunlight.intensity);
         lm->setSunHaloSize(light, settings.sunlight.sunHaloSize);
         lm->setSunHaloFalloff(light, settings.sunlight.sunHaloFalloff);
-        lm->setSunAngularRadius(light, settings.sunlight.sunAngularRadius);
+        lm->setSunAngularRadius(light, settings.sunlight.sunAngularRadiusDeg);
         lm->setDirection(light, normalize(settings.sunlight.direction));
         lm->setColor(light, settings.sunlight.color);
         lm->setShadowCaster(light, settings.sunlight.castShadows && settings.enableShadows);
@@ -1002,7 +1004,7 @@ static utils::FixedCapacityVector<math::float3> generateCustomLut(CustomLut type
     using namespace filament::math;
     size_t count = size_t(dim) * dim * dim;
     auto lut = utils::FixedCapacityVector<float3>::with_capacity(count);
-    
+
     for (size_t b = 0; b < dim; ++b) {
         for (size_t g = 0; g < dim; ++g) {
             for (size_t r = 0; r < dim; ++r) {
@@ -1273,7 +1275,7 @@ static std::ostream& operator<<(std::ostream& out, const LightDefinition& in) {
                << "\"spotOuter\": " << in.spotOuter << ",\n"
                << "\"sunHaloSize\": " << in.sunHaloSize << ",\n"
                << "\"sunHaloFalloff\": " << in.sunHaloFalloff << ",\n"
-               << "\"sunAngularRadius\": " << in.sunAngularRadius << ",\n"
+               << "\"sunAngularRadius\": " << in.sunAngularRadiusDeg << ",\n"
                << "\"castShadows\": " << to_string(in.castShadows) << ",\n"
                << "\"shadowOptions\": " << in.shadowOptions << "\n"
                << "}";

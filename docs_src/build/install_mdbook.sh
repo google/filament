@@ -68,7 +68,7 @@ print(get_type())
             echo "*** Still cannot find cargo ***"
             exit 1
         fi
-        cargo install --force mdbook
+        cargo install --force mdbook --version ~0.4
     else
         # Download prebuilts from github
         mkdir -p ${HOME}/.cargo/bin

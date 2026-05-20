@@ -254,7 +254,7 @@ struct LightDefinition {
     float spotOuter = 0.0f;
     float sunHaloSize = 10.0f;
     float sunHaloFalloff = 80.0f;
-    float sunAngularRadius = 1.9f;
+    float sunAngularRadiusDeg = 0.545f;
     bool castShadows = false;
     LightManager::ShadowOptions shadowOptions;
 };

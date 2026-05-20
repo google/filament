@@ -19,6 +19,7 @@
 #include <exception>
 
 #include <filament/Camera.h>
+#include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/MorphTargetBuffer.h>
 
@@ -715,6 +716,15 @@ Java_com_google_android_filament_Engine_nSetBuilderFeature(JNIEnv *env, jclass c
     const char *name = env->GetStringUTFChars(name_, 0);
     builder->feature(name, (bool)value);
     env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nSetBuilderColorGrading(JNIEnv *env, jclass clazz,
+        jlong nativeBuilder, jlong nativeColorGradingBuilder) {
+    Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
+    ColorGrading::Builder const* colorGradingBuilder = (ColorGrading::Builder const*) nativeColorGradingBuilder;
+    builder->colorGrading(*colorGradingBuilder);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

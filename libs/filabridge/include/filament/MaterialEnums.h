@@ -24,6 +24,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string_view>
 
 namespace filament {
 
@@ -161,6 +162,27 @@ enum VertexAttribute : uint8_t {
 
     // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
+
+constexpr std::string_view to_string(VertexAttribute attr) noexcept {
+    switch (attr) {
+        case VertexAttribute::POSITION:     return "POSITION";
+        case VertexAttribute::TANGENTS:     return "TANGENTS";
+        case VertexAttribute::COLOR:        return "COLOR";
+        case VertexAttribute::UV0:          return "UV0";
+        case VertexAttribute::UV1:          return "UV1";
+        case VertexAttribute::BONE_INDICES: return "BONE_INDICES";
+        case VertexAttribute::BONE_WEIGHTS: return "BONE_WEIGHTS";
+        case VertexAttribute::CUSTOM0:      return "CUSTOM0";
+        case VertexAttribute::CUSTOM1:      return "CUSTOM1";
+        case VertexAttribute::CUSTOM2:      return "CUSTOM2";
+        case VertexAttribute::CUSTOM3:      return "CUSTOM3";
+        case VertexAttribute::CUSTOM4:      return "CUSTOM4";
+        case VertexAttribute::CUSTOM5:      return "CUSTOM5";
+        case VertexAttribute::CUSTOM6:      return "CUSTOM6";
+        case VertexAttribute::CUSTOM7:      return "CUSTOM7";
+    }
+    return "UNKNOWN";
+}
 
 static constexpr size_t MAX_LEGACY_MORPH_TARGETS = 4;
 static constexpr size_t MAX_MORPH_TARGETS = 256; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT

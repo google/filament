@@ -144,7 +144,7 @@ filament::backend::Viewport BackendTest::getFullViewport() const {
    };
 }
 
-filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(float4 color) {
+filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(double4 color) {
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
     params.flags.discardStart = TargetBufferFlags::ALL;

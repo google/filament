@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
         mi->setParameter("reflectance", 0.5f);
 
         // Add monkey into the scene.
-        app.monkeyMesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
+        app.monkeyMesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
         auto ti = tcm.getInstance(app.monkeyMesh.renderable);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);

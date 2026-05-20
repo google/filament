@@ -48,6 +48,7 @@ public:
         struct {
             struct {
                 bool use_1d_lut = false;
+                bool use_optimized_default_builder = false;
             } color_grading;
             struct {
                 bool use_shadow_atlas = false;
@@ -94,7 +95,7 @@ public:
         } backend;
         struct {
             bool check_crc32_after_loading = false;
-            bool enable_material_instance_uniform_batching = false;
+            bool enable_material_instance_uniform_batching = true;
             bool enable_fog_as_postprocess = false;
         } material;
         struct {

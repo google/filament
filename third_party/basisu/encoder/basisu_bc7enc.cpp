@@ -1,5 +1,5 @@
 // File: basisu_bc7enc.cpp
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -100,24 +100,24 @@ static void astc_init()
 	{
 		if (!astc_is_valid_endpoint_range(range))
 			continue;
-				
+
 		const uint32_t levels = astc_get_levels(range);
 
 		uint32_t vals[256];
 		// TODO
 		for (uint32_t i = 0; i < levels; i++)
 			vals[i] = (unquant_astc_endpoint_val(i, range) << 8) | i;
-		
+
 		std::sort(vals, vals + levels);
 
 		for (uint32_t i = 0; i < levels; i++)
 		{
 			uint32_t order = vals[i] & 0xFF;
 			uint32_t unq = vals[i] >> 8;
-						
+
 			g_astc_sorted_order_unquant[range][i].m_unquant = (uint8_t)unq;
 			g_astc_sorted_order_unquant[range][i].m_index = (uint8_t)order;
-			
+
 		} // i
 
 #if 0
@@ -186,7 +186,7 @@ static inline uint32_t astc_interpolate_linear(uint32_t l, uint32_t h, uint32_t 
 void bc7enc_compress_block_init()
 {
 	astc_init();
-			
+
 	// BC7 666.1
 	for (int c = 0; c < 256; c++)
 	{
@@ -224,11 +224,11 @@ void bc7enc_compress_block_init()
 		for (uint32_t l = 0; l < 16; l++)
 		{
 			uint32_t low = (l << 4) | l;
-			
+
 			for (uint32_t h = 0; h < 16; h++)
 			{
 				uint32_t high = (h << 4) | h;
-				
+
 				const int k = astc_interpolate_linear(low, high, g_bc7_weights3[BC7ENC_ASTC_4BIT_3BIT_OPTIMAL_INDEX]);
 				const int err = (k - c) * (k - c);
 
@@ -240,9 +240,9 @@ void bc7enc_compress_block_init()
 				}
 			} // h
 		} // l
-		
+
 		g_astc_4bit_3bit_optimal_endpoints[c] = best;
-		
+
 	} // c
 
 	// ASTC [0,15] 2-bit
@@ -253,11 +253,11 @@ void bc7enc_compress_block_init()
 		for (uint32_t l = 0; l < 16; l++)
 		{
 			uint32_t low = (l << 4) | l;
-			
+
 			for (uint32_t h = 0; h < 16; h++)
 			{
 				uint32_t high = (h << 4) | h;
-				
+
 				const int k = astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_4BIT_2BIT_OPTIMAL_INDEX]);
 				const int err = (k - c) * (k - c);
 
@@ -269,9 +269,9 @@ void bc7enc_compress_block_init()
 				}
 			} // h
 		} // l
-		
+
 		g_astc_4bit_2bit_optimal_endpoints[c] = best;
-		
+
 	} // c
 
 	// ASTC range 7 [0,11] 2-bit
@@ -282,11 +282,11 @@ void bc7enc_compress_block_init()
 		for (uint32_t l = 0; l < 12; l++)
 		{
 			uint32_t low = g_astc_sorted_order_unquant[7][l].m_unquant;
-			
+
 			for (uint32_t h = 0; h < 12; h++)
 			{
 				uint32_t high = g_astc_sorted_order_unquant[7][h].m_unquant;
-				
+
 				const int k = astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_RANGE7_2BIT_OPTIMAL_INDEX]);
 				const int err = (k - c) * (k - c);
 
@@ -298,9 +298,9 @@ void bc7enc_compress_block_init()
 				}
 			} // h
 		} // l
-		
+
 		g_astc_range7_2bit_optimal_endpoints[c] = best;
-		
+
 	} // c
 
 	// ASTC range 13 [0,47] 4-bit
@@ -311,11 +311,11 @@ void bc7enc_compress_block_init()
 		for (uint32_t l = 0; l < 48; l++)
 		{
 			uint32_t low = g_astc_sorted_order_unquant[13][l].m_unquant;
-			
+
 			for (uint32_t h = 0; h < 48; h++)
 			{
 				uint32_t high = g_astc_sorted_order_unquant[13][h].m_unquant;
-				
+
 				const int k = astc_interpolate_linear(low, high, g_astc_weights4[BC7ENC_ASTC_RANGE13_4BIT_OPTIMAL_INDEX]);
 				const int err = (k - c) * (k - c);
 
@@ -327,9 +327,9 @@ void bc7enc_compress_block_init()
 				}
 			} // h
 		} // l
-		
+
 		g_astc_range13_4bit_optimal_endpoints[c] = best;
-		
+
 	} // c
 
 	// ASTC range 13 [0,47] 2-bit
@@ -340,11 +340,11 @@ void bc7enc_compress_block_init()
 		for (uint32_t l = 0; l < 48; l++)
 		{
 			uint32_t low = g_astc_sorted_order_unquant[13][l].m_unquant;
-			
+
 			for (uint32_t h = 0; h < 48; h++)
 			{
 				uint32_t high = g_astc_sorted_order_unquant[13][h].m_unquant;
-				
+
 				const int k = astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_RANGE13_2BIT_OPTIMAL_INDEX]);
 				const int err = (k - c) * (k - c);
 
@@ -356,9 +356,9 @@ void bc7enc_compress_block_init()
 				}
 			} // h
 		} // l
-		
+
 		g_astc_range13_2bit_optimal_endpoints[c] = best;
-		
+
 	} // c
 
 	// ASTC range 11 [0,31] 5-bit
@@ -393,14 +393,15 @@ void bc7enc_compress_block_init()
 
 static void compute_least_squares_endpoints_rgba(uint32_t N, const uint8_t *pSelectors, const bc7enc_vec4F* pSelector_weights, bc7enc_vec4F* pXl, bc7enc_vec4F* pXh, const color_quad_u8 *pColors)
 {
-	// Least squares using normal equations: http://www.cs.cornell.edu/~bindel/class/cs3220-s12/notes/lec10.pdf 
+	// Least squares using normal equations: http://www.cs.cornell.edu/~bindel/class/cs3220-s12/notes/lec10.pdf
+	// https://web.archive.org/web/20150319232457/http://www.cs.cornell.edu/~bindel/class/cs3220-s12/notes/lec10.pdf
 	// I did this in matrix form first, expanded out all the ops, then optimized it a bit.
 	double z00 = 0.0f, z01 = 0.0f, z10 = 0.0f, z11 = 0.0f;
 	double q00_r = 0.0f, q10_r = 0.0f, t_r = 0.0f;
 	double q00_g = 0.0f, q10_g = 0.0f, t_g = 0.0f;
 	double q00_b = 0.0f, q10_b = 0.0f, t_b = 0.0f;
 	double q00_a = 0.0f, q10_a = 0.0f, t_a = 0.0f;
-	
+
 	for (uint32_t i = 0; i < N; i++)
 	{
 		const uint32_t sel = pSelectors[i];
@@ -648,7 +649,7 @@ static uint64_t pack_astc_4bit_3bit_to_one_color(const color_cell_compressor_par
 	{
 		uint32_t low = (pResults->m_low_endpoint.m_c[i] << 4) | pResults->m_low_endpoint.m_c[i];
 		uint32_t high = (pResults->m_high_endpoint.m_c[i] << 4) | pResults->m_high_endpoint.m_c[i];
-		
+
 		p.m_c[i] = (uint8_t)astc_interpolate_linear(low, high, g_bc7_weights3[BC7ENC_ASTC_4BIT_3BIT_OPTIMAL_INDEX]);
 	}
 	p.m_c[3] = 255;
@@ -687,10 +688,10 @@ static uint64_t pack_astc_4bit_2bit_to_one_color_rgba(const color_cell_compresso
 	{
 		uint32_t low = (pResults->m_low_endpoint.m_c[i] << 4) | pResults->m_low_endpoint.m_c[i];
 		uint32_t high = (pResults->m_high_endpoint.m_c[i] << 4) | pResults->m_high_endpoint.m_c[i];
-		
+
 		p.m_c[i] = (uint8_t)astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_4BIT_2BIT_OPTIMAL_INDEX]);
 	}
-	
+
 	uint64_t total_err = 0;
 	for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 		total_err += compute_color_distance_rgba(&p, &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
@@ -726,7 +727,7 @@ static uint64_t pack_astc_range7_2bit_to_one_color(const color_cell_compressor_p
 	{
 		uint32_t low = g_astc_sorted_order_unquant[7][pResults->m_low_endpoint.m_c[i]].m_unquant;
 		uint32_t high = g_astc_sorted_order_unquant[7][pResults->m_high_endpoint.m_c[i]].m_unquant;
-		
+
 		p.m_c[i] = (uint8_t)astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_RANGE7_2BIT_OPTIMAL_INDEX]);
 	}
 	p.m_c[3] = 255;
@@ -747,7 +748,7 @@ static uint64_t pack_astc_range13_2bit_to_one_color(const color_cell_compressor_
 	const endpoint_err *pEr = &g_astc_range13_2bit_optimal_endpoints[r];
 	const endpoint_err *pEg = &g_astc_range13_2bit_optimal_endpoints[g];
 	const endpoint_err *pEb = &g_astc_range13_2bit_optimal_endpoints[b];
-	
+
 	color_quad_u8_set(&pResults->m_low_endpoint, pEr->m_lo, pEg->m_lo, pEb->m_lo, 47);
 	color_quad_u8_set(&pResults->m_high_endpoint, pEr->m_hi, pEg->m_hi, pEb->m_hi, 47);
 	pResults->m_pbits[0] = 0;
@@ -766,10 +767,10 @@ static uint64_t pack_astc_range13_2bit_to_one_color(const color_cell_compressor_
 	{
 		uint32_t low = g_astc_sorted_order_unquant[13][pResults->m_low_endpoint.m_c[i]].m_unquant;
 		uint32_t high = g_astc_sorted_order_unquant[13][pResults->m_high_endpoint.m_c[i]].m_unquant;
-		
+
 		p.m_c[i] = (uint8_t)astc_interpolate_linear(low, high, g_bc7_weights2[BC7ENC_ASTC_RANGE13_2BIT_OPTIMAL_INDEX]);
 	}
-	
+
 	uint64_t total_err = 0;
 	for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 		total_err += compute_color_distance_rgb(&p, &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
@@ -878,18 +879,18 @@ static uint64_t evaluate_solution(const color_quad_u8 *pLow, const color_quad_u8
 	const int dr = actualMaxColor.m_c[0] - lr;
 	const int dg = actualMaxColor.m_c[1] - lg;
 	const int db = actualMaxColor.m_c[2] - lb;
-	
+
 	uint64_t total_err = 0;
-	
+
 	if (pParams->m_pForce_selectors)
 	{
 		for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 		{
 			const color_quad_u8* pC = &pParams->m_pPixels[i];
-			
+
 			const uint8_t sel = pParams->m_pForce_selectors[i];
 			assert(sel < N);
-			
+
 			total_err += (pParams->m_has_alpha ? compute_color_distance_rgba : compute_color_distance_rgb)(&weightedColors[sel], pC, pParams->m_perceptual, pParams->m_weights);
 
 			pResults->m_pSelectors_temp[i] = sel;
@@ -930,7 +931,7 @@ static uint64_t evaluate_solution(const color_quad_u8 *pLow, const color_quad_u8
 					--best_sel;
 				}
 				total_err += err1;
-								
+
 				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 			}
 		}
@@ -1027,7 +1028,7 @@ static uint64_t evaluate_solution(const color_quad_u8 *pLow, const color_quad_u8
 
 		memcpy(pResults->m_pSelectors, pResults->m_pSelectors_temp, sizeof(pResults->m_pSelectors[0]) * pParams->m_num_pixels);
 	}
-				
+
 	return total_err;
 }
 
@@ -1257,7 +1258,7 @@ static uint64_t find_optimal_solution(uint32_t mode, bc7enc_vec4F xl, bc7enc_vec
 				}
 			}
 		}
-						
+
 		fixDegenerateEndpoints(mode, &bestMinColor, &bestMaxColor, &xl, &xh, iscalep >> 1, 0);
 
 		if ((pResults->m_best_overall_err == UINT64_MAX) || color_quad_u8_notequals(&bestMinColor, &pResults->m_low_endpoint) || color_quad_u8_notequals(&bestMaxColor, &pResults->m_high_endpoint) || (best_pbits[0] != pResults->m_pbits[0]) || (best_pbits[1] != pResults->m_pbits[1]))
@@ -1296,24 +1297,26 @@ void check_best_overall_error(const color_cell_compressor_params *pParams, color
 		colors[n-1].m_c[c] = g_astc_unquant[pParams->m_astc_endpoint_range][pResults->m_astc_high_endpoint.m_c[c]].m_unquant;
 		assert(colors[n-1].m_c[c] == g_astc_sorted_order_unquant[pParams->m_astc_endpoint_range][pResults->m_high_endpoint.m_c[c]].m_unquant);
 	}
-	
+
 	for (uint32_t i = 1; i < pParams->m_num_selector_weights - 1; i++)
 		for (uint32_t c = 0; c < 4; c++)
 			colors[i].m_c[c] = (uint8_t)astc_interpolate_linear(colors[0].m_c[c], colors[n - 1].m_c[c], pParams->m_pSelector_weights[i]);
 
+#ifdef _DEBUG
 	uint64_t total_err = 0;
 	for (uint32_t p = 0; p < pParams->m_num_pixels; p++)
 	{
 		const color_quad_u8 &orig = pParams->m_pPixels[p];
 		const color_quad_u8 &packed = colors[pResults->m_pSelectors[p]];
-				
+
 		if (pParams->m_has_alpha)
 			total_err += compute_color_distance_rgba(&orig, &packed, pParams->m_perceptual, pParams->m_weights);
 		else
 			total_err += compute_color_distance_rgb(&orig, &packed, pParams->m_perceptual, pParams->m_weights);
 	}
 	assert(total_err == pResults->m_best_overall_err);
-	
+#endif
+
 	// HACK HACK
 	//if (total_err != pResults->m_best_overall_err)
 	//	printf("X");
@@ -1416,12 +1419,12 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 		bc7enc_vec4F color = vec4F_from_color(&pParams->m_pPixels[i]);
 		meanColor = vec4F_add(&meanColor, &color);
 	}
-				
+
 	bc7enc_vec4F meanColorScaled = vec4F_mul(&meanColor, 1.0f / (float)(pParams->m_num_pixels));
 
 	meanColor = vec4F_mul(&meanColor, 1.0f / (float)(pParams->m_num_pixels * 255.0f));
 	vec4F_saturate_in_place(&meanColor);
-	
+
 	if (pParams->m_has_alpha)
 	{
 		// Use incremental PCA for RGBA PCA, because it's simple.
@@ -1484,7 +1487,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 			vec4F_set(&axis, xr, xg, xb, 0);
 		}
 	}
-				
+
 	if (vec4F_dot(&axis, &axis) < .5f)
 	{
 		if (pParams->m_perceptual)
@@ -1493,7 +1496,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 			vec4F_set(&axis, 1.0f, 1.0f, 1.0f, pParams->m_has_alpha ? 1.0f : 0);
 		vec4F_normalize_in_place(&axis);
 	}
-			
+
 	bc7enc_vec4F minColor, maxColor;
 
 	float l = 1e+9f, h = -1e+9f;
@@ -1518,7 +1521,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 	bc7enc_vec4F c1 = vec4F_add(&meanColor, &b1);
 	minColor = vec4F_saturate(&c0);
 	maxColor = vec4F_saturate(&c1);
-				
+
 	bc7enc_vec4F whiteVec;
 	vec4F_set_scalar(&whiteVec, 1.0f);
 	if (vec4F_dot(&minColor, &whiteVec) > vec4F_dot(&maxColor, &whiteVec))
@@ -1542,7 +1545,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 	// First find a solution using the block's PCA.
 	if (!find_optimal_solution(mode, minColor, maxColor, pParams, pResults))
 		return 0;
-	
+
 	for (uint32_t i = 0; i < pComp_params->m_least_squares_passes; i++)
 	{
 		// Now try to refine the solution using least squares by computing the optimal endpoints from the current selectors.
@@ -1556,11 +1559,11 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 
 		xl = vec4F_mul(&xl, (1.0f / 255.0f));
 		xh = vec4F_mul(&xh, (1.0f / 255.0f));
-				
+
 		if (!find_optimal_solution(mode, xl, xh, pParams, pResults))
 			return 0;
 	}
-	
+
 	if ((!pParams->m_pForce_selectors) && (pComp_params->m_uber_level > 0))
 	{
 		// In uber level 1, try varying the selectors a little, somewhat like cluster fit would. First try incrementing the minimum selectors,
@@ -1597,7 +1600,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 
 		xl = vec4F_mul(&xl, (1.0f / 255.0f));
 		xh = vec4F_mul(&xh, (1.0f / 255.0f));
-				
+
 		if (!find_optimal_solution(mode, xl, xh, pParams, pResults))
 			return 0;
 
@@ -1616,7 +1619,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 
 		xl = vec4F_mul(&xl, (1.0f / 255.0f));
 		xh = vec4F_mul(&xh, (1.0f / 255.0f));
-				
+
 		if (!find_optimal_solution(mode, xl, xh, pParams, pResults))
 			return 0;
 
@@ -1673,7 +1676,7 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 			}
 		}
 	}
-	
+
 	if (!pParams->m_pForce_selectors)
 	{
 		// Try encoding the partition as a single color by using the optimal single colors tables to encode the block to its mean.
@@ -1754,13 +1757,13 @@ uint64_t color_cell_compression(uint32_t mode, const color_cell_compressor_param
 #if BC7ENC_CHECK_OVERALL_ERROR
 	check_best_overall_error(pParams, pResults);
 #endif
-		
+
 	return pResults->m_best_overall_err;
 }
 
 uint64_t color_cell_compression_est_astc(
 	uint32_t num_weights, uint32_t num_comps, const uint32_t *pWeight_table,
-	uint32_t num_pixels, const color_quad_u8* pPixels, 
+	uint32_t num_pixels, const color_quad_u8* pPixels,
 	uint64_t best_err_so_far, const uint32_t weights[4])
 {
 	assert(num_comps == 3 || num_comps == 4);
@@ -1807,7 +1810,7 @@ uint64_t color_cell_compression_est_astc(
 	color_quad_u8_set(&lowColor, lr, lg, lb, la);
 	color_quad_u8_set(&highColor, hr, hg, hb, ha);
 
-	// Place endpoints at bbox diagonals and compute interpolated colors 
+	// Place endpoints at bbox diagonals and compute interpolated colors
 	color_quad_u8 weightedColors[32];
 
 	weightedColors[0] = lowColor;

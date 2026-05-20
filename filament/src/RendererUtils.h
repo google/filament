@@ -62,7 +62,7 @@ public:
         // Clear flags
         backend::TargetBufferFlags clearFlags;
         // Clear color
-        math::float4 clearColor = {};
+        backend::ClearColorValue clearColor;
         // Clear stencil
         uint8_t clearStencil = 0u;
         // Contact shadow enabled?

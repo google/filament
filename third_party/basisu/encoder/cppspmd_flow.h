@@ -1,7 +1,7 @@
 // Do not include this header directly.
 // Control flow functionality in common between all the headers.
 //
-// Copyright 2020-2021 Binomial LLC
+// Copyright 2020-2024 Binomial LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -218,9 +218,10 @@ CPPSPMD_FORCE_INLINE void spmd_kernel::spmd_ifelse(const vbool& cond, const IfBo
 			exec_mask unexecuted_lanes = cond_exec & m_exec;
 			m_exec = pre_if_exec;
 
-			ifBody();
+			// 11/22/2025: changed to elseBody() here, simple bug, we use the macro variants of ifelse anyway
+			elseBody();
 
-			// Propagate any lanes that got disabled inside the if body into the exec mask outside the if body, but turn on any lanes that didn't execute inside the if body.
+			// Propagate any lanes that got disabled inside the else body into the exec mask outside the else body, but turn on any lanes that didn't execute inside the else body.
 			m_exec = m_exec | unexecuted_lanes;
 
 			check_masks();

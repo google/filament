@@ -26,8 +26,10 @@
 #include <utils/debug.h>
 #include <utils/Hash.h>
 
+#include <cstdint>
 #include <fstream>
 #include <algorithm>
+#include <limits>
 
 using namespace filament;
 using namespace filament::backend;
@@ -81,7 +83,6 @@ public:
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU
@@ -335,7 +336,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             Handle<HwRenderTarget> mipLevelOneRT = addCleanup(api.createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
                     {{ texture }}, {}, {}));
-            p.clearColor = { 1.f, 0.f, 0.f, 1.f };
+            p.clearColor = math::double4{ 1.0, 0.0, 0.0, 1.0 };
             api.beginRenderPass(mipLevelOneRT, p);
             api.endRenderPass();
         }
@@ -365,13 +366,124 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         // Now render red over what was just rendered. This ensures that readPixels captures the
         // state of rendering between render passes.
-        params.clearColor = { 1.f, 0.f, 0.f, 1.f };
+        params.clearColor = math::double4{ 1.0, 0.0, 0.0, 1.0 };
         api.beginRenderPass(renderTarget, params);
         api.endRenderPass();
 
         api.commit(swapChain);
         api.endFrame(0);
     }
+    flushAndWait();
+}
+
+TEST_F(ReadPixelsTest, ReadPixelsUintClear) {
+    // Exercises the integer-format clear path end-to-end: verifies that a uint32 value placed into
+    // the `double4` clearColor round-trips bit-exact onto a `R32UI` attachment (i.e., the GL /
+    // Vulkan backend selects the matching `glClearBufferuiv` / `VkClearColorValue::uint32` arm
+    // based on the attachment's TextureFormat).
+    constexpr size_t renderTargetSize = 16;
+    uint32_t const expectedValue = 0xCAFEBABEu;
+
+    DriverApi& api = getDriverApi();
+
+    Handle<HwSwapChain> const swapChain = addCleanup(api.createSwapChainHeadless(
+            renderTargetSize, renderTargetSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    auto const usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+    Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::R32UI, 1, renderTargetSize, renderTargetSize, 1, usage));
+
+    Handle<HwRenderTarget> const renderTarget = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::COLOR, renderTargetSize, renderTargetSize, 1, 0,
+            {{ texture }}, {}, {}));
+
+    RenderPassParams params{};
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
+    // R32UI is single-channel; only the first component reaches the texture.
+    params.clearColor = math::uint4{ expectedValue, 0u, 0u, 0u };
+
+    api.beginFrame(0, 0, 0);
+    api.beginRenderPass(renderTarget, params);
+    api.endRenderPass();
+
+    constexpr size_t pixelCount = renderTargetSize * renderTargetSize;
+    constexpr size_t bufferSizeBytes = pixelCount * sizeof(uint32_t);
+    void* buffer = calloc(1, bufferSizeBytes);
+
+    PixelBufferDescriptor descriptor(buffer, bufferSizeBytes, PixelDataFormat::R_INTEGER,
+            PixelDataType::UINT, 1, 0, 0, renderTargetSize,
+            [](void* b, size_t size, void* user) {
+                uint32_t const expected = *(uint32_t const*)user;
+                uint32_t const* px = (uint32_t const*)b;
+                size_t const count = size / sizeof(uint32_t);
+                for (size_t i = 0; i < count; ++i) {
+                    EXPECT_EQ(px[i], expected) << "pixel " << i;
+                }
+                free(b);
+            }, (void*)&expectedValue);
+
+    api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+    api.commit(swapChain);
+    api.endFrame(0);
+    flushAndWait();
+}
+
+TEST_F(ReadPixelsTest, ReadPixelsIntClear) {
+    // Sibling of ReadPixelsUintClear: INT clear into a R32I attachment, using INT_MIN so the value
+    // cannot accidentally round-trip through a UINT or FLOAT path.
+    constexpr size_t renderTargetSize = 16;
+    int32_t const expectedValue = std::numeric_limits<int32_t>::min();
+
+    DriverApi& api = getDriverApi();
+
+    Handle<HwSwapChain> const swapChain = addCleanup(api.createSwapChainHeadless(
+            renderTargetSize, renderTargetSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    auto const usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+    Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::R32I, 1, renderTargetSize, renderTargetSize, 1, usage));
+
+    Handle<HwRenderTarget> const renderTarget = addCleanup(api.createRenderTarget(
+            TargetBufferFlags::COLOR, renderTargetSize, renderTargetSize, 1, 0,
+            {{ texture }}, {}, {}));
+
+    RenderPassParams params{};
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
+    params.clearColor = math::int4{ expectedValue, 0, 0, 0 };
+
+    api.beginFrame(0, 0, 0);
+    api.beginRenderPass(renderTarget, params);
+    api.endRenderPass();
+
+    constexpr size_t pixelCount = renderTargetSize * renderTargetSize;
+    constexpr size_t bufferSizeBytes = pixelCount * sizeof(int32_t);
+    void* buffer = calloc(1, bufferSizeBytes);
+
+    PixelBufferDescriptor descriptor(buffer, bufferSizeBytes, PixelDataFormat::R_INTEGER,
+            PixelDataType::INT, 1, 0, 0, renderTargetSize,
+            [](void* b, size_t size, void* user) {
+                int32_t const expected = *(int32_t const*)user;
+                int32_t const* px = (int32_t const*)b;
+                size_t const count = size / sizeof(int32_t);
+                for (size_t i = 0; i < count; ++i) {
+                    EXPECT_EQ(px[i], expected) << "pixel " << i;
+                }
+                free(b);
+            }, (void*)&expectedValue);
+
+    api.readPixels(renderTarget, 0, 0, renderTargetSize, renderTargetSize, std::move(descriptor));
+    api.commit(swapChain);
+    api.endFrame(0);
     flushAndWait();
 }
 
