@@ -816,26 +816,36 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::ImmutableCS
 
 UTILS_UNUSED
 static const char* toString(ShaderStageFlags flags) {
-    std::vector<const char*> stages;
+    static char buffer[64];
+    char* ptr = buffer;
+    size_t remaining = sizeof(buffer);
+    buffer[0] = '\0';
+
+    auto append = [&ptr, &remaining](const char* str) {
+        int written = snprintf(ptr, remaining, "%s", str);
+        if (written > 0 && (size_t) written < remaining) {
+            ptr += written;
+            remaining -= written;
+        }
+    };
+
     if (any(flags & ShaderStageFlags::VERTEX)) {
-        stages.push_back("VERTEX");
+        append("VERTEX");
     }
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        stages.push_back("FRAGMENT");
+        if (ptr != buffer) {
+            append(" | ");
+        }
+        append("FRAGMENT");
     }
     if (any(flags & ShaderStageFlags::COMPUTE)) {
-        stages.push_back("COMPUTE");
-    }
-    if (stages.empty()) {
-        return "NONE";
-    }
-    static char buffer[64];
-    buffer[0] = '\0';
-    for (size_t i = 0; i < stages.size(); i++) {
-        if (i > 0) {
-            strcat(buffer, " | ");
+        if (ptr != buffer) {
+            append(" | ");
         }
-        strcat(buffer, stages[i]);
+        append("COMPUTE");
+    }
+    if (ptr == buffer) {
+        return "NONE";
     }
     return buffer;
 }
@@ -2571,7 +2581,8 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
         LOG(ERROR) << description;
     }
-    assert_invariant(!error);
+    FILAMENT_CHECK_POSTCONDITION(computePipelineState != nil)
+            << "Unable to create Metal compute pipeline state.";
 
     [computeEncoder setComputePipelineState:computePipelineState];
 

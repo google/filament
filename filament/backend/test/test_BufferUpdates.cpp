@@ -103,8 +103,9 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 
         // Draw 10 triangles, updating the vertex buffer / index buffer each time.
         size_t triangleIndex = 0;
-        for (float i = -1.0f; i < 1.0f; i += 0.2f) {
-            const float low = i, high = i + 0.2;
+        for (int step = 0; step < 10; ++step) {
+            const float low = -1.0f + (float)step * 0.2f;
+            const float high = low + 0.2f;
             const filament::math::float2 v[3]{{ low,  low },
                                               { high, low },
                                               { low,  high }};

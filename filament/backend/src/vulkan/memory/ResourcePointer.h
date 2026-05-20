@@ -111,7 +111,9 @@ public:
             mRef->dec();
         }
         mRef = rhs.mRef;
-        mRef->inc();
+        if (mRef) {
+            mRef->inc();
+        }
         return *this;
     }
 
@@ -124,7 +126,9 @@ public:
             mRef->dec();
         }
         mRef = rhs.mRef;
-        mRef->inc();
+        if (mRef) {
+            mRef->inc();
+        }
         return *this;
     }
 
@@ -184,7 +188,9 @@ private:
 
     resource_ptr(D* ref)
         : mRef(ref) {
-        mRef->inc();
+        if (mRef) {
+            mRef->inc();
+        }
     }
 
     D* mRef = nullptr;

@@ -158,7 +158,7 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
 }
 
 VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
-    destroy();
+    VulkanPlatformSurfaceSwapChain::destroy();
     vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
 }
 
@@ -468,7 +468,7 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
 }
 
 VulkanPlatformHeadlessSwapChain::~VulkanPlatformHeadlessSwapChain() {
-    destroy();
+    VulkanPlatformHeadlessSwapChain::destroy();
 }
 
 VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index, VkSemaphore finished) {
