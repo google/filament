@@ -98,8 +98,10 @@ struct ResourceLoader::Impl {
     TextureProviderList mTextureProviders;
 
     // Avoid duplicated Texture objects via caches with two key types: buffer pointers and strings.
-    BufferTextureCache mBufferTextureCache;
-    FilepathTextureCache mFilepathTextureCache;
+    // We use two of each cache (indexed by (uint64_t)flags & 1) to prevent color space collisions
+    // (sRGB vs Linear) when the same image source is bound to multiple parameters.
+    BufferTextureCache mBufferTextureCache[2];
+    FilepathTextureCache mFilepathTextureCache[2];
 
     FFilamentAsset* mAsyncAsset = nullptr;
     size_t mRemainingTextureDownloads = 0;
@@ -564,8 +566,10 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     // Clear our texture caches. Previous calls to loadResources may have populated these, but the
     // Texture objects could have since been destroyed.
-    pImpl->mBufferTextureCache.clear();
-    pImpl->mFilepathTextureCache.clear();
+    pImpl->mBufferTextureCache[0].clear();
+    pImpl->mBufferTextureCache[1].clear();
+    pImpl->mFilepathTextureCache[0].clear();
+    pImpl->mFilepathTextureCache[1].clear();
 
     cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
 
@@ -697,17 +701,20 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     TextureProvider* provider = foundProvider->second;
     assert_invariant(provider);
 
+    const size_t cacheIdx = (uint64_t) flags & 1;
+
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
         assert_invariant(!dataUriContent);
         const size_t offset = bv ? bv->offset : 0;
         const uint8_t* sourceData = offset + (const uint8_t*) *bufferViewData;
-        if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
+        if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
+                iter != mBufferTextureCache[cacheIdx].end()) {
             return {iter->second, CacheResult::FOUND};
         }
         const uint32_t totalSize = uint32_t(bv ? bv->size : 0);
         if (Texture* texture = provider->pushTexture(sourceData, totalSize, mime.c_str(), flags); texture) {
-            mBufferTextureCache[sourceData] = texture;
+            mBufferTextureCache[cacheIdx][sourceData] = texture;
             return {texture, CacheResult::MISS};
         }
     }
@@ -716,13 +723,14 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     // Note that this is a data URI in an image, not a buffer. Data URI's in buffers are decoded
     // by the cgltf_load_buffers() function.
     else if (dataUriContent) {
-        if (auto iter = mBufferTextureCache.find(uri); iter != mBufferTextureCache.end()) {
+        if (auto iter = mBufferTextureCache[cacheIdx].find(uri);
+                iter != mBufferTextureCache[cacheIdx].end()) {
             free((void*)dataUriContent);
             return {iter->second, CacheResult::FOUND};
         }
         if (Texture* texture = provider->pushTexture(dataUriContent, dataUriSize, mime.c_str(), flags); texture) {
             free((void*)dataUriContent);
-            mBufferTextureCache[uri] = texture;
+            mBufferTextureCache[cacheIdx][uri] = texture;
             return {texture, CacheResult::MISS};
         }
         free((void*)dataUriContent);
@@ -731,18 +739,20 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     // Check the user-supplied resource cache for this URI.
     else if (auto iter = mUriDataCache->find(uri); iter != mUriDataCache->end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
-        if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
+        if (auto iter = mBufferTextureCache[cacheIdx].find(sourceData);
+                iter != mBufferTextureCache[cacheIdx].end()) {
             return {iter->second, CacheResult::FOUND};
         }
         if (Texture* texture = provider->pushTexture(sourceData, iter->second.size, mime.c_str(), flags); texture) {
-            mBufferTextureCache[sourceData] = texture;
+            mBufferTextureCache[cacheIdx][sourceData] = texture;
             return {texture, CacheResult::MISS};
         }
     }
 
     // Finally, try the file system.
     else if constexpr (GLTFIO_USE_FILESYSTEM) {
-        if (auto iter = mFilepathTextureCache.find(uri); iter != mFilepathTextureCache.end()) {
+        if (auto iter = mFilepathTextureCache[cacheIdx].find(uri);
+                iter != mFilepathTextureCache[cacheIdx].end()) {
             return {iter->second, CacheResult::FOUND};
         }
         Path fullpath = Path(mGltfPath).getParent() + uri;
@@ -758,7 +768,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         filest.seekg(0, ios::beg);
         buffer.assign((istreambuf_iterator<char>(filest)), istreambuf_iterator<char>());
         if (Texture* texture = provider->pushTexture(buffer.data(), buffer.size(), mime.c_str(), flags); texture) {
-            mFilepathTextureCache[uri] = texture;
+            mFilepathTextureCache[cacheIdx][uri] = texture;
             return {texture, CacheResult::MISS};
         }
 
@@ -784,9 +794,10 @@ void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
     mRemainingTextureDownloads = 0;
 
     // Create new texture objects if they are not cached and kick off decoding jobs.
-    for (size_t textureIndex = 0, n = asset->mTextures.size(); textureIndex < n; ++textureIndex) {
-        FFilamentAsset::TextureInfo& info = asset->mTextures[textureIndex];
-        auto [texture, cacheResult] = getOrCreateTexture(asset, textureIndex, info.flags);
+    for (size_t assetTextureIndex = 0, n = asset->mTextures.size(); assetTextureIndex < n;
+            ++assetTextureIndex) {
+        FFilamentAsset::TextureInfo& info = asset->mTextures[assetTextureIndex];
+        auto [texture, cacheResult] = getOrCreateTexture(asset, info.gltfTextureIndex, info.flags);
         if (texture == nullptr) {
             if (cacheResult == CacheResult::NOT_READY) {
                 mRemainingTextureDownloads++;
@@ -803,7 +814,7 @@ void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
 
         // For each binding to a material instance, call setParameter(...) on the material.
         for (const TextureSlot& slot : info.bindings) {
-            asset->applyTextureBinding(textureIndex, slot);
+            asset->applyTextureBinding(assetTextureIndex, slot);
         }
     }
 
