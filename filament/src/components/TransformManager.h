@@ -99,6 +99,8 @@ public:
 
     children_iterator getChildrenEnd(Instance parent) const noexcept;
 
+    children_range getChildrenRange(Instance parent) const noexcept;
+
     void openLocalTransformTransaction() noexcept;
 
     void commitLocalTransformTransaction() noexcept;
