@@ -178,17 +178,16 @@ struct VulkanCmdFence {
     }
 
     // Checks the underlying fence to see if the underlying process is complete.
-    // Updates the underlying status if the fence has signaled, and returns
-    // the current status.
-    VkResult updateStatus(VkDevice device);
+    // Updates the underlying status if the fence has signaled.
+    void refreshStatus(VkDevice device);
 
     inline VkFence getVkFence() {
         return mFence;
     }
 
-    // Checks what the status of the fence is. Note: this assumes that, in the
-    // most recent tick(), checkAndUpdateStatus() has been called. Otherwise,
-    // this may be out of date.
+    // Checks what the status of the fence is. Note: refreshStatus() should be called
+    // prior to getStatus(), either on tick() or directly prior. This method will
+    // not proactively check if the fence has signaled since the status was last set.
     VkResult getStatus() {
         std::shared_lock const rl(mLock);
         return mStatus;
