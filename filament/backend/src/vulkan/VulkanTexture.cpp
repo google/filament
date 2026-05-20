@@ -168,6 +168,9 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
         usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
+    constexpr TextureUsage DEPTH_STENCIL_USAGE =
+            TextureUsage::DEPTH_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT;
+
     // Determine if we can use the transient usage flag combined with lazily allocated memory.
     const bool useTransientAttachment =
             // Lazily allocated memory is available.
@@ -181,7 +184,7 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
             // restriction.
             // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
             // and above to be able to support stencil resolve (along with depth).
-            !(any(tusage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
+            (!any(tusage & DEPTH_STENCIL_USAGE) || samples == 1);
 
     const VkImageUsageFlags transientFlag =
        useTransientAttachment ? VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT : 0U;
