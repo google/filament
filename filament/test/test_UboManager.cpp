@@ -67,6 +67,7 @@ protected:
                           .feature("material.enable_material_instance_uniform_batching", true)
                           .backend(Backend::NOOP)
                           .build();
+        assert_invariant(mEngine);
 
         mMaterial = Material::Builder()
                             .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA,

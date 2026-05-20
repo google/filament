@@ -1023,6 +1023,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1076,6 +1077,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1147,6 +1149,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1208,6 +1211,7 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutDataHalf {
         std::vector<half> pixels;
@@ -1487,6 +1491,7 @@ TEST(FilamentTest, ColorGradingExportLutValidation) {
         .backend(Engine::Backend::NOOP)
         .feature("engine.color_grading.use_1d_lut", true)
         .build();
+    ASSERT_NE(engine, nullptr);
 
 
     struct LutMetadata {
