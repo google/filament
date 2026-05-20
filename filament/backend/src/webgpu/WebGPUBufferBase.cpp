@@ -106,10 +106,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    commandEncoder.CopyBufferToBuffer(
-        stagingBuffer, 0, mBuffer, byteOffset,
-        remainder == 0 ? bufferDescriptor.size
-                       : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
+    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
+            remainder == 0 ? bufferDescriptor.size
+                           : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
 }
 
 } // namespace filament::backend
