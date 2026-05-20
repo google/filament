@@ -71,23 +71,25 @@ class UTILS_PUBLIC TransformManager : public FilamentAPI {
 public:
     using Instance = utils::EntityInstance<TransformManager>;
 
+    struct children_sentinel {};
+
     class children_iterator {
         friend class FTransformManager;
-        TransformManager const& mManager;
+        TransformManager const* UTILS_NONNULL mManager;
         Instance mInstance;
-        children_iterator(TransformManager const& mgr, Instance instance) noexcept
-                : mManager(mgr), mInstance(instance) { }
+        children_iterator(TransformManager const& mgr, Instance const instance) noexcept
+                : mManager(&mgr), mInstance(instance) { }
     public:
         using value_type = Instance;
         using difference_type = ptrdiff_t;
-        using pointer = Instance*;
-        using reference = Instance&;
+        using pointer = Instance const* UTILS_NONNULL;
+        using reference = Instance const&;
         using iterator_category = std::forward_iterator_tag;
 
-        children_iterator& operator++();
+        children_iterator& operator++() noexcept;
 
-        children_iterator operator++(int) { // NOLINT
-            children_iterator ret(*this);
+        children_iterator operator++(int) noexcept { // NOLINT
+            children_iterator const ret(*this);
             ++(*this);
             return ret;
         }
@@ -100,7 +102,27 @@ public:
             return mInstance != other.mInstance;
         }
 
-        value_type operator*() const { return mInstance; }
+        bool isAtEnd() const noexcept { return !mInstance.isValid(); }
+
+        friend bool operator == (children_iterator const& it, children_sentinel) noexcept {
+            return !it.mInstance.isValid();
+        }
+
+        friend bool operator != (children_iterator const& it, children_sentinel s) noexcept {
+            return !(it == s);
+        }
+
+        reference operator*() const noexcept { return mInstance; }
+        pointer UTILS_NONNULL operator->() const noexcept { return &mInstance; }
+    };
+
+    class children_range {
+        children_iterator mBegin;
+    public:
+        children_range(children_iterator const begin) noexcept
+                : mBegin(begin) {}
+        children_iterator begin() const noexcept { return mBegin; }
+        children_sentinel end() const noexcept { return {}; }
     };
 
     /**
@@ -245,6 +267,14 @@ public:
      * This iterator cannot be dereferenced
      */
     children_iterator getChildrenEnd(Instance parent) const noexcept;
+
+    /**
+     * Gets a range wrapper to iterate over children of a transform component.
+     * Enables elegant range-based for-loops.
+     * @param parent The instance of the parent transform
+     * @return A children_range object
+     */
+    children_range getChildrenRange(Instance const parent) const noexcept;
 
     /**
      * Sets a local transform of a transform component.
