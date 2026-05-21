@@ -188,6 +188,8 @@ See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
 ### Building on Windows with Visual Studio 2019 or later
 
+> ⚠️**NOTE:** Filament doesn't support MSYS2-based environment.
+
 Install the following components:
 
 - [Visual Studio 2019 or later](https://www.visualstudio.com/downloads)
