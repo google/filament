@@ -28,6 +28,7 @@
 #include "GLTexture.h"
 #include "JobQueue.h"
 #include "ShaderCompilerService.h"
+#include <utils/Mutex.h>
 
 #include <backend/AcquiredImage.h>
 #include <backend/CallbackHandler.h>
@@ -216,7 +217,7 @@ public:
             Platform::Sync* sync;
             void* userData;
         };
-        std::mutex lock;
+        utils::Mutex lock;
         std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
     };
 

@@ -18,6 +18,8 @@
 
 #include "DriverBase.h"
 
+#include <utils/Mutex.h>
+
 namespace filament::backend {
 
 CallbackManager::CallbackManager(DriverBase& driver)
@@ -27,6 +29,7 @@ CallbackManager::CallbackManager(DriverBase& driver)
 CallbackManager::~CallbackManager() noexcept = default;
 
 void CallbackManager::terminate() noexcept {
+    utils::LockGuard const lock(mLock);
     for (auto&& item: mCallbacks) {
         if (item.func) {
             mDriver.scheduleCallback(

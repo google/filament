@@ -29,12 +29,12 @@ size_t CyclicBarrier::getThreadCount() const noexcept {
 }
 
 size_t CyclicBarrier::getWaitingThreadCount() const noexcept {
-    std::lock_guard<Mutex> guard(m_lock);
+    LockGuard<Mutex> guard(m_lock);
     return m_trapped_threads;
 }
 
 void CyclicBarrier::reset() noexcept {
-    std::lock_guard<Mutex> guard(m_lock);
+    LockGuard<Mutex> guard(m_lock);
     m_state = State::TRAP;
     m_trapped_threads = 0;
     m_released_threads = 0;
@@ -43,10 +43,12 @@ void CyclicBarrier::reset() noexcept {
 }
 
 void CyclicBarrier::await() noexcept {
-    std::unique_lock<Mutex> guard(m_lock);
+    UniqueLock<Mutex> guard(m_lock);
 
     // we're releasing old threads, wait until we're done with that
-    m_cv.wait(guard, [this]{ return m_state != State::RELEASE; });
+    while (m_state == State::RELEASE) {
+        m_cv.wait(guard);
+    }
 
     size_t const generation = m_generation;
 
@@ -58,13 +60,17 @@ void CyclicBarrier::await() noexcept {
         m_cv.notify_all();
 
         // wait for all previously trapped threads to be released
-        m_cv.wait(guard, [this, generation]{ return m_released_threads == 0 || m_generation != generation; });
+        while (m_released_threads != 0 && m_generation == generation) {
+            m_cv.wait(guard);
+        }
         if (m_generation != generation) return;
         m_state = State::TRAP;
         m_cv.notify_all();
     } else {
         ++m_trapped_threads;
-        m_cv.wait(guard, [this, generation]{ return m_state == State::RELEASE || m_generation != generation; });
+        while (m_state != State::RELEASE && m_generation == generation) {
+            m_cv.wait(guard);
+        }
         if (m_generation != generation) return;
         if (--m_released_threads == 0) {
             // no more threads to be released, we need to notify the last one which is

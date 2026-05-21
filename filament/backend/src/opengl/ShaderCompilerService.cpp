@@ -23,6 +23,7 @@
 #include "OpenGLDriver.h"
 
 #include <private/backend/BackendUtils.h>
+#include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -30,21 +31,26 @@
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
+#include <utils/Condition.h>
 #include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <atomic>
 #include <cctype>
+#include <iterator>
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <optional>
 #include <string_view>
 #include <thread>
@@ -105,7 +111,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // be used. It sends a signal to the engine thread being blocked upon the `wait` call, so that
     // the engine thread resumes its processing with the token.
     void signal() noexcept {
-        std::unique_lock const l(lock);
+        LockGuard const l(lock);
         signaled = true;
         cond.notify_one();
     }
@@ -113,14 +119,16 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // Used in THREAD_POOL mode. The engine thread should call this before accessing token's fields.
     // This may block until the token is ready to be used.
     void wait() const noexcept {
-        std::unique_lock l(lock);
-        cond.wait(l, [this] { return signaled; });
+        UniqueLock l(lock);
+        while (!signaled) {
+            cond.wait(l);
+        }
     }
 
     // Used in THREAD_POOL mode. Returns true if the token is signaled, meaning it's ready to be
     // used.
     bool isReady() const noexcept {
-        std::unique_lock const l(lock);
+        LockGuard const l(lock);
         return signaled;
     }
 
@@ -143,7 +151,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // Used for the `THREAD_POOL` mode.
     mutable Mutex lock;
     mutable Condition cond;
-    bool signaled = false;
+    bool signaled UTILS_GUARDED_BY(lock) = false;
 
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;

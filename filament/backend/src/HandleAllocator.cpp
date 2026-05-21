@@ -21,9 +21,13 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
+#include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
@@ -108,7 +112,7 @@ template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
 void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) const noexcept {
     auto& overflowMap = mOverflowMap;
-    std::lock_guard const lock(mLock);
+    LockGuard const lock(mLock);
     auto pos = overflowMap.find(id);
     if (pos != overflowMap.end()) {
         return pos.value();
@@ -162,7 +166,7 @@ HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size
 
     HandleBase::HandleId id = nextId | HANDLE_HEAP_FLAG;
 
-    std::unique_lock lock(mLock);
+    UniqueLock lock(mLock);
     mOverflowMap.emplace(id, p);
     lock.unlock();
 
@@ -179,7 +183,7 @@ void HandleAllocator<P0, P1, P2>::deallocateHandleSlow(HandleBase::HandleId id, 
     void* p = nullptr;
     auto& overflowMap = mOverflowMap;
 
-    std::unique_lock lock(mLock);
+    UniqueLock lock(mLock);
     auto pos = overflowMap.find(id);
     if (pos != overflowMap.end()) {
         p = pos.value();
@@ -228,7 +232,7 @@ DebugTag::DebugTag() {
 
 UTILS_NOINLINE
 ImmutableCString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
-    std::unique_lock const lock(mDebugTagLock);
+    LockGuard const lock(mDebugTagLock);
     if (auto pos = mDebugTags.find(key); pos != mDebugTags.end()) {
         return pos->second;
     }
@@ -239,7 +243,7 @@ UTILS_NOINLINE
 void DebugTag::writePoolHandleTag(HandleBase::HandleId key, ImmutableCString&& tag) noexcept {
     // This line is the costly part. In the future, we could potentially use a custom
     // allocator.
-    std::unique_lock const lock(mDebugTagLock);
+    LockGuard const lock(mDebugTagLock);
     // Pool based tags will be recycled after a certain age.
     mDebugTags[key] = std::move(tag);
 }
@@ -248,7 +252,7 @@ UTILS_NOINLINE
 void DebugTag::writeHeapHandleTag(HandleBase::HandleId key, ImmutableCString&& tag) noexcept {
     // This line is the costly part. In the future, we could potentially use a custom
     // allocator.
-    std::unique_lock const lock(mDebugTagLock);
+    LockGuard const lock(mDebugTagLock);
     // FIXME: Heap-based tag will never be recycled, therefore, this can grow indefinitely, once we're in the slow mode.
     mDebugTags[key] = std::move(tag);
 }

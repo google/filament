@@ -41,7 +41,7 @@ using namespace utils;
 
 namespace filament::backend {
 
-CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused)
+CommandBufferQueue::CommandBufferQueue(size_t const requiredSize, size_t const bufferSize, bool const paused)
         : mRequiredSize((requiredSize + (CircularBuffer::getBlockSize() - 1u)) & ~(CircularBuffer::getBlockSize() -1u)),
           mCircularBuffer(std::max(mRequiredSize, bufferSize)),
           mFreeSpace(mCircularBuffer.size()),
@@ -54,18 +54,18 @@ CommandBufferQueue::~CommandBufferQueue() {
 }
 
 void CommandBufferQueue::requestExit() {
-    std::lock_guard const lock(mLock);
+    LockGuard const lock(mLock);
     mExitRequested = EXIT_REQUESTED;
     mCondition.notify_one();
 }
 
 bool CommandBufferQueue::isPaused() const noexcept {
-    std::lock_guard const lock(mLock);
+    LockGuard const lock(mLock);
     return mPaused;
 }
 
-void CommandBufferQueue::setPaused(bool paused) {
-    std::lock_guard const lock(mLock);
+void CommandBufferQueue::setPaused(bool const paused) {
+    LockGuard const lock(mLock);
     if (paused) {
         mPaused = true;
     } else {
@@ -75,7 +75,7 @@ void CommandBufferQueue::setPaused(bool paused) {
 }
 
 bool CommandBufferQueue::isExitRequested() const {
-    std::lock_guard const lock(mLock);
+    LockGuard const lock(mLock);
     return bool(mExitRequested);
 }
 
@@ -124,7 +124,7 @@ void CommandBufferQueue::flush() {
             static_cast<char const*>(begin), static_cast<char const*>(end));
 
 
-    std::unique_lock lock(mLock);
+    UniqueLock lock(mLock);
 
     // circular buffer is too small, we corrupted the stream
     FILAMENT_CHECK_POSTCONDITION(used <= mFreeSpace) <<
@@ -156,18 +156,18 @@ void CommandBufferQueue::flush() {
                 "CommandStream is full, but since the rendering thread is paused, "
                 "the buffer cannot flush and we will deadlock. Instead, abort.";
 
-        mCondition.wait(lock, [this, requiredSize]() -> bool {
+        while (mFreeSpace < requiredSize) {
             // TODO: on macOS, we need to call pumpEvents from time to time
-            return mFreeSpace >= requiredSize;
-        });
+            mCondition.wait(lock);
+        }
     }
 }
 
 std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() const {
-    if (!UTILS_HAS_THREADING) {
+    if constexpr (!UTILS_HAS_THREADING) {
         return std::move(mCommandBuffersToExecute);
     }
-    std::unique_lock lock(mLock);
+    UniqueLock lock(mLock);
     while ((mCommandBuffersToExecute.empty() || mPaused) && !mExitRequested) {
         mCondition.wait(lock);
     }
@@ -177,7 +177,7 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
 void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
     size_t const used = std::distance(
             static_cast<char const*>(buffer.begin), static_cast<char const*>(buffer.end));
-    std::lock_guard const lock(mLock);
+    LockGuard const lock(mLock);
     mFreeSpace += used;
     mCondition.notify_one();
 }

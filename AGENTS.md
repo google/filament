@@ -12,6 +12,7 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 *   [skills/cpp_header_inclusion/SKILL.md](skills/cpp_header_inclusion/SKILL.md): Dynamic C++ Header Inclusion layering, logical layering hierarchy, and reordering rules.
 *   [skills/header_self_containment/SKILL.md](skills/header_self_containment/SKILL.md): Strict Header Self-Containment requirement to ensure every header compiles independently.
 *   [skills/preprocessor_guard_hygiene/SKILL.md](skills/preprocessor_guard_hygiene/SKILL.md): Preprocessor guard alphabetizing and macro-dependent template hygiene.
+*   [skills/cpp_static_thread_safety/SKILL.md](skills/cpp_static_thread_safety/SKILL.md): Thread capability annotations (UTILS_GUARDED_BY, UTILS_REQUIRES), LockGuard invariants, and lambda CV bypass rules.
 
 ### 2. Workspace Operations, Verification, and Builds
 *   [skills/verification_protocols/SKILL.md](skills/verification_protocols/SKILL.md): Mandatory verification pipeline (include formatting, desktop compilation, core test runs) before concluding a C++ task.
