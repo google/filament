@@ -126,8 +126,6 @@ public:
 };
 
 TEST_F(BasicStencilBufferTest, StencilBuffer) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-
     auto& api = getDriverApi();
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
@@ -151,8 +149,6 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 }
 
 TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-
     auto& api = getDriverApi();
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
@@ -177,8 +173,6 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 }
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-
     auto& api = getDriverApi();
 
     // Create two textures: a single-sampled color and a MSAA stencil texture.
