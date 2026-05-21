@@ -701,7 +701,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     TextureProvider* provider = foundProvider->second;
     assert_invariant(provider);
 
-    const size_t cacheIdx = (uint64_t) flags & 1;
+    const size_t cacheIdx = any(flags & TextureProvider::TextureFlags::sRGB) ? 1 : 0;
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
