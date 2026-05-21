@@ -135,7 +135,7 @@ protected:
             DescriptorSetHandle descSet,
             PipelineState const& state) {
         auto& api = getDriverApi();
-        RenderPassParams params = getClearColorRenderPass({0,0,0,1});
+        RenderPassParams params = getClearColorDepthRenderPass({ 0, 0, 0, 1 });
         params.viewport = getFullViewport();
 
         api.beginFrame(frame, 0, 0);

@@ -367,7 +367,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
@@ -453,7 +453,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.bindDescriptorSet(descriptorSet, 0, {});
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport.width = kTexSize;
     params.viewport.height = kTexSize;
     PipelineState state = getColorWritePipelineState();
@@ -521,7 +521,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 
     {
         RenderFrame frame(api);
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
@@ -601,7 +601,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();

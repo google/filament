@@ -77,7 +77,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         // Create a uniform buffer.
@@ -195,7 +195,7 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     {
         RenderFrame frame(api);
 
-        RenderPassParams clearParams = getClearColorRenderPass();
+        RenderPassParams clearParams = getClearColorDepthRenderPass();
         clearParams.viewport.height = screenWidth();
         clearParams.viewport.width = screenHeight();
 
