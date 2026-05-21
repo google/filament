@@ -40,11 +40,12 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
-#include <utils/ImmutableCString.h>
 
 #include <algorithm>
 
@@ -836,39 +837,27 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::ImmutableCS
 }
 
 UTILS_UNUSED
-static const char* toString(ShaderStageFlags flags) {
-    static char buffer[64];
-    char* ptr = buffer;
-    size_t remaining = sizeof(buffer);
-    buffer[0] = '\0';
-
-    auto append = [&ptr, &remaining](const char* str) {
-        int written = snprintf(ptr, remaining, "%s", str);
-        if (written > 0 && (size_t) written < remaining) {
-            ptr += written;
-            remaining -= written;
-        }
-    };
-
+static utils::CString toString(ShaderStageFlags flags) {
+    utils::CString result;
     if (any(flags & ShaderStageFlags::VERTEX)) {
-        append("VERTEX");
+        result.append("VERTEX");
     }
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        if (ptr != buffer) {
-            append(" | ");
+        if (!result.empty()) {
+            result.append(" | ");
         }
-        append("FRAGMENT");
+        result.append("FRAGMENT");
     }
     if (any(flags & ShaderStageFlags::COMPUTE)) {
-        if (ptr != buffer) {
-            append(" | ");
+        if (!result.empty()) {
+            result.append(" | ");
         }
-        append("COMPUTE");
+        result.append("COMPUTE");
     }
-    if (ptr == buffer) {
+    if (result.empty()) {
         return "NONE";
     }
-    return buffer;
+    return result;
 }
 
 const char* toString(DescriptorFlags flags) {
@@ -935,7 +924,7 @@ void MetalDriver::createDescriptorSetLayoutR(
     for (size_t i = 0; i < info.descriptors.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
                 info.descriptors[i].binding, toString(info.descriptors[i].type),
-                info.descriptors[i].count, toString(info.descriptors[i].stageFlags),
+                info.descriptors[i].count, toString(info.descriptors[i].stageFlags).c_str_safe(),
                 toString(info.descriptors[i].flags));
     }
     DEBUG_LOG("})\n");
