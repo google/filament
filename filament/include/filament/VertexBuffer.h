@@ -144,12 +144,12 @@ public:
          * only to integer types.
          *
          * @param attribute Enum of the attribute to set the normalization flag to.
-         * @param normalize true to automatically normalize the given attribute.
+         * @param normalized true to automatically normalize the given attribute.
          * @return A reference to this Builder for chaining calls.
          *
          * This is a no-op if the \p attribute is an invalid enum.
          */
-        Builder& normalized(VertexAttribute attribute, bool normalize = true) noexcept;
+        Builder& normalized(VertexAttribute attribute, bool normalized = true) noexcept;
 
         /**
          * Sets advanced skinning mode. Bone data, indices and weights will be
@@ -225,7 +225,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        VertexBuffer* UTILS_NONNULL build(Engine& engine);
+        VertexBuffer* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FVertexBuffer;
