@@ -72,7 +72,7 @@ public:
     [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer);
+            TargetBufferFlags buffer, bool isTransient);
 
     [[nodiscard]] TargetBufferFlags getTargetFlags() const { return mTargetFlags; }
     void setTargetFlags( TargetBufferFlags value) { mTargetFlags = value; }
@@ -80,6 +80,7 @@ public:
 private:
     bool mDefaultRenderTarget = false;
     TargetBufferFlags mTargetFlags = TargetBufferFlags::NONE;
+    TargetBufferFlags mTransientAttachments = TargetBufferFlags::NONE;
     uint8_t mSamples = 1;
     uint8_t mLayerCount = 1;
 

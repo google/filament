@@ -89,7 +89,8 @@ TEST_F(ReadTextureTest, ReadTexture2D) {
                 .uniforms = {},
             });
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1)); // Blue background
+    RenderPassParams params =
+            getClearColorDepthRenderPass(math::float4(0, 0, 1, 1)); // Blue background
     params.viewport.width = textureSize;
     params.viewport.height = textureSize;
 
@@ -181,7 +182,7 @@ TEST_F(ReadTextureTest, ReadTextureArray) {
                         textureSize, 1, 0, { { texture, 0, layer } }, {}, {}));
 
         RenderPassParams params =
-                getClearColorRenderPass(math::float4(float(layer), 0, 1.0f - float(layer), 1));
+                getClearColorDepthRenderPass(math::float4(float(layer), 0, 1.0f - float(layer), 1));
         params.viewport.width = textureSize;
         params.viewport.height = textureSize;
 
@@ -252,7 +253,7 @@ TEST_F(ReadTextureTest, ReadTextureXCoordinates) {
                 .uniforms = {},
             });
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0));
+    RenderPassParams params = getClearColorDepthRenderPass(math::float4(0));
     params.viewport.width = textureSize;
     params.viewport.height = textureSize;
 

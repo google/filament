@@ -317,7 +317,7 @@ void CommandBufferPool::update() {
         auto& buffer = mBuffers[index];
         // Updates the buffer's status, and marks it complete
         // if the fence has signaled.
-        buffer->checkAndUpdateStatus(mDevice);
+        buffer->refreshStatus(mDevice);
     });
 }
 

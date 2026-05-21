@@ -8,6 +8,17 @@ cmake_minimum_required(VERSION 3.22.1)
 # both release and debug).
 
 # ==================================================================================================
+# Unsupported environment
+# ==================================================================================================
+
+# Filament does not support MSYS2-based environment on Windows. See issue #9968.
+if(DEFINED ENV{MSYSTEM})
+    message(FATAL_ERROR
+        "MSYS2 Subsystem detected($ENV{MSYSTEM}). "
+        "Filament does not support MSYS2-based environment on Windows.")
+endif()
+
+# ==================================================================================================
 # Toolchain configuration
 # ==================================================================================================
 # On iOS, the deployment target is set inside third_party/clang/ios.cmake

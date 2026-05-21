@@ -138,6 +138,24 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
     // TODO consider possibly making this an array (that would avoid a heap allocation, but the
     //      concern is the size limitation on the handle itself)
     mColorAttachmentDesc.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+
+    auto checkTransient = [&](TargetBufferFlags flag, Handle<HwTexture> handle) {
+#if !defined(__EMSCRIPTEN__)
+        if (any(mTargetFlags & flag) && handle) {
+            if (auto* texture = getWebGPUTexture(handle)) {
+                if ((texture->getUsage() & wgpu::TextureUsage::TransientAttachment) !=
+                        wgpu::TextureUsage::None) {
+                    mTransientAttachments |= flag;
+                }
+            }
+        }
+#endif
+    };
+    checkTransient(TargetBufferFlags::DEPTH, mDepthAttachment.handle);
+    checkTransient(TargetBufferFlags::STENCIL, mStencilAttachment.handle);
+    for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+        checkTransient(getTargetBufferFlagsAt(i), mColorAttachments[i].handle);
+    }
 }
 
 // Constructor for the default render target
@@ -163,8 +181,8 @@ wgpu::LoadOp WebGPURenderTarget::getLoadOperation(RenderPassParams const& params
 }
 
 wgpu::StoreOp WebGPURenderTarget::getStoreOperation(RenderPassParams const& params,
-        const TargetBufferFlags bufferToOperateOn) {
-    if (any(params.flags.discardEnd & bufferToOperateOn)) {
+        const TargetBufferFlags bufferToOperateOn, bool const isTransient) {
+    if (isTransient || any(params.flags.discardEnd & bufferToOperateOn)) {
         return wgpu::StoreOp::Discard;
     }
     return wgpu::StoreOp::Store;
@@ -188,7 +206,8 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                 [](wgpu::TextureView const& msaaView) { return msaaView != nullptr; }))
                 << "A color or depth/stencil attachment texture has an MSAA sidecar but at least "
                    "one other color attachment texture does not.";
-        FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView != nullptr)
+        FILAMENT_CHECK_PRECONDITION(customDepthStencilTextureView == nullptr ||
+                                    customDepthStencilMsaaSidecarTextureView != nullptr)
                 << "The color attachment texture(s) have MSAA sidecars but the depth/stencil "
                    "texture does not.";
     } else {
@@ -217,7 +236,8 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             .view = defaultColorTextureView,
             .resolveTarget = nullptr,
             .loadOp = WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
-            .storeOp = WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0),
+            .storeOp =
+                    WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0, false),
             .clearValue = clearColor,
         });
     } else {
@@ -229,8 +249,9 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                     .resolveTarget = hasMsaaSidecars ? customColorTextureViews[i] : nullptr,
                     .loadOp =
                             WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
-                    .storeOp = WebGPURenderTarget::getStoreOperation(params,
-                            getTargetBufferFlagsAt(i)),
+                    .storeOp =
+                            WebGPURenderTarget::getStoreOperation(params, getTargetBufferFlagsAt(i),
+                                    any(mTransientAttachments & getTargetBufferFlagsAt(i))),
                     .clearValue = clearColor,
                 });
             }
@@ -261,8 +282,10 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                         depthReadOnly ? wgpu::LoadOp::Undefined
                                       : getLoadOperation(params, TargetBufferFlags::DEPTH);
                 mDepthStencilAttachmentDesc.depthStoreOp =
-                        depthReadOnly ? wgpu::StoreOp::Undefined
-                                      : getStoreOperation(params, TargetBufferFlags::DEPTH);
+                        depthReadOnly
+                                ? wgpu::StoreOp::Undefined
+                                : getStoreOperation(params, TargetBufferFlags::DEPTH,
+                                          any(mTransientAttachments & TargetBufferFlags::DEPTH));
                 mDepthStencilAttachmentDesc.depthClearValue = static_cast<float>(params.clearDepth);
                 mDepthStencilAttachmentDesc.depthReadOnly = depthReadOnly;
             } else {
@@ -275,7 +298,8 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                 mDepthStencilAttachmentDesc.stencilLoadOp =
                         getLoadOperation(params, TargetBufferFlags::STENCIL);
                 mDepthStencilAttachmentDesc.stencilStoreOp =
-                        getStoreOperation(params, TargetBufferFlags::STENCIL);
+                        getStoreOperation(params, TargetBufferFlags::STENCIL,
+                                any(mTransientAttachments & TargetBufferFlags::STENCIL));
                 mDepthStencilAttachmentDesc.stencilClearValue = params.clearStencil;
                 mDepthStencilAttachmentDesc.stencilReadOnly =
                         (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
