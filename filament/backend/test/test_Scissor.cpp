@@ -108,7 +108,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = srcRect;
 
         PipelineState ps = getColorWritePipelineState();
@@ -187,7 +187,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = bottomLeftViewport;
 
         PipelineState ps = getColorWritePipelineState();

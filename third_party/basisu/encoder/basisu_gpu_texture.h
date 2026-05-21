@@ -1,5 +1,5 @@
 // basisu_gpu_texture.h
-// Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 // limitations under the License.
 #pragma once
 #include "../transcoder/basisu.h"
+#include "../transcoder/basisu_astc_helpers.h"
 #include "basisu_etc.h"
 
 namespace basisu
@@ -48,6 +49,8 @@ namespace basisu
 		}
 
 		inline texture_format get_format() const { return m_fmt; }
+		inline bool is_hdr() const { return is_hdr_texture_format(m_fmt); }
+		inline bool is_ldr() const { return !is_hdr_texture_format(m_fmt); }
 		
 		// Width/height in pixels
 		inline uint32_t get_pixel_width() const { return m_width; }
@@ -100,9 +103,15 @@ namespace basisu
 			m_blocks.resize(m_blocks_x * m_blocks_y * m_qwords_per_block);
 		}
 
-		bool unpack(image& img) const;
+		// Unpacks LDR textures only. Asserts and returns false otherwise.
+		// astc_srgb: true to use the ASTC sRGB decode profile, false for linear. 
+		// For XUASTC LDR, this should match what was used during encoding. For ETC1S/UASTC LDR 4x4, this should be false.
+		bool unpack(image& img, bool astc_srgb) const;
+
+		// Unpacks HDR textures only. Asserts and returns false otherwise.
+		bool unpack_hdr(imagef& img) const;
 		
-		void override_dimensions(uint32_t w, uint32_t h)
+		inline void override_dimensions(uint32_t w, uint32_t h)
 		{
 			m_width = w;
 			m_height = h;
@@ -116,39 +125,60 @@ namespace basisu
 
 	typedef basisu::vector<gpu_image> gpu_image_vec;
 
-	// KTX file writing
-
-	bool create_ktx_texture_file(uint8_vec &ktx_data, const basisu::vector<gpu_image_vec>& gpu_images, bool cubemap_flag);
-		
-	bool write_compressed_texture_file(const char *pFilename, const basisu::vector<gpu_image_vec>& g, bool cubemap_flag);
+	// KTX1 file writing - compatible with ARM's astcenc tool, and some other tools.
+	// Note astc_linear_flag used to be always effectively true in older code. It's ignored for ASTC HDR formats.
+	bool create_ktx_texture_file(uint8_vec &ktx_data, const basisu::vector<gpu_image_vec>& gpu_images, bool cubemap_flag, bool astc_srgb_flag);
 	
-	inline bool write_compressed_texture_file(const char *pFilename, const gpu_image_vec &g)
-	{
-		basisu::vector<gpu_image_vec> a;
-		a.push_back(g);
-		return write_compressed_texture_file(pFilename, a, false);
-	}
+	bool does_dds_support_format(texture_format fmt);
+	bool write_dds_file(uint8_vec& dds_data, const basisu::vector<gpu_image_vec>& gpu_images, bool cubemap_flag, bool use_srgb_format);
+	bool write_dds_file(const char* pFilename, const basisu::vector<gpu_image_vec>& gpu_images, bool cubemap_flag, bool use_srgb_format);
 
-	bool write_compressed_texture_file(const char *pFilename, const gpu_image &g);
+	// Currently reads 2D 32bpp RGBA, 16-bit HALF RGBA, or 32-bit FLOAT RGBA, with or without mipmaps. No tex arrays or cubemaps, yet.
+	bool read_uncompressed_dds_file(const char* pFilename, basisu::vector<image>& ldr_mips, basisu::vector<imagef>& hdr_mips);
+
+	// Supports DDS and KTX
+	bool write_compressed_texture_file(const char *pFilename, const basisu::vector<gpu_image_vec>& g, bool cubemap_flag, bool use_srgb_format);
+	bool write_compressed_texture_file(const char* pFilename, const gpu_image_vec& g, bool use_srgb_format);
+	bool write_compressed_texture_file(const char *pFilename, const gpu_image &g, bool use_srgb_format);
 	
 	bool write_3dfx_out_file(const char* pFilename, const gpu_image& gi);
 
 	// GPU texture block unpacking
+	// For ETC1, use in basisu_etc.h: bool unpack_etc1(const etc_block& block, color_rgba *pDst, bool preserve_alpha)
 	void unpack_etc2_eac(const void *pBlock_bits, color_rgba *pPixels);
 	bool unpack_bc1(const void *pBlock_bits, color_rgba *pPixels, bool set_alpha);
 	void unpack_bc4(const void *pBlock_bits, uint8_t *pPixels, uint32_t stride);
 	bool unpack_bc3(const void *pBlock_bits, color_rgba *pPixels);
 	void unpack_bc5(const void *pBlock_bits, color_rgba *pPixels);
+
+#if 0
 	bool unpack_bc7_mode6(const void *pBlock_bits, color_rgba *pPixels);
-	bool unpack_bc7(const void* pBlock_bits, color_rgba* pPixels);
+	int determine_bc7_mode(const void* pBlock);
+	int determine_bc7_mode_4_index_mode(const void* pBlock);
+	int determine_bc7_mode_4_or_5_rotation(const void* pBlock);
+	bool unpack_bc7(const void* pBlock_bits, color_rgba* pPixels); // full format
+#endif
+
+	bool unpack_bc6h(const void* pSrc_block, void* pDst_block, bool is_signed, uint32_t dest_pitch_in_halfs = 4 * 3); // full format, outputs HALF values, RGB texels only (not RGBA)
 	void unpack_atc(const void* pBlock_bits, color_rgba* pPixels);
+	// We only support CC_MIXED non-alpha blocks here because that's the only mode the transcoder uses at the moment.
 	bool unpack_fxt1(const void* p, color_rgba* pPixels);
+	// PVRTC2 is currently limited to only what our transcoder outputs (non-interpolated, hard_flag=1 modulation=0). In this mode, PVRTC2 looks much like BC1/ATC.
 	bool unpack_pvrtc2(const void* p, color_rgba* pPixels);
 	void unpack_etc2_eac_r(const void *p, color_rgba* pPixels, uint32_t c);
 	void unpack_etc2_eac_rg(const void* p, color_rgba* pPixels);
-
+	
 	// unpack_block() is primarily intended to unpack texture data created by the transcoder.
-	// For some texture formats (like ETC2 RGB, PVRTC2, FXT1) it's not a complete implementation.
-	bool unpack_block(texture_format fmt, const void *pBlock, color_rgba *pPixels);
-			
+	// For some texture formats (like ETC2 RGB, PVRTC2, FXT1) it's not yet a complete implementation.
+	// Unpacks LDR texture formats only.
+	bool unpack_block(texture_format fmt, const void *pBlock, color_rgba *pPixels, bool astc_srgb);
+
+	// Unpacks HDR texture formats only.
+	bool unpack_block_hdr(texture_format fmt, const void* pBlock, vec4F* pPixels);
+	
+	bool read_astc_file(const uint8_t* pImage_data, size_t image_data_size, vector2D<astc_helpers::astc_block>& blocks, uint32_t& block_width, uint32_t& block_height, uint32_t& width, uint32_t& height);
+	bool read_astc_file(const char* pFilename, vector2D<astc_helpers::astc_block>& blocks, uint32_t& block_width, uint32_t& block_height, uint32_t& width, uint32_t& height);
+	bool write_astc_file(const char* pFilename, const void* pBlocks, uint32_t block_width, uint32_t block_height, uint32_t dim_x, uint32_t dim_y);
+							
 } // namespace basisu
+

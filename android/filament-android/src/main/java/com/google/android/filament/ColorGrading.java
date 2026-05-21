@@ -152,6 +152,10 @@ public class ColorGrading {
             mFinalizer = new BuilderFinalizer(mNativeBuilder);
         }
 
+        long getNativeBuilder() {
+            return mNativeBuilder;
+        }
+
         /**
          * Sets the quality level of the color grading. When color grading is implemented using
          * a 3D LUT, the quality level may impact the resolution and bit depth of the backing
@@ -573,6 +577,18 @@ public class ColorGrading {
         }
 
         /**
+         * Enables or disables SIMD fast math optimizations during LUT generation.
+         *
+         * @param fastMath true to enable fast math (default), false to use standard scalar math.
+         * @return This Builder, for chaining calls
+         */
+        @NonNull
+        public Builder fastMath(boolean fastMath) {
+            nBuilderFastMath(mNativeBuilder, fastMath);
+            return this;
+        }
+
+        /**
          * Creates the IndirectLight object and returns a pointer to it.
          *
          * @param engine The {@link Engine} to associate this <code>IndirectLight</code> with.
@@ -637,6 +653,7 @@ public class ColorGrading {
     private static native void nBuilderSaturation(long nativeBuilder, float saturation);
     private static native void nBuilderCurves(long nativeBuilder, float[] gamma, float[] midPoint, float[] scale);
     private static native void nBuilderCustomLut(long nativeBuilder, java.nio.Buffer buffer, int dim);
+    private static native void nBuilderFastMath(long nativeBuilder, boolean fastMath);
 
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 }

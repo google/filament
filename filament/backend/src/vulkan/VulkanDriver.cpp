@@ -64,6 +64,73 @@ namespace filament::backend {
 
 namespace {
 
+static constexpr uint8_t MAX_TICKS_BETWEEN_GC = 3;
+void updateYUVStagingTexture(VulkanPlatform* platform, VulkanCommandBuffer& commands,
+        resource_ptr<VulkanTexture> texture) {
+    Platform::ExternalImageHandle externalHandle = texture->getYUVStagingHandle();
+
+    uint32_t const w = texture->width;
+    uint32_t const h = texture->height;
+    uint32_t const yPlaneSize = w * h;
+    uint32_t const chromaWidth = w / 2;
+    uint32_t const chromaHeight = h / 2;
+    uint32_t const totalBufferSize = yPlaneSize + (chromaWidth * chromaHeight * 2);
+
+    VkBuffer stagingBuffer = texture->getYUVStagingBuffer();
+    VkDeviceMemory stagingMemory = texture->getYUVStagingMemory();
+    VkDevice device = platform->getDevice();
+
+    // CPU mapped data
+    void* mappedData;
+    VkResult result = vkMapMemory(device, stagingMemory, 0, totalBufferSize, 0, &mappedData);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "vkMapMemory failed YUV staging with error=" << static_cast<int32_t>(result);
+
+
+    // Rely on platform code for the copy from the internal handle.
+    // we assumed NV12 encoding, and Android we rely on per place access API which means we are free
+    // to pick the encoding into the VkBuffer and we choose the NV12 format.
+    if (platform->copyExternalImageToMemoryYUV(externalHandle, mappedData, w, h)) {
+        // Just making sure it has not memory coherency issues
+        VkMappedMemoryRange flushRange = {
+            .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+            .pNext = nullptr,
+            .memory = stagingMemory,
+            .offset = 0,
+            .size = VK_WHOLE_SIZE,
+        };
+        vkFlushMappedMemoryRanges(device, 1, &flushRange);
+    }
+    vkUnmapMemory(device, stagingMemory);
+
+    // Set the barrier to transfer destination
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::TRANSFER_DST);
+    VkCommandBuffer cmdbuf = commands.buffer();
+
+    VkBufferImageCopy regions[2] = {};
+
+    // Offset zero is luma
+    regions[0].bufferOffset = 0;
+    regions[0].imageSubresource = {VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1};
+    regions[0].imageExtent = {w, h, 1};
+
+    // We know the chroma packing (see comments near copyExternalImageToMemoryYUV)
+    regions[1].bufferOffset = yPlaneSize;
+    regions[1].imageSubresource = {VK_IMAGE_ASPECT_PLANE_1_BIT, 0, 0, 1};
+    regions[1].imageExtent = {chromaWidth, chromaHeight, 1};
+
+    commands.acquire(texture);
+
+    // Split copies because of some issue copying both places at once.
+    // @TODO: When this CL gets stubmitted to github, we need to revisit this
+    vkCmdCopyBufferToImage(cmdbuf, stagingBuffer, texture->getVkImage(),
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &regions[0]);
+    vkCmdCopyBufferToImage(cmdbuf, stagingBuffer, texture->getVkImage(),
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &regions[1]);
+
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
+}
+
 VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevice,
         VkDevice device) {
     VmaAllocator allocator;
@@ -428,6 +495,15 @@ void VulkanDriver::terminate() {
 
 void VulkanDriver::tick(int) {
     mCommands.updateFences();
+
+    // If the Renderer is skipping a lot of frames, it's possible for
+    // commands to accumulate, since we only flush command buffers if
+    // driver.flush() is called, or in endFrame(). This ensures that
+    // flush and gc run regularly, even during skipped frames.
+    if (++mTicksSinceLastGc == MAX_TICKS_BETWEEN_GC) {
+        flush();
+        collectGarbage(); // Resets mTicksSinceLastGc to 0.
+    }
 }
 
 // Garbage collection should not occur too frequently, only about once per frame. Internally, the
@@ -436,6 +512,8 @@ void VulkanDriver::tick(int) {
 // been destroyed for safe destruction, due to outstanding command buffers and triple buffering.
 void VulkanDriver::collectGarbage() {
     FVK_SYSTRACE_SCOPE();
+    mTicksSinceLastGc = 0;
+
     // Command buffers need to be submitted and completed before other resources can be gc'd.
     mCommands.gc();
     mDescriptorSetCache.gc();
@@ -513,6 +591,13 @@ void VulkanDriver::updateDescriptorSetTexture(
         mAppState.hasBoundExternalImages = true;
         set->isAnExternalSamplerBound = true;
         set->isLayoutDirty = true;
+
+        // For YUV staging we need to perform a copy each time the descriptor set is updated
+        // not that this is brittle and should the video patch change,  this will break.
+        if(texture->isYUVStaging()) {
+            updateYUVStagingTexture(mPlatform, mCommands.get(), texture);
+        }
+
     } else if (bool(texture->getStream())) {
         mStreamedImageManager.bindStreamedTexture(set, binding, texture, params);
         // TODO: Fix the stream flow!! In this case the binded image doesnt have to be one
@@ -617,6 +702,12 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vert
             vertexCount, vbi);
     vb.inc();
     mResourceManager.associateHandle(vbh.getId(), std::move(tag));
+}
+
+void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -746,7 +837,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // assert_invariant(format == metadata.filamentFormat);
     // assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+    auto imgData = mPlatform->createVkImageFromExternal(externalImage, width, height);
 
     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -767,14 +858,16 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
             mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
-            vkformat, conversion, metadata.samples, metadata.width, metadata.height,
+            vkformat, conversion,
+            imgData.internal.stagingMemory, imgData.internal.stagingBuffer, externalImage,
+            metadata.samples, metadata.width, metadata.height,
             metadata.layers, usage, mStagePool);
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
     texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
-    if (imgData.external.valid()) {
+    if (imgData.external.valid() || texture->isYUVStaging()) {
         mExternalImageManager.addExternallySampledTexture(texture, conversion);
     }
 
@@ -1016,23 +1109,20 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& ta
 
 void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
-    VkFence fence = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fenceStatus;
     if (mCurrentRenderPass.commandBuffer) {
         VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
-        fence = cmdBuff->getVkFence();
         fenceStatus = cmdBuff->getFenceStatus();
         // If we're currently recording, flush so that the fence only applies
         // to commands already issued.
         mCommands.flush();
     } else {
-        fence = mCommands.getMostRecentFence();
         fenceStatus = mCommands.getMostRecentFenceStatus();
     }
 
     {
         std::lock_guard<std::mutex> guard(sync->lock);
-        sync->sync = mPlatform->createSync(fence, fenceStatus);
+        sync->sync = mPlatform->createSync(fenceStatus);
     }
 
     for (auto& cbData : sync->conversionCallbacks) {
@@ -1134,6 +1224,10 @@ Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
+    return mResourceManager.allocHandle<VulkanVertexBuffer>();
+}
+
+Handle<HwVertexBuffer> VulkanDriver::createVertexBufferAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBuffer>();
 }
 
@@ -1381,6 +1475,7 @@ int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
+// This is currently broken, internal bug 513573228 is tracking the fix.
 void VulkanDriver::updateStreams(CommandStream* driver) {
     FVK_SYSTRACE_SCOPE();
     if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
@@ -1399,7 +1494,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 if (!texture) {
                     auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-                    auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage, texture->width, texture->height);
 
                     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -1421,7 +1516,9 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
                     auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager,
                             mContext, mPlatform->getDevice(), mAllocator, &mResourceManager,
-                            &mCommands, vkimage, memory, vkformat, conversion, metadata.samples,
+                            &mCommands, vkimage, memory, vkformat, conversion,
+                            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+                            metadata.samples,
                             metadata.width, metadata.height, metadata.layers,
                             metadata.filamentUsage, mStagePool);
 
@@ -2065,13 +2162,36 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
         // actually clearing that particular target.
+        uint32_t colorIdx = 0;
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
                 VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
-                clearValue.color.float32[0] = params.clearColor.r;
-                clearValue.color.float32[1] = params.clearColor.g;
-                clearValue.color.float32[2] = params.clearColor.b;
-                clearValue.color.float32[3] = params.clearColor.a;
+                // VkClearColorValue is a union the driver reads according to the attachment's
+                // format. Dispatch on the kind cached on the render target at construction time.
+                // Writing the wrong arm produces silent corruption.
+                switch (rt->getColorClearKind(colorIdx++)) {
+                    case VulkanRenderTarget::ColorClearKind::Float: {
+                        clearValue.color.float32[0] = static_cast<float>(params.clearColor[0]);
+                        clearValue.color.float32[1] = static_cast<float>(params.clearColor[1]);
+                        clearValue.color.float32[2] = static_cast<float>(params.clearColor[2]);
+                        clearValue.color.float32[3] = static_cast<float>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::SignedInt: {
+                        clearValue.color.int32[0] = static_cast<int32_t>(params.clearColor[0]);
+                        clearValue.color.int32[1] = static_cast<int32_t>(params.clearColor[1]);
+                        clearValue.color.int32[2] = static_cast<int32_t>(params.clearColor[2]);
+                        clearValue.color.int32[3] = static_cast<int32_t>(params.clearColor[3]);
+                        break;
+                    }
+                    case VulkanRenderTarget::ColorClearKind::UnsignedInt: {
+                        clearValue.color.uint32[0] = static_cast<uint32_t>(params.clearColor[0]);
+                        clearValue.color.uint32[1] = static_cast<uint32_t>(params.clearColor[1]);
+                        clearValue.color.uint32[2] = static_cast<uint32_t>(params.clearColor[2]);
+                        clearValue.color.uint32[3] = static_cast<uint32_t>(params.clearColor[3]);
+                        break;
+                    }
+                }
             }
         }
         // Resolve attachments are not cleared but still have entries in the list, so skip over them.
@@ -2150,7 +2270,7 @@ void VulkanDriver::nextSubpass(int) {
             ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
-        VulkanAttachment& subpassInput = renderTarget->getColor0();
+        VulkanAttachment& subpassInput = renderTarget->getColor(0);
         mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
 }
@@ -2424,8 +2544,8 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    auto const& dstAttachment = dstTarget->getColor0();
-    auto const& srcAttachment = srcTarget->getColor0();
+    auto const& dstAttachment = dstTarget->getColor(0);
+    auto const& srcAttachment = srcTarget->getColor(0);
 
     if (srcAttachment.texture->samples > 1) {
         mBlitter.resolve(dstAttachment, srcAttachment);

@@ -32,8 +32,45 @@ import androidx.annotation.Nullable;
  * resolution or refresh rate changes.
  */
 public class DisplayHelper {
+    /**
+     * Lock used to synchronize the atomic state transitions between attached and
+     * detached states, and to guarantee thread-safe access to the shared lifecycle
+     * variables: {@code mRenderer}, {@code mDisplay}, and {@code mListener}.
+     *
+     * <p>These synchronization safeguards are necessary because {@code DisplayHelper} can be
+     * initialized with a custom {@link Handler} that is bound to a different thread's
+     * {@link android.os.Looper}. Since {@code detach()} is typically called from the main thread
+     * (or the finalizer thread), while display updates execute on the Handler's thread, this lock
+     * prevents two critical cross-thread race conditions:
+     * <ul>
+     * <li><b>Listener Leaks:</b> Ensures that listener registration in {@code attach()}
+     * and unregistration in {@code detach()} are mutually exclusive. This prevents a
+     * scenario where a listener is registered on a background thread immediately after a
+     * detach sequence completes on the main thread, which would permanently leak the listener.</li>
+     * <li><b>Stale Reference Crashes:</b> Ensures that background Handler callbacks
+     * executing {@code updateDisplayInfo()} see the synchronized, up-to-date null state of
+     * {@code mRenderer} if {@code detach()} is called. This prevents NullPointerExceptions
+     * and native use-after-free crashes that occur when attempting to update a destroyed
+     * native Renderer object from a background thread.</li>
+     * </ul>
+     */
+    private final Object mLock = new Object();
 
+    /**
+     * An optional {@link Handler} used to execute display callbacks and update Filament's state.
+     *
+     * <p>When an application runs Filament on a dedicated background thread, this Handler is used
+     * to ensure that calls to {@link Renderer#setDisplayInfo} happen safely on that specific
+     * rendering thread rather than the main UI thread.
+     *
+     * <p>If this is null, updates are executed synchronously on the calling thread.
+     *
+     * <p>Because callbacks posted to this Handler may execute concurrently with {@link #detach()}
+     * (which is typically called from the main thread), all state accessed by this Handler is
+     * protected by {@link #mLock}.
+     */
     private Handler mHandler = null;
+
     private DisplayManager mDisplayManager;
     private Display mDisplay;
     private Renderer mRenderer;
@@ -84,26 +121,30 @@ public class DisplayHelper {
      * @param display a {@link Display} to be associated with the {@link Renderer}
      */
     public void attach(@NonNull Renderer renderer, @NonNull Display display) {
-        if (renderer == mRenderer && display == mDisplay) {
-            return;
-        }
-        mRenderer = renderer;
-        mDisplay = display;
-        mListener = new DisplayManager.DisplayListener() {
-            @Override
-            public void onDisplayAdded(int displayId) {
+        synchronized (mLock) {
+            if (mDisplayManager == null || (renderer == mRenderer && display == mDisplay)) {
+                return;
             }
-            @Override
-            public void onDisplayRemoved(int displayId) {
-            }
-            @Override
-            public void onDisplayChanged(int displayId) {
-                if (displayId == display.getDisplayId()) {
-                    updateDisplayInfo();
+            mRenderer = renderer;
+            mDisplay = display;
+            mListener = new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
                 }
-            }
-        };
-        mDisplayManager.registerDisplayListener(mListener, mHandler);
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    if (displayId == display.getDisplayId()) {
+                        updateDisplayInfo();
+                    }
+                }
+            };
+            mDisplayManager.registerDisplayListener(mListener, mHandler);
+        }
 
         // always invoke the callback when it's registered
         if (mHandler != null) {
@@ -123,17 +164,27 @@ public class DisplayHelper {
      * This is typically called from {@link UiHelper.RendererCallback#onDetachedFromSurface}.
      */
     public void detach() {
-        if (mListener != null) {
-            mDisplayManager.unregisterDisplayListener(mListener);
-            mListener = null;
-            mDisplay = null;
-            mRenderer = null;
+        synchronized (mLock) {
+            if (mListener != null) {
+                mDisplayManager.unregisterDisplayListener(mListener);
+                mListener = null;
+                mDisplay = null;
+                mRenderer = null;
+            }
         }
     }
 
     private void updateDisplayInfo() {
-        mRenderer.setDisplayInfo(
-                DisplayHelper.getDisplayInfo(mDisplay, mRenderer.getDisplayInfo()));
+        synchronized (mLock) {
+            // Prevent a race condition where detach() is called immediately after attach().
+            // When attach() is called, it posts a Runnable to the Handler to execute this method.
+            // If detach() is called before that Runnable executes, mRenderer and mDisplay
+            // are set to null, which would cause a NullPointerException here.
+            if (mRenderer != null && mDisplay != null) {
+                mRenderer.setDisplayInfo(
+                    DisplayHelper.getDisplayInfo(mDisplay, mRenderer.getDisplayInfo()));
+            }
+        }
     }
 
     /**

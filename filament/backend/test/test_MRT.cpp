@@ -104,7 +104,7 @@ TEST_F(BackendTest, MRT) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         api.startCapture(0);

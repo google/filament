@@ -479,6 +479,16 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
     // No actual GPU memory is allocated here, so no need to check for allocation success.
 }
 
+void MetalDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih,
+        CallbackHandler* handler, CallbackHandler::Callback callback,
+        void* user, utils::ImmutableCString&& tag) {
+    MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
+    construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih, true);
+    mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
+    scheduleCallback(handler, user, callback);
+}
+
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage, utils::ImmutableCString&& tag) {
     auto elementSize = (uint8_t)getElementTypeSize(elementType);
@@ -612,6 +622,8 @@ void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> src
             construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount);
     mContext->textures.insert(texture);
     texture->setLabel(tag);
+    DEBUG_LOG("createTextureViewR(th = %d, srch = %d, baseLevel = %d, levelCount = %d)\n",
+            th.getId(), srch.getId(), baseLevel, levelCount);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
@@ -622,6 +634,8 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a);
     mContext->textures.insert(texture);
     texture->setLabel(tag);
+    DEBUG_LOG("createTextureViewSwizzleR(th = %d, srch = %d, r = %d, g = %d, b = %d, a = %d)\n",
+            th.getId(), srch.getId(), r, g, b, a);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
@@ -629,8 +643,15 @@ void MetalDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<Hw
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
-    createTextureViewSwizzleR(th, srch, r, g, b, a, std::move(tag));
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a, true);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
+    DEBUG_LOG(
+            "createTextureViewSwizzleAsyncR(th = %d, srch = %d, r = %d, g = %d, b = %d, a = %d)\n",
+            th.getId(), srch.getId(), r, g, b, a);
     scheduleCallback(handler, user, callback);
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
@@ -930,6 +951,10 @@ Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer>();
 }
 
+Handle<HwVertexBuffer> MetalDriver::createVertexBufferAsyncS() noexcept {
+    return alloc_handle<MetalVertexBuffer>();
+}
+
 Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer>();
 }
@@ -1066,7 +1091,13 @@ void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
-    if (vbh) {
+    if (UTILS_UNLIKELY(!vbh)) {
+        return;
+    }
+    auto* vb = handle_cast<MetalVertexBuffer>(vbh);
+    if (vb->asynchronous) {
+        getJobQueue()->push([this, vbh]() mutable { destruct_handle<MetalVertexBuffer>(vbh); });
+    } else {
         destruct_handle<MetalVertexBuffer>(vbh);
     }
 }
@@ -1349,7 +1380,7 @@ bool MetalDriver::isTextureFormatFilterable(TextureFormat format) {
         return mContext->highestSupportedGpuFamily.apple >= 7 ||
                mContext->highestSupportedGpuFamily.mac >= 1;
     }
-    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) || 
+    if (isUnsignedIntFormat(format) || isSignedIntFormat(format) ||
         isDepthFormat(format) || isStencilFormat(format)) {
         return false;
     }
@@ -1645,6 +1676,14 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
     auto* tex = handle_cast<MetalTexture>(th);
     auto tag = mHandleAllocator.getHandleTag(th.getId());
+
+    DEBUG_LOG("update3DImageAsyncR(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, "
+              "width = "
+              "%d, height = %d, depth = %d, data = ?)\n",
+            th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
+
+    FILAMENT_CHECK_PRECONDITION(tex->asynchronous)
+            << "update3DImageAsyncR must be called with an asynchronous texture.";
 
     getJobQueue()->push(
             [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,

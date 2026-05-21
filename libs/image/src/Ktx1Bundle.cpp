@@ -140,6 +140,9 @@ Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
     // with only one element". For now, ignoring this distinction seems fine.
     mNumMipLevels = header->numberOfMipmapLevels ? header->numberOfMipmapLevels : 1;
     mArrayLength = header->numberOfArrayElements ? header->numberOfArrayElements : 1;
+
+    FILAMENT_CHECK_POSTCONDITION(header->numberOfFaces == 0 || header->numberOfFaces == 1 || header->numberOfFaces == 6)
+            << "KTX numberOfFaces must be 1 or 6";
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
 
     uint64_t const totalBlobs = (uint64_t)mNumMipLevels * mArrayLength * mNumCubeFaces;

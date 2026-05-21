@@ -295,14 +295,12 @@ GLSLPostProcessor::GLSLPostProcessor(
 GLSLPostProcessor::~GLSLPostProcessor() = default;
 
 static bool filterSpvOptimizerMessage(spv_message_level_t level) {
-#ifdef NDEBUG
-    // In release builds, only log errors.
+    // Only log errors.
     if (level == SPV_MSG_WARNING ||
         level == SPV_MSG_INFO ||
         level == SPV_MSG_DEBUG) {
         return false;
     }
-#endif
     return true;
 }
 
@@ -621,14 +619,6 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     if (wgslOut != tintSuccess) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
         return false;
-    }
-    // Tint adds annotations that Dawn complains about when consuming. remove for now
-    // https://dawn.googlesource.com/dawn/+/efb17b02543fb52c0b2e21d6082c0c9fbc2168a9%5E%21/
-    char const* annotationStr = "@stride(16) @internal(disable_validation__ignore_stride)";
-    size_t pos = wgslOut->wgsl.find(annotationStr);
-    while (pos != std::string::npos) {
-        wgslOut->wgsl.erase(pos, strlen(annotationStr));
-        pos = wgslOut->wgsl.find(annotationStr);
     }
     *outWsl = wgslOut->wgsl;
     return true;
@@ -1095,23 +1085,6 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
                 return;
             }
         }
-
-        // FIXME: Workaround within a workaround!!! We IGNORE config.workarounds for WEBGPU
-        //        because Tint doesn't even compile with MergeReturn/Simplification pass
-        //        active:
-        //            Tint Reader Error: warning: code is unreachable
-        //            error: no matching overload for 'operator << (i32, i32)'
-        //            2 candidate operators:
-        //             • 'operator << (T  ✓ , u32  ✗ ) -> T' where:
-        //                  ✓  'T' is 'abstract-int', 'i32' or 'u32'
-        //             • 'operator << (vecN<T>  ✗ , vecN<u32>  ✗ ) -> vecN<T>' where:
-        //                  ✗  'T' is 'abstract-int', 'i32' or 'u32'
-        if (any(config.targetApi & MaterialBuilder::TargetApi::WEBGPU)) {
-            if (!(config.targetApi & apiFilter)) {
-                return;
-            }
-        }
-
         optimizer.RegisterPass(std::move(pass));
     };
 

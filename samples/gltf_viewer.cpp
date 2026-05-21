@@ -15,7 +15,6 @@
  */
 
 #include "common/arguments.h"
-#include "common/configuration.h"
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
@@ -797,8 +796,7 @@ int main(int argc, char** argv) {
         }
 
         app.materials = (app.materialSource == JITSHADER)
-                                ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS,
-                                          samples::getJitMaterialVariantFilter(app.config.backend))
+                                ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS, {})
                                 : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
                                           UBERARCHIVE_DEFAULT_SIZE);
 

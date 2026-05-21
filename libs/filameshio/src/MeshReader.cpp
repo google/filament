@@ -35,7 +35,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <string>
+#include <limits>
 
 #include <fcntl.h>
 #if !defined(WIN32)
@@ -159,96 +159,179 @@ static size_t fileSize(int fd) {
 
 namespace filamesh {
 
+template <typename T>
+inline bool readChecked(T& dest, const uint8_t*& p, const uint8_t* end) {
+    if (size_t(end - p) < sizeof(T)) {
+        return false;
+    }
+    memcpy(&dest, p, sizeof(T));
+    p += sizeof(T);
+    return true;
+}
+
 MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
         MaterialRegistry& materials) {
 
     Mesh mesh;
 
     int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        utils::slog.e << "Unable to open filamesh file: " << path.c_str() << utils::io::endl;
+        return {};
+    }
 
     size_t size = fileSize(fd);
     char* data = (char*) malloc(size);
-    read(fd, data, size);
-
-    if (data) {
-        char *p = data;
-        char *magic = p;
-        p += sizeof(MAGICID);
-
-        if (!strncmp(MAGICID, magic, 8)) {
-            mesh = loadMeshFromBuffer(engine, data, nullptr, nullptr, materials);
-        }
-
-        Fence::waitAndDestroy(engine->createFence());
-        free(data);
+    if (!data) {
+        close(fd);
+        return {};
     }
+
+    size_t bytesRead = read(fd, data, size);
+    if (bytesRead == size) {
+        mesh = loadMeshFromBuffer(engine, data, size, nullptr, nullptr, materials);
+    }
+
+    Fence::waitAndDestroy(engine->createFence());
+    free(data);
     close(fd);
 
     return mesh;
 }
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
-        void const* data, Callback destructor, void* user,
+        void const* data, size_t dataSize, Callback destructor, void* user,
         MaterialInstance* defaultMaterial) {
     MaterialRegistry reg;
     reg.registerMaterialInstance(utils::CString(DEFAULT_MATERIAL), defaultMaterial);
-    return loadMeshFromBuffer(engine, data, destructor, user, reg);
+    return loadMeshFromBuffer(engine, data, dataSize, destructor, user, reg);
 }
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
-        void const* data, Callback destructor, void* user,
+        void const* data, size_t dataSize, Callback destructor, void* user,
         MaterialRegistry& materials) {
     const uint8_t* p = (const uint8_t*) data;
-    if (strncmp(MAGICID, (const char *) p, 8)) {
-        utils::slog.e << "Magic string not found." << utils::io::endl;
+    const uint8_t* end = p + dataSize;
+    if (end < p) { // check pointer wraparound
+        utils::slog.e << "Invalid (too large) dataSize: " << dataSize << utils::io::endl;
+        return {};
+    }
+
+    if (dataSize < 8 || strncmp(MAGICID, (const char *) p, 8)) {
+        utils::slog.e << "Magic string not found or buffer too small." << utils::io::endl;
         return {};
     }
     p += 8;
 
-    Header* header = (Header*) p;
-    p += sizeof(Header);
+    Header header;
+    if (!readChecked(header, p, end)) {
+        utils:: slog.e << "Header truncation." << utils::io::endl;
+        return {};
+    }
+
+    if (header.version != VERSION) {
+        utils::slog.e << "Unsupported filamesh version: " << header.version << utils::io::endl;
+        return {};
+    }
+
+    // Check integer overflow on header.parts * sizeof(Part)
+    if (size_t(header.parts) > std::numeric_limits<size_t>::max() / sizeof(Part)) {
+        utils::slog.e << "Too many mesh parts (overflow)." << utils::io::endl;
+        return {};
+    }
+    const size_t partsBytes = header.parts * sizeof(Part);
+
+    // Aligned payload verification (mathematically foolproof subtraction checks)
+    size_t requiredSize = header.vertexSize;
+    if (std::numeric_limits<size_t>::max() - requiredSize < header.indexSize) {
+        utils::slog.e << "Payload sizes overflow." << utils::io::endl;
+        return {};
+    }
+    requiredSize += header.indexSize;
+
+    if (std::numeric_limits<size_t>::max() - requiredSize < partsBytes) {
+        utils::slog.e << "Payload sizes overflow." << utils::io::endl;
+        return {};
+    }
+    requiredSize += partsBytes;
+
+    if (size_t(end - p) < requiredSize) {
+        utils::slog.e << "Buffer truncation in mesh payload." << utils::io::endl;
+        return {};
+    }
 
     uint8_t const* vertexData = p;
-    p += header->vertexSize;
+    p += header.vertexSize;
 
     uint8_t const* indices = p;
-    p += header->indexSize;
+    p += header.indexSize;
 
-    Part* parts = (Part*) p;
-    p += header->parts * sizeof(Part);
+    std::vector<Part> parts(header.parts);
+    for (size_t i = 0; i < header.parts; i++) {
+        if (!readChecked(parts[i], p, end)) {
+            utils::slog.e << "Buffer truncation in parts array." << utils::io::endl;
+            return {};
+        }
+    }
 
-    uint32_t materialCount = (uint32_t) *p;
-    p += sizeof(uint32_t);
+    uint32_t materialCount = 0;
+    if (!readChecked(materialCount, p, end)) {
+        utils::slog.e << "Buffer truncation reading material count." << utils::io::endl;
+        return {};
+    }
 
     std::vector<std::string> partsMaterial(materialCount);
     for (size_t i = 0; i < materialCount; i++) {
-        uint32_t nameLength = (uint32_t) *p;
-        p += sizeof(uint32_t);
-        partsMaterial[i] = (const char*) p;
-        p += nameLength + 1; // null terminated
+        uint32_t nameLength = 0;
+        if (!readChecked(nameLength, p, end)) {
+            utils::slog.e << "Buffer truncation reading material name length." << utils::io::endl;
+            return {};
+        }
+        if (size_t(nameLength) >= std::numeric_limits<size_t>::max() - 1) {
+            utils::slog.e << "Material name length overflow." << utils::io::endl;
+            return {};
+        }
+        const size_t nameBytes = size_t(nameLength) + 1; // including null terminator
+        if (size_t(end - p) < nameBytes) {
+            utils::slog.e << "Buffer truncation reading material name." << utils::io::endl;
+            return {};
+        }
+        partsMaterial[i] = std::string((const char*) p, nameLength);
+        p += nameBytes;
     }
 
     Mesh mesh;
 
     mesh.indexBuffer = IndexBuffer::Builder()
-            .indexCount(header->indexCount)
-            .bufferType(header->indexType == UI16 ? IndexBuffer::IndexType::USHORT
+            .indexCount(header.indexCount)
+            .bufferType(header.indexType == UI16 ? IndexBuffer::IndexType::USHORT
                     : IndexBuffer::IndexType::UINT)
             .build(*engine);
 
-    // If the index buffer is compressed, then decode the indices into a temporary buffer.
-    // The user callback can be called immediately afterwards because the source data does not get
-    // passed to the GPU.
-    const size_t indicesSize = header->indexSize;
-    if (header->flags & COMPRESSION) {
-        size_t indexSize = header->indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
-        size_t indexCount = header->indexCount;
+    const size_t indicesSize = header.indexSize;
+    if (header.flags & COMPRESSION) {
+        size_t indexSize = header.indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
+        size_t indexCount = header.indexCount;
+        
+        if (indexCount > std::numeric_limits<size_t>::max() / indexSize) {
+            utils::slog.e << "Uncompressed index count overflow." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
+            return {};
+        }
         size_t uncompressedSize = indexSize * indexCount;
         void* uncompressed = malloc(uncompressedSize);
+        if (!uncompressed) {
+            utils::slog.e << "Out of memory allocating uncompressed index buffer." << utils::io::endl;
+            engine->destroy(mesh.indexBuffer);
+            return {};
+        }
+
         int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexSize, indices,
                 indicesSize);
         if (err) {
             utils::slog.e << "Unable to decode index buffer." << utils::io::endl;
+            free(uncompressed);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         if (destructor) {
@@ -263,79 +346,117 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     }
 
     VertexBuffer::Builder vbb;
-    vbb.vertexCount(header->vertexCount)
+    vbb.vertexCount(header.vertexCount)
             .bufferCount(1)
             .normalized(VertexAttribute::COLOR)
             .normalized(VertexAttribute::TANGENTS);
 
-    VertexBuffer::AttributeType uvtype = (header->flags & TEXCOORD_SNORM16) ?
+    VertexBuffer::AttributeType uvtype = (header.flags & TEXCOORD_SNORM16) ?
             VertexBuffer::AttributeType::SHORT2 : VertexBuffer::AttributeType::HALF2;
 
     vbb
             .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4,
-                        header->offsetPosition, uint8_t(header->stridePosition))
+                        header.offsetPosition, uint8_t(header.stridePosition))
             .attribute(VertexAttribute::TANGENTS, 0, VertexBuffer::AttributeType::SHORT4,
-                        header->offsetTangents, uint8_t(header->strideTangents))
+                        header.offsetTangents, uint8_t(header.strideTangents))
             .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
-                        header->offsetColor, uint8_t(header->strideColor))
+                        header.offsetColor, uint8_t(header.strideColor))
             .attribute(VertexAttribute::UV0, 0, uvtype,
-                        header->offsetUV0, uint8_t(header->strideUV0))
-            .normalized(VertexAttribute::UV0, header->flags & TEXCOORD_SNORM16);
+                        header.offsetUV0, uint8_t(header.strideUV0))
+            .normalized(VertexAttribute::UV0, header.flags & TEXCOORD_SNORM16);
 
     constexpr uint32_t uintmax = std::numeric_limits<uint32_t>::max();
-    const bool hasUV1 = header->offsetUV1 != uintmax && header->strideUV1 != uintmax;
+    const bool hasUV1 = header.offsetUV1 != uintmax && header.strideUV1 != uintmax;
 
     if (hasUV1) {
         vbb
             .attribute(VertexAttribute::UV1, 0, VertexBuffer::AttributeType::HALF2,
-                    header->offsetUV1, uint8_t(header->strideUV1))
+                    header.offsetUV1, uint8_t(header.strideUV1))
             .normalized(VertexAttribute::UV1);
     }
 
     mesh.vertexBuffer = vbb.build(*engine);
 
-    // If the vertex buffer is compressed, then decode the vertices into a temporary buffer.
-    // The user callback can be called immediately afterwards because the source data does not get
-    // passed to the GPU.
-    const size_t verticesSize = header->vertexSize;
-    if (header->flags & COMPRESSION) {
+    const size_t verticesSize = header.vertexSize;
+    if (header.flags & COMPRESSION) {
         size_t vertexSize = sizeof(half4) + sizeof(short4) + sizeof(ubyte4) + sizeof(ushort2) +
                 (hasUV1 ? sizeof(ushort2) : 0);
-        size_t vertexCount = header->vertexCount;
+        size_t vertexCount = header.vertexCount;
+
+        if (vertexCount > std::numeric_limits<size_t>::max() / vertexSize) {
+            utils::slog.e << "Uncompressed vertex count overflow." << utils::io::endl;
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
+            return {};
+        }
         size_t uncompressedSize = vertexSize * vertexCount;
         void* uncompressed = malloc(uncompressedSize);
+        if (!uncompressed) {
+            utils::slog.e << "Out of memory allocating uncompressed vertex buffer." << utils::io::endl;
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
+            return {};
+        }
+
+        if (verticesSize < sizeof(CompressionHeader)) {
+            utils::slog.e << "Compressed vertex buffer too small for header." << utils::io::endl;
+            free(uncompressed);
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
+            return {};
+        }
+
         const uint8_t* srcdata = vertexData + sizeof(CompressionHeader);
         int err = 0;
-        if (header->flags & INTERLEAVED) {
+        if (header.flags & INTERLEAVED) {
             err |= meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexSize, srcdata,
                     vertexSize);
         } else {
-            const CompressionHeader* sizes = (CompressionHeader*) vertexData;
+            CompressionHeader sizes;
+            memcpy(&sizes, vertexData, sizeof(CompressionHeader));
+
+            size_t compressedSum = sizeof(CompressionHeader) +
+                                   size_t(sizes.positions) +
+                                   size_t(sizes.tangents) +
+                                   size_t(sizes.colors) +
+                                   size_t(sizes.uv0) +
+                                   size_t(sizes.uv1);
+            if (compressedSum > verticesSize) {
+                utils::slog.e << "Compressed vertex buffer elements exceed bounds." << utils::io::endl;
+                free(uncompressed);
+                engine->destroy(mesh.vertexBuffer);
+                engine->destroy(mesh.indexBuffer);
+                return {};
+            }
+
             uint8_t* dstdata = (uint8_t*) uncompressed;
             auto decode = meshopt_decodeVertexBuffer;
 
-            err |= decode(dstdata, vertexCount, sizeof(half4), srcdata, sizes->positions);
-            srcdata += sizes->positions;
+            err |= decode(dstdata, vertexCount, sizeof(half4), srcdata, sizes.positions);
+            srcdata += sizes.positions;
             dstdata += sizeof(half4) * vertexCount;
 
-            err |= decode(dstdata, vertexCount, sizeof(short4), srcdata, sizes->tangents);
-            srcdata += sizes->tangents;
+            err |= decode(dstdata, vertexCount, sizeof(short4), srcdata, sizes.tangents);
+            srcdata += sizes.tangents;
             dstdata += sizeof(short4) * vertexCount;
 
-            err |= decode(dstdata, vertexCount, sizeof(ubyte4), srcdata, sizes->colors);
-            srcdata += sizes->colors;
+            err |= decode(dstdata, vertexCount, sizeof(ubyte4), srcdata, sizes.colors);
+            srcdata += sizes.colors;
             dstdata += sizeof(ubyte4) * vertexCount;
 
-            err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes->uv0);
+            err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes.uv0);
 
-            if (sizes->uv1) {
-                srcdata += sizes->uv0;
+            if (sizes.uv1) {
+                srcdata += sizes.uv0;
                 dstdata += sizeof(ushort2) * vertexCount;
-                err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes->uv1);
+                err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes.uv1);
             }
         }
         if (err) {
             utils::slog.e << "Unable to decode vertex buffer." << utils::io::endl;
+            free(uncompressed);
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
             return {};
         }
         if (destructor) {
@@ -351,17 +472,15 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
     mesh.renderable = utils::EntityManager::get().create();
 
-    RenderableManager::Builder builder(header->parts);
-    builder.boundingBox(header->aabb);
+    RenderableManager::Builder builder(header.parts);
+    builder.boundingBox(header.aabb);
 
     const auto defaultmi = materials.getMaterialInstance(utils::CString(DEFAULT_MATERIAL));
-    for (size_t i = 0; i < header->parts; i++) {
+    for (size_t i = 0; i < header.parts; i++) {
         builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
                 mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
                 parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
 
-        // It may happen that there are more parts than materials
-        // therefore we have to use Part::material instead of i.
         uint32_t materialIndex = parts[i].material;
         if (materialIndex >= partsMaterial.size()) {
             utils::slog.e << "Material index (" << materialIndex << ") of mesh part ("

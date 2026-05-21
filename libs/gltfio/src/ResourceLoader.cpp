@@ -28,7 +28,6 @@
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
-#include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 #include <filament/MorphTargetBuffer.h>
@@ -241,18 +240,41 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
         FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
         if (srcMatrices) {
+            if (!srcMatrices->buffer_view ||
+                (!srcMatrices->buffer_view->has_meshopt_compression &&
+                 (!srcMatrices->buffer_view->buffer || !srcMatrices->buffer_view->buffer->data))) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, missing buffer view or buffer data.";
+                continue;
+            }
+
+            cgltf_size bufferSize = 0;
+            cgltf_size totalOffset = 0;
             uint8_t* bytes = nullptr;
             uint8_t* srcBuffer = nullptr;
+
             if (srcMatrices->buffer_view->has_meshopt_compression) {
+                if (!srcMatrices->buffer_view->data) {
+                    LOG(WARNING) << "Cannot copy inverse bind matrices, compressed buffer data is null.";
+                    continue;
+                }
+                bufferSize = srcMatrices->buffer_view->size;
+                totalOffset = srcMatrices->offset;
                 bytes = (uint8_t*) srcMatrices->buffer_view->data;
-                srcBuffer = bytes + srcMatrices->offset;
+                srcBuffer = bytes + totalOffset;
             } else {
+                bufferSize = srcMatrices->buffer_view->buffer->size;
+                totalOffset = srcMatrices->offset + srcMatrices->buffer_view->offset;
                 bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-                srcBuffer = bytes + srcMatrices->offset + srcMatrices->buffer_view->offset;
+                srcBuffer = bytes + totalOffset;
             }
-            assert_invariant(bytes);
-            memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer,
-                    srcSkin.joints_count * sizeof(mat4f));
+
+            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
+            if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
+                continue;
+            }
+
+            memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
         }
         FFilamentAsset::Skin skin{
                 .name = std::move(name),
@@ -264,15 +286,95 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
 
 inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         UriDataCacheHandle uriDataCache) {
+    const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
+    const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
+
     // Upload VertexBuffer and IndexBuffer data to the GPU.
     auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
     for (auto const& slot: slots) {
         const cgltf_accessor* accessor = slot.accessor;
         // Morph target accessors may not have a buffer_view (data is directly in the accessor)
         bool isMorphTarget = (slot.morphTargetBuffer != nullptr);
+        bool isSentinel = (accessor == kGenerateTangents || accessor == kGenerateNormals);
 
         if (!accessor->buffer_view && !isMorphTarget) {
-            continue;
+            // Per glTF 2.0 Accessor Schema: "When [bufferView is] undefined, the accessor MUST be
+            // initialized with zeros; sparse property or extensions MAY override zeros with
+            // actual values."
+            // Also Section 5.2.2.1: "When accessor.bufferView is undefined, the sparse accessor
+            // is initialized as an array of zeros..."
+
+            // If the accessor is sparse or requires conversion, we let it fall through to the
+            // conversion path which handles zero-initialization via cgltf_accessor_unpack_floats.
+            //
+            // We don't fall through for sentinels because they have invalid types. Sentinels
+            // occur when AssetLoader identifies that normals or tangents should be generated.
+            // Normally, TangentsJob processes these for triangle primitives. However, for line
+            // or point primitives, TangentsJob skips them. In such cases, we MUST zero-initialize
+            // the buffer here; otherwise, the VertexBuffer will have an enabled attribute with
+            // no bound buffer, causing a panic in the graphics driver.
+            if (!isSentinel && (accessor->is_sparse || (accessor->type != cgltf_type_invalid &&
+                                               utility::requiresConversion(accessor)))) {
+                // fall through
+            } else {
+                size_t count = accessor->count;
+                if (count == 0 && slot.vertexBuffer) {
+                    count = slot.vertexBuffer->getVertexCount();
+                }
+
+                size_t elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+                if (elementSize == 0 && isSentinel) {
+                    // Sentinels are used for TBN (tangent, bitangent, normal) generation.
+                    // Filament encodes this TBN frame as a quaternion in a SHORT4 attribute
+                    // (8 bytes).
+                    elementSize = 8; // SHORT4
+                }
+
+                const size_t size = count * elementSize;
+                if (size == 0) {
+                    continue;
+                }
+                if (slot.vertexBuffer) {
+                    void* zeros = malloc(size);
+                    if (!zeros) {
+                        slog.e << "Out of memory allocating zeroed vertex buffer." << io::endl;
+                        continue;
+                    }
+                    memset(zeros, 0, size);
+                    BufferObject* bo = BufferObject::Builder().size(size).build(engine);
+                    asset->mBufferObjects.push_back(bo);
+                    bo->setBuffer(engine, BufferDescriptor(zeros, size, FREE_CALLBACK));
+                    slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                    continue;
+                }
+
+                if (slot.indexBuffer) {
+                    if (accessor->component_type == cgltf_component_type_r_8u) {
+                        // glTF 8-bit indices are 1 byte, but Filament IndexBuffer requires at least
+                        // 16-bit indices. We allocate 2 bytes per index to match the expansion
+                        // performed in the conversion path below.
+                        const size_t size16 = count * sizeof(uint16_t);
+                        void* zeros = malloc(size16);
+                        if (!zeros) {
+                            slog.e << "Out of memory allocating zeroed index buffer." << io::endl;
+                            continue;
+                        }
+                        memset(zeros, 0, size16);
+                        IndexBuffer::BufferDescriptor bd(zeros, size16, FREE_CALLBACK);
+                        slot.indexBuffer->setBuffer(engine, std::move(bd));
+                    } else {
+                        void* zeros = malloc(size);
+                        if (!zeros) {
+                            slog.e << "Out of memory allocating zeroed index buffer." << io::endl;
+                            continue;
+                        }
+                        memset(zeros, 0, size);
+                        IndexBuffer::BufferDescriptor bd(zeros, size, FREE_CALLBACK);
+                        slot.indexBuffer->setBuffer(engine, std::move(bd));
+                    }
+                    continue;
+                }
+            }
         }
 
         // For morph targets without buffer_view, use cgltf_accessor_unpack_floats to unpack data directly
@@ -292,6 +394,10 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
             const size_t floatsByteCount = sizeof(float) * floatsCount;
             
             float* floatsData = (float*)malloc(floatsByteCount);
+            if (!floatsData) {
+                LOG(WARNING) << "Failed to allocate memory for morph target unpacking, skipping.";
+                continue;
+            }
             cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
 
             if (accessor->type == cgltf_type_vec3) {
@@ -310,14 +416,15 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
 
         const uint8_t* bufferData = nullptr;
         const uint8_t* data = nullptr;
-        if (accessor->buffer_view->has_meshopt_compression) {
-            bufferData = (const uint8_t*) accessor->buffer_view->data;
-            data = bufferData + accessor->offset;
-        } else {
-            bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-            data = utility::computeBindingOffset(accessor) + bufferData;
+        if (accessor->buffer_view) {
+            if (accessor->buffer_view->has_meshopt_compression) {
+                bufferData = (const uint8_t*) accessor->buffer_view->data;
+                data = bufferData + accessor->offset;
+            } else {
+                bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
+                data = utility::computeBindingOffset(accessor) + bufferData;
+            }
         }
-        assert_invariant(bufferData);
         const uint32_t size = utility::computeBindingSize(accessor);
         if (size == 0) {
             // Skip buffer upload for this accessor as requested by user
@@ -325,22 +432,25 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         }
         if (slot.vertexBuffer) {
             if (utility::requiresConversion(accessor)) {
-                const cgltf_size bufferSize = accessor->buffer_view->buffer->size;
-                const cgltf_size totalOffset = accessor->buffer_view->offset + accessor->offset;
-                
-                if (totalOffset >= bufferSize) {
-                    continue;
+                // Conversion path (handles null buffer_view internally via unpacking)
+                cgltf_size maxCount = accessor->count;
+                if (accessor->buffer_view) {
+                    const cgltf_size bufferSize = accessor->buffer_view->buffer->size;
+                    const cgltf_size totalOffset = accessor->buffer_view->offset + accessor->offset;
+
+                    if (totalOffset >= bufferSize) {
+                        continue;
+                    }
+
+                    const cgltf_size availableBytes = bufferSize - totalOffset;
+                    const cgltf_size stride = accessor->stride;
+                    const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+
+                    if (stride > 0 && availableBytes >= elementSize) {
+                        maxCount = 1 + (availableBytes - elementSize) / stride;
+                    }
                 }
-                
-                const cgltf_size availableBytes = bufferSize - totalOffset;
-                const cgltf_size stride = accessor->stride;
-                const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
-                
-                cgltf_size maxCount = 0;
-                if (stride > 0 && availableBytes >= elementSize) {
-                    maxCount = 1 + (availableBytes - elementSize) / stride;
-                }
-                
+
                 cgltf_size safeCount = accessor->count;
                 if (safeCount > maxCount) {
                     LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
@@ -362,11 +472,21 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 const size_t floatsByteCount = sizeof(float) * floatsCount;
                 
                 float* floatsData = (float*) malloc(floatsByteCount);
+                if (!floatsData) {
+                    LOG(WARNING) << "Failed to allocate memory for vertex buffer conversion, skipping.";
+                    continue;
+                }
                 cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
                 BufferObject* bo = BufferObject::Builder().size(floatsByteCount).build(engine);
                 asset->mBufferObjects.push_back(bo);
                 bo->setBuffer(engine, BufferDescriptor(floatsData, floatsByteCount, FREE_CALLBACK));
                 slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
+                continue;
+            }
+
+            // Standard upload path (direct GPU copy). This requires valid source data to be present.
+            // If bufferData is null (e.g. no bufferView), we skip the direct copy.
+            if (!bufferData) {
                 continue;
             }
 
@@ -377,9 +497,22 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
             slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
         } else if (slot.indexBuffer) {
+            // Standard upload path for index buffers.
+            if (!bufferData) {
+                continue;
+            }
+
             if (accessor->component_type == cgltf_component_type_r_8u) {
-                const size_t size16 = size * 2;
+                if (size_t(size) > std::numeric_limits<size_t>::max() / 2) {
+                    LOG(WARNING) << "Index buffer size would overflow on conversion, skipping.";
+                    continue;
+                }
+                const size_t size16 = size_t(size) * 2;
                 uint16_t* data16 = (uint16_t*) malloc(size16);
+                if (!data16) {
+                    LOG(WARNING) << "Failed to allocate memory for index buffer conversion, skipping.";
+                    continue;
+                }
                 utility::convertBytesToShorts(data16, data, size);
                 IndexBuffer::BufferDescriptor bd(data16, size16, FREE_CALLBACK);
 
@@ -434,6 +567,10 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
             const size_t floatsByteCount = sizeof(float) * floatsCount;
 
             float* floatsData = (float*) malloc(floatsByteCount);
+            if (!floatsData) {
+                LOG(WARNING) << "Failed to allocate memory for morph target packing, skipping.";
+                continue;
+            }
             cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
             if (accessor->type == cgltf_type_vec3) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,

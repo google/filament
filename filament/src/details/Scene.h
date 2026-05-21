@@ -30,6 +30,7 @@
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -79,7 +80,7 @@ public:
     using VisibleMaskType = Culler::result_type;
 
     enum {
-        RENDERABLE_INSTANCE,    //   4 | instance of the Renderable component
+        RENDERABLE_ENTITY,      //   4 | Entity of the Renderable component
         WORLD_TRANSFORM,        //  16 | instance of the Transform component
         VISIBILITY_STATE,       //   2 | visibility data of the component
         SKINNING_STATE,         //   1 | skinning data of the component
@@ -105,7 +106,7 @@ public:
     };
 
     using RenderableSoa = utils::StructureOfArrays<
-            utils::EntityInstance<RenderableManager>,   // RENDERABLE_INSTANCE
+            utils::Entity,                              // RENDERABLE_ENTITY
             math::mat4f,                                // WORLD_TRANSFORM
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::Skinning,               // SKINNING_STATE
@@ -158,7 +159,8 @@ public:
         DIRECTION,
         SHADOW_DIRECTION,
         SHADOW_REF,
-        LIGHT_INSTANCE,
+        LIGHT_ENTITY,
+        SPOT_PARAMS,
         VISIBILITY,
         SCREEN_SPACE_Z_RANGE,
         SHADOW_INFO
@@ -169,7 +171,8 @@ public:
             math::float3,
             math::float3,
             math::double2,
-            FLightManager::Instance,
+            utils::Entity,
+            math::float2,
             Culler::result_type,
             math::float2,
             ShadowInfo
@@ -181,6 +184,8 @@ public:
     bool hasContactShadows() const noexcept;
 
 private:
+    using EntitySet = utils::PagedArenaBitset;
+
     friend class Scene;
     void setSkybox(FSkybox* skybox) noexcept;
     void setIndirectLight(FIndirectLight* ibl) noexcept { mIndirectLight = ibl; }
@@ -203,14 +208,6 @@ private:
     FIndirectLight* mIndirectLight = nullptr;
 
     /*
-     * list of Entities in the scene. We use a robin_set<> so we can do efficient removes
-     * (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
-     * nicely as vector<>, which is a good compromise.
-     */
-    tsl::robin_set<utils::Entity, utils::Entity::Hasher> mEntities;
-
-
-    /*
      * The data below is valid only during a view pass. i.e. if a scene is used in multiple
      * views, the data below is updated for each view.
      * In essence, this data should be owned by View, but it's so scene-specific, that for now
@@ -219,6 +216,7 @@ private:
     RenderableSoa mRenderableData;
     LightSoa mLightData;
     bool mHasContactShadows = false;
+    EntitySet mEntities;
 };
 
 FILAMENT_DOWNCAST(Scene)
