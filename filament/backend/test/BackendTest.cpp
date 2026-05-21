@@ -97,6 +97,7 @@ void BackendTest::initializeDriver() {
         driverConfig.asynchronousMode = Platform::AsynchronousMode::THREAD_PREFERRED;
     }
     driver = mPlatform->createDriver(nullptr, driverConfig);
+    assert_invariant(driver);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }
 

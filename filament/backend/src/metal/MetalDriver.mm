@@ -40,11 +40,12 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
-#include <utils/ImmutableCString.h>
 
 #include <algorithm>
 
@@ -836,29 +837,27 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::ImmutableCS
 }
 
 UTILS_UNUSED
-static const char* toString(ShaderStageFlags flags) {
-    std::vector<const char*> stages;
+static utils::CString toString(ShaderStageFlags flags) {
+    utils::CString result;
     if (any(flags & ShaderStageFlags::VERTEX)) {
-        stages.push_back("VERTEX");
+        result.append("VERTEX");
     }
     if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        stages.push_back("FRAGMENT");
+        if (!result.empty()) {
+            result.append(" | ");
+        }
+        result.append("FRAGMENT");
     }
     if (any(flags & ShaderStageFlags::COMPUTE)) {
-        stages.push_back("COMPUTE");
+        if (!result.empty()) {
+            result.append(" | ");
+        }
+        result.append("COMPUTE");
     }
-    if (stages.empty()) {
+    if (result.empty()) {
         return "NONE";
     }
-    static char buffer[64];
-    buffer[0] = '\0';
-    for (size_t i = 0; i < stages.size(); i++) {
-        if (i > 0) {
-            strcat(buffer, " | ");
-        }
-        strcat(buffer, stages[i]);
-    }
-    return buffer;
+    return result;
 }
 
 const char* toString(DescriptorFlags flags) {
@@ -925,7 +924,7 @@ void MetalDriver::createDescriptorSetLayoutR(
     for (size_t i = 0; i < info.descriptors.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
                 info.descriptors[i].binding, toString(info.descriptors[i].type),
-                info.descriptors[i].count, toString(info.descriptors[i].stageFlags),
+                info.descriptors[i].count, toString(info.descriptors[i].stageFlags).c_str_safe(),
                 toString(info.descriptors[i].flags));
     }
     DEBUG_LOG("})\n");
@@ -2610,7 +2609,8 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
         LOG(ERROR) << description;
     }
-    assert_invariant(!error);
+    FILAMENT_CHECK_POSTCONDITION(computePipelineState != nil)
+            << "Unable to create Metal compute pipeline state.";
 
     [computeEncoder setComputePipelineState:computePipelineState];
 

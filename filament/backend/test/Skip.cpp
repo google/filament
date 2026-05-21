@@ -64,7 +64,6 @@ std::string SkipEnvironment::describe_actual_environment() {
             reality << ", and ";
         }
         reality << "device " << (BackendTest::sIsMobilePlatform ? "was" : "was not") << " mobile";
-        resultWritten = true;
     }
     return reality.str();
 }
@@ -88,7 +87,6 @@ std::string SkipEnvironment::describe_requirements() {
             requirement << ", and ";
         }
         requirement << "device needs to " << (*isMobile ? "be" : "not be") << " mobile";
-        resultWritten = true;
     }
     return requirement.str();
 }

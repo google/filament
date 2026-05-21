@@ -120,10 +120,13 @@ int main(int argc, char* argv[]) {
         // In headless mode, we don't want to start the NSApplication event loop.
         // Instead, we can manually "finish" launching the app, which will trigger the tests to run.
         [app finishLaunching];
-        [delegate applicationDidFinishLaunching:[NSNotification notificationWithName:NSApplicationDidFinishLaunchingNotification object:app]];
+        [delegate applicationDidFinishLaunching:
+                        [NSNotification
+                                notificationWithName:NSApplicationDidFinishLaunchingNotification
+                                              object:app]];
         // The line above calls exit(), so we should not reach here.
         return 0;
     }
 
-    [app run];
+    [app run]; // NOLINT(clang-analyzer-osx.cocoa.RetainCount)
 }
