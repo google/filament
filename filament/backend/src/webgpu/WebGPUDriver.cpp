@@ -1839,6 +1839,7 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
         if (target->isDefaultRenderTarget()) {
             assert_invariant(mSwapChain);
             if (UTILS_UNLIKELY(!mSwapChainView)) {
+                // TODO: clean-up. It is not ideal.
                 mSwapChainView = mSwapChain->isHeadless()
                                          ? mSwapChain->getNextTextureView()
                                          : mSwapChain->getNextTextureView(

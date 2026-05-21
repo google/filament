@@ -502,7 +502,7 @@ wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(RenderPipelineKey const
         },
         .depthStencil = depthDestination ? &depthStencilState : nullptr,
         .multisample = {
-            .count = 1,
+            .count = 1, // we don't support writing to multisampled output textures, so the count here should always be 1.
             .mask = 0xFFFFFFFF,
             .alphaToCoverageEnabled = false,
         },
