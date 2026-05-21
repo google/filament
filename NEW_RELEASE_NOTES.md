@@ -6,4 +6,6 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
 - Support attribute-less procedural rendering
+- gltfio: Support textures bound to both sRGB and Linear parameters
