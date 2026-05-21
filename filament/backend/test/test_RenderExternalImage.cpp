@@ -153,6 +153,8 @@ TEST_F(BackendTest, RenderExternalImage) {
             CVPixelBufferCreate(kCFAllocatorDefault, 1024, 1024, kCVPixelFormatType_32BGRA, options,
                     &pixBuffer);
     assert(status == kCVReturnSuccess);
+    CFRelease(options);
+    CFRelease(values[0]);
 
     // Fill image with checker-pattern.
     const size_t tileSize = 64;
