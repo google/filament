@@ -199,7 +199,7 @@ private:
         fvkutils::DescriptorSetMask descriptorSetMask = {};
 
         std::pair<bool, BindInDrawBundle> bindInDraw = {false, {}};
-    } mPipelineState = {};
+    } mPipelineState {};
 
     struct {
         // This tracks whether the app has seen external samplers bound to a the descriptor set.
@@ -210,7 +210,12 @@ private:
         bool hasExternalSamplers() const noexcept {
             return hasExternalSamplerLayouts && hasBoundExternalImages;
         }
-    } mAppState;
+    } mAppState {};
+
+    struct {
+        // Indicates whether a render primitive has been bound for draw.
+        bool bound = false;
+    } mRenderPrimitiveState {};
 
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
