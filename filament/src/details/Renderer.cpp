@@ -955,8 +955,6 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
      * Allocate command buffer
      */
 
-    FScene& scene = *view.getScene();
-
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
@@ -1061,7 +1059,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
             .clearFlags = getClearFlags(),
             .clearColor = clearColor,
             .clearStencil = clearStencil,
-            .hasContactShadows = scene.hasContactShadows(),
+            .hasContactShadows = view.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
             .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
             .enabledStencilBuffer = view.isStencilBufferEnabled(),
@@ -1076,11 +1074,11 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(scene.getRenderableData(),
+    FView::updatePrimitivesLod(view.getRenderableData(),
             engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
-    passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
+    passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());
 
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
