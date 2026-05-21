@@ -18,6 +18,7 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 
 #include <cassert>
@@ -90,7 +91,7 @@ bool EntityManager::isAlive(Entity const e) const noexcept {
 
 PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
     auto const* impl = static_cast<EntityManagerImpl const*>(this);
-    std::lock_guard const lock(impl->mFreeListLock);
+    utils::LockGuard const lock(impl->mFreeListLock);
     return impl->mAliveEntities.clone();
 }
 

@@ -31,13 +31,13 @@ namespace utils {
  * It is very low overhead as most of it is inlined.
  */
 
-class Mutex {
+class UTILS_CAPABILITY("mutex") Mutex {
 public:
     constexpr Mutex() noexcept = default;
     Mutex(const Mutex&) = delete;
     Mutex& operator=(const Mutex&) = delete;
 
-    void lock() noexcept {
+    void lock() noexcept UTILS_ACQUIRE() {
         uint32_t old_state = UNLOCKED;
         if (UTILS_UNLIKELY(!mState.compare_exchange_strong(old_state,
                 LOCKED, std::memory_order_acquire, std::memory_order_relaxed))) {
@@ -45,7 +45,7 @@ public:
         }
     }
 
-    void unlock() noexcept {
+    void unlock() noexcept UTILS_RELEASE() {
         if (UTILS_UNLIKELY(mState.exchange(UNLOCKED, std::memory_order_release) == LOCKED_CONTENDED)) {
             wake();
         }

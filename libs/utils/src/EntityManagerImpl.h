@@ -19,11 +19,15 @@
 
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/debug.h>
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 
@@ -73,7 +77,7 @@ public:
             return false;
         }
 
-        std::lock_guard const lock(mFreeListLock);
+        LockGuard const lock(mFreeListLock);
         bool const alive = (getGeneration(e) == mGens[getIndex(e)]);
         assert(alive == mAliveEntities[e.getId()]);
         return alive;
@@ -81,7 +85,7 @@ public:
 
     UTILS_NOINLINE
     size_t getEntityCount() const noexcept {
-        std::lock_guard const lock(mFreeListLock);
+        LockGuard const lock(mFreeListLock);
         if (mCurrentIndex < RAW_INDEX_COUNT) {
             return (mCurrentIndex - 1) - mFreeList.size();
         } else {
@@ -96,7 +100,7 @@ public:
         uint8_t const* const gens = mGens;
 
         // this must be thread-safe, acquire the free-list mutex
-        std::lock_guard const lock(mFreeListLock);
+        LockGuard const lock(mFreeListLock);
         Entity::Type currentIndex = mCurrentIndex;
         for (size_t i = 0; i < n; i++) {
             if (UTILS_UNLIKELY(currentIndex >= RAW_INDEX_COUNT || freeList.size() >= MIN_FREE_INDICES)) {
@@ -127,7 +131,7 @@ public:
         auto& freeList = mFreeList;
         uint8_t* const gens = mGens;
 
-        std::unique_lock lock(mFreeListLock);
+        UniqueLock lock(mFreeListLock);
         for (size_t i = 0; i < n; i++) {
             if (!entities[i]) {
                 // behave like free(), ok to free null Entity.
@@ -173,22 +177,22 @@ public:
     }
 
     void registerListener(Listener* l) noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         mListeners.insert(l);
     }
 
     void unregisterListener(Listener* l) noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         mListeners.erase(l);
     }
 
     void registerChangeCallback(void const* token, ChangeCallback callback) noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         mChangeCallbacks.push_back({token, std::move(callback)});
     }
 
     void unregisterChangeCallback(void const* token) noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         mChangeCallbacks.erase(
                 std::remove_if(mChangeCallbacks.begin(), mChangeCallbacks.end(),
                         [token](auto const& info) { return info.token == token; }),
@@ -196,31 +200,46 @@ public:
     }
 
     void flushNotifications() noexcept {
-        std::unique_lock lock(mFreeListLock);
-        if (mDirtyCount > 0) {
-            Entity localBuffer[MAX_DIRTY_COUNT];
-            assert_invariant(mDirtyCount <= MAX_DIRTY_COUNT);
-            std::copy(mDirtyEntities, mDirtyEntities + mDirtyCount, localBuffer);
-            size_t const count = mDirtyCount;
-            mDirtyCount = 0;
-            lock.unlock();
-
+        Entity localBuffer[MAX_DIRTY_COUNT];
+        size_t count = 0;
+        {
+            LockGuard const lock(mFreeListLock);
+            if (mDirtyCount > 0) {
+                assert_invariant(mDirtyCount <= MAX_DIRTY_COUNT);
+                std::copy(mDirtyEntities, mDirtyEntities + mDirtyCount, localBuffer);
+                count = mDirtyCount;
+                mDirtyCount = 0;
+            }
+        }
+        if (count > 0) {
             triggerChangeCallbacks(localBuffer, count);
         }
     }
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
     std::vector<Entity> getActiveEntities() const {
-        std::vector<Entity> result(mDebugActiveEntities.size());
-        auto p = result.begin();
-        for (auto i : mDebugActiveEntities) {
-            *p++ = i.first;
+        std::vector<Entity> result;
+        {
+            LockGuard const lock(mFreeListLock);
+            result.reserve(mDebugActiveEntities.size());
+            for (auto const& i : mDebugActiveEntities) {
+                result.push_back(i.first);
+            }
         }
         return result;
     }
 
     void dumpActiveEntities(utils::io::ostream& out) const {
-        for (auto i : mDebugActiveEntities) {
+        std::vector<std::pair<Entity, CallStack>> activeEntities;
+        {
+            LockGuard const lock(mFreeListLock);
+            activeEntities.reserve(mDebugActiveEntities.size());
+            for (auto const& i : mDebugActiveEntities) {
+                activeEntities.push_back(i);
+            }
+        }
+
+        for (auto const& i : activeEntities) {
             out << "*** Entity " << i.first.getId() << " was allocated at:\n";
             out << i.second;
             out << io::endl;
@@ -230,7 +249,7 @@ public:
 
 private:
     std::vector<ChangeCallback> getChangeCallbacks() const noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         std::vector<ChangeCallback> result;
         result.reserve(mChangeCallbacks.size());
         for (auto const& info : mChangeCallbacks) {
@@ -248,7 +267,7 @@ private:
     }
 
     FixedCapacityVector<Listener*> getListeners() const noexcept {
-        std::lock_guard const lock(mListenerLock);
+        LockGuard const lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
         FixedCapacityVector<Listener*> result(listeners.size());
         result.resize(result.capacity()); // unfortunately this memset()
@@ -263,19 +282,19 @@ private:
     };
 
     mutable Mutex mFreeListLock;
-    uint32_t mCurrentIndex = 1;
-    std::deque<Entity::Type> mFreeList;     // stores indices that got freed
-    uint8_t* const mGens;                   // stores the generation of each index.
-    PagedArenaBitset mAliveEntities;        // stores entities that are alive
+    uint32_t mCurrentIndex UTILS_GUARDED_BY(mFreeListLock) = 1;
+    std::deque<Entity::Type> mFreeList UTILS_GUARDED_BY(mFreeListLock); // stores indices that got freed
+    uint8_t* const mGens UTILS_PT_GUARDED_BY(mFreeListLock);            // stores the generation of each index.
+    PagedArenaBitset mAliveEntities UTILS_GUARDED_BY(mFreeListLock);    // stores entities that are alive
 
     mutable Mutex mListenerLock;
-    tsl::robin_set<Listener*> mListeners;
-    std::vector<CallbackInfo> mChangeCallbacks;
-    Entity mDirtyEntities[MAX_DIRTY_COUNT];
-    size_t mDirtyCount = 0;
+    tsl::robin_set<Listener*> mListeners UTILS_GUARDED_BY(mListenerLock);
+    std::vector<CallbackInfo> mChangeCallbacks UTILS_GUARDED_BY(mListenerLock);
+    Entity mDirtyEntities[MAX_DIRTY_COUNT] UTILS_GUARDED_BY(mFreeListLock);
+    size_t mDirtyCount UTILS_GUARDED_BY(mFreeListLock) = 0;
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
-    tsl::robin_map<Entity, CallStack, Entity::Hasher> mDebugActiveEntities;
+    tsl::robin_map<Entity, CallStack, Entity::Hasher> mDebugActiveEntities UTILS_GUARDED_BY(mFreeListLock);
 #endif
 };
 

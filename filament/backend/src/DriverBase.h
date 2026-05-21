@@ -27,12 +27,15 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/Mutex.h>
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
-#include <memory>
 #include <mutex>
 #include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -55,7 +58,7 @@ struct HwVertexBufferInfo : public HwBase {
     uint8_t attributeCount{};             //   1
     bool padding[2]{};                    //   2
     HwVertexBufferInfo() noexcept = default;
-    HwVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount) noexcept
+    HwVertexBufferInfo(uint8_t const bufferCount, uint8_t const attributeCount) noexcept
             : bufferCount(bufferCount),
               attributeCount(attributeCount) {
     }
@@ -70,7 +73,7 @@ struct HwVertexBuffer : public HwBase {
     };
     bool padding[2]{};                    //   2
     HwVertexBuffer() noexcept : asynchronous{}, reserved{} {}
-    explicit HwVertexBuffer(uint32_t vertexCount, bool async = false) noexcept
+    explicit HwVertexBuffer(uint32_t const vertexCount, bool const async = false) noexcept
             : vertexCount(vertexCount), asynchronous(async), reserved{} {
     }
 };
@@ -80,7 +83,7 @@ struct HwBufferObject : public HwBase {
     uint32_t asynchronous : 1;
 
     HwBufferObject() noexcept = default;
-    explicit HwBufferObject(uint32_t byteCount, bool async) noexcept : byteCount(byteCount), asynchronous(async) {}
+    explicit HwBufferObject(uint32_t const byteCount, bool const async) noexcept : byteCount(byteCount), asynchronous(async) {}
 };
 
 struct HwMemoryMappedBuffer : public HwBase {
@@ -91,8 +94,8 @@ struct HwIndexBuffer : public HwBase {
     uint32_t elementSize : 5;
     uint32_t asynchronous : 1;
 
-    HwIndexBuffer() noexcept : count{}, elementSize{} { }
-    HwIndexBuffer(uint8_t elementSize, uint32_t indexCount, bool async) noexcept :
+    HwIndexBuffer() noexcept : count{}, elementSize{}, asynchronous(0) {}
+    HwIndexBuffer(uint8_t const elementSize, uint32_t const indexCount, bool const async) noexcept :
             count(indexCount), elementSize(elementSize), asynchronous(async) {
         // we could almost store elementSize on 4 bits because it's never > 16 and never 0
         assert_invariant(elementSize > 0 && elementSize <= 16);
@@ -134,18 +137,20 @@ struct HwTexture : public HwBase {
     uint16_t reserved1 = 0;
     HwStream* hwStream = nullptr;
 
-    HwTexture() noexcept : levels{}, samples{} {}
-    HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples, uint32_t width,
-              uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage, bool async) noexcept
-            : width(width), height(height), depth(depth), target(target), levels(levels),
-              samples(samples), format(fmt), asynchronous(async), usage(usage) {}
+    HwTexture() noexcept : levels{}, samples{}, asynchronous(0), reserved(0) {}
+    HwTexture(SamplerType const target, uint8_t const levels, uint8_t const samples, uint32_t const width,
+              uint32_t const height, uint32_t const depth, TextureFormat const fmt, TextureUsage const usage,
+              bool const async) noexcept
+        : width(width), height(height), depth(depth), target(target), levels(levels),
+          samples(samples), format(fmt), asynchronous(async), reserved(0), usage(usage) {
+    }
 };
 
 struct HwRenderTarget : public HwBase {
     uint32_t width{};
     uint32_t height{};
     HwRenderTarget() noexcept = default;
-    HwRenderTarget(uint32_t w, uint32_t h) : width(w), height(h) { }
+    HwRenderTarget(uint32_t const w, uint32_t const h) : width(w), height(h) { }
 };
 
 struct HwFence : public HwBase {
@@ -206,14 +211,14 @@ public:
         CallbackData* data = CallbackData::obtain(this);
         static_assert(sizeof(T) <= sizeof(data->storage), "functor too large");
         new(data->storage) T(std::forward<T>(functor));
-        scheduleCallback(handler, data, (CallbackHandler::Callback)[](void* data) {
+        scheduleCallback(handler, data, static_cast<CallbackHandler::Callback>([](void* data) {
             CallbackData* details = static_cast<CallbackData*>(data);
             void* user = details->storage;
             T& functor = *static_cast<T*>(user);
             functor();
             functor.~T();
             CallbackData::release(details);
-        });
+        }));
     }
 
     void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
@@ -223,19 +228,23 @@ public:
      * Returns ERROR if the driver encountered an unrecoverable error.
      */
     template<typename Predicate>
-    FenceStatus waitForFence(Predicate predicate, std::chrono::steady_clock::time_point until) {
-        std::unique_lock lock(mFenceMutex);
+    FenceStatus waitForFence(Predicate predicate, std::chrono::steady_clock::time_point const until) {
+        utils::UniqueLock lock(mFenceMutex);
         bool errorObserved = false;
-        bool success = mFenceCondition.wait_until(lock, until, [&]() {
-            return predicate() ||
-                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
-        });
+        bool timeout = false;
+        while (!predicate() &&
+                !(errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)))) {
+            if (mFenceCondition.wait_until(lock, until) == std::cv_status::timeout) {
+                timeout = true;
+                break;
+            }
+        }
 
         if (UTILS_VERY_UNLIKELY(errorObserved)) {
             return FenceStatus::ERROR;
         }
 
-        return success ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
+        return !timeout ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
     }
 
     /**
@@ -244,12 +253,12 @@ public:
      */
     template<typename Predicate>
     FenceStatus waitForFence(Predicate predicate) {
-        std::unique_lock lock(mFenceMutex);
+        utils::UniqueLock lock(mFenceMutex);
         bool errorObserved = false;
-        mFenceCondition.wait(lock, [&]() {
-            return predicate() ||
-                    (errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)));
-        });
+        while (!predicate() &&
+                !(errorObserved = UTILS_VERY_UNLIKELY(mHasUnrecoverableError.load(std::memory_order_relaxed)))) {
+            mFenceCondition.wait(lock);
+        }
 
         if (UTILS_VERY_UNLIKELY(errorObserved)) {
             return FenceStatus::ERROR;
@@ -262,7 +271,7 @@ public:
      */
     template<typename Action>
     void signalFence(Action action) {
-        std::lock_guard lock(mFenceMutex);
+        utils::LockGuard const lock(mFenceMutex);
         action();
         mFenceCondition.notify_all();
     }
@@ -271,7 +280,7 @@ public:
      * Flags the driver as having encountered an unrecoverable error.
      */
     void setUnrecoverableError() noexcept override {
-        std::lock_guard lock(mFenceMutex);
+        utils::LockGuard const lock(mFenceMutex);
         mHasUnrecoverableError.store(true, std::memory_order_relaxed);
         mFenceCondition.notify_all();
     }
@@ -279,7 +288,7 @@ public:
     /**
      * Returns true if the driver has encountered an unrecoverable error.
      */
-    bool hasUnrecoverableError() const noexcept {
+    bool hasUnrecoverableError() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
         return mHasUnrecoverableError.load(std::memory_order_relaxed);
     }
 
@@ -314,18 +323,18 @@ protected:
 private:
     const Platform::DriverConfig mDriverConfig;
 
-    std::mutex mPurgeLock;
-    std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
+    mutable std::mutex mPurgeLock;
+    std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks UTILS_GUARDED_BY(mPurgeLock);
 
     std::thread mServiceThread;
-    std::mutex mServiceThreadLock;
-    std::condition_variable mServiceThreadCondition;
-    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
-    bool mExitRequested = false;
+    mutable std::mutex mServiceThreadLock;
+    mutable std::condition_variable mServiceThreadCondition;
+    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue UTILS_GUARDED_BY(mServiceThreadLock);
+    bool mExitRequested UTILS_GUARDED_BY(mServiceThreadLock) = false;
 
-    std::condition_variable mFenceCondition;
-    std::mutex mFenceMutex;
-    std::atomic<bool> mHasUnrecoverableError{false};
+    mutable std::condition_variable mFenceCondition;
+    mutable std::mutex mFenceMutex;
+    std::atomic<bool> mHasUnrecoverableError UTILS_GUARDED_BY(mFenceMutex){false};
 };
 
 

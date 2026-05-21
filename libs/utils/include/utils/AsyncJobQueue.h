@@ -55,12 +55,13 @@ public:
 
 private:
 #if !defined(__EMSCRIPTEN__)
+    void workerThreadLoop(const char* name, Priority priority);
     using Container = std::vector<Job>;
     std::thread mThread;
     Mutex mLock; // NOLINT(*-include-cleaner)
     Condition mCondition; // NOLINT(*-include-cleaner)
-    Container mQueue;
-    bool mExitRequested = false;
+    Container mQueue UTILS_GUARDED_BY(mLock);
+    bool mExitRequested UTILS_GUARDED_BY(mLock) = false;
 #endif
 };
 

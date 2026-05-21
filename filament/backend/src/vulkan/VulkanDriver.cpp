@@ -1122,7 +1122,7 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag)
     }
 
     {
-        std::lock_guard<std::mutex> guard(sync->lock);
+        std::lock_guard guard(sync->lock);
         sync->sync = mPlatform->createSync(fenceStatus);
     }
 
