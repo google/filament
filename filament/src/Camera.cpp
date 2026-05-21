@@ -142,6 +142,10 @@ mat4 Camera::getViewMatrix() const noexcept {
     return downcast(this)->getViewMatrix();
 }
 
+mat4 Camera::getEyeFromViewMatrix(uint8_t const eyeId) const noexcept {
+    return downcast(this)->getEyeFromViewMatrix(eyeId);
+}
+
 double3 Camera::getPosition() const noexcept {
     return downcast(this)->getPosition();
 }
