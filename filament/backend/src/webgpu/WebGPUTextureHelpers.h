@@ -583,7 +583,7 @@ namespace filament::backend {
         retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
     }
     if (any(TextureUsage::UPLOADABLE & fUsage)) {
-        retUsage |= wgpu::TextureUsage::CopyDst;
+        retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
     }
     if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
         retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);

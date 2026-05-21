@@ -232,7 +232,6 @@ public:
 };
 
 TEST_F(LoadImageTest, UpdateImage2D) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     SKIP_IF(Backend::VULKAN, "b/453776547");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
@@ -318,11 +317,11 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
     for (const auto& t : testCases) {
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
