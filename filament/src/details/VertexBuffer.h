@@ -20,18 +20,17 @@
 #include "downcast.h"
 
 #include <backend/DriverEnums.h>
+#include <backend/BufferDescriptor.h>
 #include <backend/Handle.h>
 
+#include <filament/MaterialEnums.h>
 #include <filament/VertexBuffer.h>
 
-#include <utils/bitset.h>
-#include <utils/compiler.h>
-
-#include <math/vec2.h>
-
+#include <atomic>
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 
 namespace filament {
 
@@ -45,7 +44,6 @@ public:
     using BufferObjectHandle = backend::BufferObjectHandle;
 
     FVertexBuffer(FEngine& engine, const Builder& builder);
-    FVertexBuffer(FEngine& engine, FVertexBuffer* buffer);
 
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
@@ -70,10 +68,10 @@ public:
             void* user = nullptr);
 
     void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
-            FBufferObject const * bufferObject);
+            FBufferObject const* bufferObject);
 
     AsyncCallId setBufferObjectAtAsync(FEngine& engine, uint8_t bufferIndex,
-            FBufferObject const * bufferObject, backend::CallbackHandler* handler,
+            FBufferObject const* bufferObject, backend::CallbackHandler* handler,
             AsyncCompletionCallback callback, void* user = nullptr);
 
     void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<uint16_t[]> skinJoints,

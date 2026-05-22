@@ -141,6 +141,11 @@ TransformManager::children_iterator FTransformManager::getChildrenEnd(Instance) 
     return { *this, 0 };
 }
 
+TransformManager::children_range FTransformManager::getChildrenRange(
+        Instance const parent) const noexcept {
+    return { { *this, mManager[parent].firstChild } };
+}
+
 void FTransformManager::destroy(Entity const e) noexcept {
     // update the reference of the element we're removing
     auto& manager = mManager;
@@ -482,8 +487,8 @@ void FTransformManager::gc(EntityManager& em) noexcept {
             });
 }
 
-TransformManager::children_iterator& TransformManager::children_iterator::operator++() {
-    FTransformManager const& that = downcast(mManager);
+TransformManager::children_iterator& TransformManager::children_iterator::operator++() noexcept {
+    FTransformManager const& that = downcast(*mManager);
     mInstance = that.mManager[mInstance].next;
     return *this;
 }
