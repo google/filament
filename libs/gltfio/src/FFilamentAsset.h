@@ -35,9 +35,10 @@
 
 #include <math/mat4.h>
 
-#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
 #include <utils/Entity.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Hash.h>
 
 #include <cgltf.h>
 
@@ -117,6 +118,13 @@ struct FFilamentAsset : public FilamentAsset {
             mSourceAsset(new SourceAsset {(cgltf_data*)srcAsset}),
             mTextures(srcAsset->textures_count),
             mMeshCache(srcAsset->meshes_count) {
+        // Initialize mTextures with default slots, one per cgltf_texture index.
+        for (size_t i = 0; i < srcAsset->textures_count; ++i) {
+            mTextures[i].gltfTextureIndex = i;
+            mTextures[i].texture = nullptr;
+            mTextures[i].isOwner = false;
+            mTextures[i].flags = TextureProvider::TextureFlags::NONE;
+        }
         if (!useExtendedAlgo) {
             mResourceInfo = ResourceInfo{};
         } else {
@@ -303,19 +311,58 @@ struct FFilamentAsset : public FilamentAsset {
     // The mapping of root nodes to scene membership sets.
     tsl::robin_map<cgltf_node*, SceneMask> mRootNodes;
 
-    // Stores all information related to a single cgltf_texture.
-    // Note that more than one cgltf_texture can map to a single Filament texture,
-    // e.g. if several have the same URL or bufferView. For each Filament texture,
-    // only one of its corresponding TextureInfo slots will have isOwner=true.
     struct TextureInfo {
         std::vector<TextureSlot> bindings;
         Texture* texture;
         TextureProvider::TextureFlags flags;
         bool isOwner;
+        size_t gltfTextureIndex;
     };
 
-    // Mapping from cgltf_texture to Texture* is required when creating new instances.
-    utils::FixedCapacityVector<TextureInfo> mTextures;
+    // Stores all information related to a single cgltf_texture or split textures under different
+    // color spaces. There are two different texture index namespaces:
+    //   - gltfTextureIndex: The texture index defined in the original glTF file.
+    //   - assetTextureIndex: The unique index in the mTextures vector representing a resolved,
+    //   unique Filament Texture resource.
+    // A cgltf_texture can map to multiple asset textures (Filament textures) if they have different
+    // color space flags (sRGB vs Linear). Note that more than one cgltf_texture can map to a single
+    // Filament texture, e.g. if several have the same URL or bufferView. For each Filament texture,
+    // only one of its corresponding TextureInfo slots will have isOwner=true.
+    std::vector<TextureInfo> mTextures;
+
+    /**
+     * Obtains the resolved assetTextureIndex for a given gltfTextureIndex and flags.
+     *
+     * If it is the first binding for this gltfTextureIndex, it assigns the flags to the default
+     * slot and returns it. If it is bound with different flags later, it allocates a new duplicate
+     * slot at the end of mTextures.
+     */
+    size_t obtainAssetTextureIndex(size_t gltfTextureIndex, TextureProvider::TextureFlags flags) {
+        auto key = TextureKey{ gltfTextureIndex, flags };
+        auto it = mResolvedTextures.find(key);
+        if (it != mResolvedTextures.end()) {
+            return it->second;
+        }
+
+        // First check if the default texture slot has been assigned.
+        TextureInfo& defaultSlot = mTextures[gltfTextureIndex];
+        if (defaultSlot.bindings.empty() && defaultSlot.texture == nullptr) {
+            defaultSlot.flags = flags;
+            mResolvedTextures[key] = gltfTextureIndex;
+            return gltfTextureIndex;
+        }
+
+        // At this point, gltfTextureIndex is being used with different flags, so we allocate a new
+        // slot for it at the end of the mTextures vector.
+        mTextures.push_back(TextureInfo{ .bindings = {},
+            .texture = nullptr,
+            .flags = flags,
+            .isOwner = false,
+            .gltfTextureIndex = gltfTextureIndex });
+        size_t newIndex = mTextures.size() - 1;
+        mResolvedTextures[key] = newIndex;
+        return newIndex;
+    }
 
     // Resource URIs can be queried by the end user.
     utils::FixedCapacityVector<const char*> mResourceUris;
@@ -372,6 +419,25 @@ struct FFilamentAsset : public FilamentAsset {
     };
 
     std::variant<ResourceInfo, ResourceInfoExtended> mResourceInfo;
+
+private:
+    struct TextureKey {
+        size_t gltfTextureIndex;
+        TextureProvider::TextureFlags flags;
+        bool operator==(const TextureKey& o) const {
+            return gltfTextureIndex == o.gltfTextureIndex && flags == o.flags;
+        }
+    };
+    struct TextureKeyHash {
+        size_t operator()(const TextureKey& k) const {
+            size_t seed = 0;
+            utils::hash::combine(seed, k.gltfTextureIndex);
+            utils::hash::combine(seed, (uint64_t) k.flags);
+            return seed;
+        }
+    };
+    // Lookup map cache mapping (gltfTextureIndex, flags) to its resolved assetTextureIndex.
+    std::unordered_map<TextureKey, size_t, TextureKeyHash> mResolvedTextures;
 };
 
 FILAMENT_DOWNCAST(FilamentAsset)

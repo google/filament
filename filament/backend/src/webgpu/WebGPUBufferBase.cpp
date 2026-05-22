@@ -86,11 +86,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    // Ensure command encoder and submission state are created before acquiring staging buffer
-    wgpu::CommandEncoder commandEncoder = webGPUQueueManager->getCommandEncoder();
+    auto [encoder, submissionState] = webGPUQueueManager->getCommandEncoderWithState();
 
-    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize,
-            webGPUQueueManager->getLatestSubmissionState());
+    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize, submissionState);
 
     void* mappedRange = stagingBuffer.GetMappedRange();
     assert_invariant(mappedRange);
@@ -106,7 +104,7 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
+    encoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
             remainder == 0 ? bufferDescriptor.size
                            : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
 }

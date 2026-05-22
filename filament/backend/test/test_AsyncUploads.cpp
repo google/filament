@@ -69,7 +69,7 @@ TEST_F(BackendTest, BasicAsyncFlow) {
                 .mUniformType = ShaderUniformType::Sampler,
             });
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport = getFullViewport();
 
     PipelineState ps = getColorWritePipelineState();

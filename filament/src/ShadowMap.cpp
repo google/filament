@@ -1392,7 +1392,7 @@ ShadowMapDescriptorSet::Transaction ShadowMap::open(DriverApi& driver) noexcept 
 }
 
 void ShadowMap::commit(Transaction& transaction,
-        FEngine& engine, DriverApi& driver) const noexcept {
+        FEngine const& engine, DriverApi& driver) const noexcept {
     mPerShadowMapUniforms.commit(transaction, engine, driver);
 }
 

@@ -317,7 +317,7 @@ TEST_F(BlitTest, ColorResolve) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
 
