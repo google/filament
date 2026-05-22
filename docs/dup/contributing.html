@@ -181,6 +181,12 @@ standards for this project.</li>
 <li>Ensure that your code has an appropriate set of unit tests which all pass.</li>
 <li>Submit a pull request.</li>
 </ol>
+<h2 id="restricted-directories"><a class="header" href="#restricted-directories">Restricted Directories</a></h2>
+<p>To ensure the security and integrity of our project automation and documentation pipelines, certain directories are restricted:</p>
+<ul>
+<li><strong><code>.github/</code></strong>: Modifications to CI/CD workflows and repository configuration are restricted to maintainers. Pull requests from external contributors touching this directory will be automatically closed. Please open an issue to discuss proposed changes to automation.</li>
+<li><strong><code>docs/</code></strong>: The documentation in the <code>/docs</code> directory is generated from source. Please make edits to the files in <code>docs_src/</code> instead.</li>
+</ul>
 <h2 id="code-style"><a class="header" href="#code-style">Code Style</a></h2>
 <p>See <a href="code_style.html">CODE_STYLE.md</a></p>
 <h2 id="code-reviews"><a class="header" href="#code-reviews">Code reviews</a></h2>

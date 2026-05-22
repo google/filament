@@ -19,7 +19,7 @@ namespace pv_png
 	{
 		uint32_t m_width;
 		uint32_t m_height;
-				
+
 		uint32_t m_num_chans;	// The number of channels, factoring in transparency. Ranges from [1-4].
 
 		uint32_t m_bit_depth;	// PNG ihdr bit depth: 1, 2, 4, 8 or 16

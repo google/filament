@@ -88,7 +88,7 @@ void FilamentApp::initialize() {
 
     app.materialInstance = app.mat->createInstance();
     MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(engine, RESOURCES_MATERIAL_SPHERE_DATA,
-            nullptr, nullptr, app.materialInstance);
+            RESOURCES_MATERIAL_SPHERE_SIZE, nullptr, nullptr, app.materialInstance);
     app.materialInstance->setParameter("baseColor", RgbType::sRGB, {0.71f, 0.0f, 0.0f});
 
     app.renderable = mesh.renderable;

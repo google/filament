@@ -112,6 +112,7 @@ pod 'Filament', '~> 1.71.4'
 - Point, spot, and directional light shadows
 - Cascaded shadows
 - EVSM, PCSS, DPCF, or PCF shadows
+- Colored penumbra
 - Transparent shadows
 - Contact shadows
 - Screen-space ambient occlusion
@@ -124,7 +125,7 @@ pod 'Filament', '~> 1.71.4'
 
 - HDR bloom
 - Depth of field bokeh
-- Multiple tone mappers: PBR Neutral, AgX, generic (customizable), ACES, filmic, etc.
+- Multiple tone mappers: GT7, PBR Neutral, AgX, generic (customizable), ACES, filmic, etc.
 - Color and tone management: luminance scaling, gamut mapping
 - Color grading: exposure, night adaptation, white balance, channel mixer,
   shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.
@@ -172,7 +173,6 @@ pod 'Filament', '~> 1.71.4'
   - [x] KHR_texture_basisu
   - [x] KHR_texture_transform
   - [x] EXT_meshopt_compression
-
 
 ## Rendering with Filament
 

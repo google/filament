@@ -204,7 +204,7 @@ public:
     static void prepareShadowMapping(Transaction const& transaction,
             float vsmExponent, float vsmMaxMoment) noexcept;
     static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
-    void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) const noexcept;
+    void commit(Transaction& transaction, FEngine const& engine, backend::DriverApi& driver) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
 
 private:

@@ -354,16 +354,16 @@ void AnimatorImpl::stashCrossFade() {
     // are added into the hierarchy.
     auto recursiveCount = [&tm](Instance node, size_t count, auto& fn) -> size_t {
         ++count;
-        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
-            count = fn(*iter, count, fn);
+        for (auto child : tm.getChildrenRange(node)) {
+            count = fn(child, count, fn);
         }
         return count;
     };
 
     auto recursiveStash = [&tm, &stash](Instance node, size_t index, auto& fn) -> size_t {
         stash[index++] = tm.getTransform(node);
-        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
-            index = fn(*iter, index, fn);
+        for (auto child : tm.getChildrenRange(node)) {
+            index = fn(child, index, fn);
         }
         return index;
     };
@@ -390,8 +390,8 @@ void AnimatorImpl::applyCrossFade(float alpha) {
         const quatf rotation = slerp(rotation0, rotation1, alpha);
         const float3 translation = mix(translation0, translation1, alpha);
         tm.setTransform(node, composeMatrix(translation, rotation, scale));
-        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
-            index = fn(*iter, index, fn);
+        for (auto child : tm.getChildrenRange(node)) {
+            index = fn(child, index, fn);
         }
         return index;
     };

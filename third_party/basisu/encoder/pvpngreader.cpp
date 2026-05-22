@@ -1,12 +1,12 @@
 // pngreader.cpp - Public Domain - see unlicense at bottom of file.
 //
-// Notes: 
-// This is ancient code from ~1995 ported to C++. It was originally written for a 
-// DOS app with very limited memory. It's not as fast as it should be, but it works. 
-// The low-level PNG reader class was written assuming the PNG file could not fit 
+// Notes:
+// This is ancient code from ~1995 ported to C++. It was originally written for a
+// DOS app with very limited memory. It's not as fast as it should be, but it works.
+// The low-level PNG reader class was written assuming the PNG file could not fit
 // entirely into memory, which dictated how it was written/structured.
 // It has been modified to use either zlib or miniz.
-// It supports all PNG color types/bit depths/interlacing, however 16-bit/component 
+// It supports all PNG color types/bit depths/interlacing, however 16-bit/component
 // images are converted to 8-bit.
 // TRNS chunks are converted to alpha as needed.
 // GAMA chunk is read, but not applied.
@@ -109,20 +109,20 @@ class png_memory_file : public png_file
 public:
 	std::vector<uint8_t> m_buf;
 	uint64_t m_ofs;
-	
-	png_memory_file() : 
+
+	png_memory_file() :
 		png_file(),
 		m_ofs(0)
-	{ 
+	{
 	}
-	
+
 	virtual ~png_memory_file()
-	{ 
+	{
 	}
 
 	std::vector<uint8_t>& get_buf() { return m_buf; }
 	const std::vector<uint8_t>& get_buf() const { return m_buf; }
-	 
+
 	void init()
 	{
 		m_ofs = 0;
@@ -163,7 +163,7 @@ public:
 		{
 			if ((sizeof(size_t) == sizeof(uint32_t)) && (new_size > 0x7FFFFFFFUL))
 				return 0;
-			m_buf.resize(new_size);
+			m_buf.resize((size_t)new_size);
 		}
 
 		memcpy(&m_buf[(size_t)m_ofs], pBuf, len);
@@ -178,11 +178,11 @@ public:
 			return 0;
 
 		uint64_t max_bytes = minimum<uint64_t>(len, m_buf.size() - m_ofs);
-		memcpy(pBuf, &m_buf[(size_t)m_ofs], max_bytes);
+		memcpy(pBuf, &m_buf[(size_t)m_ofs], (size_t)max_bytes);
 
 		m_ofs += max_bytes;
 
-		return max_bytes;
+		return (size_t)max_bytes;
 	}
 };
 
@@ -249,11 +249,11 @@ public:
 			return 0;
 
 		uint64_t max_bytes = minimum<uint64_t>(len, m_buf_size - m_ofs);
-		memcpy(pBuf, &m_pBuf[(size_t)m_ofs], max_bytes);
+		memcpy(pBuf, &m_pBuf[(size_t)m_ofs], (size_t)max_bytes);
 
 		m_ofs += max_bytes;
 
-		return max_bytes;
+		return (size_t)max_bytes;
 	}
 };
 
@@ -269,8 +269,8 @@ class png_cfile : public png_file
 {
 public:
 	FILE* m_pFile;
-	
-	png_cfile() : 
+
+	png_cfile() :
 		png_file(),
 		m_pFile(nullptr)
 	{
@@ -284,9 +284,9 @@ public:
 	bool init(const char *pFilename, const char *pMode)
 	{
 		close();
-		
+
 		m_pFile = nullptr;
-		
+
 #ifdef _MSC_VER
 		fopen_s(&m_pFile, pFilename, pMode);
 #else
@@ -333,17 +333,17 @@ public:
 		int64_t cur_ofs = ftell64(m_pFile);
 		if (cur_ofs < 0)
 			return 0;
-		
+
 		if (fseek64(m_pFile, 0, SEEK_END) != 0)
 			return 0;
-		
+
 		const int64_t cur_size = ftell64(m_pFile);
 		if (cur_size < 0)
 			return 0;
 
 		if (fseek64(m_pFile, cur_ofs, SEEK_SET) != 0)
 			return 0;
-		
+
 		return cur_size;
 	}
 
@@ -379,13 +379,13 @@ public:
 	png_decoder();
 	~png_decoder();
 
-	// Scans the PNG file, but doesn't decode the IDAT data. 
+	// Scans the PNG file, but doesn't decode the IDAT data.
 	// Returns 0 on success, or an error code.
 	// If the returned status is non-zero, or m_img_supported_flag==FALSE the image either the image is corrupted/not PNG or is unsupported in some way.
 	int png_scan(png_file *pFile);
 
 	// Decodes a single scanline of PNG image data.
-	// Returns a pointer to the scanline's pixel data and its size in bytes. 
+	// Returns a pointer to the scanline's pixel data and its size in bytes.
 	// This data is only minimally processed from the internal PNG pixel data.
 	// The caller must use the ihdr, trns_flag and values, and the palette to actually decode the pixel data.
 	//
@@ -397,21 +397,21 @@ public:
 	//
 	// Returns 0 on success, a non-zero error code, or PNG_ALLDONE.
 	int png_decode(void** ppImg_ptr, uint32_t* pImg_len);
-	
+
 	// Starts decoding. Returns 0 on success, otherwise an error code.
 	int png_decode_start();
-	
+
 	// Deinitializes the decoder, freeing all allocations.
 	void png_decode_end();
 
 	png_file* m_pFile;
-		
+
 	// Image's 24bpp palette - 3 bytes per entry
 	uint8_t m_plte_flag;
 	uint8_t m_img_pal[768];
-		
+
 	int m_img_supported_flag;
-		
+
 	ihdr_struct m_ihdr;
 
 	uint8_t m_chunk_flag;
@@ -442,7 +442,7 @@ public:
 
 	uint8_t m_gama_flag;
 	uint32_t m_gama_value;
-			
+
 	uint8_t m_trns_flag;
 	uint32_t m_trns_value[256];
 
@@ -455,7 +455,7 @@ public:
 	uint32_t m_inflate_dst_buf_ofs;
 
 	int m_inflate_eof_flag;
-		
+
 	uint8_t m_gamma_table[256];
 
 	int m_pass_x_size;
@@ -467,16 +467,16 @@ public:
 	int m_adam7_pass_size_y[7];
 
 	std::vector<uint8_t> m_adam7_image_buf;
-		
+
 	int m_adam7_decoded_flag;
-	
+
 	bool m_scanned_flag;
-		
+
 	int m_terminate_status;
-		
+
 #define TEMP_BUF_SIZE (384)
 	uint8_t m_temp_buf[TEMP_BUF_SIZE * 4];
-			
+
 	void clear();
 	void uninitialize();
 	int terminate(int status);
@@ -516,7 +516,7 @@ public:
 void png_decoder::uninitialize()
 {
 	m_pFile = nullptr;
-				
+
 	for (int i = 0; i < PNG_MAX_ALLOC_BLOCKS; i++)
 	{
 		free(m_pMalloc_blocks[i]);
@@ -600,7 +600,7 @@ int png_decoder::fetch_next_chunk_data(uint8_t* buf, int bytes)
 	int status = block_read(buf, bytes);
 	if (status != 0)
 		return status;
-				
+
 #if PVPNG_IDAT_CRC_CHECKING
 	bool check_crc32 = true;
 #else
@@ -609,7 +609,7 @@ int png_decoder::fetch_next_chunk_data(uint8_t* buf, int bytes)
 #endif
 
 	if (check_crc32)
-		m_chunk_crc32 = buminiz::mz_crc32(m_chunk_crc32, buf, bytes);
+		m_chunk_crc32 = static_cast<uint32_t>(buminiz::mz_crc32(m_chunk_crc32, buf, bytes));
 
 	if ((m_chunk_left -= bytes) == 0)
 	{
@@ -680,7 +680,7 @@ int png_decoder::fetch_next_chunk_init()
 		if (status != 0)
 			return status;
 	}
-	
+
 	int64_t n = block_read_dword();
 	if (n < 0)
 		return (int)n;
@@ -776,7 +776,7 @@ static void PixelDePack2(void* src, void* dst, int numbytes)
 	while (numbytes)
 	{
 		uint8_t v = *src8++;
-		
+
 		for (uint32_t i = 0; i < 8; i++)
 			dst8[7 - i] = (v >> i) & 1;
 
@@ -933,7 +933,7 @@ static int unpack_true_8(uint8_t* src, uint8_t* dst, int pixels, png_decoder* pw
 			uint8_t r = src[i * 3 + 0];
 			uint8_t g = src[i * 3 + 1];
 			uint8_t b = src[i * 3 + 2];
-			
+
 			dst[i * 4 + 0] = r;
 			dst[i * 4 + 1] = g;
 			dst[i * 4 + 2] = b;
@@ -982,7 +982,7 @@ static int unpack_true_16(uint8_t* src, uint8_t* dst, int pixels, png_decoder* p
 			dst[1] = src[2];
 			dst[2] = src[4];
 			dst[3] = 255;
-			
+
 			dst += 4;
 			src += 6;
 		}
@@ -1180,15 +1180,15 @@ int png_decoder::decompress_line(uint32_t* bytes_decoded)
 
 			m_inflator.next_in = inflate_src_buf + m_inflate_src_buf_ofs;
 			m_inflator.avail_in = src_bytes_left;
-			
+
 			m_inflator.next_out = m_pCur_line_buf + m_inflate_dst_buf_ofs;
 			m_inflator.avail_out = dst_bytes_left;
-						
+
 			status = buminiz::mz_inflate2(&m_inflator, buminiz::MZ_NO_FLUSH, PVPNG_ADLER32_CHECKING);
 
 			const uint32_t src_bytes_consumed = src_bytes_left - m_inflator.avail_in;
 			const uint32_t dst_bytes_written = dst_bytes_left - m_inflator.avail_out;
-			
+
 			m_inflate_src_buf_ofs += src_bytes_consumed;
 			m_inflate_dst_buf_ofs += dst_bytes_written;
 
@@ -1255,10 +1255,10 @@ int png_decoder::png_decode(void** ppImg_ptr, uint32_t* pImg_len)
 	{
 		if (m_pass_y_left == 0)
 			return PNG_ALLDONE;
-				
+
 		*ppImg_ptr = &m_adam7_image_buf[(m_ihdr.m_height - m_pass_y_left) * m_dst_bytes_per_line];
 		*pImg_len = m_dst_bytes_per_line;
-				
+
 		m_pass_y_left--;
 
 		return 0;
@@ -1282,7 +1282,7 @@ int png_decoder::png_decode(void** ppImg_ptr, uint32_t* pImg_len)
 				status = find_iend_chunk();
 				if (status < 0)
 					return status;
-								
+
 				return PNG_ALLDONE;
 			}
 
@@ -1398,7 +1398,7 @@ int png_decoder::png_decode(void** ppImg_ptr, uint32_t* pImg_len)
 		if ((*m_pProcess_func)(m_pCur_line_buf + 1, m_pPro_line_buf, m_pass_x_size, this))
 			decoded_line = m_pPro_line_buf;
 	}
-		
+
 	if (m_ihdr.m_ilace_type == 0)
 	{
 		*ppImg_ptr = decoded_line;
@@ -1499,17 +1499,17 @@ void png_decoder::png_decode_end()
 int png_decoder::png_decode_start()
 {
 	int status;
-	
+
 	if (m_img_supported_flag != TRUE)
 		return terminate(m_img_supported_flag);
-		
+
 	switch (m_ihdr.m_color_type)
 	{
 	case PNG_COLOR_TYPE_GREYSCALE:
 	{
 		if (m_ihdr.m_bit_depth == 16)
 		{
-			// This is a special case. We can't pass back 8-bit samples and let the caller decide on transparency because the PNG is 16-bits. 
+			// This is a special case. We can't pass back 8-bit samples and let the caller decide on transparency because the PNG is 16-bits.
 			// So we expand to 8-bit Gray-Alpha and handle transparency during decoding.
 			// We don't do this with all grayscale cases because that would require more code to deal with 1/2/4bpp expansion.
 			m_dec_bytes_per_pixel = (m_ihdr.m_bit_depth + 7) / 8;
@@ -1534,7 +1534,7 @@ int png_decoder::png_decode_start()
 				m_pProcess_func = unpack_grey_2;
 			else if (m_ihdr.m_bit_depth == 4)
 				m_pProcess_func = unpack_grey_4;
-			else 
+			else
 				m_pProcess_func = unpack_grey_8;
 		}
 
@@ -1626,8 +1626,8 @@ int png_decoder::png_decode_start()
 
 	if (m_ihdr.m_ilace_type == 1)
 	{
-		int i;
-		uint32_t total_lines, lines_processed;
+		//int i;
+		//uint32_t total_lines, lines_processed;
 
 		m_adam7_pass_size_x[0] = adam7_pass_size(m_ihdr.m_width, 0, 8);
 		m_adam7_pass_size_x[1] = adam7_pass_size(m_ihdr.m_width, 4, 8);
@@ -1644,17 +1644,19 @@ int png_decoder::png_decode_start()
 		m_adam7_pass_size_y[4] = adam7_pass_size(m_ihdr.m_height, 2, 4);
 		m_adam7_pass_size_y[5] = adam7_pass_size(m_ihdr.m_height, 0, 2);
 		m_adam7_pass_size_y[6] = adam7_pass_size(m_ihdr.m_height, 1, 2);
-				
+
 		m_adam7_image_buf.resize(m_dst_bytes_per_line * m_ihdr.m_height);
-								
+
 		m_adam7_pass_num = -1;
 
 		m_pass_y_left = 0;
 
+#if 0
 		total_lines = lines_processed = 0;
 
 		for (i = 0; i < 7; i++)
 			total_lines += m_adam7_pass_size_y[i];
+#endif
 
 		for (; ; )
 		{
@@ -1675,7 +1677,7 @@ int png_decoder::png_decode_start()
 				}
 			}
 
-			lines_processed++;
+			//lines_processed++;
 		}
 
 		m_adam7_decoded_flag = TRUE;
@@ -1686,7 +1688,7 @@ int png_decoder::png_decode_start()
 		m_pass_x_size = m_ihdr.m_width;
 		m_pass_y_left = m_ihdr.m_height;
 	}
-		
+
 	return 0;
 }
 
@@ -1779,13 +1781,13 @@ int png_decoder::read_ihdr_chunk()
 	if ((m_ihdr.m_height == 0) || (m_ihdr.m_height > MAX_SUPPORTED_RES))
 		return terminate(PNG_BAD_HEIGHT);
 
-	int v = fetch_next_chunk_byte(); 
-	if (v < 0) 
+	int v = fetch_next_chunk_byte();
+	if (v < 0)
 		return v;
 	m_ihdr.m_bit_depth = (uint8_t)v;
 
-	v = fetch_next_chunk_byte(); 
-	if (v < 0) 
+	v = fetch_next_chunk_byte();
+	if (v < 0)
 		return v;
 	m_ihdr.m_color_type = (uint8_t)v;
 
@@ -1812,7 +1814,7 @@ int png_decoder::read_ihdr_chunk()
 
 	if (m_ihdr.m_ilace_type > 1)
 		m_img_supported_flag = PNG_UNS_ILACE;
-		
+
 	switch (m_ihdr.m_color_type)
 	{
 	case PNG_COLOR_TYPE_GREYSCALE:
@@ -1903,7 +1905,7 @@ int png_decoder::read_bkgd_chunk()
 		if (v < 0)
 			return v;
 		m_bkgd_value[1] = v;
-		
+
 		v = fetch_next_chunk_word();
 		if (v < 0)
 			return v;
@@ -1922,7 +1924,7 @@ int png_decoder::read_gama_chunk()
 		return (int)v;
 
 	m_gama_value = (uint32_t)v;
-	
+
 	return 0;
 }
 
@@ -1962,12 +1964,12 @@ int png_decoder::read_trns_chunk()
 		if (v < 0)
 			return v;
 		m_trns_value[0] = v;
-		
+
 		v = fetch_next_chunk_word();
 		if (v < 0)
 			return v;
 		m_trns_value[1] = v;
-		
+
 		v = fetch_next_chunk_word();
 		if (v < 0)
 			return v;
@@ -2013,7 +2015,7 @@ int png_decoder::read_plte_chunk()
 		if (v < 0)
 			return v;
 		*p++ = (uint8_t)v;
-		
+
 		v = fetch_next_chunk_byte();
 		if (v < 0)
 			return v;
@@ -2024,7 +2026,7 @@ int png_decoder::read_plte_chunk()
 			return v;
 		*p++ = (uint8_t)v;
 	}
-	
+
 	return 0;
 }
 
@@ -2142,7 +2144,7 @@ void png_decoder::clear()
 	m_inflate_dst_buf_ofs = 0;
 
 	m_inflate_eof_flag = FALSE;
-		
+
 	clear_obj(m_trns_value);
 
 	m_pass_x_size = 0;
@@ -2152,18 +2154,18 @@ void png_decoder::clear()
 	m_adam7_pass_y = 0;
 	clear_obj(m_adam7_pass_size_x);
 	clear_obj(m_adam7_pass_size_y);
-		
+
 	m_adam7_decoded_flag = FALSE;
-	
+
 	m_scanned_flag = false;
-				
+
 	m_terminate_status = 0;
 }
 
 int png_decoder::png_scan(png_file *pFile)
 {
 	m_pFile = pFile;
-		
+
 	m_img_supported_flag = TRUE;
 	m_terminate_status = 0;
 
@@ -2174,11 +2176,11 @@ int png_decoder::png_scan(png_file *pFile)
 	res = read_ihdr_chunk();
 	if (res != 0)
 		return res;
-		
+
 	res = find_idat_chunk();
 	if (res != 0)
 		return res;
-				
+
 	if (m_gama_flag)
 		calc_gamma_table();
 
@@ -2198,14 +2200,14 @@ int png_decoder::png_scan(png_file *pFile)
 }
 
 static inline uint8_t get_709_luma(uint32_t r, uint32_t g, uint32_t b)
-{ 
+{
 	return (uint8_t)((13938U * r + 46869U * g + 4729U * b + 32768U) >> 16U);
 }
 
 bool get_png_info(const void* pImage_buf, size_t buf_size, png_info &info)
 {
 	memset(&info, 0, sizeof(info));
-		
+
 	if ((!pImage_buf) || (buf_size < MIN_PNG_SIZE))
 		return false;
 
@@ -2254,7 +2256,7 @@ void* load_png(const void* pImage_buf, size_t buf_size, uint32_t desired_chans, 
 	width = 0;
 	height = 0;
 	num_chans = 0;
-		
+
 	if ((!pImage_buf) || (buf_size < MIN_PNG_SIZE))
 	{
 		assert(0);
@@ -2271,7 +2273,7 @@ void* load_png(const void* pImage_buf, size_t buf_size, uint32_t desired_chans, 
 	mf.init(pImage_buf, buf_size);
 
 	png_decoder dec;
-		
+
 	int status = dec.png_scan(&mf);
 	if ((status != 0) || (dec.m_img_supported_flag != TRUE))
 		return nullptr;
@@ -2318,11 +2320,11 @@ void* load_png(const void* pImage_buf, size_t buf_size, uint32_t desired_chans, 
 	uint64_t total_size = (uint64_t)pitch * height;
 	if (total_size > 0x7FFFFFFFULL)
 		return nullptr;
-	
+
 	uint8_t* pBuf = (uint8_t*)malloc((size_t)total_size);
 	if (!pBuf)
 		return nullptr;
-	
+
 	if (dec.png_decode_start() != 0)
 	{
 		free(pBuf);

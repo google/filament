@@ -236,7 +236,7 @@ void FilamentApp::setupMaterial() {
 
 void FilamentApp::setupMesh() {
     MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(engine, RESOURCES_CUBE_DATA,
-            nullptr, nullptr, app.materialInstance);
+            RESOURCES_CUBE_SIZE, nullptr, nullptr, app.materialInstance);
     app.materialInstance->setParameter("baseColor", RgbType::sRGB, {0.71f, 0.0f, 0.0f});
 
     app.renderable = mesh.renderable;

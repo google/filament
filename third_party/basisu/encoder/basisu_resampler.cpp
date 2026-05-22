@@ -1,5 +1,5 @@
 // basisu_resampler.cpp
-// Copyright (C) 2019 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,7 +139,7 @@ namespace basisu
 				n += (right - left + 1);
 			}
 
-			// Allocate memory for contributors. 
+			// Allocate memory for contributors.
 
 			if ((n == 0) || ((Pcpool = (Contrib*)calloc(n, sizeof(Contrib))) == NULL))
 			{
@@ -573,7 +573,7 @@ namespace basisu
 
 		/* Don't deallocate a contibutor list
 		* if the user passed us one of their own.
-	*/
+		*/
 
 		if ((m_Pclist_x) && (!m_clist_x_forced))
 		{
@@ -840,5 +840,5 @@ namespace basisu
 		else
 			return g_resample_filters[filter_num].name;
 	}
-	
+
 } // namespace basisu

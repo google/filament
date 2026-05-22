@@ -543,6 +543,7 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(
             .stride = attrib.stride,
         };
         attribToBufferIndex[attribIndex] = attrib.buffer;
+        mAttributes.set(attribIndex);
     }
 }
 
@@ -562,6 +563,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
             vkbuffers[attribIndex] = bufferObject->getVkBuffer();
+            mAttributes.set(attribIndex);
         }
     }
     mResources.push_back(bufferObject);

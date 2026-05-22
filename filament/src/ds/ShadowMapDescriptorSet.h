@@ -80,7 +80,7 @@ public:
     static Transaction open(backend::DriverApi& driver) noexcept;
 
     // update local data into GPU UBO
-    void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) noexcept;
+    void commit(Transaction& transaction, FEngine const& engine, backend::DriverApi& driver) noexcept;
 
     // bind this UBO
     void bind(backend::DriverApi& driver) noexcept;

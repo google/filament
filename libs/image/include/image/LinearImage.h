@@ -57,6 +57,9 @@ public:
     LinearImage(const LinearImage& that);
     LinearImage& operator=(const LinearImage& that);
 
+    LinearImage(LinearImage&& that) noexcept;
+    LinearImage& operator=(LinearImage&& that) noexcept;
+
     /**
      * Creates an empty (invalid) image.
      */
