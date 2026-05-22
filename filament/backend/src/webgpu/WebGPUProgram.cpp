@@ -155,7 +155,7 @@ namespace {
 }// namespace
 
 WebGPUProgram::WebGPUProgram(wgpu::Device const& device, Program const& program)
-        : HwProgram{ program.getName() } {
+        : HwProgram{ program.getName() }, pushConstantDescription(program) {
     // TODO: Consider creating/compiling these shaders in parallel.
     vertexShaderModule = createShaderModule(device, program, ShaderStage::VERTEX);
     fragmentShaderModule = createShaderModule(device, program, ShaderStage::FRAGMENT);

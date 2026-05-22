@@ -211,6 +211,7 @@ void WebGPUDriver::flush(int) {
 
 void WebGPUDriver::finish(int /* dummy */) {
     mQueueManager.finish();
+    mPipelineState = {};
 
     // We use polling to advance webgpu's callback counter until all the read backs have been
     // processed. Note that blocking with mReadPixelMapsCounter.waitForAllToFinish will only
@@ -1473,6 +1474,7 @@ void WebGPUDriver::endRenderPass(int /* dummy */) {
     FWGPU_SYSTRACE_SCOPE();
     mRenderPassEncoder.End();
     mRenderPassEncoder = nullptr;
+    mPipelineState.program = nullptr;
 }
 
 void WebGPUDriver::nextSubpass(int) {
@@ -1513,22 +1515,9 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(mRenderPassEncoder && "Should be called within a renderpass");
-    uint32_t data = 0;
-    if (std::holds_alternative<int32_t>(value)) {
-        int32_t v = std::get<int32_t>(value);
-        std::memcpy(&data, &v, sizeof(data));
-    } else if (std::holds_alternative<float>(value)) {
-        float v = std::get<float>(value);
-        std::memcpy(&data, &v, sizeof(data));
-    } else if (std::holds_alternative<bool>(value)) {
-        data = std::get<bool>(value) ? 1 : 0;
-    }
-#if defined(__EMSCRIPTEN__)
-    wgpuRenderPassEncoderSetImmediates(mRenderPassEncoder.Get(), index * sizeof(uint32_t), &data,
-            sizeof(uint32_t));
-#else
-    mRenderPassEncoder.SetImmediates(index * sizeof(uint32_t), &data, sizeof(uint32_t));
-#endif
+    assert_invariant(mPipelineState.program && "Expect a program when writing to push constants");
+    mPipelineState.program->pushConstantDescription.setPushConstant(mRenderPassEncoder, stage,
+            index, value);
 }
 
 void WebGPUDriver::insertEventMarker(char const* string) {
@@ -1975,6 +1964,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     assert_invariant(mRenderPassEncoder);
     const auto program{ handleCast<WebGPUProgram>(pipelineState.program) };
     assert_invariant(program);
+    mPipelineState.program = program;
     WebGPURenderTarget const* renderTarget{ mCurrentRenderTarget };
     assert_invariant(renderTarget);
     assert_invariant(program->computeShaderModule == nullptr &&
