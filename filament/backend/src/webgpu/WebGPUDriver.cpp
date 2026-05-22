@@ -64,22 +64,6 @@
 
 using namespace std::chrono_literals;
 
-
-// https://issues.chromium.org/issues/507581790
-// Manual polyfill pending upstream fix.
-#if defined(__EMSCRIPTEN__)
-#include <emscripten/em_js.h>
-
-EM_JS(void, wgpuRenderPassEncoderSetImmediates, (WGPURenderPassEncoder passEncoder,
-                uint32_t offset, void const * data, size_t size), {
-    const encoder = WebGPU.Internals.jsObjects[passEncoder];
-    if (encoder && encoder.setImmediates) {
-        const buffer = HEAPU8.slice(data, data + size);
-        encoder.setImmediates(offset, buffer);
-    }
-})
-#endif
-
 namespace filament::backend {
 
 namespace {
