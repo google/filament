@@ -73,6 +73,7 @@ public:
 
     [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
+    [[nodiscard]] wgpu::TextureUsage getUsage() const { return mWebGPUUsage; }
 
     [[nodiscard]] wgpu::TextureComponentSwizzle getSwizzle() const { return mSwizzle; }
 

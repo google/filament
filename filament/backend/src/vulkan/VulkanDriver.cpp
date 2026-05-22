@@ -2676,13 +2676,22 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
 
 void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     FVK_SYSTRACE_SCOPE();
-    if (skipDueToEmptyRenderPass()) {
+
+    mRenderPrimitiveState.bound = false;
+    if (UTILS_VERY_UNLIKELY(skipDueToEmptyRenderPass())) {
         return;
     }
 
+    auto prim = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
+
+    if (UTILS_VERY_UNLIKELY(!prim->vertexBuffer->isValid())) {
+        return;
+    }
+    // This determines whether a draw call will be made or not.
+    mRenderPrimitiveState.bound = true;
+
     VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
     VkCommandBuffer cmdbuffer = commands->buffer();
-    auto prim = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
     commands->acquire(prim);
 
     // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
@@ -2780,6 +2789,12 @@ void VulkanDriver::prepareDraw() {
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
+
+    // Don't draw if no render primitive has been bound
+    if (UTILS_VERY_UNLIKELY(!mRenderPrimitiveState.bound)) {
+        return;
+    }
+
     prepareDraw();
 
     // Finally, make the actual draw call. TODO: support subranges

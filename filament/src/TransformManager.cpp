@@ -121,6 +121,11 @@ TransformManager::children_iterator TransformManager::getChildrenEnd(
     return downcast(this)->getChildrenEnd(parent);
 }
 
+TransformManager::children_range TransformManager::getChildrenRange(
+        Instance const parent) const noexcept {
+    return downcast(this)->getChildrenRange(parent);
+}
+
 void TransformManager::setAccurateTranslationsEnabled(bool const enable) noexcept {
     downcast(this)->setAccurateTranslationsEnabled(enable);
 }

@@ -55,6 +55,7 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
         // This thread services user callbacks
         mServiceThread = std::thread([this]() {
             JobSystem::setThreadName("ServiceThread");
+            decltype(mServiceThreadCallbackQueue) callbacks;
             do {
                 auto& serviceThreadCondition = mServiceThreadCondition;
                 auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
@@ -68,12 +69,13 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
                     break;
                 }
                 // move the callbacks to a temporary vector
-                auto callbacks(std::move(serviceThreadCallbackQueue));
+                callbacks.swap(serviceThreadCallbackQueue);
                 lock.unlock();
                 // and make sure to call them without our lock held
                 for (auto[handler, callback, user]: callbacks) {
                     handler->post(user, callback);
                 }
+                callbacks.clear();
             } while (true);
         });
     }

@@ -25,6 +25,13 @@ again.
 1. Ensure that your code has an appropriate set of unit tests which all pass.
 1. Submit a pull request.
 
+## Restricted Directories
+
+To ensure the security and integrity of our project automation and documentation pipelines, certain directories are restricted:
+
+- **`.github/`**: Modifications to CI/CD workflows and repository configuration are restricted to maintainers. Pull requests from external contributors touching this directory will be automatically closed. Please open an issue to discuss proposed changes to automation.
+- **`docs/`**: The documentation in the `/docs` directory is generated from source. Please make edits to the files in `docs_src/` instead.
+
 ## Code Style
 
 See [CODE_STYLE.md](/CODE_STYLE.md)

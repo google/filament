@@ -1230,10 +1230,8 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     t->gl.sidecarSamples = 1;
 
     auto srcBaseLevel = src->gl.baseLevel;
-    auto srcMaxLevel = src->gl.maxLevel;
-    if (srcBaseLevel > srcMaxLevel) {
+    if (srcBaseLevel > src->gl.maxLevel) {
         srcBaseLevel = 0;
-        srcMaxLevel = 127;
     }
     t->gl.baseLevel = int8_t(std::min(127, srcBaseLevel + baseLevel));
     t->gl.maxLevel  = int8_t(std::min(127, srcBaseLevel + baseLevel + levelCount - 1));
@@ -1389,7 +1387,7 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
     }
 
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+    if (t->externalTexture && mPlatform.setExternalImage(image, t->externalTexture)) {
         // the target and id can be reset each time
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
@@ -1440,7 +1438,7 @@ void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType
     }
 
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+    if (t->externalTexture && mPlatform.setExternalImage(image, t->externalTexture)) {
         // the target and id can be reset each time
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
@@ -1457,8 +1455,8 @@ void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
 void OpenGLDriver::importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, intptr_t const id,
         SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
-    samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
     GLTexture* t = handle_cast<GLTexture*>(th);
+    t->samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
 
     t->gl.id = GLuint(id);
     t->gl.imported = true;
@@ -1574,8 +1572,12 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
         if (bi != Attribute::BUFFER_UNUSED) {
-            // if a buffer is defined it must not be invalid.
-            assert_invariant(vb->gl.buffers[bi]);
+            if (UTILS_VERY_UNLIKELY(!vb->gl.buffers[bi])) {
+                // if a buffer is defined it must not be invalid, we try to gracefully handle it though
+                // since it is a situation the user can easily create, and can't be easily caught on
+                // the filament frontend.
+                continue;
+            }
 
             // if we're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
@@ -4987,6 +4989,9 @@ void OpenGLDriver::draw2(uint32_t const indexOffset, uint32_t const indexCount, 
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    if (UTILS_UNLIKELY(!rp)) {
+        return;
+    }
     glDrawElementsInstanced(GLenum(rp->type), GLsizei(indexCount),
             rp->gl.getIndicesType(),
             reinterpret_cast<const void*>(indexOffset << rp->gl.indicesShift),

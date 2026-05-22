@@ -160,7 +160,9 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
 
     NSOpenGLContext* shareContext = (__bridge NSOpenGLContext*) sharedContext;
     NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
+    assert_invariant(pixelFormat);
     NSOpenGLContext* nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:shareContext];
+    FILAMENT_CHECK_POSTCONDITION(nsOpenGLContext) << "Unable to create OpenGL context.";
 
     GLint interval = 0;
     [nsOpenGLContext makeCurrentContext];
@@ -171,9 +173,13 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
     int result = bluegl::bind();
     FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
 
+    CGLContextObj cglContext = [nsOpenGLContext CGLContextObj];
+    CGLPixelFormatObj cglPixelFormat = [pixelFormat CGLPixelFormatObj];
+    assert_invariant(cglContext);
+    assert_invariant(cglPixelFormat);
+
     UTILS_UNUSED_IN_RELEASE CVReturn success = CVOpenGLTextureCacheCreate(kCFAllocatorDefault, nullptr,
-            [pImpl->mGLContext CGLContextObj], [pImpl->mGLContext.pixelFormat CGLPixelFormatObj], nullptr,
-            &pImpl->mTextureCache);
+            cglContext, cglPixelFormat, nullptr, &pImpl->mTextureCache);
     assert_invariant(success == kCVReturnSuccess);
 
     return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
@@ -194,6 +200,7 @@ void PlatformCocoaGL::createContext(bool shared) {
     };
     NSOpenGLContext* const sharedContext = shared ? pImpl->mGLContext : nil;
     NSOpenGLPixelFormat* const pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
+    assert_invariant(pixelFormat);
     NSOpenGLContext* const nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:sharedContext];
     [nsOpenGLContext makeCurrentContext];
     pImpl->mAdditionalContexts.push_back(nsOpenGLContext);

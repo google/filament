@@ -29,6 +29,8 @@ endif ()
 if (CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang")
     # Workaround for AppleClang 17 optimizer bug causing RTTI cast failures in Tint.
     add_compile_options(-DTINT_APPLECLANG_17_WORKAROUND=1)
+    # Silence unguarded availability warning on macOS (macOS 11.0 deployment target vs. macOS 12 kIOMainPortDefault API).
+    add_compile_options("-Wno-unguarded-availability-new")
 endif()
 
 add_subdirectory(../  ${PROJECT_BINARY_DIR}/third_party/dawn)

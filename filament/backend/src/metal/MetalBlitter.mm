@@ -341,6 +341,8 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) const
     options.preprocessorMacros = macros;
     NSString* const objcSource = [NSString stringWithCString:functionLibrary
                                                     encoding:NSUTF8StringEncoding];
+    FILAMENT_CHECK_POSTCONDITION(objcSource != nil)
+            << "Unable to create NSString from functionLibrary source.";
     NSError* error = nil;
     id <MTLLibrary> const library = [mContext.device newLibraryWithSource:objcSource
                                                                   options:options
@@ -372,6 +374,8 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
     options.preprocessorMacros = macros;
     NSString* const objcSource = [NSString stringWithCString:functionLibrary
                                                     encoding:NSUTF8StringEncoding];
+    FILAMENT_CHECK_POSTCONDITION(objcSource != nil)
+            << "Unable to create NSString from functionLibrary source.";
     NSError* error = nil;
     id <MTLLibrary> const library = [mContext.device newLibraryWithSource:objcSource
                                                                   options:options

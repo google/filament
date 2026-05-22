@@ -89,9 +89,6 @@ void setup_animating_scene(Window& w, Engine* engine);
 void animation_new_frame(Window& w, double dt);
 IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine);
 
-#ifdef __cplusplus
-extern "C"
-#endif
 int main(int argc, char *argv[]) {
     // ---- initialize ----
     FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
@@ -297,7 +294,7 @@ void setup_static_scene(Window& w, Engine* engine) {
     w.materialInstance->setParameter("sheenColor", 0.00f);
     w.materialInstance->setParameter("clearCoat", 1.00f);
     w.materialInstance->setParameter("clearCoatRoughness", 0.00f);
-    w.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, nullptr, nullptr, w.materialInstance);
+    w.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, w.materialInstance);
     w.scene->addEntity(w.mesh.renderable);
 
     int width, height;
@@ -330,7 +327,7 @@ void setup_animating_scene(Window& w, Engine* engine) {
     w.materialInstance->setParameter("sheenColor", 0.00f);
     w.materialInstance->setParameter("clearCoat", 0.00f);
     w.materialInstance->setParameter("clearCoatRoughness", 0.00f);
-    w.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, nullptr, nullptr, w.materialInstance);
+    w.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, w.materialInstance);
     w.scene->addEntity(w.mesh.renderable);
 
     int width, height;
