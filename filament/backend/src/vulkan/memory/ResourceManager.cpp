@@ -15,6 +15,7 @@
  */
 
 #include "vulkan/memory/ResourceManager.h"
+
 #include "vulkan/VulkanHandles.h"
 
 #include <utils/Logger.h>

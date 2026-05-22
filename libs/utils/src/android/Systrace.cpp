@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <utils/Systrace.h>
 #include <utils/Log.h>
+#include <utils/Systrace.h>
 
 #include <cinttypes>
 
-#include <string.h>
-
-#include <errno.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <dlfcn.h>
+
+#include <errno.h>
+#include <string.h>
 
 namespace utils {
 namespace details {

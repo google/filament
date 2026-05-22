@@ -17,10 +17,13 @@
 #include "details/UboManager.h"
 
 #include "MaterialInstance.h"
+
 #include "details/BufferAllocator.h"
 
 #include <backend/DriverEnums.h>
+
 #include <private/utils/Tracing.h>
+
 #include <utils/Logger.h>
 
 #include <vector>

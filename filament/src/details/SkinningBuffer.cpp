@@ -16,21 +16,21 @@
 
 #include "details/SkinningBuffer.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "components/RenderableManager.h"
 
 #include "details/Engine.h"
 
-#include "FilamentAPI-impl.h"
+#include <utils/CString.h>
+#include <utils/StaticString.h>
 
 #include <math/half.h>
 #include <math/mat4.h>
 
-#include <utils/CString.h>
-#include <utils/StaticString.h>
-
-#include <string.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace filament {
 

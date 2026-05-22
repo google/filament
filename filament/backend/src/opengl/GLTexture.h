@@ -18,11 +18,10 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_GLTEXTURE_H
 
 #include "DriverBase.h"
-
 #include "gl_headers.h"
 
-#include <backend/Handle.h>
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
 #include <array>

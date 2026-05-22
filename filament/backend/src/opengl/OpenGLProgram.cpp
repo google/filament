@@ -16,14 +16,14 @@
 
 #include "OpenGLProgram.h"
 
-#include "GLUtils.h"
 #include "GLTexture.h"
+#include "GLUtils.h"
 #include "OpenGLDriver.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/DriverEnums.h>
-#include <backend/Program.h>
 #include <backend/Handle.h>
+#include <backend/Program.h>
 
 #include <private/utils/Tracing.h>
 
@@ -34,8 +34,8 @@
 #include <utils/Log.h>
 
 #include <algorithm>
-#include <array>
 #include <algorithm>
+#include <array>
 #include <new>
 #include <string_view>
 #include <utility>

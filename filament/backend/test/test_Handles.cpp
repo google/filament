@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include <private/backend/HandleAllocator.h>
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
-#include <private/backend/HandleAllocator.h>
-#include "utils/Panic.h"
+#include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 using namespace filament::backend;
 

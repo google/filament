@@ -15,10 +15,9 @@
  */
 
 #include "fog.h"
-
 #include "generated/resources/fog.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

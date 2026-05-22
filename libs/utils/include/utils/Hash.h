@@ -22,8 +22,8 @@
 #include <utility>
 #include <vector>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils::hash {
 

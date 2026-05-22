@@ -19,10 +19,13 @@
 
 #include "PlatformRunner.h"
 
-#include "private/filament/SamplerInterfaceBlock.h"
-#include "private/backend/DriverApi.h"
-#include "backend/Program.h"
 #include "../src/GLSLPostProcessor.h"
+
+#include <private/filament/SamplerInterfaceBlock.h>
+
+#include <private/backend/DriverApi.h>
+
+#include <backend/Program.h>
 
 #include <string>
 

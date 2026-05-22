@@ -16,15 +16,15 @@
 
 #include "WebGPUBufferBase.h"
 
+#include "DriverBase.h"
 #include "WebGPUConstants.h"
 #include "WebGPUQueueManager.h"
 #include "WebGPUStagePool.h"
 
-#include "DriverBase.h"
 #include <backend/BufferDescriptor.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 

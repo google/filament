@@ -17,14 +17,15 @@
 #ifndef TNT_LIFETIMES_H
 #define TNT_LIFETIMES_H
 
-#include <vector>
-#include <functional>
-
-#include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "backend/Handle.h"
-#include "backend/DriverApiForward.h"
+#include "gtest/gtest.h"
+
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+
+#include <functional>
+#include <vector>
 
 class RenderFrame {
 public:

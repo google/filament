@@ -16,14 +16,14 @@
 
 #include "AndroidFrameCallback.h"
 
-#include <android/choreographer.h>
-#include <android/looper.h>
-
 #include <private/utils/Tracing.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Panic.h>
+
+#include <android/choreographer.h>
+#include <android/looper.h>
 
 #include <atomic>
 #include <cstddef>

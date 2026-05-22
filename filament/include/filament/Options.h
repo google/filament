@@ -23,7 +23,6 @@
 #include <math/vec3.h>
 
 #include <math.h>
-
 #include <stdint.h>
 
 namespace filament {

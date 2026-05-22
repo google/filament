@@ -15,10 +15,9 @@
  */
 
 #include "fsr.h"
-
 #include "generated/resources/fsr.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

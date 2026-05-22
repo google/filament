@@ -15,16 +15,10 @@
  */
 
 #include "ShadowMapManager.h"
+
 #include "AtlasAllocator.h"
 #include "RenderPass.h"
 #include "ShadowMap.h"
-
-#include <filament/Frustum.h>
-#include <filament/LightManager.h>
-#include <filament/Options.h>
-
-
-#include <private/filament/EngineEnums.h>
 
 #include "components/RenderableManager.h"
 
@@ -41,22 +35,28 @@
 #include "fg/FrameGraphRenderPass.h"
 #include "fg/FrameGraphTexture.h"
 
+#include <private/filament/EngineEnums.h>
+
+#include <filament/Frustum.h>
+#include <filament/LightManager.h>
+#include <filament/Options.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/BitmaskEnum.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
 
 #include <math/half.h>
 #include <math/mat4.h>
-#include <math/vec4.h>
-#include <math/vec2.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <algorithm>
 #include <array>
@@ -64,12 +64,12 @@
 #include <functional>
 #include <iterator>
 #include <limits>
-#include <new>
 #include <memory>
+#include <new>
 #include <utility>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 namespace filament {

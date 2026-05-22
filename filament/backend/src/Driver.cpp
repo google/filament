@@ -16,8 +16,8 @@
 
 #include "DriverBase.h"
 
-#include "private/backend/Driver.h"
-#include "private/backend/CommandStream.h"
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
 
 #include <backend/AcquiredImage.h>
 #include <backend/BufferDescriptor.h>
@@ -25,10 +25,10 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 

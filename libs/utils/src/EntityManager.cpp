@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#include <utils/EntityManager.h>
-
 #include "EntityManagerImpl.h"
 
 #include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/PagedArenaBitset.h>
 
 #include <cassert>

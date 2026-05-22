@@ -23,11 +23,11 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 

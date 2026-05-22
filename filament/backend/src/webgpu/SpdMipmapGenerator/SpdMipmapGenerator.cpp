@@ -1,4 +1,5 @@
 #include "SpdMipmapGenerator.h"
+
 #include <sstream>
 #include <stdexcept>
 // C++ port of https://github.com/JolifantoBambla/webgpu-spd for early experiments

@@ -17,14 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H
 
-#include "private/backend/CircularBuffer.h"
+#include <private/backend/CircularBuffer.h>
 
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
-#include <vector>
-#include <exception>
 #include <atomic>
+#include <exception>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>

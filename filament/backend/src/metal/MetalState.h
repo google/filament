@@ -17,9 +17,7 @@
 #ifndef TNT_METAL_STATE_H
 #define TNT_METAL_STATE_H
 
-#include <Metal/Metal.h>
-
-#include "private/backend/Driver.h"
+#include <private/backend/Driver.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -29,6 +27,7 @@
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
 
+#include <Metal/Metal.h>
 #include <tsl/robin_map.h>
 
 #include <memory>

@@ -25,9 +25,9 @@
 #include "VulkanContext.h"
 
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-#include <utils/debug.h>
 
 using namespace bluevk;
 using namespace utils;

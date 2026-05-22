@@ -15,12 +15,13 @@
  */
 
 #include "AndroidSwapChainHelper.h"
-#include "AndroidNativeWindow.h"
 
-#include <android/native_window.h>
+#include "AndroidNativeWindow.h"
 
 #include <utils/compiler.h>
 #include <utils/Logger.h>
+
+#include <android/native_window.h>
 
 #include <cstddef>
 #include <cstdint>

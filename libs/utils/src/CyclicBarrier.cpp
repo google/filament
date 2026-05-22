@@ -15,6 +15,7 @@
  */
 
 #include <utils/CyclicBarrier.h>
+
 #include <algorithm>
 
 namespace utils {

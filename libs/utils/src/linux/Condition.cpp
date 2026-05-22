@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/linux/Condition.h>
-
 #include "futex.h"
+
+#include <utils/linux/Condition.h>
 
 namespace utils {
 

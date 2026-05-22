@@ -17,8 +17,9 @@
 #ifndef TNT_SKIP_H
 #define TNT_SKIP_H
 
-#include <gtest/gtest.h>
 #include "BackendTest.h"
+
+#include <gtest/gtest.h>
 
 // skipEnvironment must be a test::SkipEnvironment or something that can be passed to the type's
 // constructor

@@ -17,10 +17,10 @@
 #ifndef TNT_FILAMENT_BACKEND_ANDROIDFRAMECALLBACK_H
 #define TNT_FILAMENT_BACKEND_ANDROIDFRAMECALLBACK_H
 
+#include <utils/CountDownLatch.h>
+
 #include <android/choreographer.h>
 #include <android/looper.h>
-
-#include <utils/CountDownLatch.h>
 
 #include <atomic>
 #include <cstdint>

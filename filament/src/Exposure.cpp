@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <filament/Exposure.h>
-
 #include "details/Camera.h"
+
+#include <filament/Exposure.h>
 
 #include <cmath>
 

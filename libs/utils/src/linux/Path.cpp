@@ -16,13 +16,15 @@
 
 #include <utils/Path.h>
 
-#include <dirent.h>
 #include <pwd.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include <cstdint>
+
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <stdlib.h>
 
 namespace utils {
 

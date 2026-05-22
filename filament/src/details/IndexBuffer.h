@@ -19,9 +19,9 @@
 
 #include "downcast.h"
 
-#include <backend/Handle.h>
-
 #include <filament/IndexBuffer.h>
+
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 

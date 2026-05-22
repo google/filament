@@ -17,15 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_ANDROIDSWAPCHAINHELPER_H
 #define TNT_FILAMENT_BACKEND_ANDROIDSWAPCHAINHELPER_H
 
-#include <utils/Mutex.h>
 #include <utils/MonotonicRingMap.h>
+#include <utils/Mutex.h>
 
 #include <android/native_window.h>
 
-#include <map>
-
 #include <cstddef>
 #include <cstdint>
+#include <map>
 
 namespace filament::backend {
 

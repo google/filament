@@ -15,9 +15,9 @@
  */
 
 #include "BackendTest.h"
-
 #include "Lifetimes.h"
 #include "Skip.h"
+
 #include "../src/DriverBase.h"
 
 using namespace filament;

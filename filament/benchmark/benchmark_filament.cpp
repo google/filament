@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
+#include "Culler.h"
 #include "PerformanceCounters.h"
-
-#include <benchmark/benchmark.h>
-
 
 #include <filament/Box.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/Frustum.h>
 #include <filament/ToneMapper.h>
-#include "Culler.h"
 
 #include <utils/Allocator.h>
 #include <utils/FixedCapacityVector.h>
 
-#include <vector>
+#include <benchmark/benchmark.h>
+
 #include <random>
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;

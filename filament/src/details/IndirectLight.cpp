@@ -16,13 +16,14 @@
 
 #include "details/IndirectLight.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "details/Engine.h"
 #include "details/Texture.h"
 
-#include "FilamentAPI-impl.h"
+#include <filament/IndirectLight.h>
 
 #include <backend/DriverEnums.h>
-#include <filament/IndirectLight.h>
 
 #include <utils/Panic.h>
 

@@ -17,16 +17,16 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 #define TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 
-#include <bluevk/BlueVK.h>
-
 #include "DriverBase.h"
-#include "backend/DriverEnums.h"
-#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 #include "vulkan/utils/StaticVector.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 #include <backend/Program.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <chrono>
 #include <cstdint>

@@ -18,17 +18,17 @@
 #define TNT_FILAMENT_SAMPLERINTERFACEBLOCK_H
 
 
+#include <private/filament/DescriptorSets.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/ImmutableCString.h>
 
-#include <private/filament/DescriptorSets.h>
-
 #include <initializer_list>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <stddef.h>

@@ -26,17 +26,17 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/StaticString.h>
-#include <utils/debug.h>
 
 #include <math/vec4.h>
 
 #include <array>
+#include <string_view>
 #include <type_traits>
 #include <variant>
-#include <string_view>
 
 #include <stddef.h>
 #include <stdint.h>

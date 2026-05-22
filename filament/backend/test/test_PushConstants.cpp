@@ -15,14 +15,14 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
-#include "backend/DriverEnums.h"
-#include "backend/Handle.h"
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <utils/Hash.h>
 
