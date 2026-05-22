@@ -297,10 +297,15 @@ def reorganize_file(filepath, dry_run=False):
     if has_invalid_lines:
         return False
 
-    # Group include lines by layer (Total layers: 3 base layers + 2 per library + 4 standard/3rd-party/POSIX layers)
+    # Group include lines by layer and deduplicate globally (Total layers: 3 base layers + 2 per library + 4 standard/3rd-party/POSIX layers)
     total_layers = 7 + 2 * len(SORTED_LIBS)
     layers_dict = {i: [] for i in range(total_layers)}
+    seen_paths = set()
     for idx, info in include_lines_info:
+        path_lower = info["path"].lower()
+        if path_lower in seen_paths:
+            continue
+        seen_paths.add(path_lower)
         layers_dict[info["layer"]].append(info)
 
     # Sort within each layer alphabetically (flat-first sorting applies only to private includes)
@@ -377,6 +382,9 @@ if __name__ == "__main__":
         print("Options:")
         print("  -h, --help    Show this help message and exit")
         print("  --dry-run     Show what files would be modified without writing changes")
+        print()
+        print("Testing the script:")
+        print("  python3 test/code-correctness/test_reorganize_headers.py")
         sys.exit(0)
 
     dry_run = False
