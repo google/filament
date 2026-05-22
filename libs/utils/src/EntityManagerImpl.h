@@ -17,22 +17,20 @@
 #ifndef TNT_UTILS_ENTITYMANAGERIMPL_H
 #define TNT_UTILS_ENTITYMANAGERIMPL_H
 
-#include <utils/EntityManager.h>
-#include <utils/PagedArenaBitset.h>
-
+#include <utils/CallStack.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/CallStack.h>
 #include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
-
-#include <tsl/robin_set.h>
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
 #include <tsl/robin_map.h>
 #endif
+#include <tsl/robin_set.h>
 
 #include <algorithm>
 #include <cassert>

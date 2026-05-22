@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_ENGINE_H
 
 
-#include <filament/FilamentAPI.h>
 #include <filament/ColorGrading.h>
+#include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -33,8 +33,8 @@
 #include <initializer_list>
 #include <optional>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 namespace utils {

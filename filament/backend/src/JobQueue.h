@@ -21,13 +21,13 @@
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 
-#include <mutex>
 #include <condition_variable>
-#include <thread>
-#include <memory>
-#include <unordered_map>
 #include <limits>
+#include <memory>
+#include <mutex>
 #include <queue>
+#include <thread>
+#include <unordered_map>
 
 namespace filament::backend {
 

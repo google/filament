@@ -19,18 +19,18 @@
 
 #include "downcast.h"
 
-#include <backend/Handle.h>
-
 #include <filament/ColorGrading.h>
 
-#include <math/mathfwd.h>
+#include <backend/Handle.h>
 
-#include <cstddef>
-#include <cstdint>
+#include <math/mathfwd.h>
 
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
+
+#include <cstddef>
+#include <cstdint>
 
 namespace filament {
 

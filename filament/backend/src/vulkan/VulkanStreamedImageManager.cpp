@@ -17,8 +17,8 @@
 #include "VulkanStreamedImageManager.h"
 
 #include "VulkanDescriptorSetCache.h"
-#include "VulkanExternalImageManager.h"
 #include "VulkanDescriptorSetLayoutCache.h"
+#include "VulkanExternalImageManager.h"
 #include "VulkanSamplerCache.h"
 
 namespace filament::backend {

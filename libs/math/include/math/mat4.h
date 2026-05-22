@@ -17,17 +17,19 @@
 #ifndef TNT_MATH_MAT4_H
 #define TNT_MATH_MAT4_H
 
-#include <math/TMatHelpers.h>
 #include <math/compiler.h>
 #include <math/mat3.h>
 #include <math/quat.h>
 #include <math/scalar.h>
+#include <math/TMatHelpers.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#include <stdint.h>
-#include <sys/types.h>
 #include <limits>
+
+#include <sys/types.h>
+
+#include <stdint.h>
 
 namespace filament {
 namespace math {

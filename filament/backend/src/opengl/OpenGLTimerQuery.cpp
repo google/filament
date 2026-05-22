@@ -19,9 +19,9 @@
 #include "GLUtils.h"
 #include "OpenGLDriver.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
-#include <backend/DriverEnums.h>
 
 #include <private/utils/Tracing.h>
 

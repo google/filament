@@ -17,15 +17,14 @@
 #ifndef TNT_UTILS_JOBSYSTEM_H
 #define TNT_UTILS_JOBSYSTEM_H
 
-#include <utility>
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
-#include <utils/Slice.h>
 #include <utils/ostream.h>
+#include <utils/Slice.h>
 #include <utils/WorkStealingDequeue.h>
 
 #include <tsl/robin_map.h>
@@ -33,8 +32,9 @@
 #include <atomic>
 #include <functional>
 #include <mutex>
-#include <type_traits>
 #include <thread>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <assert.h>

@@ -15,19 +15,18 @@
  */
 
 #include "BackendTest.h"
-
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "PlatformRunner.h"
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
+#include "TrianglePrimitive.h"
+
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
-
-#include "TrianglePrimitive.h"
-#include "private/filament/SamplerInterfaceBlock.h"
 
 #include <vector>
 

@@ -16,8 +16,8 @@
 
 #include "AtlasAllocator.h"
 
-#include <utils/compiler.h>
 #include <utils/algorithm.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/QuadTree.h>
 

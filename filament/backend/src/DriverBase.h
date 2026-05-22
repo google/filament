@@ -17,17 +17,16 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERBASE_H
 #define TNT_FILAMENT_DRIVER_DRIVERBASE_H
 
-#include <utils/compiler.h>
-#include <utils/CString.h>
-
-#include <backend/Platform.h>
+#include <private/backend/Dispatcher.h>
+#include <private/backend/Driver.h>
 
 #include <backend/BufferDescriptor.h>
-#include <backend/DriverEnums.h>
 #include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
-#include "private/backend/Dispatcher.h"
-#include "private/backend/Driver.h"
+#include <utils/compiler.h>
+#include <utils/CString.h>
 
 #include <atomic>
 #include <condition_variable>

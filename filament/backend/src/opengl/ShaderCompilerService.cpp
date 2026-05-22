@@ -22,9 +22,6 @@
 #include "OpenGLBlobCache.h"
 #include "OpenGLDriver.h"
 
-#include <atomic>
-#include <iterator>
-#include <optional>
 #include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
@@ -32,20 +29,23 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
-#include <mutex>
+#include <iterator>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string_view>
 #include <thread>
 #include <utility>

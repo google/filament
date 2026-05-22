@@ -17,12 +17,13 @@
 #ifndef TNT_FILAMENT_FGVIEWERMANAGER_H
 #define TNT_FILAMENT_FGVIEWERMANAGER_H
 
-#include "details/Engine.h"
 #include "PostProcessManager.h"
 
-#include <backend/Handle.h>
+#include "details/Engine.h"
 
 #include <fgviewer/DebugServer.h>
+
+#include <backend/Handle.h>
 
 #include <utils/CString.h>
 

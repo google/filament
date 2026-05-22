@@ -16,7 +16,7 @@
 
 #include "FrameInfo.h"
 
-#include <details/Engine.h>
+#include "details/Engine.h"
 
 #include <filament/Renderer.h>
 
@@ -39,8 +39,8 @@
 #include <ratio>
 #include <utility>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

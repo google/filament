@@ -22,8 +22,8 @@
 #include <filament/TransformManager.h>
 
 #include <utils/compiler.h>
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <math/mat4.h>

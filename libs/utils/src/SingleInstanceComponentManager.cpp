@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
 #include <utils/PagedArenaBitset.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <algorithm>

@@ -16,8 +16,8 @@
 
 #include <utils/AsyncJobQueue.h>
 #include <utils/compiler.h>
-#include <utils/JobSystem.h>
 #include <utils/debug.h>
+#include <utils/JobSystem.h>
 #include <utils/Logger.h>
 
 #include <mutex>

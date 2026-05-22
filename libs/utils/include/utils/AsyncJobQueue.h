@@ -17,10 +17,10 @@
 #ifndef TNT_ASYNCJOBQUEUE_H
 #define TNT_ASYNCJOBQUEUE_H
 
-#include <utils/JobSystem.h>
-#include <utils/Invocable.h>
-#include <utils/Mutex.h> // NOLINT(*-include-cleaner)
 #include <utils/Condition.h> // NOLINT(*-include-cleaner)
+#include <utils/Invocable.h>
+#include <utils/JobSystem.h>
+#include <utils/Mutex.h> // NOLINT(*-include-cleaner)
 
 #include <thread>
 #include <vector>

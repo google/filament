@@ -24,9 +24,10 @@
 #include <algorithm>        // for std::swap and std::min
 #include <cmath>            // for std:: namespace
 
+#include <sys/types.h>
+
 #include <math.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 namespace filament {
 namespace math {

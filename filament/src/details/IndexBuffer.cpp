@@ -15,11 +15,13 @@
  */
 
 #include "details/IndexBuffer.h"
+
+#include "FilamentAPI-impl.h"
+
 #include "details/AsyncHelpers.h"
 #include "details/Engine.h"
 
-#include "FilamentAPI-impl.h"
-#include "filament/FilamentAPI.h"
+#include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
 
@@ -29,8 +31,8 @@
 
 #include <utility>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

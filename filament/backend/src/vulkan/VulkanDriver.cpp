@@ -28,6 +28,7 @@
 #include "VulkanMemory.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
+
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
@@ -37,18 +38,18 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
-#include <private/utils/FeatureFlagManager.h>
-
-#ifndef NDEBUG
-#include <set>  // For VulkanDriver::debugCommandBegin
-#endif
 
 #include <chrono>
 #include <mutex>
+#ifndef NDEBUG
+#include <set>  // For VulkanDriver::debugCommandBegin
+#endif
 
 using namespace bluevk;
 

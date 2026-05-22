@@ -16,9 +16,8 @@
 
 #include "WebGPUIndexBuffer.h"
 
-#include "WebGPUBufferBase.h"
-
 #include "DriverBase.h"
+#include "WebGPUBufferBase.h"
 
 #include <webgpu/webgpu_cpp.h>
 

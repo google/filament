@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <utils/PagedArenaBitset.h>
-
 #include <utils/compiler.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 
-#include <algorithm>
 #include <bit>
+
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cassert>
 #include <type_traits>
 #include <utility>
 #include <vector>

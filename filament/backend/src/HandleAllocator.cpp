@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "private/backend/HandleAllocator.h"
+#include <private/backend/HandleAllocator.h>
 
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
-#include <utils/CString.h>
-#include <utils/Logger.h>
-#include <utils/Panic.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 #include <exception>

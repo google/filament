@@ -23,8 +23,8 @@
 #include <utils/Mutex.h>
 
 #include <atomic>
-#include <mutex>
 #include <list>
+#include <mutex>
 
 namespace filament::backend {
 

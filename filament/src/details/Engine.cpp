@@ -17,8 +17,8 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "TextureCache.h"
 #include "RenderPrimitive.h"
+#include "TextureCache.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -44,35 +44,41 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+
+#include "generated/resources/materials.h"
+
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
-
-#include <private/backend/PlatformFactory.h>
-
-#include <private/utils/FeatureFlagManager.h>
-#include <private/utils/Tracing.h>
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/DriverEnums.h>
+
+#include <private/utils/FeatureFlagManager.h>
+#include <private/utils/Tracing.h>
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
 #include <utils/Slice.h>
 #include <utils/ThreadUtils.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 #include <utils/tribool.h>
 
 #include <math/vec3.h>
@@ -81,30 +87,23 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#ifdef __EXCEPTIONS
+#include <exception>
+#endif
 #include <initializer_list>
 #include <memory>
 #include <mutex>
 #include <new>
 #include <optional>
-#include <thread>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <utility>
-
-#ifdef __EXCEPTIONS
-#include <exception>
-#endif
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#if FILAMENT_ENABLE_FGVIEWER
-#include "fg/FgviewerManager.h"
-#endif
-
-#include "generated/resources/materials.h"
 
 using namespace filament::math;
 using namespace utils;

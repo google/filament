@@ -23,15 +23,14 @@
 
 #include <utils/compiler.h>
 
+#include <math/mat4.h>
 #include <math/mathfwd.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
-#include <math/mat4.h>
 
 #include <math.h>
-
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class Entity;

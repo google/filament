@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/OpenGLPlatform.h>
-
+#include "OpenGLDriver.h"
 #include "OpenGLDriverBase.h"
 #include "OpenGLDriverFactory.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include <utils/compiler.h>
-#include <utils/Panic.h>
 #include <utils/CString.h>
 #include <utils/Invocable.h>
+#include <utils/Panic.h>
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "OpenGLDriver.h"
 
 namespace filament::backend {
 

@@ -21,7 +21,7 @@
 #include "webgpu/WebGPUStrings.h"
 #endif
 
-#include "backend/DriverEnums.h"
+#include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>
 

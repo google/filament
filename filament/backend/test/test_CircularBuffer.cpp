@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include <private/backend/CircularBuffer.h>
 
-#include "private/backend/CircularBuffer.h"
+#include <gtest/gtest.h>
 
 #include <cstdint>
 #include <cstring>

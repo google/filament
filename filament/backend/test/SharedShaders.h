@@ -17,10 +17,10 @@
 #ifndef TNT_SHAREDSHADERS_H
 #define TNT_SHAREDSHADERS_H
 
-#include "Shader.h"
-#include "SharedShadersConstants.h"
 #include "Lifetimes.h"
 #include "PlatformRunner.h"
+#include "Shader.h"
+#include "SharedShadersConstants.h"
 
 namespace test {
 

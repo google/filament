@@ -19,22 +19,22 @@
 
 // This needs to be at the top
 #include "DriverBase.h"
-
 #include "VulkanAsyncHandles.h"
 #include "VulkanBufferCache.h"
 #include "VulkanBufferProxy.h"
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
-#include "vulkan/VulkanCommands.h"
+
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/VulkanCommands.h"
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
-#include <utils/bitset.h>
 
 #include <array>
 

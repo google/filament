@@ -18,12 +18,11 @@
 #define TNT_FILAMENT_COMPONENTS_RENDERABLEMANAGER_H
 
 #include "downcast.h"
-
 #include "HwRenderPrimitiveFactory.h"
 
-#include "ds/DescriptorSet.h"
+#include "details/InstanceBuffer.h"
 
-#include <details/InstanceBuffer.h>
+#include "ds/DescriptorSet.h"
 
 #include <filament/Box.h>
 #include <filament/MaterialEnums.h>

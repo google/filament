@@ -16,32 +16,32 @@
 
 #include "details/Texture.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "details/AsyncHelpers.h"
 #include "details/Engine.h"
 #include "details/Stream.h"
 
-#include "private/backend/BackendUtils.h"
-
-#include "FilamentAPI-impl.h"
-
 #include <filament/Texture.h>
+
+#include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <math/half.h>
-#include <math/scalar.h>
-#include <math/vec3.h>
-
-#include <utils/Allocator.h>
 #include <utils/algorithm.h>
+#include <utils/Allocator.h>
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+#include <utils/StaticString.h>
+
+#include <math/half.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
 
 #include <algorithm>
 #include <array>

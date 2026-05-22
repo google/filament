@@ -17,9 +17,9 @@
 #ifndef TNT_UTILS_BENCHMARK_PEROFRMANCECOUNTERS_H
 #define TNT_UTILS_BENCHMARK_PEROFRMANCECOUNTERS_H
 
-#include <benchmark/benchmark.h>
-
 #include <utils/Profiler.h>
+
+#include <benchmark/benchmark.h>
 
 class PerformanceCounters {
     benchmark::State& state;

@@ -18,8 +18,9 @@
 
 #include "details/Engine.h"
 
-#include <backend/Platform.h>
 #include <filament/Sync.h>
+
+#include <backend/Platform.h>
 
 namespace filament {
 

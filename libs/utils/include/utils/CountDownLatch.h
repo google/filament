@@ -21,8 +21,8 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/BackendUtilsAndroid.h"
+#include <private/backend/BackendUtilsAndroid.h>
 
 #include <android/hardware_buffer.h>
 

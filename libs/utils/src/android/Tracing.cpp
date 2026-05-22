@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/compiler.h>
 #include <private/utils/Tracing.h>
+
+#include <utils/compiler.h>
 
 #include <perfetto/perfetto.h>
 

@@ -17,13 +17,13 @@
 #ifndef TNT_FILAMENT_MATERIALPARSER_H
 #define TNT_FILAMENT_MATERIALPARSER_H
 
+#include <private/filament/Variant.h>
+
+#include <filament/MaterialChunkType.h>
+#include <filament/MaterialEnums.h>
+
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
-
-#include <filament/MaterialEnums.h>
-#include <filament/MaterialChunkType.h>
-
-#include <private/filament/Variant.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>

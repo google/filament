@@ -18,6 +18,7 @@
 #define TNT_MATH_SCALAR_H
 
 #include <math/compiler.h>
+
 #include <assert.h>
 
 namespace filament {

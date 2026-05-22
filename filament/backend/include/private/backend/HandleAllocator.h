@@ -20,13 +20,13 @@
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 

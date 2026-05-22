@@ -20,8 +20,9 @@
 #include <utils/compiler.h>
 
 #include <cassert>
-#include <stdint.h>
+
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 

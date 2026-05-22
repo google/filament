@@ -21,11 +21,11 @@
 
 #include <math/mathfwd.h>
 
-#include <cstdint>
-
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
+
+#include <cstdint>
 
 namespace filament {
 

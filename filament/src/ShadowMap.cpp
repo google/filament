@@ -16,15 +16,15 @@
 
 #include "ShadowMap.h"
 
-#include <filament/Box.h>
-#include <filament/Frustum.h>
-#include <filament/LightManager.h>
-
 #include "components/LightManager.h"
 
 #include "details/DebugRegistry.h"
 #include "details/Engine.h"
 #include "details/Scene.h"
+
+#include <filament/Box.h>
+#include <filament/Frustum.h>
+#include <filament/LightManager.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
@@ -36,11 +36,11 @@
 #include <utils/Entity.h>
 #include <utils/Slice.h>
 
-#include <math/vec3.h>
-#include <math/vec4.h>
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/scalar.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <algorithm>
 #include <array>

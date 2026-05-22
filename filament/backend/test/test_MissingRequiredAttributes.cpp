@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"

@@ -19,6 +19,7 @@
 
 #include "fg/details/DependencyGraph.h"
 #include "fg/details/Utilities.h"
+#include "fg/FrameGraphId.h"
 
 namespace utils {
 class CString;

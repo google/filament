@@ -17,11 +17,10 @@
 #ifndef TNT_UTILS_CYCLIC_BARRIER_H
 #define TNT_UTILS_CYCLIC_BARRIER_H
 
-#include <stddef.h>
-
-// note: we use our version of mutex/condition to keep this public header STL free
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
+
+#include <stddef.h>
 
 namespace utils {
 

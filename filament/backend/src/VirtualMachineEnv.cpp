@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/VirtualMachineEnv.h"
+#include <private/backend/VirtualMachineEnv.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>

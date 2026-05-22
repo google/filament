@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
 
-#include "DriverBase.h"
-
 #include "BindingMap.h"
+#include "DriverBase.h"
 #include "OpenGLState.h"
 #include "ShaderCompilerService.h"
 

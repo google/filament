@@ -19,9 +19,9 @@
 
 #include "downcast.h"
 
-#include <backend/Handle.h>
-
 #include <filament/BufferObject.h>
+
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 
