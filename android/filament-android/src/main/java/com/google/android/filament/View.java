@@ -2018,6 +2018,7 @@ public class View {
         }
 
         /** @deprecated has no effect. */
+        @Deprecated
         public float filterWidth = 1.0f;
         /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
         public float feedback = 0.12f;
@@ -2154,6 +2155,7 @@ public class View {
         /**
          * @deprecated has no effect.
          */
+        @Deprecated
         public float minVarianceScale = 0.5f;
         /**
          * VSM light bleeding reduction amount, between 0 and 1.

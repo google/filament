@@ -137,12 +137,40 @@ cd ${MESA_DIR}
 git checkout -f mesa-${MESA_VERSION}
 
 # Apply custom patch to fix a double-free in OSMesa
-git apply << 'EOF'
+cat << 'EOF' > /tmp/a.diff
+diff --git a/src/mesa/main/context.c b/src/mesa/main/context.c
+index 636eb5235b9..f2afbd57730 100644
+--- a/src/mesa/main/context.c
++++ b/src/mesa/main/context.c
+@@ -1139,7 +1139,16 @@ _mesa_free_context_data(struct gl_context *ctx, bool destroy_debug_output)
+    _mesa_free_image_textures(ctx);
+    _mesa_free_matrix_data( ctx );
+    _mesa_free_pipeline_data(ctx);
++
++   // If the shared context's default fragment shader is about to be freed
++   // by _mesa_free_program_data, we just remove the reference in ctx->Shared.
++   bool shouldRemoveDefault = ctx->Shared->DefaultFragmentShader && (ctx->Shared->DefaultFragmentShader == ctx->ATIFragmentShader.Current);
+    _mesa_free_program_data(ctx);
++
++   shouldRemoveDefault = shouldRemoveDefault && ctx->ATIFragmentShader.Current == NULL;
++   if (shouldRemoveDefault) {
++      ctx->Shared->DefaultFragmentShader = NULL;
++   }
+    _mesa_free_shader_state(ctx);
+    _mesa_free_queryobj_data(ctx);
+    _mesa_free_sync_data(ctx);
 diff --git a/src/mesa/program/program.c b/src/mesa/program/program.c
 index 74bd6a6c33b..a70814e53a1 100644
 --- a/src/mesa/program/program.c
 +++ b/src/mesa/program/program.c
-@@ -130,6 +130,7 @@ _mesa_free_program_data(struct gl_context *ctx)
+@@ -123,15 +123,16 @@ _mesa_free_program_data(struct gl_context *ctx)
+    _mesa_reference_program(ctx, &ctx->VertexProgram.Current, NULL);
+    _mesa_delete_program_cache(ctx, ctx->VertexProgram.Cache);
+    _mesa_reference_program(ctx, &ctx->FragmentProgram.Current, NULL);
+    _mesa_delete_program_cache(ctx, ctx->FragmentProgram.Cache);
+
+    /* XXX probably move this stuff */
+    if (ctx->ATIFragmentShader.Current) {
        ctx->ATIFragmentShader.Current->RefCount--;
        if (ctx->ATIFragmentShader.Current->RefCount <= 0) {
           free(ctx->ATIFragmentShader.Current);
@@ -150,7 +178,11 @@ index 74bd6a6c33b..a70814e53a1 100644
        }
     }
  
+    free((void *) ctx->Program.ErrorString);
+ }
 EOF
+
+git apply /tmp/a.diff
 
 mkdir -p out
 

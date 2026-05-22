@@ -145,6 +145,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
         }
 #endif
     }
+    (void) result;
 
     return new VulkanStage(memory, buffer, capacity, pMapping);
 }

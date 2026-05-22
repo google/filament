@@ -692,3 +692,11 @@ static LinearImage diffImages(const LinearImage& a, const LinearImage& b) {
     }
     return result;
 }
+
+TEST_F(ImageTest, LinearImageDimensionOverflow) { // NOLINT
+    LinearImage img1(std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), 3);
+    EXPECT_FALSE(img1);
+
+    LinearImage img2(2, 2, 0);
+    EXPECT_FALSE(img2);
+}

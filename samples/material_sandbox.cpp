@@ -57,7 +57,9 @@
 
 #include "material_sandbox.h"
 
-using namespace filament::math;
+#include <ranges>
+
+using namespace math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
@@ -77,12 +79,12 @@ static bool g_singleMode = false;
 static float g_rangePlot[1024 * 3];
 static float g_curvePlot[1024 * 3];
 
-const static ImVec2 verticalSliderSize(18.0f, 160.0f);
-const static ImVec2 plotLinesSize(320.0f, 160.0f);
-const static ImVec2 plotLinesWideSize(480.0f, 120.0f);
+constexpr static ImVec2 verticalSliderSize(18.0f, 160.0f);
+constexpr static ImVec2 plotLinesSize(320.0f, 160.0f);
+constexpr static ImVec2 plotLinesWideSize(480.0f, 120.0f);
 
 static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
+    const std::string exec_name(Path(name).getName());
     std::string usage(
             "SAMPLE_MATERIAL showcases all material models\n"
             "Usage:\n"
@@ -125,7 +127,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(const int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "ha:vps:i:d:c:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -166,9 +168,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             case 's':
                 try {
                     config->scale = std::stof(arg);
-                } catch (std::invalid_argument& e) {
+                } catch (std::invalid_argument&) {
                     // keep scale of 1.0
-                } catch (std::out_of_range& e) {
+                } catch (std::out_of_range&) {
                     // keep scale of 1.0
                 }
                 break;
@@ -193,16 +195,16 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 static void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
 
-    for (const auto& material : g_meshMaterialInstances) {
-        engine->destroy(material.second);
+    for (const auto& material: g_meshMaterialInstances | std::views::values) {
+        engine->destroy(material);
     }
 
-    for (auto& i : g_params.materialInstance) {
-        engine->destroy(i);
+    for (const auto& material : g_params.materialInstance) {
+        engine->destroy(material);
     }
 
-    for (auto& i : g_params.material) {
-        engine->destroy(i);
+    for (const auto& material : g_params.material) {
+        engine->destroy(material);
     }
 
     engine->destroy(g_params.light);
@@ -237,7 +239,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         if (!instance) continue;
 
         rcm.setCastShadows(instance, g_params.castShadows);
-        rcm.setScreenSpaceContactShadows(instance, true);
+        rcm.setScreenSpaceContactShadows(instance, g_params.screenSpaceContactShadows);
 
         if (!g_singleMode || count == 0) {
             for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
@@ -270,30 +272,30 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 0, 1, 2, 2, 3, 0
         };
 
-        const static filament::math::float3 vertices[] = {
+        static constexpr float3 vertices[] = {
                 { -10, 0, -10 },
                 { -10, 0,  10 },
                 {  10, 0,  10 },
                 {  10, 0, -10 },
         };
 
-        short4 tbn = filament::math::packSnorm16(
+        short4 tbn = packSnorm16(
                 mat3f::packTangentFrame(
-                        filament::math::mat3f{
+                        mat3f{
                                 float3{ 1.0f, 0.0f, 0.0f },
                                 float3{ 0.0f, 0.0f, 1.0f },
                                 float3{ 0.0f, 1.0f, 0.0f }
                         }
                 ).xyzw);
 
-        const static filament::math::short4 normals[] { tbn, tbn, tbn, tbn };
+        const static short4 normals[] { tbn, tbn, tbn, tbn };
 
         VertexBuffer* vertexBuffer = VertexBuffer::Builder()
                 .vertexCount(4)
                 .bufferCount(2)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
-                .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
-                .normalized(VertexAttribute::TANGENTS)
+                .attribute(POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .attribute(TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                .normalized(TANGENTS)
                 .build(*engine);
 
         vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
@@ -323,11 +325,10 @@ static void setup(Engine* engine, View*, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                filament::math::mat4f::translation(float3{ 0, -1, -4 }));
+                mat4f::translation(float3{ 0, -1, -4 }));
     }
 
-    auto* ibl = FilamentApp::get().getIBL();
-    if (ibl) {
+    if (auto* ibl = FilamentApp::get().getIBL()) {
         auto& params = g_params;
         IndirectLight* const pIndirectLight = ibl->getIndirectLight();
         // If we loaded an equirectangular IBL, we don't have spherical harmonics. In that case,
@@ -335,7 +336,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         if (ibl->hasSphericalHarmonics()) {
             params.lightDirection =
                     IndirectLight::getDirectionEstimate(ibl->getSphericalHarmonics());
-            float4 c = pIndirectLight->getColorEstimate(
+            float4 c = IndirectLight::getColorEstimate(
                     ibl->getSphericalHarmonics(), params.lightDirection);
             params.lightIntensity = c.w * pIndirectLight->getIntensity();
             params.lightColor = c.rgb;
@@ -345,9 +346,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
 }
 
-static filament::MaterialInstance* updateInstances(
-        SandboxParameters& params, filament::Engine& engine) {
-
+static MaterialInstance* updateInstances(SandboxParameters& params) {
     int material = params.currentMaterialModel;
     if (material == MATERIAL_MODEL_LIT) {
         if (params.currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
@@ -368,7 +367,7 @@ static filament::MaterialInstance* updateInstances(
     materialInstance->setParameter("baseColor", RgbType::sRGB, params.color);
 
     if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
-        math::float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveExposureWeight);
+        float4 emissive(Color::toLinear(params.emissiveColor), params.emissiveExposureWeight);
         emissive.rgb *= Exposure::luminance(params.emissiveEV);
         materialInstance->setParameter("emissive", emissive);
     }
@@ -390,7 +389,7 @@ static filament::MaterialInstance* updateInstances(
         }
 
         if  (hasRefraction) {
-            math::float3 color = Color::toLinear(params.transmittanceColor);
+            float3 color = Color::toLinear(params.transmittanceColor);
             materialInstance->setParameter("absorption",
                     Color::absorptionAtDistance(color, params.distance));
             materialInstance->setParameter("ior", params.ior);
@@ -438,37 +437,41 @@ static void computeRangePlot(SandboxParameters &parameters) {
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
 
     for (size_t i = 0; i < 1024; i++) {
-        float x = i / 1024.0f;
-        float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
-        float h = smoothstep(ranges.z, ranges.w, x);
+        const float x = static_cast<float>(i) / 1024.0f;
+        const float s = 1.0f - smoothstep(ranges.x, ranges.y, x);
+        const float h = smoothstep(ranges.z, ranges.w, x);
         g_rangePlot[i]        = s;
         g_rangePlot[1024 + i] = 1.0f - s - h;
         g_rangePlot[2048 + i] = h;
     }
 }
 
-static void rangePlotSeriesStart(int series) {
-    switch (series) {
+static void rangePlotSeriesStart(const int series) {
+    // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+    switch (series) { // NOLINT(*-multiway-paths-covered)
         case 0:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.4f, 0.25f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.4f, 0.25f, 1.0f)));
             break;
         case 1:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.8f, 0.25f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.8f, 0.25f, 1.0f)));
             break;
         case 2:
-            ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_PlotLines,
+                static_cast<ImVec4>(ImColor::HSV(0.17f, 0.21f, 1.0f)));
             break;
     }
 }
 
-static void rangePlotSeriesEnd(int series) {
+static void rangePlotSeriesEnd(const int series) {
     if (series < 3) {
         ImGui::PopStyleColor();
     }
 }
 
-static float getRangePlotValue(int series, void* data, int index) {
-    return ((float*) data)[series * 1024 + index];
+static float getRangePlotValue(const int series, void* data, const int index) {
+    return static_cast<float*>(data)[series * 1024 + index];
 }
 
 inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highlightScale) {
@@ -485,7 +488,7 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
 static void computeCurvePlot(SandboxParameters &parameters) {
     ColorGradingOptions &colorGrading = parameters.colorGradingOptions;
     for (size_t i = 0; i < 1024; i++) {
-        float3 x{i / 1024.0f * 2.0f};
+        float3 x{static_cast<float>(i) / 1024.0f * 2.0f};
         float3 y = curves(x, colorGrading.gamma, colorGrading.midPoint, colorGrading.scale);
         g_curvePlot[i]        = y.r;
         g_curvePlot[1024 + i] = y.g;
@@ -493,22 +496,26 @@ static void computeCurvePlot(SandboxParameters &parameters) {
     }
 }
 
-static void tooltipFloat(float value) {
+static void tooltipFloat(const float value) {
     if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%.2f", value);
     }
 }
 
-static void pushSliderColors(float hue) {
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, (ImVec4) ImColor::HSV(hue, 0.5f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, (ImVec4) ImColor::HSV(hue, 0.6f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, (ImVec4) ImColor::HSV(hue, 0.7f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab, (ImVec4) ImColor::HSV(hue, 0.9f, 0.9f));
+static void pushSliderColors(const float hue) {
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.5f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.6f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.7f, 0.5f)));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab,
+        static_cast<ImVec4>(ImColor::HSV(hue, 0.9f, 0.9f)));
 }
 
 static void popSliderColors() { ImGui::PopStyleColor(4); }
 
-static void gui(filament::Engine* engine, filament::View*) {
+static void gui(Engine* engine, View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
@@ -618,14 +625,13 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("IBL", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("Rotation", &params.iblRotation);
             if (ImGui::CollapsingHeader("SSAO")) {
-                int quality = (int)params.ssaoOptions.quality;
-                int lowpass = (int)params.ssaoOptions.lowPassFilter;
+                int quality = static_cast<int>(params.ssaoOptions.quality);
+                int lowpass = static_cast<int>(params.ssaoOptions.lowPassFilter);
                 bool upsampling = params.ssaoOptions.upsampling != View::QualityLevel::LOW;
-                DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("Enabled##ssao", &params.ssaoOptions.enabled);
                 ImGui::SliderFloat("Radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
                 ImGui::SliderFloat("Bias", &params.ssaoOptions.bias, 0.0f, 0.01f, "%.6f");
-                ImGui::SliderFloat("Min Horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, (float)M_PI_4, "%.6f");
+                ImGui::SliderFloat("Min Horizon angle", &params.ssaoOptions.minHorizonAngleRad, 0.0f, M_PI_4, "%.6f");
                 ImGui::SliderFloat("Intensity", &params.ssaoOptions.intensity, 0.0f, 4.0f);
                 ImGui::SliderFloat("Power", &params.ssaoOptions.power, 0.0f, 4.0f);
                 ImGui::SliderInt("Quality", &quality, 0, 3);
@@ -645,13 +651,13 @@ static void gui(filament::Engine* engine, filament::View*) {
 //                        debug.getPropertyAddress<float>("d.ssao.stddev"), 0.0f, 8.0f);
 
                 params.ssaoOptions.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
-                params.ssaoOptions.quality = (View::QualityLevel)quality;
-                params.ssaoOptions.lowPassFilter = (View::QualityLevel)lowpass;
+                params.ssaoOptions.quality = static_cast<View::QualityLevel>(quality);
+                params.ssaoOptions.lowPassFilter = static_cast<View::QualityLevel>(lowpass);
                 if (ImGui::CollapsingHeader("Dominant Light Shadows")) {
                     int sampleCount = params.ssaoOptions.ssct.sampleCount;
                     int rayCount = params.ssaoOptions.ssct.rayCount;
                     ImGui::Checkbox("Enabled##dls", &params.ssaoOptions.ssct.enabled);
-                    ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+                    ImGui::SliderFloat("Cone angle", &params.ssaoOptions.ssct.lightConeRad, 0.0f, M_PI_2);
                     ImGui::SliderFloat("Shadow Distance", &params.ssaoOptions.ssct.shadowDistance, 0.0f, 10.0f);
                     ImGui::SliderFloat("Contact dist max", &params.ssaoOptions.ssct.contactDistanceMax, 0.0f, 100.0f);
                     ImGui::SliderFloat("Intensity##dls", &params.ssaoOptions.ssct.intensity, 0.0f, 10.0f);
@@ -820,7 +826,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SameLine(0.0f, 18.0f);
                     popSliderColors();
 
-                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.0f, 0.7f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.0f, 0.7f, 0.8f)));
                     ImGui::PlotLines("", g_curvePlot, 1024, 0, "Red", 0.0f, 2.0f, plotLinesSize);
                     ImGui::PopStyleColor();
 
@@ -836,7 +842,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SameLine(0.0f, 18.0f);
                     popSliderColors();
 
-                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.3f, 0.7f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.3f, 0.7f, 0.8f)));
                     ImGui::PlotLines("", g_curvePlot + 1024, 1024, 0, "Green", 0.0f, 2.0f, plotLinesSize);
                     ImGui::PopStyleColor();
 
@@ -852,7 +858,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                     ImGui::SameLine(0.0f, 18.0f);
                     popSliderColors();
 
-                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.6f, 0.7f, 0.8f));
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.6f, 0.7f, 0.8f)));
                     ImGui::PlotLines("", g_curvePlot + 2048, 1024, 0, "Blue", 0.0f, 2.0f, plotLinesSize);
                     ImGui::PopStyleColor();
                 } else {
@@ -870,7 +876,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                     colorGrading.midPoint = float3{colorGrading.midPoint.r};
                     colorGrading.scale = float3{colorGrading.scale.r};
 
-                    ImGui::PushStyleColor(ImGuiCol_PlotLines, (ImVec4) ImColor::HSV(0.17f, 0.21f, 0.9f));
+                    ImGui::PushStyleColor(ImGuiCol_PlotLines, static_cast<ImVec4>(ImColor::HSV(0.17f, 0.21f, 0.9f)));
                     ImGui::PlotLines("", g_curvePlot, 1024, 0, "RGB", 0.0f, 2.0f, plotLinesSize);
                     ImGui::PopStyleColor();
                 }
@@ -906,7 +912,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     }
     ImGui::End();
 
-    MaterialInstance* materialInstance = updateInstances(params, *engine);
+    MaterialInstance* materialInstance = updateInstances(params);
 
     auto& rcm = engine->getRenderableManager();
     size_t count = 0;
@@ -920,6 +926,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         }
         count++;
         rcm.setCastShadows(instance, params.castShadows);
+        rcm.setReceiveShadows(instance, true);
     }
 
     if (params.directionalLightEnabled && !params.hasDirectionalLight) {
@@ -930,8 +937,7 @@ static void gui(filament::Engine* engine, filament::View*) {
         params.hasDirectionalLight = false;
     }
 
-    auto* ibl = FilamentApp::get().getIBL();
-    if (ibl) {
+    if (auto* ibl = FilamentApp::get().getIBL()) {
         ibl->getIndirectLight()->setIntensity(params.iblIntensity);
         ibl->getIndirectLight()->setRotation(
                 mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
@@ -947,6 +953,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     lcm.setSunHaloFalloff(lightInstance, params.sunHaloFalloff);
 
     LightManager::ShadowOptions options = lcm.getShadowOptions(lightInstance);
+    options.mapSize = 2048;
     options.stable = params.stableShadowMap;
     options.lispsm = params.lispsm;
     options.normalBias = params.normalBias;
@@ -976,8 +983,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(filament::Engine* engine, filament::View* view, filament::Scene*,
-        filament::Renderer* renderer) {
+static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
@@ -985,7 +991,7 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setTemporalAntiAliasingOptions(g_params.taaOptions);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
+    view->setSampleCount(static_cast<uint8_t>(g_params.msaa ? 4 : 1));
 #pragma clang diagnostic pop
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
@@ -996,7 +1002,8 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             ColorGrading *colorGrading = ColorGrading::Builder()
-                    .whiteBalance(options.temperature / 100.0f, options.tint / 100.0f)
+                    .whiteBalance(static_cast<float>(options.temperature) / 100.0f,
+                        static_cast<float>(options.tint) / 100.0f)
                     .channelMixer(options.outRed, options.outGreen, options.outBlue)
                     .shadowsMidtonesHighlights(
                             Color::toLinear(options.shadows),
@@ -1035,16 +1042,16 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
 }
 
-int main(int argc, char* argv[]) {
-    int option_index = handleCommandLineArgments(argc, argv, &g_config);
-    int num_args = argc - option_index;
+int main(const int argc, char* argv[]) {
+    const int option_index = handleCommandLineArgments(argc, argv, &g_config);
+    const int num_args = argc - option_index;
     if (num_args < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
     for (int i = option_index; i < argc; i++) {
-        utils::Path filename = argv[i];
+        Path filename = argv[i];
         if (!filename.exists()) {
             std::cerr << "file " << argv[i] << " not found!" << std::endl;
             return 1;

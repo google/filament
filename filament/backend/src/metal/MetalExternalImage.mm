@@ -241,12 +241,16 @@ void MetalExternalImage::ensureComputePipelineState(MetalContext& context) {
 
     NSString* objcSource = [NSString stringWithCString:kernel
                                               encoding:NSUTF8StringEncoding];
+    FILAMENT_CHECK_POSTCONDITION(objcSource != nil)
+            << "Unable to create NSString from kernel source.";
     id<MTLLibrary> library = [context.device newLibraryWithSource:objcSource
                                                           options:nil
                                                             error:&error];
     NSERROR_CHECK("Unable to compile Metal shading library.");
 
     id<MTLFunction> kernelFunction = [library newFunctionWithName:@"ycbcrToRgb"];
+    FILAMENT_CHECK_POSTCONDITION(kernelFunction != nil)
+            << "Unable to create Metal function 'ycbcrToRgb'.";
 
     context.externalImageComputePipelineState =
             [context.device newComputePipelineStateWithFunction:kernelFunction error:&error];
@@ -262,6 +266,8 @@ id<MTLCommandBuffer> MetalExternalImage::encodeColorConversionPass(MetalContext&
 
     id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
 
+    FILAMENT_CHECK_POSTCONDITION(context.externalImageComputePipelineState != nil)
+            << "Metal compute pipeline state is nil.";
     [computeEncoder setComputePipelineState:context.externalImageComputePipelineState];
     [computeEncoder setTexture:inYPlane atIndex:0];
     [computeEncoder setTexture:inCbCrTexture atIndex:1];

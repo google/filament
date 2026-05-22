@@ -107,7 +107,7 @@ ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(DriverApi& driv
 }
 
 void ShadowMapDescriptorSet::commit(Transaction& transaction,
-        FEngine& engine, DriverApi& driver) noexcept {
+        FEngine const& engine, DriverApi& driver) noexcept {
     driver.updateBufferObject(mUniformBufferHandle, {
             transaction.uniforms, sizeof(PerViewUib) }, 0);
     mDescriptorSet.commit(engine.getPerViewDescriptorSetLayoutDepthVariant(), driver);

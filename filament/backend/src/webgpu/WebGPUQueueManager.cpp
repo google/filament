@@ -69,6 +69,14 @@ wgpu::CommandEncoder WebGPUQueueManager::getCommandEncoder() {
     return mCommandEncoder;
 }
 
+// Returns the command encoder and the submission state of the encoder.
+std::pair<wgpu::CommandEncoder, std::shared_ptr<WebGPUSubmissionState>>
+        WebGPUQueueManager::getCommandEncoderWithState() {
+    auto encoder = getCommandEncoder();
+    auto state = getLatestSubmissionState();
+    return { encoder, state };
+}
+
 void WebGPUQueueManager::flush() {
     submit();
 }

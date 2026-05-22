@@ -194,17 +194,17 @@ Rust is not a conductor.
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_10.png"/></td>
     </tr>
     <tr style="background-color:transparent">
       <td colspan="5" style="border-color:transparent">NON-METAL/DIELECTRIC</td>
@@ -228,17 +228,17 @@ It is sometimes called **glossiness**.
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_10.png"/></td>
     </tr>
   </tbody>
 </table>
@@ -255,17 +255,17 @@ It is sometimes called **glossiness**.
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_10.png"/></td>
     </tr>
   </tbody>
 </table>
@@ -283,17 +283,17 @@ Specular intensity for **non-metals**. The default is **0.5**, or **4%** reflect
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_10.png"/></td>
     </tr>
   </tbody>
 </table>
@@ -435,17 +435,17 @@ This layer has a fixed index of refraction of 1.5.
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_10.png"/></td>
     </tr>
     <tr style="background-color:transparent">
       <td colspan="5" style="border-color:transparent">NO CLEAR COAT</td>
@@ -470,17 +470,17 @@ This may affect the roughness of the base layer.
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_10.png"/></td>
     </tr>
     <tr style="background-color:transparent">
       <td colspan="5" style="border-color:transparent">GLOSSY CLEAR COAT</td>
@@ -505,17 +505,17 @@ Values can be **negative** to change the orientation of the specular reflections
   </thead>
   <tbody>
     <tr>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_00.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_01.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_02.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_03.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_04.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_05.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_06.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_07.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_08.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_09.png"></img></td>
-        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_10.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_00.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_01.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_02.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_03.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_04.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_05.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_06.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_07.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_08.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_09.png"/></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_10.png"/></td>
     </tr>
     <tr style="background-color:transparent">
       <td colspan="5" style="border-color:transparent">ISOTROPIC</td>

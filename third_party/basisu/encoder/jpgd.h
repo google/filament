@@ -1,11 +1,13 @@
 // jpgd.h - C++ class for JPEG decompression.
-// Public domain, Rich Geldreich <richgel99@gmail.com>
+// Dual licensed: Public domain, Rich Geldreich <richgel99@gmail.com>, or Apache 2.0 (see jpgd.cpp)
 #ifndef JPEG_DECODER_H
 #define JPEG_DECODER_H
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef __wasi__
 #include <setjmp.h>
+#endif
 #include <assert.h>
 #include <stdint.h>
 
@@ -191,7 +193,10 @@ namespace jpgd
 			char m_data[1];
 		};
 
+		// TODO: we can get rid of longjmp entirely
+#ifndef __wasi__
 		jmp_buf m_jmp_state;
+#endif
 		uint32_t m_flags;
 		mem_block* m_pMem_blocks;
 		int m_image_x_size;

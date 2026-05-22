@@ -202,7 +202,23 @@ FView::FView(FEngine& engine)
 
 FView::~FView() noexcept = default;
 
+void FView::setScene(FScene* scene) {
+    if (mScene != scene) {
+        if (mScene) {
+            invalidateCache(mScene);
+        }
+        mScene = scene;
+        if (scene) {
+            mCurrentViewCache = scene->registerView(this);
+        }
+    }
+}
+
 void FView::terminate(FEngine& engine) {
+    if (mScene) {
+        invalidateCache(mScene);
+    }
+
     // Here we would cleanly free resources we've allocated, or we own (currently none).
 
     clearPickingQueries();
@@ -421,7 +437,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     ShadowMapManager::Builder builder;
 
     // dominant directional light is always as index 0
-    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
@@ -441,7 +458,8 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
+        FLightManager::Instance const li = lcm.getInstance(entity);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -486,14 +504,14 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FScene* const scene = mScene;
-    auto const& lightData = scene->getLightData();
+    auto const& lightData = mCurrentViewCache->lightData;
 
     /*
      * Dynamic lights
      */
 
     if (hasDynamicLighting()) {
-        scene->prepareDynamicLights(cameraInfo, mLightUbh);
+        scene->prepareDynamicLights(cameraInfo, mLightUbh, *mCurrentViewCache);
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -528,7 +546,8 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      * Directional light (always at index 0)
      */
 
-    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
@@ -711,7 +730,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      */
     scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
-            hasVSM());
+            hasVSM(), *mCurrentViewCache);
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -719,7 +738,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
     JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
-    size_t const lightCount = scene->getLightData().size();
+    size_t const lightCount = mCurrentViewCache->lightData.size();
     if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         // create and start the prepareVisibleLights job
         // note: this job updates LightData (non const)
@@ -731,7 +750,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = scene->getLightData()]
+                 &lightData = mCurrentViewCache->lightData]
                         (JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
@@ -745,7 +764,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     Range merged;
 
     { // all the operations in this scope must happen sequentially
-        FScene::RenderableSoa& renderableData = scene->getRenderableData();
+        FScene::RenderableSoa& renderableData = mCurrentViewCache->renderableData;
 
         Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
         std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
@@ -769,14 +788,14 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         }
 
         // lightData is const from this point on (can only happen after prepareVisibleLightsJob)
-        auto const& lightData = scene->getLightData();
+        auto const& lightData = mCurrentViewCache->lightData;
 
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
 
         // we also know if we have a directional light
         FLightManager::Instance const directionalLight =
-                lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+                engine.getLightManager().getInstance(lightData.elementAt<FScene::LIGHT_ENTITY>(0));
         mHasDirectionalLighting = directionalLight.isValid();
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
@@ -873,7 +892,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
-        scene->prepareVisibleRenderables(merged);
+        scene->prepareVisibleRenderables(merged, *mCurrentViewCache);
 
         // update those UBOs
         if (!merged.empty()) {
@@ -891,7 +910,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
     { // this must happen after mRenderableUbh is created/updated
         // prepare skinning, morphing and hybrid instancing
-        auto& sceneData = scene->getRenderableData();
+        auto& sceneData = mCurrentViewCache->renderableData;
         for (uint32_t const i : merged) {
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
@@ -899,8 +918,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
             // FIXME: when only one is active the UBO handle of the other is null
             //        (probably a problem on vulkan)
             if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
-                auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
                 FRenderableManager& rcm = engine.getRenderableManager();
+                auto const ci = rcm.getInstance(sceneData.elementAt<FScene::RENDERABLE_ENTITY>(i));
                 auto& descriptorSet = rcm.getDescriptorSet(ci);
 
                 auto const& layout = engine.getPerRenderableDescriptorSetLayout();
@@ -1344,7 +1363,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT instanceArray   = lightData.data<FScene::LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT entityArray   = lightData.data<FScene::LIGHT_ENTITY>();
     auto      * UTILS_RESTRICT visibleArray    = lightData.data<FScene::VISIBILITY>();
 
     Culler::intersects(visibleArray, frustum, sphereArray, lightData.size());
@@ -1354,7 +1373,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     size_t visibleLightCount = FScene::DIRECTIONAL_LIGHTS_COUNT;
     // skip directional light
     for (size_t i = FScene::DIRECTIONAL_LIGHTS_COUNT; i < lightData.size(); i++) {
-        FLightManager::Instance const li = instanceArray[i];
+        FLightManager::Instance const li = lcm.getInstance(entityArray[i]);
         if (visibleArray[i]) {
             if (!lcm.isLightCaster(li)) {
                 visibleArray[i] = 0;
@@ -1449,7 +1468,7 @@ void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
     FRenderableManager const& rcm = engine.getRenderableManager();
     for (uint32_t const index : visible) {
         uint8_t const level = 0; // TODO: pick the proper level of detail
-        auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
+        auto ri = rcm.getInstance(renderableData.elementAt<FScene::RENDERABLE_ENTITY>(index));
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
     }
 }
@@ -1663,6 +1682,22 @@ float4 FView::getMaterialGlobal(uint32_t const index) const {
     FILAMENT_CHECK_PRECONDITION(index < 4)
             << "material global variable index (" << +index << ") out of range";
     return mMaterialGlobals[index];
+}
+
+bool FView::hasContactShadows() const noexcept {
+    if (mCurrentViewCache) {
+        assert_invariant(mScene);
+        return mScene->hasContactShadows(*mCurrentViewCache);
+    }
+    return false;
+}
+
+void FView::invalidateCache(FScene* scene) const noexcept {
+    assert_invariant(scene);
+    if (mCurrentViewCache && mScene == scene) {
+        scene->unregisterView(this);
+        mCurrentViewCache = nullptr;
+    }
 }
 
 } // namespace filament

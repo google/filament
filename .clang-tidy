@@ -1,0 +1,26 @@
+---
+# Disabling EnumCastOutOfRange due to how Filament uses Enums as bitmasks (see utils/BitmaskEnum.h)
+# Disabling NewDeleteLeaks due to many false positives
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -clang-analyzer-cplusplus.NewDeleteLeaks
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - ''
+  - h
+  - hh
+  - hpp
+  - hxx
+ImplementationFileExtensions:
+  - c
+  - cc
+  - cpp
+  - cxx
+HeaderFilterRegex: ''
+ExcludeHeaderFilterRegex: 'third_party/.*'
+FormatStyle:     file
+SystemHeaders:   false
+...
+

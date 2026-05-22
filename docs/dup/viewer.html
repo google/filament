@@ -87,7 +87,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="../images/filament_logo_small.png"></img>
+                <img class="flogo" src="../images/filament_logo_small.png"/>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
@@ -159,16 +159,21 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="viewer-library"><a class="header" href="#viewer-library">Viewer Library</a></h1>
-<p>The <strong>Viewer Library</strong> (<code>libs/viewer</code>) provides a high-level abstraction for configuring and rendering Filament scenes. It is used by tools like <code>gltf_viewer</code> to load assets, manage settings, and drive the rendering loop.</p>
+<p>The <strong>Viewer Library</strong> (<code>libs/viewer</code>) provides a high-level abstraction for configuring and
+rendering Filament scenes. It is used by tools like <code>gltf_viewer</code> to load assets, manage settings,
+and drive the rendering loop.</p>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <ul>
-<li><strong>Settings Management</strong>: Centralized configuration for View, Camera, Lights, and Materials via the <code>Settings</code> struct.</li>
+<li><strong>Settings Management</strong>: Centralized configuration for View, Camera, Lights, and Materials via
+the <code>Settings</code> struct.</li>
 <li><strong>JSON Serialization</strong>: Full support for loading and saving settings via JSON.</li>
-<li><strong>Automation</strong>: <code>AutomationEngine</code> allows scripting the viewer with a sequence of JSON-based test cases (batch mode).</li>
+<li><strong>Automation</strong>: <code>AutomationEngine</code> allows scripting the viewer with a sequence of JSON-based test
+cases (batch mode).</li>
 <li><strong>GUI Integration</strong>: Built-in support for <code>imgui</code> via <code>ViewerGui</code> and <code>Settings</code> binding.</li>
 </ul>
 <h2 id="json-settings-schema"><a class="header" href="#json-settings-schema">JSON Settings Schema</a></h2>
-<p>The viewer settings can be configured using a JSON object. This is used for <code>gltf_viewer --settings</code> or in automation specs.</p>
+<p>The viewer settings can be configured using a JSON object. This is used for <code>gltf_viewer --settings</code>
+or in automation specs.</p>
 <h3 id="root-object"><a class="header" href="#root-object">Root Object</a></h3>
 <p>The root object contains the following categories:</p>
 <div class="table-wrapper"><table><thead><tr><th style="text-align: left">Key</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
@@ -182,7 +187,8 @@
 </div>
 <hr />
 <h3 id="camera-settings-camera"><a class="header" href="#camera-settings-camera">Camera Settings (<code>camera</code>)</a></h3>
-<p>Allows explicit control over the camera. If <code>enabled</code> is false, the viewer uses its default orbit camera logic (auto-scaling/centering).</p>
+<p>Allows explicit control over the camera. If <code>enabled</code> is false, the viewer uses its default orbit
+camera logic (auto-scaling/centering).</p>
 <pre><code class="language-json">"camera": {
     "enabled": true,                  // Must be true to use these explicit settings
     "projection": "PERSPECTIVE",      // "PERSPECTIVE" or "ORTHO"

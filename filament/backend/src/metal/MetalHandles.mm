@@ -634,8 +634,8 @@ MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t buff
 }
 
 MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
-        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih, bool async)
+    : HwVertexBuffer(vertexCount, async), vbih(vbih), buffers(bufferCount, nullptr) {
 }
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
@@ -771,12 +771,12 @@ MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8
 }
 
 MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r,
-        TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept
-    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-              src->format, src->usage, false),
-      context(context),
-      devicePixelFormat(src->devicePixelFormat),
-      externalImage(src->externalImage) {
+        TextureSwizzle g, TextureSwizzle b, TextureSwizzle a, bool async) noexcept
+        : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+                  src->format, src->usage, async),
+          context(context),
+          devicePixelFormat(src->devicePixelFormat),
+          externalImage(src->externalImage) {
     texture = src->getMtlTextureForRead();
     if (context.supportsTextureSwizzling) {
         // Even though we've already checked context.supportsTextureSwizzling, we still need to

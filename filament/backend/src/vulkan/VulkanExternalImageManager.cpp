@@ -107,7 +107,8 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
 VkSamplerYcbcrConversion VulkanExternalImageManager::getVkSamplerYcbcrConversion(
         VulkanPlatform::ExternalImageMetadata const& metadata) {
-    // This external image does not require external sampler (YUV conversion).
+    // The platform now explicitly tells us if this image needs YCbCr conversion
+    // This needs to be replaced by `if (!metadata.isChromaConversionRequired)` once it's in
     if (metadata.externalFormat == 0 && !fvkutils::isVKYcbcrConversionFormat(metadata.format)) {
         return VK_NULL_HANDLE;
     }
@@ -122,8 +123,9 @@ VkSamplerYcbcrConversion VulkanExternalImageManager::getVkSamplerYcbcrConversion
             .xChromaOffset = fvkutils::getChromaLocationFilament(metadata.xChromaOffset),
             .yChromaOffset = fvkutils::getChromaLocationFilament(metadata.yChromaOffset),
 
-            // Unclear where to get the chromaFilter, we just assume it's nearest.
-            .chromaFilter = SamplerMagFilter::NEAREST,
+            // Unclear where to get the chromaFilter, we just assume it's linear.
+            // @TODO: internal bug id:512818491
+            .chromaFilter = SamplerMagFilter::LINEAR,
         },
         .format = metadata.format,
         .externalFormat = metadata.externalFormat,
@@ -144,8 +146,8 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
     auto& imageData = findImage(mImages, image);
     // according to spec, these must match chromaFilter
     // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
-    samplerParams.filterMag = SamplerMagFilter::NEAREST;
-    samplerParams.filterMin = SamplerMinFilter::NEAREST;
+    samplerParams.filterMag = SamplerMagFilter::LINEAR;
+    samplerParams.filterMin = SamplerMinFilter::LINEAR;
     // If the sampler has a ycbcrConversion then anisotropic must be disabled and addressModeU,
     // addressModeV and addressModeW must be VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE.
     // https://docs.vulkan.org/spec/latest/chapters/samplers.html#VUID-VkSamplerCreateInfo-addressModeU-01646

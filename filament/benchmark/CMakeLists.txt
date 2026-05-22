@@ -11,6 +11,7 @@ endif()
 # ==================================================================================================
 
 set(BENCHMARK_SRCS
+        benchmark_BufferAllocator.cpp
         benchmark_filament.cpp)
 
 add_executable(benchmark_filament ${BENCHMARK_SRCS})

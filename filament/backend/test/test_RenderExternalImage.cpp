@@ -77,7 +77,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport = getFullViewport();
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
@@ -153,6 +153,8 @@ TEST_F(BackendTest, RenderExternalImage) {
             CVPixelBufferCreate(kCFAllocatorDefault, 1024, 1024, kCVPixelFormatType_32BGRA, options,
                     &pixBuffer);
     assert(status == kCVReturnSuccess);
+    CFRelease(options);
+    CFRelease(values[0]);
 
     // Fill image with checker-pattern.
     const size_t tileSize = 64;
@@ -180,7 +182,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport = getFullViewport();
 
     api.startCapture(0);
