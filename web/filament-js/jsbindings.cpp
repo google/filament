@@ -1827,16 +1827,20 @@ class_<Ktx1Bundle>("Ktx1Bundle")
 
     .function("isCubemap", &Ktx1Bundle::isCubemap)
     .function("_getBlob", EMBIND_LAMBDA(BufferDescriptor, (Ktx1Bundle* self, KtxBlobIndex index), {
-        uint8_t* data;
-        uint32_t size;
-        self->getBlob(index, &data, &size);
+        uint8_t* data = nullptr;
+        uint32_t size = 0;
+        if (!self->getBlob(index, &data, &size)) {
+            return BufferDescriptor(nullptr, 0);
+        }
         return BufferDescriptor(data, size);
     }), allow_raw_pointers())
     .function("_getCubeBlob", EMBIND_LAMBDA(BufferDescriptor,
             (Ktx1Bundle* self, uint32_t miplevel), {
-        uint8_t* data;
-        uint32_t size;
-        self->getBlob({miplevel}, &data, &size);
+        uint8_t* data = nullptr;
+        uint32_t size = 0;
+        if (!self->getBlob({miplevel}, &data, &size)) {
+            return BufferDescriptor(nullptr, 0);
+        }
         return BufferDescriptor(data, size * 6);
     }), allow_raw_pointers())
 
