@@ -192,29 +192,29 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                                          customColorMsaaSidecarTextureViews[0] };
         // either all the color textures have MSAA sidecars or none of them do
         if (hasColorMsaaSidecars) {
-            FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
+            assert_invariant(std::all_of(customColorMsaaSidecarTextureViews,
                     customColorMsaaSidecarTextureViews + customColorTextureViewCount,
-                    [](wgpu::TextureView const& msaaView) { return msaaView != nullptr; }))
-                    << "A color attachment texture has an MSAA sidecar but at least "
-                       "one other color attachment texture does not.";
+                    [](wgpu::TextureView const& msaaView) { return msaaView != nullptr; }) &&
+                    "A color attachment texture has an MSAA sidecar but at least "
+                    "one other color attachment texture does not.");
         } else {
-            FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
+            assert_invariant(std::all_of(customColorMsaaSidecarTextureViews,
                     customColorMsaaSidecarTextureViews + customColorTextureViewCount,
-                    [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }))
-                    << "A color attachment texture does not have an MSAA sidecar but "
-                       "at least one other color attachment texture does.";
+                    [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }) &&
+                    "A color attachment texture does not have an MSAA sidecar but "
+                    "at least one other color attachment texture does.");
         }
         // Note: Depth/stencil attachments are evaluated independently because they may
         // be pre-configured as multi-sampled textures (requiring no sidecar view).
     } else {
-        FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
+        assert_invariant(std::all_of(customColorMsaaSidecarTextureViews,
                 customColorMsaaSidecarTextureViews + customColorTextureViewCount,
-                [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }))
-                << "Render target sample count is 1, but at least one color attachment texture "
-                   "was provided with an MSAA sidecar.";
-        FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView == nullptr)
-                << "Render target sample count is 1, but the depth/stencil texture was provided "
-                   "with an MSAA sidecar.";
+                [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }) &&
+                "Render target sample count is 1, but at least one color attachment texture "
+                "was provided with an MSAA sidecar.");
+        assert_invariant(customDepthStencilMsaaSidecarTextureView == nullptr &&
+                "Render target sample count is 1, but the depth/stencil texture was provided "
+                "with an MSAA sidecar.");
     }
     mColorAttachmentDesc.clear();
 
