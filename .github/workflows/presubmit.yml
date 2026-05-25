@@ -23,6 +23,9 @@ concurrency:
 # 3. github.event_name == 'push' && ...: If it's a push to main, it only runs if the
 #    'check-verification' job confirmed the commit is NOT verified.
 
+permissions:
+  contents: read
+
 jobs:
   check-verification:
     if: github.event_name == 'push'
