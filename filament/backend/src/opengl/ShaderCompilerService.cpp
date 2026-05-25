@@ -42,6 +42,8 @@
 #include <array>
 #include <atomic>
 #include <cctype>
+#include <cstdio>
+#include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -792,6 +794,40 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
             if (multiview && stage == ShaderStage::VERTEX) {
                 process_OVR_multiview2(context, numViews, shader_src, shader_len);
             }
+
+#ifdef __EMSCRIPTEN__
+            // WebGL workaround: ANGLE-on-D3D11 and some Android GLES drivers don't
+            // propagate `const int CONFIG_FOO = SPIRV_CROSS_CONSTANT_ID_<id>` into
+            // uniform-block array sizes, so they layout the block using the matc-baked
+            // default and disagree with the runtime-bound range — every instanced draw
+            // then fails the WebGL2 validator with "uniform buffer too small".
+            // Rewrite the symbolic array lengths to literals in place (padded with
+            // spaces to preserve byte count) so the GLSL compiler can't get it wrong.
+            // Values mirror what the engine binds with __EMSCRIPTEN__; backend can't
+            // include EngineEnums.h (layering — same precedent as CONFIG_STEREO_EYE_COUNT
+            // hardcoded above). Spec-constant-aware analogue of the 2022 hack at
+            // commit fe3790cb9 (#5859), removed when spec constants were assumed
+            // portable.
+            {
+                auto rewriteArraySize = [&](std::string_view symbolic, size_t value) {
+                    char replacement[32];
+                    int const n = std::snprintf(replacement, sizeof(replacement), "[%zu", value);
+                    if (n <= 0 || (size_t)n >= symbolic.size()) {
+                        return;
+                    }
+                    std::memset(replacement + n, ' ', symbolic.size() - n - 1);
+                    replacement[symbolic.size() - 1] = ']';
+                    std::string_view view{ shader_src, shader_len };
+                    for (size_t p = view.find(symbolic); p != std::string_view::npos;
+                            p = view.find(symbolic, p + symbolic.size())) {
+                        std::memcpy(shader_src + p, replacement, symbolic.size());
+                    }
+                };
+                rewriteArraySize("[CONFIG_MAX_INSTANCES]", 8);
+                rewriteArraySize("[CONFIG_FROXEL_BUFFER_HEIGHT]", 1024);
+                rewriteArraySize("[CONFIG_FROXEL_RECORD_BUFFER_HEIGHT]", 1024);
+            }
+#endif
 
             // add support for ARB_shading_language_packing if needed
             auto const packingFunctions = process_ARB_shading_language_packing(context);
