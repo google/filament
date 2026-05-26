@@ -15,6 +15,7 @@
  */
 
 #include "vulkan/VulkanSemaphore.h"
+
 #include "vulkan/VulkanSemaphoreManager.h"
 
 namespace filament::backend {

@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
+#include "DriverBase.h"
 #include "WebGPUTexture.h"
 
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 

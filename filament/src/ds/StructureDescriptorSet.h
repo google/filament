@@ -17,7 +17,6 @@
 #pragma once
 
 #include "DescriptorSet.h"
-
 #include "TypedUniformBuffer.h"
 
 #include <private/filament/UibStructs.h>

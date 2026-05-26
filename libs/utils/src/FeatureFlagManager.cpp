@@ -27,12 +27,12 @@
 #include <optional>
 #include <string_view>
 
-#include <stdlib.h>
-#include <stdio.h>
-
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
+
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace utils {
 

@@ -16,9 +16,9 @@
 
 #include "WebGPUBufferObject.h"
 
+#include "DriverBase.h"
 #include "WebGPUBufferBase.h"
 
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
 #include <webgpu/webgpu_cpp.h>

@@ -18,11 +18,11 @@
  #define TNT_FILAMENT_BACKEND_VULKANTEXTURE_H
 
 #include "DriverBase.h"
-
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
 #include "VulkanStagePool.h"
+
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Image.h"

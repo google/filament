@@ -17,14 +17,14 @@
 #ifndef TNT_FILAMENT_DETAILS_DFG_H
 #define TNT_FILAMENT_DETAILS_DFG_H
 
-#include <backend/Handle.h>
-
 #include "details/Texture.h"
+
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 namespace filament {
 

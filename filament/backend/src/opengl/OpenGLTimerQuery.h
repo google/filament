@@ -17,13 +17,12 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
 #define TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
 
+#include "DriverBase.h"
+#include "gl_headers.h"
+
 #include <backend/DriverEnums.h>
 
-#include "DriverBase.h"
-
 #include <utils/AsyncJobQueue.h>
-
-#include "gl_headers.h"
 
 #include <atomic>
 #include <chrono>

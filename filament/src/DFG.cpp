@@ -21,20 +21,20 @@
 #include "details/Engine.h"
 #include "details/Texture.h"
 
+#include "generated/resources/dfg.h"
+
 #include <filament/Texture.h>
 
 #include <backend/DriverEnums.h>
 
-#include <utils/debug.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
-#include <cstdlib>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <utility>
-
-#include "generated/resources/dfg.h"
 
 namespace filament {
 

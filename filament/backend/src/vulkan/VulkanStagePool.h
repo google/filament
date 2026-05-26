@@ -18,10 +18,12 @@
 #define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
 #include "VulkanMemory.h"
-#include "backend/DriverEnums.h"
+
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
+
+#include <backend/DriverEnums.h>
 
 #include <map>
 #include <unordered_set>

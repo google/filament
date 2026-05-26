@@ -17,14 +17,15 @@
 #ifndef TNT_MATH_VEC2_H
 #define TNT_MATH_VEC2_H
 
-#include <math/TVecHelpers.h>
 #include <math/half.h>
+#include <math/TVecHelpers.h>
 
 #include <type_traits>
 
+#include <sys/types.h>
+
 #include <assert.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 namespace filament {
 namespace math {

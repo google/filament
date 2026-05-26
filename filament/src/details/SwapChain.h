@@ -19,9 +19,9 @@
 
 #include "downcast.h"
 
-#include "private/backend/DriverApi.h"
-
 #include <filament/SwapChain.h>
+
+#include <private/backend/DriverApi.h>
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverApiForward.h>

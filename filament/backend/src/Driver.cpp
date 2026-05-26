@@ -16,8 +16,8 @@
 
 #include "DriverBase.h"
 
-#include "private/backend/Driver.h"
-#include "private/backend/CommandStream.h"
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
 
 #include <backend/AcquiredImage.h>
 #include <backend/BufferDescriptor.h>
@@ -25,10 +25,11 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 
@@ -61,7 +62,7 @@ DriverBase::DriverBase(const Platform::DriverConfig& driverConfig) noexcept
                 auto& serviceThreadCallbackQueue = mServiceThreadCallbackQueue;
 
                 // wait for some callbacks to dispatch
-                std::unique_lock<std::mutex> lock(mServiceThreadLock);
+                UniqueLock lock(mServiceThreadLock);
                 while (serviceThreadCallbackQueue.empty() && !mExitRequested) {
                     serviceThreadCondition.wait(lock);
                 }
@@ -110,18 +111,18 @@ void DriverBase::CallbackData::release(CallbackData* data) {
 
 void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
     if (handler && UTILS_HAS_THREADING) {
-        std::lock_guard<std::mutex> const lock(mServiceThreadLock);
+        LockGuard const lock(mServiceThreadLock);
         mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
         mServiceThreadCondition.notify_one();
     } else {
-        std::lock_guard<std::mutex> const lock(mPurgeLock);
+        LockGuard const lock(mPurgeLock);
         mCallbacks.emplace_back(user, callback);
     }
 }
 
 void DriverBase::purge() noexcept {
     decltype(mCallbacks) callbacks;
-    std::unique_lock<std::mutex> lock(mPurgeLock);
+    UniqueLock lock(mPurgeLock);
     std::swap(callbacks, mCallbacks);
     lock.unlock(); // don't remove this, it ensures callbacks are called without lock held
     for (auto& item : callbacks) {
@@ -188,12 +189,18 @@ void DriverBase::stopServiceThread() noexcept {
     }
 
     {
-        std::lock_guard<std::mutex> lock(mServiceThreadLock);
+        LockGuard const lock(mServiceThreadLock);
         mExitRequested = true;
     }
     mServiceThreadCondition.notify_one();
     mServiceThread.join();
-    assert_invariant(mServiceThreadCallbackQueue.empty());
+
+#ifndef NDEBUG
+    {
+        LockGuard const lock(mServiceThreadLock);
+        assert_invariant(mServiceThreadCallbackQueue.empty());
+    }
+#endif
 }
 #endif
 
@@ -226,6 +233,7 @@ size_t Driver::getElementTypeSize(ElementType type) noexcept {
         case ElementType::HALF3:    return sizeof(half3);
         case ElementType::HALF4:    return sizeof(half4);
     }
+    return 0;
 }
 
 // ------------------------------------------------------------------------------------------------

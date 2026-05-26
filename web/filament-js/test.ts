@@ -84,6 +84,21 @@ function smoke_renderables() {
     inst.delete();
 }
 
+function smoke_camutils() {
+    const manip = new Filament.Camutils$Manipulator$Builder()
+        .viewport(1024, 768)
+        .orbitHomePosition(0, 0, 1)
+        .targetPosition(0, 0, 0)
+        .upVector(0, 1, 0)
+        .build(Filament.Camutils$Mode.ORBIT);
+    manip.attach(canvas);
+    manip.update(0.016);
+    const camera: Filament.Camera = engine.createCamera();
+    camera.setLookAt(manip);
+    manip.detach(canvas);
+}
+
 smoke_camera_frustum();
 smoke_transforms();
 smoke_renderables();
+smoke_camutils();

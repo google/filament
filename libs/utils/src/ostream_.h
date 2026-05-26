@@ -19,8 +19,8 @@
 
 #include <utils/ostream.h>
 
-#include <utility>
 #include <mutex>
+#include <utility>
 
 namespace utils::io {
 

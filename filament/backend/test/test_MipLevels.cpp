@@ -16,7 +16,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "Shader.h"

@@ -16,11 +16,11 @@
 
 #include "PerformanceCounters.h"
 
-#include <benchmark/benchmark.h>
-
 #include "../src/details/BufferAllocator.h"
 
 #include <utils/compiler.h>
+
+#include <benchmark/benchmark.h>
 
 #include <array>
 #include <cstddef>

@@ -19,17 +19,17 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORM_H
 
-#include <utils/CString.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
-
-#include <stddef.h>
-#include <stdint.h>
 
 #include <atomic>
 #include <memory>
 #include <mutex>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class FeatureFlagManager;
@@ -634,10 +634,10 @@ public:
     void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
-    std::shared_ptr<InsertBlobFunc> mInsertBlob;
-    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob;
-    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat;
     mutable utils::Mutex mMutex;
+    std::shared_ptr<InsertBlobFunc> mInsertBlob UTILS_GUARDED_BY(mMutex);
+    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob UTILS_GUARDED_BY(mMutex);
+    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat UTILS_GUARDED_BY(mMutex);
 };
 
 } // namespace filament

@@ -20,8 +20,8 @@
 #include "fg/details/Resource.h"
 #include "fg/FrameGraphId.h"
 
-#include "backend/DriverEnums.h"
-#include "backend/Handle.h"
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 namespace filament {
 

@@ -17,18 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
 #define TNT_FILAMENT_BACKEND_OPENGL_GLUTILS_H
 
-#include <utils/debug.h>
-#include <utils/ostream.h>
+#include "gl_headers.h"
 
 #include <backend/DriverEnums.h>
+
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <string_view>
 #include <unordered_set>
 
 #include <stddef.h>
 #include <stdint.h>
-
-#include "gl_headers.h"
 
 namespace filament::backend::GLUtils {
 

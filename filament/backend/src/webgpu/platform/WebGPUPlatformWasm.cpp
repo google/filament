@@ -18,11 +18,11 @@
 
 #include <utils/Panic.h>
 
-#include <webgpu/webgpu_cpp.h>
 #include <emscripten/html5.h>
+#include <webgpu/webgpu_cpp.h>
 
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 extern "C" WGPUDevice emscripten_webgpu_get_device(void);
 

@@ -16,9 +16,9 @@
 
 #include <backend/platforms/AndroidNdk.h>
 
-#include <android/hardware_buffer.h>
-
 #include <utils/compiler.h>
+
+#include <android/hardware_buffer.h>
 
 #include <mutex>
 

@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 
-#include "FilamentAPI-impl.h"
-
 #include "components/LightManager.h"
+
+#include "FilamentAPI-impl.h"
 
 #include "details/Engine.h"
 
 #include <filament/LightManager.h>
 
-#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 
 #include <math/fast.h>
 #include <math/scalar.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <algorithm>
 #include <cmath>
 #include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace filament::math;
 using namespace utils;

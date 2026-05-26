@@ -17,8 +17,8 @@
 #include "details/Engine.h"
 
 #include "MaterialParser.h"
-#include "TextureCache.h"
 #include "RenderPrimitive.h"
+#include "TextureCache.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -44,35 +44,44 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+
+#include "generated/resources/materials.h"
+
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
-
-#include <private/backend/PlatformFactory.h>
-
-#include <private/utils/FeatureFlagManager.h>
-#include <private/utils/Tracing.h>
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/DriverEnums.h>
+
+#include <private/utils/FeatureFlagManager.h>
+#include <private/utils/Tracing.h>
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
+#include <utils/compiler.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
 #include <utils/Slice.h>
 #include <utils/ThreadUtils.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 #include <utils/tribool.h>
 
 #include <math/vec3.h>
@@ -81,30 +90,24 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <condition_variable>
+#ifdef __EXCEPTIONS
+#include <exception>
+#endif
 #include <initializer_list>
 #include <memory>
 #include <mutex>
 #include <new>
 #include <optional>
-#include <thread>
 #include <string_view>
+#include <thread>
 #include <unordered_map>
 #include <utility>
-
-#ifdef __EXCEPTIONS
-#include <exception>
-#endif
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#if FILAMENT_ENABLE_FGVIEWER
-#include "fg/FgviewerManager.h"
-#endif
-
-#include "generated/resources/materials.h"
 
 using namespace filament::math;
 using namespace utils;
@@ -329,7 +332,7 @@ FEngine::FEngine(Builder const& builder) :
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
             [this, &builder](std::string_view const name, bool const value) {
-        if (builder->mFeatureFlags.find(utils::CString(name)) == builder->mFeatureFlags.end()) {
+        if (builder->mFeatureFlags.find(CString(name)) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
                 *p = value;
@@ -690,7 +693,10 @@ void FEngine::shutdown() {
      */
     mMaterialCache.terminate(*this);
 
-    cleanupResourceListLocked(mFenceListLock, std::move(mFences));
+    {
+        LockGuard const lock(mFenceListLock);
+        cleanupResourceList(std::move(mFences));
+    }
 
     driver.destroyTexture(std::move(mDummyOneTexture));
     driver.destroyTexture(std::move(mDummyOneTextureArray));
@@ -1113,7 +1119,7 @@ FView* FEngine::createView() noexcept {
 FFence* FEngine::createFence() noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this);
     if (UTILS_LIKELY(p)) {
-        std::lock_guard const guard(mFenceListLock);
+        LockGuard const guard(mFenceListLock);
         mFences.insert(p);
     }
     return p;
@@ -1145,7 +1151,7 @@ FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t f
 FSync* FEngine::createSync() noexcept {
     FSync* p = mHeapAllocator.make<FSync>(*this);
     if (UTILS_LIKELY(p)) {
-        std::lock_guard const guard(mSyncListLock);
+        LockGuard const guard(mSyncListLock);
         mSyncs.insert(p);
     }
     return p;
@@ -1200,15 +1206,7 @@ void FEngine::cleanupResourceList(ResourceList<T>&& list) {
         list.clear();
     }
 }
-template<typename T, typename Lock>
-UTILS_NOINLINE
-void FEngine::cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list) {
-    // copy the list with the lock held, then proceed as usual
-    lock.lock();
-    auto copy(std::move(list));
-    lock.unlock();
-    cleanupResourceList(std::move(copy));
-}
+
 
 // -----------------------------------------------------------------------------------------------
 
@@ -1280,28 +1278,7 @@ bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     return success;
 }
 
-template<typename T, typename Lock>
-UTILS_ALWAYS_INLINE
-bool FEngine::terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list) {
-    if (p == nullptr) return true;
-    lock.lock();
-    bool const success = list.remove(p);
-    lock.unlock();
 
-#if UTILS_HAS_RTTI
-    auto typeName = CallStack::typeName<T>();
-    const char * const typeNameCStr = typeName.c_str();
-#else
-    const char * const typeNameCStr = "<no-rtti>";
-#endif
-
-    if (ASSERT_PRECONDITION_NON_FATAL(success,
-            "Object %s at %p doesn't exist (double free?)", typeNameCStr, p)) {
-        const_cast<T*>(p)->terminate(*this);
-        mHeapAllocator.destroy(const_cast<T*>(p));
-    }
-    return success;
-}
 
 // -----------------------------------------------------------------------------------------------
 
@@ -1372,7 +1349,8 @@ bool FEngine::destroy(const FIndirectLight* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FFence* p) {
-    return terminateAndDestroyLocked(mFenceListLock, p, mFences);
+    LockGuard const lock(mFenceListLock);
+    return terminateAndDestroy(p, mFences);
 }
 
 UTILS_NOINLINE
@@ -1382,7 +1360,8 @@ bool FEngine::destroy(const FSwapChain* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FSync* p) {
-    return terminateAndDestroyLocked(mSyncListLock, p, mSyncs);
+    LockGuard const lock(mSyncListLock);
+    return terminateAndDestroy(p, mSyncs);
 }
 
 UTILS_NOINLINE
@@ -1463,10 +1442,12 @@ bool FEngine::isValid(const FVertexBuffer* p) const {
 }
 
 bool FEngine::isValid(const FFence* p) const {
+    LockGuard const lock(mFenceListLock);
     return isValid(p, mFences);
 }
 
 bool FEngine::isValid(const FSync* p) const {
+    LockGuard const lock(mSyncListLock);
     return isValid(p, mSyncs);
 }
 
@@ -1678,14 +1659,16 @@ void FEngine::signalFence(FenceSignal& signal, FenceSignal::State s) noexcept {
 }
 
 Fence::FenceStatus FEngine::waitFence(FenceSignal& signal, uint64_t const timeout) noexcept {
-    std::unique_lock lock(mFenceLock);
+    UniqueLock lock(mFenceLock);
     while (signal.mState == FenceSignal::UNSIGNALED && !mFenceHasUnrecoverableError) {
         if (timeout == FENCE_WAIT_FOR_EVER) {
             mFenceCondition.wait(lock);
         } else {
             if (timeout == 0 ||
                     mFenceCondition.wait_for(lock, std::chrono::nanoseconds(timeout)) == std::cv_status::timeout) {
-                if (mFenceHasUnrecoverableError) break;
+                if (mFenceHasUnrecoverableError) {
+                    break;
+                }
                 return Fence::FenceStatus::TIMEOUT_EXPIRED;
             }
         }

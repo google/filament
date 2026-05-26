@@ -24,14 +24,14 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/PlatformMetal.h>
 
-#include <Metal/Metal.h>
-
 #include <utils/compiler.h>
 
-#include <utility>
-#include <memory>
+#include <Metal/Metal.h>
+
 #include <atomic>
 #include <chrono>
+#include <memory>
+#include <utility>
 
 namespace filament::backend {
 

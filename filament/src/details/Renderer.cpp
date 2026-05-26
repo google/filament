@@ -42,44 +42,44 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
-#include <private/utils/Tracing.h>
-
 #include <filament/Camera.h>
 #include <filament/Fence.h>
 #include <filament/Options.h>
 #include <filament/Renderer.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/mat4.h>
+#include <private/utils/Tracing.h>
 
-#include <utils/architecture.h>
 #include <utils/Allocator.h>
+#include <utils/architecture.h>
 #include <utils/bitset.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
+
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 
 #include <algorithm>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <utility>
 
-#include <stddef.h>
-#include <stdint.h>
-
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
+
+#include <stddef.h>
+#include <stdint.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -954,8 +954,6 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
      * Allocate command buffer
      */
 
-    FScene& scene = *view.getScene();
-
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
@@ -1060,7 +1058,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
             .clearFlags = getClearFlags(),
             .clearColor = clearColor,
             .clearStencil = clearStencil,
-            .hasContactShadows = scene.hasContactShadows(),
+            .hasContactShadows = view.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
             .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
             .enabledStencilBuffer = view.isStencilBufferEnabled(),
@@ -1075,11 +1073,11 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    FView::updatePrimitivesLod(scene.getRenderableData(),
+    FView::updatePrimitivesLod(view.getRenderableData(),
             engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
-    passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
+    passBuilder.geometry(view.getRenderableData(), view.getVisibleRenderables());
 
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used

@@ -16,14 +16,15 @@
 
 #include "AndroidFrameCallback.h"
 
-#include <android/choreographer.h>
-#include <android/looper.h>
-
 #include <private/utils/Tracing.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Mutex.h>
+#include <utils/Panic.h>
+
+#include <android/choreographer.h>
+#include <android/looper.h>
 
 #include <atomic>
 #include <cstddef>
@@ -103,7 +104,7 @@ bool AndroidFrameCallback::isSupported() noexcept {
 }
 
 AndroidFrameCallback::Timeline AndroidFrameCallback::getPreferredTimeline() const noexcept {
-    std::lock_guard const l(mLock);
+    LockGuard const l(mLock);
     return mPreferredTimeline;
 }
 
@@ -127,7 +128,7 @@ void AndroidFrameCallback::vsyncCallback(const AChoreographerFrameCallbackData* 
                 AChoreographerFrameCallbackData_getFrameTimelineDeadlineNanos(
                         callbackData, preferredIndex);
 
-        std::lock_guard const l(mLock);
+        LockGuard const l(mLock);
         mPreferredTimeline = {
             .frameTime = frameTime,
             .expectedPresentTime = expectedPresentTime,

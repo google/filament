@@ -21,9 +21,10 @@
 
 #include <backend/DriverEnums.h>
 
+#include <bluevk/BlueVK.h>
+
 #include <utils/Hash.h>
 
-#include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
 namespace filament::backend {

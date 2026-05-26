@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_DRIVER_METALSTAGEPOOL_H
 #define TNT_FILAMENT_DRIVER_METALSTAGEPOOL_H
 
-#include <Metal/Metal.h>
-
 #include "MetalBuffer.h"
+
+#include <Metal/Metal.h>
 
 #include <map>
 #include <mutex>

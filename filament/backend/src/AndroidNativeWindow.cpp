@@ -16,14 +16,14 @@
 
 #include "AndroidNativeWindow.h"
 
-#include <android/api-level.h>
-#include <android/native_window.h>
-
 #include <utils/compiler.h>
 #include <utils/Logger.h>
 
-#include <cstdint>
+#include <android/api-level.h>
+#include <android/native_window.h>
+
 #include <cerrno>
+#include <cstdint>
 #include <utility>
 
 #include <dlfcn.h>

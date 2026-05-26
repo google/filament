@@ -15,16 +15,10 @@
  */
 
 #include "ShadowMapManager.h"
+
 #include "AtlasAllocator.h"
 #include "RenderPass.h"
 #include "ShadowMap.h"
-
-#include <filament/Frustum.h>
-#include <filament/LightManager.h>
-#include <filament/Options.h>
-
-
-#include <private/filament/EngineEnums.h>
 
 #include "components/RenderableManager.h"
 
@@ -41,22 +35,28 @@
 #include "fg/FrameGraphRenderPass.h"
 #include "fg/FrameGraphTexture.h"
 
+#include <private/filament/EngineEnums.h>
+
+#include <filament/Frustum.h>
+#include <filament/LightManager.h>
+#include <filament/Options.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/BitmaskEnum.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
 
 #include <math/half.h>
 #include <math/mat4.h>
-#include <math/vec4.h>
-#include <math/vec2.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <algorithm>
 #include <array>
@@ -64,12 +64,12 @@
 #include <functional>
 #include <iterator>
 #include <limits>
-#include <new>
 #include <memory>
+#include <new>
 #include <utility>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 namespace filament {
@@ -175,7 +175,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     calculateTextureRequirements(engine, view, lightData);
 
     // Compute scene-dependent values shared across all shadow maps
-    ShadowMap::SceneInfo const info{ view.getScene()->getRenderableData(), view.getVisibleLayers() };
+    ShadowMap::SceneInfo const info{ view.getRenderableData(), view.getVisibleLayers() };
 
     shadowTechnique |= updateCascadeShadowMaps(
             engine, view, cameraInfo, renderableData, lightData, info);
@@ -238,8 +238,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         FView& view, CameraInfo const& mainCameraInfo,
         float4 const& userTime) noexcept {
 
-    FScene* scene = view.getScene();
-    assert_invariant(scene);
+    assert_invariant(view.getScene());
 
     // make a copy here, because it's a very small structure
     VsmShadowOptions const& vsmShadowOptions = view.getVsmShadowOptions();
@@ -309,11 +308,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 break;
                             case ShadowType::SPOT:
                                 prepareSpotShadowMap(shadowMap, engine, view, mainCameraInfo,
-                                        scene->getLightData(), mSceneInfo);
+                                        view.getLightData(), mSceneInfo);
                                 break;
                             case ShadowType::POINT:
                                 preparePointShadowMap(shadowMap, engine, view, mainCameraInfo,
-                                        scene->getLightData());
+                                        view.getLightData());
                                 break;
                         }
 
@@ -344,8 +343,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             },
             [=, this,
                     passBuilder = passBuilder,
-                    &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
-                    &view = view]
+                    &engine = static_cast<FEngine const &>(engine),
+                    &view = static_cast<FView const&>(view)]
                     (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
@@ -368,7 +367,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     //       recorded in the command buffer, per shadow map. Maybe this could
                     //       be done with indirect draw calls.
 
-                    // Note: the output of culling below is stored in scene->getRenderableData()
+                    // Note: the output of culling below is stored in view.getRenderableData()
 
                     switch (shadowMap.getShadowType()) {
                         case ShadowType::DIRECTIONAL:
@@ -377,15 +376,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         case ShadowType::SPOT:
                             if (shadowMap.hasVisibleShadows()) {
                                 ShadowMapManager::cullSpotShadowMap(shadowMap, engine, view,
-                                        scene->getRenderableData(), entry.range,
-                                        scene->getLightData());
+                                        view.getRenderableData(), entry.range,
+                                        view.getLightData());
                             }
                             break;
                         case ShadowType::POINT:
                             if (shadowMap.hasVisibleShadows()) {
                                 ShadowMapManager::cullPointShadowMap(shadowMap, view,
-                                        scene->getRenderableData(), entry.range,
-                                        scene->getLightData());
+                                        view.getRenderableData(), entry.range,
+                                        view.getLightData());
                             }
                             break;
                     }
@@ -406,7 +405,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     shadowMap.commit(transaction, engine, driver);
 
                     // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                    FView::updatePrimitivesLod(scene->getRenderableData(), engine, cameraInfo, entry.range);
+                    FView::updatePrimitivesLod(view.getRenderableData(), engine, cameraInfo, entry.range);
 
                     // generate and sort the commands for rendering the shadow map
 
@@ -426,7 +425,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
                             .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
-                            .geometry(scene->getRenderableData(), entry.range)
+                            .geometry(view.getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine, driver);
 
@@ -809,7 +808,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
                 normalize(cameraInfo.worldTransform[0].xyz));
 
         // Compute scene-dependent values shared across all cascades
-        ShadowMap::updateSceneInfoDirectional(MvAtOrigin, view.getScene()->getRenderableData(), sceneInfo);
+        ShadowMap::updateSceneInfoDirectional(MvAtOrigin, view.getRenderableData(), sceneInfo);
 
         // we always do culling without depth clamp, because objects behind the camera
         // must be rendered regardless
@@ -975,7 +974,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
     };
 
     auto const shaderParameters = shadowMap.updateSpot(engine,
-            lightData, lightIndex, mainCameraInfo, shadowMapInfo, view.getScene()->getRenderableData(), sceneInfo);
+            lightData, lightIndex, mainCameraInfo, shadowMapInfo, view.getRenderableData(), sceneInfo);
 
     // and if we need to generate it, update all the UBO data
     if (shadowMap.hasVisibleShadows()) {
@@ -1070,7 +1069,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
     };
 
     auto const shaderParameters = shadowMap.updatePoint(engine, lightData, lightIndex,
-            mainCameraInfo, shadowMapInfo, view.getScene()->getRenderableData(), face);
+            mainCameraInfo, shadowMapInfo, view.getRenderableData(), face);
 
     // and if we need to generate it, update all the UBO data
     if (shadowMap.hasVisibleShadows()) {

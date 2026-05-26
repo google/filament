@@ -16,6 +16,7 @@
 
 #include <backend/Platform.h>
 
+#include <utils/Mutex.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 
@@ -139,25 +140,25 @@ bool Platform::queryFrameTimestamps(SwapChain const*, uint64_t, FrameTimestamps*
 }
 
 void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
-    std::lock_guard<decltype(mMutex)> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     mInsertBlob = std::make_shared<InsertBlobFunc>(std::move(insertBlob));
     mRetrieveBlob = std::make_shared<RetrieveBlobFunc>(std::move(retrieveBlob));
 }
 
 bool Platform::hasInsertBlobFunc() const noexcept {
-    std::lock_guard<decltype(mMutex)> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     return mInsertBlob && bool(*mInsertBlob);
 }
 
 bool Platform::hasRetrieveBlobFunc() const noexcept {
-    std::lock_guard<decltype(mMutex)> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     return mRetrieveBlob && bool(*mRetrieveBlob);
 }
 
 void Platform::insertBlob(void const* key, size_t keySize, void const* value, size_t valueSize) {
     std::shared_ptr<InsertBlobFunc> callback;
     {
-        std::unique_lock<decltype(mMutex)> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         callback = mInsertBlob;
     }
     if (callback) {
@@ -168,7 +169,7 @@ void Platform::insertBlob(void const* key, size_t keySize, void const* value, si
 size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size_t valueSize) {
     std::shared_ptr<RetrieveBlobFunc> callback;
     {
-        std::unique_lock<decltype(mMutex)> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         callback = mRetrieveBlob;
     }
     if (callback) {
@@ -178,19 +179,19 @@ size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size
 }
 
 void Platform::setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept {
-    std::lock_guard<decltype(mMutex)> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     mDebugUpdateStat = std::make_shared<DebugUpdateStatFunc>(std::move(debugUpdateStat));
 }
 
 bool Platform::hasDebugUpdateStatFunc() const noexcept {
-    std::lock_guard<decltype(mMutex)> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
     return mDebugUpdateStat && bool(*mDebugUpdateStat);
 }
 
 void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
     std::shared_ptr<DebugUpdateStatFunc> callback;
     {
-        std::unique_lock<decltype(mMutex)> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         callback = mDebugUpdateStat;
     }
     if (callback) {
@@ -201,7 +202,7 @@ void Platform::debugUpdateStat(const char* key, uint64_t intValue) {
 void Platform::debugUpdateStat(const char* key, utils::CString stringValue) {
     std::shared_ptr<DebugUpdateStatFunc> callback;
     {
-        std::unique_lock<decltype(mMutex)> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         callback = mDebugUpdateStat;
     }
     if (callback) {

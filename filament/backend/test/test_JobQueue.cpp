@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "JobQueue.h"
+
+#include <gtest/gtest.h>
 
 #include <atomic>
 #include <thread>

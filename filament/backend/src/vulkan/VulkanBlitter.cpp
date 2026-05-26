@@ -15,9 +15,11 @@
  */
 
 #include "VulkanBlitter.h"
+
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
 #include "VulkanTexture.h"
+
 #include "vulkan/utils/Image.h"
 
 #include <utils/FixedCapacityVector.h>

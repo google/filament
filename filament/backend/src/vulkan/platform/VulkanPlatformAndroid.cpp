@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatformAndroid.h>
+#include "AndroidFrameCallback.h"
 
-#include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
-
-#include "AndroidFrameCallback.h"
+#include "vulkan/VulkanConstants.h"
+#include "vulkan/VulkanContext.h"
 
 #include <private/backend/BackendUtilsAndroid.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
-
-#include <bluevk/BlueVK.h>
 
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>

@@ -16,14 +16,14 @@
 
 #include "BackendTest.h"
 
+#include <private/backend/Driver.h>
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/Platform.h>
 
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
-
-#include <private/backend/Driver.h>
-#include <private/backend/PlatformFactory.h>
 
 namespace test {
 
