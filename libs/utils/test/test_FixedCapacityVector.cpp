@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 

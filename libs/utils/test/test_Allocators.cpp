@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
+#include <utils/Allocator.h>
+
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <bitset>
 #include <functional>
 #include <utility>
 #include <vector>
-
-#include <gtest/gtest.h>
-
-#include <utils/Allocator.h>
 
 using namespace utils;
 

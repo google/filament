@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <random>
-
 #include <utils/StructureOfArrays.h>
+
 #include <math/vec4.h>
+
+#include <gtest/gtest.h>
 
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <random>
 #include <utility>
 
 using namespace filament::math;

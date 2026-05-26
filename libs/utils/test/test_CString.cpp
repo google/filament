@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/CString.h>
+
+#include <gtest/gtest.h>
 
 #include <algorithm>
 #include <climits>
-#include <utility>
 #include <type_traits>
 #include <unordered_set>
+#include <utility>
 
 using namespace utils;
 

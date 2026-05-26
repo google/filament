@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/FixedCapacityVector.h>
 #include <utils/InternPool.h>
 #include <utils/Slice.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 

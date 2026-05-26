@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/RefCountedMap.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 

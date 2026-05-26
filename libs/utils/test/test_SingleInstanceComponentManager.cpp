@@ -1,8 +1,10 @@
-#include <gtest/gtest.h>
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
+
+#include <gtest/gtest.h>
+
 #include <vector>
 
 using namespace utils;

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#include <limits.h>
-#include <gtest/gtest.h>
-
 #include <utils/Path.h>
+
+#include <gtest/gtest.h>
 
 #include <iosfwd>
 #include <string>
 #include <vector>
+
+#include <limits.h>
 
 #ifndef PATH_MAX    // should be in <limits.h>
 #define PATH_MAX    4096
