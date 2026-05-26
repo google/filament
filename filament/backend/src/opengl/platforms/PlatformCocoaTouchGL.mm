@@ -32,6 +32,8 @@
 
 #include "CocoaTouchExternalImage.h"
 
+#include <mutex>
+
 namespace filament::backend {
 
 using namespace backend;
@@ -40,7 +42,10 @@ struct PlatformCocoaTouchGLImpl {
     EAGLContext* mGLContext = nullptr;
     CAEAGLLayer* mCurrentGlLayer = nullptr;
     std::vector<CAEAGLLayer*> mHeadlessGlLayers;
-    std::vector<EAGLContext*> mAdditionalContexts;
+    // TODO: to be converted to utils::Mutex/utils::LockGuard
+    // mutable utils::Mutex mAdditionalContextsLock;
+    mutable std::mutex mAdditionalContextsLock;
+    std::vector<EAGLContext*> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     CGRect mCurrentGlLayerRect;
     GLuint mDefaultFramebuffer = 0;
     GLuint mDefaultColorbuffer = 0;
@@ -112,12 +117,23 @@ void PlatformCocoaTouchGL::createContext(bool shared) {
                                    sharegroup:sharegroup];
     FILAMENT_CHECK_POSTCONDITION(context) << "Unable to create extra OpenGL ES context.";
     [EAGLContext setCurrentContext:context];
-    pImpl->mAdditionalContexts.push_back(context);
+    {
+        std::lock_guard const lock(pImpl->mAdditionalContextsLock);
+        pImpl->mAdditionalContexts.push_back(context);
+    }
 }
 
 void PlatformCocoaTouchGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
     pImpl->mGLContext = nil;
+    std::vector<EAGLContext*> additionalContexts;
+    {
+        std::lock_guard const lock(pImpl->mAdditionalContextsLock);
+        additionalContexts.swap(pImpl->mAdditionalContexts);
+    }
+    for (auto& context : additionalContexts) {
+        context = nil;
+    }
     delete pImpl->mExternalImageSharedGl;
 }
 

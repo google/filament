@@ -24,6 +24,7 @@
 
 #include <windows.h>
 
+#include <mutex>
 #include <vector>
 
 #include <stdint.h>
@@ -66,7 +67,10 @@ protected:
 
     // For shared contexts
     static constexpr int SHARED_CONTEXT_NUM = 2;
-    std::vector<HGLRC> mAdditionalContexts;
+    // TODO: to be converted to utils::Mutex/utils::LockGuard
+    // mutable utils::Mutex mAdditionalContextsLock;
+    mutable std::mutex mAdditionalContextsLock;
+    std::vector<HGLRC> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     std::atomic<int> mNextFreeSharedContextIndex{0};
 };
 
