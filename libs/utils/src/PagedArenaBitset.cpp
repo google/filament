@@ -787,7 +787,7 @@ PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RE
                 auto& [activeWordsMask, words] = out->mArena.back();
                 uint32_t pop = 0;
 
-                uint16_t dirs[MAX_MULTI_WAY_INPUTS];
+                uint16_t dirs[MAX_MULTI_WAY_INPUTS] = {};
                 for (size_t i = 0; i < count; ++i) {
                     dirs[i] = inputs[i]->mDirectory[dirIdx];
                 }
@@ -870,7 +870,7 @@ uint32_t PagedArenaBitset::intersectSizeInternal(const Collection& inputs) {
                 overlap &= overlap - 1;
                 uint32_t const dirIdx = (maskIdx << WORD_SHIFT) | bit;
 
-                uint16_t dirs[MAX_MULTI_WAY_INPUTS];
+                uint16_t dirs[MAX_MULTI_WAY_INPUTS] = {};
                 for (size_t i = 0; i < count; ++i) {
                     dirs[i] = inputs[i]->mDirectory[dirIdx];
                 }

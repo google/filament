@@ -31,8 +31,10 @@ using namespace utils;
 
 void mk_file(Path &p, const char *str) {
     FILE *f = ::fopen(p.c_str(), "w");
-    ::fprintf(f, "placeholder %s", str);
-    ::fclose(f);
+    if (f) {
+        ::fprintf(f, "placeholder %s", str);
+        ::fclose(f);
+    }
 };
 
 TEST(PathTest, Constructor) {

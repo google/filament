@@ -18,6 +18,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/Mutex.h>
+#include <utils/compiler.h>
 
 #include <benchmark/benchmark.h>
 
@@ -26,7 +27,7 @@ using namespace utils;
 static void BM_std_mutex(benchmark::State& state) {
     static std::mutex l;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         l.lock();
         l.unlock();
     }
@@ -35,7 +36,7 @@ static void BM_std_mutex(benchmark::State& state) {
 static void BM_utils_mutex(benchmark::State& state) {
     static Mutex l;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         l.lock();
         l.unlock();
     }

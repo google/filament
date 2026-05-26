@@ -40,8 +40,8 @@ TEST(SingleInstanceComponentManagerTest, BatchCallbackTest) {
     
     // Test addComponent (should be batched, not flushed yet)
     Entity e1 = em.create();
-    auto i1 = manager.addComponent(e1);
-    
+    manager.addComponent(e1);
+
     EXPECT_TRUE(notifiedEntities.empty());
     
     // Manual flush

@@ -573,7 +573,7 @@ void BM_bitset_Iteration<PagedArenaBitset>(benchmark::State& state) {
     }
 
     std::vector<uint32_t> buffer;
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         set.extractTo(buffer);
         size_t sum = 0;
         for (uint32_t const bit : buffer) {

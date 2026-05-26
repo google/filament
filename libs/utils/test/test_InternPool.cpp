@@ -64,7 +64,7 @@ TEST(InternPoolTest, ReleaseByValue) {
     InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
-    Slice<const int> interned = pool.acquire(value);
+    pool.acquire(value);
 
     EXPECT_FALSE(pool.empty());
 

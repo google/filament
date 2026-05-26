@@ -66,7 +66,7 @@ TEST(AllocatorTest, LinearAllocator) {
     EXPECT_EQ(scratch+8, p);
 
     // check alignment
-    p = la.alloc(1, 1, 0);
+    la.alloc(1, 1, 0);
     p = la.alloc(24, 32, 0);
     EXPECT_NE(nullptr, p);
     EXPECT_EQ(0, uintptr_t(p) & 31);
@@ -76,7 +76,7 @@ TEST(AllocatorTest, LinearAllocator) {
     EXPECT_EQ(uintptr_t(q), uintptr_t(p) + 24);
 
     // check alignment + offset
-    p = la.alloc(3, 1, 0);
+    la.alloc(3, 1, 0);
     p = la.alloc(sizeof(float)*4, 32, 4);
     EXPECT_EQ(0, uintptr_t(p) & 31);
 

@@ -83,7 +83,8 @@ TEST(CString, Constructors) {
         CString s2(std::move(s1));
         EXPECT_STREQ("move me", s2.c_str());
         EXPECT_EQ(original_cstr, s2.c_str()); // pointer should be moved
-        EXPECT_EQ(nullptr, s1.c_str()); // original should be empty
+        EXPECT_EQ(nullptr,
+                s1.c_str()); // original should be empty  // NOLINT(clang-analyzer-cplusplus.Move)
     }
 }
 
@@ -148,7 +149,7 @@ TEST(CString, Assignment) {
         s2 = std::move(s1);
         EXPECT_STREQ("move", s2.c_str());
         EXPECT_EQ(original_cstr, s2.c_str());
-        EXPECT_EQ(nullptr, s1.c_str());
+        EXPECT_EQ(nullptr, s1.c_str()); // NOLINT(clang-analyzer-cplusplus.Move)
     }
     // self-assignment
     {

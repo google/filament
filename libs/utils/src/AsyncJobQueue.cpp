@@ -37,6 +37,7 @@ void AsyncJobQueue::workerThreadLoop(const char* name, Priority priority) {
     JobSystem::setThreadName(name);
     JobSystem::setThreadPriority(priority);
     bool exitRequested;
+    decltype(mQueue) tempQueue;
     do {
         UniqueLock lock(mLock);
         // wait until we get a job, or we're asked to exit
@@ -44,16 +45,18 @@ void AsyncJobQueue::workerThreadLoop(const char* name, Priority priority) {
             mCondition.wait(lock);
         }
         exitRequested = mExitRequested;
-        auto const queue = std::move(mQueue);
+        tempQueue.swap(mQueue);
         // here we have drained the whole queue, and if exitRequested is set, we're guaranteed
         // no more job will be added after we unlock.
         lock.unlock();
 
         // execute the jobs without holding a lock. These jobs must be executed in order,
         // front to back, and are allowed to be long-running (like waiting on a fence).
-        for (auto& job : queue) {
+        for (auto& job: tempQueue) {
             job();
         }
+
+        tempQueue.clear();
     } while (!exitRequested);
 }
 #endif
