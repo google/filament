@@ -288,7 +288,6 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
             "skipFrame() can't be called between beginFrame() and endFrame()";
 
     if (!vsyncSteadyClockTimeNano) {
-        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
         mVsyncSteadyClockTimeNano = 0;
     }
 

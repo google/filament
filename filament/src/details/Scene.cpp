@@ -23,6 +23,7 @@
 #include "components/TransformManager.h"
 
 #include "details/Engine.h"
+#include "details/Camera.h"
 #include "details/Skybox.h"
 #include "details/View.h"
 

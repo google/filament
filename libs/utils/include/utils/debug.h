@@ -21,6 +21,7 @@
 
 namespace utils {
 UTILS_PUBLIC
+UTILS_NORETURN
 void panic(const char *func, const char * file, int line, const char *assertion) noexcept;
 } // namespace filament
 

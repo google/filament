@@ -18,16 +18,19 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 namespace filament::backend {
+
+using namespace utils;
 
 JobQueue::JobQueue(PassKey) {}
 
 JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJobId*/) {
     JobId jobId = preIssuedJobId;
     {
-        std::lock_guard<std::mutex> lock(mQueueMutex);
+        LockGuard const lock(mQueueMutex);
         if (mIsStopping) {
             return InvalidJobId;
         }
@@ -57,14 +60,16 @@ JobQueue::JobId JobQueue::push(Job job, JobId const preIssuedJobId/* = InvalidJo
 }
 
 JobQueue::Job JobQueue::pop(bool shouldBlock) {
-    std::unique_lock<std::mutex> lock(mQueueMutex);
+    UniqueLock lock(mQueueMutex);
 
     decltype(mJobsMap)::iterator it;
 
     while (true) {
         if (shouldBlock) {
             // Wait only if we're in blocking mode and the queue is empty
-            mQueueCondition.wait(lock, [this] { return !mJobOrder.empty() || mIsStopping; });
+            while (mJobOrder.empty() && !mIsStopping) {
+                mQueueCondition.wait(lock);
+            }
         }
 
         if (mJobOrder.empty()) {
@@ -97,7 +102,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
         return jobs;
     }
 
-    std::lock_guard<std::mutex> lock(mQueueMutex);
+    LockGuard const lock(mQueueMutex);
     if (mJobOrder.empty()) {
         return jobs;
     }
@@ -128,7 +133,7 @@ utils::FixedCapacityVector<JobQueue::Job> JobQueue::popBatch(int const maxJobsTo
 }
 
 JobQueue::JobId JobQueue::issueJobId() noexcept {
-    std::lock_guard<std::mutex> lock(mQueueMutex);
+    LockGuard const lock(mQueueMutex);
     JobId const jobId = genNextJobId();
     // Preallocate a job, which serves two main purposes. It provides a valid jobId that can be
     // checked for integrity when passed to the `push` method, and it enables job cancellation for
@@ -138,7 +143,7 @@ JobQueue::JobId JobQueue::issueJobId() noexcept {
 }
 
 bool JobQueue::cancel(JobId const jobId) noexcept {
-    std::lock_guard<std::mutex> lock(mQueueMutex);
+    LockGuard const lock(mQueueMutex);
 
     auto it = mJobsMap.find(jobId);
     if (it == mJobsMap.end()) {
@@ -152,7 +157,7 @@ bool JobQueue::cancel(JobId const jobId) noexcept {
 
 void JobQueue::stop() noexcept {
     {
-        std::lock_guard<std::mutex> lock(mQueueMutex);
+        LockGuard const lock(mQueueMutex);
         mIsStopping = true;
     }
     mQueueCondition.notify_all(); // Wake up all waiting threads
