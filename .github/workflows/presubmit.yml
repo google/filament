@@ -90,12 +90,6 @@ jobs:
       - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
-      - name: Test - public headers
-        run: |
-          # out/cmake-release should have the artifacts ready for installation. Here we install it
-          #   to test the public headers
-          ninja -C out/cmake-release install
-          test/check-headers/test.sh out/release/filament/include
 
   build-windows:
     name: build-windows
@@ -370,8 +364,27 @@ jobs:
         run: |
           # This will build for all three desktop backends on mac
           ./build.sh -p desktop debug gltf_viewer
-      - name: Run test
-        run: bash test/code-correctness/test.sh
+          # This will build and install the release build
+          ./build.sh -p desktop release && ninja -C out/cmake-release install
+      - name: Check - clang-tidy (exception escape)
+        run: bash test/code-correctness/clang-tidy-proxy.sh
+      - name: Check - public header inclusion
+        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
+      - name: Check - header organization
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILES=()
+            while IFS= read -r -d '' file; do
+              FILES+=("$file")
+            done < <(git diff -z --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+            if [ ${#FILES[@]} -gt 0 ]; then
+              bash test/code-correctness/check-headers.sh "${FILES[@]}"
+            else
+              echo "No files to check."
+            fi
+          else
+            bash test/code-correctness/check-headers.sh ${{ github.sha }}
+          fi
 
   test-backend:
     name: test-backend
