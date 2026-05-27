@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include <utils/ImmutableCString.h>
-
 #include <utils/compiler.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
 #include <utils/StaticString.h>

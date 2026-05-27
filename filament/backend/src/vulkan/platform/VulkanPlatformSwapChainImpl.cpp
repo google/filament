@@ -16,16 +16,16 @@
 
 #include "VulkanPlatformSwapChainImpl.h"
 
-#include "vulkan/VulkanConstants.h"
+#ifdef __ANDROID__
+#include "AndroidNativeWindow.h"
+#endif
+
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/Helper.h"
 #include "vulkan/utils/Image.h"
+#include "vulkan/VulkanConstants.h"
 
 #include <backend/DriverEnums.h>
-
-#ifdef __ANDROID__
-#include <AndroidNativeWindow.h>
-#endif
 
 using namespace bluevk;
 using namespace utils;

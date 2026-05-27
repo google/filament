@@ -16,25 +16,25 @@
 
 #include "details/VertexBuffer.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "details/AsyncHelpers.h"
 #include "details/BufferObject.h"
 #include "details/Engine.h"
-
-#include "FilamentAPI-impl.h"
 
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 #include <filament/VertexBuffer.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
 
-#include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 
 #include <algorithm>
 #include <array>

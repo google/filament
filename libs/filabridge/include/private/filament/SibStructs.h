@@ -17,8 +17,8 @@
 #ifndef TNT_FILABRIDGE_SIBSTRUCTS_H
 #define TNT_FILABRIDGE_SIBSTRUCTS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

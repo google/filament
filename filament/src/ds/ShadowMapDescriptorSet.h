@@ -18,10 +18,9 @@
 #define TNT_FILAMENT_SHADOWMAPDESCRIPTORSET_H
 
 #include "DescriptorSet.h"
-
 #include "DescriptorSetLayout.h"
 
-#include "private/filament/UibStructs.h"
+#include <private/filament/UibStructs.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>

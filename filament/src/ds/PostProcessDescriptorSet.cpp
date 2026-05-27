@@ -21,8 +21,8 @@
 
 #include "details/Engine.h"
 
-#include <private/filament/EngineEnums.h>
 #include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
 
 #include <backend/DriverEnums.h>

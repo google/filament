@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_FILAMENTAPI_H
 
 #include <utils/compiler.h>
-#include <utils/PrivateImplementation.h>
 #include <utils/ImmutableCString.h>
+#include <utils/PrivateImplementation.h>
 #include <utils/StaticString.h>
 
 #include <stddef.h>

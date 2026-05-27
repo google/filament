@@ -19,9 +19,9 @@
 
 #include "Definitions.h"
 
-#include <backend/DriverEnums.h>
-
 #include <private/backend/BackendUtils.h>  // for getFormatSize()
+
+#include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 

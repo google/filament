@@ -15,18 +15,18 @@
  */
 
 #include "OpenGLContext.h"
-#include "OpenGLState.h"
 
 #include "GLUtils.h"
+#include "OpenGLState.h"
 #include "OpenGLTimerQuery.h"
 
-#include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
-#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <algorithm>

@@ -17,19 +17,19 @@
 #ifndef TNT_FILAMENT_FRAMEINFO_H
 #define TNT_FILAMENT_FRAMEINFO_H
 
+#include "details/SwapChain.h"
+
 #include <filament/Renderer.h>
-
-#include <details/SwapChain.h>
-
-#include <backend/Platform.h>
-#include <backend/DriverEnums.h>
-#include <backend/Handle.h>
 
 #include <private/backend/DriverApi.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Platform.h>
+
+#include <utils/AsyncJobQueue.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/AsyncJobQueue.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <array>
@@ -39,8 +39,8 @@
 #include <ratio>
 #include <type_traits>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 class FEngine;

@@ -19,14 +19,15 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
-#include <math/scalar.h>
-#include <math/half.h>
-
 #include <utils/debug.h>
 #include <utils/Logger.h>
 
+#include <math/half.h>
+#include <math/scalar.h>
+
 #include <cstdint>
 #include <cstring>
+
 #include <stddef.h>
 #include <stdint.h>
 

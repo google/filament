@@ -15,10 +15,9 @@
  */
 
 #include "dof.h"
-
 #include "generated/resources/dof.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

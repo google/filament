@@ -17,18 +17,18 @@
 #ifndef TNT_BACKEND_TEST_H
 #define TNT_BACKEND_TEST_H
 
-#include <gtest/gtest.h>
+#include "ImageExpectations.h"
+#include "Lifetimes.h"
+#include "PlatformRunner.h"
 
-#include <filesystem>
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/DriverApi.h>
 
 #include <backend/Platform.h>
 
-#include "private/backend/CommandBufferQueue.h"
-#include "private/backend/DriverApi.h"
+#include <gtest/gtest.h>
 
-#include "PlatformRunner.h"
-#include "ImageExpectations.h"
-#include "Lifetimes.h"
+#include <filesystem>
 
 namespace test {
 

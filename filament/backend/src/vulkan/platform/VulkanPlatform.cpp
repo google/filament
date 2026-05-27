@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "backend/platforms/VulkanPlatform.h"
+#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
+#include "vulkan/utils/Helper.h"
+#include "vulkan/VulkanConstants.h"
+#include "vulkan/VulkanContext.h"
+#include "vulkan/VulkanDriver.h"
 
 #include <backend/DriverEnums.h>
-
-#include "vulkan/VulkanContext.h"
-#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
-#include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanDriver.h"
-#include "vulkan/utils/Helper.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>

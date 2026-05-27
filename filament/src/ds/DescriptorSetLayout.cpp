@@ -20,10 +20,10 @@
 
 #include "details/Engine.h"
 
+#include <backend/DriverEnums.h>
+
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
-
-#include <backend/DriverEnums.h>
 
 #include <algorithm>
 #include <utility>

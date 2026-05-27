@@ -19,8 +19,8 @@
 
 #include <filament/FilamentAPI.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/StaticString.h>

@@ -23,10 +23,10 @@
 
 #include <backend/Handle.h>
 
-#include <math/mat4.h>
-
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+
+#include <math/mat4.h>
 
 #include <cstddef>
 #include <cstdint>

@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETCACHE_H
 
 #include "VulkanHandles.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
@@ -25,9 +26,10 @@
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <bluevk/BlueVK.h>
+
 #include <utils/bitset.h>
 
-#include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
 #include <memory>

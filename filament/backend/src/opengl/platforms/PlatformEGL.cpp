@@ -14,34 +14,32 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/PlatformEGL.h>
-
 #include "opengl/GLUtils.h"
 
-#include <backend/platforms/OpenGLPlatform.h>
-
-#include <backend/Platform.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
+#include <backend/platforms/PlatformEGL.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Invocable.h>
+#include <utils/Logger.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
 
+#include <algorithm>
+#include <initializer_list>
+#include <new>
+#include <utility>
+
 #if defined(__ANDROID__)
 #include <sys/system_properties.h>
 #endif
-#include <utils/compiler.h>
-
-#include <utils/Invocable.h>
-#include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
-
-#include <algorithm>
-#include <new>
-#include <initializer_list>
-#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>

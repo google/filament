@@ -25,10 +25,10 @@
 
 #include <utils/debug.h>
 
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
-#include <chrono>
 
 using namespace bluevk;
 

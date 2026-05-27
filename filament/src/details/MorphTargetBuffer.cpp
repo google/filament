@@ -16,17 +16,17 @@
 
 #include "details/MorphTargetBuffer.h"
 
-#include <private/filament/SibStructs.h>
-
-#include <details/Engine.h>
-
 #include "FilamentAPI-impl.h"
 
-#include <math/mat4.h>
-#include <math/norm.h>
+#include "details/Engine.h"
+
+#include <private/filament/SibStructs.h>
 
 #include <utils/CString.h>
 #include <utils/StaticString.h>
+
+#include <math/mat4.h>
+#include <math/norm.h>
 
 namespace filament {
 

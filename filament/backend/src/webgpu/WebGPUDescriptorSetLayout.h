@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUDESCRIPTORSETLAYOUT_H
 
 #include "DriverBase.h"
+
 #include <backend/DriverEnums.h>
 
 #include <webgpu/webgpu_cpp.h>

@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
+#include "Culler.h"
 #include "PerformanceCounters.h"
-
-#include <benchmark/benchmark.h>
-
 
 #include <filament/Box.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/Frustum.h>
 #include <filament/ToneMapper.h>
-#include "Culler.h"
 
 #include <utils/Allocator.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/compiler.h>
 
-#include <vector>
+#include <benchmark/benchmark.h>
+
 #include <random>
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;
@@ -87,7 +87,7 @@ public:
 BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _ : state) {
             Culler::Test::intersects(visibles, frustum, boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
         }
         benchmark::ClobberMemory();
@@ -99,7 +99,7 @@ BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
 BENCHMARK_F(FilamentCullingFixture, sphereCulling)(benchmark::State& state) {
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _ : state) {
             Culler::Test::intersects(visibles, frustum, spheres.data(), BATCH_SIZE);
         }
         benchmark::ClobberMemory();
@@ -135,7 +135,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationDefault)(benchmark::State& state) 
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -158,7 +158,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationWithAdjustments)(benchmark::State&
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -181,7 +181,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationWithAdjustmentsInteger)(benchmark:
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -208,7 +208,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationAdvanced32)(benchmark::State& stat
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -231,7 +231,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationUltraQuality)(benchmark::State& st
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -253,7 +253,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationCustomLutBaseline)(benchmark::Stat
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -277,7 +277,7 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationWithCustomLut)(benchmark::State& s
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -304,7 +304,7 @@ BENCHMARK_F(ColorGradingFixture, lutGeneration1DLDR)(benchmark::State& state) {
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();
@@ -331,7 +331,7 @@ BENCHMARK_F(ColorGradingFixture, lutGeneration1DHDR)(benchmark::State& state) {
         std::vector<ColorGrading*> cgs;
         cgs.reserve(kMaxAccumulatedLuts);
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (UTILS_UNUSED auto _: state) {
             cgs.push_back(builder.build(*engine));
         }
         benchmark::ClobberMemory();

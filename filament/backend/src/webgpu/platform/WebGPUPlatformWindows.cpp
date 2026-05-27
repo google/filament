@@ -19,12 +19,11 @@
 #include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstdint>
 #include <vector>
-
-#include <Windows.h>
 
 /**
  * Windows OS specific implementation aspects of the WebGPU backend

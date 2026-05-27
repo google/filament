@@ -25,14 +25,16 @@
 #include "details/Scene.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/utils/Tracing.h>
-#include <private/backend/DriverApi.h>
 
 #include <filament/Box.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include <private/backend/DriverApi.h>
+
 #include <backend/DriverEnums.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/architecture.h>
 #include <utils/BinaryTreeArray.h>

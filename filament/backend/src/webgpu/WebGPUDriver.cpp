@@ -1146,10 +1146,12 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
     const auto extent{
         wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth }
     };
-    const uint32_t bytesPerRow{ static_cast<uint32_t>(
-            PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type) * width) };
-    const uint8_t* dataBuff{ static_cast<const uint8_t*>(inputData->buffer) };
-    const size_t dataSize{ inputData->size };
+    const size_t bpp = PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type);
+    const uint32_t stride = inputData->stride ? inputData->stride : width;
+    const uint32_t bytesPerRow = static_cast<uint32_t>(bpp * stride);
+    const size_t offsetBytes = (inputData->top * bytesPerRow) + (inputData->left * bpp);
+    const uint8_t* dataBuff = static_cast<const uint8_t*>(inputData->buffer) + offsetBytes;
+    const size_t dataSize = inputData->size - offsetBytes;
     const auto layout{ wgpu::TexelCopyBufferLayout{
         .bytesPerRow = bytesPerRow,
         .rowsPerImage = height,
@@ -1308,9 +1310,6 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
     wgpu::TextureView defaultDepthStencilView = nullptr;
     wgpu::TextureFormat defaultDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
-    const bool msaaSidecarsRequired{ renderTarget->getSamples() > 1 &&
-                                     renderTarget->getSampleCountPerAttachment() <= 1 };
-
     std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
     std::array<wgpu::TextureView, customColorViews.size()> customColorMsaaSidecarViews{};
     uint32_t customColorViewCount = 0;
@@ -1357,6 +1356,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                     customColorViews[customColorViewCount] =
                             colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer,
                                     renderTarget->getLayerCount());
+
+                    const bool msaaSidecarsRequired{ renderTarget->getSamples() > 1 &&
+                                 colorTexture->samples == 1 };
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -1401,7 +1403,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             if (dsTexture) {
                 customDepthStencilView = dsTexture->makeAttachmentTextureView(depthStencilMipLevel,
                         depthStencilArrayLayer, renderTarget->getLayerCount());
-                if (msaaSidecarsRequired) {
+                if (renderTarget->getSamples() > 1 && dsTexture->samples == 1) {
                     customDepthStencilMsaaSidecarTextureView =
                             dsTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
                                     renderTarget->getSamples(), depthStencilMipLevel,
@@ -1410,6 +1412,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << "Could not get a required MSAA sidecar texture view for "
                                "depth/stencil?";
                 }
+
                 customDepthStencilFormat = dsTexture->getViewFormat();
 
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::STENCIL) &&

@@ -21,14 +21,14 @@
 
 #include <filament/FilamentAPI.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/StaticString.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

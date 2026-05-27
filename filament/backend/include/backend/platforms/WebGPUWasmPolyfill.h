@@ -20,6 +20,7 @@
 #if defined(__EMSCRIPTEN__)
 
 #include <webgpu/webgpu_cpp.h>
+
 #include <cstdint>
 
 namespace wgpu {

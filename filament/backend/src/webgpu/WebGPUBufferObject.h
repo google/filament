@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUBUFFEROBJECT_H
 #define TNT_FILAMENT_BACKEND_WEBGPUBUFFEROBJECT_H
 
-#include "WebGPUBufferBase.h"
-
 #include "DriverBase.h"
+#include "WebGPUBufferBase.h"
 
 #include <cstdint>
 

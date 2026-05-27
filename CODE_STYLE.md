@@ -129,25 +129,27 @@ private:
 
 ### Headers
 
-- **always** include a class' header **first** in the `.cpp` file
-- other headers are sorted in reverse order of their layering, that is, lower layer headers last
-- within a layer, headers are sorted alphabetically
-- strive for implementing one class per file
-- `STL` limited in **filament** public headers to:
-    - `array`
-    - `initializer_list`
-    - `iterator`
-    - `limits`
-    - `optional`
-    - `type_traits`
-    - `utility`
-    - `variant`
+- **always** include a class' header **first** in the `.cpp` file.
+- other headers are sorted in order of their layering, from **most dependent to least dependent** (most dependent at the top, least dependent/lower layers at the bottom).
+- within a layer, headers are sorted alphabetically (with the exception of private local headers).
+- strive for implementing one class per file.
 
-For **libfilament** the rule of thumb is that STL headers that don't generate code are allowed (e.g. `type_traits`),
-conversely containers and algorithms are not allowed. There are exceptions such as `array`. See above for the full list.
-- The following `STL` headers are banned entirely, from public and private headers as well as implementation files:
-  - `iostream`
+#### Header Layering Hierarchy
+Headers must be grouped and separated by **exactly one blank line** in the following order (top to bottom):
 
+1.  **0. Corresponding Header:** `#include "details/Bar.h"` (the implementation's own header).
+2.  **0.5. Windows Cleanup Header:** `#include <utils/unwindows.h>` (always second to undefine Windows macros, only if needed).
+3.  **1. Private / Local Headers:** `#include "PrivateStuff.h"` (using `" "` syntax **only** for truly private headers located under the local module's `src/` directory or its subdirectories).
+4.  **2. Internal Proprietary Libraries:** `#include <filament/Box.h>`, `#include <private/filament/EngineEnums.h>`, `#include <filaflat/MaterialChunk.h>`, `#include <backend/Handle.h>` (all public and private includes for other proprietary libraries **must** use `< >` brackets syntax. The layering priority order of these libraries is dynamically computed based on the `CMakeLists.txt` target linkage graph from most dependent to least dependent).
+5.  **3. Third-Party Libraries:** `#include <tsl/robin_map.h>`, `#include <jni.h>` (known third-party and system includes).
+6.  **4. C++ Standard Library:** `#include <algorithm>` (standard C++ templates and `<c...>` wrappers like `<cstdint>`, `<cstddef>`).
+7.  **5. POSIX System Headers:** `#include <unistd.h>` (C POSIX system headers and `<sys/...>` headers, placed below C++ standard but above legacy C standard).
+8.  **6. C Standard Library:** `#include <stddef.h>` (legacy system headers ending in `.h`).
+
+#### Private / Local Includes Formatting (Layer 1)
+To maximize readability for local quoted includes:
+*   **Flat-First Sorting:** Flat/top-level files (without a directory prefix, e.g., `"Allocators.h"`) are sorted **first**. Files nested inside subdirectories (e.g., `"components/Foo.h"`) are sorted **second**.
+*   **Sub-Directory Spacing:** includes are grouped by their sub-directory path prefix, with **exactly one blank line** separating different sub-directory groups.
 
 *Sorting the headers is important to help catching missing `#include` directives.*
 
@@ -170,21 +172,80 @@ conversely containers and algorithms are not allowed. There are exceptions such 
 
 // Bar.cpp
 
+// 0. Corresponding header
 #include <foo/Bar.h>
 
-#include "PrivateStuff.h"
+// 0.5. Windows Cleanup
+#include <utils/unwindows.h>
 
-#include <foo/Alloc.h>
-#include <foo/Bar.h>
+// 1. Private / local headers (grouped by subdirectory prefix, flat first)
+#include "Allocators.h"
 
-#include <utils/compiler.h>
+#include "components/LightManager.h"
+#include "components/RenderableManager.h"
 
+#include "details/Engine.h"
+#include "details/Skybox.h"
+
+// 2. Internal library headers (sorted by topological dependencies: filaflat above backend)
+#include <private/filament/EngineEnums.h>
+#include <filament/Box.h>
+
+#include <filaflat/MaterialChunk.h>
+
+#include <backend/Handle.h>
+
+#include <private/utils/Tracing.h>
+#include <utils/Allocator.h>
+
+#include <math/vec3.h>
+
+// 3. Third-party
+#include <tsl/robin_map.h>
+
+// 4. C++ Standard Library
 #include <algorithm>
-#include <iostream>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
 
-#include <assert.h>
-#include <string.h>
+// 5. POSIX / System headers
+#include <unistd.h>
+#include <sys/stat.h>
+
+// 6. C Standard Library
+#include <stddef.h>
+#include <stdint.h>
 ```
+
+#### Automatic Header Formatting Tool
+An official script is available in the repository to automatically format and sort C++ include blocks in accordance with these rules:
+
+```bash
+./tools/reorganize_headers.py <file_or_directory>
+```
+
+To see what changes would be made without modifying the files, use the `--dry-run` option:
+```bash
+./tools/reorganize_headers.py --dry-run <file_or_directory>
+```
+
+*Note: The tool has safety checks built-in and will automatically skip any files with inline preprocessor conditionals (`#if`, `#ifdef`, etc.) or nested code statements inside their include block to prevent compilation regressions.*
+
+- `STL` limited in **filament** public headers to:
+    - `array`
+    - `initializer_list`
+    - `iterator`
+    - `limits`
+    - `optional`
+    - `type_traits`
+    - `utility`
+    - `variant`
+
+For **libfilament** the rule of thumb is that STL headers that don't generate code are allowed (e.g. `type_traits`),
+conversely containers and algorithms are not allowed. There are exceptions such as `array`. See above for the full list.
+- The following `STL` headers are banned entirely, from public and private headers as well as implementation files:
+  - `iostream`
 
 ### Strings
 

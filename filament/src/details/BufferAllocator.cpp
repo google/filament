@@ -17,10 +17,11 @@
 #include "details/BufferAllocator.h"
 
 #include <private/utils/Tracing.h>
-#include <utils/Panic.h>
+
 #include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 namespace filament {
 namespace {

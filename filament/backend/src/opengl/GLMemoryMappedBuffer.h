@@ -18,13 +18,12 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_GLMEMORYMAPPEDBUFFER_H
 
 #include "DriverBase.h"
+#include "gl_headers.h"
 
 #include <private/backend/HandleAllocator.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
-
-#include "gl_headers.h"
 
 #include <stddef.h>
 #include <stdint.h>

@@ -16,14 +16,14 @@
 
 #include "details/InstanceBuffer.h"
 
-#include "details/Engine.h"
-
 #include "FilamentAPI-impl.h"
+
+#include "details/Engine.h"
 
 #include <private/filament/UibStructs.h>
 
-#include <filament/FilamentAPI.h>
 #include <filament/Engine.h>
+#include <filament/FilamentAPI.h>
 #include <filament/InstanceBuffer.h>
 
 #include <backend/DriverEnums.h>
@@ -37,12 +37,11 @@
 #include <math/mat3.h>
 #include <math/mat4.h>
 
-#include <utility>
-
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cstddef>
+#include <utility>
 
 namespace filament {
 
