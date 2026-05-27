@@ -17,13 +17,12 @@
 #ifndef TNT_FILAMENT_DRIVER_METALENUMS_H
 #define TNT_FILAMENT_DRIVER_METALENUMS_H
 
-#include "private/backend/Driver.h"
-
-#include <Metal/Metal.h>
+#include <private/backend/Driver.h>
 
 #include <utils/Panic.h>
 
 #include <Availability.h>
+#include <Metal/Metal.h>
 
 namespace filament {
 namespace backend {

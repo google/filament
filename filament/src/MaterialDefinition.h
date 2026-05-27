@@ -17,16 +17,16 @@
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
 #include "ProgramSpecialization.h"
-#include "backend/DriverApiForward.h"
 
-#include <private/filament/Variant.h>
+#include "ds/DescriptorSetLayout.h"
+
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/ConstantInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
-#include <private/filament/ConstantInfo.h>
+#include <private/filament/Variant.h>
 
-#include <ds/DescriptorSetLayout.h>
-
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 

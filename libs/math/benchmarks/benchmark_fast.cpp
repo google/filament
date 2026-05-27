@@ -17,10 +17,10 @@
 
 #include "PerformanceCounters.h"
 
-#include <benchmark/benchmark.h>
-
 #include <math/fast.h>
 #include <math/half.h>
+
+#include <benchmark/benchmark.h>
 
 #include <cmath>
 

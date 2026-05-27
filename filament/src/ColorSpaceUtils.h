@@ -20,8 +20,8 @@
 #include <utils/compiler.h>
 
 #include <math/mat3.h>
-#include <math/vec3.h>
 #include <math/scalar.h>
+#include <math/vec3.h>
 
 #include <cmath>
 

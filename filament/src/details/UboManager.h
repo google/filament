@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMENT_DETAILS_UBOMANAGER_H
 #define TNT_FILAMENT_DETAILS_UBOMANAGER_H
 
-#include "backend/DriverApiForward.h"
-
 #include "details/BufferAllocator.h"
 
-#include <backend/Handle.h>
 #include <private/backend/DriverApi.h>
+
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
 
 #include <functional>
 #include <vector>

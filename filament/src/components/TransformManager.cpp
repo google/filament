@@ -16,10 +16,11 @@
 
 #include "components/TransformManager.h"
 
-#include <math/mat4.h>
+#include <filament/TransformManager.h>
 
 #include <utils/debug.h>
-#include <filament/TransformManager.h>
+
+#include <math/mat4.h>
 
 
 using namespace utils;

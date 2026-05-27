@@ -67,7 +67,6 @@ class FilamentTasks {
 // MISSING FEATURES
 // ----------------
 // None of the following features are implemented. They would be easy to add.
-// - Replace gltumble and Trackball with camutils Manipulator (i.e. enable scroll-to-zoom)
 // - Write a documentation page (might be neat if the doc page has instances of the actual viewer)
 // - Fix the import at the top of the file to support webpack / rollup / esbuild
 // - Expose more animation properties (e.g. enable / disable, selected index)
@@ -114,12 +113,14 @@ class FilamentViewer extends LitElement {
         // fully loaded, which is why we use the task manager.
         this.filamentTasks.add(this._startFilament.bind(this));
 
-        const overlay = this.shadowRoot.getElementById(this.overlayId);
-        ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
-            overlay.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
-        });
-        if (this.enableDrop) {
-            overlay.addEventListener("drop", this._dropHandler.bind(this), false);
+        const canvas = document.getElementById(this.canvasId);
+        if (canvas) {
+            ["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+                canvas.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation() }, false)
+            });
+            if (this.enableDrop) {
+                canvas.addEventListener("drop", this._dropHandler.bind(this), false);
+            }
         }
     }
 
@@ -147,6 +148,7 @@ class FilamentViewer extends LitElement {
                 width: 100%;
                 height: 100%;
                 position: absolute;
+                pointer-events: none;
             }
             .overlay {
                 text-align: center;
@@ -208,10 +210,13 @@ class FilamentViewer extends LitElement {
         this.view.setCamera(this.camera);
         this.view.setScene(this.scene);
 
-        // If gltumble has been loaded, use it.
-        if (window.Trackball) {
-            this.trackball = new Trackball(overlay, { startSpin: 0.0 });
-        }
+        this.manipulator = new Filament.Camutils$Manipulator$Builder()
+            .viewport(canvas.width, canvas.height)
+            .orbitHomePosition(0, -0.125, 1.5)
+            .targetPosition(0, -0.125, -4)
+            .upVector(0, 1, 0)
+            .build(Filament.Camutils$Mode.ORBIT);
+        this.manipulator.attach(canvas);
 
         // This color is consistent with the default CSS background color.
         this.renderer.setClearOptions({ clearColor: [0.8, 0.8, 0.8, 1.0], clear: true });
@@ -242,8 +247,9 @@ class FilamentViewer extends LitElement {
         canvas.width = width;
         canvas.height = height;
         this.view.setViewport([0, 0, width, height]);
-        const y = -0.125, eye = [0, y, 1.5], center = [0, y, 0], up = [0, 1, 0];
-        this.camera.lookAt(eye, center, up);
+        if (this.manipulator) {
+            this.manipulator.setViewport(width, height);
+        }
         const aspect = width / height;
         const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
         this.camera.setProjectionFov(25, aspect, 1.0, 10.0, fov);
@@ -418,11 +424,7 @@ class FilamentViewer extends LitElement {
         // Apply the root transform of the model.
         const tcm = this.engine.getTransformManager();
         const inst = tcm.getInstance(this.assetRoot);
-        let rootTransform = this.unitCubeTransform;
-        if (this.trackball) {
-            rootTransform = Filament.multiplyMatrices(rootTransform, this.trackball.getMatrix());
-        }
-        tcm.setTransform(inst, rootTransform);
+        tcm.setTransform(inst, this.unitCubeTransform);
         inst.delete();
 
         // Add renderable entities to the scene as they become ready.
@@ -438,6 +440,15 @@ class FilamentViewer extends LitElement {
     }
 
     _renderFrame() {
+        const now = Date.now();
+        const deltaTime = (now - (this.lastFrameTime || now)) / 1000;
+        this.lastFrameTime = now;
+
+        if (this.manipulator) {
+            this.manipulator.update(deltaTime);
+            this.camera.setLookAt(this.manipulator);
+        }
+
         // Apply transforms and add entities to the scene.
         if (this.asset) {
             this._updateAsset();

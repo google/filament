@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/VirtualMachineEnv.h"
+#include <private/backend/VirtualMachineEnv.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -41,7 +41,7 @@ using namespace utils;
 
 UTILS_NOINLINE
 JavaVM* VirtualMachineEnv::getVirtualMachine() {
-    std::lock_guard const lock(sLock);
+    LockGuard const lock(sLock);
     assert_invariant(sVirtualMachine);
     return sVirtualMachine;
 }
@@ -56,7 +56,7 @@ JavaVM* VirtualMachineEnv::getVirtualMachine() {
 UTILS_PUBLIC
 UTILS_NOINLINE
 jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) {
-    std::lock_guard const lock(sLock);
+    LockGuard const lock(sLock);
     if (sVirtualMachine) {
         // It doesn't make sense for JNI_OnLoad() to be called more than once
         return JNI_VERSION_1_6;

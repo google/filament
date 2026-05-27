@@ -20,7 +20,6 @@
 #include "webgpu/WebGPUConstants.h"
 
 #include <backend/DriverEnums.h>
-
 #if defined(__EMSCRIPTEN__)
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif

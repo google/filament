@@ -16,28 +16,28 @@
 
 #include "TextureCache.h"
 
-#include <filament/Engine.h>
-
 #include "details/Texture.h"
 
+#include <filament/Engine.h>
+
+#include <private/backend/DriverApi.h>
+
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
-#include <backend/DriverEnums.h>
 
-#include "private/backend/DriverApi.h"
-
-#include <utils/Logger.h>
 #include <utils/algorithm.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 #include <utils/ImmutableCString.h>
+#include <utils/Logger.h>
+#include <utils/ostream.h>
 #include <utils/StaticString.h>
 
-#include <array>
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <memory>
 #include <optional>

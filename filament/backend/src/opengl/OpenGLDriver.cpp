@@ -17,6 +17,7 @@
 #include "OpenGLDriver.h"
 
 #include "CommandStreamDispatcher.h"
+#include "gl_headers.h"
 #include "GLMemoryMappedBuffer.h"
 #include "GLTexture.h"
 #include "GLUtils.h"
@@ -26,9 +27,10 @@
 #include "OpenGLState.h"
 #include "OpenGLTimerQuery.h"
 #include "SystraceProfile.h"
-#include "gl_headers.h"
 
-#include <backend/platforms/OpenGLPlatform.h>
+#include <private/backend/CommandStream.h>
+#include <private/backend/Dispatcher.h>
+#include <private/backend/DriverApi.h>
 
 #include <backend/BufferDescriptor.h>
 #include <backend/CallbackHandler.h>
@@ -38,31 +40,31 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "private/backend/CommandStream.h"
-#include "private/backend/Dispatcher.h"
-#include "private/backend/DriverApi.h"
-
 #include <private/utils/Tracing.h>
 
-#include <type_traits>
 #include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
-#include <utils/ImmutableCString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 
+#include <math/mat3.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
-#include <math/mat3.h>
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
 
 #include <algorithm>
 #include <chrono>
@@ -72,16 +74,13 @@
 #include <mutex>
 #include <new>
 #include <type_traits>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#if defined(__EMSCRIPTEN__)
-#include <emscripten.h>
-#endif
 
 #if defined(__clang__)
 #pragma clang diagnostic push

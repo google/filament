@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
-#include "private/backend/CommandBufferQueue.h"
-#include "private/backend/CommandStream.h" // For NoopCommand
-#include "private/backend/CircularBuffer.h"
+#include <private/backend/CircularBuffer.h>
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/CommandStream.h>
 
 #include <utils/Panic.h> // For assert_invariant
 
-#include <thread>
-#include <vector>
-#include <numeric>
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <chrono>
-#include <future>
 #include <cstring>
+#include <future>
+#include <numeric>
+#include <thread>
+#include <vector>
 
 using namespace std::chrono_literals;
 

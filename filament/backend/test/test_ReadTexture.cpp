@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "Shader.h"
@@ -23,8 +22,8 @@
 #include "Skip.h"
 #include "TrianglePrimitive.h"
 
-#include <utils/Hash.h>
 #include <utils/debug.h>
+#include <utils/Hash.h>
 
 #include <algorithm>
 #include <fstream>

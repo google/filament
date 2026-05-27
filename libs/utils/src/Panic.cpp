@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <utils/Panic.h>
-
 #include "ostream_.h"
 
 #include <utils/CallStack.h>
@@ -24,11 +22,7 @@
 #include <utils/Log.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <utils/Panic.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -36,6 +30,11 @@
 #include <new>
 #include <string_view>
 #include <utility>
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace utils {
 

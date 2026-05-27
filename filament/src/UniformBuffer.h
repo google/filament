@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_UNIFORMBUFFER_H
 #define TNT_FILAMENT_UNIFORMBUFFER_H
 
-#include "private/backend/DriverApi.h"
+#include <private/backend/DriverApi.h>
 
 #include <backend/BufferDescriptor.h>
 
@@ -33,8 +33,8 @@
 
 #include <type_traits>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 namespace filament {

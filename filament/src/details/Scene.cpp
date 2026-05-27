@@ -23,25 +23,20 @@
 #include "components/TransformManager.h"
 
 #include "details/Engine.h"
+#include "details/Camera.h"
 #include "details/Skybox.h"
 #include "details/View.h"
 
-#include <backend/Handle.h>
-
 #include <private/filament/UibStructs.h>
 
-#include <private/utils/Tracing.h>
-
 #include <filament/Box.h>
-#include <filament/TransformManager.h>
-#include <filament/RenderableManager.h>
 #include <filament/LightManager.h>
+#include <filament/RenderableManager.h>
+#include <filament/TransformManager.h>
 
-#include <math/mat3.h>
-#include <math/mat4.h>
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
+#include <backend/Handle.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
@@ -52,15 +47,20 @@
 #include <utils/JobSystem.h>
 #include <utils/Range.h>
 
-#include <algorithm>
-#include <cstdint>
-#include <limits>
-#include <functional>
-#include <memory>
-#include <utility>
-#include <new>
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <new>
+#include <utility>
 
 using namespace filament::backend;
 using namespace filament::math;

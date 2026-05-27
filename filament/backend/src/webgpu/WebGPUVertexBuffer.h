@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUVERTEXBUFFER_H
 
 #include "DriverBase.h"
+
 #include <backend/Handle.h>
 
 #include <cstdint>

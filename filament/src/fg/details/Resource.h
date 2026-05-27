@@ -17,13 +17,12 @@
 #ifndef TNT_FILAMENT_FG_DETAILS_RESOURCE_H
 #define TNT_FILAMENT_FG_DETAILS_RESOURCE_H
 
-#include "fg/FrameGraphId.h"
-#include "fg/FrameGraphTexture.h"
-#include "fg/FrameGraphRenderPass.h"
-
+#include "fg/details/DependencyGraph.h"
 #include "fg/details/ResourceAllocator.h"
 #include "fg/details/ResourceCreationContext.h"
-#include "fg/details/DependencyGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphRenderPass.h"
+#include "fg/FrameGraphTexture.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

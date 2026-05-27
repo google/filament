@@ -16,9 +16,9 @@
 
 #include "WebGPUVertexBufferInfo.h"
 
+#include "DriverBase.h"
 #include "WebGPUConstants.h"
 
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>

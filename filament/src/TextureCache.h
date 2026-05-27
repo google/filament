@@ -19,22 +19,21 @@
 
 #include <filament/Engine.h>
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "backend/DriverApiForward.h"
-
-#include <utils/StaticString.h>
 #include <utils/Hash.h>
+#include <utils/StaticString.h>
 
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
 
-#include <cstddef>
 #include <stddef.h>
 #include <stdint.h>
 

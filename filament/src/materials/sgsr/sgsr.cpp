@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "fsr.h"
-
 #include "generated/resources/sgsr.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "fsr.h"
+
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

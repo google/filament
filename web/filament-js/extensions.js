@@ -700,4 +700,57 @@ Filament.loadClassExtensions = function() {
     Filament.gltfio$FilamentInstance.prototype.getMaterialVariantNames = function() {
         return Filament.vectorToArray(this._getMaterialVariantNames());
     }
+
+    /// Camutils$Manipulator ::class::
+
+    /**
+     * Attaches the manipulator to a canvas and starts listening for mouse and wheel events.
+     */
+    Filament.Camutils$Manipulator.prototype.attach = function(canvas) {
+        const manip = this;
+
+        this.onMouseDown = (e) => {
+            manip.grabBegin(e.offsetX, -e.offsetY, e.shiftKey);
+        };
+        this.onMouseMove = (e) => {
+            manip.grabUpdate(e.offsetX, -e.offsetY);
+        };
+        this.onMouseUp = (e) => {
+            manip.grabEnd();
+        };
+        this.onWheel = (e) => {
+            e.preventDefault();
+            // Camutils expects a scroll delta where negative means "zoom in".
+            // DOM wheel deltaY is positive for "scroll down" (zoom out).
+            manip.scroll(e.offsetX, e.offsetY, e.deltaY / 4.0);
+        };
+
+        canvas.addEventListener('mousedown', this.onMouseDown);
+        window.addEventListener('mousemove', this.onMouseMove);
+        window.addEventListener('mouseup', this.onMouseUp);
+        canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    };
+
+    /**
+     * Detaches the manipulator from its canvas and stops listening for events.
+     */
+    Filament.Camutils$Manipulator.prototype.detach = function(canvas) {
+        canvas.removeEventListener('mousedown', this.onMouseDown);
+        window.removeEventListener('mousemove', this.onMouseMove);
+        window.removeEventListener('mouseup', this.onMouseUp);
+        canvas.removeEventListener('wheel', this.onWheel);
+    };
+
+    /// Camera ::core class::
+
+    /**
+     * Updates the camera position and orientation using the given manipulator.
+     */
+    Filament.Camera.prototype.setLookAt = function(manip) {
+        const eye = [0, 0, 0];
+        const target = [0, 0, 0];
+        const up = [0, 0, 0];
+        manip.getLookAt(eye, target, up);
+        this.lookAt(eye, target, up);
+    };
 };

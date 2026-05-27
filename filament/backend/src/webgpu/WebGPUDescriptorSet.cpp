@@ -24,8 +24,8 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 

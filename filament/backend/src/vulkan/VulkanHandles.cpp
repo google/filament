@@ -16,10 +16,9 @@
 
 #include "VulkanHandles.h"
 
-// TODO: remove this by moving DebugUtils out of VulkanDriver
 #include "VulkanDriver.h"
-
 #include "VulkanMemory.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Definitions.h"
@@ -28,8 +27,8 @@
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/compiler.h> // UTILS_FALLTHROUGH
-#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 #include <utils/CString.h>
+#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
 

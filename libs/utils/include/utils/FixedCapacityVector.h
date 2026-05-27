@@ -17,9 +17,9 @@
 #ifndef TNT_UTILS_FIXEDCAPACITYVECTOR_H
 #define TNT_UTILS_FIXEDCAPACITYVECTOR_H
 
-#include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/compressed_pair.h>
+#include <utils/Slice.h>
 
 #include <algorithm>
 #include <initializer_list>

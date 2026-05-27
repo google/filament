@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
+#include "VulkanTexture.h"
+
+#include "DataReshaper.h"
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
 #include "VulkanMemory.h"
-#include "VulkanTexture.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
 
-#include <DataReshaper.h>
-#include <backend/DriverEnums.h>
 #include <private/backend/BackendUtils.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>

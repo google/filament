@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
@@ -35,8 +34,8 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <new>
 #include <tuple>
 #include <utility>

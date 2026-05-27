@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_MATERIALINSTANCE_H
 #define TNT_FILAMENT_MATERIALINSTANCE_H
 
-#include <filament/FilamentAPI.h>
 #include <filament/Color.h>
 #include <filament/Engine.h>
+#include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 
 #include <backend/DriverEnums.h>

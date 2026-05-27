@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include "VulkanConstants.h"
 #include "VulkanFencePool.h"
+
+#include "VulkanConstants.h"
 
 #include <algorithm>
 #include <deque>

@@ -15,7 +15,8 @@
  */
 
 #include "details/View.h"
-#include "filament/View.h"
+
+#include <filament/View.h>
 
 #include <stdint.h>
 

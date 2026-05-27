@@ -17,22 +17,23 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 #define TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 
-#include <bluevk/BlueVK.h>
-
 #include "DriverBase.h"
-#include "backend/DriverEnums.h"
-#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 #include "vulkan/utils/StaticVector.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 #include <backend/Program.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <utils/Mutex.h>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
@@ -265,7 +266,7 @@ struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
     };
 
     VulkanSync() {}
-    std::mutex lock;
+    utils::Mutex lock;
     std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 

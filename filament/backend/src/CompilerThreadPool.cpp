@@ -20,9 +20,9 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Mutex.h>
 
 #include <algorithm>
-#include <iterator>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -42,7 +42,7 @@ CompilerThreadPool::~CompilerThreadPool() noexcept {
     assert_invariant(mQueues[2].empty());
 }
 
-void CompilerThreadPool::init(uint32_t threadCount,
+void CompilerThreadPool::init(uint32_t const threadCount,
         ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) {
     auto setup = std::make_shared<ThreadSetup>(std::move(threadSetup));
     auto cleanup = std::make_shared<ThreadCleanup>(std::move(threadCleanup));
@@ -54,36 +54,37 @@ void CompilerThreadPool::init(uint32_t threadCount,
             (*setup)();
 
             // process jobs from the queue until we're asked to exit
-            while (!mExitRequested) {
-                std::unique_lock lock(mQueueLock);
-                mQueueCondition.wait(lock, [this]() {
-                    return  mExitRequested ||
-                            (!std::all_of( std::begin(mQueues), std::end(mQueues),
-                                    [](auto&& q) { return q.empty(); }));
+            while (true) {
+                UniqueLock lock(mQueueLock);
+                mQueueCondition.wait(lock, [this]() UTILS_NO_THREAD_SAFETY_ANALYSIS {
+                    return mExitRequested ||
+                            (!std::ranges::all_of(mQueues, [](auto&& q) { return q.empty(); }));
                 });
+
+                if (UTILS_UNLIKELY(mExitRequested)) {
+                    break;
+                }
 
                 FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "CompilerThreadPool Jobs",
                         mQueues[0].size() + mQueues[1].size() + mQueues[2].size());
 
-                if (UTILS_LIKELY(!mExitRequested)) {
-                    Job job;
-                    // use the first queue that's not empty
-                    auto& queue = [this]() -> auto& {
-                        for (auto& q: mQueues) {
-                            if (!q.empty()) {
-                                return q;
-                            }
+                Job job;
+                // use the first queue that's not empty
+                auto& queue = [this]() UTILS_NO_THREAD_SAFETY_ANALYSIS -> auto& {
+                    for (auto& q: mQueues) {
+                        if (!q.empty()) {
+                            return q;
                         }
-                        return mQueues[0]; // we should never end-up here.
-                    }();
-                    assert_invariant(!queue.empty());
-                    std::swap(job, queue.front().second);
-                    queue.pop_front();
+                    }
+                    return mQueues[0]; // we should never end-up here.
+                }();
+                assert_invariant(!queue.empty());
+                std::swap(job, queue.front().second);
+                queue.pop_front();
 
-                    // execute the job without holding any locks
-                    lock.unlock();
-                    job();
-                }
+                // execute the job without holding any locks
+                lock.unlock();
+                job();
             }
 
             (*cleanup)();
@@ -106,7 +107,7 @@ auto CompilerThreadPool::find(program_token_t const& token) -> std::pair<Queue&,
 }
 
 auto CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
-    std::unique_lock const lock(mQueueLock);
+    LockGuard const lock(mQueueLock);
     Job job;
     auto&& [q, pos] = find(token);
     if (pos != q.end()) {
@@ -118,17 +119,22 @@ auto CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
 
 void CompilerThreadPool::queue(CompilerPriorityQueue priorityQueue,
         program_token_t const& token, Job&& job) {
-    std::unique_lock const lock(mQueueLock);
+    LockGuard const lock(mQueueLock);
     mQueues[size_t(priorityQueue)].emplace_back(token, std::move(job));
     mQueueCondition.notify_one();
 }
 
 void CompilerThreadPool::terminate() noexcept {
-    std::unique_lock lock(mQueueLock);
-    mExitRequested = true;
-    mQueueCondition.notify_all();
-    lock.unlock();
+    {
+        LockGuard const lock(mQueueLock);
+        mExitRequested = true;
+        mQueueCondition.notify_all();
+    } // lock releases automatically here!
 
+    // We MUST unlock the queue lock before joining background compiler threads.
+    // If we hold mQueueLock while blocked inside join(), a worker thread waking up
+    // from its condition variable wait will attempt to re-acquire mQueueLock and block,
+    // resulting in a fatal runtime deadlock.
     for (auto& thread: mCompilerThreads) {
         if (thread.joinable()) {
             thread.join();
@@ -137,9 +143,14 @@ void CompilerThreadPool::terminate() noexcept {
     mCompilerThreads.clear();
 
     // Clear all the queues, dropping the remaining jobs. This relies on the jobs being cancelable.
-    for (auto&& q : mQueues) {
-        q.clear();
-    }
+    // Since background threads are joined, no other thread is active. We briefly re-acquire
+    // the lock solely to satisfy Clang's static capability analysis (mQueues is UTILS_GUARDED_BY).
+    {
+        LockGuard const lock(mQueueLock);
+        for (auto&& q : mQueues) {
+            q.clear();
+        }
+    } // lock releases automatically here!
 }
 
 } // namespace filament::backend

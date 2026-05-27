@@ -16,15 +16,15 @@
 #ifndef TNT_UTILS_INTERNPOOL_H
 #define TNT_UTILS_INTERNPOOL_H
 
-#include <utils/Slice.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Panic.h>
-#include <utils/debug.h>
-
-#include <limits>
+#include <utils/Slice.h>
 
 #include <tsl/robin_map.h>
+
+#include <limits>
 
 namespace utils {
 
