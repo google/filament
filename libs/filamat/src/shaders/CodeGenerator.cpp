@@ -431,7 +431,7 @@ io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage
 
 io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage stage,
         const AttributeBitset& attributes, Interpolation interpolation,
-        MaterialBuilder::PushConstantList const& pushConstants) const {
+        MaterialBuilder::PushConstantList const& pushConstants, uint32_t pushConstantOffset) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -457,8 +457,8 @@ io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, Shader
         });
 
         out << "\n";
-        generatePushConstants(out, pushConstants, attributes.size());
     }
+    generatePushConstants(out, pushConstants, attributes.size(), pushConstantOffset);
 
     out << "\n";
     out << SHADERS_SURFACE_VARYINGS_GLSL_DATA;
@@ -899,12 +899,9 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
-// Note that we've only introduced push constants to the vertex stage.  If we want to add push
-// constants to the fragment stage, in vulkan, we would have to offset the definition of the field
-// by the size of the constant struct in the vertex stage. This is due to vulkan having essentially
-// one block of memory for push constants that is shared across all stages).
 utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
-        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation,
+        uint32_t startOffset) const {
     if (UTILS_UNLIKELY(pushConstants.empty())) {
         return out;
     }
@@ -923,14 +920,20 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
     bool const outputSpirv =
             mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {
-        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n";
     } else {
         out << "struct " << STRUCT_NAME << " {\n";
     }
 
+    bool isFirst = true;
     for (auto const& constant: pushConstants) {
+        if (outputSpirv && startOffset != 0 && isFirst) {
+            out << "layout(offset=" << startOffset << ") ";
+        }
+        isFirst = false;
         out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
     }
+
 
     if (outputSpirv) {
         out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
