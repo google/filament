@@ -1736,10 +1736,11 @@ class_<utils::EntityManager>("EntityManager")
     }), allow_raw_pointers())
 #endif
 
-    /// create ::method::
-    /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
-    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy));
+    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy))
+    .function("advanceEpoch", &utils::EntityManager::advanceEpoch)
+    .class_function("getMaxEntityCount", &utils::EntityManager::getMaxEntityCount)
+    .function("getEntityCount", &utils::EntityManager::getEntityCount);
 
 // DRIVER TYPES
 // ------------

@@ -16,6 +16,17 @@
 
 #include "common/arguments.h"
 
+#include "generated/resources/gltf_demo.h"
+
+#include "materials/uberarchive.h"
+
+#include <viewer/ViewerGui.h>
+
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -26,27 +37,16 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
-#include <gltfio/AssetLoader.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/ResourceLoader.h>
-#include <gltfio/TextureProvider.h>
-
-#include <viewer/ViewerGui.h>
-
 #include <camutils/Manipulator.h>
 
 #include <utils/getopt.h>
-
 #include <utils/NameComponentManager.h>
-
-#include <iostream>
-#include <fstream>
-#include <string>
 
 #include <math/mat4.h>
 
-#include "generated/resources/gltf_demo.h"
-#include "materials/uberarchive.h"
+#include <fstream>
+#include <iostream>
+#include <string>
 
 using namespace filament;
 using namespace filament::math;
@@ -295,6 +295,9 @@ int main(int argc, char** argv) {
         app.resourceLoader->asyncUpdateLoad();
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
+
+        app.names->gc();
+        app.loader->gc();
 
         if (app.instanceToAnimate == -1) {
             for (FilamentInstance* instance : app.instances) {

@@ -260,6 +260,8 @@ struct FAssetLoader : public AssetLoader {
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(*config.materials),
             mEngine(*config.engine),
+            mNodeManager(mEntityManager),
+            mTrsTransformManager(mEntityManager),
             mDefaultNodeName(config.defaultNodeName) {
         if (config.ext) {
             FILAMENT_CHECK_POSTCONDITION(AssetConfigurationExtended::isSupported())
@@ -281,6 +283,11 @@ struct FAssetLoader : public AssetLoader {
 
     void destroyAsset(const FFilamentAsset* asset) {
         delete asset;
+    }
+
+    void gc() noexcept {
+        mNodeManager.gc();
+        mTrsTransformManager.gc();
     }
 
     size_t getMaterialsCount() const noexcept {
@@ -1836,6 +1843,10 @@ void AssetLoader::enableDiagnostics(bool enable) {
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
     downcast(this)->destroyAsset(downcast(asset));
+}
+
+void AssetLoader::gc() noexcept {
+    downcast(this)->gc();
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
