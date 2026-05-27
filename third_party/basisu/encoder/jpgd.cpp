@@ -7,6 +7,7 @@
 // Public Domain
 //
 // License 2:
+// Copyright (C) 2019-2026 Binomial LLC. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,6 +24,10 @@
 // v1.04, May. 19, 2012: Code tweaks to fix VS2008 static code analysis warnings
 // v2.00, March 20, 2020: Fuzzed with zzuf and afl. Fixed several issues, converted most assert()'s to run-time checks. Added chroma upsampling. Removed freq. domain upsampling. gcc/clang warnings.
 //
+
+#if defined(__wasi__)
+#pragma message("__wasi__ defined in jpgd.cpp: note if a decode error occurs, the app will exit because wasi doesn't support longjmp yet.")
+#endif
 
 #include "jpgd.h"
 #include <string.h>
@@ -608,7 +613,14 @@ namespace jpgd {
 	{
 		m_error_code = status;
 		free_all_blocks();
+
+#ifdef __wasi__
+		// HACK HACK for wasi's lack of longjmp support
+		fprintf(stderr, "jpeg_decoder::stop_decoding: JPEG decode failed with status: %i\n", (int)status);
+		exit(EXIT_FAILURE);
+#else
 		longjmp(m_jmp_state, status);
+#endif
 	}
 
 	void* jpeg_decoder::alloc(size_t nSize, bool zero)
@@ -947,15 +959,15 @@ namespace jpgd {
 	// Finds the next marker.
 	int jpeg_decoder::next_marker()
 	{
-		uint c, bytes;
+		uint c;// , bytes;
 
-		bytes = 0;
+		//bytes = 0;
 
 		do
 		{
 			do
 			{
-				bytes++;
+				//bytes++;
 				c = get_bits(8);
 			} while (c != 0xFF);
 
@@ -1303,7 +1315,7 @@ namespace jpgd {
 		int i;
 		jpgd_block_t* p;
 		jpgd_quant_t* q;
-		int mcu_row, mcu_block, row_block = 0;
+		int mcu_row, mcu_block;// , row_block = 0;
 		int component_num, component_id;
 		int block_x_mcu[JPGD_MAX_COMPONENTS];
 
@@ -1338,7 +1350,7 @@ namespace jpgd {
 					if (p[g_ZAG[i]])
 						p[g_ZAG[i]] = static_cast<jpgd_block_t>(p[g_ZAG[i]] * q[i]);
 
-				row_block++;
+				//row_block++;
 
 				if (m_comps_in_scan == 1)
 					block_x_mcu[component_id]++;
@@ -1425,7 +1437,7 @@ namespace jpgd {
 	// Decodes and dequantizes the next row of coefficients.
 	void jpeg_decoder::decode_next_row()
 	{
-		int row_block = 0;
+		//int row_block = 0;
 
 		for (int mcu_row = 0; mcu_row < m_mcus_per_row; mcu_row++)
 		{
@@ -1528,7 +1540,7 @@ namespace jpgd {
 
 				m_mcu_block_max_zag[mcu_block] = k;
 
-				row_block++;
+				//row_block++;
 			}
 
 			transform_mcu(mcu_row);
@@ -2071,8 +2083,10 @@ namespace jpgd {
 
 	int jpeg_decoder::decode_next_mcu_row()
 	{
+#ifndef __wasi__
 		if (setjmp(m_jmp_state))
 			return JPGD_FAILED;
+#endif
 
 		const bool chroma_y_filtering = (m_flags & cFlagLinearChromaFiltering) && ((m_scan_type == JPGD_YH2V2) || (m_scan_type == JPGD_YH1V2)) && (m_image_x_size >= 2) && (m_image_y_size >= 2);
 		if (chroma_y_filtering)
@@ -2987,8 +3001,10 @@ namespace jpgd {
 
 	jpeg_decoder::jpeg_decoder(jpeg_decoder_stream* pStream, uint32_t flags)
 	{
+#ifndef __wasi__
 		if (setjmp(m_jmp_state))
 			return;
+#endif
 		decode_init(pStream, flags);
 	}
 
@@ -3000,8 +3016,10 @@ namespace jpgd {
 		if (m_error_code)
 			return JPGD_FAILED;
 
+#ifndef __wasi__
 		if (setjmp(m_jmp_state))
 			return JPGD_FAILED;
+#endif
 
 		decode_start();
 
@@ -3146,7 +3164,7 @@ namespace jpgd {
 
 		for (int y = 0; y < image_height; y++)
 		{
-			const uint8* pScan_line;
+			const uint8* pScan_line = nullptr;
 			uint scan_line_len;
 			if (decoder.decode((const void**)&pScan_line, &scan_line_len) != JPGD_SUCCESS)
 			{

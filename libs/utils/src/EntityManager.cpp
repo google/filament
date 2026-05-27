@@ -19,6 +19,7 @@
 #include "EntityManagerImpl.h"
 
 #include <utils/Entity.h>
+#include <utils/PagedArenaBitset.h>
 
 #include <cassert>
 #include <cstddef>
@@ -86,6 +87,12 @@ void EntityManager::dumpActiveEntities(utils::io::ostream& out) const {
 
 bool EntityManager::isAlive(Entity const e) const noexcept {
     return static_cast<EntityManagerImpl const *>(this)->isAlive(e);
+}
+
+PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
+    auto const* impl = static_cast<EntityManagerImpl const*>(this);
+    std::lock_guard const lock(impl->mFreeListLock);
+    return impl->mAliveEntities.clone();
 }
 
 } // namespace utils

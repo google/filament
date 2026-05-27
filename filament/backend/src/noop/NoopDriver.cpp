@@ -419,6 +419,10 @@ void NoopDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 void NoopDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
 }
 
+void NoopDriver::drawArrays(uint32_t vertexOffset, uint32_t vertexCount,
+        uint32_t instanceCount) {
+}
+
 void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
         uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
 }

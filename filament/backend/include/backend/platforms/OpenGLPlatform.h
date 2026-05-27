@@ -53,7 +53,7 @@ protected:
     ~OpenGLPlatform() noexcept override;
 
     utils::CString getDeviceInfo(DeviceInfoType infoType,
-            Driver* UTILS_NULLABLE driver) const noexcept override;
+            Driver* UTILS_NULLABLE driver) const override;
 
 public:
     struct ExternalTexture {

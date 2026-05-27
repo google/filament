@@ -1,4 +1,3 @@
-
 <div class="demo_frame" style="width:100%; height:400px; border: 1px solid black; position: relative;">
     <canvas id="demo-canvas" style="width:100%; height:100%; touch-action: none;"></canvas>
 </div>
@@ -7,94 +6,106 @@
 <script>
 // We wrap the demo code so it applies to demo-canvas instead of generic canvas
 (function() {
-    const originalGetElementsByTagName = document.getElementsByTagName;
-    document.getElementsByTagName = function(tag) {
-        if (tag === 'canvas') return [document.getElementById('demo-canvas')];
-        return originalGetElementsByTagName.call(document, tag);
-    };
-//
+const originalGetElementsByTagName = document.getElementsByTagName;
+document.getElementsByTagName = function(tag) {
+  if (tag === 'canvas') return [document.getElementById('demo-canvas')];
+  return originalGetElementsByTagName.call(document, tag);
+};
+
 const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
 const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
 const filamat_url = 'plastic.filamat'
-//
-Filament.init([ filamat_url, ibl_url, sky_url ], () => {
-  // Create some global aliases to enums for convenience.
-  window.VertexAttribute = Filament.VertexAttribute;
-  window.AttributeType = Filament.VertexBuffer$AttributeType;
-  window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
-  window.IndexType = Filament.IndexBuffer$IndexType;
-  window.Fov = Filament.Camera$Fov;
-  window.LightType = Filament.LightManager$Type;
-//
-  // Obtain the canvas DOM object and pass it to the App.
-  const canvas = document.getElementsByTagName('canvas')[0];
-  window.app = new App(canvas);
-} );
-//
+
+const initFilament = (backend) => () => {
+  Filament.init([ filamat_url, ibl_url, sky_url ], () => {
+    // Create some global aliases to enums for convenience.
+    window.VertexAttribute = Filament.VertexAttribute;
+    window.AttributeType = Filament.VertexBuffer$AttributeType;
+    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+    window.IndexType = Filament.IndexBuffer$IndexType;
+    window.Fov = Filament.Camera$Fov;
+    window.LightType = Filament.LightManager$Type;
+
+    // Obtain the canvas DOM object and pass it to the App.
+    const canvas = document.getElementsByTagName('canvas')[0];
+    let options = {};
+      if (backend == 'webgpu') {
+        options = {backend: Filament.Backend.WEBGPU};
+      }
+     window.app = new App(canvas, options);
+  });
+};
+
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
+
 class App {
-  constructor(canvas) {
+  constructor(canvas, options) {
     this.canvas = canvas;
-    const engine = this.engine = Filament.Engine.create(canvas);
+    const engine = this.engine = Filament.Engine.create(canvas, options);
     const scene = engine.createScene();
-//
-const material = engine.createMaterial(filamat_url);
-const matinstance = material.createInstance();
-//
-const red = [0.8, 0.0, 0.0];
-matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
-matinstance.setFloatParameter('roughness', 0.5);
-matinstance.setFloatParameter('clearCoat', 1.0);
-matinstance.setFloatParameter('clearCoatRoughness', 0.3);
-const renderable = Filament.EntityManager.get().create();
-scene.addEntity(renderable);
-//
-const icosphere = new Filament.IcoSphere(5);
-//
-const vb = Filament.VertexBuffer.Builder()
-  .vertexCount(icosphere.vertices.length / 3)
-  .bufferCount(2)
-  .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 0)
-  .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
-  .normalized(VertexAttribute.TANGENTS)
-  .build(engine);
-//
-const ib = Filament.IndexBuffer.Builder()
-  .indexCount(icosphere.triangles.length)
-  .bufferType(IndexType.USHORT)
-  .build(engine);
-//
-vb.setBufferAt(engine, 0, icosphere.vertices);
-vb.setBufferAt(engine, 1, icosphere.tangents);
-ib.setBuffer(engine, icosphere.triangles);
-//
-Filament.RenderableManager.Builder(1)
-  .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
-  .material(0, matinstance)
-  .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
-  .build(engine, renderable);
-const sunlight = Filament.EntityManager.get().create();
-scene.addEntity(sunlight);
-Filament.LightManager.Builder(LightType.SUN)
-  .color([0.98, 0.92, 0.89])
-  .intensity(110000.0)
-  .direction([0.6, -1.0, -0.8])
-  .sunAngularRadius(1.9)
-  .sunHaloSize(10.0)
-  .sunHaloFalloff(80.0)
-  .build(engine, sunlight);
-//
-const backlight = Filament.EntityManager.get().create();
-scene.addEntity(backlight);
-Filament.LightManager.Builder(LightType.DIRECTIONAL)
-        .direction([-1, 0, 1])
-        .intensity(50000.0)
-        .build(engine, backlight);
-const indirectLight = engine.createIblFromKtx1(ibl_url);
-indirectLight.setIntensity(50000);
-scene.setIndirectLight(indirectLight);
-const skybox = engine.createSkyFromKtx1(sky_url);
-scene.setSkybox(skybox);
-//
+
+    const material = engine.createMaterial(filamat_url);
+    const matinstance = material.createInstance();
+
+    const red = [0.8, 0.0, 0.0];
+    matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
+    matinstance.setFloatParameter('roughness', 0.5);
+    matinstance.setFloatParameter('clearCoat', 1.0);
+    matinstance.setFloatParameter('clearCoatRoughness', 0.3);
+    const renderable = Filament.EntityManager.get().create();
+    scene.addEntity(renderable);
+
+    const icosphere = new Filament.IcoSphere(5);
+
+    const vb = Filament.VertexBuffer.Builder()
+      .vertexCount(icosphere.vertices.length / 3)
+      .bufferCount(2)
+      .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 0)
+      .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
+      .normalized(VertexAttribute.TANGENTS)
+      .build(engine);
+
+    const ib = Filament.IndexBuffer.Builder()
+      .indexCount(icosphere.triangles.length)
+      .bufferType(IndexType.USHORT)
+      .build(engine);
+
+    vb.setBufferAt(engine, 0, icosphere.vertices);
+    vb.setBufferAt(engine, 1, icosphere.tangents);
+    ib.setBuffer(engine, icosphere.triangles);
+
+    Filament.RenderableManager.Builder(1)
+      .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+      .material(0, matinstance)
+      .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
+      .build(engine, renderable);
+    const sunlight = Filament.EntityManager.get().create();
+    scene.addEntity(sunlight);
+    Filament.LightManager.Builder(LightType.SUN)
+      .color([0.98, 0.92, 0.89])
+      .intensity(110000.0)
+      .direction([0.6, -1.0, -0.8])
+      .sunAngularRadius(1.9)
+      .sunHaloSize(10.0)
+      .sunHaloFalloff(80.0)
+      .build(engine, sunlight);
+
+    const backlight = Filament.EntityManager.get().create();
+    scene.addEntity(backlight);
+    Filament.LightManager.Builder(LightType.DIRECTIONAL)
+            .direction([-1, 0, 1])
+            .intensity(50000.0)
+            .build(engine, backlight);
+    const indirectLight = engine.createIblFromKtx1(ibl_url);
+    indirectLight.setIntensity(50000);
+    scene.setIndirectLight(indirectLight);
+    const skybox = engine.createSkyFromKtx1(sky_url);
+    scene.setSkybox(skybox);
+
     this.swapChain = engine.createSwapChain();
     this.renderer = engine.createRenderer();
     this.camera = engine.createCamera(Filament.EntityManager.get().create());
@@ -107,7 +118,7 @@ scene.setSkybox(skybox);
     window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
-//
+
   render() {
     const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
     const radians = Date.now() / 10000;
@@ -116,7 +127,7 @@ scene.setSkybox(skybox);
     this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
-//
+
   resize() {
     const dpr = window.devicePixelRatio;
     const width = this.canvas.width = this.canvas.clientWidth * dpr;
@@ -207,6 +218,7 @@ const ibl_url = 'pillars_2k/pillars_2k_ibl.ktx';
 const sky_url = 'pillars_2k/pillars_2k_skybox.ktx';
 const filamat_url = 'plastic.filamat'
 
+const initFilament = (backend) => () => {
 Filament.init([ filamat_url, ibl_url, sky_url ], () => {
   // Create some global aliases to enums for convenience.
   window.VertexAttribute = Filament.VertexAttribute;
@@ -218,18 +230,29 @@ Filament.init([ filamat_url, ibl_url, sky_url ], () => {
 
   // Obtain the canvas DOM object and pass it to the App.
   const canvas = document.getElementsByTagName('canvas')[0];
-  window.app = new App(canvas);
+  let options = {};
+  if (backend == 'webgpu') {
+      options = {backend: Filament.Backend.WEBGPU};
+  }
+  window.app = new App(canvas, options);
 } );
+};
+
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
 
 class App {
-  constructor(canvas) {
+  constructor(canvas, options) {
     this.canvas = canvas;
-    const engine = this.engine = Filament.Engine.create(canvas);
+    const engine = this.engine = Filament.Engine.create(canvas, options);
     const scene = engine.createScene();
 
     const material = engine.createMaterial(filamat_url);
     const matinstance = material.createInstance();
-    
+
     const red = [0.8, 0.0, 0.0];
     matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
     matinstance.setFloatParameter('roughness', 0.5);
@@ -237,9 +260,9 @@ class App {
     matinstance.setFloatParameter('clearCoatRoughness', 0.3);
     const renderable = Filament.EntityManager.get().create();
     scene.addEntity(renderable);
-    
+
     const icosphere = new Filament.IcoSphere(5);
-    
+
     const vb = Filament.VertexBuffer.Builder()
       .vertexCount(icosphere.vertices.length / 3)
       .bufferCount(2)
@@ -247,16 +270,16 @@ class App {
       .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
       .normalized(VertexAttribute.TANGENTS)
       .build(engine);
-    
+
     const ib = Filament.IndexBuffer.Builder()
       .indexCount(icosphere.triangles.length)
       .bufferType(IndexType.USHORT)
       .build(engine);
-    
+
     vb.setBufferAt(engine, 0, icosphere.vertices);
     vb.setBufferAt(engine, 1, icosphere.tangents);
     ib.setBuffer(engine, icosphere.triangles);
-    
+
     Filament.RenderableManager.Builder(1)
       .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
       .material(0, matinstance)
@@ -272,7 +295,7 @@ class App {
       .sunHaloSize(10.0)
       .sunHaloFalloff(80.0)
       .build(engine, sunlight);
-    
+
     const backlight = Filament.EntityManager.get().create();
     scene.addEntity(backlight);
     Filament.LightManager.Builder(LightType.DIRECTIONAL)

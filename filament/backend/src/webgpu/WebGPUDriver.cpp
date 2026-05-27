@@ -679,7 +679,9 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimit
     assert_invariant(mDevice);
     const auto renderPrimitive = constructHandle<WebGPURenderPrimitive>(renderPrimitiveHandle);
     const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
-    const auto indexBuffer = handleCast<WebGPUIndexBuffer>(indexBufferHandle);
+    // Non-indexed (attribute-less) primitives have no IndexBuffer.
+    const auto indexBuffer =
+            indexBufferHandle ? handleCast<WebGPUIndexBuffer>(indexBufferHandle) : nullptr;
     renderPrimitive->vertexBuffer = vertexBuffer;
     renderPrimitive->indexBuffer = indexBuffer;
     renderPrimitive->type = primitiveType;
@@ -1320,8 +1322,14 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
 
     mCurrentRenderTarget = renderTarget;
     if (renderTarget->isDefaultRenderTarget()) {
-        assert_invariant(mSwapChain && mTextureView);
-        defaultColorView = mTextureView;
+        assert_invariant(mSwapChain);
+
+        if (!mSwapChainView) {
+            mSwapChainView = mSwapChain->isHeadless() ?
+                mSwapChain->getNextTextureView() :
+                mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
+        }
+        defaultColorView  = mSwapChainView;
         defaultDepthStencilView = mSwapChain->getDepthTextureView();
         defaultDepthStencilFormat = mSwapChain->getDepthFormat();
 
@@ -1479,18 +1487,11 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSwapChain,
     auto swapChain = handleCast<WebGPUSwapChain>(drawSwapChain);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-
-    if (mSwapChain->isHeadless()) {
-        mTextureView = mSwapChain->getNextTextureView();
-    } else {
-        mTextureView = mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
-    }
-    assert_invariant(mTextureView);
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mQueueManager.flush();
-    mTextureView = nullptr;
+    mSwapChainView = nullptr;
     assert_invariant(mSwapChain);
     mSwapChain->present(*this);
 }
@@ -2020,8 +2021,11 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
                 renderPrimitive->vertexBuffer->getBuffers()[bindingInfo.sourceBufferIndex],
                 bindingInfo.bufferOffset);
     }
-    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
-            renderPrimitive->indexBuffer->getIndexFormat());
+    // Index buffer is optional: non-indexed (attribute-less) primitives have none.
+    if (renderPrimitive->indexBuffer) {
+        mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
+                renderPrimitive->indexBuffer->getIndexFormat());
+    }
 }
 
 void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
@@ -2037,6 +2041,21 @@ void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
     }
 
     mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
+}
+
+void WebGPUDriver::drawArrays(const uint32_t vertexOffset, const uint32_t vertexCount,
+        const uint32_t instanceCount) {
+    FWGPU_SYSTRACE_SCOPE();
+    // Bind groups are deferred until the actual draw call (mirrors draw2).
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto& binding = mCurrentDescriptorSets[i];
+        if (binding.bindGroup) {
+            mRenderPassEncoder.SetBindGroup(i, binding.bindGroup, binding.offsetCount,
+                    binding.offsets.data());
+        }
+    }
+
+    mRenderPassEncoder.Draw(vertexCount, instanceCount, vertexOffset, 0);
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState,

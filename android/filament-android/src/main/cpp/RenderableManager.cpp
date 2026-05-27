@@ -108,6 +108,25 @@ Java_com_google_android_filament_RenderableManager_nBuilderGeometry__JIIJJIIII(J
             (size_t) count);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderGeometry__JIIJII(JNIEnv*,
+        jclass, jlong nativeBuilder, jint index, jint primitiveType, jlong nativeVertexBuffer,
+        jint offset, jint count) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
+    builder->geometry((size_t) index, (RenderableManager::PrimitiveType) primitiveType,
+            vertexBuffer, (size_t) offset, (size_t) count);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderGeometry__JIIJ(JNIEnv*,
+        jclass, jlong nativeBuilder, jint index, jint primitiveType, jlong nativeVertexBuffer) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
+    builder->geometry((size_t) index, (RenderableManager::PrimitiveType) primitiveType,
+            vertexBuffer);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderGeometryType(JNIEnv*, jclass,
@@ -539,6 +558,17 @@ Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIE
     IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
     rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
             (RenderableManager::PrimitiveType) primitiveType, vertexBuffer, indexBuffer,
+            (size_t) offset, (size_t) count);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJII(JNIEnv*,
+        jclass, jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType,
+        jlong nativeVertexBuffer, jint offset, jint count) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
+    rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
+            (RenderableManager::PrimitiveType) primitiveType, vertexBuffer,
             (size_t) offset, (size_t) count);
 }
 

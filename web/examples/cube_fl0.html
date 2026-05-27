@@ -27,18 +27,34 @@
   <script src="../gl-matrix-min.js"></script>
   <script>
 
-    Filament.init(['nonlit.filamat'], () => {
-      window.VertexAttribute = Filament.VertexAttribute;
-      window.AttributeType = Filament.VertexBuffer$AttributeType;
-      window.Projection = Filament.Camera$Projection;
-      window.Fov = Filament.Camera$Fov;
-      window.app = new App(document.getElementsByTagName('canvas')[0]);
-    });
+    const initFilament = (backend) => () => {
+      Filament.init(['nonlit.filamat'], () => {
+        window.VertexAttribute = Filament.VertexAttribute;
+        window.AttributeType = Filament.VertexBuffer$AttributeType;
+        window.Projection = Filament.Camera$Projection;
+        window.Fov = Filament.Camera$Fov;
+        let options = {
+          majorVersion: 1, // Fallback to WebGL 1.0/2.0 context
+          backend: Filament.Backend.OPENGL
+        };
+        if (backend == 'webgpu') {
+          options = {backend: Filament.Backend.WEBGPU};
+        }
+        window.app = new App(document.getElementsByTagName('canvas')[0], options);
+      });
+    };
+
+    if (location.search === '?backend=webgpu') {
+      Filament.initWebGPU().then(initFilament("webgpu"));
+    } else {
+      initFilament()();
+    }
 
     class App {
-      constructor(canvas) {
+      constructor(canvas, options) {
         this.canvas = canvas;
-        const engine = this.engine = Filament.Engine.create(this.canvas, {}, { forceGLES2Context: true });
+        const config = backend ? {} : { forceGLES2Context: true };
+        const engine = this.engine = Filament.Engine.create(this.canvas, options, config);
         console.log("Engine Config forceGLES2Context:", engine.getConfig().forceGLES2Context);
         this.scene = engine.createScene();
         this.cube = Filament.EntityManager.get().create();

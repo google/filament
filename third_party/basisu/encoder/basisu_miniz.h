@@ -1,9 +1,9 @@
 /* miniz.c v1.15 - deflate/inflate, zlib-subset, ZIP reading/writing/appending, PNG writing
    Implements RFC 1950: http://www.ietf.org/rfc/rfc1950.txt and RFC 1951: http://www.ietf.org/rfc/rfc1951.txt
-  
-   Forked from the public domain/unlicense version at: https://code.google.com/archive/p/miniz/ 
-   
-   Copyright (C) 2019-2021 Binomial LLC. All Rights Reserved.
+
+   Forked from the public domain/unlicense version at: https://code.google.com/archive/p/miniz/
+
+   Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -497,7 +497,7 @@ size_t tdefl_compress_mem_to_mem(void *pOut_buf, size_t out_buf_len, const void 
 
 // Compresses an image to a compressed PNG file in memory.
 // On entry:
-//  pImage, w, h, and num_chans describe the image to compress. num_chans may be 1, 2, 3, or 4. 
+//  pImage, w, h, and num_chans describe the image to compress. num_chans may be 1, 2, 3, or 4.
 //  The image pitch in bytes per scanline will be w*num_chans. The leftmost pixel on the top scanline is stored first in memory.
 //  level may range from [0,10], use MZ_NO_COMPRESSION, MZ_BEST_SPEED, MZ_BEST_COMPRESSION, etc. or a decent default is MZ_DEFAULT_LEVEL
 //  If flip is true, the image will be flipped on the Y axis (useful for OpenGL apps).
@@ -799,7 +799,7 @@ mz_ulong mz_deflateBound(mz_streamp pStream, mz_ulong source_len)
   // This is really over conservative. (And lame, but it's actually pretty tricky to compute a true upper bound given the way tdefl's blocking works.)
   mz_uint64 a = 128ULL + (source_len * 110ULL) / 100ULL;
   mz_uint64 b = 128ULL + (mz_uint64)source_len + ((source_len / (31 * 1024)) + 1ULL) * 5ULL;
-  
+
   mz_uint64 t = MZ_MAX(a, b);
   if (((mz_ulong)t) != t)
      t = (mz_ulong)(-1);
@@ -1377,8 +1377,8 @@ common_exit:
       for ( ; i < block_len; ++i) s1 += *ptr++, s2 += s1;
       s1 %= 65521U, s2 %= 65521U; buf_len -= block_len; block_len = 5552;
     }
-    r->m_check_adler32 = (s2 << 16) + s1; 
-    if ((status == TINFL_STATUS_DONE) && (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER) && (r->m_check_adler32 != r->m_z_adler32)) 
+    r->m_check_adler32 = (s2 << 16) + s1;
+    if ((status == TINFL_STATUS_DONE) && (decomp_flags & TINFL_FLAG_PARSE_ZLIB_HEADER) && (r->m_check_adler32 != r->m_z_adler32))
         status = TINFL_STATUS_ADLER32_MISMATCH;
   }
   return status;
@@ -1973,7 +1973,7 @@ static MZ_FORCEINLINE void tdefl_find_match(tdefl_compressor *d, mz_uint lookahe
                    (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (--probe_len > 0) );
     if (!probe_len)
     {
-      *pMatch_dist = dist; *pMatch_len = MZ_MIN(max_match_len, TDEFL_MAX_MATCH_LEN); break;
+      *pMatch_dist = dist; *pMatch_len = MZ_MIN(max_match_len, (mz_uint)TDEFL_MAX_MATCH_LEN); break;
     }
     else if ((probe_len = ((mz_uint)(p - s) * 2) + (mz_uint)(*(const mz_uint8*)p == *(const mz_uint8*)q)) > match_len)
     {
@@ -2101,7 +2101,7 @@ static mz_bool tdefl_compress_fast(tdefl_compressor *d)
 
       total_lz_bytes += cur_match_len;
       lookahead_pos += cur_match_len;
-      dict_size = MZ_MIN(dict_size + cur_match_len, TDEFL_LZ_DICT_SIZE);
+      dict_size = MZ_MIN(dict_size + cur_match_len, (mz_uint)TDEFL_LZ_DICT_SIZE);
       cur_pos = (cur_pos + cur_match_len) & TDEFL_LZ_DICT_SIZE_MASK;
       MZ_ASSERT(lookahead_size >= cur_match_len);
       lookahead_size -= cur_match_len;
@@ -2129,7 +2129,7 @@ static mz_bool tdefl_compress_fast(tdefl_compressor *d)
       d->m_huff_count[0][lit]++;
 
       lookahead_pos++;
-      dict_size = MZ_MIN(dict_size + 1, TDEFL_LZ_DICT_SIZE);
+      dict_size = MZ_MIN(dict_size + 1, (mz_uint)TDEFL_LZ_DICT_SIZE);
       cur_pos = (cur_pos + 1) & TDEFL_LZ_DICT_SIZE_MASK;
       lookahead_size--;
 
@@ -2283,7 +2283,7 @@ static mz_bool tdefl_compress_normal(tdefl_compressor *d)
     d->m_lookahead_pos += len_to_move;
     MZ_ASSERT(d->m_lookahead_size >= len_to_move);
     d->m_lookahead_size -= len_to_move;
-    d->m_dict_size = MZ_MIN(d->m_dict_size + len_to_move, TDEFL_LZ_DICT_SIZE);
+    d->m_dict_size = MZ_MIN(d->m_dict_size + len_to_move, (mz_uint)TDEFL_LZ_DICT_SIZE);
     // Check if it's time to flush the current LZ codes to the internal output buffer.
     if ( (d->m_pLZ_code_buf > &d->m_lz_code_buf[TDEFL_LZ_CODE_BUF_SIZE - 8]) ||
          ( (d->m_total_lz_bytes > 31*1024) && (((((mz_uint)(d->m_pLZ_code_buf - d->m_lz_code_buf) * 115) >> 7) >= d->m_total_lz_bytes) || (d->m_flags & TDEFL_FORCE_ALL_RAW_BLOCKS))) )
@@ -2528,4 +2528,3 @@ void *tdefl_write_image_to_png_file_in_memory(const void *pImage, int w, int h, 
 } // namespace buminiz
 
 #endif // MINIZ_HEADER_FILE_ONLY
-

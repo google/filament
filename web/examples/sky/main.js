@@ -1,9 +1,21 @@
 
 // main.js
 
+const initFilament = (backend) => () => {
 Filament.init([(window.FILAMENT_ASSET_DIR || '') + 'simulated_skybox.filamat?v=' + Date.now()], () => {
-  window.app = new App(document.getElementsByTagName('canvas')[0]);
+  let options = {};
+  if (backend == 'webgpu') {
+      options = {backend: Filament.Backend.WEBGPU};
+  }
+  window.app = new App(document.getElementsByTagName('canvas')[0], options);
 });
+};
+
+if (location.search === '?backend=webgpu') {
+    Filament.initWebGPU().then(initFilament("webgpu"));
+} else {
+    initFilament()();
+}
 
 // Helper: Julian Date
 function getJD(date) {
@@ -119,9 +131,9 @@ function multiplyMat3(a, b) {
 }
 
 class App {
-  constructor(canvas) {
+  constructor(canvas, options) {
     this.canvas = canvas;
-    const engine = this.engine = Filament.Engine.create(this.canvas);
+    const engine = this.engine = Filament.Engine.create(this.canvas, options);
     this.scene = engine.createScene();
 
     this.skybox = new SimulatedSkybox(engine);

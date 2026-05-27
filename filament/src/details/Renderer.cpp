@@ -574,7 +574,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
         RenderPassParams params = {};
-        params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.clearColor = ClearColorValue{ 0.f, 0.f, 0.f, 1.f };
         params.flags.clear = TargetBufferFlags::COLOR;
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
@@ -1011,7 +1011,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     //        into a temporary buffer (common case), the clearColor is color-graded. A problem
     //        arises when transparent views are used, in this case the clear color is not
     //        color-graded.
-    const float4 clearColor = mClearOptions.clearColor;
+    const ClearColorValue clearColor = mClearOptions.clearColor;
 
     const uint8_t clearStencil = mClearOptions.clearStencil;
     const TargetBufferFlags clearFlags = mClearFlags;

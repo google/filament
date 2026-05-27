@@ -19,12 +19,14 @@
 
 #include "downcast.h"
 
-#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <filament/ColorGrading.h>
 
 #include <math/mathfwd.h>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
@@ -47,6 +49,10 @@ public:
     bool isLDR() const noexcept { return mIsLDR; }
 
 private:
+    struct Config;
+    static math::float4 hdrColorAt(Builder const& builder, Config const& config,
+            size_t r, size_t g, size_t b) noexcept;
+
     backend::TextureHandle mLutHandle;
     uint32_t mDimension;
     bool mIsOneDimensional;

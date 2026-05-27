@@ -63,14 +63,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=examples_dir, **kwargs)
 
     def do_GET(self):
+        from urllib.parse import urlparse
+        parsed_path = urlparse(self.path).path
+
         # Serve main index if root
-        if self.path == '/' or self.path == '/index.html':
+        if parsed_path == '/' or parsed_path == '/index.html':
             self.serve_index()
             return
             
         # If it's a markdown file, render it
-        if self.path.endswith('.md'):
-            self.serve_markdown()
+        if parsed_path.endswith('.md'):
+            self.serve_markdown(parsed_path)
             return
 
         # Otherwise serve normally
@@ -107,9 +110,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         html.append("</ul></body></html>")
         self.wfile.write("".join(html).encode('utf-8'))
 
-    def serve_markdown(self):
+    def serve_markdown(self, parsed_path):
         # path looks like /triangle/triangle.md
-        file_path = os.path.join(examples_dir, self.path.lstrip('/'))
+        file_path = os.path.join(examples_dir, parsed_path.lstrip('/'))
         if not os.path.exists(file_path):
             self.send_error(404, "File not found")
             return
@@ -137,7 +140,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         
         # fix relative links, since we are serving at /dir/file.md but resources are at /dir/
         # base url should just be the directory of the markdown
-        dir_name = os.path.dirname(self.path.lstrip('/'))
+        dir_name = os.path.dirname(parsed_path.lstrip('/'))
         base_tag = f'<base href="/{dir_name}/" />'
         
         # insert base tag into HEAD
@@ -154,6 +157,7 @@ if __name__ == '__main__':
     port = 8000
     print(f"Serving at http://localhost:{port}")
     print(f"Serving directory: {examples_dir}")
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", port), CustomHandler) as httpd:
         try:
             httpd.serve_forever()

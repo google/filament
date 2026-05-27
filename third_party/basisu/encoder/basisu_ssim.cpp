@@ -1,5 +1,5 @@
 // basisu_ssim.cpp
-// Copyright (C) 2019 Binomial LLC. All Rights Reserved.
+// Copyright (C) 2019-2024 Binomial LLC. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ namespace basisu
 		float g = (1.0f / (sqrtf((float)(2.0f * M_PI * sigma_sqr)))) * pow;
 		return g;
 	}
-		
+
 	// size_x/y should be odd
 	void compute_gaussian_kernel(float *pDst, int size_x, int size_y, float sigma_sqr, uint32_t flags)
 	{
@@ -91,6 +91,8 @@ namespace basisu
 
 	void gaussian_filter(imagef &dst, const imagef &orig_img, uint32_t odd_filter_width, float sigma_sqr, bool wrapping, uint32_t width_divisor, uint32_t height_divisor)
 	{
+		assert(&dst != &orig_img);
+
 		assert(odd_filter_width && (odd_filter_width & 1));
 		odd_filter_width |= 1;
 
@@ -316,14 +318,14 @@ namespace basisu
 
 		return avg;
 	}
-		
+
 	// Reference: https://ece.uwaterloo.ca/~z70wang/research/ssim/index.html
 	vec4F compute_ssim(const imagef &a, const imagef &b)
 	{
 		imagef axb, a_sq, b_sq, mu1, mu2, mu1_sq, mu2_sq, mu1_mu2, s1_sq, s2_sq, s12, smap, t1, t2, t3;
 
 		const float C1 = 6.50250f, C2 = 58.52250f;
-				
+
 		pow_image(a, a_sq, vec4F(2));
 		pow_image(b, b_sq, vec4F(2));
 		mul_image(a, b, axb, vec4F(1.0f));
