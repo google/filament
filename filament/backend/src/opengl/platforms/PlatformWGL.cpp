@@ -149,7 +149,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
     for (int i = 0; i < SHARED_CONTEXT_NUM; ++i) {
         HGLRC context = wglCreateContextAttribs(mWhdc, mContext, mAttribs.data());
         if (context) {
-            std::lock_guard const lock(mAdditionalContextsLock);
+            utils::LockGuard const lock(mAdditionalContextsLock);
             mAdditionalContexts.push_back(context);
         }
     }
@@ -190,7 +190,7 @@ void PlatformWGL::createContext(bool shared) {
 
     HGLRC context;
     {
-        std::lock_guard const lock(mAdditionalContextsLock);
+        utils::LockGuard const lock(mAdditionalContextsLock);
         context = mAdditionalContexts[nextIndex];
     }
     BOOL result = wglMakeCurrent(mWhdc, context);
@@ -205,7 +205,7 @@ void PlatformWGL::terminate() noexcept {
     }
     std::vector<HGLRC> additionalContexts;
     {
-        std::lock_guard const lock(mAdditionalContextsLock);
+        utils::LockGuard const lock(mAdditionalContextsLock);
         additionalContexts.swap(mAdditionalContexts);
     }
     for (auto& context : additionalContexts) {
