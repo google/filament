@@ -78,6 +78,7 @@
 #include <utils/JobSystem.h>
 #include <utils/memalign.h>
 #include <utils/Slice.h>
+#include <utils/PagedArenaBitsetPool.h>
 #include <utils/tribool.h>
 
 #include <cstddef>
