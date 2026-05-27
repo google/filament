@@ -42,7 +42,6 @@ namespace {
 
 /**
  * Creates MSAA sidecar textures for attachments if necessary.
- * This function also verifies that all attachments have the same sample count.
  */
 void createMsaaSidecarTextures(const uint8_t renderTargetSampleCount,
         const TargetBufferFlags targetFlags, MRT const& colorAttachments,
@@ -96,6 +95,9 @@ void createMsaaSidecarTextures(const uint8_t renderTargetSampleCount,
             if (renderTargetSampleCount > 1 && texture->samples == 1) {
                 texture->createMsaaSidecarTextureIfNotAlreadyCreated(renderTargetSampleCount,
                         device);
+            }
+            else {
+                assert_invariant(renderTargetSampleCount == texture->samples);
             }
         }
     }
