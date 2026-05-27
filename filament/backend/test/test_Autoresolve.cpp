@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
@@ -69,7 +68,7 @@ TEST_F(BackendTest, Autoresolve) {
                     .color = float4(1, 0, 0, 1),
                 });
 
-        RenderPassParams params = getClearColorRenderPass(float4(1));
+        RenderPassParams params = getClearColorDepthRenderPass(float4(1));
         params.viewport = { 0, 0, kRenderTargetSize, kRenderTargetSize };
 
         RenderFrame frame(api);

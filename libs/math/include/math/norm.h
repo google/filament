@@ -21,6 +21,7 @@
 #include <math/vec4.h>
 
 #include <cmath>
+
 #include <stdint.h>
 
 namespace filament {

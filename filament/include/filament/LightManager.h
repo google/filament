@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_LIGHTMANAGER_H
 #define TNT_FILAMENT_LIGHTMANAGER_H
 
-#include <filament/FilamentAPI.h>
 #include <filament/Color.h>
+#include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
@@ -27,8 +27,8 @@
 #include <math/mathfwd.h>
 #include <math/quat.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
     class Entity;

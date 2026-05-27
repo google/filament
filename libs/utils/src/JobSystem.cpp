@@ -270,10 +270,9 @@ void JobSystem::decRef(Job const* job) noexcept {
         mJobPool.destroy(job);
     }
 }
-
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
-    std::lock_guard const lock(mWaiterLock);
+    LockGuard const lock(mWaiterLock);
     mWaiterCondition.notify_all();
 }
 
@@ -290,12 +289,12 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
     return (job->runningJobCount.load(std::memory_order_acquire) & JOB_COUNT_MASK) == 0;
 }
 
-inline void JobSystem::wait(std::unique_lock<Mutex>& lock) noexcept {
+inline void JobSystem::wait(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterCondition.wait(lock);
 }
 
-inline uint32_t JobSystem::wait(std::unique_lock<Mutex>& lock, Job* const job) noexcept {
+inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     // signal we are waiting
 
@@ -342,7 +341,7 @@ void JobSystem::wakeOne() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() {
-    std::lock_guard const lock(mThreadMapLock);
+    LockGuard const lock(mThreadMapLock);
     auto const iter = mThreadMap.find(std::this_thread::get_id());
     FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
     return *iter->second;
@@ -460,16 +459,18 @@ void JobSystem::loop(ThreadState* state) {
     setThreadPriority(Priority::DISPLAY);
 
     // record our work queue
-    std::unique_lock lock(mThreadMapLock);
-    bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
-    lock.unlock();
+    bool inserted;
+    {
+        LockGuard const lock(mThreadMapLock);
+        inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
+    }
 
     FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
 
     // run our main loop...
     do {
         if (!execute(*state)) {
-            std::unique_lock lock(mWaiterLock);
+            UniqueLock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
             }
@@ -610,7 +611,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
             // this could take time however, so we will wait with a condition, and
             // continue to handle more jobs, as they get added.
 
-            std::unique_lock lock(mWaiterLock);
+            UniqueLock lock(mWaiterLock);
             uint32_t const runningJobCount = wait(lock, job);
             // we could be waking up because either:
             // - the job we're waiting on has completed
@@ -645,10 +646,12 @@ void JobSystem::runAndWait(Job*& job) noexcept {
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
 
-    std::unique_lock lock(mThreadMapLock);
-    auto const iter = mThreadMap.find(tid);
-    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
-    lock.unlock();
+    ThreadState const* state = nullptr;
+    {
+        LockGuard const lock(mThreadMapLock);
+        auto const iter = mThreadMap.find(tid);
+        state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    }
 
     if (state) {
         // we're already part of a JobSystem, do nothing.
@@ -672,13 +675,15 @@ void JobSystem::adopt() {
     // however, it's not a problem since mThreadState is pre-initialized and valid
     // (e.g.: the queue is empty).
 
-    lock.lock();
-    mThreadMap[tid] = &mThreadStates[index];
+    {
+        LockGuard const lock(mThreadMapLock);
+        mThreadMap[tid] = &mThreadStates[index];
+    }
 }
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
-    std::unique_lock const lock(mThreadMapLock);
+    LockGuard const lock(mThreadMapLock);
     auto const iter = mThreadMap.find(tid);
     ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";

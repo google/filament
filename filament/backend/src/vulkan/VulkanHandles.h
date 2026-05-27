@@ -19,22 +19,22 @@
 
 // This needs to be at the top
 #include "DriverBase.h"
-
 #include "VulkanAsyncHandles.h"
 #include "VulkanBufferCache.h"
 #include "VulkanBufferProxy.h"
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
-#include "vulkan/VulkanCommands.h"
+
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/VulkanCommands.h"
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
-#include <utils/bitset.h>
 
 #include <array>
 
@@ -367,6 +367,12 @@ private:
 struct VulkanBufferObject;
 
 struct VulkanVertexBufferInfo : public HwVertexBufferInfo, fvkmemory::Resource {
+
+    using AttributeBitSet = utils::bitset32;
+    // This ensures that we have a bit for each of the attribute index, which ranges from
+    // [0, MAX_VERTEX_ATTRIBUTE_COUNT).
+    static_assert(sizeof(AttributeBitSet) * 8 >= MAX_VERTEX_ATTRIBUTE_COUNT);
+
     VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
 
@@ -390,6 +396,10 @@ struct VulkanVertexBufferInfo : public HwVertexBufferInfo, fvkmemory::Resource {
         return mInfo.mSoa.size();
     }
 
+    AttributeBitSet getDeclaredAttributes() const noexcept {
+        return mAttributes;
+    }
+
 private:
     struct PipelineInfo {
         PipelineInfo(size_t size) : mSoa(size /* capacity */) {
@@ -410,6 +420,8 @@ private:
         > mSoa;
     };
 
+    // Tracks which attributes have been declared for the vbo.
+    AttributeBitSet mAttributes;
     PipelineInfo mInfo;
 };
 
@@ -425,9 +437,15 @@ struct VulkanVertexBuffer : public HwVertexBuffer, fvkmemory::Resource {
     inline VkBuffer* getVkBuffers() { return mBuffers.data(); }
     fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi;
 
+    // Returns whether all the declared attributes have a buffer attached.
+    bool isValid() const noexcept {
+        return mAttributes == vbi->getDeclaredAttributes();
+    }
+
 private:
     utils::FixedCapacityVector<VkBuffer> mBuffers;
     std::vector<fvkmemory::resource_ptr<VulkanBufferObject>> mResources;
+    VulkanVertexBufferInfo::AttributeBitSet mAttributes;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {

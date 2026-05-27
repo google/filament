@@ -18,15 +18,16 @@
 #define TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
 
 #include "DriverBase.h"
-
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 #include "VulkanTexture.h"
+
 #include "vulkan/memory/Resource.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/FixedCapacityVector.h>
 
 #include <memory>

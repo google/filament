@@ -22,12 +22,12 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphRenderPass.h"
 
-#include "backend/DriverApiForward.h"
-#include <backend/TargetBufferInfo.h>
-
 #if FILAMENT_ENABLE_FGVIEWER
 #include <fgviewer/FrameGraphInfo.h>
 #endif
+
+#include <backend/DriverApiForward.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <cstdint>
 #include <unordered_set>

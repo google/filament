@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERER_H
 #define TNT_FILAMENT_DETAILS_RENDERER_H
 
-#include "downcast.h"
-
 #include "Allocators.h"
+#include "downcast.h"
 #include "FrameInfo.h"
 #include "FrameSkipper.h"
 #include "PostProcessManager.h"
@@ -27,16 +26,15 @@
 
 #include "details/SwapChain.h"
 
-#include "backend/DriverApiForward.h"
-
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <math/vec4.h>

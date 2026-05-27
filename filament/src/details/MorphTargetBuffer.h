@@ -21,8 +21,8 @@
 
 #include <filament/MorphTargetBuffer.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <math/vec3.h>

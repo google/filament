@@ -20,13 +20,13 @@
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 
@@ -62,7 +62,7 @@ private:
     // driver thread, but it can be accessed from any thread, because it's called from handle_cast<>
     // which is used by synchronous calls.
     mutable utils::Mutex mDebugTagLock;
-    tsl::robin_map<HandleBase::HandleId, utils::ImmutableCString> mDebugTags;
+    tsl::robin_map<HandleBase::HandleId, utils::ImmutableCString> mDebugTags UTILS_GUARDED_BY(mDebugTagLock);
 };
 
 /*
@@ -394,7 +394,7 @@ private:
 
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
-    tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
+    tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap UTILS_GUARDED_BY(mLock);
     std::atomic<HandleBase::HandleId> mId = 0;
 
     // constants

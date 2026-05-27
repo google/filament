@@ -803,6 +803,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
 )
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${TARGET} PRIVATE -Wthread-safety)
+endif()
+
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )

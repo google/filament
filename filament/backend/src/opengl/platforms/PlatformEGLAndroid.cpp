@@ -14,42 +14,37 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/PlatformEGLAndroid.h>
+#include "AndroidFrameCallback.h"
+#include "AndroidNativeWindow.h"
+#include "AndroidSwapChainHelper.h"
+#include "ExternalStreamManagerAndroid.h"
 
 #include "opengl/GLUtils.h"
+
+#include <private/backend/BackendUtilsAndroid.h>
+#include <private/backend/VirtualMachineEnv.h>
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
-
-#include <private/backend/BackendUtilsAndroid.h>
-#include <private/backend/VirtualMachineEnv.h>
-
-#include "AndroidNativeWindow.h"
-#include "AndroidFrameCallback.h"
-#include "AndroidSwapChainHelper.h"
-#include "ExternalStreamManagerAndroid.h"
-
-#include <android/api-level.h>
-#include <android/native_window.h>
-#include <android/hardware_buffer.h>
+#include <backend/platforms/PlatformEGLAndroid.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
-#include <utils/Panic.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <math/mat3.h>
 
+#include <android/api-level.h>
+#include <android/hardware_buffer.h>
+#include <android/native_window.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-
-#include <sys/system_properties.h>
-
 #include <jni.h>
 
 #include <array>
@@ -59,7 +54,9 @@
 #include <new>
 #include <string_view>
 
+#include <sys/system_properties.h>
 #include <unistd.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -204,8 +201,8 @@ void PlatformEGLAndroid::beginFrame(
 
 void PlatformEGLAndroid::preCommit() noexcept {
     if (mPerformanceHintSession.isValid()) {
-        auto const actualWorkDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                clock::now() - mStartTimeOfActualWork);
+        auto const actualWorkDuration =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - mStartTimeOfActualWork);
         mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
     }
     PlatformEGL::preCommit();

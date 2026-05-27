@@ -24,6 +24,7 @@
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 #include "MaterialCache.h"
+#include "MaterialDefinition.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
 #include "UboManager.h"
@@ -36,7 +37,6 @@
 #include "ds/DescriptorSetLayout.h"
 
 #include "details/BufferObject.h"
-#include "details/Camera.h"
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
@@ -48,12 +48,13 @@
 #include "details/Sync.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <private/backend/CommandBufferQueue.h>
 #include <private/backend/CommandStream.h>
-#include <private/backend/DriverApi.h>
 
 #include <private/utils/FeatureFlagManager.h>
+
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
@@ -65,18 +66,24 @@
 #include <filament/VertexBuffer.h>
 #include <filament/IndexBuffer.h>
 
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
+#include <utils/memalign.h>
 #include <utils/Slice.h>
 #include <utils/tribool.h>
 
+#include <cstddef>
 #include <chrono>
+#include <condition_variable>
+#include <functional>
 #include <memory>
 #include <new>
 #include <optional>
@@ -86,6 +93,7 @@
 #include <mutex>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -221,7 +229,7 @@ public:
     void signalFence(FenceSignal& signal, FenceSignal::State s) noexcept;
 
     // Waits for a fence to be signaled or for a timeout.
-    Fence::FenceStatus waitFence(FenceSignal& signal, uint64_t timeout) noexcept;
+    Fence::FenceStatus waitFence(FenceSignal& signal, uint64_t timeout) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
     size_t getMaxAutomaticInstances() const noexcept {
         return CONFIG_MAX_INSTANCES;
@@ -297,7 +305,7 @@ public:
 
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
-        backend::ShaderLanguage preferredLanguage;
+        backend::ShaderLanguage preferredLanguage{};
 
         switch (mConfig.preferredShaderLanguage) {
             case Config::ShaderLanguage::DEFAULT:
@@ -456,7 +464,7 @@ public:
 
     // flush the current buffer based on some heuristics
     void flushIfNeeded() {
-        auto counter = mFlushCounter + 1;
+        auto const counter = mFlushCounter + 1;
         if (UTILS_LIKELY(counter < 128)) {
             mFlushCounter = counter;
         } else {
@@ -622,14 +630,8 @@ private:
     template<typename T>
     bool terminateAndDestroy(const T* ptr, ResourceList<T>& list);
 
-    template<typename T, typename Lock>
-    bool terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>& list);
-
     template<typename T>
     void cleanupResourceList(ResourceList<T>&& list);
-
-    template<typename T, typename Lock>
-    void cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list);
 
     backend::Driver* mDriver = nullptr;
     backend::Handle<backend::HwRenderTarget> mDefaultRenderTarget;
@@ -679,17 +681,17 @@ private:
     ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
 
     // the fence list is accessed from multiple threads
-    utils::Mutex mFenceListLock;
-    ResourceList<FFence> mFences{"Fence"};
+    mutable utils::Mutex mFenceListLock;
+    ResourceList<FFence> mFences UTILS_GUARDED_BY(mFenceListLock){"Fence"};
 
-    mutable utils::Mutex mFenceLock;
-    mutable utils::Condition mFenceCondition;
+    mutable std::mutex mFenceLock;
+    mutable std::condition_variable mFenceCondition;
     bool mFenceHasUnrecoverableError = false;
 
     // the sync list is accessed from multiple threads, because they are
     // synchronization objects.
-    utils::Mutex mSyncListLock;
-    ResourceList<FSync> mSyncs{ "Sync" };
+    mutable utils::Mutex mSyncListLock;
+    ResourceList<FSync> mSyncs UTILS_GUARDED_BY(mSyncListLock){ "Sync" };
 
     mutable uint32_t mMaterialId = 0;
 

@@ -15,12 +15,11 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
-#include "Skip.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 namespace test {
@@ -38,6 +37,7 @@ struct MsaaSwapChainTest : public BackendTest, public testing::WithParamInterfac
 TEST_P(MsaaSwapChainTest, Basic) {
     SKIP_IF(Backend::OPENGL, "OpenGL does not support MSAA SwapChain on all platforms.");
     SKIP_IF(Backend::VULKAN, "Vulkan does not support MSAA SwapChain on all platforms.");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support MSAA SwapChain.");
 
     constexpr int kRenderTargetSize = 512;
 
@@ -65,7 +65,7 @@ TEST_P(MsaaSwapChainTest, Basic) {
     });
     TrianglePrimitive triangle(api);
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport = getFullViewport();
 
     PipelineState ps = getColorWritePipelineState();

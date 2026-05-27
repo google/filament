@@ -16,15 +16,15 @@
 
 #include "WebGPUBufferBase.h"
 
+#include "DriverBase.h"
 #include "WebGPUConstants.h"
 #include "WebGPUQueueManager.h"
 #include "WebGPUStagePool.h"
 
-#include "DriverBase.h"
 #include <backend/BufferDescriptor.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -86,8 +86,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     const size_t stagingBufferSize =
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize,
-            webGPUQueueManager->getLatestSubmissionState());
+    auto [encoder, submissionState] = webGPUQueueManager->getCommandEncoderWithState();
+
+    wgpu::Buffer stagingBuffer = webGPUStagePool->acquireBuffer(stagingBufferSize, submissionState);
 
     void* mappedRange = stagingBuffer.GetMappedRange();
     assert_invariant(mappedRange);
@@ -103,8 +104,7 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
-            byteOffset,
+    encoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
             remainder == 0 ? bufferDescriptor.size
                            : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
 }

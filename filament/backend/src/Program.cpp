@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include <backend/Program.h>
 #include <backend/DriverEnums.h>
+#include <backend/Program.h>
 
 #include <utils/CString.h>
-#include <utils/Invocable.h>
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Invocable.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <utility>
 

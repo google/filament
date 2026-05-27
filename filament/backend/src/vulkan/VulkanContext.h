@@ -17,18 +17,17 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
-#include "vulkan/utils/Image.h"
-#include "vulkan/utils/Definitions.h"
-
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Image.h"
 
-#include <vector>
+#include <bluevk/BlueVK.h>
 
 #include <utils/bitset.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
 
-#include <bluevk/BlueVK.h>
+#include <vector>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)

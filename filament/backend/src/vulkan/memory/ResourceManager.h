@@ -18,13 +18,12 @@
 #define TNT_FILAMENT_BACKEND_VULKAN_MEMORY_RESOURCEMANAGER_H
 
 #include "vulkan/memory/Resource.h"
-
 #include "vulkan/VulkanAsyncHandles.h"
 
 #include <private/backend/HandleAllocator.h>
 
-#include <utils/Panic.h>
 #include <utils/ImmutableCString.h>
+#include <utils/Panic.h>
 
 namespace filament::backend::fvkmemory {
 

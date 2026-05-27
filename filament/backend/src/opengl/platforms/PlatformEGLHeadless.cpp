@@ -16,14 +16,14 @@
 
 #include <backend/platforms/PlatformEGLHeadless.h>
 
+#include <utils/compiler.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+
 #include <bluegl/BlueGL.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-
-#include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
 
 using namespace utils;
 

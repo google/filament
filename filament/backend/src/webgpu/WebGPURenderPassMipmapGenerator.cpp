@@ -15,6 +15,7 @@
  */
 
 #include "WebGPURenderPassMipmapGenerator.h"
+
 #include "WebGPUQueueManager.h"
 
 #include <utils/Panic.h>

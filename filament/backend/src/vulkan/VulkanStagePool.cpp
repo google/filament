@@ -19,6 +19,7 @@
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
+
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Image.h"
 
@@ -145,6 +146,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
         }
 #endif
     }
+    (void) result;
 
     return new VulkanStage(memory, buffer, capacity, pMapping);
 }

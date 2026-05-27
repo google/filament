@@ -19,8 +19,8 @@
 #include "fg/details/PassNode.h"
 #include "fg/details/ResourceNode.h"
 
-#include <utils/Panic.h>
 #include <utils/CString.h>
+#include <utils/Panic.h>
 
 using namespace filament::backend;
 

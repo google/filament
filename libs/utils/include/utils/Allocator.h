@@ -25,11 +25,11 @@
 #include <cstddef>
 #include <mutex>
 #include <type_traits>
+#include <vector>
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <vector>
+#include <stdlib.h>
 
 namespace utils {
 

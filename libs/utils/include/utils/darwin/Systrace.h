@@ -17,17 +17,18 @@
 #ifndef TNT_UTILS_DARWIN_SYSTRACE_H
 #define TNT_UTILS_DARWIN_SYSTRACE_H
 
-#include <atomic>
-
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <utils/compiler.h>
 
 #include <os/log.h>
 #include <os/signpost.h>
 
-#include <utils/compiler.h>
+#include <atomic>
 #include <stack>
+
+#include <unistd.h>
+
+#include <stdint.h>
+#include <stdio.h>
 
 // enable tracing
 #define SYSTRACE_ENABLE() ::utils::details::Systrace::enable(SYSTRACE_TAG)

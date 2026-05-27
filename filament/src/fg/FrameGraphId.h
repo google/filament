@@ -17,9 +17,10 @@
 #ifndef TNT_FILAMENT_FG_FRAMEGRAPHID_H
 #define TNT_FILAMENT_FG_FRAMEGRAPHID_H
 
-#include <stdint.h>
 #include <limits>
 #include <utility>
+
+#include <stdint.h>
 
 namespace filament {
 

@@ -90,5 +90,9 @@ function(glslang_add_build_info_dependency target)
 endfunction()
 
 
+if (NOT MSVC)
+    add_compile_options("-Wno-deprecated-enum-enum-conversion")
+endif()
+
 add_subdirectory(../glslang/tnt "${CMAKE_CURRENT_BINARY_DIR}/glslang")
 add_subdirectory(../SPIRV/tnt "${CMAKE_CURRENT_BINARY_DIR}/SPIRV")

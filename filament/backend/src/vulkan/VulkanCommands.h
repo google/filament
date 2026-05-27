@@ -17,17 +17,17 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCOMMANDS_H
 #define TNT_FILAMENT_BACKEND_VULKANCOMMANDS_H
 
-#include <bluevk/BlueVK.h>
-
 #include "DriverBase.h"
-
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 #include "VulkanFencePool.h"
 #include "VulkanSemaphoreManager.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
+
+#include <bluevk/BlueVK.h>
 
 #include <utils/Condition.h>
 #include <utils/CString.h>
@@ -94,8 +94,8 @@ struct VulkanCommandBuffer {
     void begin() noexcept;
     fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
-    inline void checkAndUpdateStatus(VkDevice device) {
-        mFenceStatus->updateStatus(device);
+    inline void refreshStatus(VkDevice device) {
+        mFenceStatus->refreshStatus(device);
     }
 
     VkResult getStatus() {

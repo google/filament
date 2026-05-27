@@ -16,7 +16,6 @@
 
 #include "ColorPassDescriptorSet.h"
 
-
 #include "Froxelizer.h"
 #include "PerViewDescriptorSetUtils.h"
 #include "TypedUniformBuffer.h"
@@ -28,34 +27,34 @@
 #include "details/IndirectLight.h"
 #include "details/Texture.h"
 
-#include <filament/Exposure.h>
-#include <filament/Options.h>
-#include <filament/MaterialEnums.h>
-#include <filament/Viewport.h>
-
-#include <private/filament/EngineEnums.h>
 #include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
+
+#include <filament/Exposure.h>
+#include <filament/MaterialEnums.h>
+#include <filament/Options.h>
+#include <filament/Viewport.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
-
-#include <math/mat4.h>
-#include <math/mat3.h>
-#include <math/scalar.h>
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
 
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstring>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 #include <random>
 
@@ -129,8 +128,8 @@ void ColorPassDescriptorSet::init(
         auto const& layout = mDescriptorSetLayout[i];
         descriptorSet.setBuffer(layout, +PerViewBindingPoints::LIGHTS,
                 lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
-        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER,
-                recordBuffer, 0, sizeof(FroxelRecordUib));
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER, recordBuffer, 0,
+                Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()));
         descriptorSet.setBuffer(layout, +PerViewBindingPoints::FROXEL_BUFFER,
                 froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }

@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
+#include "DriverBase.h"
 #include "WebGPUTexture.h"
 
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
@@ -62,7 +62,6 @@ public:
 
     [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
-    [[nodiscard]] uint8_t getSampleCountPerAttachment() const { return mSampleCountPerAttachment; }
     [[nodiscard]] uint8_t getLayerCount() const { return mLayerCount; }
 
     [[nodiscard]] MRT const& getColorAttachmentInfos() const { return mColorAttachments; }
@@ -72,7 +71,7 @@ public:
     [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer);
+            TargetBufferFlags buffer, bool isTransient);
 
     [[nodiscard]] TargetBufferFlags getTargetFlags() const { return mTargetFlags; }
     void setTargetFlags( TargetBufferFlags value) { mTargetFlags = value; }
@@ -80,6 +79,7 @@ public:
 private:
     bool mDefaultRenderTarget = false;
     TargetBufferFlags mTargetFlags = TargetBufferFlags::NONE;
+    TargetBufferFlags mTransientAttachments = TargetBufferFlags::NONE;
     uint8_t mSamples = 1;
     uint8_t mLayerCount = 1;
 
@@ -88,8 +88,6 @@ private:
     // mDepthStencilAttachment?
     Attachment mDepthAttachment{};
     Attachment mStencilAttachment{};
-
-    uint8_t mSampleCountPerAttachment = 0;
 
     // Cached descriptors for the render pass
     std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDesc;

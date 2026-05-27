@@ -16,8 +16,8 @@
 
 #include "StringPlaceholderTemplateProcessor.h"
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <sstream>
 #include <string>

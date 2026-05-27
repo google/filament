@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUBLITTER_H
 
 #include <backend/DriverEnums.h>
-
 #if defined(__EMSCRIPTEN__)
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif

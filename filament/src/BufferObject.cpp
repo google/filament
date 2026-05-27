@@ -16,9 +16,9 @@
 
 #include "details/BufferObject.h"
 
-#include "details/Engine.h"
-
 #include "FilamentAPI-impl.h"
+
+#include "details/Engine.h"
 
 namespace filament {
 

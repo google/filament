@@ -17,10 +17,10 @@
 #ifndef TNT_COMPUTE_TEST_H
 #define TNT_COMPUTE_TEST_H
 
-#include <gtest/gtest.h>
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/DriverApi.h>
 
-#include "private/backend/CommandBufferQueue.h"
-#include "private/backend/DriverApi.h"
+#include <gtest/gtest.h>
 
 class ComputeTest : public ::testing::Test {
     static filament::backend::Backend sBackend;

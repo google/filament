@@ -17,13 +17,13 @@
 #ifndef TNT_IMAGE_EXPECTATIONS_H
 #define TNT_IMAGE_EXPECTATIONS_H
 
-#include <filesystem>
-#include <vector>
-
 #include "gtest/gtest.h"
 
-#include "backend/Handle.h"
-#include "backend/DriverApiForward.h"
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+
+#include <filesystem>
+#include <vector>
 
 // Arguments are (RenderTargetHandle renderTarget, ImageExpectations& expectations,
 // ScreenshotParams screenshotParams)

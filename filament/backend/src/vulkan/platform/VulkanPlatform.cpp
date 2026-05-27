@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include "backend/platforms/VulkanPlatform.h"
+#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
+#include "vulkan/utils/Helper.h"
+#include "vulkan/VulkanConstants.h"
+#include "vulkan/VulkanContext.h"
+#include "vulkan/VulkanDriver.h"
 
 #include <backend/DriverEnums.h>
-
-#include "vulkan/VulkanContext.h"
-#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
-#include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanDriver.h"
-#include "vulkan/utils/Helper.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -983,12 +983,26 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures.
-    vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
-    vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
+    if (vkGetPhysicalDeviceProperties2) {
+        vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
+    } else {
+        vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties.properties);
+    }
+
+    if (vkGetPhysicalDeviceFeatures2) {
+        vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
+    } else {
+        vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures.features);
+    }
+
     vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
 
     // Store the extension support in the context
-    if (!mImpl->mSharedContext) {
+    if (sharedContext) {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+    } else {
         context.mDebugUtilsSupported =
                 setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =
@@ -998,10 +1012,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         context.mVertexInputDynamicStateSupported =
                 setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
         context.mGlobalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
-    } else {
-        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
-        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
-        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
     }
 
     // Pass along relevant driver config (feature flags)

@@ -15,14 +15,14 @@
  */
 
 #include "ComputeTest.h"
+
 #include "PlatformRunner.h"
 
-#include <backend/Platform.h>
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/DriverApi.h>
 #include <private/backend/PlatformFactory.h>
 
-
-#include "private/backend/CommandBufferQueue.h"
-#include "private/backend/DriverApi.h"
+#include <backend/Platform.h>
 
 using namespace filament;
 using namespace filament::backend;

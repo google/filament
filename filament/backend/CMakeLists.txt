@@ -319,6 +319,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPipelineLayoutCache.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPUPushConstantDescription.cpp
+            src/webgpu/WebGPUPushConstantDescription.h
             src/webgpu/WebGPUQueueManager.cpp
             src/webgpu/WebGPUQueueManager.h
             src/webgpu/WebGPURenderPassMipmapGenerator.cpp
@@ -535,6 +537,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${TARGET} PRIVATE -Wthread-safety)
+endif()
 
 if (FILAMENT_SUPPORTS_METAL)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_METAL_PROFILING}>:FILAMENT_METAL_PROFILING>)

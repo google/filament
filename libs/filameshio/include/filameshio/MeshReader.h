@@ -102,7 +102,7 @@ public:
      * named "DefaultMaterial" to the registry.
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
-            void const* data, Callback destructor, void* user,
+            void const* data, size_t dataSize, Callback destructor, void* user,
             MaterialRegistry& materials);
 
     /**
@@ -111,7 +111,7 @@ public:
      * renderable are assigned the specified default material.
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
-            void const* data, Callback destructor, void* user,
+            void const* data, size_t dataSize, Callback destructor, void* user,
             filament::MaterialInstance* defaultMaterial);
 };
 

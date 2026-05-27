@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatformAndroid.h>
+#include "AndroidFrameCallback.h"
 
-#include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
-
-#include "AndroidFrameCallback.h"
+#include "vulkan/VulkanConstants.h"
+#include "vulkan/VulkanContext.h"
 
 #include <private/backend/BackendUtilsAndroid.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
-
-#include <bluevk/BlueVK.h>
 
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>
@@ -90,64 +89,10 @@ bool isProtectedFromUsage(uint64_t usage) {
     return usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
 }
 
-std::pair<VkFormat, VkImageUsageFlags> getVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
-        bool sRGB) {
-    VkFormat format = VK_FORMAT_UNDEFINED;
+VkImageUsageFlags getVkUsage(const AHardwareBuffer_Desc& desc, VkFormat format, bool sRGB) {
     VkImageUsageFlags usage = 0;
-    // Refer to "11.2.17. External Memory Handle Types" in the spec, and
-    // Tables 13/14 for how the following derivation works.
-    bool isDepthFormat = false;
-    switch (desc.format) {
-        case AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM:
-            format = VK_FORMAT_R8G8B8A8_UNORM;
-            break;
-        case AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM:
-            format = VK_FORMAT_R8G8B8A8_UNORM;
-            break;
-        case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
-            format = VK_FORMAT_R8G8B8_UNORM;
-            break;
-        case AHARDWAREBUFFER_FORMAT_R5G6B5_UNORM:
-            format = VK_FORMAT_R5G6B5_UNORM_PACK16;
-            break;
-        case AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT:
-            format = VK_FORMAT_R16G16B16A16_SFLOAT;
-            break;
-        case AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM:
-            format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-            break;
-        case AHARDWAREBUFFER_FORMAT_D16_UNORM:
-            isDepthFormat = true;
-            format = VK_FORMAT_D16_UNORM;
-            break;
-        case AHARDWAREBUFFER_FORMAT_D24_UNORM:
-            isDepthFormat = true;
-            format = VK_FORMAT_X8_D24_UNORM_PACK32;
-            break;
-        case AHARDWAREBUFFER_FORMAT_D24_UNORM_S8_UINT:
-            isDepthFormat = true;
-            format = VK_FORMAT_D24_UNORM_S8_UINT;
-            break;
-        case AHARDWAREBUFFER_FORMAT_D32_FLOAT:
-            isDepthFormat = true;
-            format = VK_FORMAT_D32_SFLOAT;
-            break;
-        case AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT:
-            isDepthFormat = true;
-            format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-            break;
-        case AHARDWAREBUFFER_FORMAT_S8_UINT:
-            isDepthFormat = true;
-            format = VK_FORMAT_S8_UINT;
-            break;
-        default:
-            format = VK_FORMAT_UNDEFINED;
-    }
-
-    format = transformVkFormat(format, sRGB);
-
+    bool isDepthStencilFormat = fvkutils::isVkDepthFormat(format) || fvkutils::isVkStencilFormat(format);
     // The following only concern usage flags derived from Table 14.
-    usage = 0;
     if (desc.usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE) {
         usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 
@@ -155,7 +100,7 @@ std::pair<VkFormat, VkImageUsageFlags> getVKFormatAndUsage(const AHardwareBuffer
         // usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
     }
     if (desc.usage & AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER) {
-        if (isDepthFormat) {
+        if (isDepthStencilFormat) {
             usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         } else {
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -165,7 +110,7 @@ std::pair<VkFormat, VkImageUsageFlags> getVKFormatAndUsage(const AHardwareBuffer
         usage = VK_IMAGE_USAGE_STORAGE_BIT;
     }
 
-    return { format, usage };
+    return usage;
 }
 
 std::pair<TextureFormat, TextureUsage> getFilamentFormatAndUsage(const AHardwareBuffer_Desc& desc,
@@ -354,8 +299,26 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         metadata.samples = VK_SAMPLE_COUNT_1_BIT;
         metadata.isStagingRequired = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
 
-        std::tie(metadata.format, metadata.usage) =
-            getVKFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
+        // Get the VkFormat directly from the driver.
+        VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
+            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
+        };
+        VkAndroidHardwareBufferPropertiesANDROID properties = {
+            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+            .pNext = &formatInfo,
+        };
+        VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &properties);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkGetAndroidHardwareBufferProperties failed with error="
+            << static_cast<int32_t>(result);
+
+        VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
+        metadata.format = bufferPropertiesFormat;
+        metadata.usage = getVkUsage(bufferDesc, metadata.format, fvkExternalImage->sRGB);
+
+        // TODO: Right now, if we get a format that isn't explicitly supported by Filament, the
+        // reverse mapping to a Filament format may be empty. We can fix this by deriving the format
+        // from the VkFormat directly, but for now this should be ok.
         std::tie(metadata.filamentFormat, metadata.filamentUsage) =
             getFilamentFormatAndUsage(bufferDesc, fvkExternalImage->sRGB);
 
@@ -371,23 +334,6 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         if (any(metadata.filamentUsage & (TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE))) {
             metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         }
-
-        VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
-            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
-        };
-        VkAndroidHardwareBufferPropertiesANDROID properties = {
-            .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
-            .pNext = &formatInfo,
-        };
-        VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(getDevice(), buffer, &properties);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkGetAndroidHardwareBufferProperties failed with error="
-            << static_cast<int32_t>(result);
-
-        VkFormat bufferPropertiesFormat = transformVkFormat(formatInfo.format, fvkExternalImage->sRGB);
-        FILAMENT_CHECK_POSTCONDITION(metadata.format == bufferPropertiesFormat)
-            << "mismatched image format( " << metadata.format << ") and queried format("
-            << bufferPropertiesFormat << ") for external image (AHB)";
 
         metadata.allocationSize = properties.allocationSize;
         metadata.memoryTypeBits = properties.memoryTypeBits;

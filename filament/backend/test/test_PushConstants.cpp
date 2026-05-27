@@ -15,14 +15,14 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "ShaderGenerator.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
-#include "backend/DriverEnums.h"
-#include "backend/Handle.h"
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <utils/Hash.h>
 
@@ -40,6 +40,7 @@ static constexpr struct {
     size_t TRIANGLE_OFFSET_X = 2;
     size_t TRIANGLE_OFFSET_Y = 3;
 
+    size_t BOOL_PADDING = 1;
     size_t RED = 0;
     size_t GREEN = 2;
     size_t BLUE = 3;
@@ -72,7 +73,7 @@ void main() {
 static const char* const triangleFs = R"(#version 450 core
 
 layout(push_constant) uniform Constants {
-#if defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     // offset here accounts for the size of the push constants in the vertex stage.  Vulkan has one
     // block of memory for all stages to share.
     layout(offset=16) float red;
@@ -104,15 +105,15 @@ void initPushConstants() {
 
     gFragConstants.reserve(4);
     gFragConstants.resize(4);
+    gFragConstants[pushConstantIndex.BOOL_PADDING] = { "pushConstantsF.padding",
+        backend::ConstantType::BOOL };
     gFragConstants[pushConstantIndex.RED] = {"pushConstantsF.red", backend::ConstantType::FLOAT};
     gFragConstants[pushConstantIndex.GREEN] = {"pushConstantsF.green", backend::ConstantType::FLOAT};
     gFragConstants[pushConstantIndex.BLUE] = {"pushConstantsF.blue", backend::ConstantType::FLOAT};
 }
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
     // Test is flaky on CI (but does not repro locally).
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776664");
 
     initPushConstants();
 
@@ -137,7 +138,7 @@ TEST_F(BackendTest, PushConstants) {
 
         TrianglePrimitive triangle(api);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         PipelineState ps = {};
@@ -152,6 +153,9 @@ TEST_F(BackendTest, PushConstants) {
         api.beginRenderPass(renderTarget, params);
         api.bindPipeline(ps);
         api.bindRenderPrimitive(triangle.getRenderPrimitive());
+
+        // To avoid vulkan validation warning, we need to set this.
+        api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.BOOL_PADDING, false);
 
         // Set the push constants to scale the triangle in half
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_HIDE, false);

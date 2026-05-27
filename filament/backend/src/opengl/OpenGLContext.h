@@ -17,15 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 #define TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 
-#include <backend/platforms/OpenGLPlatform.h>
+#include "gl_headers.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
-#include "gl_headers.h"
-
-#include <utils/compiler.h>
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
 #include <math/vec2.h>

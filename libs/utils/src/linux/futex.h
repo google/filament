@@ -17,13 +17,15 @@
 #ifndef UTILS_LINUX_FUTEX_H
 #define UTILS_LINUX_FUTEX_H
 
+#include <utils/compiler.h>
+
 #include <linux/futex.h>
+
 #include <sys/syscall.h>
-#include <errno.h>
-#include <stdbool.h>
 #include <unistd.h>
 
-#include <utils/compiler.h>
+#include <errno.h>
+#include <stdbool.h>
 
 struct timespec;
 

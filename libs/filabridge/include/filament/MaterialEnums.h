@@ -19,12 +19,13 @@
 #ifndef TNT_FILAMENT_MATERIAL_ENUM_H
 #define TNT_FILAMENT_MATERIAL_ENUM_H
 
-#include <utils/bitset.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/bitset.h>
+
+#include <string_view>
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string_view>
 
 namespace filament {
 
