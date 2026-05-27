@@ -51,6 +51,7 @@
 
 namespace filament::backend {
 
+class WebGPUProgram;
 class WebGPUSwapChain;
 class WebGPUQueueManager;
 
@@ -101,6 +102,11 @@ private:
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
     WebGPUBlitter mBlitter;
     webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
+
+    struct {
+        // For push constant
+        WebGPUProgram* program = nullptr;
+    } mPipelineState {};
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
