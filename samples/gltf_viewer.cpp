@@ -1076,6 +1076,9 @@ int main(int argc, char** argv) {
     auto animate = [&app](Engine*, View*, double now) {
         app.resourceLoader->asyncUpdateLoad();
 
+        app.names->gc();
+        app.assetLoader->gc();
+
         // Optionally fit the model into a unit cube at the origin.
         app.viewer->updateRootTransform();
 

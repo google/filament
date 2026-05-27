@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-#include <gltfio/Animator.h>
-#include <gltfio/AssetLoader.h>
-#include <gltfio/MaterialProvider.h>
-#include <gltfio/math.h>
-
+#include "downcast.h"
 #include "FFilamentAsset.h"
 #include "FNodeManager.h"
 #include "FTrsTransformManager.h"
 #include "GltfEnums.h"
 #include "Utility.h"
+
 #include "extended/AssetLoaderExtended.h"
+
+#include <gltfio/Animator.h>
+#include <gltfio/AssetLoader.h>
+#include <gltfio/MaterialProvider.h>
+#include <gltfio/math.h>
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -40,24 +42,21 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
-#include <math/mat4.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
-
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
 #include <utils/NameComponentManager.h>
+#include <utils/Panic.h>
 
-#include <tsl/robin_map.h>
+#include <math/mat4.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <cgltf.h>
-
-#include "downcast.h"
+#include <tsl/robin_map.h>
 
 #include <codecvt>
 #include <locale>
@@ -261,6 +260,8 @@ struct FAssetLoader : public AssetLoader {
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(*config.materials),
             mEngine(*config.engine),
+            mNodeManager(mEntityManager),
+            mTrsTransformManager(mEntityManager),
             mDefaultNodeName(config.defaultNodeName) {
         if (config.ext) {
             FILAMENT_CHECK_POSTCONDITION(AssetConfigurationExtended::isSupported())
@@ -282,6 +283,11 @@ struct FAssetLoader : public AssetLoader {
 
     void destroyAsset(const FFilamentAsset* asset) {
         delete asset;
+    }
+
+    void gc() noexcept {
+        mNodeManager.gc();
+        mTrsTransformManager.gc();
     }
 
     size_t getMaterialsCount() const noexcept {
@@ -1829,6 +1835,10 @@ void AssetLoader::enableDiagnostics(bool enable) {
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
     downcast(this)->destroyAsset(downcast(asset));
+}
+
+void AssetLoader::gc() noexcept {
+    downcast(this)->gc();
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {

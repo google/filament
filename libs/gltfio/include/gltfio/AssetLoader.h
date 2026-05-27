@@ -17,12 +17,12 @@
 #ifndef GLTFIO_ASSETLOADER_H
 #define GLTFIO_ASSETLOADER_H
 
-#include <filament/Engine.h>
-#include <filament/Material.h>
-
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
 #include <gltfio/MaterialProvider.h>
+
+#include <filament/Engine.h>
+#include <filament/Material.h>
 
 #include <utils/compiler.h>
 
@@ -234,6 +234,11 @@ public:
      * texture decoding or GPU uploading might be underway.
      */
     void destroyAsset(const FilamentAsset* asset);
+
+    /**
+     * @brief Performs a Garbage Collection sweep over all internal component managers.
+     */
+    void gc() noexcept;
 
     /**
      * Gets a weak reference to an array of cached materials, used internally to create material
