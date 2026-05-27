@@ -1461,7 +1461,7 @@ void WebGPUDriver::endRenderPass(int /* dummy */) {
     FWGPU_SYSTRACE_SCOPE();
     mRenderPassEncoder.End();
     mRenderPassEncoder = nullptr;
-    mPipelineState.program = nullptr;
+    mPipelineState = {};
 }
 
 void WebGPUDriver::nextSubpass(int) {
