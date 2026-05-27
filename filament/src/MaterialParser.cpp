@@ -267,6 +267,12 @@ bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
     if (ZSTD_isError(decompressBound)) {
         return false;
     }
+    // Reject implausibly large declared sizes to prevent unbounded allocation
+    // from attacker-controlled .filamat files (decompression bomb).
+    static constexpr size_t MAX_ZSTD_DECOMPRESSED_SIZE = 256u * 1024u * 1024u; // 256 MiB
+    if (UTILS_UNLIKELY(decompressBound > MAX_ZSTD_DECOMPRESSED_SIZE)) {
+        return false;
+    }
 
     auto dst_buffer = std::make_unique<char[]>(decompressBound);
     const size_t decompressed =
