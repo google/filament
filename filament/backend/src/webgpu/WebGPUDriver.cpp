@@ -1161,10 +1161,12 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
     const auto extent{
         wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth }
     };
-    const uint32_t bytesPerRow{ static_cast<uint32_t>(
-            PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type) * width) };
-    const uint8_t* dataBuff{ static_cast<const uint8_t*>(inputData->buffer) };
-    const size_t dataSize{ inputData->size };
+    const size_t bpp = PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type);
+    const uint32_t stride = inputData->stride ? inputData->stride : width;
+    const uint32_t bytesPerRow = static_cast<uint32_t>(bpp * stride);
+    const size_t offsetBytes = (inputData->top * bytesPerRow) + (inputData->left * bpp);
+    const uint8_t* dataBuff = static_cast<const uint8_t*>(inputData->buffer) + offsetBytes;
+    const size_t dataSize = inputData->size - offsetBytes;
     const auto layout{ wgpu::TexelCopyBufferLayout{
         .bytesPerRow = bytesPerRow,
         .rowsPerImage = height,

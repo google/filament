@@ -582,7 +582,8 @@ namespace filament::backend {
         retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
     }
     if (any(TextureUsage::UPLOADABLE & fUsage)) {
-        retUsage |= wgpu::TextureUsage::CopyDst;
+        // TODO: Consider doing a staging buffer + blit + copy instead of adding RenderAttachment flag
+        retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
     }
     if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
         retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);
