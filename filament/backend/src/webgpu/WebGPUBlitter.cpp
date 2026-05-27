@@ -319,7 +319,7 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
     };
     const wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
         .view = destinationView,
-        .depthLoadOp = wgpu::LoadOp::Clear,
+        .depthLoadOp = wgpu::LoadOp::Load,
         .depthStoreOp = wgpu::StoreOp::Store,
         .depthClearValue = 0.0f, // explicitly defining for consistency
         .depthReadOnly = false,
@@ -337,7 +337,7 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
         // shader), but we probably should (leveraging a msaa sidecar texture) to take advantage
         // of hardware acceleration. Thus, this might be an opportunity for optimization
         .resolveTarget = nullptr,
-        .loadOp = wgpu::LoadOp::Clear,
+        .loadOp = wgpu::LoadOp::Load,
         .storeOp = wgpu::StoreOp::Store,
         .clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
     };
@@ -363,6 +363,12 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
     };
     renderPassEncoder.SetPipeline(getOrCreateRenderPipeline(renderPipelineKey));
     renderPassEncoder.SetBindGroup(TEXTURE_BIND_GROUP_INDEX, textureBindGroup);
+    renderPassEncoder.SetViewport(
+            static_cast<float>(args.destination.origin.x),
+            static_cast<float>(args.destination.origin.y),
+            static_cast<float>(args.destination.extent.width),
+            static_cast<float>(args.destination.extent.height),
+            0.0f, 1.0f);
     renderPassEncoder.Draw(3); // draw the full-screen triangle
                                // with hard-coded vertices in the shader
     renderPassEncoder.End();
