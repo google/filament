@@ -554,13 +554,13 @@ public:
          * precedence.
          *
          * @param primitiveIndex the primitive of interest
-         * @param order draw order number (0 by default). Only the lowest 15 bits are used.
+         * @param blendOrder draw order number (0 by default). Only the lowest 15 bits are used.
          *
          * @return Builder reference for chaining calls.
          *
          * @see globalBlendOrderEnabled
          */
-        Builder& blendOrder(size_t primitiveIndex, uint16_t order) noexcept;
+        Builder& blendOrder(size_t primitiveIndex, uint16_t blendOrder) noexcept;
 
         /**
          * Sets whether the blend order is global or local to this Renderable (by default).
@@ -634,7 +634,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Result build(Engine& engine, utils::Entity entity);
+        Result build(Engine& engine, utils::Entity entity) const;
 
     private:
         friend class FEngine;
