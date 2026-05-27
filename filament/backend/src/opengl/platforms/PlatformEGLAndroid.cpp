@@ -201,8 +201,8 @@ void PlatformEGLAndroid::beginFrame(
 
 void PlatformEGLAndroid::preCommit() noexcept {
     if (mPerformanceHintSession.isValid()) {
-        auto const actualWorkDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                clock::now() - mStartTimeOfActualWork);
+        auto const actualWorkDuration =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - mStartTimeOfActualWork);
         mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
     }
     PlatformEGL::preCommit();
