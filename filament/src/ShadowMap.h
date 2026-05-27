@@ -17,15 +17,16 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADOWMAP_H
 #define TNT_FILAMENT_DETAILS_SHADOWMAP_H
 
-#include <filament/Box.h>
-
 #include "Culler.h"
-#include "ds/ShadowMapDescriptorSet.h"
+
+#include "components/LightManager.h"
 
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "components/LightManager.h"
+#include "ds/ShadowMapDescriptorSet.h"
+
+#include <filament/Box.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>

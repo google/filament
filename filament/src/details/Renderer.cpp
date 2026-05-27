@@ -42,44 +42,44 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
-#include <private/utils/Tracing.h>
-
 #include <filament/Camera.h>
 #include <filament/Fence.h>
 #include <filament/Options.h>
 #include <filament/Renderer.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/mat4.h>
+#include <private/utils/Tracing.h>
 
-#include <utils/architecture.h>
 #include <utils/Allocator.h>
+#include <utils/architecture.h>
 #include <utils/bitset.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
+
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 
 #include <algorithm>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <utility>
 
-#include <stddef.h>
-#include <stdint.h>
-
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
+
+#include <stddef.h>
+#include <stdint.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -288,7 +288,6 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
             "skipFrame() can't be called between beginFrame() and endFrame()";
 
     if (!vsyncSteadyClockTimeNano) {
-        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
         mVsyncSteadyClockTimeNano = 0;
     }
 

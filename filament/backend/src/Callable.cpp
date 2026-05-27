@@ -16,8 +16,8 @@
 
 #include <backend/PresentCallable.h>
 
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 namespace filament::backend {
 

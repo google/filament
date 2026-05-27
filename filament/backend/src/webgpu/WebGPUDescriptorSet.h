@@ -17,11 +17,10 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDESCRIPTORSET_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDESCRIPTORSET_H
 
+#include "DriverBase.h"
+#include "WebGPUConstants.h"
 #include "WebGPUDescriptorSetLayout.h"
 
-#include "WebGPUConstants.h"
-
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
 #include <webgpu/webgpu_cpp.h>

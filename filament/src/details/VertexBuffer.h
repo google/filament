@@ -19,15 +19,15 @@
 
 #include "downcast.h"
 
-#include <backend/DriverEnums.h>
-#include <backend/BufferDescriptor.h>
-#include <backend/Handle.h>
-
 #include <filament/MaterialEnums.h>
 #include <filament/VertexBuffer.h>
 
-#include <atomic>
+#include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <memory>

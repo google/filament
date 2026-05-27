@@ -418,6 +418,7 @@ export class Camera {
     public getCullingFar(): number;
     public setModelMatrix(view: mat4): void;
     public lookAt(eye: float3, center: float3, up: float3): void;
+    public setLookAt(manip: Camutils$Manipulator): void;
     public getModelMatrix(): mat4;
     public getViewMatrix(): mat4;
     public getPosition(): float3;
@@ -1798,4 +1799,72 @@ export interface View$SoftShadowOptions {
  */
 export interface View$StereoscopicOptions {
     enabled?: boolean;
+}
+
+export enum Camutils$Mode {
+    ORBIT,
+    MAP,
+    FREE_FLIGHT,
+}
+
+export enum Camutils$Fov {
+    VERTICAL,
+    HORIZONTAL,
+}
+
+export enum Camutils$Key {
+    FORWARD,
+    LEFT,
+    BACKWARD,
+    RIGHT,
+    UP,
+    DOWN,
+}
+
+export class Camutils$Bookmark {
+    public static interpolate(a: Camutils$Bookmark, b: Camutils$Bookmark, t: number): Camutils$Bookmark;
+    public static duration(a: Camutils$Bookmark, b: Camutils$Bookmark): number;
+}
+
+export class Camutils$Manipulator {
+    public setViewport(width: number, height: number): void;
+    public getLookAt(eye: float3, target: float3, up: float3): void;
+    public raycast(x: number, y: number, result: float3): boolean;
+    public getRay(x: number, y: number, origin: float3, dir: float3): void;
+    public grabBegin(x: number, y: number, strafe: boolean): void;
+    public grabUpdate(x: number, y: number): void;
+    public grabEnd(): void;
+    public keyDown(key: Camutils$Key): void;
+    public keyUp(key: Camutils$Key): void;
+    public scroll(x: number, y: number, scrolldelta: number): void;
+    public update(deltaTime: number): void;
+    public getCurrentBookmark(): Camutils$Bookmark;
+    public getHomeBookmark(): Camutils$Bookmark;
+    public jumpToBookmark(bookmark: Camutils$Bookmark): void;
+    public attach(canvas: HTMLCanvasElement): void;
+    public detach(canvas: HTMLCanvasElement): void;
+}
+
+export class Camutils$Manipulator$Builder {
+    constructor();
+    public viewport(width: number, height: number): Camutils$Manipulator$Builder;
+    public targetPosition(x: number, y: number, z: number): Camutils$Manipulator$Builder;
+    public upVector(x: number, y: number, z: number): Camutils$Manipulator$Builder;
+    public zoomSpeed(val: number): Camutils$Manipulator$Builder;
+    public orbitHomePosition(x: number, y: number, z: number): Camutils$Manipulator$Builder;
+    public orbitSpeed(x: number, y: number): Camutils$Manipulator$Builder;
+    public fovDirection(fov: Camutils$Fov): Camutils$Manipulator$Builder;
+    public fovDegrees(degrees: number): Camutils$Manipulator$Builder;
+    public farPlane(distance: number): Camutils$Manipulator$Builder;
+    public mapExtent(worldWidth: number, worldHeight: number): Camutils$Manipulator$Builder;
+    public mapMinDistance(mindist: number): Camutils$Manipulator$Builder;
+    public flightStartPosition(x: number, y: number, z: number): Camutils$Manipulator$Builder;
+    public flightStartOrientation(pitch: number, yaw: number): Camutils$Manipulator$Builder;
+    public flightMaxMoveSpeed(maxSpeed: number): Camutils$Manipulator$Builder;
+    public flightSpeedSteps(steps: number): Camutils$Manipulator$Builder;
+    public flightPanSpeed(x: number, y: number): Camutils$Manipulator$Builder;
+    public flightMoveDamping(damping: number): Camutils$Manipulator$Builder;
+    public groundPlane(a: number, b: number, c: number, d: number): Camutils$Manipulator$Builder;
+    public panning(enabled: boolean): Camutils$Manipulator$Builder;
+    public build(mode: Camutils$Mode): Camutils$Manipulator;
 }

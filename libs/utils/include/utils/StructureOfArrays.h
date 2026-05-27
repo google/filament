@@ -17,7 +17,6 @@
 #ifndef TNT_UTILS_STRUCTUREOFARRAYS_H
 #define TNT_UTILS_STRUCTUREOFARRAYS_H
 
-#include <type_traits>
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
@@ -27,6 +26,7 @@
 #include <cstddef>
 #include <iterator>     // for std::random_access_iterator_tag
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include <assert.h>

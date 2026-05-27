@@ -16,16 +16,15 @@
 
 #include "ShaderGenerator.h"
 
-#include <GlslangToSpv.h>
-
-#include <spirv_glsl.hpp>
-#include <spirv_msl.hpp>
+#include "builtinResource.h"
 
 #include "../src/GLSLPostProcessor.h"
 
-#include "builtinResource.h"
-
 #include <utils/FixedCapacityVector.h>
+
+#include <GlslangToSpv.h>
+#include <spirv_glsl.hpp>
+#include <spirv_msl.hpp>
 
 #include <iostream>
 #include <utility>

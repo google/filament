@@ -21,12 +21,12 @@
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <utils/compiler.h>
+#include <utils/Invocable.h>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
-
-#include <utils/compiler.h>
-#include <utils/Invocable.h>
 
 #include <initializer_list>
 #include <utility>

@@ -347,10 +347,10 @@ TEST(AtlasAllocator, ReuseHole) {
     AtlasAllocator allocator(256);
 
     // Allocate 4 128x128 blocks.
-    auto vp0 = allocator.allocate(128);
+    allocator.allocate(128);
     auto vp1 = allocator.allocate(128);
-    auto vp2 = allocator.allocate(128);
-    auto vp3 = allocator.allocate(128);
+    allocator.allocate(128);
+    allocator.allocate(128);
 
     // Free the second one (vp1)
     allocator.free(vp1);

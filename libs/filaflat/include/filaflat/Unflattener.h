@@ -17,11 +17,11 @@
 #ifndef TNT_FILAFLAT_UNFLATTENER_H
 #define TNT_FILAFLAT_UNFLATTENER_H
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/CString.h>
-
 #include <private/filament/Variant.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
 
 #include <type_traits>
 

@@ -17,8 +17,8 @@
 #ifndef TNT_UTILS_SLICE_H
 #define TNT_UTILS_SLICE_H
 
-#include <utils/Hash.h>
 #include <utils/compiler.h>
+#include <utils/Hash.h>
 
 #include <algorithm>
 #include <type_traits>

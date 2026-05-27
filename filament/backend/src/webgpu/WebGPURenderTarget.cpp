@@ -16,17 +16,18 @@
 
 #include "WebGPURenderTarget.h"
 
+#include "DriverBase.h"
 #include "WebGPUTexture.h"
 
-#include "DriverBase.h"
+#include <private/backend/BackendUtils.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
-#include <private/backend/BackendUtils.h>
 #include <utils/BitmaskEnum.h>
-#include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 

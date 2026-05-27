@@ -25,15 +25,15 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/StaticString.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 
-#include <utility>
 #include <limits>
+#include <utility>
 
 #include <stdint.h>
 

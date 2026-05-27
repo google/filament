@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_GLBUFFEROBJECT_H
 
 #include "DriverBase.h"
-
 #include "gl_headers.h"
 
 #include <backend/DriverEnums.h>

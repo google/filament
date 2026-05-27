@@ -17,14 +17,14 @@
 #ifndef TNT_UTILS_PAGEARENABITSET_H
 #define TNT_UTILS_PAGEARENABITSET_H
 
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
-#include <utils/algorithm.h>
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cassert>
 #include <type_traits>
 #include <vector>
 

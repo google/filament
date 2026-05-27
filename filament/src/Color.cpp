@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <filament/Color.h>
-
 #include "ColorSpaceUtils.h"
+
+#include <filament/Color.h>
 
 #include <math/mat3.h>
 #include <math/scalar.h>

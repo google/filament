@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
-#include "WebGPUQueueManager.h"
-
 #include "DriverBase.h"
+#include "WebGPUQueueManager.h"
 
 #include <backend/DriverEnums.h>
 

@@ -16,6 +16,7 @@
 
 #include "GLDescriptorSet.h"
 
+#include "gl_headers.h"
 #include "GLBufferObject.h"
 #include "GLDescriptorSetLayout.h"
 #include "GLTexture.h"
@@ -24,22 +25,20 @@
 #include "OpenGLProgram.h"
 #include "OpenGLState.h"
 
-#include "gl_headers.h"
-
 #include <private/backend/HandleAllocator.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/BitmaskEnum.h>
-#include <utils/Log.h>
-#include <utils/Logger.h>
-#include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <algorithm>
+#include <utils/Log.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 
+#include <algorithm>
 #include <type_traits>
 #include <utility>
 #include <variant>

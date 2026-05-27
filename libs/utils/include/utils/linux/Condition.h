@@ -17,13 +17,13 @@
 #ifndef TNT_UTILS_LINUX_CONDITION_H
 #define TNT_UTILS_LINUX_CONDITION_H
 
+#include <utils/linux/Mutex.h>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable> // for cv_status
 #include <limits>
 #include <mutex> // for unique_lock
-
-#include <utils/linux/Mutex.h>
 
 #include <time.h>
 

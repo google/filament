@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include <utils/CString.h>
-
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>

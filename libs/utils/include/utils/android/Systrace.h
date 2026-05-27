@@ -17,13 +17,14 @@
 #ifndef TNT_UTILS_ANDROID_SYSTRACE_H
 #define TNT_UTILS_ANDROID_SYSTRACE_H
 
+#include <utils/compiler.h>
+
 #include <atomic>
+
+#include <unistd.h>
 
 #include <stdint.h>
 #include <stdio.h>
-#include <unistd.h>
-
-#include <utils/compiler.h>
 
 // enable tracing
 #define SYSTRACE_ENABLE() ::utils::details::Systrace::enable(SYSTRACE_TAG)

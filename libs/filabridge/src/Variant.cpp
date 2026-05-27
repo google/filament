@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include <private/filament/Variant.h>
-
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
 #include <filament/MaterialEnums.h>
 

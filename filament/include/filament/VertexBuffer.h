@@ -29,6 +29,7 @@
 #include <utils/StaticString.h>
 
 #include <functional>
+
 #include <stddef.h>
 #include <stdint.h>
 

@@ -20,8 +20,8 @@
 
 #include <utils/StaticString.h>
 
-#include <array>
 #include <algorithm>
+#include <array>
 
 namespace filament {
 

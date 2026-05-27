@@ -17,10 +17,10 @@
 #ifndef TNT_FILAMENT_FG_DETAILS_DEPENDENCYGRAPH_H
 #define TNT_FILAMENT_FG_DETAILS_DEPENDENCYGRAPH_H
 
-#include <utils/ostream.h>
 #include <utils/CString.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/ostream.h>
 
 #include <vector>
 

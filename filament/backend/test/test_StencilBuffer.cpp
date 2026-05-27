@@ -15,14 +15,14 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
-#include "backend/DriverEnums.h"
+
+#include <backend/DriverEnums.h>
 
 using namespace filament;
 using namespace filament::backend;

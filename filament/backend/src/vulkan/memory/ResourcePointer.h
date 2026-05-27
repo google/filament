@@ -21,6 +21,7 @@
 #include "vulkan/memory/ResourceManager.h"
 
 #include <backend/Handle.h>
+
 #include <utils/compiler.h>
 
 #include <utility>

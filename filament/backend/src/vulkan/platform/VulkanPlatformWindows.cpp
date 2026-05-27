@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatformWindows.h>
-#include <backend/DriverEnums.h>
-
 #include "vulkan/VulkanConstants.h"
 
-#include <utils/Panic.h>
+#include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatformWindows.h>
 
 #include <bluevk/BlueVK.h>
 
-#include <tuple>
-
-#include <stdint.h>
-#include <stddef.h>
+#include <utils/Panic.h>
 
 #if defined(WIN32)
-    #include <windows.h>
+#include <windows.h>
 #endif
+
+#include <tuple>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace bluevk;
 

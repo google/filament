@@ -16,9 +16,11 @@
 
 #include "PerformanceCounters.h"
 
-#include <benchmark/benchmark.h>
-
 #include "../src/details/BufferAllocator.h"
+
+#include <utils/compiler.h>
+
+#include <benchmark/benchmark.h>
 
 #include <array>
 #include <cstddef>
@@ -51,7 +53,7 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateRetire)(benchmark::State& sta
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (UTILS_UNUSED auto _: state) {
         auto const [id, offset] = allocator.allocate(size);
         benchmark::DoNotOptimize(id);
         benchmark::DoNotOptimize(offset);
@@ -67,7 +69,7 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateGpuRetireRelease)(benchmark::
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (UTILS_UNUSED auto _: state) {
         auto const [id, offset] = allocator.allocate(size);
         benchmark::DoNotOptimize(offset);
         allocator.acquireGpu(id);
@@ -85,7 +87,7 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateBatchAndRetire)(benchmark::St
     std::array<AllocationId, BATCH_SIZE> ids{};
 
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (UTILS_UNUSED auto _: state) {
         for (AllocationId& id : ids) {
             auto const [newId, offset] = allocator.allocate(size);
             benchmark::DoNotOptimize(offset);
@@ -113,7 +115,7 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, allocateFragmented)(benchmark::State&
     }
 
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (UTILS_UNUSED auto _: state) {
         auto const [id, offset] = allocator.allocate(size);
         benchmark::DoNotOptimize(offset);
         retireValid(allocator, id);
@@ -127,7 +129,7 @@ BENCHMARK_DEFINE_F(BufferAllocatorFixture, reset)(benchmark::State& state) {
     BufferAllocator allocator(TOTAL_SIZE, SLOT_SIZE);
 
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (UTILS_UNUSED auto _: state) {
         allocator.reset(TOTAL_SIZE);
     }
     benchmark::ClobberMemory();

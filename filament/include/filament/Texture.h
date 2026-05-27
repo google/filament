@@ -29,9 +29,9 @@
 #include <utils/Invocable.h>
 #include <utils/StaticString.h>
 
+#include <functional>
 #include <utility>
 
-#include <functional>
 #include <stddef.h>
 #include <stdint.h>
 

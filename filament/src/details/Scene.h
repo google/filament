@@ -17,27 +17,26 @@
 #ifndef TNT_FILAMENT_DETAILS_SCENE_H
 #define TNT_FILAMENT_DETAILS_SCENE_H
 
-#include "downcast.h"
-
 #include "Allocators.h"
 #include "Culler.h"
-
-#include "ds/DescriptorSet.h"
+#include "downcast.h"
 
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
+
+#include "ds/DescriptorSet.h"
 
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
 #include <utils/PagedArenaBitset.h>
+#include <utils/Range.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
-#include <utils/Range.h>
-
-#include <stddef.h>
 
 #include <tsl/robin_set.h>
+
+#include <stddef.h>
 
 namespace filament {
 

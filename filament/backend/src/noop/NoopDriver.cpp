@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include "noop/NoopDriver.h"
+
+#include "CommandStreamDispatcher.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/Platform.h>
-
-#include "noop/NoopDriver.h"
-#include "CommandStreamDispatcher.h"
 
 #include <utils/ImmutableCString.h>
 
