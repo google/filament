@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_SSRPASSDESCRIPTORSET_H
 
 #include "DescriptorSet.h"
-
 #include "TypedUniformBuffer.h"
 
 #include <private/filament/UibStructs.h>

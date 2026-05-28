@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-#include <filament/Renderer.h>
+#include "details/Renderer.h"
 
 #include "TextureCache.h"
 
 #include "details/Engine.h"
-#include "details/Renderer.h"
 #include "details/View.h"
+
+#include <filament/Renderer.h>
 
 #include <utils/FixedCapacityVector.h>
 

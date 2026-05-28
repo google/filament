@@ -17,15 +17,14 @@
 #ifndef TNT_UTILS_JOBSYSTEM_H
 #define TNT_UTILS_JOBSYSTEM_H
 
-#include <utility>
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
-#include <utils/Slice.h>
 #include <utils/ostream.h>
+#include <utils/Slice.h>
 #include <utils/WorkStealingDequeue.h>
 
 #include <tsl/robin_map.h>
@@ -33,8 +32,9 @@
 #include <atomic>
 #include <functional>
 #include <mutex>
-#include <type_traits>
 #include <thread>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <assert.h>
@@ -51,6 +51,8 @@ class JobSystem {
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
     using Mutex = utils::Mutex;
     using Condition = utils::Condition;
+    using UniqueLock = utils::UniqueLock<Mutex>;
+    using LockGuard = utils::LockGuard<Mutex>;
 
 public:
     class Job;
@@ -437,8 +439,8 @@ private:
     Job* steal(WorkQueue& workQueue) noexcept;
 
     [[nodiscard]]
-    uint32_t wait(std::unique_lock<Mutex>& lock, Job* job) noexcept;
-    void wait(std::unique_lock<Mutex>& lock) noexcept;
+    uint32_t wait(UniqueLock& lock, Job* job) noexcept;
+    void wait(UniqueLock& lock) noexcept;
     void wakeAll() noexcept;
     void wakeOne() noexcept;
 
@@ -468,7 +470,7 @@ private:
     Job* mRootJob = nullptr;
 
     Mutex mThreadMapLock; // this should have very little contention
-    tsl::robin_map<std::thread::id, ThreadState *> mThreadMap;
+    tsl::robin_map<std::thread::id, ThreadState *> mThreadMap UTILS_GUARDED_BY(mThreadMapLock);
 };
 
 // -------------------------------------------------------------------------------------------------

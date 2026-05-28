@@ -16,9 +16,9 @@
 #ifndef TNT_FILAMENT_PROGRAMSPECIALIZATION_H
 #define TNT_FILAMENT_PROGRAMSPECIALIZATION_H
 
-#include <backend/Program.h>
-
 #include <private/filament/Variant.h>
+
+#include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
 

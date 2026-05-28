@@ -22,8 +22,8 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
+#include <utils/SingleInstanceComponentManager.h>
 
 namespace filament {
 

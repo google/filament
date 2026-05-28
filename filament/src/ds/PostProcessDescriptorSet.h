@@ -18,9 +18,7 @@
 #define TNT_FILAMENT_POSTPROCESSINGDESCRIPTORSET_H
 
 #include "DescriptorSet.h"
-
 #include "DescriptorSetLayout.h"
-
 #include "TypedUniformBuffer.h"
 
 #include <private/filament/UibStructs.h>

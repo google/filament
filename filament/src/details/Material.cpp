@@ -15,19 +15,19 @@
  */
 
 #include "details/Material.h"
-#include "details/Engine.h"
 
+#include "FilamentAPI-impl.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
+#include "details/Engine.h"
+
 #include "ds/ColorPassDescriptorSet.h"
 
-#include "FilamentAPI-impl.h"
-
-#include <private/filament/EngineEnums.h>
-#include <private/filament/DescriptorSets.h>
-#include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/Variant.h>
 
 #include <filament/Material.h>
@@ -39,21 +39,21 @@
 
 #include <filaflat/ChunkContainer.h>
 
+#include <backend/CallbackHandler.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
-#include <backend/CallbackHandler.h>
 #include <backend/Program.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>

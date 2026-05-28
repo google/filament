@@ -157,7 +157,8 @@ TEST_F(FilameshTest, NonInterleaved) {
 
     // Deserialize the mesh as a smoke test.
     MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
-    auto mesh = MeshReader::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
+    string serialized = stream.str();
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
     auto& rm = engine->getRenderableManager();
     auto inst = rm.getInstance(mesh.renderable);
     EXPECT_EQ(rm.getPrimitiveCount(inst), 1);
@@ -206,13 +207,95 @@ TEST_F(FilameshTest, Interleaved) {
 
     // Deserialize the mesh as a smoke test.
     MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
-    auto mesh = MeshReader::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
+    string serialized = stream.str();
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
     auto& rm = engine->getRenderableManager();
     auto inst = rm.getInstance(mesh.renderable);
     EXPECT_EQ(rm.getPrimitiveCount(inst), 1);
 
     // Cleanup.
     engine->destroy(mesh.renderable);
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, TruncatedBuffer) {
+    const Header header {
+        .version = VERSION,
+        .parts = 1,
+        .aabb = unitBox,
+        .offsetTangents = sizeof(positions),
+        .offsetColor = sizeof(positions) + sizeof(tangents),
+        .offsetUV0 = sizeof(positions) + sizeof(tangents) + sizeof(colors),
+        .strideUV1 = maxint,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions) + sizeof(tangents) + sizeof(colors) + sizeof(uv0),
+        .indexType = IndexType::UI16,
+        .indexCount = 3,
+        .indexSize = sizeof(uint16_t) * 3
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, tangents, sizeof(tangents));
+    write(stream, colors, sizeof(colors));
+    write(stream, uv0, sizeof(uv0));
+    write(stream, indices, sizeof(indices));
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    // Verify that truncating at any byte position returns an empty mesh cleanly
+    for (size_t size = 0; size < serialized.size(); ++size) {
+        auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), size, nullptr, nullptr, mi);
+        EXPECT_EQ(mesh.vertexBuffer, nullptr);
+        EXPECT_EQ(mesh.indexBuffer, nullptr);
+    }
+
+    engine->destroy(mi);
+}
+
+TEST_F(FilameshTest, MalformedHeaderPartsOverflow) {
+    // Craft a header claiming a huge number of parts that would overflow during multiplication
+    const Header header {
+        .version = VERSION,
+        .parts = 0xFFFFFFFF, // overflow
+        .aabb = unitBox,
+        .vertexCount = vertexCount,
+        .vertexSize = sizeof(positions),
+        .indexType = IndexType::UI16,
+        .indexCount = 3,
+        .indexSize = sizeof(uint16_t) * 3
+    };
+    const uint32_t nmats = 1;
+    const string matname = "DefaultMaterial";
+    const uint32_t matnamelength = matname.size();
+
+    stringstream stream(ios_base::out);
+    write(stream, MAGICID, sizeof(MAGICID));
+    write(stream, &header, sizeof(header));
+    write(stream, positions, sizeof(positions));
+    write(stream, indices, sizeof(indices));
+    write(stream, parts, sizeof(parts));
+    write(stream, &nmats, sizeof(nmats));
+    write(stream, &matnamelength, sizeof(matnamelength));
+    write(stream, matname.c_str(), matnamelength + 1);
+
+    string serialized = stream.str();
+    MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
+
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, serialized.data(), serialized.size(), nullptr, nullptr, mi);
+    EXPECT_EQ(mesh.vertexBuffer, nullptr);
+    EXPECT_EQ(mesh.indexBuffer, nullptr);
+
     engine->destroy(mi);
 }
 

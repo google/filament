@@ -306,6 +306,9 @@ TEST(FilamentTest, TransformManager) {
     auto first = tcm.getChildrenBegin(newParent);
     auto last = tcm.getChildrenEnd(newParent);
     while (first != last) {
+        EXPECT_TRUE(first->isValid());
+        TransformManager::Instance const& instanceRef = *first;
+        (void)instanceRef;
         ++first;
         c++;
     }
@@ -313,6 +316,122 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
     EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
     EXPECT_EQ(c, tcm.getChildCount(newParent));
+
+    // verify copy assignment
+    {
+        auto itCopy = tcm.getChildrenBegin(newParent);
+        itCopy = tcm.getChildrenEnd(newParent);
+        EXPECT_EQ(itCopy, tcm.getChildrenEnd(newParent));
+    }
+
+    // test range-based for loop
+    size_t rangeCount = 0;
+    for (auto ch : tcm.getChildrenRange(newParent)) {
+        EXPECT_TRUE(ch.isValid());
+        rangeCount++;
+    }
+    EXPECT_EQ(rangeCount, c);
+}
+
+TEST(FilamentTest, TransformManagerChildrenIteration) {
+    FTransformManager tcm;
+    EntityManager& em = EntityManager::get();
+
+    std::array<Entity, 5> entities;
+    em.create(entities.size(), entities.data());
+
+    // Entity 0 will be our root/parent
+    tcm.create(entities[0]);
+    TransformManager::Instance const parent = tcm.getInstance(entities[0]);
+
+    // 1. Test parent with no children
+    {
+        auto range = tcm.getChildrenRange(parent);
+        EXPECT_TRUE(range.begin() == range.end());
+        EXPECT_EQ(tcm.getChildCount(parent), 0u);
+
+        size_t loopCount = 0;
+        for (auto const child : range) {
+            (void)child;
+            loopCount++;
+        }
+        EXPECT_EQ(loopCount, 0u);
+    }
+
+    // 2. Add child 1
+    tcm.create(entities[1], parent, mat4f{});
+    TransformManager::Instance const child1 = tcm.getInstance(entities[1]);
+
+    // Test parent with 1 child
+    {
+        auto range = tcm.getChildrenRange(parent);
+        EXPECT_TRUE(range.begin() != range.end());
+        EXPECT_EQ(tcm.getChildCount(parent), 1u);
+
+        auto it = range.begin();
+        EXPECT_EQ(*it, child1);
+        EXPECT_TRUE(it->isValid());
+        EXPECT_EQ(it->asValue(), child1.asValue());
+
+        ++it;
+        EXPECT_TRUE(it == range.end());
+    }
+
+    // 3. Add child 2 and 3
+    tcm.create(entities[2], parent, mat4f{});
+    tcm.create(entities[3], parent, mat4f{});
+    TransformManager::Instance const child2 = tcm.getInstance(entities[2]);
+    TransformManager::Instance const child3 = tcm.getInstance(entities[3]);
+
+    // Test iterator mechanics and range traversal with multiple children
+    {
+        auto range = tcm.getChildrenRange(parent);
+        EXPECT_EQ(tcm.getChildCount(parent), 3u);
+
+        // Verify range-based iteration
+        std::vector<TransformManager::Instance> elements;
+        for (auto const child : range) {
+            elements.push_back(child);
+        }
+        EXPECT_EQ(elements.size(), 3u);
+
+        // Traverse order: child3 -> child2 -> child1
+        EXPECT_EQ(elements[0], child3);
+        EXPECT_EQ(elements[1], child2);
+        EXPECT_EQ(elements[2], child1);
+
+        // Verify Iterator Equality/Inequality operator
+        auto it1 = range.begin();
+        auto it2 = range.begin();
+        EXPECT_TRUE(it1 == it2);
+        EXPECT_FALSE(it1 != it2);
+
+        ++it1;
+        EXPECT_FALSE(it1 == it2);
+        EXPECT_TRUE(it1 != it2);
+
+        // Verify Postfix Increment operator
+        auto itPostfix = it2++;
+        EXPECT_EQ(itPostfix, range.begin());
+        EXPECT_EQ(it2, it1);
+
+        // Verify Copy Construction
+        auto itCopy(it1);
+        EXPECT_EQ(itCopy, it1);
+        ++itCopy;
+        EXPECT_NE(itCopy, it1);
+
+        // Verify Copy Assignment
+        itCopy = it1;
+        EXPECT_EQ(itCopy, it1);
+        ++itCopy;
+        EXPECT_NE(itCopy, it1);
+    }
+
+    // Cleanup entities
+    for (auto e : entities) {
+        em.destroy(e);
+    }
 }
 
 TEST(FilamentTest, RenderableManagerCallback) {
@@ -1023,6 +1142,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1076,6 +1196,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1147,6 +1268,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1208,6 +1330,7 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutDataHalf {
         std::vector<half> pixels;
@@ -1487,6 +1610,7 @@ TEST(FilamentTest, ColorGradingExportLutValidation) {
         .backend(Engine::Backend::NOOP)
         .feature("engine.color_grading.use_1d_lut", true)
         .build();
+    ASSERT_NE(engine, nullptr);
 
 
     struct LutMetadata {

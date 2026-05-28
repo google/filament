@@ -20,11 +20,11 @@
 #include "RenderPrimitive.h"
 #include "ShadowMap.h"
 
+#include "components/RenderableManager.h"
+
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/View.h"
-
-#include "components/RenderableManager.h"
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
@@ -32,24 +32,24 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <private/backend/CircularBuffer.h>
+#include <private/backend/CommandStream.h>
+
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 
-#include "private/backend/CircularBuffer.h"
-#include "private/backend/CommandStream.h"
-
 #include <private/utils/Tracing.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 
 #include <algorithm>
 #include <functional>

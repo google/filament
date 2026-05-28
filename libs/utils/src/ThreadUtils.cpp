@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include "utils/ThreadUtils.h"
-
 #include <utils/compiler.h>
+#include <utils/ThreadUtils.h>
 
 namespace utils {
 

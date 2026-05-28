@@ -16,23 +16,23 @@
 
 #include "details/RenderTarget.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "details/Engine.h"
 #include "details/Texture.h"
 
-#include "FilamentAPI-impl.h"
-
 #include <filament/RenderTarget.h>
 
-#include <utils/compiler.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
 #include <iterator>
 #include <limits>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 namespace filament {

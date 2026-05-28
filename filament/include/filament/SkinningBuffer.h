@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_SKINNINGBUFFER_H
 
 #include <filament/FilamentAPI.h>
-
 #include <filament/RenderableManager.h>
 
 #include <utils/compiler.h>

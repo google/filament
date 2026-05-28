@@ -182,7 +182,16 @@ uint32_t computeBindingSize(cgltf_accessor const* accessor) {
         return 0;
     }
     cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
-    return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
+    cgltf_size stride = accessor->stride > 0 ? accessor->stride : element_size;
+    if (stride > 0 && accessor->count - 1 >
+                              (std::numeric_limits<cgltf_size>::max() - element_size) / stride) {
+        return 0;
+    }
+    cgltf_size size = stride * (accessor->count - 1) + element_size;
+    if (size > std::numeric_limits<uint32_t>::max()) {
+        return 0;
+    }
+    return uint32_t(size);
 }
 
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count) {

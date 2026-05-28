@@ -15,6 +15,7 @@
  */
 
 #include "LocalProgramCache.h"
+
 #include "MaterialParser.h"
 
 #include "details/Engine.h"

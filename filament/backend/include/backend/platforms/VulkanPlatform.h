@@ -28,8 +28,8 @@
 #include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
-#include <cstring>
 #include <cstddef>
+#include <cstring>
 #include <functional>
 #include <tuple>
 #include <unordered_set>

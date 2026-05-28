@@ -15,10 +15,9 @@
  */
 
 #include "bloom.h"
-
 #include "generated/resources/bloom.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

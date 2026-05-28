@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
@@ -69,7 +68,7 @@ TEST_F(BackendTest, BasicAsyncFlow) {
                 .mUniformType = ShaderUniformType::Sampler,
             });
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport = getFullViewport();
 
     PipelineState ps = getColorWritePipelineState();

@@ -17,22 +17,23 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 #define TNT_FILAMENT_BACKEND_VULKANASYNCHANDLES_H
 
-#include <bluevk/BlueVK.h>
-
 #include "DriverBase.h"
-#include "backend/DriverEnums.h"
-#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 #include "vulkan/utils/StaticVector.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 #include <backend/Program.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <utils/Mutex.h>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
@@ -178,17 +179,16 @@ struct VulkanCmdFence {
     }
 
     // Checks the underlying fence to see if the underlying process is complete.
-    // Updates the underlying status if the fence has signaled, and returns
-    // the current status.
-    VkResult updateStatus(VkDevice device);
+    // Updates the underlying status if the fence has signaled.
+    void refreshStatus(VkDevice device);
 
     inline VkFence getVkFence() {
         return mFence;
     }
 
-    // Checks what the status of the fence is. Note: this assumes that, in the
-    // most recent tick(), checkAndUpdateStatus() has been called. Otherwise,
-    // this may be out of date.
+    // Checks what the status of the fence is. Note: refreshStatus() should be called
+    // prior to getStatus(), either on tick() or directly prior. This method will
+    // not proactively check if the fence has signaled since the status was last set.
     VkResult getStatus() {
         std::shared_lock const rl(mLock);
         return mStatus;
@@ -266,7 +266,7 @@ struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
     };
 
     VulkanSync() {}
-    std::mutex lock;
+    utils::Mutex lock;
     std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 

@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKAN_VULKANSEMAPHOREMANAGER_H
 #define TNT_FILAMENT_BACKEND_VULKAN_VULKANSEMAPHOREMANAGER_H
 
-#include "vulkan/VulkanSemaphore.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/VulkanSemaphore.h"
 
 #include <bluevk/BlueVK.h>
 

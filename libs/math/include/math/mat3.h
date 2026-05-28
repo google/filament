@@ -19,18 +19,18 @@
 
 #include <math/compiler.h>
 #include <math/quat.h>
-#include <math/vec3.h>
 #include <math/TMatHelpers.h>
 #include <math/TVecHelpers.h>
-
-#include <limits.h>
-#include <stdint.h>
-#include <sys/types.h>
+#include <math/vec3.h>
 
 #include <cmath>
 
+#include <sys/types.h>
+
 #include <assert.h>
+#include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 namespace math {

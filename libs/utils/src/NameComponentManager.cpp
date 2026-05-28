@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include <utils/NameComponentManager.h>
 #include <utils/EntityManager.h>
+#include <utils/NameComponentManager.h>
 
 namespace utils {
 

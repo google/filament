@@ -16,10 +16,10 @@
 #ifndef TNT_UTILS_REFCOUNTEDMAP_H
 #define TNT_UTILS_REFCOUNTEDMAP_H
 
-#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/LruCache.h>
+#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 

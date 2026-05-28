@@ -25,9 +25,9 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
 #include <utils/StaticString.h>
-#include <utils/debug.h>
 
 #include <webgpu/webgpu_cpp.h>
 

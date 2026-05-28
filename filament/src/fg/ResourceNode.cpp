@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
+#include "fg/details/ResourceNode.h"
+
 #include "FrameGraphId.h"
 
 #include "details/DependencyGraph.h"
 
-#include "fg/FrameGraph.h"
 #include "fg/details/PassNode.h"
-#include "fg/details/ResourceNode.h"
+#include "fg/FrameGraph.h"
 
 #include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 
-#include <new>
 #include <cstdint>
+#include <new>
 
 namespace filament {
 

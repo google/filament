@@ -16,17 +16,17 @@
 
 #include "GLUtils.h"
 
-#include "private/backend/Driver.h"
+#include <private/backend/Driver.h>
 
-#include <utils/Logger.h>
 #include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 #include <utils/trap.h>
 
+#include <cstdio>
 #include <string_view>
 
 #include <stddef.h>
-#include <cstdio>
 
 namespace filament::backend {
 

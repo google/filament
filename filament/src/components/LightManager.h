@@ -19,9 +19,9 @@
 
 #include "downcast.h"
 
-#include "backend/DriverApiForward.h"
-
 #include <filament/LightManager.h>
+
+#include <backend/DriverApiForward.h>
 
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
+#include "generated/resources/ssao.h"
 #include "ssao.h"
 
-#include "generated/resources/ssao.h"
-
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

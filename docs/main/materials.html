@@ -275,6 +275,7 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/customvertexattributes" class="level3"><span class="tocNumber">4.3.2&nbsp; </span>Custom vertex attributes</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/proceduralandattribute-lessrendering" class="level3"><span class="tocNumber">4.3.3&nbsp; </span>Procedural and attribute-less rendering</a><br/>
 &nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&nbsp; </span>prepareMaterial function</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&nbsp; </span>Material fragment inputs</a><br/>
@@ -2180,6 +2181,94 @@ the material:</p>
 <span class="line">        custom2</span>
 <span class="line">    <span class="hljs-punctuation">]</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
+<a class="target" name="proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="toc4.3.3">&nbsp;</a><h3 id="procedural-and-attribute-less-rendering"><a class="header" href="#procedural-and-attribute-less-rendering">Procedural and attribute-less rendering</a></h3>
+<p>
+<p>Filament supports procedural or “attribute-less” rendering. This allows you to render objects whose geometry is generated entirely inside the vertex shader (for example, a procedural quad, a sphere, or particle effects), avoiding the memory and processing overhead of transferring traditional vertex and index attribute buffers.</p>
+</p><p>
+To implement procedural rendering:
+</p><p>
+<ol start=1>
+<li class="number"><strong class="asterisk">Shader API</strong>: In the vertex block of your material definition, call the built-in <code>getVertexIndex()</code> API to retrieve the index of the current vertex. This function automatically maps to the graphics backend's native vertex ID variable (<code>gl_VertexID</code> in OpenGL ES, <code>gl_VertexIndex</code> in Vulkan, or <code>[[vertex_id]]</code> in Metal/MSL).
+</li>
+<li class="number"><strong class="asterisk">Material Definition</strong>: Omit the <code>requires</code> array (or do not declare any vertex attribute requirements inside it). If you need to pass procedural properties to the fragment shader, declare them under the <code>variables</code> property as custom interpolants.
+</li>
+<li class="number"><strong class="asterisk">C++ VertexBuffer</strong>: Construct a <code>VertexBuffer</code> with <code>bufferCount(0)</code> and a non-zero <code>vertexCount(...)</code> matching the number of vertices you wish to generate. No buffers need to be set using <code>setBufferAt()</code>.
+</li>
+<li class="number"><strong class="asterisk">C++ RenderableManager</strong>: Build the geometry using the non-indexed overload of <code>geometry()</code> by omitting the <code>IndexBuffer</code> parameter.</li></ol>
+</p><p>
+<div class="admonition note"><div class="admonition-title"> Compatibility and requirements</div>
+</p><p>
+<ul>
+    <li class="asterisk"><strong class="asterisk">Feature Levels</strong>: Attribute-less rendering requires <code>featureLevel : 1</code> or higher. GLES 2.0 (feature level 0) does not support vertex ID query interfaces and is incompatible.
+</li>
+    <li class="asterisk"><strong class="asterisk">Skinning and Morphing</strong>: It is incompatible with features that rely on pre-shader vertex processing (such as skinning and morphing).</div></li></ul>
+</p>
+<a class="target" name="example:proceduralcenteredquad">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad">&nbsp;</a><a class="target" name="toc4.3.3.1">&nbsp;</a><h4 id="example-procedural-centered-quad"><a class="header" href="#example-procedural-centered-quad">Example: Procedural Centered Quad</a></h4>
+<p>
+<p>Below is a complete, working example demonstrating how to render a textured quad using 6 vertices forming 2 triangles without supplying any vertex buffer objects.</p>
+</p>
+<a class="target" name="materialdefinition(.mat)">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/materialdefinition(.mat)">&nbsp;</a><a class="target" name="toc4.3.3.1.1">&nbsp;</a><h5 id="material-definition-mat"><a class="header" href="#material-definition-mat">Material definition (<code>.mat</code>)</a></h5>
+<pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
+<span class="line">    name <span class="hljs-punctuation">:</span> ProceduralQuad<span class="hljs-punctuation">,</span></span>
+<span class="line">    shadingModel <span class="hljs-punctuation">:</span> unlit<span class="hljs-punctuation">,</span></span>
+<span class="line">    culling <span class="hljs-punctuation">:</span> none<span class="hljs-punctuation">,</span></span>
+<span class="line">    parameters <span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span></span>
+<span class="line">        <span class="hljs-punctuation">{</span></span>
+<span class="line">            type <span class="hljs-punctuation">:</span> sampler2d<span class="hljs-punctuation">,</span></span>
+<span class="line">            name <span class="hljs-punctuation">:</span> albedo</span>
+<span class="line">        <span class="hljs-punctuation">}</span></span>
+<span class="line">    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span></span>
+<span class="line">    variables <span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span></span>
+<span class="line">        quadUV</span>
+<span class="line">    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">vertex <span class="hljs-punctuation">{</span></span>
+<span class="line">    void materialVertex(inout MaterialVertexInputs material) <span class="hljs-punctuation">{</span></span>
+<span class="line">        const vec2 positions<span class="hljs-punctuation">[</span><span class="hljs-number">6</span><span class="hljs-punctuation">]</span> = vec2<span class="hljs-punctuation">[</span><span class="hljs-number">6</span><span class="hljs-punctuation">]</span>(</span>
+<span class="line">            vec2(<span class="hljs-number">-0.5</span><span class="hljs-punctuation">,</span> <span class="hljs-number">-0.5</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2( <span class="hljs-number">0.5</span><span class="hljs-punctuation">,</span> <span class="hljs-number">-0.5</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">-0.5</span><span class="hljs-punctuation">,</span>  <span class="hljs-number">0.5</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2( <span class="hljs-number">0.5</span><span class="hljs-punctuation">,</span> <span class="hljs-number">-0.5</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2( <span class="hljs-number">0.5</span><span class="hljs-punctuation">,</span>  <span class="hljs-number">0.5</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">-0.5</span><span class="hljs-punctuation">,</span>  <span class="hljs-number">0.5</span>)</span>
+<span class="line">        );</span>
+<span class="line">        const vec2 uvs<span class="hljs-punctuation">[</span><span class="hljs-number">6</span><span class="hljs-punctuation">]</span> = vec2<span class="hljs-punctuation">[</span><span class="hljs-number">6</span><span class="hljs-punctuation">]</span>(</span>
+<span class="line">            vec2(<span class="hljs-number">0.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">1.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">0.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">1.0</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">1.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">1.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">1.0</span>)<span class="hljs-punctuation">,</span></span>
+<span class="line">            vec2(<span class="hljs-number">0.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">1.0</span>)</span>
+<span class="line">        );</span>
+<span class="line"></span>
+<span class="line">        int vid = getVertexIndex();</span>
+<span class="line">        material.worldPosition = vec4(positions<span class="hljs-punctuation">[</span>vid<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">1.0</span>);</span>
+<span class="line">        material.quadUV        = vec4(uvs<span class="hljs-punctuation">[</span>vid<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span><span class="hljs-punctuation">,</span> <span class="hljs-number">0.0</span>);</span>
+<span class="line">    <span class="hljs-punctuation">}</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">fragment <span class="hljs-punctuation">{</span></span>
+<span class="line">    void material(inout MaterialInputs material) <span class="hljs-punctuation">{</span></span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        material.baseColor = texture(materialParams_albedo<span class="hljs-punctuation">,</span> variable_quadUV.xy);</span>
+<span class="line">    <span class="hljs-punctuation">}</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
+<a class="target" name="c++clientcode">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/c++clientcode">&nbsp;</a><a class="target" name="toc4.3.3.1.2">&nbsp;</a><h5 id="c-client-code"><a class="header" href="#c-client-code">C++ client code</a></h5>
+<pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// 1. Create an attribute-less vertex buffer with 6 vertices and 0 buffer slots</span></span>
+<span class="line">VertexBuffer* vb = VertexBuffer::<span class="hljs-built_in">Builder</span>()</span>
+<span class="line">        .<span class="hljs-built_in">vertexCount</span>(<span class="hljs-number">6</span>)</span>
+<span class="line">        .<span class="hljs-built_in">bufferCount</span>(<span class="hljs-number">0</span>)</span>
+<span class="line">        .<span class="hljs-built_in">build</span>(*engine);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// 2. Register the renderable with the non-indexed geometry overload</span></span>
+<span class="line">utils::Entity renderable = utils::EntityManager::<span class="hljs-built_in">get</span>().<span class="hljs-built_in">create</span>();</span>
+<span class="line">RenderableManager::<span class="hljs-built_in">Builder</span>(<span class="hljs-number">1</span>)</span>
+<span class="line">        .<span class="hljs-built_in">boundingBox</span>({{ <span class="hljs-number">-0.5f</span>, <span class="hljs-number">-0.5f</span>, <span class="hljs-number">-0.01f</span> }, { <span class="hljs-number">0.5f</span>, <span class="hljs-number">0.5f</span>, <span class="hljs-number">0.01f</span> }})</span>
+<span class="line">        .<span class="hljs-built_in">geometry</span>(<span class="hljs-number">0</span>, RenderableManager::PrimitiveType::TRIANGLES, vb)</span>
+<span class="line">        .<span class="hljs-built_in">material</span>(<span class="hljs-number">0</span>, matInstance)</span>
+<span class="line">        .<span class="hljs-built_in">culling</span>(<span class="hljs-literal">false</span>)</span>
+<span class="line">        .<span class="hljs-built_in">build</span>(*engine, renderable);</span></code></pre>
 <a class="target" name="fragmentblock">&nbsp;</a><a class="target" name="materialdefinitions/fragmentblock">&nbsp;</a><a class="target" name="toc4.4">&nbsp;</a><h2 id="fragment-block"><a class="header" href="#fragment-block">Fragment block</a></h2>
 <p>
 <p>The fragment block must be used to control the fragment shading stage of the material. The fragment

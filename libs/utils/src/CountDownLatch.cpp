@@ -24,7 +24,7 @@ CountDownLatch::CountDownLatch(size_t count)  noexcept
 }
 
 void CountDownLatch::reset(size_t count) noexcept {
-    std::lock_guard<Mutex> guard(m_lock);
+    LockGuard<Mutex> guard(m_lock);
     m_initial_count = static_cast<uint32_t>(count);
     m_remaining_count = static_cast<uint32_t>(count);
     if (count == 0) {
@@ -33,12 +33,14 @@ void CountDownLatch::reset(size_t count) noexcept {
 }
 
 void CountDownLatch::await() noexcept {
-    std::unique_lock<Mutex> guard(m_lock);
-    m_cv.wait(guard, [this]{ return m_remaining_count == 0; } );
+    UniqueLock<Mutex> guard(m_lock);
+    while (m_remaining_count != 0) {
+        m_cv.wait(guard);
+    }
 }
 
 void CountDownLatch::latch() noexcept {
-    std::lock_guard<Mutex> guard(m_lock);
+    LockGuard<Mutex> guard(m_lock);
     if (m_remaining_count > 0) {
         if (--m_remaining_count == 0) {
             m_cv.notify_all();
@@ -47,7 +49,7 @@ void CountDownLatch::latch() noexcept {
 }
 
 size_t CountDownLatch::getCount() const noexcept {
-    std::lock_guard<Mutex> guard(m_lock);
+    LockGuard<Mutex> guard(m_lock);
     return m_initial_count - m_remaining_count;
 }
 

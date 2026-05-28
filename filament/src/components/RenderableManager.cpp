@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-#include "FilamentAPI-impl.h"
-
-#include "RenderPrimitive.h"
-
 #include "components/RenderableManager.h"
 
-#include "ds/DescriptorSet.h"
+#include "FilamentAPI-impl.h"
+#include "RenderPrimitive.h"
 
 #include "details/Engine.h"
-#include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
 #include "details/Material.h"
+#include "details/VertexBuffer.h"
+
+#include "ds/DescriptorSet.h"
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
@@ -39,15 +38,15 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/Logger.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <math/mat4.h>
 #include <math/scalar.h>

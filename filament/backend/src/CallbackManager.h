@@ -20,11 +20,12 @@
 
 #include <backend/CallbackHandler.h>
 
+#include <utils/compiler.h>
 #include <utils/Mutex.h>
 
 #include <atomic>
-#include <mutex>
 #include <list>
+#include <mutex>
 
 namespace filament::backend {
 
@@ -74,24 +75,24 @@ public:
 
 private:
     Container::const_iterator getCurrent() const noexcept {
-        std::lock_guard const lock(mLock);
+        utils::LockGuard const lock(mLock);
         return --mCallbacks.end();
     }
 
     Container::iterator allocateNewSlot() {
-        std::lock_guard const lock(mLock);
+        utils::LockGuard const lock(mLock);
         auto curr = --mCallbacks.end();
         mCallbacks.emplace_back();
         return curr;
     }
     void destroySlot(Container::const_iterator curr) noexcept {
-        std::lock_guard const lock(mLock);
+        utils::LockGuard const lock(mLock);
         mCallbacks.erase(curr);
     }
 
     DriverBase& mDriver;
     mutable utils::Mutex mLock;
-    Container mCallbacks;
+    Container mCallbacks UTILS_GUARDED_BY(mLock);
 };
 
 } // namespace filament::backend

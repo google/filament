@@ -16,14 +16,15 @@
 
 #include "RenderPrimitive.h"
 
-#include <filament/RenderableManager.h>
-#include <filament/MaterialEnums.h>
-
 #include "details/IndexBuffer.h"
 #include "details/MaterialInstance.h"
 #include "details/VertexBuffer.h"
 
+#include <filament/MaterialEnums.h>
+#include <filament/RenderableManager.h>
+
 #include <private/backend/CommandStream.h>
+
 #include <backend/DriverApiForward.h>
 
 #include <utils/debug.h>

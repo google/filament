@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_BACKENDUTILS_H
 
 #include <backend/DriverEnums.h>
-
 #include <backend/PixelBufferDescriptor.h>
 
 #include <string_view>

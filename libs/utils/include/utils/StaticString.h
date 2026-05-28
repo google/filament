@@ -18,7 +18,6 @@
 #define TNT_UTILS_STATICSTRING_H
 
 #include <utils/compiler.h>
-
 #include <utils/ostream.h>
 
 #include <string_view>

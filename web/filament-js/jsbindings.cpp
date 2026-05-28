@@ -60,6 +60,9 @@
 
 #include <viewer/ViewerGui.h>
 
+#include <camutils/Bookmark.h>
+#include <camutils/Manipulator.h>
+
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -1921,7 +1924,7 @@ class_<MeshReader>("MeshReader")
         };
         // Parse the filamesh buffer. This creates the VB, IB, and renderable.
         return MeshReader::loadMeshFromBuffer(
-                engine, buffer.bd->buffer,
+                engine, buffer.bd->buffer, buffer.bd->size,
                 destructor, bundle, matreg);
     }), allow_raw_pointers());
 
@@ -2260,6 +2263,97 @@ class_<ViewerGui>("ViewerGui")
     .function("keyDownEvent", &ViewerGui::keyDownEvent)
     .function("keyUpEvent", &ViewerGui::keyUpEvent)
     .function("keyPressEvent", &ViewerGui::keyPressEvent);
+
+    // CAMUTILS
+    // --------
+
+    enum_<camutils::Mode>("Camutils$Mode")
+        .value("ORBIT", camutils::Mode::ORBIT)
+        .value("MAP", camutils::Mode::MAP)
+        .value("FREE_FLIGHT", camutils::Mode::FREE_FLIGHT);
+
+    enum_<camutils::Fov>("Camutils$Fov")
+        .value("VERTICAL", camutils::Fov::VERTICAL)
+        .value("HORIZONTAL", camutils::Fov::HORIZONTAL);
+
+    enum_<camutils::Manipulator<float>::Key>("Camutils$Key")
+        .value("FORWARD", camutils::Manipulator<float>::Key::FORWARD)
+        .value("LEFT", camutils::Manipulator<float>::Key::LEFT)
+        .value("BACKWARD", camutils::Manipulator<float>::Key::BACKWARD)
+        .value("RIGHT", camutils::Manipulator<float>::Key::RIGHT)
+        .value("UP", camutils::Manipulator<float>::Key::UP)
+        .value("DOWN", camutils::Manipulator<float>::Key::DOWN);
+
+    using CamManipulator = camutils::Manipulator<float>;
+    using CamBuilder = CamManipulator::Builder;
+    using CamBookmark = camutils::Bookmark<float>;
+
+    auto getLookAt = [] (const CamManipulator* manip, em::val eye, em::val target, em::val up) {
+        filament::math::float3 eyePos, targetPos, upVector;
+        manip->getLookAt(&eyePos, &targetPos, &upVector);
+        eye.set(0, eyePos.x); eye.set(1, eyePos.y); eye.set(2, eyePos.z);
+        target.set(0, targetPos.x); target.set(1, targetPos.y); target.set(2, targetPos.z);
+        up.set(0, upVector.x); up.set(1, upVector.y); up.set(2, upVector.z);
+    };
+
+    auto raycast = [] (const CamManipulator* manip, int x, int y, em::val result) {
+        filament::math::float3 res;
+        if (manip->raycast(x, y, &res)) {
+            result.set(0, res.x); result.set(1, res.y); result.set(2, res.z);
+            return true;
+        }
+        return false;
+    };
+
+    auto getRay = [] (const CamManipulator* manip, int x, int y, em::val origin, em::val dir) {
+        filament::math::float3 o, d;
+        manip->getRay(x, y, &o, &d);
+        origin.set(0, o.x); origin.set(1, o.y); origin.set(2, o.z);
+        dir.set(0, d.x); dir.set(1, d.y); dir.set(2, d.z);
+    };
+
+    class_<CamManipulator>("Camutils$Manipulator")
+        .function("setViewport", &CamManipulator::setViewport)
+        .function("getLookAt", (void (*) (const CamManipulator*, em::val, em::val, em::val)) getLookAt, allow_raw_pointers())
+        .function("raycast", (bool (*) (const CamManipulator*, int, int, em::val)) raycast, allow_raw_pointers())
+        .function("getRay", (void (*) (const CamManipulator*, int, int, em::val, em::val)) getRay, allow_raw_pointers())
+        .function("grabBegin", &CamManipulator::grabBegin)
+        .function("grabUpdate", &CamManipulator::grabUpdate)
+        .function("grabEnd", &CamManipulator::grabEnd)
+        .function("keyDown", &CamManipulator::keyDown)
+        .function("keyUp", &CamManipulator::keyUp)
+        .function("scroll", &CamManipulator::scroll)
+        .function("update", &CamManipulator::update)
+        .function("getCurrentBookmark", &CamManipulator::getCurrentBookmark)
+        .function("getHomeBookmark", &CamManipulator::getHomeBookmark)
+        .function("jumpToBookmark", &CamManipulator::jumpToBookmark);
+
+    class_<CamBuilder>("Camutils$Manipulator$Builder")
+        .constructor<>()
+        .BUILDER_FUNCTION("viewport", CamBuilder, (CamBuilder* b, int w, int h), { return &b->viewport(w, h); })
+        .BUILDER_FUNCTION("targetPosition", CamBuilder, (CamBuilder* b, float x, float y, float z), { return &b->targetPosition(x, y, z); })
+        .BUILDER_FUNCTION("upVector", CamBuilder, (CamBuilder* b, float x, float y, float z), { return &b->upVector(x, y, z); })
+        .BUILDER_FUNCTION("zoomSpeed", CamBuilder, (CamBuilder* b, float val), { return &b->zoomSpeed(val); })
+        .BUILDER_FUNCTION("orbitHomePosition", CamBuilder, (CamBuilder* b, float x, float y, float z), { return &b->orbitHomePosition(x, y, z); })
+        .BUILDER_FUNCTION("orbitSpeed", CamBuilder, (CamBuilder* b, float x, float y), { return &b->orbitSpeed(x, y); })
+        .BUILDER_FUNCTION("fovDirection", CamBuilder, (CamBuilder* b, camutils::Fov fov), { return &b->fovDirection(fov); })
+        .BUILDER_FUNCTION("fovDegrees", CamBuilder, (CamBuilder* b, float degrees), { return &b->fovDegrees(degrees); })
+        .BUILDER_FUNCTION("farPlane", CamBuilder, (CamBuilder* b, float distance), { return &b->farPlane(distance); })
+        .BUILDER_FUNCTION("mapExtent", CamBuilder, (CamBuilder* b, float w, float h), { return &b->mapExtent(w, h); })
+        .BUILDER_FUNCTION("mapMinDistance", CamBuilder, (CamBuilder* b, float dist), { return &b->mapMinDistance(dist); })
+        .BUILDER_FUNCTION("flightStartPosition", CamBuilder, (CamBuilder* b, float x, float y, float z), { return &b->flightStartPosition(x, y, z); })
+        .BUILDER_FUNCTION("flightStartOrientation", CamBuilder, (CamBuilder* b, float p, float y), { return &b->flightStartOrientation(p, y); })
+        .BUILDER_FUNCTION("flightMaxMoveSpeed", CamBuilder, (CamBuilder* b, float speed), { return &b->flightMaxMoveSpeed(speed); })
+        .BUILDER_FUNCTION("flightSpeedSteps", CamBuilder, (CamBuilder* b, int steps), { return &b->flightSpeedSteps(steps); })
+        .BUILDER_FUNCTION("flightPanSpeed", CamBuilder, (CamBuilder* b, float x, float y), { return &b->flightPanSpeed(x, y); })
+        .BUILDER_FUNCTION("flightMoveDamping", CamBuilder, (CamBuilder* b, float damping), { return &b->flightMoveDamping(damping); })
+        .BUILDER_FUNCTION("groundPlane", CamBuilder, (CamBuilder* b, float a, float b_, float c, float d), { return &b->groundPlane(a, b_, c, d); })
+        .BUILDER_FUNCTION("panning", CamBuilder, (CamBuilder* b, bool enabled), { return &b->panning(enabled); })
+        .function("build", &CamBuilder::build, allow_raw_pointers());
+
+    class_<CamBookmark>("Camutils$Bookmark")
+        .class_function("interpolate", &CamBookmark::interpolate)
+        .class_function("duration", &CamBookmark::duration);
 
 function("fitIntoUnitCube", EMBIND_LAMBDA(flatmat4, (Aabb box, float zoffset), {
     return flatmat4 { fitIntoUnitCube(box, zoffset) };

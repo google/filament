@@ -7,22 +7,29 @@ set(TRANSCODER_SRC
 )
 
 set(ENCODER_SRC
+    ../encoder/3rdparty/android_astc_decomp.cpp
+    ../encoder/3rdparty/tinyexr.cpp
+    ../encoder/basisu_astc_hdr_6x6_enc.cpp
+    ../encoder/basisu_astc_hdr_common.cpp
+    ../encoder/basisu_astc_ldr_common.cpp
+    ../encoder/basisu_astc_ldr_encode.cpp
     ../encoder/basisu_backend.cpp
     ../encoder/basisu_basis_file.cpp
+    ../encoder/basisu_bc7enc.cpp
     ../encoder/basisu_comp.cpp
     ../encoder/basisu_enc.cpp
     ../encoder/basisu_etc.cpp
     ../encoder/basisu_frontend.cpp
     ../encoder/basisu_gpu_texture.cpp
-    ../encoder/basisu_pvrtc1_4.cpp
-    ../encoder/basisu_resampler.cpp
-    ../encoder/basisu_resample_filters.cpp
-    ../encoder/basisu_ssim.cpp
-    ../encoder/basisu_uastc_enc.cpp
-    ../encoder/basisu_bc7enc.cpp
-    ../encoder/jpgd.cpp
     ../encoder/basisu_kernels_sse.cpp
     ../encoder/basisu_opencl.cpp
+    ../encoder/basisu_pvrtc1_4.cpp
+    ../encoder/basisu_resample_filters.cpp
+    ../encoder/basisu_resampler.cpp
+    ../encoder/basisu_ssim.cpp
+    ../encoder/basisu_uastc_enc.cpp
+    ../encoder/basisu_uastc_hdr_4x4_enc.cpp
+    ../encoder/jpgd.cpp
     ../encoder/pvpngreader.cpp
 )
 
@@ -72,6 +79,19 @@ target_include_directories(basis_transcoder PUBLIC ../transcoder)
 target_compile_definitions(basis_encoder PRIVATE ${BASIS_CONFIG})
 target_compile_definitions(basis_transcoder PRIVATE ${BASIS_CONFIG})
 
+if (CMAKE_BUILD_TYPE MATCHES "[Dd]ebug")
+    target_compile_definitions(basis_encoder PRIVATE DEBUG=1)
+    target_compile_definitions(basis_transcoder PRIVATE DEBUG=1)
+else()
+    target_compile_definitions(basis_encoder PRIVATE NDEBUG=1)
+    target_compile_definitions(basis_transcoder PRIVATE NDEBUG=1)
+endif()
+
+if (NOT MSVC)
+    target_compile_options(basis_encoder PRIVATE "-Wno-#pragma-messages")
+    target_compile_options(basis_transcoder PRIVATE "-Wno-#pragma-messages")
+endif()
+
 set_target_properties(basis_encoder PROPERTIES FOLDER ThirdParty)
 set_target_properties(basis_transcoder PROPERTIES FOLDER ThirdParty)
 
@@ -80,6 +100,14 @@ if (IS_HOST_PLATFORM)
     target_link_libraries(basisu basis_encoder)
     set_target_properties(basisu PROPERTIES FOLDER ThirdParty)
     target_compile_definitions(basisu PRIVATE ${BASIS_CONFIG})
+    if (CMAKE_BUILD_TYPE MATCHES "[Dd]ebug")
+        target_compile_definitions(basisu PRIVATE DEBUG=1)
+    else()
+        target_compile_definitions(basisu PRIVATE NDEBUG=1)
+    endif()
+    if (NOT MSVC)
+        target_compile_options(basisu PRIVATE "-Wno-#pragma-messages")
+    endif()
     install(TARGETS basisu DESTINATION bin)
 
     if (NOT MSVC AND NOT ANDROID)

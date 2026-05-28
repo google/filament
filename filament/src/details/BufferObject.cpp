@@ -16,13 +16,13 @@
 
 #include "details/BufferObject.h"
 
-#include "details/Engine.h"
-
 #include "FilamentAPI-impl.h"
 
-#include <backend/DriverEnums.h>
+#include "details/Engine.h"
 
 #include <filament/BufferObject.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/Panic.h>
@@ -30,8 +30,8 @@
 
 #include <utility>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
