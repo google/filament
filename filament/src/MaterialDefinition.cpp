@@ -69,7 +69,7 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
         for (auto variant: definition.getVariants()) {
             if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
                 specialization.variant = variant;
-                for (auto specKey: DynamicSpecConstKey::getKeys()) {
+                for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
                     specialization.specKey = specKey;
                     Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
                     if (program) {
@@ -143,7 +143,7 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
 
     for (auto variant : definition.getVariants()) {
         if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
-            for (auto specKey: DynamicSpecConstKey::getKeys()) {
+            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
                 LocalProgramCache::CacheKey mappedKey =
                         LocalProgramCache::mapCacheEntryKey(variant, specKey);
                 Handle<HwProgram>& program = programCache[mappedKey];

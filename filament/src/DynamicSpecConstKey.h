@@ -38,7 +38,7 @@ struct DynamicSpecConstKey {
 
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
 
-    static utils::Slice<const DynamicSpecConstKey> getKeys() noexcept;
+    static utils::Slice<const DynamicSpecConstKey> getAllPossibleKeys() noexcept;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;

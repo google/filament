@@ -37,7 +37,7 @@ static auto const gDynamicSpecConstKeys{ get_keys() };
 
 } // anonymous namespace
 
-utils::Slice<const DynamicSpecConstKey> DynamicSpecConstKey::getKeys() noexcept {
+utils::Slice<const DynamicSpecConstKey> DynamicSpecConstKey::getAllPossibleKeys() noexcept {
     return { gDynamicSpecConstKeys.data(), gDynamicSpecConstKeys.size() };
 }
 
