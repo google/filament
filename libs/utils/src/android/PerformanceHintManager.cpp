@@ -37,6 +37,7 @@ struct PerformanceHintManager {
 
 struct PerformanceHintManager::SessionDetails {
     APerformanceHintSession* mSession = nullptr;
+    int64_t mLastTargetDurationNanos = -1;
 };
 
 PerformanceHintManager::PerformanceHintManager() noexcept = default;
@@ -77,11 +78,14 @@ int64_t PerformanceHintManager::getPreferredUpdateRateNanos() const noexcept {
 PerformanceHintManager::Session::Session() noexcept = default;
 
 PerformanceHintManager::Session::Session(PerformanceHintManager& manager, int32_t const* threadIds,
-        size_t size, int64_t initialTargetWorkDurationNanos) noexcept {
+        size_t const size, int64_t const initialTargetWorkDurationNanos) noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         if (UTILS_LIKELY(manager.isValid())) {
             mImpl->mSession = APerformanceHint_createSession(
                    manager->mManager, threadIds, size, initialTargetWorkDurationNanos);
+            if (mImpl->mSession) {
+                mImpl->mLastTargetDurationNanos = initialTargetWorkDurationNanos;
+            }
         }
     }
 }
@@ -103,17 +107,25 @@ bool PerformanceHintManager::Session::isValid() const {
 }
 
 int PerformanceHintManager::Session::updateTargetWorkDuration(
-        int64_t targetDurationNanos) noexcept {
+        int64_t const targetDurationNanos) noexcept {
+
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         if (UTILS_LIKELY(mImpl->mSession)) {
-            return APerformanceHint_updateTargetWorkDuration(mImpl->mSession, targetDurationNanos);
+            if (UTILS_LIKELY(mImpl->mLastTargetDurationNanos == targetDurationNanos)) {
+                return 0;
+            }
+            int const err = APerformanceHint_updateTargetWorkDuration(mImpl->mSession, targetDurationNanos);
+            if (UTILS_LIKELY(!err)) {
+                mImpl->mLastTargetDurationNanos = targetDurationNanos;
+            }
+            return err;
         }
     }
     return -1;
 }
 
 int PerformanceHintManager::Session::reportActualWorkDuration(
-        int64_t actualDurationNanos) noexcept {
+        int64_t const actualDurationNanos) noexcept {
     if (__builtin_available(android __ANDROID_API_T__, *)) {
         if (UTILS_LIKELY(mImpl->mSession)) {
             return APerformanceHint_reportActualWorkDuration(mImpl->mSession, actualDurationNanos);
