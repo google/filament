@@ -323,9 +323,13 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         const uint32_t offset = mAttributes[attributeIndex].offset;
         const uint8_t stride = mAttributes[attributeIndex].stride;
         const uint8_t slot = mAttributes[attributeIndex].buffer;
-        const size_t end = offset + mVertexCount * stride;
+        const size_t elementSize = Driver::getElementTypeSize(mAttributes[attributeIndex].type);
+        // mVertexCount is always > 0, checked by precondition, so this should
+        // not underflow.
+        const size_t end = offset + (mVertexCount - 1) * stride + elementSize;
+        const size_t rounded = ((end + stride - 1) / stride) * stride;
         assert_invariant(slot < mBufferCount);
-        bufferSizes[slot] = std::max(bufferSizes[slot], end);
+        bufferSizes[slot] = std::max(bufferSizes[slot], rounded);
     };
 
     if (!mBufferObjectsEnabled) {
