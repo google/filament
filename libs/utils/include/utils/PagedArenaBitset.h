@@ -401,6 +401,24 @@ public:
      */
     template <typename Func>
     void forEachSetBit(Func&& callback) const {
+        const_cast<PagedArenaBitset*>(this)->traverseSetBits<false>(std::forward<Func>(callback));
+    }
+
+    /**
+     * @brief Traverses set bits in ascending order, popping (clearing) each bit upon successful processing.
+     * @tparam Func A callable taking `uint32_t` and returning `bool` (or convertible to `bool`).
+     * @param callback Invoked for each set bit. Return `true` to consume/pop the bit; `false` to STOP and leave the bit set.
+     * @return The number of bits successfully popped.
+     */
+    template <typename Func>
+    uint32_t popSetBits(Func&& callback) {
+        return traverseSetBits<true>(std::forward<Func>(callback));
+    }
+
+private:
+    template <bool Destructive, typename Func>
+    uint32_t traverseSetBits(Func&& callback) {
+        uint32_t count = 0;
         for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
             uint64_t masterMask = mMasterMask[m];
             while (masterMask) {
@@ -418,7 +436,7 @@ public:
                     uint16_t const physicalIdx = mDirectory[dirIdx];
 
                     assert(physicalIdx != INVALID_PAGE && "Summary mask desynchronized");
-                    auto const& [activeWordsMask, words] = mArena[physicalIdx];
+                    auto& [activeWordsMask, words] = mArena[physicalIdx];
                     uint64_t activeMask = activeWordsMask;
 
                     while (activeMask != 0) {
@@ -431,10 +449,29 @@ public:
                             // Calculate the unique Entity ID from the hierarchy indices
                             uint32_t const id = (dirIdx << FILAMENT_PAGE_SHIFT) | (w << WORD_SHIFT) | wBit;
 
+                            bool proceed = true;
                             if constexpr (std::is_convertible_v<std::invoke_result_t<Func, uint32_t>, bool>) {
-                                if (!callback(id)) return;
+                                proceed = callback(id);
                             } else {
                                 callback(id);
+                            }
+
+                            if constexpr (Destructive) {
+                                if (UTILS_LIKELY(proceed)) {
+                                    words[w] &= ~(1ULL << wBit);
+                                    if (words[w] == 0) {
+                                        activeWordsMask &= ~(1ULL << w);
+                                    }
+                                    mSize--;
+                                    count++;
+                                } else {
+                                    return count;
+                                }
+                            } else {
+                                if (UTILS_UNLIKELY(!proceed)) {
+                                    return count;
+                                }
+                                count++;
                             }
                         }
                         activeMask &= (activeMask - 1);
@@ -442,8 +479,10 @@ public:
                 }
             }
         }
+        return count;
     }
 
+public:
     // ----------------------------------------------------------------------------------------------------------------
     // subset / superset queries
     // ----------------------------------------------------------------------------------------------------------------
