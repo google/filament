@@ -758,6 +758,7 @@ PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RE
     }
 
     size_t const count = std::size(inputs);
+    assert(count > 0);
 
     // The Generic N-Way Loop
     for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
@@ -787,7 +788,7 @@ PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RE
                 auto& [activeWordsMask, words] = out->mArena.back();
                 uint32_t pop = 0;
 
-                uint16_t dirs[MAX_MULTI_WAY_INPUTS] = {};
+                uint16_t dirs[MAX_MULTI_WAY_INPUTS];
                 for (size_t i = 0; i < count; ++i) {
                     dirs[i] = inputs[i]->mDirectory[dirIdx];
                 }
@@ -846,6 +847,7 @@ uint32_t PagedArenaBitset::intersectSizeInternal(const Collection& inputs) {
 
     uint32_t totalPop = 0;
     const size_t count = std::size(inputs);
+    assert(count > 0);
 
     for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
         uint64_t masterOverlap = inputs[0]->mMasterMask[m];
@@ -870,7 +872,7 @@ uint32_t PagedArenaBitset::intersectSizeInternal(const Collection& inputs) {
                 overlap &= overlap - 1;
                 uint32_t const dirIdx = (maskIdx << WORD_SHIFT) | bit;
 
-                uint16_t dirs[MAX_MULTI_WAY_INPUTS] = {};
+                uint16_t dirs[MAX_MULTI_WAY_INPUTS];
                 for (size_t i = 0; i < count; ++i) {
                     dirs[i] = inputs[i]->mDirectory[dirIdx];
                 }
