@@ -29,6 +29,7 @@
 #include <EGL/eglplatform.h>
 
 #include <initializer_list>
+#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -216,7 +217,10 @@ private:
     // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
-    std::vector<EGLContext> mAdditionalContexts;
+    // TODO: to be converted to utils::Mutex/utils::LockGuard
+    // mutable utils::Mutex mAdditionalContextsLock;
+    mutable std::mutex mAdditionalContextsLock;
+    std::vector<EGLContext> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     bool mMSAA4XSupport = false;
 
     class EGL {
