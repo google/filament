@@ -925,12 +925,11 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
         out << "struct " << STRUCT_NAME << " {\n";
     }
 
-    bool isFirst = true;
     for (auto const& constant: pushConstants) {
-        if (outputSpirv && startOffset != 0 && isFirst) {
+        if (outputSpirv && startOffset != 0) {
             out << "layout(offset=" << startOffset << ") ";
+            startOffset = 0;
         }
-        isFirst = false;
         out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
     }
 
