@@ -24,12 +24,12 @@
 #include <backend/platforms/PlatformCocoaGL.h>
 
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 #include <Cocoa/Cocoa.h>
 #include <OpenGL/OpenGL.h>
 
-#include <mutex>
 #include <vector>
 
 namespace filament::backend {
@@ -52,9 +52,7 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
-    // TODO: to be converted to utils::Mutex/utils::LockGuard
-    // mutable utils::Mutex mAdditionalContextsLock;
-    mutable std::mutex mAdditionalContextsLock;
+    mutable utils::Mutex mAdditionalContextsLock;
     std::vector<NSOpenGLContext*> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
     std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
@@ -209,7 +207,7 @@ void PlatformCocoaGL::createContext(bool shared) {
     NSOpenGLContext* const nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:sharedContext];
     [nsOpenGLContext makeCurrentContext];
     {
-        std::lock_guard const lock(pImpl->mAdditionalContextsLock);
+        utils::LockGuard const lock(pImpl->mAdditionalContextsLock);
         pImpl->mAdditionalContexts.push_back(nsOpenGLContext);
     }
 }
@@ -224,7 +222,7 @@ void PlatformCocoaGL::terminate() noexcept {
     pImpl->mGLContext = nil;
     std::vector<NSOpenGLContext*> additionalContexts;
     {
-        std::lock_guard const lock(pImpl->mAdditionalContextsLock);
+        utils::LockGuard const lock(pImpl->mAdditionalContextsLock);
         additionalContexts.swap(pImpl->mAdditionalContexts);
     }
     for (auto& context : additionalContexts) {
