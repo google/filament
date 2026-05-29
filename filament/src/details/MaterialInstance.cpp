@@ -475,7 +475,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 for (auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
-                    if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                    if (definition.isValidProgram(variant, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                         FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                                 "prepareProgram(variant found)",

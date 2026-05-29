@@ -67,9 +67,9 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     // cache which is initialized later.
     if constexpr (useCache) {
         for (auto variant: definition.getVariants()) {
-            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
-                specialization.variant = variant;
-                for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+            specialization.variant = variant;
+            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+                if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
                     specialization.specKey = specKey;
                     Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
                     if (program) {
@@ -86,12 +86,9 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
                 Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
         // Precache depth programs.
         for (auto variant: definition.getDepthVariants()) {
-            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+            DynamicSpecConstKey const specKey{0};
+            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
                 specialization.variant = variant;
-                // depth variant doesn't evaluate dynamic lighting so we can skip it.
-                // TODO: Have a centralized place to determine which variant specKey combinations
-                // can be skipped.
-                DynamicSpecConstKey const specKey{0};
                 specialization.specKey = specKey;
                 LocalProgramCache::CacheKey mappedKey = LocalProgramCache::mapCacheEntryKey(variant, specKey);
                 if constexpr (useCache) {
@@ -112,9 +109,9 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     } else if constexpr (useCache) {
         // Don't precache depth programs, but acquire them.
         for (auto variant: definition.getDepthVariants()) {
-            if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
+            DynamicSpecConstKey const specKey{0};
+            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
                 specialization.variant = variant;
-                DynamicSpecConstKey const specKey{0};
                 specialization.specKey = specKey;
                 Handle<HwProgram> const* program = globalProgramCache.acquire(specialization);
                 if (program) {
@@ -142,8 +139,8 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     };
 
     for (auto variant : definition.getVariants()) {
-        if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
-            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+        for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+            if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
                 LocalProgramCache::CacheKey mappedKey =
                         LocalProgramCache::mapCacheEntryKey(variant, specKey);
                 Handle<HwProgram>& program = programCache[mappedKey];
@@ -166,8 +163,8 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     const bool destroySharedVariants = isDefaultMaterial || definition.hasCustomDepthShader;
 
     for (auto variant: definition.getDepthVariants()) {
-        if (UTILS_LIKELY(definition.hasVariant(variant, shaderModel, isStereoSupported))) {
-            DynamicSpecConstKey const specKey{0};
+        DynamicSpecConstKey const specKey{0};
+        if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
             LocalProgramCache::CacheKey mappedKey =
                 LocalProgramCache::mapCacheEntryKey(variant, specKey);
             Handle<HwProgram> &program = programCache[mappedKey];
@@ -847,7 +844,7 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi& driver,
         MaterialParser const& parser, ProgramSpecialization const& specialization,
         CompilerPriorityQueue priorityQueue) const {
-    if (!hasVariant(specialization.variant, engine.getShaderModel(), driver.isStereoSupported())) {
+    if (!isValidProgram(specialization.variant, specialization.specKey, engine.getShaderModel(), driver.isStereoSupported())) {
         return {};
     }
     if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
@@ -889,7 +886,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
     }
 }
 
-bool MaterialDefinition::hasVariant(Variant const variant,
+bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
         ShaderModel const sm, bool isStereoSupported) const noexcept {
     if (!isStereoSupported && Variant::isStereoVariant(variant)) {
         return false;
@@ -914,6 +911,14 @@ bool MaterialDefinition::hasVariant(Variant const variant,
     if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
         return false;
     }
+
+    if (specKey.hasDynamicLighting()) {
+        if (materialDomain != MaterialDomain::SURFACE || !isVariantLit ||
+                Variant::isValidDepthVariant(variant) || Variant::isSSRVariant(variant)) {
+            return false;
+        }
+    }
+
     return true;
 }
 
