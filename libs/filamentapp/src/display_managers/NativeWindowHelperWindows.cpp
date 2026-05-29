@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2015 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENTAPP_VULKAN_PLATFORM_HELPER_COMMON_H
-#define TNT_FILAMENTAPP_VULKAN_PLATFORM_HELPER_COMMON_H
+#include <filamentapp/NativeWindowHelper.h>
 
-#include <backend/platforms/VulkanPlatform.h>
+#include <utils/Panic.h>
 
-namespace filament::filamentapp {
+#include <SDL_syswm.h>
 
-filament::backend::VulkanPlatform::Customization parseGpuHint(char const* gpuHintCstr);
-
-} // namespace filament::filamentapp
-
-#endif // TNT_FILAMENTAPP_VULKAN_PLATFORM_HELPER_COMMON_H
+void* getNativeWindowFromSDL(SDL_Window* sdlWindow) {
+    SDL_SysWMinfo wmi;
+    SDL_VERSION(&wmi.version);
+    FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
+            << "SDL version unsupported!";
+    HWND win = (HWND) wmi.info.win.window;
+    return (void*) win;
+}

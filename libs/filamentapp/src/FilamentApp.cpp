@@ -16,10 +16,13 @@
 
 #include <filamentapp/FilamentApp.h>
 
+#include "PlatformHelper.h"
+
 #include "KeyInputConversion.h"
+#include "display_managers/HtmlDisplayManager.h"
+#include "display_managers/SDLDisplayManager.h"
 
 #if defined(WIN32)
-#    include <SDL_syswm.h>
 #    include <utils/unwindows.h>
 #endif
 
@@ -50,32 +53,19 @@
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <backend/platforms/VulkanPlatform.h>
-#include <filamentapp/VulkanPlatformHelper.h>
-#endif
-
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #if defined(__ANDROID__)
-        #include "backend/platforms/WebGPUPlatformAndroid.h"
-    #elif defined(__APPLE__)
-        #include "backend/platforms/WebGPUPlatformApple.h"
-    #elif defined(__linux__)
-        #include "backend/platforms/WebGPUPlatformLinux.h"
-    #elif defined(WIN32)
-        #include "backend/platforms/WebGPUPlatformWindows.h"
-    #endif
 #endif
 
 #include <filagui/ImGuiHelper.h>
 
 #include <filamentapp/Cube.h>
 #include <filamentapp/Grid.h>
-#include <filamentapp/NativeWindowHelper.h>
 
 #include <stb_image.h>
 
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #ifdef __EXCEPTIONS
@@ -90,49 +80,11 @@ using namespace filament;
 using namespace filagui;
 using namespace filament::math;
 using namespace utils;
+using namespace filament::app;
 
 namespace {
 
 using namespace filament::backend;
-
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    #if defined(__ANDROID__)
-        class FilamentAppWebGPUPlatform : public WebGPUPlatformAndroid {
-    #elif defined(__APPLE__)
-        class FilamentAppWebGPUPlatform : public WebGPUPlatformApple {
-    #elif defined(__linux__)
-        class FilamentAppWebGPUPlatform : public WebGPUPlatformLinux {
-    #elif defined(WIN32)
-        class FilamentAppWebGPUPlatform : public WebGPUPlatformWindows {
-    #endif
-public:
-    FilamentAppWebGPUPlatform(Config::WebGPUBackend backend)
-        : mBackend(backend) {}
-
-    virtual WebGPUPlatform::Configuration getConfiguration() const noexcept override {
-        WebGPUPlatform::Configuration config = {};
-        switch (mBackend) {
-            case Config::WebGPUBackend::VULKAN:
-                config.forceBackendType = wgpu::BackendType::Vulkan;
-                break;
-            case Config::WebGPUBackend::METAL:
-                config.forceBackendType = wgpu::BackendType::Metal;
-                break;
-            case Config::WebGPUBackend::DEFAULT:
-                break;
-            default:
-                LOG(ERROR) << "FilamentApp: Unsupported webgpu backend was selected(="
-                           << (int) mBackend << "). Selection is ignored.";
-                break;
-        }
-        return config;
-    }
-
-private:
-    Config::WebGPUBackend const mBackend;
-};
-#endif
-
 }
 
 FilamentApp& FilamentApp::get() {
@@ -140,12 +92,13 @@ FilamentApp& FilamentApp::get() {
     return filamentApp;
 }
 
-FilamentApp::FilamentApp() {
-    initSDL();
-}
+FilamentApp::FilamentApp() {}
 
 FilamentApp::~FilamentApp() {
-    SDL_Quit();
+    if (mDisplayManager) {
+        mDisplayManager->terminate();
+        delete mDisplayManager;
+    }
 }
 
 View* FilamentApp::getGuiView() const noexcept {
@@ -156,9 +109,62 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
         PreRenderCallback preRender, PostRenderCallback postRender,
         size_t width, size_t height) {
+
+    // Note that we need to determine the backend in order to build custom platforms.
+    Engine::Backend backend = filament::app::resolveBackend(config.backend);
+
+    backend::Platform* platform = nullptr;
+    if (backend == Engine::Backend::VULKAN) {
+        platform = mVulkanPlatform =
+                filament::app::createVulkanPlatform(config.vulkanGPUHint.c_str());
+    } else if (backend == Engine::Backend::WEBGPU) {
+        platform = mWebGPUPlatform =
+                filament::app::createWebGPUPlatform(config.forcedWebGPUBackend);
+    }
+
+    Engine::Config engineConfig = {
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+        .stereoscopicType = Engine::StereoscopicType::INSTANCED,
+#elif defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        .stereoscopicType = Engine::StereoscopicType::MULTIVIEW,
+#else
+        .stereoscopicType = Engine::StereoscopicType::NONE,
+#endif
+        .stereoscopicEyeCount = (uint8_t) config.stereoscopicEyeCount,
+        .asynchronousMode = config.asynchronousMode,
+    };
+
+    // "backend.enable_asynchronous_operation" is forcibly enabled here, inheriting the setting
+    // from the Engine, purely to demonstrate the object's asynchronous behavior within
+    // Filament. Users should manage this flag at their discretion.
+    mEngine = Engine::Builder()
+                      .backend(backend)
+                      .featureLevel(config.featureLevel)
+                      .feature("backend.enable_asynchronous_operation",
+                              engineConfig.asynchronousMode != AsynchronousMode::NONE)
+                      .platform(platform)
+                      .config(&engineConfig)
+                      .build();
+
+    assert_invariant(mEngine->getBackend() == backend);
+
+    // By now we have resolved to a specific backend (instead of default).
+    config.backend = backend;
+
+    if (config.displayManager == Config::DisplayManager::WEB) {
+        mDisplayManager = new HtmlDisplayManager();
+    } else {
+        mDisplayManager = new SDLDisplayManager();
+    }
+
+    if (!mDisplayManager->init(config)) {
+        LOG(ERROR) << "Failed to initialize display manager" << utils::io::endl;
+        return;
+    }
+
     mWindowTitle = config.title;
     std::unique_ptr<FilamentApp::Window> window(
-            new FilamentApp::Window(this, config, config.title, width, height));
+            new FilamentApp::Window(this, config, config.title, mCameraParams, width, height));
 
     mDepthMaterial = Material::Builder()
             .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
@@ -225,51 +231,28 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     if (imguiCallback) {
         mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
-            getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
-        ImGuiIO& io = ImGui::GetIO();
-        #ifdef WIN32
-            SDL_SysWMinfo wmInfo;
-            SDL_VERSION(&wmInfo.version);
-            SDL_GetWindowWMInfo(window->getSDLWindow(), &wmInfo);
-            ImGui::GetMainViewport()->PlatformHandleRaw = wmInfo.info.win.window;
-        #endif
-        io.SetClipboardTextFn = [](void*, const char* text) {
-            SDL_SetClipboardText(text);
-        };
-        io.GetClipboardTextFn = [](void*) -> const char* {
-            return SDL_GetClipboardText();
-        };
-        io.ClipboardUserData = nullptr;
+                getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
     }
 
     bool mousePressed[3] = { false };
 
-    int sidebarWidth = mSidebarWidth;
-    float cameraFocalLength = mCameraFocalLength;
-    float cameraNear = mCameraNear;
-    float cameraFar = mCameraFar;
-
-    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
-    SDL_Window* sdlWindow = window->getSDLWindow();
+    int sidebarWidth = mCameraParams.sidebarWidth;
+    float cameraFocalLength = mCameraParams.focalLength;
+    float cameraNear = mCameraParams.near;
+    float cameraFar = mCameraParams.far;
+    WindowCameraParams oldCamera = mCameraParams;
 
 #ifdef __EXCEPTIONS
 try {
 #endif
     while (!mClosed) {
-        if (mWindowTitle != SDL_GetWindowTitle(sdlWindow)) {
-            SDL_SetWindowTitle(sdlWindow, mWindowTitle.c_str());
-        }
+        uint32_t width, height;
+        mDisplayManager->getWindowSize(window->mWindow, &width, &height);
 
-        if (mSidebarWidth != sidebarWidth ||
-            mCameraFocalLength != cameraFocalLength ||
-            mCameraNear != cameraNear ||
-            mCameraFar != cameraFar) {
-            window->configureCamerasForWindow();
-            sidebarWidth = mSidebarWidth;
-            cameraFocalLength = mCameraFocalLength;
-            cameraNear = mCameraNear;
-            cameraFar = mCameraFar;
-            }
+        if (oldCamera != mCameraParams) {
+            window->configureCamerasForWindow(mCameraParams);
+            oldCamera = mCameraParams;
+        }
 
         if (!UTILS_HAS_THREADING) {
             mEngine->execute();
@@ -277,112 +260,104 @@ try {
 
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
-            double now = (double) SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
-            mAnimation(mEngine, window->mMainView->getView(), now);
+            mAnimation(mEngine, window->mMainView->getView(), mDisplayManager->getTime());
         }
 
         // Loop over fresh events twice: first stash them and let ImGui process them, then allow
         // the app to process the stashed events. This is done because ImGui might wish to block
         // certain events from the app (e.g., when dragging the mouse over an obscuring window).
-        constexpr int kMaxEvents = 16;
-        SDL_Event events[kMaxEvents];
-        int nevents = 0;
-        while (nevents < kMaxEvents && SDL_PollEvent(&events[nevents]) != 0) {
+        std::vector<filament::app::AppEvent> events;
+        mDisplayManager->pollEvents(events);
+
+        for (const auto& event: events) {
             if (mImGuiHelper) {
                 ImGuiIO& io = ImGui::GetIO();
-                SDL_Event* event = &events[nevents];
-                switch (event->type) {
-                    case SDL_MOUSEWHEEL: {
-                        if (event->wheel.x > 0) io.MouseWheelH += 1;
-                        if (event->wheel.x < 0) io.MouseWheelH -= 1;
-                        if (event->wheel.y > 0) io.MouseWheel += 1;
-                        if (event->wheel.y < 0) io.MouseWheel -= 1;
+                switch (event.type) {
+                    case AppEvent::Type::MOUSE_WHEEL: {
+                        io.MouseWheel += event.mouseWheel.delta;
                         break;
                     }
-                    case SDL_MOUSEBUTTONDOWN: {
-                        if (event->button.button == SDL_BUTTON_LEFT) mousePressed[0] = true;
-                        if (event->button.button == SDL_BUTTON_RIGHT) mousePressed[1] = true;
-                        if (event->button.button == SDL_BUTTON_MIDDLE) mousePressed[2] = true;
+                    case AppEvent::Type::MOUSE_BUTTON_DOWN: {
+                        if (event.mouseButton.button == 1) mousePressed[0] = true;
+                        if (event.mouseButton.button == 3) mousePressed[1] = true;
+                        if (event.mouseButton.button == 2) mousePressed[2] = true;
                         break;
                     }
-                    case SDL_TEXTINPUT: {
-                        io.AddInputCharactersUTF8(event->text.text);
+                    case AppEvent::Type::KEYDOWN:
+                    case AppEvent::Type::KEYUP: {
+                        io.AddKeyEvent(ImGuiMod_Ctrl,
+                                (event.key.modifiers & AppKeyModifier::CTRL) != 0);
+                        io.AddKeyEvent(ImGuiMod_Shift,
+                                (event.key.modifiers & AppKeyModifier::SHIFT) != 0);
+                        io.AddKeyEvent(ImGuiMod_Alt,
+                                (event.key.modifiers & AppKeyModifier::ALT) != 0);
+                        io.AddKeyEvent(ImGuiMod_Super,
+                                (event.key.modifiers & AppKeyModifier::SUPER) != 0);
+                        io.AddKeyEvent(filamentapp_utils::AppKeyToImGuiKey(event.key.code),
+                                event.type == AppEvent::Type::KEYDOWN);
                         break;
                     }
-                    case SDL_KEYUP:
-                    case SDL_KEYDOWN: {
-                        SDL_Scancode const scancode = event->key.keysym.scancode;
-                        SDL_Keycode const keycode = event->key.keysym.sym;
-
-                        auto modState = SDL_GetModState();
-                        io.AddKeyEvent(ImGuiMod_Ctrl, (modState & KMOD_CTRL) != 0);
-                        io.AddKeyEvent(ImGuiMod_Shift, (modState & KMOD_SHIFT) != 0);
-                        io.AddKeyEvent(ImGuiMod_Alt, (modState & KMOD_ALT) != 0);
-                        io.AddKeyEvent(ImGuiMod_Super, (modState & KMOD_GUI) != 0);
-                        io.AddKeyEvent(
-                                filamentapp_utils::ImGui_ImplSDL2_KeyEventToImGuiKey(keycode, scancode),
-                                event->type == SDL_KEYDOWN);
+                    case AppEvent::Type::TEXTINPUT: {
+                        io.AddInputCharactersUTF8(event.text.text);
                         break;
                     }
+                    default:
+                        break;
                 }
             }
-            nevents++;
         }
 
         // Now, loop over the events a second time for app-side processing.
-        for (int i = 0; i < nevents; i++) {
-            const SDL_Event& event = events[i];
+        for (const auto& event: events) {
             ImGuiIO* io = mImGuiHelper ? &ImGui::GetIO() : nullptr;
             switch (event.type) {
-                case SDL_QUIT:
+                case AppEvent::Type::QUIT:
                     mClosed = true;
                     break;
-                case SDL_KEYDOWN:
-                    if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                case AppEvent::Type::KEYDOWN:
+                    if (event.key.code == AppKey::ESCAPE) {
                         mClosed = true;
                     }
 #ifndef NDEBUG
-                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                    if (event.key.code == AppKey::PRINT_SCREEN) {
                         DebugRegistry& debug = mEngine->getDebugRegistry();
                         bool* captureFrame =
                                 debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                         *captureFrame = true;
                     }
 #endif
-                    window->keyDown(event.key.keysym.scancode);
+                    window->keyDown(event.key.code);
                     break;
-                case SDL_KEYUP:
-                    window->keyUp(event.key.keysym.scancode);
+                case AppEvent::Type::KEYUP:
+                    window->keyUp(event.key.code);
                     break;
-                case SDL_MOUSEWHEEL:
+                case AppEvent::Type::MOUSE_WHEEL:
+                    if (!io || !io->WantCaptureMouse) window->mouseWheel(event.mouseWheel.delta);
+                    break;
+                case AppEvent::Type::MOUSE_BUTTON_DOWN:
                     if (!io || !io->WantCaptureMouse)
-                        window->mouseWheel(event.wheel.y);
+                        window->mouseDown(event.mouseButton.button, event.mouseButton.x,
+                                event.mouseButton.y);
                     break;
-                case SDL_MOUSEBUTTONDOWN:
+                case AppEvent::Type::MOUSE_BUTTON_UP:
                     if (!io || !io->WantCaptureMouse)
-                        window->mouseDown(event.button.button, event.button.x, event.button.y);
+                        window->mouseUp(event.mouseButton.x, event.mouseButton.y);
                     break;
-                case SDL_MOUSEBUTTONUP:
+                case AppEvent::Type::MOUSE_MOVE:
                     if (!io || !io->WantCaptureMouse)
-                        window->mouseUp(event.button.x, event.button.y);
+                        window->mouseMoved(event.mouseMove.x, event.mouseMove.y);
                     break;
-                case SDL_MOUSEMOTION:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseMoved(event.motion.x, event.motion.y);
-                    break;
-                case SDL_DROPFILE:
+                case AppEvent::Type::DROP_FILE:
                     if (mDropHandler) {
-                        mDropHandler(event.drop.file);
+                        mDropHandler(event.dropFile.path);
                     }
-                    SDL_free(event.drop.file);
                     break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) {
-                    case SDL_WINDOWEVENT_RESIZED:
-                            window->resize();
-                            break;
-                    default:
-                            break;
+                case AppEvent::Type::RESIZED:
+                    window->resize(mCameraParams);
+                    // Call the resize callback, if this FilamentApp has one. This must be done
+                    // after configureCamerasForWindow, so the viewports are correct.
+                    if (mResize) {
+                        mResize(mEngine, window->mMainView->getView());
                     }
                     break;
                 default:
@@ -391,43 +366,36 @@ try {
         }
 
         // Calculate the time step.
-        static Uint64 frequency = SDL_GetPerformanceFrequency();
-        Uint64 now = SDL_GetPerformanceCounter();
-        const float timeStep = mTime > 0 ? (float)((double)(now - mTime) / frequency) :
-                (float)(1.0f / 60.0f);
-        mTime = now;
+        static double lastTime = 0;
+        double now = mDisplayManager->getTime();
+        const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
+        lastTime = now;
 
         // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
         // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
         if (mImGuiHelper) {
 
             // Inform ImGui of the current window size in case it was resized.
-            if (config.headless) {
-                mImGuiHelper->setDisplaySize(window->mWidth, window->mHeight);
-            } else {
-                int windowWidth, windowHeight;
-                int displayWidth, displayHeight;
-                SDL_GetWindowSize(window->mWindow, &windowWidth, &windowHeight);
-                SDL_GL_GetDrawableSize(window->mWindow, &displayWidth, &displayHeight);
-                mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
-                        windowWidth > 0 ? ((float)displayWidth / windowWidth) : 0,
-                        displayHeight > 0 ? ((float)displayHeight / windowHeight) : 0);
-            }
+            uint32_t windowWidth, windowHeight;
+            uint32_t displayWidth, displayHeight;
+            mDisplayManager->getWindowSize(window->mWindow, &windowWidth, &windowHeight);
+            mDisplayManager->getDrawableSize(window->mWindow, &displayWidth, &displayHeight);
+            mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
+                    windowWidth > 0 ? ((float) displayWidth / windowWidth) : 0,
+                    displayHeight > 0 ? ((float) displayHeight / windowHeight) : 0);
 
             // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
             // from our event handler)
             ImGuiIO& io = ImGui::GetIO();
             int mx, my;
-            Uint32 buttons = SDL_GetMouseState(&mx, &my);
+            uint32_t buttons = mDisplayManager->getMouseState(&mx, &my);
             io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-            io.MouseDown[0] = mousePressed[0] || (buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;
-            io.MouseDown[1] = mousePressed[1] || (buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-            io.MouseDown[2] = mousePressed[2] || (buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+            io.MouseDown[0] = mousePressed[0] || (buttons & (1 << 0)) != 0;
+            io.MouseDown[1] = mousePressed[1] || (buttons & (1 << 2)) != 0;
+            io.MouseDown[2] = mousePressed[2] || (buttons & (1 << 1)) != 0;
             mousePressed[0] = mousePressed[1] = mousePressed[2] = false;
 
-            // TODO: Update to a newer SDL and use SDL_CaptureMouse() to retrieve mouse coordinates
-            // outside of the client area; see the imgui SDL example.
-            if ((SDL_GetWindowFlags(window->mWindow) & SDL_WINDOW_INPUT_FOCUS) != 0) {
+            if (mDisplayManager->isWindowFocused(window->mWindow)) {
                 io.MousePos = ImVec2((float)mx, (float)my);
             }
 
@@ -523,11 +491,11 @@ try {
 
         // Delay rendering for roughly one monitor refresh interval
         // TODO: Use SDL_GL_SetSwapInterval for proper vsync
-        SDL_DisplayMode Mode;
-        int refreshIntervalMS = (SDL_GetDesktopDisplayMode(
-            SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 &&
-            Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
-        SDL_Delay(refreshIntervalMS);
+        // For now, we'll use a fixed 16ms sleep for SDL-like platforms to match original behavior.
+        // HtmlDisplayManager might not need this if it has its own throttling.
+        if (mDisplayManager->isVsyncSupported()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
 
         Renderer* renderer = window->getRenderer();
 
@@ -536,7 +504,7 @@ try {
         }
 
         if (mReconfigureCameras) {
-            window->configureCamerasForWindow();
+            window->configureCamerasForWindow(mCameraParams);
             mReconfigureCameras = false;
         }
 
@@ -561,6 +529,9 @@ try {
             for (auto const& view: window->mViews) {
                 renderer->render(view->getView());
             }
+
+            mDisplayManager->onFrameFinished(window->mWindow, mEngine, renderer);
+
             if (postRender) {
                 postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
@@ -600,18 +571,12 @@ try {
     Engine::destroy(&mEngine);
     mEngine = nullptr;
 
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     if (mVulkanPlatform) {
-        filamentapp::destroyVulkanPlatform(mVulkanPlatform);
+        filament::app::destroyVulkanPlatform(mVulkanPlatform);
     }
-#endif
-
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
     if (mWebGPUPlatform) {
-        delete mWebGPUPlatform;
+        filament::app::destroyWebGPUPlatform(mWebGPUPlatform);
     }
-#endif
-
 }
 
 // RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
@@ -696,10 +661,6 @@ void FilamentApp::loadDirt(const Config& config) {
     }
 }
 
-void FilamentApp::initSDL() {
-    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
-}
-
 void FilamentApp::setCameraFrustumEnabled(bool enabled) noexcept {
     mCameraFrustumEnabled = enabled ? 0x2 : 0x0;
 }
@@ -726,126 +687,41 @@ bool FilamentApp::isFroxelGridEnabled() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-FilamentApp::Window::Window(FilamentApp* filamentApp,
-        const Config& config, std::string title, size_t w, size_t h)
-        : mFilamentApp(filamentApp), mConfig(config), mIsHeadless(config.headless) {
-    const int x = SDL_WINDOWPOS_CENTERED;
-    const int y = SDL_WINDOWPOS_CENTERED;
-    uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
-    if (config.resizeable) {
-        windowFlags |= SDL_WINDOW_RESIZABLE;
-    }
+FilamentApp::Window::Window(FilamentApp* filamentApp, const Config& config, std::string title,
+        WindowCameraParams const& cameraParams, size_t w, size_t h)
+        : mDisplayManager(filamentApp->mDisplayManager),
+          mEngine(filamentApp->mEngine),
+          mConfig(config),
+          mIsHeadless(config.headless) {
+
+    mWindow =
+            mDisplayManager->createWindow(title.c_str(), w, h, config.resizeable, config.headless);
+
+    void* nativeWindow = mDisplayManager->getNativeWindow(mWindow);
+    auto engine = mEngine;
+
+    mWidth = w;
+    mHeight = h;
+
+    // Write back the active feature level.
+    config.featureLevel = engine->getActiveFeatureLevel();
+
 
     if (config.headless) {
-        windowFlags |= SDL_WINDOW_HIDDEN;
-    }
-
-    // Even if we're in headless mode, we still need to create a window, otherwise SDL will not poll
-    // events.
-    mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
-
-    auto const createEngine = [&config, this]() {
-        auto backend = config.backend;
-
-        // This mirrors the logic for choosing a backend given compile-time flags and client having
-        // provided DEFAULT as the backend (see PlatformFactory.cpp)
-        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(FILAMENT_IOS) && \
-            !defined(__APPLE__) && defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            if (backend == Engine::Backend::DEFAULT) {
-                backend = Engine::Backend::VULKAN;
-            }
-        #endif
-
-        Engine::Config engineConfig = {};
-        engineConfig.stereoscopicEyeCount = config.stereoscopicEyeCount;
-#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
-        engineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
-#elif defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
-        engineConfig.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
-#else
-        engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
-#endif
-
-        backend::Platform* platform = nullptr;
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        if (backend == Engine::Backend::VULKAN) {
-            platform = mFilamentApp->mVulkanPlatform =
-                    filamentapp::createVulkanPlatform(config.vulkanGPUHint.c_str());
-        }
-#endif
-
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-        if (backend == Engine::Backend::WEBGPU) {
-            platform = mFilamentApp->mWebGPUPlatform =
-                    new FilamentAppWebGPUPlatform(config.forcedWebGPUBackend);
-        }
-#endif
-
-        Engine::Builder builder = Engine::Builder();
-
-        engineConfig.asynchronousMode = config.asynchronousMode;
-        if (engineConfig.asynchronousMode != AsynchronousMode::NONE) {
-            // This feature flag is forcibly enabled here, inheriting the setting from the Engine,
-            // purely to demonstrate the object's asynchronous behavior within Filament. Users
-            // should manage this flag at their discretion.
-            builder.feature("backend.enable_asynchronous_operation", true);
-        }
-
-        return builder.backend(backend)
-                .featureLevel(config.featureLevel)
-                .platform(platform)
-                .config(&engineConfig)
-                .build();
-    };
-
-    if (config.headless) {
-        mFilamentApp->mEngine = createEngine();
-        mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t) w, (uint32_t) h);
-        mWidth = w;
-        mHeight = h;
+        mSwapChain = engine->createSwapChain((uint32_t) w, (uint32_t) h);
     } else {
-
-        void* nativeWindow = ::getNativeWindow(mWindow);
-
-        // Create the Engine after the window in case this happens to be a single-threaded platform.
-        // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
-        // current, rather than the one created by SDL.
-        mFilamentApp->mEngine = createEngine();
-
-        // get the resolved backend
-        mBackend = config.backend = mFilamentApp->mEngine->getBackend();
-
-        void* nativeSwapChain = nativeWindow;
-
-#if defined(__APPLE__)
-        ::prepareNativeWindow(mWindow);
-
-        void* metalLayer = nullptr;
-
-        if (config.backend == filament::Engine::Backend::METAL || config.backend == filament::Engine::Backend::VULKAN
-            || config.backend == filament::Engine::Backend::WEBGPU) {
-            metalLayer = setUpMetalLayer(nativeWindow);
-            // The swap chain on both native Metal and MoltenVK is a CAMetalLayer.
-            nativeSwapChain = metalLayer;
-        }
-
-#endif
-
-        // Write back the active feature level.
-        config.featureLevel = mFilamentApp->mEngine->getActiveFeatureLevel();
-
-        mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain,
+        mSwapChain = engine->createSwapChain(nativeWindow,
                 filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
 
-    mRenderer = mFilamentApp->mEngine->createRenderer();
+    mRenderer = engine->createRenderer();
 
     // create cameras
     utils::EntityManager& em = utils::EntityManager::get();
     em.create(3, mCameraEntities);
-    mCameras[0] = mMainCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[0]);
-    mCameras[1] = mDebugCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[1]);
-    mCameras[2] = mOrthoCamera = mFilamentApp->mEngine->createCamera(mCameraEntities[2]);
+    mCameras[0] = mMainCamera = engine->createCamera(mCameraEntities[0]);
+    mCameras[1] = mDebugCamera = engine->createCamera(mCameraEntities[1]);
+    mCameras[2] = mOrthoCamera = engine->createCamera(mCameraEntities[2]);
 
     // set exposure
     for (auto camera : mCameras) {
@@ -885,7 +761,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     }
 
     // configure the cameras
-    configureCamerasForWindow();
+    configureCamerasForWindow(cameraParams);
 
     mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
@@ -894,12 +770,12 @@ FilamentApp::Window::~Window() {
     mViews.clear();
     utils::EntityManager& em = utils::EntityManager::get();
     for (auto e : mCameraEntities) {
-        mFilamentApp->mEngine->destroyCameraComponent(e);
+        mEngine->destroyCameraComponent(e);
         em.destroy(e);
     }
-    mFilamentApp->mEngine->destroy(mRenderer);
-    mFilamentApp->mEngine->destroy(mSwapChain);
-    SDL_DestroyWindow(mWindow);
+    mEngine->destroy(mRenderer);
+    mEngine->destroy(mSwapChain);
+    mDisplayManager->destroyWindow(mWindow);
     delete mMainCameraMan;
     delete mDebugCameraMan;
 }
@@ -948,7 +824,7 @@ void FilamentApp::Window::mouseMoved(ssize_t x, ssize_t y) {
     mLastY = y;
 }
 
-void FilamentApp::Window::keyDown(SDL_Scancode key) {
+void FilamentApp::Window::keyDown(AppKey key) {
     auto& eventTarget = mKeyEventTarget[key];
 
     // keyDown events can be sent multiple times per key (for key repeat)
@@ -978,7 +854,7 @@ void FilamentApp::Window::keyDown(SDL_Scancode key) {
     }
 }
 
-void FilamentApp::Window::keyUp(SDL_Scancode key) {
+void FilamentApp::Window::keyUp(AppKey key) {
     auto& eventTarget = mKeyEventTarget[key];
     if (!eventTarget) {
         return;
@@ -988,52 +864,31 @@ void FilamentApp::Window::keyUp(SDL_Scancode key) {
 }
 
 void FilamentApp::Window::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
-    int dw, dh, ww, wh;
-    SDL_GL_GetDrawableSize(mWindow, &dw, &dh);
-    SDL_GetWindowSize(mWindow, &ww, &wh);
-    x = x * dw / ww;
-    y = y * dh / wh;
+    uint32_t dw, dh, ww, wh;
+    mDisplayManager->getDrawableSize(mWindow, &dw, &dh);
+    mDisplayManager->getWindowSize(mWindow, &ww, &wh);
+    x = x * (ssize_t) dw / (ssize_t) ww;
+    y = y * (ssize_t) dh / (ssize_t) wh;
 }
 
-void FilamentApp::Window::resize() {
-    void* nativeWindow = ::getNativeWindow(mWindow);
-
-#if defined(__APPLE__)
-
-    if (mBackend == filament::Engine::Backend::METAL) {
-        resizeMetalLayer(nativeWindow);
-    }
-
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) || defined(FILAMENT_SUPPORTS_WEBGPU)
-    if (mBackend == filament::Engine::Backend::VULKAN || mBackend == filament::Engine::Backend::WEBGPU) {
-        resizeMetalLayer(nativeWindow);
-    }
-#endif
-
-#endif
-
-    configureCamerasForWindow();
-
-    // Call the resize callback, if this FilamentApp has one. This must be done after
-    // configureCamerasForWindow, so the viewports are correct.
-    if (mFilamentApp->mResize) {
-        mFilamentApp->mResize(mFilamentApp->mEngine, mMainView->getView());
-    }
+void FilamentApp::Window::resize(WindowCameraParams const& cameraParams) {
+    mDisplayManager->onWindowResized(mWindow);
+    configureCamerasForWindow(cameraParams);
 }
 
-void FilamentApp::Window::configureCamerasForWindow() {
+void FilamentApp::Window::configureCamerasForWindow(WindowCameraParams const& cameraParams) {
     float dpiScaleX = 1.0f;
     float dpiScaleY = 1.0f;
 
     // If the app is not headless, query the window for its physical & virtual sizes.
     if (!mIsHeadless) {
         uint32_t width, height;
-        SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
+        mDisplayManager->getDrawableSize(mWindow, &width, &height);
         mWidth = (size_t) width;
         mHeight = (size_t) height;
 
-        int virtualWidth, virtualHeight;
-        SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
+        uint32_t virtualWidth, virtualHeight;
+        mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
         dpiScaleX = (float) width / virtualWidth;
         dpiScaleY = (float) height / virtualHeight;
     }
@@ -1043,28 +898,28 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     const float3 at(0, 0, -4);
     const double ratio = double(height) / double(width);
-    const int sidebar = mFilamentApp->mSidebarWidth * dpiScaleX;
+    const int sidebar = cameraParams.sidebarWidth * dpiScaleX;
 
     const bool splitview = mViews.size() > 2;
 
     const uint32_t mainWidth = std::max(2, (int) width - sidebar);
 
-    double near = mFilamentApp->mCameraNear;
-    double far = mFilamentApp->mCameraFar;
+    double near = cameraParams.near;
+    double far = cameraParams.far;
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
         const int ec = mConfig.stereoscopicEyeCount;
         aspectRatio = double(mainWidth) / ec / height;
 
         mat4 projections[4];
-        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
+        projections[0] = Camera::projection(cameraParams.focalLength, aspectRatio, near, far);
         projections[1] = projections[0];
         // simulate foveated rendering
-        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, aspectRatio, near, far);
+        projections[2] = Camera::projection(cameraParams.focalLength * 2.0, aspectRatio, near, far);
         projections[3] = projections[2];
         mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
     } else {
-        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
+        mMainCamera->setLensProjection(cameraParams.focalLength, aspectRatio, near, far);
     }
     mDebugCamera->setProjection(45.0, aspectRatio, 0.0625, 4096, Camera::Fov::VERTICAL);
 
@@ -1126,24 +981,24 @@ void FilamentApp::CView::mouseWheel(ssize_t x) {
     }
 }
 
-bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key) {
+bool FilamentApp::manipulatorKeyFromKeycode(AppKey scancode, CameraManipulator::Key& key) {
     switch (scancode) {
-        case SDL_SCANCODE_W:
+        case AppKey::W:
             key = CameraManipulator::Key::FORWARD;
             return true;
-        case SDL_SCANCODE_A:
+        case AppKey::A:
             key = CameraManipulator::Key::LEFT;
             return true;
-        case SDL_SCANCODE_S:
+        case AppKey::S:
             key = CameraManipulator::Key::BACKWARD;
             return true;
-        case SDL_SCANCODE_D:
+        case AppKey::D:
             key = CameraManipulator::Key::RIGHT;
             return true;
-        case SDL_SCANCODE_E:
+        case AppKey::E:
             key = CameraManipulator::Key::UP;
             return true;
-        case SDL_SCANCODE_Q:
+        case AppKey::Q:
             key = CameraManipulator::Key::DOWN;
             return true;
         default:
@@ -1151,7 +1006,7 @@ bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipul
     }
 }
 
-void FilamentApp::CView::keyUp(SDL_Scancode scancode) {
+void FilamentApp::CView::keyUp(AppKey scancode) {
     if (mCameraManipulator) {
         CameraManipulator::Key key;
         if (manipulatorKeyFromKeycode(scancode, key)) {
@@ -1160,7 +1015,7 @@ void FilamentApp::CView::keyUp(SDL_Scancode scancode) {
     }
 }
 
-void FilamentApp::CView::keyDown(SDL_Scancode scancode) {
+void FilamentApp::CView::keyDown(AppKey scancode) {
     if (mCameraManipulator) {
         CameraManipulator::Key key;
         if (manipulatorKeyFromKeycode(scancode, key)) {

@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#include <ktxreader/Ktx1Reader.h>
+
+#include <imageio/ImageDecoder.h>
+
 #include <filamentapp/IBL.h>
 
 #include <filament/Engine.h>
@@ -23,23 +27,17 @@
 #include <filament/Skybox.h>
 #include <filament/Texture.h>
 
-#include <ktxreader/Ktx1Reader.h>
-
-#include <imageio/ImageDecoder.h>
+#include <utils/Log.h>
+#include <utils/Path.h>
 
 #include <filament-iblprefilter/IBLPrefilterContext.h>
-
 #include <stb_image.h>
-
-#include <utils/Path.h>
 
 #include <fstream>
 #include <iostream>
 #include <string>
 
 #include <string.h>
-
-#include <utils/Log.h>
 
 using namespace filament;
 using namespace filament::math;
