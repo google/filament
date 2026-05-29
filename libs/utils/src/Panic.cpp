@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include <utils/Panic.h>
-
 #include "ostream_.h"
 
 #include <utils/CallStack.h>
@@ -24,11 +22,7 @@
 #include <utils/Log.h>
 #include <utils/Logger.h>
 #include <utils/ostream.h>
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <utils/Panic.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -36,6 +30,19 @@
 #include <new>
 #include <string_view>
 #include <utility>
+#if defined(__ANDROID__)
+#    include <android/log.h>                // __android_log_default_aborter
+#    include <android/set_abort_message.h>  // android_set_abort_message
+#endif
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#if defined(__ANDROID__)
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
+#endif
 
 namespace utils {
 
@@ -229,6 +236,19 @@ void TPanic<T>::panic(char const* function, char const* file, int line, char con
     throw std::move(e);
 #endif
 
+    // Register the full panic message as the tombstone "Abort message:" so that it
+    // appears in crash reports collected by Google Play Console and other tools that
+    // read tombstones from field devices (which never have access to logcat output).
+#if defined(__ANDROID__)
+    if (__builtin_available(android 30, *)) {
+        __android_log_default_aborter(e.what());
+    } else {
+        // For API < 30, we can try to use this private API if it's available.
+        if (&android_set_abort_message) {
+            android_set_abort_message(e.what());
+        }
+    }
+#endif
     // and finally abort if we somehow get here
     std::abort();
 }

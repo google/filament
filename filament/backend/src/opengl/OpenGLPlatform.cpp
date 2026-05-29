@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/OpenGLPlatform.h>
-
+#include "OpenGLDriver.h"
 #include "OpenGLDriverBase.h"
 #include "OpenGLDriverFactory.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include <utils/compiler.h>
-#include <utils/Panic.h>
 #include <utils/CString.h>
 #include <utils/Invocable.h>
+#include <utils/Panic.h>
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "OpenGLDriver.h"
 
 namespace filament::backend {
 
@@ -45,20 +43,30 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
-utils::CString OpenGLPlatform::getDeviceInfo(DeviceInfoType infoType,
-        Driver* driver) const {
+utils::CString OpenGLPlatform::getDeviceInfo(DeviceInfoType infoType, Driver* driver) const {
+    utils::CString (*getter)(Driver const* UTILS_NONNULL) = nullptr;
     switch (infoType) {
         case DeviceInfoType::OPENGL_RENDERER:
-            return getRendererString(driver);
+            getter = OpenGLPlatform::getRendererString;
+            break;
         case DeviceInfoType::OPENGL_VENDOR:
-            return getVendorString(driver);
+            getter = OpenGLPlatform::getVendorString;
+            break;
         case DeviceInfoType::OPENGL_VERSION:
-            return getVersionString(driver);
+            getter = OpenGLPlatform::getVersionString;
+            break;
         default:
             FILAMENT_CHECK_POSTCONDITION(false) << "Unsupported DeviceInfoType for OpenGLPlatform";
-            return {};
+            break;
     }
+
+    if (!driver) {
+        return {};
+    }
+
+    return getter(driver);
 }
+
 
 utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
     auto const p = static_cast<OpenGLDriverBase const*>(driver);

@@ -16,10 +16,11 @@
 
 #include "components/TransformManager.h"
 
-#include <math/mat4.h>
+#include <filament/TransformManager.h>
 
 #include <utils/debug.h>
-#include <filament/TransformManager.h>
+
+#include <math/mat4.h>
 
 
 using namespace utils;
@@ -139,6 +140,11 @@ TransformManager::children_iterator FTransformManager::getChildrenBegin(
 
 TransformManager::children_iterator FTransformManager::getChildrenEnd(Instance) const noexcept {
     return { *this, 0 };
+}
+
+TransformManager::children_range FTransformManager::getChildrenRange(
+        Instance const parent) const noexcept {
+    return { { *this, mManager[parent].firstChild } };
 }
 
 void FTransformManager::destroy(Entity const e) noexcept {
@@ -482,8 +488,8 @@ void FTransformManager::gc(EntityManager& em) noexcept {
             });
 }
 
-TransformManager::children_iterator& TransformManager::children_iterator::operator++() {
-    FTransformManager const& that = downcast(mManager);
+TransformManager::children_iterator& TransformManager::children_iterator::operator++() noexcept {
+    FTransformManager const& that = downcast(*mManager);
     mInstance = that.mManager[mInstance].next;
     return *this;
 }

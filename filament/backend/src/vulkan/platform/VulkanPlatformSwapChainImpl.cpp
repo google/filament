@@ -16,16 +16,16 @@
 
 #include "VulkanPlatformSwapChainImpl.h"
 
-#include "vulkan/VulkanConstants.h"
+#ifdef __ANDROID__
+#include "AndroidNativeWindow.h"
+#endif
+
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/Helper.h"
 #include "vulkan/utils/Image.h"
+#include "vulkan/VulkanConstants.h"
 
 #include <backend/DriverEnums.h>
-
-#ifdef __ANDROID__
-#include <AndroidNativeWindow.h>
-#endif
 
 using namespace bluevk;
 using namespace utils;
@@ -158,7 +158,7 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
 }
 
 VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
-    destroy();
+    VulkanPlatformSurfaceSwapChain::destroy();
     vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
 }
 
@@ -468,7 +468,7 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
 }
 
 VulkanPlatformHeadlessSwapChain::~VulkanPlatformHeadlessSwapChain() {
-    destroy();
+    VulkanPlatformHeadlessSwapChain::destroy();
 }
 
 VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index, VkSemaphore finished) {

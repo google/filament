@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUSWAPCHAIN_H
 
 #include "DriverBase.h"
-#include <backend/Platform.h>
 
+#include <backend/Platform.h>
 #if defined(__EMSCRIPTEN__)
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif

@@ -15,8 +15,8 @@
  */
 
 #include "vulkan/memory/Resource.h"
-#include "vulkan/memory/ResourceManager.h"
 
+#include "vulkan/memory/ResourceManager.h"
 #include "vulkan/VulkanHandles.h"
 
 namespace filament::backend::fvkmemory {

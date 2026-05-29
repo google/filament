@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUPROGRAM_H
 #define TNT_FILAMENT_BACKEND_WEBGPUPROGRAM_H
 
+#include "webgpu/WebGPUPushConstantDescription.h"
+
 #include "DriverBase.h"
 
 #include <webgpu/webgpu_cpp.h>
@@ -33,6 +35,7 @@ class WebGPUProgram final : public HwProgram {
 public:
     WebGPUProgram(wgpu::Device const&, Program const&);
 
+    WebGPUPushConstantDescription pushConstantDescription;
     wgpu::ShaderModule vertexShaderModule = nullptr;
     wgpu::ShaderModule fragmentShaderModule = nullptr;
     wgpu::ShaderModule computeShaderModule = nullptr;

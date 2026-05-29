@@ -16,10 +16,9 @@
 
 #include "VulkanHandles.h"
 
-// TODO: remove this by moving DebugUtils out of VulkanDriver
 #include "VulkanDriver.h"
-
 #include "VulkanMemory.h"
+
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Definitions.h"
@@ -28,8 +27,8 @@
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/compiler.h> // UTILS_FALLTHROUGH
-#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 #include <utils/CString.h>
+#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
 
@@ -543,6 +542,7 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(
             .stride = attrib.stride,
         };
         attribToBufferIndex[attribIndex] = attrib.buffer;
+        mAttributes.set(attribIndex);
     }
 }
 
@@ -562,6 +562,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
             vkbuffers[attribIndex] = bufferObject->getVkBuffer();
+            mAttributes.set(attribIndex);
         }
     }
     mResources.push_back(bufferObject);

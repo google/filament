@@ -17,15 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_WGL_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_WGL_H
 
-#include <stdint.h>
+#include <utils/unwindows.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/platforms/OpenGLPlatform.h>
+
+#include <utils/Mutex.h>
 
 #include <windows.h>
-#include "utils/unwindows.h"
-
-#include <backend/platforms/OpenGLPlatform.h>
-#include <backend/DriverEnums.h>
 
 #include <vector>
+
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -65,7 +68,8 @@ protected:
 
     // For shared contexts
     static constexpr int SHARED_CONTEXT_NUM = 2;
-    std::vector<HGLRC> mAdditionalContexts;
+    mutable utils::Mutex mAdditionalContextsLock;
+    std::vector<HGLRC> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     std::atomic<int> mNextFreeSharedContextIndex{0};
 };
 

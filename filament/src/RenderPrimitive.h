@@ -17,11 +17,11 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERPRIMITIVE_H
 #define TNT_FILAMENT_DETAILS_RENDERPRIMITIVE_H
 
-#include <filament/RenderableManager.h>
-
 #include "components/RenderableManager.h"
 
 #include "details/MaterialInstance.h"
+
+#include <filament/RenderableManager.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

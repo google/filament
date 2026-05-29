@@ -21,14 +21,14 @@
 #include "LocalProgramCache.h"
 #include "UniformBuffer.h"
 
-#include "ds/DescriptorSet.h"
-
 #include "details/BufferAllocator.h"
 #include "details/Engine.h"
 
-#include <filament/MaterialInstance.h>
+#include "ds/DescriptorSet.h"
 
 #include <private/filament/Variant.h>
+
+#include <filament/MaterialInstance.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

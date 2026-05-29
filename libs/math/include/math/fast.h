@@ -20,14 +20,14 @@
 #include <math/compiler.h>
 #include <math/scalar.h>
 
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
+
 #include <cmath>
 #include <type_traits>
 
 #include <stdint.h>
-
-#ifdef __ARM_NEON
-#include <arm_neon.h>
-#endif
 
 namespace filament {
 namespace math {

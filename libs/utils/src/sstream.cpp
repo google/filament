@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <utils/sstream.h>
-#include <utils/ostream.h>
-
 #include "ostream_.h"
+
+#include <utils/ostream.h>
+#include <utils/sstream.h>
 
 namespace utils::io {
 

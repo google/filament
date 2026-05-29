@@ -25,9 +25,9 @@
 #include "VulkanContext.h"
 
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-#include <utils/debug.h>
 
 using namespace bluevk;
 using namespace utils;
@@ -317,7 +317,7 @@ void CommandBufferPool::update() {
         auto& buffer = mBuffers[index];
         // Updates the buffer's status, and marks it complete
         // if the fence has signaled.
-        buffer->checkAndUpdateStatus(mDevice);
+        buffer->refreshStatus(mDevice);
     });
 }
 

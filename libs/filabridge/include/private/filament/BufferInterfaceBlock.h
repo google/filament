@@ -19,8 +19,8 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/CString.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <math/vec4.h>

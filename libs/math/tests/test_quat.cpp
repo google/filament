@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-#include <math.h>
-#include <random>
-#include <functional>
-#include <type_traits>
+#include <math/mat4.h>
+#include <math/quat.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <gtest/gtest.h>
 
-#include <math/quat.h>
-#include <math/mat4.h>
-#include <math/vec4.h>
-#include <math/vec3.h>
-#include <math/scalar.h>
+#include <functional>
+#include <random>
+#include <type_traits>
+
+#include <math.h>
 
 using namespace filament::math;
 

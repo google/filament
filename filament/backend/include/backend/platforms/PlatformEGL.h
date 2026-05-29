@@ -21,14 +21,15 @@
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <utils/compiler.h>
+#include <utils/Invocable.h>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
 
-#include <utils/compiler.h>
-#include <utils/Invocable.h>
-
 #include <initializer_list>
+#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -216,7 +217,8 @@ private:
     // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
-    std::vector<EGLContext> mAdditionalContexts;
+    mutable utils::Mutex mAdditionalContextsLock;
+    std::vector<EGLContext> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     bool mMSAA4XSupport = false;
 
     class EGL {

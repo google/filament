@@ -15,10 +15,9 @@
  */
 
 #include "colorGrading.h"
-
 #include "generated/resources/colorGrading.h"
 
-#include <materials/StaticMaterialInfo.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <utils/Slice.h>
 

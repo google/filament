@@ -25,10 +25,10 @@
 
 #include <utils/debug.h>
 
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
-#include <chrono>
 
 using namespace bluevk;
 
@@ -198,14 +198,13 @@ std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
     return cmdFence;
 }
 
-VkResult VulkanCmdFence::updateStatus(VkDevice device) {
+void VulkanCmdFence::refreshStatus(VkDevice device) {
     if (mFence != VK_NULL_HANDLE) {
         VkResult status = vkGetFenceStatus(device, mFence);
         if (status == VK_SUCCESS) {
             setStatus(status);
         }
     }
-    return mStatus;
 }
 
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,

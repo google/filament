@@ -17,8 +17,8 @@
 #ifndef FILAMENT_BACKEND_ANDROIDNDK_H
 #define FILAMENT_BACKEND_ANDROIDNDK_H
 
-#include <android/native_window.h>
 #include <android/hardware_buffer.h>
+#include <android/native_window.h>
 
 #define FILAMENT_REQUIRES_API(x) __attribute__((__availability__(android,introduced=x)))
 

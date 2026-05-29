@@ -17,12 +17,12 @@
 #ifndef TNT_UTILS_COUNTDOWNLATCH_H
 #define TNT_UTILS_COUNTDOWNLATCH_H
 
-// note: we use our version of mutex/condition to keep this public header STL free
+#include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 
@@ -81,8 +81,8 @@ public:
     CountDownLatch& operator=(const CountDownLatch&) = delete;
 
 private:
-    uint32_t m_initial_count;
-    uint32_t m_remaining_count;
+    uint32_t m_initial_count UTILS_GUARDED_BY(m_lock);
+    uint32_t m_remaining_count UTILS_GUARDED_BY(m_lock);
     mutable Mutex m_lock;
     mutable Condition m_cv;
 };

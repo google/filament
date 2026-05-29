@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "ImageExpectations.h"
 #include "Lifetimes.h"
 #include "Shader.h"
@@ -35,8 +34,8 @@
 #include <gtest/gtest.h>
 
 #include <array>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <new>
 #include <tuple>
 #include <utility>
@@ -135,7 +134,7 @@ protected:
             DescriptorSetHandle descSet,
             PipelineState const& state) {
         auto& api = getDriverApi();
-        RenderPassParams params = getClearColorRenderPass({0,0,0,1});
+        RenderPassParams params = getClearColorDepthRenderPass({ 0, 0, 0, 1 });
         params.viewport = getFullViewport();
 
         api.beginFrame(frame, 0, 0);
@@ -156,8 +155,6 @@ protected:
             size_t const copyOffset,
             const math::float4& color,
             const char* screenshotName) {
-
-        SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
         auto& api = getDriverApi();
 
@@ -216,8 +213,6 @@ protected:
 };
 
 TEST_F(MemoryMappedTest, MapCopyUnmap) {
-    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
-
     auto& api = getDriverApi();
 
     // Create a buffer object.
@@ -264,8 +259,6 @@ TEST_F(MemoryMappedTest, MapAndCopyWithOffsets) {
 }
 
 TEST_F(MemoryMappedTest, MultipleCopies) {
-    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
-
     auto& api = getDriverApi();
 
     auto const swapChain = addCleanup(createSwapChain());
@@ -316,8 +309,6 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
 }
 
 TEST_F(MemoryMappedTest, UpdatePartial) {
-    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
-
     auto& api = getDriverApi();
 
     auto swapChain = addCleanup(createSwapChain());

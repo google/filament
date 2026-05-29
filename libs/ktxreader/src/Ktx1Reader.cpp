@@ -44,6 +44,26 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
     }
 #endif
 
+    // Pre-validate all mip levels and cubemap faces to prevent uninitialized/UAF issues
+    uint8_t* dummyData = nullptr;
+    uint32_t dummySize = 0;
+    for (uint32_t level = 0; level < nmips; ++level) {
+        if (ktx.isCubemap()) {
+            for (uint32_t face = 0; face < 6; ++face) {
+                if (!ktx.getBlob({ level, 0, face }, &dummyData, &dummySize)) {
+                    utils::slog.e << "Missing or invalid face " << face << " for mip level "
+                                  << level << utils::io::endl;
+                    return nullptr;
+                }
+            }
+        } else {
+            if (!ktx.getBlob({ level, 0, 0 }, &dummyData, &dummySize)) {
+                utils::slog.e << "Missing or invalid mip level " << level << utils::io::endl;
+                return nullptr;
+            }
+        }
+    }
+
     Texture* texture = Texture::Builder()
         .width(ktxinfo.pixelWidth)
         .height(ktxinfo.pixelHeight)
@@ -70,8 +90,8 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
         }
     };
 
-    uint8_t* data;
-    uint32_t size;
+    uint8_t* data = nullptr;
+    uint32_t size = 0;
 
     if (isCompressed(ktxinfo)) {
         if (ktx.isCubemap()) {

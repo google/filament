@@ -18,9 +18,9 @@
 #ifndef TNT_BACKENDTESTUTILS_H
 #define TNT_BACKENDTESTUTILS_H
 
-#include <cstddef>
-
 #include <backend/PixelBufferDescriptor.h>
+
+#include <cstddef>
 
 using namespace filament;
 using namespace filament::backend;

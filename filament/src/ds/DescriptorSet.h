@@ -26,8 +26,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
 #include <utils/bitset.h>
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/StaticString.h>
 

@@ -18,9 +18,8 @@
 #define TNT_UTILS_IMMUTABLECSTRING_H
 
 #include <utils/compiler.h>
-
-#include <utils/StaticString.h>
 #include <utils/ostream.h>
+#include <utils/StaticString.h>
 
 #include <cassert>
 #include <cstdint>

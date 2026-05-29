@@ -21,8 +21,9 @@
 #include <utils/ThreadUtils.h>
 
 #include <algorithm>
-#include <dlfcn.h>
 #include <memory>
+
+#include <dlfcn.h>
 
 #if defined(__linux__)
 // This is to ensure that linking during compilation will not fail even if

@@ -15,15 +15,14 @@
  */
 
 #include <utils/Allocator.h>
-
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 
 #include <algorithm>
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 namespace utils {

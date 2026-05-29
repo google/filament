@@ -23,15 +23,14 @@
 
 #include <utils/compiler.h>
 
+#include <math/mat4.h>
 #include <math/mathfwd.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
-#include <math/mat4.h>
 
 #include <math.h>
-
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class Entity;
@@ -456,6 +455,14 @@ public:
 
     //! Returns the camera's view matrix (inverse of the model matrix)
     math::mat4 getViewMatrix() const noexcept;
+
+    /** Returns the eye from view matrix for the specified eye.
+     *
+     * @param eyeId the index of the eye to return the eye from view matrix for, must be
+     *              < config.stereoscopicEyeCount
+     * @return The eye from view matrix
+     */
+    math::mat4 getEyeFromViewMatrix(uint8_t eyeId = 0) const noexcept;
 
     //! Returns the camera's position in world space
     math::double3 getPosition() const noexcept;

@@ -31,10 +31,23 @@ namespace {
 using namespace filament;
 using namespace backend;
 
-using ::testing::NiceMock;
+using ::testing::_;
+using ::testing::Return;
 
 using AllocationId = BufferAllocator::AllocationId;
 using allocation_size_t = BufferAllocator::allocation_size_t;
+
+class UboTestMockDriver : public MockDriver {
+public:
+    Handle<HwFence> createFenceS() noexcept override {
+        Handle<HwFence> fence = MockDriver::createFenceS();
+        createdFences.push_back(fence);
+        return fence;
+    }
+
+    std::vector<Handle<HwFence>> createdFences;
+};
+
 } // anonymous namespace
 
 class UboManagerTest : public ::testing::Test {
@@ -67,6 +80,7 @@ protected:
                           .feature("material.enable_material_instance_uniform_batching", true)
                           .backend(Backend::NOOP)
                           .build();
+        assert_invariant(mEngine);
 
         mMaterial = Material::Builder()
                             .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA,
@@ -74,7 +88,18 @@ protected:
                             .build(*mEngine);
     }
 
+    FMaterialInstance* createInstance() {
+        auto mi = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+        mTestInstances.push_back(mi);
+        return mi;
+    }
+
     void TearDown() override {
+        for (auto* mi : mTestInstances) {
+            mUboManager.unmanageMaterialInstance(mi);
+            mEngine->destroy(mi);
+        }
+        mUboManager.terminate(mDriverApi);
         mEngine->destroy(mMaterial);
         Engine::destroy(&mEngine);
     }
@@ -82,12 +107,13 @@ protected:
     // The engine is only for creating materials/material instances, we're not using the UboManager
     // inside for testing.
     Engine* mEngine = nullptr;
-    NiceMock<MockDriver> mMockDriver;
+    UboTestMockDriver mMockDriver;
     CommandBufferQueue mCommandBufferQueue;
     CommandStream mCommandStream;
     DriverApi& mDriverApi;
     UboManager mUboManager;
     Material const* mMaterial;
+    std::vector<FMaterialInstance*> mTestInstances;
     std::vector<FMaterialInstance*>& mPendingInstances;
     std::vector<FMaterialInstance*>& mManagedInstances;
     Handle<HwBufferObject>& mUbHandle;
@@ -102,7 +128,7 @@ TEST_F(UboManagerTest, InitialState) {
 
 TEST_F(UboManagerTest, BeginFrameWithoutReallocate) {
     BufferAllocator::allocation_size_t originalBufferSize = mUboManager.getTotalSize();
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
     EXPECT_EQ(mi1->getAllocationId(), BufferAllocator::UNALLOCATED);
     ASSERT_TRUE(mi1->isUsingUboBatching());
 
@@ -128,15 +154,6 @@ TEST_F(UboManagerTest, BeginFrameWithoutReallocate) {
 
     mUboManager.endFrame(mDriverApi);
     EXPECT_TRUE(mAllocator.isLockedByGpu(mi1->getAllocationId()));
-
-    // We're not using the UboManager inside mEngine, so we need to unmanage the material instance
-    // by ourselves.
-    mUboManager.unmanageMaterialInstance(mi1);
-    EXPECT_FALSE(contains(mPendingInstances, mi1));
-    EXPECT_FALSE(contains(mManagedInstances, mi1));
-
-    mUboManager.terminate(mDriverApi);
-    mEngine->destroy(mi1);
 }
 
 TEST_F(UboManagerTest, BeginFrameWithReallocate) {
@@ -149,7 +166,7 @@ TEST_F(UboManagerTest, BeginFrameWithReallocate) {
     instances.reserve(numInstances);
 
     for (size_t i = 0; i < numInstances; ++i) {
-        auto mi = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+        auto mi = createInstance();
         instances.push_back(mi);
         mUboManager.manageMaterialInstance(mi);
     }
@@ -173,18 +190,10 @@ TEST_F(UboManagerTest, BeginFrameWithReallocate) {
     }
 
     mUboManager.finishBeginFrame(mDriverApi);
-    mUboManager.terminate(mDriverApi);
-
-    for (auto* mi: instances) {
-        // We're not using the UboManager inside mEngine, so we need to unmanage the material instance
-        // by ourselves.
-        mUboManager.unmanageMaterialInstance(mi);
-        mEngine->destroy(mi);
-    }
 }
 
 TEST_F(UboManagerTest, RecycleSlot) {
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
     mUboManager.manageMaterialInstance(mi1);
 
     // Frame 1: mi1 gets an allocation.
@@ -200,19 +209,22 @@ TEST_F(UboManagerTest, RecycleSlot) {
     mUboManager.unmanageMaterialInstance(mi1);
     EXPECT_TRUE(mAllocator.isLockedByGpu(mi1AllocationId));
 
+    ASSERT_FALSE(mMockDriver.createdFences.empty());
+    const auto fenceFrame1 = mMockDriver.createdFences[0];
+
     // Frame 2: The slot for mi1 is still locked by the GPU.
     // We expect getFenceStatus to be called for the fence from frame 1.
     // We'll mock it to return TIMEOUT_EXPIRED, so the resource is not reclaimed.
-    EXPECT_CALL(mMockDriver, getFenceStatus(_)).WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
+    EXPECT_CALL(mMockDriver, getFenceStatus(fenceFrame1)).WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
     mUboManager.beginFrame(mDriverApi);
     mUboManager.finishBeginFrame(mDriverApi);
     mUboManager.endFrame(mDriverApi);
 
     // Frame 3: Now, we'll simulate that the fence from frame 1 has signaled.
     // The resource for mi1 should be reclaimed.
-    EXPECT_CALL(mMockDriver, getFenceStatus(_)).WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
+    EXPECT_CALL(mMockDriver, getFenceStatus(fenceFrame1)).WillOnce(Return(FenceStatus::CONDITION_SATISFIED));
 
-    auto mi2 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi2 = createInstance();
     mUboManager.manageMaterialInstance(mi2);
 
     mUboManager.beginFrame(mDriverApi);
@@ -222,15 +234,10 @@ TEST_F(UboManagerTest, RecycleSlot) {
     EXPECT_EQ(mAllocator.getAllocationOffset(mi2->getAllocationId()), mi1AllocationOffset);
 
     mUboManager.finishBeginFrame(mDriverApi);
-    mUboManager.unmanageMaterialInstance(mi2);
-    mUboManager.terminate(mDriverApi);
-
-    mEngine->destroy(mi1);
-    mEngine->destroy(mi2);
 }
 
 TEST_F(UboManagerTest, OrphanSlot) {
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
     mUboManager.manageMaterialInstance(mi1);
 
     // Frame 1: mi1 gets an allocation.
@@ -240,10 +247,13 @@ TEST_F(UboManagerTest, OrphanSlot) {
     mUboManager.finishBeginFrame(mDriverApi);
     mUboManager.endFrame(mDriverApi); // Locks alloc1.
 
+    ASSERT_FALSE(mMockDriver.createdFences.empty());
+    const auto fenceFrame1 = mMockDriver.createdFences[0];
+
     // Frame 2: Mark the instance as dirty and begin a new frame.
     // This should trigger orphaning.
     mi1->getUniformBuffer().invalidate();
-    EXPECT_CALL(mMockDriver, getFenceStatus(_)).WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
+    EXPECT_CALL(mMockDriver, getFenceStatus(fenceFrame1)).WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED));
     mUboManager.beginFrame(mDriverApi);
 
     const AllocationId alloc2 = mi1->getAllocationId();
@@ -253,30 +263,27 @@ TEST_F(UboManagerTest, OrphanSlot) {
     mUboManager.finishBeginFrame(mDriverApi);
     mUboManager.endFrame(mDriverApi); // Locks alloc2.
 
+    ASSERT_GE(mMockDriver.createdFences.size(), 2);
+    const auto fenceFrame2 = mMockDriver.createdFences[1];
+
     // Frame 3: The fence for alloc1 should now be signaled.
-    EXPECT_CALL(mMockDriver, getFenceStatus(_))
-            .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED))      // For alloc2's fence
+    EXPECT_CALL(mMockDriver, getFenceStatus(fenceFrame2))
+            .WillOnce(Return(FenceStatus::TIMEOUT_EXPIRED)); // For alloc2's fence
+    EXPECT_CALL(mMockDriver, getFenceStatus(fenceFrame1))
             .WillOnce(Return(FenceStatus::CONDITION_SATISFIED)); // For alloc1's fence
     mUboManager.beginFrame(mDriverApi);
     mUboManager.finishBeginFrame(mDriverApi);
-    mUboManager.unmanageMaterialInstance(mi1);
-    mUboManager.terminate(mDriverApi);
-
-    mEngine->destroy(mi1);
 }
 
 TEST_F(UboManagerTest, DoubleManage) {
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
     mUboManager.manageMaterialInstance(mi1);
     EXPECT_EQ(mPendingInstances.size(), 1);
     EXPECT_DEATH(mUboManager.manageMaterialInstance(mi1), "");
-
-    mUboManager.terminate(mDriverApi);
-    mEngine->destroy(mi1);
 }
 
 TEST_F(UboManagerTest, ManageAndUnmanageBeforeBeginFrame) {
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
     mUboManager.manageMaterialInstance(mi1);
     EXPECT_TRUE(contains(mPendingInstances, mi1));
 
@@ -288,21 +295,15 @@ TEST_F(UboManagerTest, ManageAndUnmanageBeforeBeginFrame) {
     EXPECT_FALSE(contains(mPendingInstances, mi1));
     EXPECT_FALSE(contains(mManagedInstances, mi1));
     EXPECT_EQ(mi1->getAllocationId(), BufferAllocator::UNALLOCATED);
-
-    mUboManager.terminate(mDriverApi);
-    mEngine->destroy(mi1);
 }
 
 TEST_F(UboManagerTest, UnmanageUnmanaged) {
-    auto mi1 = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+    auto mi1 = createInstance();
 
     // Unmanaging an instance that was never managed should not cause any issues.
     mUboManager.unmanageMaterialInstance(mi1);
     EXPECT_FALSE(contains(mPendingInstances, mi1));
     EXPECT_FALSE(contains(mManagedInstances, mi1));
-
-    mUboManager.terminate(mDriverApi);
-    mEngine->destroy(mi1);
 }
 
 TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrame) {
@@ -311,7 +312,7 @@ TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrame) {
     instances.reserve(numInstances);
 
     for (size_t i = 0; i < numInstances; ++i) {
-        auto mi = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+        auto mi = createInstance();
         instances.push_back(mi);
         mUboManager.manageMaterialInstance(mi);
     }
@@ -323,14 +324,6 @@ TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrame) {
     for (const auto* mi: instances) {
         EXPECT_TRUE(mAllocator.isLockedByGpu(mi->getAllocationId()));
     }
-
-    mUboManager.terminate(mDriverApi);
-    for (auto* mi: instances) {
-        // We're not using the UboManager inside mEngine, so we need to unmanage the material instance
-        // by ourselves.
-        mUboManager.unmanageMaterialInstance(mi);
-        mEngine->destroy(mi);
-    }
 }
 
 TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrameWithInvalidIdInBetween) {
@@ -339,7 +332,7 @@ TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrameWithInvalidIdInBetween) 
     instances.reserve(numInstances);
 
     for (size_t i = 0; i < numInstances; ++i) {
-        auto mi = static_cast<FMaterialInstance*>(mMaterial->createInstance());
+        auto mi = createInstance();
         instances.push_back(mi);
         mUboManager.manageMaterialInstance(mi);
     }
@@ -356,14 +349,19 @@ TEST_F(UboManagerTest, AllAllocationsLockedAfterEndFrameWithInvalidIdInBetween) 
             EXPECT_TRUE(mAllocator.isLockedByGpu(mi->getAllocationId()));
         }
     }
-
-    mUboManager.terminate(mDriverApi);
-    for (auto* mi: instances) {
-        // We're not using the UboManager inside mEngine, so we need to unmanage the material instance
-        // by ourselves.
-        mUboManager.unmanageMaterialInstance(mi);
-        mEngine->destroy(mi);
-    }
 }
 
-// TODO: Add more tests for the beginFrame flow
+TEST_F(UboManagerTest, UpdateSlot) {
+    auto mi1 = createInstance();
+    mUboManager.manageMaterialInstance(mi1);
+
+    mUboManager.beginFrame(mDriverApi);
+    EXPECT_NE(mUboManager.getMemoryMappedBufferHandle().getId(), HandleBase::nullid);
+
+    char data[64] = {};
+    BufferDescriptor desc(data, sizeof(data));
+    mUboManager.updateSlot(mDriverApi, mi1->getAllocationId(), std::move(desc));
+
+    mUboManager.finishBeginFrame(mDriverApi);
+    mUboManager.endFrame(mDriverApi);
+}

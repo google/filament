@@ -19,7 +19,6 @@
 
 #include "DriverBase.h"
 
-
 #include <backend/DriverEnums.h>
 
 namespace filament::backend {

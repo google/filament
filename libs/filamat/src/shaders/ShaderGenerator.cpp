@@ -20,11 +20,11 @@
 #include "SibGenerator.h"
 #include "UibGenerator.h"
 
-#include <filament/MaterialEnums.h>
-
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
+
+#include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 
@@ -549,13 +549,27 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
     MaterialBuilder::PushConstantList fragmentPushConstants;
-    std::ranges::copy_if(mPushConstants,
-            std::back_insert_iterator(fragmentPushConstants),
+    std::ranges::copy_if(mPushConstants, std::back_insert_iterator(fragmentPushConstants),
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::FRAGMENT;
             });
+
+    uint32_t pushConstantOffset = 0;
+    for (auto const& constant : mPushConstants) {
+        if (constant.stage == ShaderStage::VERTEX) {
+            switch (constant.type) {
+                case ConstantType::BOOL:
+                case ConstantType::FLOAT:
+                case ConstantType::INT:
+                    // In GPU layouts (GLSL/SPIR-V/WGSL), scalars including booleans
+                    // are packed into 32-bit (4-byte) register slots.
+                    pushConstantOffset += sizeof(int32_t);
+                    break;
+            }
+        }
+    }
     cg.generateSurfaceShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes,
-            interpolation, fragmentPushConstants);
+            interpolation, fragmentPushConstants, pushConstantOffset);
 
     CodeGenerator::generateSurfaceTypes(fs, ShaderStage::FRAGMENT);
 

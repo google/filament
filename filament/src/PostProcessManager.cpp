@@ -24,6 +24,30 @@
 
 #include "PostProcessManager.h"
 
+#include "FrameHistory.h"
+#include "fsr.h"
+#include "RenderPass.h"
+#include "ShadowMapManager.h"
+
+#include "details/Camera.h"
+#include "details/ColorGrading.h"
+#include "details/Engine.h"
+#include "details/Material.h"
+#include "details/MaterialInstance.h"
+#include "details/Texture.h"
+#include "details/VertexBuffer.h"
+
+#include "ds/DescriptorSet.h"
+#include "ds/SsrPassDescriptorSet.h"
+#include "ds/TypedUniformBuffer.h"
+
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
+
+#include "generated/resources/materials.h"
+
 #include "materials/antiAliasing/fxaa/fxaa.h"
 #include "materials/antiAliasing/taa/taa.h"
 #include "materials/bloom/bloom.h"
@@ -36,47 +60,28 @@
 #include "materials/sgsr/sgsr.h"
 #include "materials/ssao/ssao.h"
 
-#include "details/Engine.h"
-
-#include "ds/DescriptorSet.h"
-#include "ds/SsrPassDescriptorSet.h"
-#include "ds/TypedUniformBuffer.h"
-
-#include "fg/FrameGraph.h"
-#include "fg/FrameGraphId.h"
-#include "fg/FrameGraphResources.h"
-#include "fg/FrameGraphTexture.h"
-
-#include "fsr.h"
-#include "FrameHistory.h"
-#include "RenderPass.h"
-#include "ShadowMapManager.h"
-
-#include "details/Camera.h"
-#include "details/ColorGrading.h"
-#include "details/Material.h"
-#include "details/MaterialInstance.h"
-#include "details/Texture.h"
-#include "details/VertexBuffer.h"
-
-#include "generated/resources/materials.h"
+#include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
+#include <private/filament/Variant.h>
 
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
 #include <filament/Options.h>
 #include <filament/Viewport.h>
 
-#include <private/filament/EngineEnums.h>
-#include <private/filament/UibStructs.h>
-#include <private/filament/Variant.h>
+#include <private/backend/BackendUtils.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include <private/backend/BackendUtils.h>
+#include <utils/algorithm.h>
+#include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/half.h>
 #include <math/mat2.h>
@@ -87,12 +92,6 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#include <utils/algorithm.h>
-#include <utils/BitmaskEnum.h>
-#include <utils/debug.h>
-#include <utils/compiler.h>
-#include <utils/FixedCapacityVector.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -100,8 +99,8 @@
 #include <limits>
 #include <string_view>
 #include <type_traits>
-#include <variant>
 #include <utility>
+#include <variant>
 
 #include <stddef.h>
 #include <stdint.h>

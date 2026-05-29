@@ -20,12 +20,11 @@
 #include "MaterialDefinition.h"
 #include "DynamicSpecConstKey.h"
 
-#include <backend/Handle.h>
-
 #include <private/filament/Variant.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 #include <backend/Program.h>
 
 #include <utility>

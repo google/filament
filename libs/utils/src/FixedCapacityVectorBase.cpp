@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 #include <stddef.h>

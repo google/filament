@@ -17,15 +17,15 @@
 #ifndef TNT_UTILS_MEMALIGN_H
 #define TNT_UTILS_MEMALIGN_H
 
+#if defined(WIN32)
+#include <malloc.h>
+#endif
+
 #include <type_traits>
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#if defined(WIN32)
-#include <malloc.h>
-#endif
 
 namespace utils {
 

@@ -16,20 +16,22 @@
 
 #include "details/Skybox.h"
 
+#include "FilamentAPI-impl.h"
+
 #include "details/Engine.h"
+#include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
-#include "details/IndexBuffer.h"
 
-#include "FilamentAPI-impl.h"
+#include "generated/resources/materials.h"
 
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
-#include <filament/TextureSampler.h>
 #include <filament/Skybox.h>
+#include <filament/TextureSampler.h>
 
 #include <backend/DriverEnums.h>
 
@@ -40,9 +42,6 @@
 #include <math/vec4.h>
 
 #include <stdint.h>
-
-
-#include "generated/resources/materials.h"
 
 using namespace filament::math;
 namespace filament {

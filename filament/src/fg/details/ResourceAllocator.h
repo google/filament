@@ -17,13 +17,12 @@
 #pragma once
 
 #include "fg/details/ResourceCreationContext.h"
-
-#include <fg/FrameGraphDummyLink.h>
-#include <fg/FrameGraphTexture.h>
-
-#include <utils/StaticString.h>
+#include "fg/FrameGraphDummyLink.h"
+#include "fg/FrameGraphTexture.h"
 
 #include <backend/DriverApiForward.h>
+
+#include <utils/StaticString.h>
 
 #include <type_traits>
 #include <utility>

@@ -8,6 +8,17 @@ cmake_minimum_required(VERSION 3.22.1)
 # both release and debug).
 
 # ==================================================================================================
+# Unsupported environment
+# ==================================================================================================
+
+# Filament does not support MSYS2-based environment on Windows. See issue #9968.
+if(DEFINED ENV{MSYSTEM})
+    message(FATAL_ERROR
+        "MSYS2 Subsystem detected($ENV{MSYSTEM}). "
+        "Filament does not support MSYS2-based environment on Windows.")
+endif()
+
+# ==================================================================================================
 # Toolchain configuration
 # ==================================================================================================
 # On iOS, the deployment target is set inside third_party/clang/ios.cmake
@@ -387,7 +398,7 @@ else()
     if(FILAMENT_USING_GCC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -Wno-changes-meaning -Wno-return-type -Wno-attributes -Wno-unknown-pragmas -Wno-class-memaccess -Wno-multichar -Wno-deprecated-declarations -Wno-subobject-linkage -Wno-invalid-constexpr")
     else()
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function -Wno-deprecated-declarations")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function -Wno-deprecated-declarations -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS")
     endif()
     if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-extension")
@@ -834,16 +845,14 @@ if (FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR)
    set(IMPORT_EXECUTABLES_DIR ${FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR})
 endif()
 
-if (WASM)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
+if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
+    set(IMPORT_EXECUTABLES_BUILD_TYPE Prebuilt)
+elseif (WASM)
+    set(IMPORT_EXECUTABLES_BUILD_TYPE Release)
 else()
-    if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
-        set(IMPORT_EXECUTABLES_BUILD_TYPE Prebuilt)
-    else()
-        set(IMPORT_EXECUTABLES_BUILD_TYPE ${CMAKE_BUILD_TYPE})
-    endif()
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${IMPORT_EXECUTABLES_BUILD_TYPE}.cmake)
+    set(IMPORT_EXECUTABLES_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
+set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${IMPORT_EXECUTABLES_BUILD_TYPE}.cmake)
 
 # ==================================================================================================
 # Common Functions

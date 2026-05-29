@@ -19,10 +19,10 @@
 
 #include <backend/DriverEnums.h>
 
+#include <bluevk/BlueVK.h>
+
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
-
-#include <bluevk/BlueVK.h>
 
 // Definitions for common types used across classes.
 

@@ -16,16 +16,16 @@
 
 #include "WebGPUProgram.h"
 
+#include "DriverBase.h"
 #include "WebGPUConstants.h"
 #include "WebGPUStrings.h"
 
-#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
-#include <utils/debug.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -155,7 +155,7 @@ namespace {
 }// namespace
 
 WebGPUProgram::WebGPUProgram(wgpu::Device const& device, Program const& program)
-        : HwProgram{ program.getName() } {
+        : HwProgram{ program.getName() }, pushConstantDescription(program) {
     // TODO: Consider creating/compiling these shaders in parallel.
     vertexShaderModule = createShaderModule(device, program, ShaderStage::VERTEX);
     fragmentShaderModule = createShaderModule(device, program, ShaderStage::FRAGMENT);

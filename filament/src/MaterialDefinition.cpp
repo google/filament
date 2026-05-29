@@ -19,27 +19,27 @@
 #include "Froxelizer.h"
 #include "LocalProgramCache.h"
 #include "MaterialParser.h"
-#include "filament/MaterialEnums.h"
 
-#include <ds/ColorPassDescriptorSet.h>
+#include "details/Engine.h"
 
-#include <details/Engine.h>
+#include "ds/ColorPassDescriptorSet.h"
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/PushConstantInfo.h>
+
+#include <filament/MaterialEnums.h>
 
 #include <utils/Hash.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
-#include <iterator>
-#include <memory>
-#include <utility>
-
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <iterator>
+#include <memory>
+#include <utility>
 
 namespace filament {
 

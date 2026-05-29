@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_DESCRIPTORSETLAYOUT_H
 #define TNT_FILAMENT_DESCRIPTORSETLAYOUT_H
 
-#include <backend/DriverEnums.h>
-
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/bitset.h>

@@ -25,10 +25,11 @@
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <bluevk/BlueVK.h>
+
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 
-#include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
 namespace filament::backend {

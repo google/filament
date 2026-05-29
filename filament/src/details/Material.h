@@ -24,15 +24,19 @@
 
 #include "ds/DescriptorSetLayout.h"
 
-#include <filament/Material.h>
-#include <filament/MaterialEnums.h>
-
-#include <private/filament/EngineEnums.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/ConstantInfo.h>
+#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
-#include <private/filament/ConstantInfo.h>
+
+#include <filament/Material.h>
+#include <filament/MaterialEnums.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
@@ -50,10 +54,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-#if FILAMENT_ENABLE_MATDBG
-#include <matdbg/DebugServer.h>
-#endif
 
 namespace filament {
 

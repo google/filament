@@ -17,18 +17,14 @@
 #ifndef TNT_FILAMENT_DRIVER_METALHANDLES_H
 #define TNT_FILAMENT_DRIVER_METALHANDLES_H
 
-#include "metal/MetalDriver.h"
-
-#include <CoreVideo/CVPixelBuffer.h>
-#include <Metal/Metal.h>
-#include <QuartzCore/QuartzCore.h> // for CAMetalLayer
-
 #include "MetalBuffer.h"
 #include "MetalContext.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalFlags.h"
 #include "MetalState.h" // for MetalState::VertexDescription
+
+#include "metal/MetalDriver.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/PlatformMetal.h>
@@ -39,6 +35,10 @@
 #include <utils/Panic.h>
 
 #include <math/vec2.h>
+
+#include <CoreVideo/CVPixelBuffer.h>
+#include <Metal/Metal.h>
+#include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
 #include <atomic>
 #include <condition_variable>

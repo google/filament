@@ -35,6 +35,9 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+#include <viewer/AutomationEngine.h>
+#include <viewer/Settings.h>
+
 using namespace emscripten;
 using namespace filament;
 
@@ -454,5 +457,32 @@ enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
         .value("METAL", backend::Backend::METAL)
         .value("WEBGPU", backend::Backend::WEBGPU)
         .value("NOOP", backend::Backend::NOOP);
+
+    enum_<filament::viewer::ToneMapping>("viewer$ToneMapping")
+        .value("LINEAR", filament::viewer::ToneMapping::LINEAR)
+        .value("ACES_LEGACY", filament::viewer::ToneMapping::ACES_LEGACY)
+        .value("ACES", filament::viewer::ToneMapping::ACES)
+        .value("FILMIC", filament::viewer::ToneMapping::FILMIC)
+        .value("AGX", filament::viewer::ToneMapping::AGX)
+        .value("GENERIC", filament::viewer::ToneMapping::GENERIC)
+        .value("PBR_NEUTRAL", filament::viewer::ToneMapping::PBR_NEUTRAL)
+        .value("GT7", filament::viewer::ToneMapping::GT7)
+        .value("DISPLAY_RANGE", filament::viewer::ToneMapping::DISPLAY_RANGE);
+
+    enum_<filament::viewer::CustomLut>("viewer$CustomLut")
+        .value("NONE", filament::viewer::CustomLut::NONE)
+        .value("NEGATIVE", filament::viewer::CustomLut::NEGATIVE)
+        .value("GRAYSCALE", filament::viewer::CustomLut::GRAYSCALE)
+        .value("SEPIA", filament::viewer::CustomLut::SEPIA)
+        .value("TEAL_AND_ORANGE", filament::viewer::CustomLut::TEAL_AND_ORANGE);
+
+    enum_<filament::AgxToneMapper::AgxLook>("AgxToneMapper$AgxLook")
+        .value("NONE", filament::AgxToneMapper::AgxLook::NONE)
+        .value("PUNCHY", filament::AgxToneMapper::AgxLook::PUNCHY)
+        .value("GOLDEN", filament::AgxToneMapper::AgxLook::GOLDEN);
+
+    enum_<filament::viewer::AutomationEngine::Options::ExportFormat>("AutomationEngine$ExportFormat")
+        .value("TIFF", filament::viewer::AutomationEngine::Options::ExportFormat::TIFF)
+        .value("PPM", filament::viewer::AutomationEngine::Options::ExportFormat::PPM);
 
 }

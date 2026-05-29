@@ -16,8 +16,8 @@
 
 #include "PerformanceCounters.h"
 
-#include <utils/JobSystem.h>
 #include <utils/compiler.h>
+#include <utils/JobSystem.h>
 
 #include <benchmark/benchmark.h>
 

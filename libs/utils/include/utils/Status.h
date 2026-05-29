@@ -17,10 +17,11 @@
 #ifndef TNT_UTILS_STATUS_H
 #define TNT_UTILS_STATUS_H
 
-#include <ostream>
-#include <string_view>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+
+#include <ostream>
+#include <string_view>
 
 namespace utils {
 
