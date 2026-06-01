@@ -41,7 +41,7 @@ namespace filament::backend {
 /**
  * A concrete implementation of OpenGLPlatform that supports EGL.
  */
-class PlatformEGL : public OpenGLPlatform {
+class UTILS_SHARED_LINKING PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
