@@ -296,6 +296,15 @@ public:
         // Some Mali drivers also have problems with this (b/445721121)
         bool disable_framebuffer_fetch_extension;
 
+        // ANGLE-on-D3D11 (and some other GLES drivers) don't fold a spec-constant-initialized
+        // `const int` into a uniform-block array length, e.g.
+        // `const int CONFIG_MAX_INSTANCES = SPIRV_CROSS_CONSTANT_ID_1;` used as the size of
+        // `PerRenderableData data[CONFIG_MAX_INSTANCES]`. They lay the block out with the
+        // matc-baked default while the engine binds the runtime size, so every instanced draw
+        // trips "uniform buffer too small" and is dropped (lit materials render black). When set,
+        // ShaderCompilerService rewrites such array lengths to the bound literal.
+        bool spec_constant_array_size_not_folded;
+
     } bugs = {};
 
     struct Procs {
@@ -388,6 +397,9 @@ private:
                     ""},
             {   bugs.disable_framebuffer_fetch_extension,
                     "disable_framebuffer_fetch_extension",
+                    ""},
+            {   bugs.spec_constant_array_size_not_folded,
+                    "spec_constant_array_size_not_folded",
                     ""},
     }};
 
