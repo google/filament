@@ -19,9 +19,11 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <utils/compiler.h>
+
 namespace filament::backend {
 
-class VulkanPlatformLinux : public VulkanPlatform {
+class UTILS_SHARED_LINKING VulkanPlatformLinux : public VulkanPlatform {
 protected:
     ExtensionSet getSwapchainInstanceExtensions() const override;
     SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
