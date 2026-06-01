@@ -34,6 +34,15 @@
 #include <GL/glcorearb.h>
 #include <GL/glext.h>
 
+// BLUEGL_SHARED_LINKING marks symbols that need default visibility only when
+// Filament is consumed as a shared/dynamic library. These symbols are
+// implementation details that must be visible across shared-library boundaries.
+#if __has_attribute(visibility)
+#    define BLUEGL_SHARED_LINKING __attribute__((visibility("default")))
+#else
+#    define BLUEGL_SHARED_LINKING
+#endif
+
 #if defined(WIN32)
 
 #ifdef max
@@ -79,7 +88,7 @@ namespace bluegl {
  *
  * @return 0 on success or -1 if an error occurred.
  */
-int bind();
+BLUEGL_SHARED_LINKING int bind();
 
 /**
  * Unbinds all available OpenGL Core functions.
@@ -88,7 +97,7 @@ int bind();
  * As such you should assume that no OpenGL calls can be made after
  * calling this function.
  */
-void unbind();
+BLUEGL_SHARED_LINKING void unbind();
 
 
 } // namespace bluegl
