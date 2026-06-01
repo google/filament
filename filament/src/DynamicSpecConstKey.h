@@ -41,6 +41,13 @@ struct DynamicSpecConstKey {
 
     static utils::Slice<const DynamicSpecConstKey> getAllPossibleKeys() noexcept;
 
+    static constexpr DynamicSpecConstKey filter(DynamicSpecConstKey key, bool isLit) noexcept {
+        if (!isLit) {
+            key.key &= ~DYNAMIC_LIGHTING;
+        }
+        return key;
+    }
+
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
     }
@@ -63,6 +70,10 @@ struct DynamicSpecConstKey {
 
     constexpr bool hasDynamicLighting() const noexcept {
         return key & DYNAMIC_LIGHTING;
+    }
+
+    constexpr void setDynamicLighting(bool v) noexcept {
+        key = (key & ~DYNAMIC_LIGHTING) | (v ? DYNAMIC_LIGHTING : type_t(0));
     }
 };
 

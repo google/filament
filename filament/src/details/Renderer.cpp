@@ -1030,6 +1030,10 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
 
+    DynamicSpecConstKey specKey{0};
+    specKey.setDynamicLighting(view.hasDynamicLighting());
+    passBuilder.dynamicSpecConstKey(specKey);
+
     Variant variant;
     variant.setDirectionalLighting(view.hasDirectionalLighting());
     variant.setDynamicLighting(view.hasDynamicLighting());

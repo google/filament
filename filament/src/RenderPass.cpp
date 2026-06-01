@@ -145,6 +145,7 @@ RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
             builder.mFlags,
             builder.mVisibilityMask,
             builder.mVariant,
+            builder.mDynamicSpecConstKey,
             builder.mCameraPosition,
             builder.mCameraForwardVector);
 
@@ -189,6 +190,7 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
         RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         Variant const variant,
+        DynamicSpecConstKey const specKey,
         float3 const cameraPosition,
         float3 const cameraForwardVector) const noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
@@ -216,12 +218,12 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     auto stereoscopicEyeCount = engine.getConfig().stereoscopicEyeCount;
 
     auto work = [commandTypeFlags, curr, &soa,
-                 variant, renderFlags, visibilityMask,
+                 variant, specKey, renderFlags, visibilityMask,
                  cameraPosition, cameraForwardVector, stereoscopicEyeCount]
             (uint32_t const startIndex, uint32_t const indexCount) {
         generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount },
-                variant, renderFlags, visibilityMask,
+                variant, specKey, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
 
@@ -243,9 +245,7 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            // TODO: Remove this after we pass the specKey info from PrimitiveInfo
-            DynamicSpecConstKey specKey{ first->info.materialVariant.hasDynamicLighting() };
-            first->info.mi->prepareProgram(driver, first->info.materialVariant, specKey,
+            first->info.mi->prepareProgram(driver, first->info.materialVariant, first->info.dynamicSpecConstKey,
                     CompilerPriorityQueue::CRITICAL);
         }
     }
@@ -409,7 +409,7 @@ void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
 /* static */
 UTILS_ALWAYS_INLINE // This function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
-void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
+void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey const specKey,
         FMaterialInstance const* const UTILS_RESTRICT mi,
         bool const inverseFrontFaces, bool const hasDepthClamp) noexcept {
 
@@ -452,6 +452,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
+    cmdDraw.info.dynamicSpecConstKey = DynamicSpecConstKey::filter(specKey, ma->isVariantLit());
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -459,7 +460,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 UTILS_NOINLINE
 void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> const range,
-        Variant const variant, RenderFlags const renderFlags,
+        Variant const variant, DynamicSpecConstKey const specKey, RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         float3 const cameraPosition, float3 const cameraForward,
         uint8_t instancedStereoEyeCount) noexcept {
@@ -494,13 +495,13 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range,
-                    variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    variant, specKey, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     instancedStereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range,
-                    variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    variant, specKey, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     instancedStereoEyeCount);
             break;
         default:
@@ -523,7 +524,7 @@ UTILS_NOINLINE
 RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
+        Variant const variant, DynamicSpecConstKey const specKey, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
 
     constexpr bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
@@ -567,6 +568,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     if constexpr (isDepthPass) {
         cmd.info.materialVariant = variant;
+        cmd.info.dynamicSpecConstKey = specKey;
         cmd.info.rasterState = {};
         cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isDepthMomentsVariant(variant);
         cmd.info.rasterState.depthWrite = true;
@@ -704,7 +706,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 //                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
-                setupColorCommand(cmd, renderableVariant, mi,
+                setupColorCommand(cmd, renderableVariant, specKey, mi,
                         inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -1091,9 +1093,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     mi->use(driver, info.materialVariant);
                 }
 
-                // TODO: Remove this after we pass the specKey info from PrimitiveInfo
-                DynamicSpecConstKey specKey{ info.materialVariant.hasDynamicLighting() };
-                pipeline.program = mi->getProgram(info.materialVariant, specKey);
+                pipeline.program = mi->getProgram(info.materialVariant, info.dynamicSpecConstKey);
 
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;
