@@ -16,7 +16,6 @@
 
 #include "details/Material.h"
 
-#include "DynamicSpecConstKey.h"
 #include "FilamentAPI-impl.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
@@ -265,9 +264,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                for (auto const specKey : DynamicSpecConstKey::getAllPossibleKeys()) {
-                    mi->prepareProgram(driver, variant, specKey, priority);
-                }
+                mi->prepareProgram(driver, variant, priority);
             }
         }
     }
@@ -486,7 +483,7 @@ FixedCapacityVector<Program::SpecializationConstant> FMaterial::processSpecializ
                         << types[value.index()] << " was provided.";
                 break;
         }
-        uint32_t const index = pos->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
+        uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
         specializationConstants[index] = value;
     }
     return specializationConstants;

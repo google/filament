@@ -243,9 +243,7 @@ void RenderPass::appendCommands(FEngine const& engine, backend::DriverApi& drive
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            // TODO: Remove this after we pass the specKey info from PrimitiveInfo
-            DynamicSpecConstKey specKey{ first->info.materialVariant.hasDynamicLighting() };
-            first->info.mi->prepareProgram(driver, first->info.materialVariant, specKey,
+            first->info.mi->prepareProgram(driver, first->info.materialVariant,
                     CompilerPriorityQueue::CRITICAL);
         }
     }
@@ -1091,9 +1089,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     mi->use(driver, info.materialVariant);
                 }
 
-                // TODO: Remove this after we pass the specKey info from PrimitiveInfo
-                DynamicSpecConstKey specKey{ info.materialVariant.hasDynamicLighting() };
-                pipeline.program = mi->getProgram(info.materialVariant, specKey);
+                pipeline.program = mi->getProgram(info.materialVariant);
 
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;
