@@ -71,10 +71,10 @@ void LocalProgramCache::initializeForMaterial(FEngine& engine, FMaterial const& 
     size_t cachedProgramsSize;
     switch (material.getMaterialDomain()) {
         case filament::MaterialDomain::SURFACE:
-            cachedProgramsSize = 1 << (VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+            cachedProgramsSize = 1 << VARIANT_BITS;
             break;
         case filament::MaterialDomain::POST_PROCESS:
-            cachedProgramsSize = 1 << (POST_PROCESS_VARIANT_BITS + DYNAMIC_SPEC_CONST_KEY_BITS);
+            cachedProgramsSize = 1 << POST_PROCESS_VARIANT_BITS;
             break;
         case filament::MaterialDomain::COMPUTE:
             cachedProgramsSize = 1;
@@ -103,42 +103,37 @@ void LocalProgramCache::initializeForMaterialInstance(FEngine& engine, FMaterial
 }
 
 Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Variant const variant,
-        DynamicSpecConstKey specKey, CompilerPriorityQueue const priorityQueue) const noexcept {
+        CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
     FEngine& engine = mMaterial->getEngine();
 
     Handle<HwProgram> result;
-    CacheKey mappedKey = mapCacheEntryKey(variant, specKey);
     if (mMaterial->isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = engine.getDefaultMaterial();
         assert_invariant(defaultMaterial);
         LocalProgramCache const& defaultPrograms = defaultMaterial->getPrograms();
-        result = defaultPrograms.mCachedPrograms[mappedKey];
+        result = defaultPrograms.mCachedPrograms[variant.key];
         if (!result) {
-            result = defaultPrograms.prepareProgram(driver, variant, specKey, priorityQueue);
+            result = defaultPrograms.prepareProgram(driver, variant, priorityQueue);
         }
     } else {
         result = mMaterial->getDefinition().prepareProgram(engine, driver,
-                mMaterial->getMaterialParser(), getProgramSpecialization(variant, specKey),
-                priorityQueue);
+                mMaterial->getMaterialParser(), getProgramSpecialization(variant), priorityQueue);
     }
 
-    FILAMENT_CHECK_POSTCONDITION(result)
-            << "Requested variant " << (uint32_t) variant.key << " with specKey "
-            << (uint32_t) specKey.key << " does not exist for material " << mMaterial->getName();
+    FILAMENT_CHECK_POSTCONDITION(result) << "Requested variant " << (uint32_t)variant.key
+                                         << " does not exist for material " << mMaterial->getName();
 
-    return mCachedPrograms[mappedKey] = result;
+    return mCachedPrograms[variant.key] = result;
 }
 
-ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant,
-        DynamicSpecConstKey specKey) const noexcept {
+ProgramSpecialization LocalProgramCache::getProgramSpecialization(Variant variant) const noexcept {
     assert_invariant(mMaterial != nullptr);
 
-    return ProgramSpecialization{
+    return ProgramSpecialization {
         .materialCrc32 = mMaterial->getMaterialParser().getCrc32(),
         .variant = variant,
-        .specKey = specKey,
         .specializationConstants = mSpecializationConstants,
     };
 }
@@ -192,7 +187,7 @@ Program::SpecializationConstant LocalProgramCache::getConstantImpl(
     auto it = constants.find(name);
     FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
 
-    return getConstantImpl(it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS);
+    return getConstantImpl(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
 }
 
 void LocalProgramCache::setConstants(
@@ -229,7 +224,7 @@ void LocalProgramCache::setConstants(
         MaterialDefinition const& definition = mMaterial->getDefinition();
         auto it = definition.specializationConstantsNameToIndex.find(name);
         if (it != definition.specializationConstantsNameToIndex.cend()) {
-            uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
+            uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
             if (newSpecializationConstants[id] != value) {
                 newSpecializationConstants[id] = value;
                 hasChanged = true;

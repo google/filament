@@ -88,14 +88,6 @@ enum class ReservedSpecializationConstants : uint8_t {
     // check CONFIG_NEXT_RESERVED_SPEC_CONSTANT and CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 
-// Dynamic specialization constants are for those spec constants which act like a variant,
-// might be changed in the middle of the render pass. The values are always determined by the system and
-// users should not modify the value of these constants by themselves.
-enum class DynamicSpecializationConstants : uint8_t {
-    RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = 0,
-    // check CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT and CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS below
-};
-
 enum class PushConstantIds : uint8_t  {
     MORPHING_BUFFER_OFFSET = 0,
 };
@@ -110,23 +102,12 @@ constexpr size_t CONFIG_RENDERPASS_CHANNEL_COUNT = 8;
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 255;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
-// The number of specialization constants that Filament reserves for its own
-// use. It includes the static (ReservedSpecializationConstants) and dynamic
-// (DynamicSpecializationConstants) ones.
-// They are always the first constants (from 0 to
-// CONFIG_MAX_INTERNAL_SPEC_CONSTANTS - 1). Updating this value necessitates a
-// material version bump.
-constexpr size_t CONFIG_MAX_INTERNAL_SPEC_CONSTANTS = 32;
+// The number of specialization constants that Filament reserves for its own use. These are always
+// the first constants (from 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1).
+// Updating this value necessitates a material version bump.
 constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
-constexpr size_t CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS = 16;
-static_assert(CONFIG_MAX_DYNAMIC_SPEC_CONSTANTS + CONFIG_MAX_RESERVED_SPEC_CONSTANTS ==
-       CONFIG_MAX_INTERNAL_SPEC_CONSTANTS, "Inconsistent specialization constant counts");
-
 // The number of the next unassigned reserved spec constant.
 constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 12;
-
-// The number of the next unassigned dynamic spec constant.
-constexpr size_t CONFIG_NEXT_DYNAMIC_SPEC_CONSTANT = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + 1;
 
 // The maximum number of shadow maps possible.
 // There is currently a maximum limit of 128 shadow maps.
@@ -190,8 +171,6 @@ struct utils::EnableIntegerOperators<filament::PerMaterialBindingPoints> : publi
 
 template<>
 struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
-template<>
-struct utils::EnableIntegerOperators<filament::DynamicSpecializationConstants> : public std::true_type {};
 template<>
 struct utils::EnableIntegerOperators<filament::PushConstantIds> : public std::true_type {};
 template<>
