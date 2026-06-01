@@ -92,10 +92,10 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant, DynamicSpecConstKey const specKey,
+            Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
         flushSpecializationConstants();
-        return getPrograms().prepareProgram(driver, variant, specKey, priorityQueue);
+        return getPrograms().prepareProgram(driver, variant, priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
@@ -103,12 +103,11 @@ public:
     //
     // See also Material::getProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant const variant,
-            DynamicSpecConstKey const specKey) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
         updateActiveProgramsForMatdbg(variant);
 #endif
-        return getPrograms().getProgram(variant, specKey);
+        return getPrograms().getProgram(variant);
     }
 
     void setScissor(uint32_t const left, uint32_t const bottom, uint32_t const width, uint32_t const height) noexcept {
