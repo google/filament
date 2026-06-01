@@ -166,6 +166,7 @@ set(SRCS
         src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
+        src/DynamicSpecConstKey.cpp
 )
 
 set(PRIVATE_HDRS
@@ -177,6 +178,7 @@ set(PRIVATE_HDRS
         src/compact.h
         src/Culler.h
         src/DFG.h
+        src/DynamicSpecConstKey.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
