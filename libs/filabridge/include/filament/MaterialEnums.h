@@ -277,7 +277,12 @@ using UserVariantFilterMask = uint32_t;
 
 enum class UserVariantFilterBit : UserVariantFilterMask {
     DIRECTIONAL_LIGHTING        = 0x01,         //!< Directional lighting
-    DYNAMIC_LIGHTING            = 0x02,         //!< Dynamic lighting
+
+    //!< \note Since dynamic lighting was migrated to specialization constants, filtering this bit
+    //!< no longer affects the size of offline compiled materials (.filamat). However, we keep it
+    //!< for pruning unnecessary pipeline compilations at runtime.
+    DYNAMIC_LIGHTING = 0x02, //!< Dynamic lighting
+
     SHADOW_RECEIVER             = 0x04,         //!< Shadow receiver
     SKINNING                    = 0x08,         //!< Skinning
     FOG                         = 0x10,         //!< Fog

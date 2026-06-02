@@ -17,13 +17,16 @@
 #include <gltfio/MaterialProvider.h>
 
 #include <filament/MaterialEnums.h>
+
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/Hash.h>
+#include <utils/sstream.h>
 
 #include <tsl/robin_map.h>
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 using namespace filamat;
@@ -70,7 +73,6 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
         strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
@@ -81,6 +83,11 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     }();
 
     for (auto& filterStr : variantFilters) {
+        if (std::string_view(filterStr) == "dynamicLighting") {
+            io::sstream warningMessage;
+            warningMessage << "Warning: dynamicLighting variant filter is deprecated and ignored.";
+            continue;
+        }
         mVariantFilter |= (uint32_t)strToEnum.at(filterStr);
     }
     MaterialBuilder::init();
