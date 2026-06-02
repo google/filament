@@ -590,7 +590,7 @@ private:
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
     DescriptorSet mCommonRenderableDescriptorSet;
 
-    FScene* mScene = nullptr;
+    mutable FScene* mScene = nullptr;
     mutable FScene::SceneCacheData* mCurrentViewCache = nullptr;
     // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
