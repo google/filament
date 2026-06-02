@@ -1697,6 +1697,7 @@ void FView::invalidateCache(FScene* scene) const noexcept {
     if (mCurrentViewCache && mScene == scene) {
         scene->unregisterView(this);
         mCurrentViewCache = nullptr;
+        mScene = nullptr;
     }
 }
 
