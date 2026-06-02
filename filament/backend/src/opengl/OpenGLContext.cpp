@@ -359,6 +359,16 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     (void)shader;
 
     const bool isAngle = strstr(renderer, "ANGLE");
+
+    // ANGLE's D3D11 path doesn't fold a spec-constant-initialized `const int` into a
+    // uniform-block array length, so instanced draws bind a range smaller than the block the
+    // shader declares ("uniform buffer too small" -> dropped draw -> black materials). Renderer
+    // string looks like "ANGLE (NVIDIA, NVIDIA GeForce ... Direct3D11 vs_5_0 ps_5_0)". This is
+    // observed on Chromium/Firefox-on-Windows, including through WebGL. (b/...)
+    if (isAngle && strstr(renderer, "Direct3D11")) {
+        bugs->spec_constant_array_size_not_folded = true;
+    }
+
     if (!isAngle) {
         if (strstr(renderer, "Adreno")) {
             // Qualcomm GPU
