@@ -1830,6 +1830,9 @@ class_<Ktx1Bundle>("Ktx1Bundle")
         uint8_t* data = nullptr;
         uint32_t size = 0;
         if (!self->getBlob(index, &data, &size)) {
+            utils::slog.e << "Missing or invalid KTX blob at mip level " << index.mipLevel
+                          << ", array index " << index.arrayIndex << ", face "
+                          << index.cubeFace << utils::io::endl;
             return BufferDescriptor(nullptr, 0);
         }
         return BufferDescriptor(data, size);
@@ -1839,6 +1842,8 @@ class_<Ktx1Bundle>("Ktx1Bundle")
         uint8_t* data = nullptr;
         uint32_t size = 0;
         if (!self->getBlob({miplevel}, &data, &size)) {
+            utils::slog.e << "Missing or invalid KTX cubemap mip level " << miplevel
+                          << utils::io::endl;
             return BufferDescriptor(nullptr, 0);
         }
         return BufferDescriptor(data, size * 6);
