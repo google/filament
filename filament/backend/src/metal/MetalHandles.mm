@@ -215,7 +215,7 @@ NSUInteger MetalSwapChain::getSurfaceHeight() const {
 
 
 NSUInteger MetalSwapChain::getSampleCount() const {
-    if (flags & flags & SwapChain::CONFIG_MSAA_4_SAMPLES) {
+    if (flags & SwapChain::CONFIG_MSAA_4_SAMPLES) {
         return 4u;
     }
     return 1u;
@@ -1564,7 +1564,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                 MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
                 samplerArgument.index = binding.binding * 2 + 1;
                 samplerArgument.dataType = MTLDataTypeSampler;
-                textureArgument.access = MTLArgumentAccessReadOnly;
+                samplerArgument.access = MTLArgumentAccessReadOnly;
                 [arguments addObject:samplerArgument];
                 break;
             }
