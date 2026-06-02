@@ -102,6 +102,12 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         if (!unflattener.read(&stringCount)) {
             return false;
         }
+        // Reject unreasonably large string counts to prevent OOM from
+        // attacker-controlled material data.
+        static constexpr uint32_t MAX_DICTIONARY_STRING_COUNT = 65536;
+        if (stringCount > MAX_DICTIONARY_STRING_COUNT) {
+            return false;
+        }
 
         dictionary.reserve(stringCount);
         for (uint32_t i = 0; i < stringCount; i++) {
