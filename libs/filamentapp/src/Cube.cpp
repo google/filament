@@ -16,11 +16,12 @@
 
 #include <filamentapp/Cube.h>
 
-#include <utils/EntityManager.h>
-#include <filament/VertexBuffer.h>
 #include <filament/IndexBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+
+#include <utils/EntityManager.h>
 
 using namespace filament::math;
 using namespace filament;

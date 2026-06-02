@@ -15,6 +15,9 @@
  */
 
 
+#include <geometry/SurfaceOrientation.h>
+
+#include <filamentapp/IcoSphere.h>
 #include <filamentapp/Sphere.h>
 
 #include <filament/Engine.h>
@@ -23,12 +26,10 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
+
 #include <utils/EntityManager.h>
+
 #include <math/norm.h>
-
-#include <geometry/SurfaceOrientation.h>
-
-#include <filamentapp/IcoSphere.h>
 
 using namespace filament;
 using namespace filament::math;

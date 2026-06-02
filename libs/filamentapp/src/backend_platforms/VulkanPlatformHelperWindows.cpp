@@ -4,7 +4,7 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatformLinux.h>
-
 #include "VulkanPlatformHelperCommon.h"
 
-namespace filament::filamentapp {
+#include <backend/platforms/VulkanPlatformWindows.h>
+
+namespace filament::app {
 
 using namespace filament::backend;
 
-class FilamentAppVulkanPlatform : public VulkanPlatformLinux {
+class FilamentAppVulkanPlatform : public VulkanPlatformWindows {
 public:
-    FilamentAppVulkanPlatform(char const* gpuHintCstr) : mCustomization(parseGpuHint(gpuHintCstr)) {}
+    FilamentAppVulkanPlatform(char const* gpuHintCstr)
+            : mCustomization(parseGpuHint(gpuHintCstr)) {}
 
     VulkanPlatform::Customization getCustomization() const noexcept override {
         return mCustomization;
@@ -34,8 +35,8 @@ private:
     VulkanPlatform::Customization mCustomization;
 };
 
-VulkanPlatform* createVulkanPlatform(char const* gpuHintCstr) {
+Platform* createVulkanPlatform(char const* gpuHintCstr) {
     return new FilamentAppVulkanPlatform(gpuHintCstr);
 }
 
-} // namespace filament::filamentapp
+} // namespace filament::app

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,16 @@
  * limitations under the License.
  */
 
-#include <filamentapp/VulkanPlatformHelper.h>
+#include "VulkanPlatformHelperCommon.h"
 
-#include <backend/platforms/VulkanPlatform.h>
+namespace filament::app {
 
-#include <utils/CString.h>
-
-#include <algorithm>
-#include <cstdlib>
-
-namespace filament::filamentapp {
-
-using namespace filament::backend;
-
-VulkanPlatform::Customization parseGpuHint(char const* gpuHintCstr) {
+filament::backend::VulkanPlatform::Customization parseGpuHint(char const* gpuHintCstr) {
     utils::CString gpuHint{ gpuHintCstr };
     if (gpuHint.empty()) {
         return {};
     }
-    VulkanPlatform::Customization::GPUPreference pref;
+    filament::backend::VulkanPlatform::Customization::GPUPreference pref;
     // Check to see if it is an integer, if so turn it into an index.
     if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
         char* p_end{};
@@ -43,8 +34,4 @@ VulkanPlatform::Customization parseGpuHint(char const* gpuHintCstr) {
     return { .gpu = pref };
 }
 
-void destroyVulkanPlatform(VulkanPlatform* platform) {
-    delete platform;
-}
-
-} // namespace filament::filamentapp
+} // namespace filament::app

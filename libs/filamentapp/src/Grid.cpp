@@ -29,15 +29,15 @@
 #include <filament/VertexBuffer.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Log.h>
 
-#include <math/vec3.h>
 #include <math/mat4.h>
+#include <math/vec3.h>
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <vector>
-#include <utils/Log.h>
 
 using namespace filament;
 

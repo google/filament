@@ -23,7 +23,9 @@
 
 #include <SDL_syswm.h>
 
-void* getNativeWindow(SDL_Window* sdlWindow) {
+#include <utils/Log.h>
+
+void* getNativeWindowFromSDL(SDL_Window* sdlWindow) {
     SDL_SysWMinfo wmi;
     SDL_VERSION(&wmi.version);
     FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
