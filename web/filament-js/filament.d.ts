@@ -1868,3 +1868,263 @@ export class Camutils$Manipulator$Builder {
     public panning(enabled: boolean): Camutils$Manipulator$Builder;
     public build(mode: Camutils$Mode): Camutils$Manipulator;
 }
+
+export enum viewer$ToneMapping {
+    LINEAR,
+    ACES_LEGACY,
+    ACES,
+    FILMIC,
+    AGX,
+    GENERIC,
+    PBR_NEUTRAL,
+    GT7,
+    DISPLAY_RANGE,
+}
+
+export enum viewer$CustomLut {
+    NONE,
+    NEGATIVE,
+    GRAYSCALE,
+    SEPIA,
+    TEAL_AND_ORANGE,
+}
+
+export enum AgxToneMapper$AgxLook {
+    NONE,
+    PUNCHY,
+    GOLDEN,
+}
+
+export enum AutomationEngine$ExportFormat {
+    TIFF,
+    PPM,
+}
+
+export interface GenericToneMapperSettings {
+    contrast: number;
+    midGrayIn: number;
+    midGrayOut: number;
+    hdrMax: number;
+}
+
+export interface AgxToneMapperSettings {
+    look: AgxToneMapper$AgxLook;
+}
+
+export interface ColorGradingSettings {
+    enabled: boolean;
+    linkedCurves: boolean;
+    luminanceScaling: boolean;
+    gamutMapping: boolean;
+    quality: ColorGrading$QualityLevel;
+    toneMapping: viewer$ToneMapping;
+    customLut: viewer$CustomLut;
+    agxToneMapper: AgxToneMapperSettings;
+    colorspace: any; // color::ColorSpace is not fully bound
+    genericToneMapper: GenericToneMapperSettings;
+    shadows: float4;
+    midtones: float4;
+    highlights: float4;
+    ranges: float4;
+    outRed: float3;
+    outGreen: float3;
+    outBlue: float3;
+    slope: float3;
+    offset: float3;
+    power: float3;
+    gamma: float3;
+    midPoint: float3;
+    scale: float3;
+    exposure: number;
+    nightAdaptation: number;
+    temperature: number;
+    tint: number;
+    contrast: number;
+    vibrance: number;
+    saturation: number;
+}
+
+export interface DynamicLightingSettings {
+    zLightNear: number;
+    zLightFar: number;
+}
+
+export interface FogSettings {
+    fogColorTexture: Texture | null;
+}
+
+export interface ViewSettings {
+    antiAliasing: View$AntiAliasing;
+    dithering: View$Dithering;
+    shadowType: View$ShadowType;
+    postProcessingEnabled: boolean;
+    ssao: View$AmbientOcclusionOptions;
+    screenSpaceReflections: View$ScreenSpaceReflectionsOptions;
+    bloom: View$BloomOptions;
+    dof: View$DepthOfFieldOptions;
+    dsr: View$DynamicResolutionOptions;
+    fog: View$FogOptions;
+    msaa: View$MultiSampleAntiAliasingOptions;
+    renderQuality: View$RenderQuality;
+    taa: View$TemporalAntiAliasingOptions;
+    vignette: View$VignetteOptions;
+    vsmShadowOptions: View$VsmShadowOptions;
+    guardBand: View$GuardBandOptions;
+    stereoscopicOptions: View$StereoscopicOptions;
+    colorGrading: ColorGradingSettings;
+    dynamicLighting: DynamicLightingSettings;
+    fogSettings: FogSettings;
+    blendMode: BlendMode;
+    stencilBufferEnabled: boolean;
+    visibleLayers: number;
+}
+
+export interface LightDefinition {
+    type: LightManager$Type;
+    position: float3;
+    direction: float3;
+    color: float3;
+    intensity: number;
+    falloff: number;
+    spotInner: number;
+    spotOuter: number;
+    sunHaloSize: number;
+    sunHaloFalloff: number;
+    sunAngularRadius: number;
+    castShadows: boolean;
+    shadowOptions: LightManager$ShadowOptions;
+}
+
+export interface LightSettings {
+    enableShadows: boolean;
+    enableSunlight: boolean;
+    softShadowOptions: View$SoftShadowOptions;
+    iblIntensity: number;
+    iblRotation: number;
+    sunlight: LightDefinition;
+    lights: LightDefinition[];
+}
+
+export interface CameraSettings {
+    center: float3;
+    lookAt: float3;
+    up: float3;
+    horizontalFov: number;
+    near: number;
+    far: number;
+    focalLength: number;
+    aperture: number;
+    shutterSpeed: number;
+    sensitivity: number;
+    focusDistance: number;
+    eyeOcularDistance: number;
+    eyeToeIn: number;
+    projection: Camera$Projection;
+    enabled: boolean;
+    scaling: float2;
+    shift: float2;
+}
+
+export interface AnimationSettings {
+    enabled: boolean;
+    time: number;
+    speed: number;
+}
+
+export interface RenderSettings {
+    clearOptions: Renderer$ClearOptions;
+    frameRateOptions: any;
+}
+
+export interface ViewerOptions {
+    groundShadowStrength: number;
+    groundPlaneEnabled: boolean;
+    skyboxEnabled: boolean;
+    backgroundColor: float3;
+    autoScaleEnabled: boolean;
+    autoInstancingEnabled: boolean;
+}
+
+export interface DebugOptions {
+    skipFrames: number;
+}
+
+export interface viewer$Settings {
+    view: ViewSettings;
+    lighting: LightSettings;
+    viewer: ViewerOptions;
+    camera: CameraSettings;
+    animation: AnimationSettings;
+    render: RenderSettings;
+    debug: DebugOptions;
+}
+
+export interface ViewerContent {
+    view: View;
+    renderer: Renderer;
+    materials: MaterialInstance[];
+    lightManager: LightManager;
+    scene: Scene;
+    indirectLight: IndirectLight | null;
+    sunlight: Entity;
+    assetLights: Entity[];
+}
+
+export class JsonSerializer {
+    constructor();
+    writeJson(settings: viewer$Settings): string;
+    readJson(json: string, settings: viewer$Settings): boolean;
+}
+
+export class AutomationSpec {
+    static generate(json: string): AutomationSpec | null;
+    static generateDefaultTestCases(): AutomationSpec;
+    size(): number;
+    get(index: number, out: viewer$Settings): boolean;
+    getName(index: number): string;
+    delete(): void;
+}
+
+export interface AutomationEngine$Options {
+    sleepDuration: number;
+    minFrameCount: number;
+    verbose: boolean;
+    exportScreenshots: boolean;
+    exportSettings: boolean;
+    exportFormat: AutomationEngine$ExportFormat;
+}
+
+export class AutomationEngine {
+    constructor(spec: AutomationSpec, settings: viewer$Settings);
+    static createFromJSON(json: string): AutomationEngine | null;
+    static createDefault(): AutomationEngine;
+    startRunning(): void;
+    startBatchMode(): void;
+    tick(engine: Engine, content: ViewerContent, deltaTime: number): void;
+    applySettings(engine: Engine, json: string, content: ViewerContent): void;
+    getColorGrading(engine: Engine): ColorGrading;
+    getViewerOptions(): ViewerOptions;
+    getSettings(): viewer$Settings;
+    signalBatchMode(): void;
+    stopRunning(): void;
+    terminate(): void;
+    shouldClose(): boolean;
+    getOptions(): AutomationEngine$Options;
+    setOptions(options: AutomationEngine$Options): void;
+    isRunning(): boolean;
+    currentTest(): number;
+    testCount(): number;
+    getStatusMessage(): string;
+    delete(): void;
+}
+
+export class ViewerGui {
+    constructor(engine: Engine, scene: Scene, view: View, sidebarWidth: number);
+    renderUserInterface(timeStepInSeconds: number, guiView: View, pixelRatio: number): void;
+    getSettings(): viewer$Settings;
+    mouseEvent(mouseX: number, mouseY: number, mouseButton: boolean, mouseWheelY: number, control: boolean): void;
+    keyDownEvent(keyCode: number): void;
+    keyUpEvent(keyCode: number): void;
+    keyPressEvent(charCode: number): void;
+    delete(): void;
+}

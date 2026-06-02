@@ -36,6 +36,17 @@
 #    define UTILS_PUBLIC
 #endif
 
+// UTILS_SHARED_LINKING marks symbols that need default visibility only when
+// Filament is consumed as a shared/dynamic library. Unlike UTILS_PUBLIC,
+// which denotes the intentional public API surface, these symbols are
+// implementation details that must be visible across shared-library
+// boundaries.
+#if __has_attribute(visibility)
+#    define UTILS_SHARED_LINKING __attribute__((visibility("default")))
+#else
+#    define UTILS_SHARED_LINKING
+#endif
+
 #if __has_attribute(deprecated)
 #   define UTILS_DEPRECATED [[deprecated]]
 #else
