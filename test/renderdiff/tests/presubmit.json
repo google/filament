@@ -93,6 +93,8 @@
         {
             "name": "SSR",
             "description": "Screen space reflections",
+            // Do not include "webgpu" since it is flaky (b/454921221)
+            "backends": ["opengl", "vulkan"],
             "apply_presets": ["base", "ssr_models"],
             "rendering": {
                 "view.screenSpaceReflections.enabled": true
