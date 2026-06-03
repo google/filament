@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_SAMPLE_SPHERE_H
 
 #include <utils/Entity.h>
+
 #include <math/vec3.h>
 
 namespace filament {

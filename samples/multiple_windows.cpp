@@ -16,33 +16,37 @@
 
 #include "common/arguments.h"
 
-#include <SDL.h>
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/NativeWindowHelper.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/IBL.h>
-#include <filamentapp/NativeWindowHelper.h>
-#include <filameshio/MeshReader.h>
-#include <math/mat4.h>
+
 #include <utils/EntityManager.h>
 #include <utils/Panic.h>
+
+#include <math/mat4.h>
+
+#include <SDL.h>
 
 #include <functional>
 #include <iostream>
 #include <vector>
-
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
 
 using namespace filament;
 
@@ -202,7 +206,7 @@ int main(int argc, char *argv[]) {
 void setup_window(Window& w, Engine* engine) {
     w.renderer = engine->createRenderer();
 
-    void* nativeWindow = ::getNativeWindow(w.sdl_window);
+    void* nativeWindow = ::getNativeWindowFromSDL(w.sdl_window);
     void* nativeSwapChain = nativeWindow;
 #if defined(__APPLE__)
     void* metalLayer = nullptr;
@@ -252,7 +256,7 @@ void destroy_window(Window& w, Engine* engine) {
 
 void resize_window(Window& w, Engine* engine) {
 #if defined(__APPLE__)
-    void* nativeWindow = ::getNativeWindow(w.sdl_window);
+    void* nativeWindow = ::getNativeWindowFromSDL(w.sdl_window);
     if (kBackend == filament::Engine::Backend::METAL) {
         resizeMetalLayer(nativeWindow);
     }

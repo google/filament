@@ -93,17 +93,39 @@ HEADER_FILE_TEMPLATE = COPYRIGHT_HEADER + '''
     #ifndef VK_NO_PROTOTYPES
     #define VK_NO_PROTOTYPES
     #endif
+
+    #if defined(__ANDROID__)
+    #define VK_USE_PLATFORM_ANDROID_KHR 1
+    #elif defined(FILAMENT_IOS)
+    #define VK_USE_PLATFORM_IOS_MVK 1
+    #elif defined(__linux__)
+    #if defined(FILAMENT_SUPPORTS_XCB)
+    #define VK_USE_PLATFORM_XCB_KHR 1
+    #endif
+    #if defined(FILAMENT_SUPPORTS_XLIB)
+    #define VK_USE_PLATFORM_XLIB_KHR 1
+    #endif
+    #if defined(FILAMENT_SUPPORTS_WAYLAND)
+    #define VK_USE_PLATFORM_WAYLAND_KHR 1
+    #endif
+    #elif defined(__APPLE__)
+    #define VK_USE_PLATFORM_METAL_EXT 1
+    #elif defined(WIN32)
+    #define VK_USE_PLATFORM_WIN32_KHR 1
+    #endif
+
     #include <vulkan/vulkan.h>
 #endif
 
+#include <utils/compiler.h>
 #include <utils/unwindows.h>
 
 namespace bluevk {
 
     // Returns false if BlueGL could not find the Vulkan shared library.
-    bool initialize();
+    UTILS_SHARED_LINKING bool initialize();
 
-    void bindInstance(VkInstance instance);
+    UTILS_SHARED_LINKING void bindInstance(VkInstance instance);
 
 %(FUNCTION_POINTERS)s
 

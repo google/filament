@@ -387,7 +387,7 @@ void PlatformEGL::createContext(bool const shared) {
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, context);
 
     {
-        std::lock_guard const lock(mAdditionalContextsLock);
+        utils::LockGuard const lock(mAdditionalContextsLock);
         mAdditionalContexts.push_back(context);
     }
 }
@@ -400,7 +400,7 @@ void PlatformEGL::releaseContext() noexcept {
     }
 
     {
-        std::lock_guard const lock(mAdditionalContextsLock);
+        utils::LockGuard const lock(mAdditionalContextsLock);
         mAdditionalContexts.erase(
                 std::remove_if(mAdditionalContexts.begin(), mAdditionalContexts.end(),
                         [context](EGLContext const c) {
@@ -423,7 +423,7 @@ void PlatformEGL::terminate() noexcept {
     }
     std::vector<EGLContext> additionalContexts;
     {
-        std::lock_guard const lock(mAdditionalContextsLock);
+        utils::LockGuard const lock(mAdditionalContextsLock);
         additionalContexts.swap(mAdditionalContexts);
     }
     for (auto const context : additionalContexts) {

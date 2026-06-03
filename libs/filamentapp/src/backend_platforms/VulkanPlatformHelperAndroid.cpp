@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatformAndroid.h>
-
 #include "VulkanPlatformHelperCommon.h"
 
-namespace filament::filamentapp {
+#include <backend/platforms/VulkanPlatformAndroid.h>
+
+namespace filament::app {
 
 using namespace filament::backend;
 
 class FilamentAppVulkanPlatform : public VulkanPlatformAndroid {
 public:
-    FilamentAppVulkanPlatform(char const* gpuHintCstr) : mCustomization(parseGpuHint(gpuHintCstr)) {}
+    FilamentAppVulkanPlatform(char const* gpuHintCstr)
+            : mCustomization(parseGpuHint(gpuHintCstr)) {}
 
     VulkanPlatform::Customization getCustomization() const noexcept override {
         return mCustomization;
@@ -34,8 +35,8 @@ private:
     VulkanPlatform::Customization mCustomization;
 };
 
-VulkanPlatform* createVulkanPlatform(char const* gpuHintCstr) {
+Platform* createVulkanPlatform(char const* gpuHintCstr) {
     return new FilamentAppVulkanPlatform(gpuHintCstr);
 }
 
-} // namespace filament::filamentapp
+} // namespace filament::app
