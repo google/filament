@@ -75,7 +75,7 @@ struct FrameInfoImpl : public details::FrameInfo {
     // Actual presentation time of this frame
     FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
     // deadline for queuing a frame [ns]
-    CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
+    CompositorTiming::time_point_ns presentDeadlineLatency{ FrameTimestamps::INVALID };
     // display refresh rate [ns]
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]

@@ -296,19 +296,13 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
 
     AndroidFrameCallback::Timeline const preferredTimeline{
             mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-    // FIXME: expectedPresentLatency might reflect the previous frame's value because
-    //        the choreographer's callback can happen before (good) or after (bad) us.
-    //        This problem is mitigated by storing the latency instead of the deadline,
-    //        because it generally is constant frame to frame.
-    if (UTILS_LIKELY(preferredTimeline.expectedPresentTime > preferredTimeline.frameTime)) {
-        // latency can never be negative, let's be safe
-        outCompositorTiming->expectedPresentLatency =
-                preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
-    } else {
-        // fake a reasonable value (33ms)
-        outCompositorTiming->expectedPresentLatency = 33'000'000;
-    }
-    outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
+
+    outCompositorTiming->expectedPresentLatency =
+        preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
+
+    outCompositorTiming->compositeDeadlineLatency =
+        preferredTimeline.frameTimelineDeadline - preferredTimeline.frameTime;
+
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
 
@@ -325,9 +319,8 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
             return true;
         }
 
-        std::array<EGLnsecsANDROID, 3> values;
-        constexpr std::array<EGLint, 3> names{
-            EGL_COMPOSITE_DEADLINE_ANDROID,
+        std::array<EGLnsecsANDROID, 2> values;
+        constexpr std::array names{
             EGL_COMPOSITE_INTERVAL_ANDROID,
             EGL_COMPOSITE_TO_PRESENT_LATENCY_ANDROID
         };
@@ -337,9 +330,8 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
             // reset current error to EGL_SUCCESS
             eglGetError();
         } else {
-            outCompositorTiming->compositeDeadline = values[0];
-            outCompositorTiming->compositeInterval = values[1];
-            outCompositorTiming->compositeToPresentLatency = values[2];
+            outCompositorTiming->compositeInterval = values[0];
+            outCompositorTiming->compositeToPresentLatency = values[1];
         }
     }
     return true;
@@ -415,8 +407,6 @@ Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uin
     if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
         EGLDisplay const dpy = getEglDisplay();
         sc->compositorTimingSupported =
-                eglGetCompositorTimingSupportedANDROID(dpy, sc->sur,
-                        EGL_COMPOSITE_DEADLINE_ANDROID) &&
                 eglGetCompositorTimingSupportedANDROID(dpy, sc->sur,
                         EGL_COMPOSITE_INTERVAL_ANDROID) &&
                 eglGetCompositorTimingSupportedANDROID(dpy, sc->sur,

@@ -42,6 +42,7 @@ public:
     struct Timeline {
         using timepoint_ns = int64_t;
         static constexpr timepoint_ns INVALID = -1;
+        int64_t frameId{ INVALID };
         timepoint_ns frameTime{ INVALID };
         timepoint_ns expectedPresentTime{ INVALID };
         timepoint_ns frameTimelineDeadline{ INVALID };
