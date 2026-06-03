@@ -212,7 +212,7 @@ bool NoopDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool NoopDriver::isFrameTimeSupported() {
-    return true;
+    return false;
 }
 
 bool NoopDriver::isAutoDepthResolveSupported() {

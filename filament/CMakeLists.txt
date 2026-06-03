@@ -35,6 +35,7 @@ set(PUBLIC_HDRS
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
         include/filament/Renderer.h
+        include/filament/FrameHistoryStream.h
         include/filament/Scene.h
         include/filament/SkinningBuffer.h
         include/filament/Skybox.h
