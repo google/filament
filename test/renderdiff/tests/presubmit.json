@@ -35,6 +35,11 @@
             "name": "animation_models",
             "models": ["Fox"],
             "rendering": {}
+        },
+        {
+            "name": "ssr_models",
+            "models": ["DamagedHelmet"],
+            "rendering": {}
         }
     ],
     "tests": [
@@ -83,6 +88,14 @@
                     "enabled": true,
                     "time": 0.5
                 }
+            }
+        },
+        {
+            "name": "SSR",
+            "description": "Screen space reflections",
+            "apply_presets": ["base", "ssr_models"],
+            "rendering": {
+                "view.screenSpaceReflections.enabled": true
             }
         }
     ]
