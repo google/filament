@@ -43,7 +43,8 @@ Dispatcher NoopDriver::getDispatcher() const noexcept {
 }
 
 ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(FILAMENT_IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS) || \
+    defined(__EMSCRIPTEN__) || defined(FILAMENT_USES_EXTERNAL_GLES3)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
