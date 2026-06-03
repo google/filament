@@ -26,6 +26,7 @@
 
 #include "details/SwapChain.h"
 
+#include <filament/FrameHistoryStream.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -49,6 +50,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+#ifndef FILAMENT_LOG_FRAME_INFO
+#define FILAMENT_LOG_FRAME_INFO 0
+#endif
 
 namespace filament {
 
@@ -209,6 +214,9 @@ private:
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 1; // id 0 is reserved for standalone views
     FrameInfoManager mFrameInfoManager;
+#if FILAMENT_LOG_FRAME_INFO
+    FrameHistoryStream mFrameHistoryStream;
+#endif
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;
     backend::TextureFormat mHdrQualityHigh;
