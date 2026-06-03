@@ -891,6 +891,17 @@ void FilamentApp::Window::configureCamerasForWindow(WindowCameraParams const& ca
         mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
         dpiScaleX = (float) width / virtualWidth;
         dpiScaleY = (float) height / virtualHeight;
+    } else {
+        uint32_t width, height;
+        mDisplayManager->getWindowSize(mWindow, &width, &height);
+        if (width != mWidth || height != mHeight) {
+            mWidth = width;
+            mHeight = height;
+            if (mSwapChain) {
+                mEngine->destroy(mSwapChain);
+            }
+            mSwapChain = mEngine->createSwapChain((uint32_t) width, (uint32_t) height);
+        }
     }
 
     const uint32_t width = mWidth;
