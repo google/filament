@@ -133,7 +133,8 @@ class TestConfig(RenderingConfig):
       # Tolerance is inherited from the LAST preset that has one defined
       for preset in apply_presets:
         rendering.update(given_presets[preset].rendering)
-        preset_models = given_presets[preset].models
+        if given_presets[preset].models:
+          preset_models = given_presets[preset].models
         if given_presets[preset].tolerance:
           preset_tolerance = given_presets[preset].tolerance
 

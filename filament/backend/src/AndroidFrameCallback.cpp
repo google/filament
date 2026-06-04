@@ -128,8 +128,12 @@ void AndroidFrameCallback::vsyncCallback(const AChoreographerFrameCallbackData* 
                 AChoreographerFrameCallbackData_getFrameTimelineDeadlineNanos(
                         callbackData, preferredIndex);
 
+        int64_t const frameId = AChoreographerFrameCallbackData_getFrameTimelineVsyncId(
+                callbackData, preferredIndex);
+
         LockGuard const l(mLock);
         mPreferredTimeline = {
+            .frameId = frameId,
             .frameTime = frameTime,
             .expectedPresentTime = expectedPresentTime,
             .frameTimelineDeadline = frameTimelineDeadline

@@ -776,6 +776,7 @@ int main(int argc, char** argv) {
             options.sleepDuration = 0.0;
             options.exportScreenshots = true;
             options.exportSettings = true;
+            options.minFrameCount = 10; // For multi-frame effects like SSR.
             options.exportFormat = app.screenshotAsPPM
                                            ? AutomationEngine::Options::ExportFormat::PPM
                                            : AutomationEngine::Options::ExportFormat::TIFF;

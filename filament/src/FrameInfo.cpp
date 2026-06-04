@@ -132,7 +132,7 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
     CompositorTiming compositorTiming{};
     if (driver.isCompositorTimingSupported() &&
         driver.queryCompositorTiming(swapChain->getHwHandle(), &compositorTiming)) {
-        front.presentDeadline = compositorTiming.compositeDeadline;
+        front.presentDeadlineLatency = compositorTiming.compositeDeadlineLatency;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
         front.expectedPresentLatency = compositorTiming.expectedPresentLatency;
@@ -359,7 +359,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .gpuFrameComplete               = toTimepoint(entry.gpuFrameComplete),
                 .vsync                          = toTimepoint(entry.vsync),
                 .displayPresent                 = entry.displayPresent,
-                .presentDeadline                = entry.presentDeadline,
+                .presentDeadline                = toTimepoint(entry.vsync) + entry.presentDeadlineLatency,
                 .displayPresentInterval         = entry.displayPresentInterval,
                 .compositionToPresentLatency    = entry.compositionToPresentLatency,
                 .expectedPresentLatency         = entry.expectedPresentLatency
