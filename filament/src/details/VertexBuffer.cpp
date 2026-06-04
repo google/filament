@@ -261,7 +261,8 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount),
           mBufferObjectsEnabled(builder->mBufferObjectsEnabled),
           mAdvancedSkinningEnabled(builder->mAdvancedSkinningEnabled){
-    std::ranges::copy(builder->mAttributes, mAttributes.begin());
+    // TODO: can be replaced with std::ranges once client fully supports c++20
+    std::copy(builder->mAttributes.begin(), builder->mAttributes.end(), mAttributes.begin());
     mDeclaredAttributes = builder->mDeclaredAttributes;
 
     if (mAdvancedSkinningEnabled) {

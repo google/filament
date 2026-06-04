@@ -36,6 +36,8 @@
 
 #include <tsl/robin_set.h>
 
+#include <unordered_map>
+
 #include <stddef.h>
 
 namespace filament {
