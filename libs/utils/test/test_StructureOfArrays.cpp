@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/StructureOfArrays.h>
+
 #include <math/vec4.h>
+
+#include <gtest/gtest.h>
 
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <random>
 #include <utility>
 
 using namespace filament::math;
@@ -75,8 +77,9 @@ TEST(StructureOfArraysTest, Iterator) {
     EXPECT_EQ(soa.elementAt<0>(1), 7.0f);
     EXPECT_EQ(soa.elementAt<0>(2), 3.0f);
 
+    std::mt19937 gen(0);
     for (size_t i = 0; i < 8; i++) {
-        soa.elementAt<0>(i) = float(std::rand());
+        soa.elementAt<0>(i) = float(gen());
         soa.elementAt<1>(i) = soa.elementAt<0>(i) * 2;
         soa.elementAt<2>(i) = soa.elementAt<0>(i) * 4;
     }

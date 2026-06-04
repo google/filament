@@ -1,8 +1,10 @@
-#include <gtest/gtest.h>
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
+
+#include <gtest/gtest.h>
+
 #include <vector>
 
 using namespace utils;
@@ -40,8 +42,8 @@ TEST(SingleInstanceComponentManagerTest, BatchCallbackTest) {
     
     // Test addComponent (should be batched, not flushed yet)
     Entity e1 = em.create();
-    auto i1 = manager.addComponent(e1);
-    
+    manager.addComponent(e1);
+
     EXPECT_TRUE(notifiedEntities.empty());
     
     // Manual flush
