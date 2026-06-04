@@ -326,9 +326,10 @@ ShaderGenerator::ShaderGenerator(
         assert_invariant(materialVertexCode.empty());
     }
 
-    std::ranges::copy(properties, std::begin(mProperties));
-    std::ranges::copy(variables, std::begin(mVariables));
-    std::ranges::copy(outputs, std::back_inserter(mOutputs));
+    // TODO: can be replaced with std::ranges once client fully supports c++20
+    std::copy(std::begin(properties), std::end(properties), std::begin(mProperties));
+    std::copy(std::begin(variables), std::end(variables), std::begin(mVariables));
+    std::copy(std::begin(outputs), std::end(outputs), std::back_inserter(mOutputs));
 
     mMaterialFragmentCode = materialCode;
     mMaterialVertexCode = materialVertexCode;
@@ -434,7 +435,8 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
     }
 
     MaterialBuilder::PushConstantList vertexPushConstants;
-    std::ranges::copy_if(mPushConstants,
+    // TODO: can be replaced with std::ranges once client fully supports c++20
+    std::copy_if(mPushConstants.begin(), mPushConstants.end(),
             std::back_insert_iterator(vertexPushConstants),
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::VERTEX;
@@ -549,7 +551,9 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
     MaterialBuilder::PushConstantList fragmentPushConstants;
-    std::ranges::copy_if(mPushConstants, std::back_insert_iterator(fragmentPushConstants),
+    // TODO: can be replaced with std::ranges once client fully supports c++20
+    std::copy_if(mPushConstants.begin(), mPushConstants.end(),
+            std::back_insert_iterator(fragmentPushConstants),
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::FRAGMENT;
             });
