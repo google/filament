@@ -17,6 +17,10 @@
 #ifndef TNT_FILAMENT_RESOURCEALLOCATOR_H
 #define TNT_FILAMENT_RESOURCEALLOCATOR_H
 
+#ifndef FILAMENT_TEXTURE_CACHE_DEBUG
+#define FILAMENT_TEXTURE_CACHE_DEBUG 0
+#endif
+
 #include <filament/Engine.h>
 
 #include <backend/DriverApiForward.h>
@@ -40,6 +44,7 @@
 namespace filament {
 
 class TextureCacheDisposer;
+class TextureCacheInterface;
 
 // The only reason we use an interface here is for unit-tests, so we can mock this allocator.
 // This is not too time-critical, so that's okay.
@@ -81,6 +86,12 @@ protected:
 
 class TextureCache final : public TextureCacheInterface {
 public:
+    enum class EvictionReason {
+        SKIPPED_FRAME,
+        AGED_OUT,
+        UNIQUE_AGE_LIMIT
+    };
+
     explicit TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
             Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
 
@@ -162,6 +173,34 @@ private:
         }
     };
 
+    class Debugger {
+    public:
+        struct Config {
+            size_t recentEvictionThreshold = 5;
+            size_t historyLimit = 32;
+        };
+
+        Debugger() {
+            mRecentEvictions.reserve(mConfig.historyLimit);
+        }
+        explicit Debugger(Config const config) : mConfig(config) {
+            mRecentEvictions.reserve(mConfig.historyLimit);
+        }
+
+        void recordEviction(TextureKey const& key, EvictionReason reason, size_t age) noexcept;
+        bool checkRecentEviction(TextureKey const& key, utils::StaticString& evictedName, EvictionReason& outReason) noexcept;
+        void ageRecentEvictions(size_t age) noexcept;
+
+    private:
+        Config mConfig;
+        struct EvictionRecord {
+            TextureKey key;
+            size_t evictionAge;
+            EvictionReason reason;
+        };
+        std::vector<EvictionRecord> mRecentEvictions;
+    };
+
     struct TextureCachePayload {
         backend::TextureHandle handle;
         size_t age = 0;
@@ -216,7 +255,7 @@ private:
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
 
     CacheContainer::iterator
-    purge(CacheContainer::iterator const& pos);
+    purge(CacheContainer::iterator const& pos, EvictionReason reason);
 
     backend::DriverApi& mBackend;
     std::shared_ptr<TextureCacheDisposer> mDisposer;
@@ -227,6 +266,12 @@ private:
     static constexpr bool mEnabled = true;
 
     friend class TextureCacheDisposer;
+
+
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+    friend class Debugger;
+    std::unique_ptr<Debugger> mDebugger;
+#endif
 };
 
 class TextureCacheDisposer final : public TextureCacheDisposerInterface {
