@@ -205,19 +205,26 @@ FView::~FView() noexcept = default;
 void FView::setScene(FScene* scene) {
     if (mScene != scene) {
         if (mScene) {
-            invalidateCache(mScene);
+            mScene->unregisterView(this);
         }
         mScene = scene;
         if (scene) {
-            mCurrentViewCache = scene->registerView(this);
+            scene->registerView(this);
+            if (!mSceneCache) {
+                mSceneCache = std::make_unique<FScene::SceneCacheData>();
+            }
+        } else {
+            mSceneCache.reset();
         }
     }
 }
 
 void FView::terminate(FEngine& engine) {
     if (mScene) {
-        invalidateCache(mScene);
+        mScene->unregisterView(this);
+        mScene = nullptr;
     }
+    mSceneCache.reset();
 
     // Here we would cleanly free resources we've allocated, or we own (currently none).
 
@@ -504,14 +511,14 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FScene* const scene = mScene;
-    auto const& lightData = mCurrentViewCache->lightData;
+    auto const& lightData = mSceneCache->lightData;
 
     /*
      * Dynamic lights
      */
 
     if (hasDynamicLighting()) {
-        scene->prepareDynamicLights(cameraInfo, mLightUbh, *mCurrentViewCache);
+        scene->prepareDynamicLights(cameraInfo, mLightUbh, *mSceneCache);
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -730,7 +737,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      */
     scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
-            hasVSM(), *mCurrentViewCache);
+            hasVSM(), *mSceneCache);
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -738,7 +745,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
     JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
-    size_t const lightCount = mCurrentViewCache->lightData.size();
+    size_t const lightCount = mSceneCache->lightData.size();
     if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         // create and start the prepareVisibleLights job
         // note: this job updates LightData (non const)
@@ -750,7 +757,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = mCurrentViewCache->lightData]
+                 &lightData = mSceneCache->lightData]
                         (JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
@@ -764,7 +771,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     Range merged;
 
     { // all the operations in this scope must happen sequentially
-        FScene::RenderableSoa& renderableData = mCurrentViewCache->renderableData;
+        FScene::RenderableSoa& renderableData = mSceneCache->renderableData;
 
         Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
         std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
@@ -788,7 +795,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         }
 
         // lightData is const from this point on (can only happen after prepareVisibleLightsJob)
-        auto const& lightData = mCurrentViewCache->lightData;
+        auto const& lightData = mSceneCache->lightData;
 
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
@@ -892,7 +899,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
-        scene->prepareVisibleRenderables(merged, *mCurrentViewCache);
+        scene->prepareVisibleRenderables(merged, *mSceneCache);
 
         // update those UBOs
         if (!merged.empty()) {
@@ -910,7 +917,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
     { // this must happen after mRenderableUbh is created/updated
         // prepare skinning, morphing and hybrid instancing
-        auto& sceneData = mCurrentViewCache->renderableData;
+        auto& sceneData = mSceneCache->renderableData;
         for (uint32_t const i : merged) {
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
@@ -1685,19 +1692,17 @@ float4 FView::getMaterialGlobal(uint32_t const index) const {
 }
 
 bool FView::hasContactShadows() const noexcept {
-    if (mCurrentViewCache) {
+    if (mSceneCache) {
         assert_invariant(mScene);
-        return mScene->hasContactShadows(*mCurrentViewCache);
+        return mScene->hasContactShadows(*mSceneCache);
     }
     return false;
 }
 
-void FView::invalidateCache(FScene* scene) const noexcept {
-    assert_invariant(scene);
-    if (mCurrentViewCache && mScene == scene) {
-        scene->unregisterView(this);
-        mCurrentViewCache = nullptr;
+void FView::detachScene(FScene const* scene) noexcept {
+    if (mScene == scene) {
         mScene = nullptr;
+        mSceneCache.reset();
     }
 }
 

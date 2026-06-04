@@ -104,12 +104,12 @@ public:
     ~FView() noexcept;
 
     FScene::RenderableSoa& getRenderableData() const noexcept {
-        assert_invariant(mCurrentViewCache);
-        return mCurrentViewCache->renderableData;
+        assert_invariant(mSceneCache);
+        return mSceneCache->renderableData;
     }
     FScene::LightSoa& getLightData() const noexcept {
-        assert_invariant(mCurrentViewCache);
-        return mCurrentViewCache->lightData;
+        assert_invariant(mSceneCache);
+        return mSceneCache->lightData;
     }
 
     void terminate(FEngine& engine);
@@ -127,7 +127,7 @@ public:
     FScene* getScene() noexcept { return mScene; }
 
     bool hasContactShadows() const noexcept;
-    void invalidateCache(FScene* scene) const noexcept;
+    void detachScene(FScene const* scene) noexcept;
 
     void setCullingCamera(FCamera* camera) noexcept { mCullingCamera = camera; }
     void setViewingCamera(FCamera* camera) noexcept { mViewingCamera = camera; }
@@ -590,8 +590,8 @@ private:
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
     DescriptorSet mCommonRenderableDescriptorSet;
 
-    mutable FScene* mScene = nullptr;
-    mutable FScene::SceneCacheData* mCurrentViewCache = nullptr;
+    FScene* mScene = nullptr;
+    std::unique_ptr<FScene::SceneCacheData> mSceneCache;
     // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
     // The optional (debug) camera, used only for viewing
