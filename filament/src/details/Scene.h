@@ -34,7 +34,7 @@
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
-#include <tsl/robin_set.h>
+#include <vector>
 
 #include <unordered_map>
 
@@ -220,9 +220,9 @@ private:
      * we store it here.
      */
     friend class FView;
-    SceneCacheData* registerView(FView const* view) noexcept;
-    void unregisterView(FView const* view) noexcept;
-    std::unordered_map<FView const*, std::unique_ptr<SceneCacheData>> mViewCaches;
+    void registerView(FView* view) noexcept;
+    void unregisterView(FView* view) noexcept;
+    std::vector<FView*> mRegisteredViews;
     EntitySet mEntities;
 };
 
