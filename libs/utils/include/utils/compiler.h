@@ -36,6 +36,17 @@
 #    define UTILS_PUBLIC
 #endif
 
+// UTILS_SHARED_LINKING marks symbols that need default visibility only when
+// Filament is consumed as a shared/dynamic library. Unlike UTILS_PUBLIC,
+// which denotes the intentional public API surface, these symbols are
+// implementation details that must be visible across shared-library
+// boundaries.
+#if __has_attribute(visibility)
+#    define UTILS_SHARED_LINKING __attribute__((visibility("default")))
+#else
+#    define UTILS_SHARED_LINKING
+#endif
+
 #if __has_attribute(deprecated)
 #   define UTILS_DEPRECATED [[deprecated]]
 #else
@@ -207,6 +218,66 @@
 #define UTILS_NONNULL
 #define UTILS_NULLABLE
 #endif
+
+#if defined(__clang__) && !defined(SWIG)
+// We only enable Clang thread safety annotations if standard std::mutex annotations
+// are manually activated via the _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS define,
+// AND multi-threading is enabled (UTILS_HAS_THREADING is not 0).
+// This prevents compile failures on single-threaded targets or builds where standard
+// annotations are disabled by default in the platform's standard library headers.
+#if defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && UTILS_HAS_THREADING
+#define UTILS_THREAD_ANNOTATION_ATTRIBUTE(x)   __attribute__((x))
+#else
+#define UTILS_THREAD_ANNOTATION_ATTRIBUTE(x)
+#endif
+#else
+#define UTILS_THREAD_ANNOTATION_ATTRIBUTE(x)
+#endif
+
+#define UTILS_CAPABILITY(x) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(capability(x))
+
+#define UTILS_SCOPED_CAPABILITY \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(scoped_lockable)
+
+#define UTILS_GUARDED_BY(x) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(guarded_by(x))
+
+#define UTILS_PT_GUARDED_BY(x) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(pt_guarded_by(x))
+
+#define UTILS_ACQUIRED_BEFORE(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquired_before(__VA_ARGS__))
+
+#define UTILS_ACQUIRED_AFTER(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquired_after(__VA_ARGS__))
+
+#define UTILS_REQUIRES(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(requires_capability(__VA_ARGS__))
+
+#define UTILS_REQUIRES_SHARED(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(requires_shared_capability(__VA_ARGS__))
+
+#define UTILS_ACQUIRE(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquire_capability(__VA_ARGS__))
+
+#define UTILS_ACQUIRE_SHARED(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquire_shared_capability(__VA_ARGS__))
+
+#define UTILS_RELEASE(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(release_capability(__VA_ARGS__))
+
+#define UTILS_RELEASE_SHARED(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(release_shared_capability(__VA_ARGS__))
+
+#define UTILS_EXCLUDES(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(excludes_capability(__VA_ARGS__))
+
+#define UTILS_RETURN_CAPABILITY(x) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(lock_returned(x))
+
+#define UTILS_NO_THREAD_SAFETY_ANALYSIS \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(no_thread_safety_analysis)
 
 #if defined(_MSC_VER)
 // MSVC does not support loop unrolling hints

@@ -63,7 +63,7 @@ void Virtualizer::baz() noexcept {
 static void BM_call_local(benchmark::State& state) {
     PerformanceCounters pc(state);
 #pragma unroll(REPEAT)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         foo();
     }
 }
@@ -71,7 +71,7 @@ static void BM_call_local(benchmark::State& state) {
 static void BM_call_library(benchmark::State& state) {
     PerformanceCounters pc(state);
 #pragma unroll(REPEAT)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         bar();
     }
 }
@@ -86,7 +86,7 @@ static void BM_call_virtual(benchmark::State& state) {
 
     PerformanceCounters pc(state);
 #pragma unroll(REPEAT)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         v->baz();
     }
 }
@@ -101,7 +101,7 @@ static void BM_call_virtual_no_unroll(benchmark::State& state) {
 
     PerformanceCounters pc(state);
 #pragma unroll(8)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         v->baz();
     }
 }
@@ -117,7 +117,7 @@ static void BM_call_virtual_trampoline(benchmark::State& state) {
 
     PerformanceCounters pc(state);
 #pragma unroll(REPEAT)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         v->bazz();
     }
 }
@@ -128,7 +128,7 @@ static void BM_call_function_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(pfn);
     PerformanceCounters pc(state);
 #pragma unroll(REPEAT)
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         pfn();
     }
 }

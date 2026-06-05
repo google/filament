@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,14 +61,16 @@
     #include <vulkan/vulkan.h>
 #endif
 
+
+#include <utils/compiler.h>
 #include <utils/unwindows.h>
 
 namespace bluevk {
 
     // Returns false if BlueGL could not find the Vulkan shared library.
-    bool initialize();
+    UTILS_SHARED_LINKING bool initialize();
 
-    void bindInstance(VkInstance instance);
+    UTILS_SHARED_LINKING void bindInstance(VkInstance instance);
 
 #if defined(VK_VERSION_1_0)
 extern PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;

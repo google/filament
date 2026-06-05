@@ -114,11 +114,10 @@ public:
         duration_ns compositeInterval;
 
         /**
-         * The timestamp [ns] since epoch of the next time the compositor will begin composition.
-         * This is effectively the deadline for when the compositor must receive a newly queued
-         * frame.
+         * The time delta [ns] between the start of composition and the next time the compositor will begin composition.
+         * This is effectively the deadline for when the compositor must receive a newly queued frame.
          */
-        time_point_ns compositeDeadline;
+        duration_ns compositeDeadlineLatency;
 
         /**
          * The time delta [ns] between the start of composition and the expected present time of
@@ -634,10 +633,10 @@ public:
     void debugUpdateStat(const char* UTILS_NONNULL key, utils::CString stringValue);
 
 private:
-    std::shared_ptr<InsertBlobFunc> mInsertBlob;
-    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob;
-    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat;
     mutable utils::Mutex mMutex;
+    std::shared_ptr<InsertBlobFunc> mInsertBlob UTILS_GUARDED_BY(mMutex);
+    std::shared_ptr<RetrieveBlobFunc> mRetrieveBlob UTILS_GUARDED_BY(mMutex);
+    std::shared_ptr<DebugUpdateStatFunc> mDebugUpdateStat UTILS_GUARDED_BY(mMutex);
 };
 
 } // namespace filament

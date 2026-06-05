@@ -40,6 +40,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PagedArenaBitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PagedArenaBitsetPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Panic.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
@@ -94,6 +95,7 @@ set(SRCS
         src/ThreadUtils.cpp
         src/Status.cpp
         src/PagedArenaBitset.cpp
+        src/PagedArenaBitsetPool.cpp
 )
 
 if (WIN32)
@@ -162,6 +164,10 @@ if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${TARGET} PRIVATE -Wthread-safety)
+endif()
+
 # ==================================================================================================
 # Installation
 # ==================================================================================================
@@ -184,6 +190,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Allocators.cpp
             test/test_bitset.cpp
             test/test_EntitySet.cpp
+            test/test_PagedArenaBitsetPool.cpp
             test/test_tribool.cpp
             test/test_CountDownLatch.cpp
             test/test_CString.cpp

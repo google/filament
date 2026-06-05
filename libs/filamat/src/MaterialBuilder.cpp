@@ -1512,10 +1512,10 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             }
             auto const& samplerList = info.sib.getSamplerInfoList();
             using SamplerInfo = SamplerInterfaceBlock::SamplerInfo;
-            if (std::ranges::any_of(samplerList,
-                    [](const SamplerInfo& sampler) {
-                        return sampler.type == SamplerType::SAMPLER_CUBEMAP_ARRAY;
-                    })) {
+            // TODO: can be replaced with std::ranges once client fully supports c++20
+            if (std::any_of(samplerList.begin(), samplerList.end(), [](const SamplerInfo& sampler) {
+                    return sampler.type == SamplerType::SAMPLER_CUBEMAP_ARRAY;
+                })) {
                 LOG(ERROR) << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
                        << " and uses a samplerCubemapArray.";

@@ -386,7 +386,10 @@ void PlatformEGL::createContext(bool const shared) {
 
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, context);
 
-    mAdditionalContexts.push_back(context);
+    {
+        utils::LockGuard const lock(mAdditionalContextsLock);
+        mAdditionalContexts.push_back(context);
+    }
 }
 
 void PlatformEGL::releaseContext() noexcept {
@@ -396,11 +399,14 @@ void PlatformEGL::releaseContext() noexcept {
         eglDestroyContext(mEGLDisplay, context);
     }
 
-    mAdditionalContexts.erase(
-            std::remove_if(mAdditionalContexts.begin(), mAdditionalContexts.end(),
-                    [context](EGLContext const c) {
-                        return c == context;
-                    }), mAdditionalContexts.end());
+    {
+        utils::LockGuard const lock(mAdditionalContextsLock);
+        mAdditionalContexts.erase(
+                std::remove_if(mAdditionalContexts.begin(), mAdditionalContexts.end(),
+                        [context](EGLContext const c) {
+                            return c == context;
+                        }), mAdditionalContexts.end());
+    }
 
     eglReleaseThread();
 }
@@ -415,7 +421,12 @@ void PlatformEGL::terminate() noexcept {
     if (mEGLContextProtected != EGL_NO_CONTEXT) {
         eglDestroyContext(mEGLDisplay, mEGLContextProtected);
     }
-    for (auto const context : mAdditionalContexts) {
+    std::vector<EGLContext> additionalContexts;
+    {
+        utils::LockGuard const lock(mAdditionalContextsLock);
+        additionalContexts.swap(mAdditionalContexts);
+    }
+    for (auto const context : additionalContexts) {
         eglDestroyContext(mEGLDisplay, context);
     }
     eglTerminate(mEGLDisplay);

@@ -149,6 +149,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
     for (int i = 0; i < SHARED_CONTEXT_NUM; ++i) {
         HGLRC context = wglCreateContextAttribs(mWhdc, mContext, mAttribs.data());
         if (context) {
+            utils::LockGuard const lock(mAdditionalContextsLock);
             mAdditionalContexts.push_back(context);
         }
     }
@@ -187,7 +188,11 @@ void PlatformWGL::createContext(bool shared) {
     FILAMENT_CHECK_PRECONDITION(nextIndex < SHARED_CONTEXT_NUM)
             << "Shared context index out of range. Increase SHARED_CONTEXT_NUM.";
 
-    HGLRC context = mAdditionalContexts[nextIndex];
+    HGLRC context;
+    {
+        utils::LockGuard const lock(mAdditionalContextsLock);
+        context = mAdditionalContexts[nextIndex];
+    }
     BOOL result = wglMakeCurrent(mWhdc, context);
     FILAMENT_CHECK_POSTCONDITION(result) << "Failed to make current.";
 }
@@ -198,8 +203,13 @@ void PlatformWGL::terminate() noexcept {
         wglDeleteContext(mContext);
         mContext = NULL;
     }
-    for (auto& context : mAdditionalContexts) {
-        wglDeleteContext(mContext);
+    std::vector<HGLRC> additionalContexts;
+    {
+        utils::LockGuard const lock(mAdditionalContextsLock);
+        additionalContexts.swap(mAdditionalContexts);
+    }
+    for (auto& context : additionalContexts) {
+        wglDeleteContext(context);
     }
     if (mHWnd && mWhdc) {
         ReleaseDC(mHWnd, mWhdc);

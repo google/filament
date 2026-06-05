@@ -17,11 +17,11 @@
 #ifndef TNT_FILAMENT_SAMPLE_CONFIG_H
 #define TNT_FILAMENT_SAMPLE_CONFIG_H
 
-#include <string>
-
 #include <filament/Engine.h>
 
 #include <camutils/Manipulator.h>
+
+#include <string>
 
 struct Config {
     std::string title;
@@ -46,6 +46,9 @@ struct Config {
     using WebGPUBackend = filament::Engine::Backend;
     // Force a backend for webgpu.
     WebGPUBackend forcedWebGPUBackend = WebGPUBackend::DEFAULT;
+
+    enum class DisplayManager { SDL, WEB };
+    DisplayManager displayManager = DisplayManager::SDL;
 
     // Asynchronous mode for Engine
     filament::backend::AsynchronousMode asynchronousMode = filament::backend::AsynchronousMode::NONE;

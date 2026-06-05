@@ -17,18 +17,20 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
-#include <backend/platforms/PlatformCocoaGL.h>
+#include "CocoaExternalImage.h"
 
 #include "opengl/gl_headers.h"
 
+#include <backend/platforms/PlatformCocoaGL.h>
+
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
-#include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
+#include <OpenGL/OpenGL.h>
 
 #include <vector>
-#include "CocoaExternalImage.h"
 
 namespace filament::backend {
 
@@ -50,7 +52,8 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
-    std::vector<NSOpenGLContext*> mAdditionalContexts;
+    mutable utils::Mutex mAdditionalContextsLock;
+    std::vector<NSOpenGLContext*> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
     std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
@@ -203,7 +206,10 @@ void PlatformCocoaGL::createContext(bool shared) {
     assert_invariant(pixelFormat);
     NSOpenGLContext* const nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:sharedContext];
     [nsOpenGLContext makeCurrentContext];
-    pImpl->mAdditionalContexts.push_back(nsOpenGLContext);
+    {
+        utils::LockGuard const lock(pImpl->mAdditionalContextsLock);
+        pImpl->mAdditionalContexts.push_back(nsOpenGLContext);
+    }
 }
 
 int PlatformCocoaGL::getOSVersion() const noexcept {
@@ -214,7 +220,12 @@ void PlatformCocoaGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
     pImpl->mExternalImageSharedGl.reset();
     pImpl->mGLContext = nil;
-    for (auto& context : pImpl->mAdditionalContexts) {
+    std::vector<NSOpenGLContext*> additionalContexts;
+    {
+        utils::LockGuard const lock(pImpl->mAdditionalContextsLock);
+        additionalContexts.swap(pImpl->mAdditionalContexts);
+    }
+    for (auto& context : additionalContexts) {
         context = nil;
     }
     bluegl::unbind();

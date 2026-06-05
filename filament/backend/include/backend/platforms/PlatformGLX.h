@@ -36,7 +36,7 @@ namespace filament::backend {
 /**
  * A concrete implementation of OpenGLPlatform that supports GLX.
  */
-class PlatformGLX : public OpenGLPlatform {
+class UTILS_SHARED_LINKING PlatformGLX : public OpenGLPlatform {
 protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface

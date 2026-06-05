@@ -44,6 +44,7 @@
 
 #include <filament/Camera.h>
 #include <filament/Fence.h>
+#include <filament/FrameHistoryStream.h>
 #include <filament/Options.h>
 #include <filament/Renderer.h>
 
@@ -96,6 +97,9 @@ FRenderer::FRenderer(FEngine& engine) :
         mFrameSkipper(),
         mRenderTargetHandle(engine.getDefaultRenderTarget()),
         mFrameInfoManager(engine, engine.getDriverApi()),
+#if FILAMENT_LOG_FRAME_INFO
+        mFrameHistoryStream(this),
+#endif
         mHdrTranslucent(TextureFormat::RGBA16F),
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
@@ -288,7 +292,6 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
             "skipFrame() can't be called between beginFrame() and endFrame()";
 
     if (!vsyncSteadyClockTimeNano) {
-        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
         mVsyncSteadyClockTimeNano = 0;
     }
 
@@ -375,6 +378,29 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
         return false;
     }
+
+#if FILAMENT_LOG_FRAME_INFO
+    for (auto fi : mFrameHistoryStream.getNewFrames()) {
+        if (fi) {
+            LOG(INFO)
+                    << fi->frameId << ", "
+                    << fi->vsync << ", "
+                    << fi->displayPresentInterval << ", "
+                    << fi->gpuFrameDuration << ", "
+                    << (fi->beginFrame - fi->vsync) << ", "
+                    << (fi->endFrame - fi->vsync) << ", "
+                    << (fi->backendBeginFrame - fi->vsync) << ", "
+                    << (fi->backendEndFrame - fi->vsync) << ", "
+                    << (fi->gpuFrameComplete - fi->vsync) << ", "
+                    << ((fi->displayPresent > 0) ? (fi->displayPresent - fi->vsync) : -1) << ", "
+                    << ((fi->presentDeadline > 0) ? (fi->presentDeadline - fi->vsync) : -1) << ", "
+                    << ((fi->expectedPresentLatency > 0) ? (fi->expectedPresentLatency) : -1)
+                    ;
+        } else {
+            LOG(INFO) << fi.getMissingId();
+        }
+    }
+#endif
 
     mEngine.propagateBackendException();
 

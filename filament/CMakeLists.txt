@@ -35,6 +35,7 @@ set(PUBLIC_HDRS
         include/filament/RenderTarget.h
         include/filament/RenderableManager.h
         include/filament/Renderer.h
+        include/filament/FrameHistoryStream.h
         include/filament/Scene.h
         include/filament/SkinningBuffer.h
         include/filament/Skybox.h
@@ -802,6 +803,10 @@ target_compile_options(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
         $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
 )
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${TARGET} PRIVATE -Wthread-safety)
+endif()
 
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>

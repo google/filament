@@ -22,6 +22,7 @@
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 
+#include "details/Camera.h"
 #include "details/Engine.h"
 #include "details/Skybox.h"
 #include "details/View.h"
@@ -412,9 +413,10 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, FScen
 }
 
 void FScene::terminate(FEngine&) {
-    while (!mViewCaches.empty()) {
-        mViewCaches.begin()->first->invalidateCache(this);
+    for (FView* view : mRegisteredViews) {
+        view->detachScene(this);
     }
+    mRegisteredViews.clear();
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera,
@@ -578,17 +580,20 @@ void FScene::setSkybox(FSkybox* skybox) noexcept {
     }
 }
 
-FScene::SceneCacheData* FScene::registerView(FView const* view) noexcept {
-    auto [it, inserted] = mViewCaches.try_emplace(view, nullptr);
-    assert_invariant(inserted);
-    if (inserted) {
-        it->second = std::make_unique<SceneCacheData>();
+void FScene::registerView(FView* view) noexcept {
+    auto it = std::find(mRegisteredViews.begin(), mRegisteredViews.end(), view);
+    assert_invariant(it == mRegisteredViews.end());
+    if (it == mRegisteredViews.end()) {
+        mRegisteredViews.push_back(view);
     }
-    return it->second.get();
 }
 
-void FScene::unregisterView(FView const* view) noexcept {
-    mViewCaches.erase(view);
+void FScene::unregisterView(FView* view) noexcept {
+    auto it = std::find(mRegisteredViews.begin(), mRegisteredViews.end(), view);
+    assert_invariant(it != mRegisteredViews.end());
+    if (it != mRegisteredViews.end()) {
+        mRegisteredViews.erase(it);
+    }
 }
 
 UTILS_NOINLINE

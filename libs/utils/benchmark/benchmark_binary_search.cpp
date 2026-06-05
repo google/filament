@@ -68,7 +68,7 @@ BENCHMARK_DEFINE_F(BinarySearch, linearSearch)(benchmark::State& state) {
 
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (auto _ UTILS_UNUSED: state) {
             auto item = ip[i++ % state.range(0)];
             auto const& pos = std::find(first, last, item);
             benchmark::DoNotOptimize(pos);
@@ -85,7 +85,7 @@ BENCHMARK_DEFINE_F(BinarySearch, stdLowerBound)(benchmark::State& state) {
 
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (auto _ UTILS_UNUSED: state) {
             auto item = ip[i++ % state.range(0)];
             auto const& pos = std::lower_bound(first, last, item);
             benchmark::DoNotOptimize(pos);

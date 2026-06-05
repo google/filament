@@ -52,7 +52,7 @@ private:
     JNIEnv* getEnvironmentSlow();
 
     static utils::Mutex sLock;
-    static JavaVM* sVirtualMachine;
+    static JavaVM* sVirtualMachine UTILS_GUARDED_BY(sLock);
     static JavaVM* getVirtualMachine();
 
     JNIEnv* mJniEnv = nullptr;

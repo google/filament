@@ -17,7 +17,10 @@
 #ifndef TNT_FILAMENT_BACKEND_ANDROIDFRAMECALLBACK_H
 #define TNT_FILAMENT_BACKEND_ANDROIDFRAMECALLBACK_H
 
+#include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
+#include <utils/CountDownLatch.h>
+#include <utils/Mutex.h>
 
 #include <android/choreographer.h>
 #include <android/looper.h>
@@ -39,6 +42,7 @@ public:
     struct Timeline {
         using timepoint_ns = int64_t;
         static constexpr timepoint_ns INVALID = -1;
+        int64_t frameId{ INVALID };
         timepoint_ns frameTime{ INVALID };
         timepoint_ns expectedPresentTime{ INVALID };
         timepoint_ns frameTimelineDeadline{ INVALID };
@@ -73,8 +77,8 @@ private:
         static_cast<AndroidFrameCallback*>(data)->vsyncCallback(callbackData);
     }
 
-    mutable std::mutex mLock;
-    Timeline mPreferredTimeline{};
+    mutable utils::Mutex mLock;
+    Timeline mPreferredTimeline UTILS_GUARDED_BY(mLock){};
 };
 
 } // namespace filament::backend

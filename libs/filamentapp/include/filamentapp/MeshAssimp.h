@@ -26,25 +26,27 @@ namespace filament {
     class Renderable;
 }
 
-#include <unordered_map>
-#include <map>
-#include <vector>
+#include <filament/Box.h>
+#include <filament/Color.h>
+#include <filament/Texture.h>
+#include <filament/TextureSampler.h>
+#include <filament/TransformManager.h>
+
+#include <filamat/MaterialBuilder.h>
+
+#include <utils/EntityManager.h>
+#include <utils/Path.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/quat.h>
 #include <math/vec3.h>
 
-#include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <filamat/MaterialBuilder.h>
-#include <filament/Color.h>
-#include <filament/Box.h>
-#include <filament/Texture.h>
-#include <filament/TextureSampler.h>
-#include <filament/TransformManager.h>
 #include <assimp/scene.h>
+
+#include <map>
+#include <unordered_map>
+#include <vector>
 
 class MeshAssimp {
 public:

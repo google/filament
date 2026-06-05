@@ -33,6 +33,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <utils/Mutex.h>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
@@ -265,7 +266,7 @@ struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
     };
 
     VulkanSync() {}
-    std::mutex lock;
+    utils::Mutex lock;
     std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 

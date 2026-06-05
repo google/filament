@@ -73,7 +73,7 @@ void main() {
 static const char* const triangleFs = R"(#version 450 core
 
 layout(push_constant) uniform Constants {
-#if defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     // offset here accounts for the size of the push constants in the vertex stage.  Vulkan has one
     // block of memory for all stages to share.
     layout(offset=16) float red;
@@ -113,7 +113,6 @@ void initPushConstants() {
 }
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
     // Test is flaky on CI (but does not repro locally).
 
     initPushConstants();

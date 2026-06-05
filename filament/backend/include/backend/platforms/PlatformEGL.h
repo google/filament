@@ -29,6 +29,7 @@
 #include <EGL/eglplatform.h>
 
 #include <initializer_list>
+#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -40,7 +41,7 @@ namespace filament::backend {
 /**
  * A concrete implementation of OpenGLPlatform that supports EGL.
  */
-class PlatformEGL : public OpenGLPlatform {
+class UTILS_SHARED_LINKING PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
@@ -216,7 +217,8 @@ private:
     // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
-    std::vector<EGLContext> mAdditionalContexts;
+    mutable utils::Mutex mAdditionalContextsLock;
+    std::vector<EGLContext> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     bool mMSAA4XSupport = false;
 
     class EGL {

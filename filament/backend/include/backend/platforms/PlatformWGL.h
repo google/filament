@@ -22,6 +22,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <utils/Mutex.h>
+
 #include <windows.h>
 
 #include <vector>
@@ -66,7 +68,8 @@ protected:
 
     // For shared contexts
     static constexpr int SHARED_CONTEXT_NUM = 2;
-    std::vector<HGLRC> mAdditionalContexts;
+    mutable utils::Mutex mAdditionalContextsLock;
+    std::vector<HGLRC> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     std::atomic<int> mNextFreeSharedContextIndex{0};
 };
 

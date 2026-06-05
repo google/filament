@@ -337,7 +337,7 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 if (slot.vertexBuffer) {
                     void* zeros = malloc(size);
                     if (!zeros) {
-                        slog.e << "Out of memory allocating zeroed vertex buffer." << io::endl;
+                        LOG(ERROR) << "Out of memory allocating zeroed vertex buffer.";
                         continue;
                     }
                     memset(zeros, 0, size);
@@ -356,7 +356,7 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                         const size_t size16 = count * sizeof(uint16_t);
                         void* zeros = malloc(size16);
                         if (!zeros) {
-                            slog.e << "Out of memory allocating zeroed index buffer." << io::endl;
+                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
                             continue;
                         }
                         memset(zeros, 0, size16);
@@ -365,7 +365,7 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     } else {
                         void* zeros = malloc(size);
                         if (!zeros) {
-                            slog.e << "Out of memory allocating zeroed index buffer." << io::endl;
+                            LOG(ERROR) << "Out of memory allocating zeroed index buffer.";
                             continue;
                         }
                         memset(zeros, 0, size);

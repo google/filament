@@ -187,7 +187,7 @@ bool PagedArenaBitset::operator[](uint32_t const index) const noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
-    uint32_t const dirIdx = index >> PAGE_SHIFT;
+    uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
     uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
     uint32_t const bitInMask = dirIdx & WORD_MASK;
 
@@ -204,7 +204,7 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
-    uint32_t const dirIdx = index >> PAGE_SHIFT;
+    uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
     uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
     uint32_t const bitInMask = dirIdx & WORD_MASK;
     bool const pageExists = (mSummaryMask[maskIdx] & (1ULL << bitInMask)) != 0;
@@ -239,7 +239,7 @@ bool PagedArenaBitset::fetchRemove(uint32_t const index) noexcept {
     assert(mSummaryMask.size() == MASK_WORDS && "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
-    uint32_t const dirIdx = index >> PAGE_SHIFT;
+    uint32_t const dirIdx = index >> FILAMENT_PAGE_SHIFT;
     uint32_t const maskIdx = dirIdx >> WORD_SHIFT;
     uint32_t const bitInMask = dirIdx & WORD_MASK;
 
@@ -611,7 +611,7 @@ void PagedArenaBitset::extractTo(std::vector<uint32_t>& outBuffer) const {
                     while (word) {
                         int const wBit = std::countr_zero(word);
                         word &= word - 1;
-                        outBuffer.push_back((dirIdx << PAGE_SHIFT) | (w << WORD_SHIFT) | wBit);
+                        outBuffer.push_back((dirIdx << FILAMENT_PAGE_SHIFT) | (w << WORD_SHIFT) | wBit);
                     }
                     activeMask &= (activeMask - 1);
                 }
@@ -758,6 +758,7 @@ PagedArenaBitset& PagedArenaBitset::intersectInternal(PagedArenaBitset* UTILS_RE
     }
 
     size_t const count = std::size(inputs);
+    assert(count > 0);
 
     // The Generic N-Way Loop
     for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
@@ -846,6 +847,7 @@ uint32_t PagedArenaBitset::intersectSizeInternal(const Collection& inputs) {
 
     uint32_t totalPop = 0;
     const size_t count = std::size(inputs);
+    assert(count > 0);
 
     for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
         uint64_t masterOverlap = inputs[0]->mMasterMask[m];

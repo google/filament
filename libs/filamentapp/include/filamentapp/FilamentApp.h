@@ -17,24 +17,22 @@
 #ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
-#include <SDL.h>
+#include "Config.h"
+#include "IBL.h"
 
 #include <filament/Engine.h>
 #include <filament/Viewport.h>
 
 #include <camutils/Manipulator.h>
 
-#include <utils/Path.h>
 #include <utils/Entity.h>
+#include <utils/Path.h>
 
-#include "Config.h"
-#include "IBL.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace filament {
 class Renderer;
@@ -60,6 +58,11 @@ class WebGPUPlatform;
 #endif
 
 }
+
+namespace filament::app {
+class DisplayManager;
+enum class AppKey : uint32_t;
+} // namespace filament::app
 
 class FilamentApp {
 public:
@@ -100,10 +103,15 @@ public:
 
     void close() { mClosed = true; }
 
-    void setSidebarWidth(int width) { mSidebarWidth = width; }
+    void setSidebarWidth(int width) { mCameraParams.sidebarWidth = width; }
     void setWindowTitle(const char* title) { mWindowTitle = title; }
-    void setCameraFocalLength(float focalLength) { mCameraFocalLength = focalLength; }
-    void setCameraNearFar(float near, float far) { mCameraNear = near; mCameraFar = far; }
+
+    void setCameraFocalLength(float focalLength) { mCameraParams.focalLength = focalLength; }
+
+    void setCameraNearFar(float near, float far) {
+        mCameraParams.near = near;
+        mCameraParams.far = far;
+    }
 
     void addOffscreenView(filament::View* view) { mOffscreenViews.push_back(view); }
 
@@ -139,7 +147,8 @@ private:
 
     using CameraManipulator = filament::camutils::Manipulator<float>;
 
-    static bool manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key);
+    static bool manipulatorKeyFromKeycode(filament::app::AppKey scancode,
+            CameraManipulator::Key& key);
 
     class CView {
     public:
@@ -155,8 +164,8 @@ private:
         virtual void mouseUp(ssize_t x, ssize_t y);
         virtual void mouseMoved(ssize_t x, ssize_t y);
         virtual void mouseWheel(ssize_t x);
-        virtual void keyDown(SDL_Scancode scancode);
-        virtual void keyUp(SDL_Scancode scancode);
+        virtual void keyDown(filament::app::AppKey scancode);
+        virtual void keyUp(filament::app::AppKey scancode);
 
         filament::View const* getView() const { return view; }
         filament::View* getView() { return view; }
@@ -180,37 +189,53 @@ private:
         void setGodCamera(filament::Camera* camera);
     };
 
+    struct WindowCameraParams {
+        int sidebarWidth = 0;
+        float focalLength = 28.0f;
+        float near = 0.1f;
+        float far = 100.0f;
+
+        bool operator==(WindowCameraParams const& params) const noexcept {
+            return sidebarWidth == params.sidebarWidth && focalLength == params.focalLength &&
+                   near == params.near && far == params.far;
+        }
+
+        bool operator!=(WindowCameraParams const& params) const noexcept {
+            return !(*this == params);
+        }
+    };
+
+public:
     class Window {
         friend class FilamentApp;
     public:
-        Window(FilamentApp* filamentApp, const Config& config,
-               std::string title, size_t w, size_t h);
+        using Handle = void*;
         virtual ~Window();
+
+    private:
+        Window(FilamentApp* filamentApp, const Config& config, std::string title,
+                WindowCameraParams const& cameraParams, size_t w, size_t h);
 
         void mouseDown(int button, ssize_t x, ssize_t y);
         void mouseUp(ssize_t x, ssize_t y);
         void mouseMoved(ssize_t x, ssize_t y);
         void mouseWheel(ssize_t x);
-        void keyDown(SDL_Scancode scancode);
-        void keyUp(SDL_Scancode scancode);
-        void resize();
+        void keyDown(filament::app::AppKey scancode);
+        void keyUp(filament::app::AppKey scancode);
+        void resize(WindowCameraParams const& cameraParams);
 
         filament::Renderer* getRenderer() { return mRenderer; }
         filament::SwapChain* getSwapChain() { return mSwapChain; }
 
-        SDL_Window* getSDLWindow() {
-            return mWindow;
-        }
-
-    private:
-        void configureCamerasForWindow();
+        void configureCamerasForWindow(WindowCameraParams const& camera);
         void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
 
-        FilamentApp* const mFilamentApp = nullptr;
+        filament::app::DisplayManager* const mDisplayManager = nullptr;
+        filament::Engine* const mEngine = nullptr;
         Config mConfig;
         const bool mIsHeadless;
 
-        SDL_Window* mWindow = nullptr;
+        Handle mWindow = nullptr;
         filament::Renderer* mRenderer = nullptr;
         filament::Engine::Backend mBackend;
 
@@ -239,11 +264,11 @@ private:
         CView* mMouseEventTarget = nullptr;
 
         // Keep track of which view should receive a key's keyUp event.
-        std::unordered_map<SDL_Scancode, CView*> mKeyEventTarget;
+        std::unordered_map<filament::app::AppKey, CView*> mKeyEventTarget;
     };
 
+private:
     friend class Window;
-    void initSDL();
 
     void loadIBL(const Config& config);
     void loadDirt(const Config& config);
@@ -253,7 +278,7 @@ private:
     std::unique_ptr<IBL> mIBL;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
-    uint64_t mTime = 0;
+    double mTime = 0;
 
     filament::Material const* mDefaultMaterial = nullptr;
     filament::Material const* mTransparentMaterial = nullptr;
@@ -263,27 +288,20 @@ private:
     AnimCallback mAnimation;
     ResizeCallback mResize;
     DropCallback mDropHandler;
-    int mSidebarWidth = 0;
     size_t mSkippedFrames = 0;
     std::string mWindowTitle;
     std::vector<filament::View*> mOffscreenViews;
-    float mCameraFocalLength = 28.0f;
-    float mCameraNear = 0.1f;
-    float mCameraFar = 100.0f;
+    WindowCameraParams mCameraParams{};
     bool mReconfigureCameras = false;
     uint8_t mFroxelInfoAge = 0x42;
     uint8_t mFroxelGridEnabled = 0;
     uint8_t mDirectionalShadowFrustumEnabled = 0x2;
     uint8_t mCameraFrustumEnabled = 0x2;
 
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;
-#endif
+    filament::app::DisplayManager* mDisplayManager = nullptr;
 
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    filament::backend::WebGPUPlatform* mWebGPUPlatform = nullptr;
-#endif
-
+    filament::backend::Platform* mVulkanPlatform = nullptr;
+    filament::backend::Platform* mWebGPUPlatform = nullptr;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

@@ -37,22 +37,33 @@ set(SRCS
         src/IcoSphere.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
+        src/PlatformHelper.cpp
+        src/PlatformHelper.h
         src/KeyInputConversion.h
+        src/DisplayManager.h
+        src/AppEvent.h
+        src/display_managers/SDLDisplayManager.h
+        src/display_managers/SDLDisplayManager.cpp
+        src/display_managers/HtmlDisplayManager.h
+        src/display_managers/HtmlDisplayManager.cpp
 )
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    list(APPEND SRCS src/VulkanPlatformHelper.cpp)
+    list(APPEND SRCS
+            src/backend_platforms/VulkanPlatformHelperCommon.h
+            src/backend_platforms/VulkanPlatformHelperCommon.cpp
+    )
 endif()
 
 set(LIBS
         assimp
         camutils
+        civetweb
         filagui
         filamat
         filament
         filament-iblprefilter
         geometry
-        
         image
         imageio
         imgui
@@ -71,25 +82,34 @@ set(MATERIAL_SRCS
 )
 
 if (APPLE)
-    list(APPEND SRCS src/NativeWindowHelperCocoa.mm)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperCocoa.mm)
     if (FILAMENT_SUPPORTS_VULKAN)
-        list(APPEND SRCS src/VulkanPlatformHelperApple.mm)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperApple.mm)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperApple.mm)
     endif()
     list(APPEND LIBS "-framework Cocoa -framework QuartzCore")
 endif()
 
 if (LINUX)
-    list(APPEND SRCS src/NativeWindowHelperLinux.cpp)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperLinux.cpp)
     if (FILAMENT_SUPPORTS_VULKAN)
-        list(APPEND SRCS src/VulkanPlatformHelperLinux.cpp)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperLinux.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperLinux.cpp)
     endif()
 endif()
 
 if (WIN32)
-    list(APPEND SRCS src/NativeWindowHelperWindows.cpp)
+    list(APPEND SRCS src/display_managers/NativeWindowHelperWindows.cpp)
 
     if (FILAMENT_SUPPORTS_VULKAN)
-        list(APPEND SRCS src/VulkanPlatformHelperWindows.cpp)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperWindows.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperWindows.cpp)
     endif()
 
     list(APPEND LIBS sdl2main)
@@ -97,7 +117,10 @@ endif()
 
 if (ANDROID)
     if (FILAMENT_SUPPORTS_VULKAN)
-        list(APPEND SRCS src/VulkanPlatformHelperAndroid.cpp)
+        list(APPEND SRCS src/backend_platforms/VulkanPlatformHelperAndroid.cpp)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND SRCS src/backend_platforms/WebGPUPlatformHelperAndroid.cpp)
     endif()
 endif()
 

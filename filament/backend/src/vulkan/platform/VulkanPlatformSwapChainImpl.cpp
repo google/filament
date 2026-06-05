@@ -362,9 +362,10 @@ bool VulkanPlatformSurfaceSwapChain::queryCompositorTiming(
 #ifdef __ANDROID__
     // fallback to private APIs
     if (UTILS_VERY_LIKELY(mNativeWindow)) {
+        CompositorTiming::duration_ns dummyCompositeDeadlineLatency;
         int const status = NativeWindow::getCompositorTiming(
                 static_cast<ANativeWindow*>(mNativeWindow),
-                &outCompositorTiming->compositeDeadline,
+                &dummyCompositeDeadlineLatency,
                 &outCompositorTiming->compositeInterval,
                 &outCompositorTiming->compositeToPresentLatency);
         if (status == 0) {

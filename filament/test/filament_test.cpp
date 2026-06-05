@@ -14,51 +14,56 @@
  * limitations under the License.
  */
 
-#include <array>
-#include <cmath>
-#include <cstring>
-#include <functional>
-#include <cstddef>
-#include <cstdint>
-#include <iostream>
-#include <limits>
-#include <random>
-#include <utility>
-#include <vector>
+#include "Allocators.h"
+#include "Froxelizer.h"
+#include "UniformBuffer.h"
 
-#include <gtest/gtest.h>
+#include "components/RenderableManager.h"
+#include "components/TransformManager.h"
 
+#include "details/Camera.h"
+#include "details/Engine.h"
+#include "details/View.h"
+
+#include <private/filament/BufferInterfaceBlock.h>
+
+#include <filament/Box.h>
+#include <filament/Camera.h>
+#include <filament/Color.h>
+#include <filament/ColorGrading.h>
+#include <filament/Engine.h>
+#include <filament/FrameHistoryStream.h>
+#include <filament/Frustum.h>
+#include <filament/Material.h>
+#include <filament/ToneMapper.h>
+
+#include <private/backend/BackendUtils.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/Slice.h>
+
+#include <math/half.h>
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/quat.h>
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/half.h>
 
-#include <filament/Box.h>
-#include <filament/Camera.h>
-#include <filament/Color.h>
-#include <filament/ColorGrading.h>
-#include <filament/Frustum.h>
-#include <filament/Material.h>
-#include <filament/Engine.h>
-#include <filament/ToneMapper.h>
+#include <gtest/gtest.h>
 
-#include <private/filament/BufferInterfaceBlock.h>
-#include <private/backend/BackendUtils.h>
-
-#include <utils/Slice.h>
-
-#include "Allocators.h"
-#include "backend/DriverEnums.h"
-#include "details/Camera.h"
-#include "Froxelizer.h"
-#include "details/Engine.h"
-#include "details/View.h"
-#include "components/RenderableManager.h"
-#include "components/TransformManager.h"
-#include "UniformBuffer.h"
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <random>
+#include <utility>
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;
@@ -1142,6 +1147,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1195,6 +1201,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1266,6 +1273,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutData {
         std::vector<uint32_t> pixels;
@@ -1327,6 +1335,7 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .backend(Engine::Backend::NOOP)
             .feature("engine.color_grading.use_optimized_default_builder", true)
             .build();
+    ASSERT_NE(engine, nullptr);
 
     struct LutDataHalf {
         std::vector<half> pixels;
@@ -1606,6 +1615,7 @@ TEST(FilamentTest, ColorGradingExportLutValidation) {
         .backend(Engine::Backend::NOOP)
         .feature("engine.color_grading.use_1d_lut", true)
         .build();
+    ASSERT_NE(engine, nullptr);
 
 
     struct LutMetadata {
@@ -1682,6 +1692,75 @@ TEST(FilamentTest, ColorGradingExportLutValidation) {
     engine->destroy(downcast(cg3DFloat));
     Engine* baseEngine = engine;
     Engine::destroy(&baseEngine);
+}
+
+TEST(FilamentTest, FrameHistoryStreamTest) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    Renderer* renderer = engine->createRenderer();
+    SwapChain* swapChain = engine->createSwapChain(100, 100);
+
+    FrameHistoryStream logger(renderer);
+
+    for (int i = 0; i < 5; ++i) {
+        if (renderer->beginFrame(swapChain, (i + 1) * 16666666)) {
+            renderer->endFrame();
+        }
+        engine->flushAndWait();
+    }
+
+    size_t count = 0;
+    for (auto fi : logger.getNewFrames()) {
+        if (fi) {
+            EXPECT_GT(fi.getFrameId(), 0u);
+            EXPECT_EQ(fi->frameId, fi.getFrameId());
+            count++;
+        } else {
+            FAIL() << "Unexpected missing frame: " << fi.getMissingId();
+        }
+    }
+
+    EXPECT_EQ(count, 4u);
+
+    size_t count2 = 0;
+    for (auto fi : logger.getNewFrames()) {
+        (void)fi;
+        count2++;
+    }
+    EXPECT_EQ(count2, 0u);
+
+    renderer->skipFrame((6 + 1) * 16666666);
+    engine->flushAndWait();
+
+    if (renderer->beginFrame(swapChain, (7 + 1) * 16666666)) {
+        renderer->endFrame();
+    }
+    engine->flushAndWait();
+
+    renderer->skipFrame();
+    engine->flushAndWait();
+
+    size_t validCount = 0;
+    size_t missingCount = 0;
+    uint32_t missingId = 0;
+    uint32_t validId = 0;
+    for (auto fi : logger.getNewFrames()) {
+        if (fi) {
+            validCount++;
+            validId = fi.getFrameId();
+        } else {
+            missingCount++;
+            missingId = fi.getMissingId();
+        }
+    }
+
+    EXPECT_EQ(validCount, 2u);
+    EXPECT_EQ(missingCount, 1u);
+    EXPECT_EQ(missingId, 7u);
+    EXPECT_EQ(validId, 8u);
+
+    engine->destroy(swapChain);
+    engine->destroy(renderer);
+    Engine::destroy(&engine);
 }
 
 int main(int argc, char** argv) {

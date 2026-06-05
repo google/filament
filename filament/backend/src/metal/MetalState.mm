@@ -197,14 +197,14 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
         MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
         textureArgument.index = i++;
         textureArgument.dataType = MTLDataTypeTexture;
-        textureArgument.textureType = textureTypes[i];
+        textureArgument.textureType = textureTypes[j];
         textureArgument.access = MTLArgumentAccessReadOnly;
         [arguments addObject:textureArgument];
 
         MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
         samplerArgument.index = i++;
         samplerArgument.dataType = MTLDataTypeSampler;
-        textureArgument.access = MTLArgumentAccessReadOnly;
+        samplerArgument.access = MTLArgumentAccessReadOnly;
         [arguments addObject:samplerArgument];
     }
 
@@ -213,7 +213,7 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
 
 template <NSUInteger N, ShaderStage stage>
 void MetalBufferBindings<N, stage>::setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index) {
-    assert_invariant(offset + 1 <= N);
+    assert_invariant(index < N);
 
     if (mBuffers[index] != buffer) {
         mBuffers[index] = buffer;
