@@ -28,7 +28,6 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/debug.h>
 #include <utils/Panic.h>
-
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
