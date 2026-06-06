@@ -19,3 +19,6 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 *   [skills/filament_build_clean/SKILL.md](skills/filament_build_clean/SKILL.md): Clean commands, debug desktop compilation, and release desktop compilation protocols.
 *   [skills/filament_desktop_testing/SKILL.md](skills/filament_desktop_testing/SKILL.md): Instructions for executing and filtering tests and benchmarks on desktop.
 *   [skills/filament_android_development/SKILL.md](skills/filament_android_development/SKILL.md): Android development, compilation with Perfetto, binary deployment, shell invocation, and formatted benchmarking.
+
+### 3. Cross-Platform Language Bindings
+*   [skills/bindings_synchronization/SKILL.md](skills/bindings_synchronization/SKILL.md): Synchronization guidelines for Java/JNI (Android) and JavaScript/TypeScript (Web/WASM) when public C++ APIs change.
