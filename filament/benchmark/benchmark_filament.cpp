@@ -23,11 +23,10 @@
 #include <filament/Frustum.h>
 #include <filament/ToneMapper.h>
 
-#include <utils/Allocator.h>
-#include <utils/FixedCapacityVector.h>
-#include <utils/compiler.h>
-
 #include <benchmark/benchmark.h>
+#include <utils/Allocator.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <random>
 #include <vector>

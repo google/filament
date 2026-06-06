@@ -19,11 +19,10 @@
 
 #include <filament/Frustum.h>
 
-#include <utils/compiler.h>
-#include <utils/Slice.h>
-
 #include <math/vec2.h>
 #include <math/vec4.h>
+#include <utils/compiler.h>
+#include <utils/Slice.h>
 
 namespace filament {
 

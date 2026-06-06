@@ -32,8 +32,6 @@
  * this explicit rather than mysterious.
  */
 
-#include <filameshio/MeshReader.h>
-
 #include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
@@ -56,16 +54,12 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
-#include <geometry/SurfaceOrientation.h>
-
-#include <viewer/AutomationEngine.h>
-#include <viewer/AutomationSpec.h>
-#include <viewer/Settings.h>
-#include <viewer/ViewerGui.h>
-
 #include <camutils/Bookmark.h>
 #include <camutils/Manipulator.h>
-
+#include <emscripten.h>
+#include <emscripten/bind.h>
+#include <filameshio/MeshReader.h>
+#include <geometry/SurfaceOrientation.h>
 #include <gltfio/Animator.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -73,25 +67,21 @@
 #include <gltfio/MaterialProvider.h>
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
-
-#include <materials/uberarchive.h>
-
 #include <ktxreader/Ktx1Reader.h>
 #include <ktxreader/Ktx2Reader.h>
-
+#include <materials/uberarchive.h>
+#include <math/mat4.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/mat4.h>
-
-#include <utils/EntityManager.h>
-#include <utils/NameComponentManager.h>
-#include <utils/Log.h>
-
 #include <stb_image.h>
-
-#include <emscripten.h>
-#include <emscripten/bind.h>
+#include <utils/EntityManager.h>
+#include <utils/Log.h>
+#include <utils/NameComponentManager.h>
+#include <viewer/AutomationEngine.h>
+#include <viewer/AutomationSpec.h>
+#include <viewer/Settings.h>
+#include <viewer/ViewerGui.h>
 
 // Avoid warnings for deprecated Filament APIs.
 #pragma clang diagnostic push

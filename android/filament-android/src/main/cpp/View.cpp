@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <jni.h>
+#include "common/CallbackUtils.h"
 
 #include <filament/Color.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
-#include "common/CallbackUtils.h"
-#include <common/JniUtils.h>
+#include <private/backend/VirtualMachineEnv.h>
 
-#include "private/backend/VirtualMachineEnv.h"
+#include <common/JniUtils.h>
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::android;
