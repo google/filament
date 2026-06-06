@@ -93,6 +93,12 @@ Java_com_google_android_filament_View_nSetShadowingEnabled(JNIEnv*, jclass, jlon
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetTighterShadowCasterCullingEnabled(JNIEnv*, jclass, jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setTighterShadowCasterCullingEnabled(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
         jlong nativeView, jlong nativeTarget) {
     View* view = (View*) nativeView;
@@ -466,6 +472,13 @@ JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsShadowingEnabled(JNIEnv *, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isShadowingEnabled();
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsTighterShadowCasterCullingEnabled(JNIEnv *, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->isTighterShadowCasterCullingEnabled();
 }
 
 extern "C" JNIEXPORT void JNICALL

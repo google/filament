@@ -389,6 +389,29 @@ public class View {
     }
 
     /**
+     * Enables or disables tighter shadow caster culling for shadow maps. Disabled by default.
+     * This can improve performance by culling shadow casters more aggressively against the view frustum silhouette.
+     *
+     * <p><b>Warning:</b> We discourage enabling this option when using advanced shadow filtering
+     * techniques such as Variance Shadow Maps (VSM), DPCF, PCSS, or shadow mipmapping. Because these
+     * filtering techniques sample across wide spatial regions or large blur kernels, shadow casters
+     * physically outside the unblurred view silhouette volume may contribute soft shadow penumbras inside
+     * the visible screen boundary. Culling them can introduce shadow boundary/edge clipping artifacts.</p>
+     *
+     * @param enabled true enables tighter shadow caster culling, false disables it.
+     */
+    public void setTighterShadowCasterCullingEnabled(boolean enabled) {
+        nSetTighterShadowCasterCullingEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * @return whether tighter shadow caster culling is enabled
+     */
+    public boolean isTighterShadowCasterCullingEnabled() {
+        return nIsTighterShadowCasterCullingEnabled(getNativeObject());
+    }
+
+    /**
      * Enables or disables frustum culling. Enabled by default.
      *
      * @param enabled true enables frustum culling, false disables it.
@@ -1431,6 +1454,8 @@ public class View {
     private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
     private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
+    private static native void nSetTighterShadowCasterCullingEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsTighterShadowCasterCullingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
     private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
