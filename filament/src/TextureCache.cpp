@@ -140,6 +140,7 @@ TextureCache::TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
 }
 
 TextureCache::~TextureCache() noexcept {
+    mDisposer->removeTextureCache(this);
     assert_invariant(mTextureCache.empty());
 }
 
@@ -231,7 +232,7 @@ TextureHandle TextureCache::createTexture(StaticString const name,
             handle = swizzledHandle;
         }
     }
-    mDisposer->checkout(handle, key);
+    mDisposer->checkout(this, handle, key);
     return handle;
 }
 
@@ -247,10 +248,6 @@ void TextureCache::destroyTexture(TextureHandle const h) noexcept {
     } else {
         mBackend.destroyTexture(h);
     }
-}
-
-TextureCacheDisposerInterface& TextureCache::getDisposer() noexcept {
-    return *mDisposer;
 }
 
 void TextureCache::gc(bool const skippedFrame) noexcept {
@@ -372,15 +369,22 @@ void TextureCacheDisposer::terminate() noexcept {
 
 void TextureCacheDisposer::destroy(TextureHandle const handle) noexcept {
     if (handle) {
-        auto r = checkin(handle);
-        if (r.has_value()) {
+        auto it = mInUseTextures.find(handle);
+        if (it != mInUseTextures.end()) {
+            if (it->second.cache) {
+                it->second.cache->destroyTexture(handle);
+            } else {
+                mBackend.destroyTexture(handle);
+                mInUseTextures.erase(it);
+            }
+        } else {
             mBackend.destroyTexture(handle);
         }
     }
 }
 
-void TextureCacheDisposer::checkout(TextureHandle handle, TextureCache::TextureKey key) {
-    mInUseTextures.emplace(handle, key);
+void TextureCacheDisposer::checkout(TextureCacheInterface* cache, TextureHandle handle, TextureCache::TextureKey key) {
+    mInUseTextures.emplace(handle, InUseRecord{key, cache});
 }
 
 std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(TextureHandle handle) {
@@ -390,10 +394,18 @@ std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(TextureHan
     if (it == mInUseTextures.end()) {
         return std::nullopt;
     }
-    TextureKey const key = it->second;
+    TextureKey const key = it->second.key;
     // remove it from the in-use list
     mInUseTextures.erase(it);
     return key;
+}
+
+void TextureCacheDisposer::removeTextureCache(TextureCacheInterface* cache) noexcept {
+    for (auto& entry : mInUseTextures) {
+        if (entry.second.cache == cache) {
+            entry.second.cache = nullptr;
+        }
+    }
 }
 
 void TextureCache::Debugger::recordEviction(TextureKey const& key,
