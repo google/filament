@@ -24,7 +24,6 @@
 #include <bluevk/BlueVK.h>
 
 #include <utils/compiler.h>
-
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
