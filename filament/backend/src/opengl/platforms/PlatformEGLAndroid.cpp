@@ -623,7 +623,7 @@ Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
     } else {
         LOG(WARNING) << "Native fences not supported on this device.";
     }
-    return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
+    return new(std::nothrow) SyncEGLAndroid(sync);
 }
 
 bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {

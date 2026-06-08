@@ -109,6 +109,8 @@ protected:
     // OpenGLPlatform Interface
 
     struct SyncEGLAndroid : public Sync {
+        explicit SyncEGLAndroid(EGLSyncKHR sync) noexcept
+            : sync(sync) {}
         EGLSyncKHR sync;
     };
 
