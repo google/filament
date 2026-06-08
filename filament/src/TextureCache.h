@@ -52,6 +52,7 @@ class TextureCacheInterface;
 class TextureCacheDisposerInterface {
 public:
     virtual void destroy(backend::TextureHandle handle) noexcept = 0;
+    virtual void removeTextureCache(TextureCacheInterface* cache) noexcept = 0;
 protected:
     virtual ~TextureCacheDisposerInterface();
 };
@@ -77,8 +78,6 @@ public:
             backend::TextureUsage usage) noexcept = 0;
 
     virtual void destroyTexture(backend::TextureHandle h) noexcept = 0;
-
-    virtual TextureCacheDisposerInterface& getDisposer() noexcept = 0;
 
 protected:
     virtual ~TextureCacheInterface();
@@ -121,8 +120,6 @@ public:
             backend::TextureUsage usage) noexcept override;
 
     void destroyTexture(backend::TextureHandle h) noexcept override;
-
-    TextureCacheDisposerInterface& getDisposer() noexcept override;
 
     void gc(bool skippedFrame = false) noexcept;
 
@@ -281,13 +278,18 @@ public:
     ~TextureCacheDisposer() noexcept override;
     void terminate() noexcept;
     void destroy(backend::TextureHandle handle) noexcept override;
+    void removeTextureCache(TextureCacheInterface* cache) noexcept override;
 
 private:
     friend class TextureCache;
-    void checkout(backend::TextureHandle handle, TextureKey key);
+    void checkout(TextureCacheInterface* cache, backend::TextureHandle handle, TextureKey key);
     std::optional<TextureKey> checkin(backend::TextureHandle handle);
 
-    using InUseContainer = TextureCache::AssociativeContainer<backend::TextureHandle, TextureKey>;
+    struct InUseRecord {
+        TextureKey key;
+        TextureCacheInterface* cache;
+    };
+    using InUseContainer = TextureCache::AssociativeContainer<backend::TextureHandle, InUseRecord>;
     backend::DriverApi& mBackend;
     InUseContainer mInUseTextures;
 };
