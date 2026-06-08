@@ -4,12 +4,11 @@ import sys
 import unittest
 import tempfile
 
-# Ensure the tools/ directory is in the Python path to import reorganize_headers
+# Ensure the script directory is in the Python path to import run as reorganize_headers
 script_dir = os.path.dirname(os.path.abspath(__file__))
-workspace_root = os.path.dirname(os.path.dirname(script_dir))
-sys.path.insert(0, os.path.join(workspace_root, "tools"))
+sys.path.insert(0, script_dir)
 
-import reorganize_headers
+import run as reorganize_headers
 
 class TestHeaderReorganizer(unittest.TestCase):
 
