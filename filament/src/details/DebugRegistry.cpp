@@ -16,11 +16,11 @@
 
 #include "details/DebugRegistry.h"
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/compiler.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -32,13 +32,13 @@
 #include <string_view>
 #include <utility>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
 #endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace filament::math;
 using namespace utils;

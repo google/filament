@@ -28,12 +28,13 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/Mutex.h>
+
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <utils/Mutex.h>
 #include <shared_mutex>
 #include <utility>
 #include <vector>

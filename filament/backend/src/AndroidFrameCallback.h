@@ -19,7 +19,6 @@
 
 #include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
-#include <utils/CountDownLatch.h>
 #include <utils/Mutex.h>
 
 #include <android/choreographer.h>

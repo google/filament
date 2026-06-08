@@ -22,13 +22,12 @@
 #include <utils/Logger.h>
 #include <utils/Mutex.h>
 
-#include <limits>
-#include <mutex>
-
 #include <android/native_window.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <mutex>
 
 namespace filament::backend {
 

@@ -15,6 +15,9 @@
  */
 #include "webgpu/WebGPUDriver.h"
 
+#include "CommandStreamDispatcher.h"
+#include "DriverBase.h"
+#include "SystraceProfile.h"
 #include "WebGPUBufferObject.h"
 #include "WebGPUConstants.h"
 #include "WebGPUDescriptorSet.h"
@@ -33,25 +36,25 @@
 #include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
-#include "webgpu/utils/AsyncTaskCounter.h"
-#include <backend/platforms/WebGPUPlatform.h>
 
-#include "CommandStreamDispatcher.h"
-#include "DriverBase.h"
-#include "SystraceProfile.h"
-#include "private/backend/Dispatcher.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
+
+#include <private/backend/BackendUtils.h>
+#include <private/backend/Dispatcher.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/platforms/WebGPUPlatform.h>
 #include <backend/TargetBufferInfo.h>
-#include <private/backend/BackendUtils.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/Hash.h>
+#include <utils/ImmutableCString.h>
+#include <utils/Panic.h>
 
 #include <math/mat3.h>
-#include <utils/debug.h>
-#include <utils/CString.h>
-#include <utils/ImmutableCString.h>
-#include <utils/Hash.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
 
