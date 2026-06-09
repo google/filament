@@ -52,6 +52,9 @@ public:
     bool willOverflow(size_t const size) const noexcept {
         // Evaluate the remaining valid buffer size instead of using pointer arithmetic,
         // preventing arbitrary integer size overflows from pointer wrapping.
+        if (UTILS_UNLIKELY(mCursor > mEnd)) {
+            return true;   // cursor was constructed/advanced past the end
+        }
         return size > size_t(mEnd - mCursor);
     }
 

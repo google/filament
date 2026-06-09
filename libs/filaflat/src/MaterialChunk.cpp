@@ -387,7 +387,13 @@ size_t MaterialChunk::getDictionaryOccurrences(std::vector<uint32_t>& outOccurre
         ShaderStage stage;
         decodeKey(chunk.first, &model, &variant, &stage);
 
-        Unflattener unflattener(mBase + chunk.second, mContainer.getChunkRange(mMaterialTag).second);
+        auto const matRange = mContainer.getChunkRange(mMaterialTag);
+        // chunk.second (offsetValue) is attacker-controlled; reject offsets that would place
+        // the cursor outside the material chunk before forming the pointer (parity with setCursor()).
+        if (chunk.second >= size_t(matRange.second - mBase)) {
+            continue;
+        }
+        Unflattener unflattener(mBase + chunk.second, matRange.second);
 
         uint32_t shaderSize = 0;
         if (!unflattener.read(&shaderSize)) {
