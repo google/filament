@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include "materials/uberarchive.h"
 
-#include <backend/PixelBufferDescriptor.h>
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/math.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
-#include <gltfio/AssetLoader.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/ResourceLoader.h>
-#include <gltfio/TextureProvider.h>
-#include <gltfio/math.h>
-#include <math/mathfwd.h>
+#include <backend/PixelBufferDescriptor.h>
+
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Path.h>
 
-#include "materials/uberarchive.h"
+#include <math/mathfwd.h>
+
+#include <gtest/gtest.h>
 
 #include <cstdint>
 #include <fstream>
