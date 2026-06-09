@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUPUSHCONSTANTDESCRIPTION_H
 #define TNT_FILAMENT_BACKEND_WEBGPUPUSHCONSTANTDESCRIPTION_H
 
-#include <backend/Program.h>
 #include <backend/DriverEnums.h>
+#include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
 

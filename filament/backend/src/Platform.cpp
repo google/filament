@@ -16,8 +16,8 @@
 
 #include <backend/Platform.h>
 
-#include <utils/Mutex.h>
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
 
 #include <atomic>

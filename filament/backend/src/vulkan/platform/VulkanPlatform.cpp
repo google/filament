@@ -786,13 +786,16 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
 
 Platform::Sync* VulkanPlatform::createSync(
         std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
-    return new VulkanSync{.fenceStatus = fenceStatus};
+    return new(std::nothrow) VulkanSync(std::move(fenceStatus));
 }
 
-void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
+void VulkanPlatform::destroySync(Sync* sync) noexcept {
     // Sync must be a VulkanSync*, since it was created by VulkanPlatform's
     // createSync object.
-    delete sync;
+    // Note: the cast is required, as Platform::Sync does not have a virtual
+    // destructor, and therefore it is undefined behavior to delete the base
+    // class.
+    delete static_cast<VulkanSync*>(sync);
 }
 
 VkInstance VulkanPlatform::getInstance() const noexcept {

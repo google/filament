@@ -36,7 +36,7 @@ Includes must be grouped and separated by **exactly one blank line** in the foll
 AI agents **must never manually sort includes** or guess target dependencies. Always run the repository's dynamic topological include formatter after modifying C++ files:
 
 ```bash
-./tools/reorganize_headers/run.py <file_or_directory>
+./tools/reorganize-headers/run.py <file_or_directory>
 ```
 
 *Note: The tool dynamically parses `CMakeLists.txt` files to topologically sort proprietary libraries and includes preprocessor safety checks to avoid breaking platform-conditional include guards.*

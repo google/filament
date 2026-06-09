@@ -361,7 +361,7 @@ def reorganize_file(filepath, dry_run=False):
 if __name__ == "__main__":
     # Setup workspace root and build the topological dependency list dynamically
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    workspace = os.path.dirname(script_dir)
+    workspace = os.path.dirname(os.path.dirname(script_dir))
     
     try:
         deps = analyze_dependencies(workspace)

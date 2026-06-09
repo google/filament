@@ -20,5 +20,11 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 *   [skills/filament_desktop_testing/SKILL.md](skills/filament_desktop_testing/SKILL.md): Instructions for executing and filtering tests and benchmarks on desktop.
 *   [skills/filament_android_development/SKILL.md](skills/filament_android_development/SKILL.md): Android development, compilation with Perfetto, binary deployment, shell invocation, and formatted benchmarking.
 
-### 3. Cross-Platform Language Bindings
+### 3. Code Style
+*   **Code Formatting**: Code formatting in Filament code (not `third_party/`) should follow the formatting convention in [CODE_STYLE.md](CODE_STYLE.md).
+
+### 4. Commit Conventions
+*   **Commit Messages**: Commit messages should be formatted with the 50/72 rule: 50 is the maximum number of characters of the commit title, and 72 is the maximum character length of the commit body.
+
+### 5. Cross-Platform Language Bindings
 *   [skills/bindings_synchronization/SKILL.md](skills/bindings_synchronization/SKILL.md): Synchronization guidelines for Java/JNI (Android) and JavaScript/TypeScript (Web/WASM) when public C++ APIs change.

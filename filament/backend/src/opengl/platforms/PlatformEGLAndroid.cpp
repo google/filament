@@ -623,7 +623,7 @@ Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
     } else {
         LOG(WARNING) << "Native fences not supported on this device.";
     }
-    return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
+    return new(std::nothrow) SyncEGLAndroid(sync);
 }
 
 bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
@@ -658,7 +658,11 @@ void PlatformEGLAndroid::destroySync(Sync* sync) noexcept {
             eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
         }
     }
-    delete sync;
+
+    // Cast to SyncEGLAndroid, as Platform::Sync does not have a virtual
+    // destructor, and therefore, it is undefined behavior to delete
+    // the base class.
+    delete static_cast<SyncEGLAndroid*>(sync);
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t const tname) noexcept {
