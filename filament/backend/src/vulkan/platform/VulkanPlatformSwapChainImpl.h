@@ -62,6 +62,11 @@ struct VulkanPlatformSwapChainBase : public Platform::SwapChain {
 
     virtual bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const;
 
+    virtual int setFrameRate(float frameRate,
+            Platform::FrameRateCompatibility compatibility,
+            Platform::ChangeFrameRateStrategy strategy) const;
+
+
 protected:
     virtual void destroy();
 
@@ -91,6 +96,11 @@ struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainBase {
     virtual bool hasResized() const override;
 
     virtual bool isProtected() const override;
+
+    int setFrameRate(float frameRate,
+            Platform::FrameRateCompatibility compatibility,
+            Platform::ChangeFrameRateStrategy strategy) const override;
+
 
 protected:
     virtual void destroy() override;
@@ -123,7 +133,6 @@ private:
 
 #ifdef __ANDROID__
     AndroidSwapChainHelper mImpl{};
-    AndroidProducerThrottling mProducerThrottling;
 #endif
 };
 
@@ -147,6 +156,10 @@ struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainBase {
     virtual bool hasResized() const override { return false; }
 
     virtual bool isProtected() const override { return false; }
+
+    int setFrameRate(float frameRate,
+            Platform::FrameRateCompatibility compatibility,
+            Platform::ChangeFrameRateStrategy strategy) const override;
 
 protected:
     virtual void destroy() override;

@@ -247,7 +247,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 }// namespace
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
-        wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
+        wgpu::Adapter const& adapter, wgpu::Device const& device, void* nativeWindow, uint64_t flags)
     : mDevice{device},
       mSurface{surface},
       mNeedStencil{(flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0},
@@ -257,7 +257,8 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
       mDepthTextureView{createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)},
       mType{SwapChainType::SURFACE},
       mHeadlessWidth{0},
-      mHeadlessHeight{0} {
+      mHeadlessHeight{0},
+      mNativeWindow{nativeWindow} {
 
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {

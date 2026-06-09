@@ -176,8 +176,8 @@ private:
     // synchronous calls, making access to VulkanSwapchain unsafe (this difference vs other backends
     // is due to the ref-counting of vulkan resources).
     struct {
-        std::mutex lock;
-        std::unordered_map<HandleId, Platform::SwapChain*> nativeSwapchains;
+        utils::Mutex lock;
+        std::unordered_map<HandleId, Platform::SwapChain*> nativeSwapchains UTILS_GUARDED_BY(lock);
     } mTiming;
 
     // This is necessary for us to write to push constants after binding a pipeline.

@@ -34,7 +34,7 @@ namespace filament::backend {
 class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
 public:
     WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
-            wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+            wgpu::Adapter const& adapter, wgpu::Device const& device, void* nativeWindow, uint64_t flags);
 
     WebGPUSwapChain( wgpu::Extent2D const& extent,
             wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
@@ -53,6 +53,8 @@ public:
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
     [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
+
+    [[nodiscard]] void* getNativeWindow() const { return mNativeWindow; }
 
     [[nodiscard]] uint32_t getWidth() const { return mConfig.width; }
     [[nodiscard]] uint32_t getHeight() const { return mConfig.height; }
@@ -98,6 +100,8 @@ private:
         CallbackHandler* handler = nullptr;
         std::shared_ptr<FrameScheduledCallback> callback;
     } mFrameScheduled;
+
+    void* mNativeWindow = nullptr;
 };
 
 } // namespace filament::backend

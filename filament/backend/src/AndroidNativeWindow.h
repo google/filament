@@ -17,10 +17,15 @@
 #ifndef FILAMENT_BACKEND_ANDROIDNATIVEWINDOW_H
 #define FILAMENT_BACKEND_ANDROIDNATIVEWINDOW_H
 
+#include <backend/Platform.h>
+
+#include <utils/tribool.h>
+
 #include <android/native_window.h>
 
 #include <cstdint>
 #include <utility>
+
 
 namespace filament::backend {
 
@@ -31,6 +36,7 @@ struct NativeWindow {
 
     // is valid query enum value
     enum {
+        QUEUES_TO_WINDOW_COMPOSER = 7,
         IS_VALID                = 17,
         FRAME_TIMESTAMPS_SUPPORTS_PRESENT = 18,
         GET_NEXT_FRAME_ID       = 24,
@@ -47,6 +53,8 @@ struct NativeWindow {
     int (*query)(ANativeWindow const*, int, int*);
     int (*perform)(ANativeWindow*, int, ...);
 
+    static bool queuesToWindowComposer(ANativeWindow* anw) noexcept;
+
     // return whether the ANativeWindow is valid
     static std::pair<int, bool> isValid(ANativeWindow* anw) noexcept;
 
@@ -55,7 +63,7 @@ struct NativeWindow {
     static int frameTimestampsSupportsPresent(ANativeWindow* anw, bool* outSupportsPresent);
     static int getCompositorTiming(ANativeWindow* anw,
             int64_t* compositeDeadline, int64_t* compositeInterval,
-            int64_t* compositeToPresentLatency);
+            int64_t* compositeToPresent);
     static int getFrameTimestamps(ANativeWindow* anw,
             uint64_t frameId,
             int64_t* outRequestedPresentTime, int64_t* outAcquireTime,
@@ -63,19 +71,19 @@ struct NativeWindow {
             int64_t* outLastRefreshStartTime, int64_t* outGpuCompositionDoneTime,
             int64_t* outDisplayPresentTime, int64_t* outDequeueReadyTime,
             int64_t* outReleaseTime);
-};
 
-struct AndroidProducerThrottling {
-    AndroidProducerThrottling();
-    int32_t setProducerThrottlingEnabled(ANativeWindow* window, bool enabled) const;
-    int32_t isProducerThrottlingEnabled(ANativeWindow* window, bool* outEnabled) const;
-    bool isSupported() const noexcept;
-private:
-    int32_t (*mSetProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
-    int32_t (*mIsProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
-};
+    static utils::tribool isFrameRateChangeSupported(ANativeWindow* anw) noexcept;
 
+    static int setFrameRate(ANativeWindow* anw, float frameRate,
+            Platform::FrameRateCompatibility compatibility,
+            Platform::ChangeFrameRateStrategy strategy) noexcept;
+    static bool isProducerThrottlingSupported() noexcept;
+
+    static int32_t setProducerThrottlingEnabled(ANativeWindow* anw,
+            bool enabled) noexcept;
+};
 
 } // namespace filament::backend
+
 
 #endif //FILAMENT_BACKEND_ANDROIDNATIVEWINDOW_H

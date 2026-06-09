@@ -113,7 +113,8 @@ class ModelViewer(
 
     private var fetchResourcesJob: Job? = null
 
-    private var swapChain: SwapChain? = null
+    var swapChain: SwapChain? = null
+        private set
     private var assetLoader: AssetLoader
     private var materialProvider: MaterialProvider
     private var resourceLoader: ResourceLoader

@@ -16,13 +16,14 @@
 
 #include <viewer/ViewerGui.h>
 
+#include <filagui/ImGuiExtensions.h>
+#include <filagui/ImGuiHelper.h>
+
+#include <filament/LightManager.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
-#include <filament/LightManager.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
-
-#include <filagui/ImGuiHelper.h>
 
 #include <utils/EntityManager.h>
 
@@ -30,7 +31,6 @@
 #include <math/vec3.h>
 
 #include <imgui.h>
-#include <filagui/ImGuiExtensions.h>
 
 #include <string>
 #include <vector>
@@ -1071,6 +1071,8 @@ void ViewerGui::updateUserInterface() {
 
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
+
+        ImGui::SliderFloat("Frame rate", &mSettings.viewer.cameraFrameRate, 0.0f, 120.0f, "%.0f Hz");
 
         // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {

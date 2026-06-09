@@ -15,6 +15,7 @@
  */
 
 #include "AndroidFrameCallback.h"
+#include "AndroidNativeWindow.h"
 
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
@@ -740,4 +741,15 @@ bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uin
     return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
+utils::tribool VulkanPlatformAndroid::isFrameRateChangeSupported(void* const nativeWindow) const noexcept {
+    return NativeWindow::isFrameRateChangeSupported(static_cast<ANativeWindow*>(nativeWindow));
+}
+
+int VulkanPlatformAndroid::setFrameRate(SwapChain const* swapchain, float frameRate,
+        FrameRateCompatibility compatibility, ChangeFrameRateStrategy strategy) noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const*>(swapchain);
+    return vulkanSwapchain ? vulkanSwapchain->setFrameRate(frameRate, compatibility, strategy) : -1;
+}
+
 } // namespace filament::backend
+

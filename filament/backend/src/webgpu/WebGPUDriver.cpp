@@ -52,6 +52,7 @@
 #include <utils/debug.h>
 #include <utils/Hash.h>
 #include <utils/ImmutableCString.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 
 #include <math/mat3.h>
@@ -285,6 +286,20 @@ void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     mSwapChain = nullptr;
 }
 
+void WebGPUDriver::setFrameRate(Handle<HwSwapChain> sch, float const frameRate,
+        Platform::FrameRateCompatibility const compatibility,
+        Platform::ChangeFrameRateStrategy const strategy) {
+    if (sch) {
+        auto swapChain = handleCast<WebGPUSwapChain>(sch);
+        if (swapChain) {
+            int const err = mPlatform.setFrameRate(swapChain, frameRate, compatibility, strategy);
+            if (err < 0) {
+                LOG(WARNING) << "Platform::setFrameRate returned an error: " << err;
+            }
+        }
+    }
+}
+
 void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
     //TODO
 }
@@ -481,7 +496,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
-            mDevice, flags);
+            mDevice, nativeWindow, flags);
     assert_invariant(mSwapChain);
 
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
@@ -924,6 +939,7 @@ bool WebGPUDriver::isMSAASwapChainSupported(uint32_t) {
 bool WebGPUDriver::isProtectedContentSupported() {
     return false;
 }
+
 
 bool WebGPUDriver::isStereoSupported() {
     return false;

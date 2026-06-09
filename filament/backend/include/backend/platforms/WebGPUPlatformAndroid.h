@@ -17,17 +17,32 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORMANDROID_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_WEBGPUPLATFORMANDROID_H
 
+#include "AndroidNdk.h"
+
 #include <backend/platforms/WebGPUPlatform.h>
 
 namespace filament::backend {
 
-class WebGPUPlatformAndroid : public WebGPUPlatform {
+class WebGPUPlatformAndroid : public WebGPUPlatform, public AndroidNdk {
 public:
+    WebGPUPlatformAndroid() noexcept;
+    ~WebGPUPlatformAndroid() noexcept override;
+
     wgpu::Extent2D getSurfaceExtent(void* nativeWindow) const override;
     wgpu::Surface createSurface(void* nativeWindow, uint64_t /*flags*/) override;
 
+    utils::tribool isFrameRateChangeSupported(void* nativeWindow) const noexcept override;
+    int setFrameRate(SwapChain const* swapchain, float frameRate,
+            FrameRateCompatibility compatibility,
+            ChangeFrameRateStrategy strategy) noexcept override;
+
+
 protected:
     std::vector<wgpu::RequestAdapterOptions> getAdapterOptions() override;
+
+private:
+    struct AndroidDetails;
+    AndroidDetails& mAndroidDetails;
 };
 
 } // namespace filament::backend

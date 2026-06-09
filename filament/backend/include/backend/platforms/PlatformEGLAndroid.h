@@ -105,6 +105,12 @@ protected:
     bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
             FrameTimestamps* outFrameTimestamps) const noexcept override;
 
+    utils::tribool isFrameRateChangeSupported(void* nativeWindow) const noexcept override;
+
+    int setFrameRate(SwapChain const* swapchain, float frameRate,
+            FrameRateCompatibility compatibility,
+            ChangeFrameRateStrategy strategy) noexcept override;
+
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
