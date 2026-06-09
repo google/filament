@@ -14,27 +14,30 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#include "materials/uberarchive.h"
 
-#include <backend/PixelBufferDescriptor.h>
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/math.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
-#include <gltfio/AssetLoader.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/ResourceLoader.h>
-#include <gltfio/TextureProvider.h>
-#include <gltfio/math.h>
-#include <math/mathfwd.h>
+#include <backend/PixelBufferDescriptor.h>
+
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Path.h>
 
-#include "materials/uberarchive.h"
+#include <math/mathfwd.h>
 
+#include <gtest/gtest.h>
+
+#include <cstdint>
 #include <fstream>
 #include <unordered_map>
 
@@ -45,6 +48,15 @@ using namespace utils;
 
 char const* ANIMATED_MORPH_CUBE_GLB = "AnimatedMorphCube.glb";
 char const* DAMAGED_HELMET_WEBP_GLB = "DamagedHelmetWebp.glb";
+
+static constexpr uint8_t VALID_1X1_PNG[] = {
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+    0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xcf, 0xc0, 0xf0,
+    0x1f, 0x00, 0x05, 0x00, 0x01, 0xff, 0x89, 0x99, 0x3d, 0x1d, 0x00, 0x00,
+    0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+};
 
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
@@ -162,6 +174,20 @@ TEST_F(glTFIOTest, AnimatedMorphCubeMaterials) {
     std::string_view name{materialInst->getName()};
 
     EXPECT_EQ(name, "Material");
+}
+
+TEST_F(glTFIOTest, StbProviderCancelFreesDecodedTextureWithStbAllocator) {
+    TextureProvider* provider = createStbProvider(mEngine);
+    Texture* texture = provider->pushTexture(VALID_1X1_PNG, sizeof(VALID_1X1_PNG), "image/png",
+            TextureProvider::TextureFlags::NONE);
+
+    ASSERT_NE(texture, nullptr) << provider->getPushMessage();
+
+    provider->waitForCompletion();
+    provider->cancelDecoding();
+
+    mEngine->destroy(texture);
+    delete provider;
 }
 
 // A macro to help with mat comparisons within a range.
