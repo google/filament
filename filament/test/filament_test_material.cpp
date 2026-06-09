@@ -232,34 +232,34 @@ TEST(MaterialInstanceTest, SetConstant) {
     Engine::destroy(engine);
 }
 
-TEST(Material, UnlitMaterialDoesNotGenerateShadowReceiverVariants) {
+TEST(Material, CompileMaterialWithSkinningEnabled) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     filamat::MaterialBuilder builder;
     builder.init();
+
     builder.name("UnlitMaterial");
     builder.shading(Shading::UNLIT);
+
     filamat::Package result = builder.build(engine->getJobSystem());
     ASSERT_TRUE(result.isValid());
+
+    View* view = engine->createView();
+    ASSERT_NE(view, nullptr);
 
     Material* material = Material::Builder()
                                  .package(result.getData(), result.getSize())
                                  .build(*engine);
     ASSERT_NE(material, nullptr);
 
-    View* view = engine->createView();
-    ASSERT_NE(view, nullptr);
-
-    // Call getMaterialCompileVariants passing shadowReceiver = true
     auto variants = FEngine::getMaterialCompileVariants(
             downcast(view), downcast(material),
-            /* shadowReceiver= */ utils::tribool(true),
-            /* skinning= */ utils::tribool(false));
+            /* shadowReceiver= */ utils::tribool(false),
+            /* skinning= */ utils::tribool(true));
 
-    // As the material shading model is unlit, shadowReceiver is ignored even though it was
-    // explicitly requested.
     for (auto const v : variants) {
         EXPECT_FALSE(filament::Variant::isShadowReceiverVariant(v));
+        EXPECT_TRUE(v.hasSkinningOrMorphing());
     }
 
     engine->destroy(view);
@@ -267,25 +267,68 @@ TEST(Material, UnlitMaterialDoesNotGenerateShadowReceiverVariants) {
     Engine::destroy(engine);
 }
 
-TEST(Material, LitMaterialGeneratesShadowReceiverVariants) {
+TEST(Material, CompileLitMaterialWithShadowReceiverEnabled) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
     filamat::MaterialBuilder builder;
     builder.init();
+
     builder.name("LitMaterial");
     builder.shading(Shading::LIT);
+
     filamat::Package result = builder.build(engine->getJobSystem());
     ASSERT_TRUE(result.isValid());
+
+    View* view = engine->createView();
+    ASSERT_NE(view, nullptr);
 
     Material* material = Material::Builder()
                                  .package(result.getData(), result.getSize())
                                  .build(*engine);
     ASSERT_NE(material, nullptr);
 
+    auto variants = FEngine::getMaterialCompileVariants(
+            downcast(view), downcast(material),
+            /* shadowReceiver= */ utils::tribool(true),
+            /* skinning= */ utils::tribool(false));
+
+    // Verify that SRE is successfully generated for the lit material.
+    bool hasShadowReceiver = false;
+    for (auto const v : variants) {
+        if (filament::Variant::isShadowReceiverVariant(v)) {
+            hasShadowReceiver = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(hasShadowReceiver);
+
+    engine->destroy(view);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, CompileUnlitMaterialShadowMultiplierWithShadowReceiverEnabled) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+
+    builder.name("UnlitMaterial");
+    builder.shading(Shading::UNLIT);
+    // This is necessary for the shadow receiver variant to be generated.
+    builder.shadowMultiplier(true);
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
     View* view = engine->createView();
     ASSERT_NE(view, nullptr);
 
-    // Call getMaterialCompileVariants passing shadowReceiver = true
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
     auto variants = FEngine::getMaterialCompileVariants(
             downcast(view), downcast(material),
             /* shadowReceiver= */ utils::tribool(true),

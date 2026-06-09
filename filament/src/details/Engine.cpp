@@ -1769,6 +1769,7 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         }
     };
 
+    // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
     baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
@@ -1779,7 +1780,7 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
 
     variants.push_back(baseVariant);
     apply(0, skinning, &Variant::setSkinning);
-    // Only respect shadowReceiver variant when the material is lit.
+    // Only respect shadowReceiver variant when the shading model is lit or hasShadowMultiplier.
     if (isMaterialLit) {
         apply(0, shadowReceiver, &Variant::setShadowReceiver);
     } else {
