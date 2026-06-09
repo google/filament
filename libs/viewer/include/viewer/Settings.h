@@ -27,9 +27,10 @@
 #include <filament/Scene.h>
 #include <filament/View.h>
 
+#include <utils/compiler.h>
+
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <utils/compiler.h>
 
 #include <string>
 

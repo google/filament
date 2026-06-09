@@ -40,16 +40,17 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <math/half.h>
-#include <math/mat4.h>
-#include <math/vec2.h>
-#include <math/vec4.h>
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
+
+#include <math/half.h>
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <algorithm>
 #include <array>

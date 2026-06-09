@@ -17,14 +17,16 @@
 #include "jsonParseUtils.h"
 #include "Settings_generated.h"
 
+#include <viewer/Settings.h>
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Skybox.h>
 
-#include <math/mat3.h>
 #include <utils/Log.h>
-#include <viewer/Settings.h>
+
+#include <math/mat3.h>
 
 #include <sstream>
 #include <string>
