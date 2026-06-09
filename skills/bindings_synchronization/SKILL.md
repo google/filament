@@ -16,9 +16,17 @@ When making changes to public Filament C++ APIs, AI agents **must** ensure the c
 You must check and update the language bindings if your changes touch any public headers under `filament/include/filament/`, specifically:
 - **New/Modified/Deleted Methods** on core classes (e.g., `View`, `Engine`, `Camera`, `LightManager`, `RenderableManager`).
 - **Options Structs** (e.g., `AmbientOcclusionOptions`, `BloomOptions`, `FogOptions`).
+  > [!IMPORTANT]
+  > If you modify options structs defined in `filament/include/filament/Options.h`, **you must run the beamsplitter tool**. The tool parses `Options.h` and automatically updates Java bindings, JavaScript/TypeScript bindings, and C++ JSON serialization files.
+  > 
+  > Run it via:
+  > ```bash
+  > cd tools/beamsplitter && go run .
+  > ```
 - **Enums & Constants** (e.g., `BlendMode`, `QualityLevel`, `AntiAliasing` under `filament/include/filament/` or nested inside classes).
 
 ---
+
 
 ## 2. Java & Android JNI Synchronization
 
