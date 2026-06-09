@@ -107,6 +107,7 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
 
 MikktspaceImpl::MikktspaceImpl(const TangentSpaceMeshInput* input) noexcept
     : mFaceCount((int) input->triangleCount),
+      mVertexCount(input->vertexCount),
       mPositions(input->positions()),
       mPositionStride(input->positionsStride()),
       mNormals(input->normals()),
@@ -145,8 +146,14 @@ MikktspaceImpl* MikktspaceImpl::getThis(SMikkTSpaceContext const* context) noexc
 
 inline const uint3 MikktspaceImpl::getTriangle(int const triangleIndex) const noexcept {
     const size_t tstride = mIsTriangle16 ? sizeof(ushort3) : sizeof(uint3);
-    return mIsTriangle16 ? uint3(*(ushort3*) (pointerAdd(mTriangles, triangleIndex, tstride)))
-                         : *(uint3*) (pointerAdd(mTriangles, triangleIndex, tstride));
+    uint3 tri = mIsTriangle16 ?
+            uint3(*(ushort3*) (pointerAdd(mTriangles, triangleIndex, tstride)))
+            : *(uint3*) (pointerAdd(mTriangles, triangleIndex, tstride));
+    FILAMENT_CHECK_PRECONDITION(tri.x < mVertexCount && tri.y < mVertexCount &&
+            tri.z < mVertexCount)
+            << "Triangle index out of bounds:"
+            << " vertexCount=" << mVertexCount;
+    return tri;
 }
 
 void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {

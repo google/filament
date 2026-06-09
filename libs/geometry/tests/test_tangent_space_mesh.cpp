@@ -427,6 +427,21 @@ TEST_F(TangentSpaceMeshTest, Lengyel) {
     TangentSpaceMesh::destroy(mesh);
 }
 
+TEST_F(TangentSpaceMeshTest, OobTriangleIndexAborts) {
+    float3 positions[] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+    uint3 triangles[] = {{100, 1, 2}};  // index 100 >= vertexCount 3
+
+    EXPECT_DEATH({
+        TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        TangentSpaceMesh::destroy(mesh);
+    }, "");
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
