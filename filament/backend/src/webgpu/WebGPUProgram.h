@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUPROGRAM_H
 #define TNT_FILAMENT_BACKEND_WEBGPUPROGRAM_H
 
-#include "webgpu/WebGPUPushConstantDescription.h"
-
 #include "DriverBase.h"
+
+#include "webgpu/WebGPUPushConstantDescription.h"
 
 #include <webgpu/webgpu_cpp.h>
 

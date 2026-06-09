@@ -34,9 +34,8 @@
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
-#include <vector>
-
 #include <unordered_map>
+#include <vector>
 
 #include <stddef.h>
 

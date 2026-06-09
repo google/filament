@@ -48,10 +48,25 @@ class Driver;
  */
 class UTILS_PUBLIC Platform {
 public:
-    struct SwapChain {};
-    struct Fence {};
-    struct Stream {};
-    struct Sync {};
+    struct SwapChain {
+    protected:
+        ~SwapChain() = default;
+    };
+
+    struct Fence {
+    protected:
+        ~Fence() = default;
+    };
+
+    struct Stream {
+    protected:
+        ~Stream() = default;
+    };
+
+    struct Sync {
+    protected:
+        ~Sync() = default;
+    };
 
     using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
 

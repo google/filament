@@ -23,7 +23,6 @@
 #include "OpenGLDriver.h"
 
 #include <private/backend/BackendUtils.h>
-#include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -44,15 +43,12 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <atomic>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <iterator>
-#include <iterator>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <optional>
 #include <string_view>
 #include <thread>
