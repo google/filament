@@ -29,6 +29,7 @@ import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Material
 import com.google.android.filament.Skybox
+import com.google.android.filament.SwapChain
 import com.google.android.filament.View
 import com.google.android.filament.View.OnPickCallback
 import com.google.android.filament.utils.*
@@ -72,6 +73,7 @@ class MainActivity : Activity() {
     private var loadStartFence: Fence? = null
     private val viewerContent = AutomationEngine.ViewerContent()
     private var useStaticModel = false
+    private var currentFrameRate = -1.0f
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -393,6 +395,20 @@ class MainActivity : Activity() {
         modelViewer.cameraNear = automation.cameraSettings.near
         modelViewer.cameraFar = automation.cameraSettings.far
         updateRootTransform()
+
+        val targetFps = automation.viewerOptions.cameraFrameRate
+        if (targetFps != currentFrameRate) {
+            modelViewer.swapChain?.let { sc ->
+                if (sc.isFrameRateChangeSupported) {
+                    sc.setFrameRate(
+                        targetFps,
+                        SwapChain.FrameRateCompatibility.DEFAULT,
+                        SwapChain.ChangeFrameRateStrategy.ONLY_IF_SEAMLESS
+                    )
+                    currentFrameRate = targetFps
+                }
+            }
+        }
     }
 
     private fun updateRootTransform() {

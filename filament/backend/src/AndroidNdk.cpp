@@ -17,6 +17,7 @@
 #include <backend/platforms/AndroidNdk.h>
 
 #include <utils/compiler.h>
+#include <utils/Logger.h>
 
 #include <android/hardware_buffer.h>
 
@@ -35,23 +36,46 @@ static void loadSymbol(void* handle, const char* symbol, T& pfn) {
     pfn = T(dlsym(handle, symbol));
 }
 
-#if FILAMENT_USE_DLSYM(26)
+#if FILAMENT_USE_DLSYM(37)
 AndroidNdk::Ndk AndroidNdk::ndk{};
 #endif
 
 AndroidNdk::AndroidNdk() {
-#if FILAMENT_USE_DLSYM(26)
+#if FILAMENT_USE_DLSYM(37)
     std::call_once(sInitOnce, [] {
         // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
         // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
         // not to call dlclose().
-        if (__builtin_available(android 26, *)) {
-            void* h = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
-            if (h) {
+        void* h = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
+        if (h) {
+#if FILAMENT_USE_DLSYM(26)
+            if (__builtin_available(android 26, *)) {
                 loadSymbol(h, "AHardwareBuffer_acquire", ndk.AHardwareBuffer_acquire);
                 loadSymbol(h, "AHardwareBuffer_release", ndk.AHardwareBuffer_release);
                 loadSymbol(h, "AHardwareBuffer_describe", ndk.AHardwareBuffer_describe);
             }
+#endif
+#if FILAMENT_USE_DLSYM(30)
+            if (__builtin_available(android 30, *)) {
+                loadSymbol(h, "ANativeWindow_setFrameRate", ndk.ANativeWindow_setFrameRate);
+            }
+#endif
+#if FILAMENT_USE_DLSYM(31)
+            if (__builtin_available(android 31, *)) {
+                loadSymbol(h, "ANativeWindow_setFrameRateWithChangeStrategy",
+                        ndk.ANativeWindow_setFrameRateWithChangeStrategy);
+            }
+#endif
+#if FILAMENT_USE_DLSYM(37)
+            loadSymbol(h, "ANativeWindow_setProducerThrottlingEnabled",
+                    ndk.ANativeWindow_setProducerThrottlingEnabled);
+            loadSymbol(h, "ANativeWindow_isProducerThrottlingEnabled",
+                    ndk.ANativeWindow_isProducerThrottlingEnabled);
+            if (ndk.ANativeWindow_setProducerThrottlingEnabled &&
+                    ndk.ANativeWindow_isProducerThrottlingEnabled) {
+                LOG(INFO) << "Producer Throttling API available";
+            }
+#endif
         }
     });
 #endif

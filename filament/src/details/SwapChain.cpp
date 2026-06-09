@@ -21,6 +21,7 @@
 #include <filament/SwapChain.h>
 
 #include <backend/CallbackHandler.h>
+#include <backend/Platform.h>
 
 #include <utils/CString.h>
 #include <utils/Invocable.h>
@@ -53,12 +54,17 @@ utils::CString getRemovedFlags(uint64_t originalFlags, uint64_t modifiedFlags) {
 } // anonymous namespace
 
 FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t const flags)
-        : mEngine(engine), mNativeWindow(nativeWindow), mConfigFlags(initFlags(engine, flags)) {
+        : mEngine(engine),
+          mNativeWindow(nativeWindow),
+          mConfigFlags(initFlags(engine, flags)) {
     mHwSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, mConfigFlags);
 }
 
 FSwapChain::FSwapChain(FEngine& engine, uint32_t const width, uint32_t const height, uint64_t const flags)
-        : mEngine(engine), mWidth(width), mHeight(height), mConfigFlags(initFlags(engine, flags)) {
+        : mEngine(engine),
+          mFrameRateSupportState(utils::tribool::kFalse),
+          mWidth(width), mHeight(height),
+          mConfigFlags(initFlags(engine, flags)) {
     mHwSwapChain = engine.getDriverApi().createSwapChainHeadless(width, height, mConfigFlags);
 }
 
@@ -128,4 +134,18 @@ bool FSwapChain::isProtectedContentSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isProtectedContentSupported();
 }
 
+utils::tribool FSwapChain::isFrameRateChangeSupported() const noexcept {
+    if (mFrameRateSupportState.is_indeterminate() && mNativeWindow) {
+        mFrameRateSupportState = mEngine.getPlatform()->isFrameRateChangeSupported(mNativeWindow);
+    }
+    return mFrameRateSupportState;
+}
+
+void FSwapChain::setFrameRate(float const frameRate, FrameRateCompatibility const compatibility,
+        ChangeFrameRateStrategy const strategy) noexcept {
+    mEngine.getDriverApi().setFrameRate(mHwSwapChain, frameRate,
+            compatibility, strategy);
+}
+
 } // namespace filament
+

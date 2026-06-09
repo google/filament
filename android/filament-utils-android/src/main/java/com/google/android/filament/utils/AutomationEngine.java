@@ -54,6 +54,10 @@ public class AutomationEngine {
     private final long mNativeObject;
     private ColorGrading mColorGrading;
 
+    long getNativeObject() {
+        return mNativeObject;
+    }
+
     /**
      * Allows users to toggle screenshots, change the sleep duration between tests, etc.
      */
@@ -99,6 +103,7 @@ public class AutomationEngine {
         public boolean skyboxEnabled = true;
         public boolean autoScaleEnabled = true;
         public boolean autoInstancingEnabled = false;
+        public float cameraFrameRate = 0.0f;
     }
 
     public static class CameraSettings {
