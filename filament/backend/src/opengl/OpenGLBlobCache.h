@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGLBLOBCACHE_H
 #define TNT_FILAMENT_BACKEND_OPENGLBLOBCACHE_H
 
-#include "gl_headers.h"
-
 #include "BlobCacheKey.h"
+#include "gl_headers.h"
 
 namespace filament::backend {
 

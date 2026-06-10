@@ -17,17 +17,18 @@
 #ifndef TNT_UTILS_DARWIN_FILAMENT_TRACING_H
 #define TNT_UTILS_DARWIN_FILAMENT_TRACING_H
 
-#include <atomic>
-
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
+#include <utils/compiler.h>
 
 #include <os/log.h>
 #include <os/signpost.h>
 
-#include <utils/compiler.h>
+#include <atomic>
 #include <stack>
+
+#include <unistd.h>
+
+#include <stdint.h>
+#include <stdio.h>
 
 #if FILAMENT_TRACING_ENABLED == false
 

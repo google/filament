@@ -15,7 +15,6 @@
  */
 
 #include <backend/Platform.h>
-
 #include <backend/platforms/PlatformWebGL.h>
 
 #include <cstdint>

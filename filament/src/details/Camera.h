@@ -17,13 +17,12 @@
 #ifndef TNT_FILAMENT_DETAILS_CAMERA_H
 #define TNT_FILAMENT_DETAILS_CAMERA_H
 
-#include <filament/Camera.h>
-
 #include "downcast.h"
 
-#include <filament/Frustum.h>
-
 #include <private/filament/EngineEnums.h>
+
+#include <filament/Camera.h>
+#include <filament/Frustum.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>

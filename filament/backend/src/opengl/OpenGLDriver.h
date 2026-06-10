@@ -28,6 +28,7 @@
 #include "GLTexture.h"
 #include "JobQueue.h"
 #include "ShaderCompilerService.h"
+#include <utils/Mutex.h>
 
 #include <backend/AcquiredImage.h>
 #include <backend/CallbackHandler.h>
@@ -122,8 +123,8 @@ public:
 
     struct GLVertexBuffer : public HwVertexBuffer {
         GLVertexBuffer() noexcept = default;
-        GLVertexBuffer(uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
-                : HwVertexBuffer(vertexCount), vbih(vbih) {
+        GLVertexBuffer(uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih, bool async = false)
+                : HwVertexBuffer(vertexCount, async), vbih(vbih) {
         }
         Handle<HwVertexBufferInfo> vbih;
         struct {
@@ -216,7 +217,7 @@ public:
             Platform::Sync* sync;
             void* userData;
         };
-        std::mutex lock;
+        utils::Mutex lock;
         std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
     };
 
@@ -413,6 +414,7 @@ private:
     void destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th);
     void destroyBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh);
     void destroyIndexBufferCommon(OpenGLState& gl, Handle<HwIndexBuffer> ibh);
+    void destroyVertexBufferCommon(Handle<HwVertexBuffer> vbh);
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;

@@ -22,8 +22,8 @@
 #include <filament/TransformManager.h>
 
 #include <utils/compiler.h>
-#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
+#include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
@@ -98,6 +98,8 @@ public:
     children_iterator getChildrenBegin(Instance parent) const noexcept;
 
     children_iterator getChildrenEnd(Instance parent) const noexcept;
+
+    children_range getChildrenRange(Instance parent) const noexcept;
 
     void openLocalTransformTransaction() noexcept;
 

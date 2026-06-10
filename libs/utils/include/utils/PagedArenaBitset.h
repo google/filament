@@ -17,14 +17,14 @@
 #ifndef TNT_UTILS_PAGEARENABITSET_H
 #define TNT_UTILS_PAGEARENABITSET_H
 
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/Slice.h>
-#include <utils/algorithm.h>
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cassert>
 #include <type_traits>
 #include <vector>
 
@@ -119,7 +119,8 @@ public:
     // The allocation granularity of the Arena, expressed as a bit-shift (2^12 = 4096 bits).
     // This is the "Page Size". Every active 4096-bit range allocates exactly one 512-byte
     // Page in memory. This balances L2 Directory footprint against sparse memory overhead.
-    static constexpr uint32_t PAGE_SHIFT = 12;
+    // Note: This is prefixed with FILAMENT_ to avoid collision with a iOS simulator #define.
+    static constexpr uint32_t FILAMENT_PAGE_SHIFT = 12;
 
     // The hardware execution width, expressed as a bit-shift (2^6 = 64 bits).
     // This binds the bitset to the CPU's native 64-bit architecture (uint64_t), ensuring
@@ -428,7 +429,7 @@ public:
                             word &= word - 1;
 
                             // Calculate the unique Entity ID from the hierarchy indices
-                            uint32_t const id = (dirIdx << PAGE_SHIFT) | (w << WORD_SHIFT) | wBit;
+                            uint32_t const id = (dirIdx << FILAMENT_PAGE_SHIFT) | (w << WORD_SHIFT) | wBit;
 
                             if constexpr (std::is_convertible_v<std::invoke_result_t<Func, uint32_t>, bool>) {
                                 if (!callback(id)) return;
@@ -488,7 +489,7 @@ private:
     explicit PagedArenaBitset(NoInit) noexcept;
 
     // Directory Size
-    static constexpr uint32_t DIR_SIZE = 1U << (DOMAIN_BITS - PAGE_SHIFT);
+    static constexpr uint32_t DIR_SIZE = 1U << (DOMAIN_BITS - FILAMENT_PAGE_SHIFT);
 
     // Summary Mask Size (1 bit per Directory Entry)
     // Shifting right by WORD_SHIFT is equivalent to dividing by 64.
@@ -499,7 +500,7 @@ private:
     // in case a small domain results in MASK_WORDS < 64.
     static constexpr uint32_t MASTER_WORDS = (MASK_WORDS + ((1U << WORD_SHIFT) - 1)) >> WORD_SHIFT;
 
-    static constexpr uint32_t WORDS_PER_PAGE = 1U << (PAGE_SHIFT - WORD_SHIFT);
+    static constexpr uint32_t WORDS_PER_PAGE = 1U << (FILAMENT_PAGE_SHIFT - WORD_SHIFT);
     static constexpr uint32_t WORD_MASK = ((1U << WORD_SHIFT) - 1);
     static constexpr uint16_t INVALID_PAGE = 0xFFFF;
 

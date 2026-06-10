@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 #define TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 
-#include <filament/SkinningBuffer.h>
-
 #include "downcast.h"
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
+
+#include <filament/SkinningBuffer.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/Handle.h>

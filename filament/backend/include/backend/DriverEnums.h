@@ -26,17 +26,17 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/StaticString.h>
-#include <utils/debug.h>
 
 #include <math/vec4.h>
 
 #include <array>
+#include <string_view>
 #include <type_traits>
 #include <variant>
-#include <string_view>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -825,6 +825,38 @@ enum class ElementType : uint8_t {
     HALF3,
     HALF4,
 };
+
+constexpr std::string_view to_string(ElementType type) noexcept {
+    switch (type) {
+        case ElementType::BYTE:    return "BYTE";
+        case ElementType::BYTE2:   return "BYTE2";
+        case ElementType::BYTE3:   return "BYTE3";
+        case ElementType::BYTE4:   return "BYTE4";
+        case ElementType::UBYTE:   return "UBYTE";
+        case ElementType::UBYTE2:  return "UBYTE2";
+        case ElementType::UBYTE3:  return "UBYTE3";
+        case ElementType::UBYTE4:  return "UBYTE4";
+        case ElementType::SHORT:   return "SHORT";
+        case ElementType::SHORT2:  return "SHORT2";
+        case ElementType::SHORT3:  return "SHORT3";
+        case ElementType::SHORT4:  return "SHORT4";
+        case ElementType::USHORT:  return "USHORT";
+        case ElementType::USHORT2: return "USHORT2";
+        case ElementType::USHORT3: return "USHORT3";
+        case ElementType::USHORT4: return "USHORT4";
+        case ElementType::INT:     return "INT";
+        case ElementType::UINT:    return "UINT";
+        case ElementType::FLOAT:   return "FLOAT";
+        case ElementType::FLOAT2:  return "FLOAT2";
+        case ElementType::FLOAT3:  return "FLOAT3";
+        case ElementType::FLOAT4:  return "FLOAT4";
+        case ElementType::HALF:    return "HALF";
+        case ElementType::HALF2:   return "HALF2";
+        case ElementType::HALF3:   return "HALF3";
+        case ElementType::HALF4:   return "HALF4";
+    }
+    return "UNKNOWN";
+}
 
 //! Buffer object binding type
 enum class BufferObjectBinding : uint8_t {

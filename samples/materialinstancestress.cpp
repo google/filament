@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.desiredObjectCount = app.ui.objectCountSlider;
         app.suzanneTemplate = MeshReader::loadMeshFromBuffer(engine,
-                MONKEY_SUZANNE_DATA, nullptr, nullptr, nullptr);
+                MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, nullptr);
 
         app.litMaterial = Material::Builder()
                 .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)

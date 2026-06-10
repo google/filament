@@ -363,7 +363,7 @@ void AutomationEngine::updateCustomLights(Engine* engine,
                 .castShadows(def.castShadows)
                 .sunHaloSize(def.sunHaloSize)
                 .sunHaloFalloff(def.sunHaloFalloff)
-                .sunAngularRadius(def.sunAngularRadius)
+                .sunAngularRadius(def.sunAngularRadiusDeg)
                 .build(*engine, mCustomLights[i]);
 
         // Shadow options must be set on the instance after creation

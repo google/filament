@@ -18,11 +18,12 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUTEXTURE_H
 
 #include "DriverBase.h"
-#include <backend/DriverEnums.h>
 
+#include <backend/DriverEnums.h>
 #if defined(__EMSCRIPTEN__)
 #include <backend/platforms/WebGPUWasmPolyfill.h>
 #endif
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
@@ -73,6 +74,7 @@ public:
 
     [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
+    [[nodiscard]] wgpu::TextureUsage getUsage() const { return mWebGPUUsage; }
 
     [[nodiscard]] wgpu::TextureComponentSwizzle getSwizzle() const { return mSwizzle; }
 

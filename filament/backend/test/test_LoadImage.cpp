@@ -15,19 +15,18 @@
  */
 
 #include "BackendTest.h"
-
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "PlatformRunner.h"
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
+#include "TrianglePrimitive.h"
+
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
-
-#include "TrianglePrimitive.h"
-#include "private/filament/SamplerInterfaceBlock.h"
 
 #include <vector>
 
@@ -367,7 +366,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
@@ -453,7 +452,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.bindDescriptorSet(descriptorSet, 0, {});
 
-    RenderPassParams params = getClearColorRenderPass();
+    RenderPassParams params = getClearColorDepthRenderPass();
     params.viewport.width = kTexSize;
     params.viewport.height = kTexSize;
     PipelineState state = getColorWritePipelineState();
@@ -521,7 +520,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 
     {
         RenderFrame frame(api);
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
@@ -601,7 +600,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();

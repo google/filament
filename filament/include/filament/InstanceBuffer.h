@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_INSTANCEBUFFER_H
 #define TNT_FILAMENT_INSTANCEBUFFER_H
 
-#include <filament/FilamentAPI.h>
 #include <filament/Engine.h>
+#include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
 #include <utils/StaticString.h>

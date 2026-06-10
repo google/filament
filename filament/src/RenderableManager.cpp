@@ -17,9 +17,9 @@
 #include "components/RenderableManager.h"
 
 #include "details/Engine.h"
-#include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/Material.h"
+#include "details/VertexBuffer.h"
 
 using namespace utils;
 

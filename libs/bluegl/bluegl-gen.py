@@ -101,6 +101,17 @@ def generateHeader(api, functions, include_dir, output_dir):
     'headers':   headers
  }
 
+    visibility_macro = '''
+// BLUEGL_SHARED_LINKING marks symbols that need default visibility only when
+// Filament is consumed as a shared/dynamic library. These symbols are
+// implementation details that must be visible across shared-library boundaries.
+#if __has_attribute(visibility)
+#    define BLUEGL_SHARED_LINKING __attribute__((visibility("default")))
+#else
+#    define BLUEGL_SHARED_LINKING
+#endif
+'''
+
     content = '''
 #if defined(WIN32)
 
@@ -147,7 +158,7 @@ namespace bluegl {
  *
  * @return 0 on success or -1 if an error occurred.
  */
-int bind%(gl_suffix)s();
+BLUEGL_SHARED_LINKING int bind%(gl_suffix)s();
 
 /**
  * Unbinds all available OpenGL %(api_suffix)s functions.
@@ -156,7 +167,7 @@ int bind%(gl_suffix)s();
  * As such you should assume that no OpenGL calls can be made after
  * calling this function.
  */
-void unbind%(gl_suffix)s();
+ BLUEGL_SHARED_LINKING void unbind%(gl_suffix)s();
 
 ''' % {
     'api_suffix': api['suffix'],
@@ -175,6 +186,7 @@ void unbind%(gl_suffix)s();
 
     with open(src_file, 'w') as file:
         file.write(header)
+        file.write(visibility_macro)
         file.write(content)
         file.write(footer)
 

@@ -62,7 +62,14 @@ public:
 
     void setStreamSource(JNIEnv* env, jobject streamSource) noexcept {
         mStreamSource = env->NewGlobalRef(streamSource);
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
         mBuilder->stream(mStreamSource);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
     }
 
     void cleanup(JNIEnv* env) {

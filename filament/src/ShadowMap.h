@@ -17,15 +17,16 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADOWMAP_H
 #define TNT_FILAMENT_DETAILS_SHADOWMAP_H
 
-#include <filament/Box.h>
-
 #include "Culler.h"
-#include "ds/ShadowMapDescriptorSet.h"
+
+#include "components/LightManager.h"
 
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "components/LightManager.h"
+#include "ds/ShadowMapDescriptorSet.h"
+
+#include <filament/Box.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
@@ -106,7 +107,7 @@ public:
     struct SceneInfo {
 
         SceneInfo() noexcept = default;
-        SceneInfo(FScene const& scene, uint8_t visibleLayers) noexcept;
+        SceneInfo(FScene::RenderableSoa const& renderableData, uint8_t visibleLayers) noexcept;
 
         // scratch data: light's near/far expressed in light-space, calculated from the scene's
         // content assuming the light is at the origin.
@@ -150,12 +151,12 @@ public:
     ShaderParameters updateSpot(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
             CameraInfo const& camera,
-            const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+            const ShadowMapInfo& shadowMapInfo, FScene::RenderableSoa const& renderableData,
             SceneInfo sceneInfo) noexcept;
 
     ShaderParameters updatePoint(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index, CameraInfo const& camera,
-            const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept;
+            const ShadowMapInfo& shadowMapInfo, FScene::RenderableSoa const& renderableData, uint8_t face) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -167,10 +168,10 @@ public:
     FCamera const* getDebugCamera() const noexcept { return mDebugCamera; }
 
     // Update SceneInfo struct for a given light
-    static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene const& scene,
+    static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene::RenderableSoa const& renderableData,
             SceneInfo& sceneInfo);
 
-    static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
+    static void updateSceneInfoSpot(const math::mat4f& Mv, FScene::RenderableSoa const& renderableData,
             SceneInfo& sceneInfo);
 
     LightManager::ShadowOptions const& getShadowOptions() const noexcept {
@@ -204,7 +205,7 @@ public:
     static void prepareShadowMapping(Transaction const& transaction,
             float vsmExponent, float vsmMaxMoment) noexcept;
     static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
-    void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) const noexcept;
+    void commit(Transaction& transaction, FEngine const& engine, backend::DriverApi& driver) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
 
 private:
@@ -277,7 +278,7 @@ private:
             math::float3 const* vertices, size_t count) noexcept;
 
     template<typename Visitor>
-    static void visitScene(FScene const& scene, uint32_t visibleLayers, Visitor visitor) noexcept;
+    static void visitScene(FScene::RenderableSoa const& soa, uint32_t visibleLayers, Visitor visitor) noexcept;
 
     static inline Aabb compute2DBounds(const math::mat4f& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;

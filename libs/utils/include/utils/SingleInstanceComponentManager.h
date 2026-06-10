@@ -20,9 +20,9 @@
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
-#include <utils/PagedArenaBitset.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
+#include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 

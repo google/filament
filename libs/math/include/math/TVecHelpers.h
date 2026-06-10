@@ -21,8 +21,9 @@
 
 #include <cmath>            // for std:: namespace
 
-#include <stdint.h>
 #include <sys/types.h>
+
+#include <stdint.h>
 
 namespace filament::math::details {
 

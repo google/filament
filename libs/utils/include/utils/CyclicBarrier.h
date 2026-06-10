@@ -17,11 +17,12 @@
 #ifndef TNT_UTILS_CYCLIC_BARRIER_H
 #define TNT_UTILS_CYCLIC_BARRIER_H
 
-#include <stddef.h>
-
-// note: we use our version of mutex/condition to keep this public header STL free
+#include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
+
+#include <stddef.h>
+#include <stddef.h>
 
 namespace utils {
 
@@ -74,10 +75,10 @@ private:
     mutable Mutex m_lock;
     mutable Condition m_cv;
 
-    State m_state = State::TRAP;
-    size_t m_trapped_threads = 0;
-    size_t m_released_threads = 0;
-    size_t m_generation = 0;
+    State m_state UTILS_GUARDED_BY(m_lock) = State::TRAP;
+    size_t m_trapped_threads UTILS_GUARDED_BY(m_lock) = 0;
+    size_t m_released_threads UTILS_GUARDED_BY(m_lock) = 0;
+    size_t m_generation UTILS_GUARDED_BY(m_lock) = 0;
 };
 
 } // namespace utils

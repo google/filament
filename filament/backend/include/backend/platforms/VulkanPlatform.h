@@ -23,13 +23,15 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/compiler.h>
+
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
-#include <cstring>
 #include <cstddef>
+#include <cstring>
 #include <functional>
 #include <tuple>
 #include <unordered_set>
@@ -53,7 +55,7 @@ struct VulkanCmdFence;
 /**
  * A Platform interface that creates a Vulkan backend.
  */
-class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
+class UTILS_SHARED_LINKING VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
     /**
      * Encapsulates information required to instantiate a known external format,

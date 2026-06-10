@@ -87,7 +87,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="../images/filament_logo_small.png"></img>
+                <img class="flogo" src="../images/filament_logo_small.png"/>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
@@ -278,10 +278,102 @@ private:
 </code></pre>
 <h3 id="headers"><a class="header" href="#headers">Headers</a></h3>
 <ul>
-<li><strong>always</strong> include a class' header <strong>first</strong> in the <code>.cpp</code> file</li>
-<li>other headers are sorted in reverse order of their layering, that is, lower layer headers last</li>
-<li>within a layer, headers are sorted alphabetically</li>
-<li>strive for implementing one class per file</li>
+<li><strong>always</strong> include a class' header <strong>first</strong> in the <code>.cpp</code> file.</li>
+<li>other headers are sorted in order of their layering, from <strong>most dependent to least dependent</strong> (most dependent at the top, least dependent/lower layers at the bottom).</li>
+<li>within a layer, headers are sorted alphabetically (with the exception of private local headers).</li>
+<li>strive for implementing one class per file.</li>
+</ul>
+<h4 id="header-layering-hierarchy"><a class="header" href="#header-layering-hierarchy">Header Layering Hierarchy</a></h4>
+<p>Headers must be grouped and separated by <strong>exactly one blank line</strong> in the following order (top to bottom):</p>
+<ol>
+<li><strong>0. Corresponding Header:</strong> <code>#include "details/Bar.h"</code> (the implementation's own header).</li>
+<li><strong>0.5. Windows Cleanup Header:</strong> <code>#include &lt;utils/unwindows.h&gt;</code> (always second to undefine Windows macros, only if needed).</li>
+<li><strong>1. Private / Local Headers:</strong> <code>#include "PrivateStuff.h"</code> (using <code>" "</code> syntax <strong>only</strong> for truly private headers located under the local module's <code>src/</code> directory or its subdirectories).</li>
+<li><strong>2. Internal Proprietary Libraries:</strong> <code>#include &lt;filament/Box.h&gt;</code>, <code>#include &lt;private/filament/EngineEnums.h&gt;</code>, <code>#include &lt;filaflat/MaterialChunk.h&gt;</code>, <code>#include &lt;backend/Handle.h&gt;</code> (all public and private includes for other proprietary libraries <strong>must</strong> use <code>&lt; &gt;</code> brackets syntax. The layering priority order of these libraries is dynamically computed based on the <code>CMakeLists.txt</code> target linkage graph from most dependent to least dependent).</li>
+<li><strong>3. Third-Party Libraries:</strong> <code>#include &lt;tsl/robin_map.h&gt;</code>, <code>#include &lt;jni.h&gt;</code> (known third-party and system includes).</li>
+<li><strong>4. C++ Standard Library:</strong> <code>#include &lt;algorithm&gt;</code> (standard C++ templates and <code>&lt;c...&gt;</code> wrappers like <code>&lt;cstdint&gt;</code>, <code>&lt;cstddef&gt;</code>).</li>
+<li><strong>5. POSIX System Headers:</strong> <code>#include &lt;unistd.h&gt;</code> (C POSIX system headers and <code>&lt;sys/...&gt;</code> headers, placed below C++ standard but above legacy C standard).</li>
+<li><strong>6. C Standard Library:</strong> <code>#include &lt;stddef.h&gt;</code> (legacy system headers ending in <code>.h</code>).</li>
+</ol>
+<h4 id="private--local-includes-formatting-layer-1"><a class="header" href="#private--local-includes-formatting-layer-1">Private / Local Includes Formatting (Layer 1)</a></h4>
+<p>To maximize readability for local quoted includes:</p>
+<ul>
+<li><strong>Flat-First Sorting:</strong> Flat/top-level files (without a directory prefix, e.g., <code>"Allocators.h"</code>) are sorted <strong>first</strong>. Files nested inside subdirectories (e.g., <code>"components/Foo.h"</code>) are sorted <strong>second</strong>.</li>
+<li><strong>Sub-Directory Spacing:</strong> includes are grouped by their sub-directory path prefix, with <strong>exactly one blank line</strong> separating different sub-directory groups.</li>
+</ul>
+<p><em>Sorting the headers is important to help catching missing <code>#include</code> directives.</em></p>
+<pre><code class="language-c++">/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Bar.cpp
+
+// 0. Corresponding header
+#include &lt;foo/Bar.h&gt;
+
+// 0.5. Windows Cleanup
+#include &lt;utils/unwindows.h&gt;
+
+// 1. Private / local headers (grouped by subdirectory prefix, flat first)
+#include "Allocators.h"
+
+#include "components/LightManager.h"
+#include "components/RenderableManager.h"
+
+#include "details/Engine.h"
+#include "details/Skybox.h"
+
+// 2. Internal library headers (sorted by topological dependencies: filaflat above backend)
+#include &lt;private/filament/EngineEnums.h&gt;
+#include &lt;filament/Box.h&gt;
+
+#include &lt;filaflat/MaterialChunk.h&gt;
+
+#include &lt;backend/Handle.h&gt;
+
+#include &lt;private/utils/Tracing.h&gt;
+#include &lt;utils/Allocator.h&gt;
+
+#include &lt;math/vec3.h&gt;
+
+// 3. Third-party
+#include &lt;tsl/robin_map.h&gt;
+
+// 4. C++ Standard Library
+#include &lt;algorithm&gt;
+#include &lt;cstddef&gt;
+#include &lt;cstdint&gt;
+#include &lt;utility&gt;
+
+// 5. POSIX / System headers
+#include &lt;unistd.h&gt;
+#include &lt;sys/stat.h&gt;
+
+// 6. C Standard Library
+#include &lt;stddef.h&gt;
+#include &lt;stdint.h&gt;
+</code></pre>
+<h4 id="automatic-header-formatting-tool"><a class="header" href="#automatic-header-formatting-tool">Automatic Header Formatting Tool</a></h4>
+<p>An official script is available in the repository to automatically format and sort C++ include blocks in accordance with these rules:</p>
+<pre><code class="language-bash">./tools/reorganize_headers.py &lt;file_or_directory&gt;
+</code></pre>
+<p>To see what changes would be made without modifying the files, use the <code>--dry-run</code> option:</p>
+<pre><code class="language-bash">./tools/reorganize_headers.py --dry-run &lt;file_or_directory&gt;
+</code></pre>
+<p><em>Note: The tool has safety checks built-in and will automatically skip any files with inline preprocessor conditionals (<code>#if</code>, <code>#ifdef</code>, etc.) or nested code statements inside their include block to prevent compilation regressions.</em></p>
+<ul>
 <li><code>STL</code> limited in <strong>filament</strong> public headers to:
 <ul>
 <li><code>array</code></li>
@@ -304,40 +396,6 @@ conversely containers and algorithms are not allowed. There are exceptions such 
 </ul>
 </li>
 </ul>
-<p><em>Sorting the headers is important to help catching missing <code>#include</code> directives.</em></p>
-<pre><code class="language-c++">/*
- * Copyright (C) 2018 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-// Bar.cpp
-
-#include &lt;foo/Bar.h&gt;
-
-#include "PrivateStuff.h"
-
-#include &lt;foo/Alloc.h&gt;
-#include &lt;foo/Bar.h&gt;
-
-#include &lt;utils/compiler.h&gt;
-
-#include &lt;algorithm&gt;
-#include &lt;iostream&gt;
-
-#include &lt;assert.h&gt;
-#include &lt;string.h&gt;
-</code></pre>
 <h3 id="strings"><a class="header" href="#strings">Strings</a></h3>
 <ul>
 <li>Never use <code>std::string</code> in the Filament core renderer. Prefer <code>utils::CString</code> or <code>std::string_view</code>.</li>

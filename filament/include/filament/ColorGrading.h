@@ -22,13 +22,15 @@
 #include <filament/FilamentAPI.h>
 #include <filament/ToneMapper.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -111,6 +113,21 @@ class ColorSpace;
 class UTILS_PUBLIC ColorGrading : public FilamentAPI {
     struct BuilderDetails;
 public:
+    /**
+     * Callback invoked during build() to export the generated LUT data.
+     *
+     * @param data Pointer to the generated LUT pixel data.
+     * @param size Total size in bytes of the data buffer.
+     * @param format Pixel data format.
+     * @param type Pixel data type.
+     * @param width LUT width.
+     * @param height LUT height.
+     * @param depth LUT depth.
+     * @param user Opaque user pointer provided when registering the callback.
+     */
+    using ExportCallback = void(*)(void const* UTILS_NONNULL data, size_t size,
+            backend::PixelDataFormat format, backend::PixelDataType type,
+            uint32_t width, uint32_t height, uint32_t depth, void* UTILS_NULLABLE user);
 
     enum class QualityLevel : uint8_t {
         LOW,
@@ -490,6 +507,27 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& outputColorSpace(const color::ColorSpace& colorSpace) noexcept;
+
+        /**
+         * Registers a callback to inspect or copy the generated LUT data during build().
+         *
+         * @param callback Function pointer invoked with the generated data and layout metadata.
+         * @param user Optional user data pointer passed to the callback.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& exportLut(ExportCallback UTILS_NULLABLE callback, void* UTILS_NULLABLE user = nullptr) noexcept;
+
+        /**
+         * Hints whether the engine is permitted to use fast mathematical approximations (such as SIMD 
+         * polynomial transcendentals) during LUT generation when eligible.
+         *
+         * Setting fastMath to false forces exact C++ scalar libm calculations.
+         * The default is true.
+         *
+         * @param fastMath true to allow fast mathematical approximations, false otherwise.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& fastMath(bool fastMath) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.

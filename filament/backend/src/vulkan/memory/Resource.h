@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_VULKAN_MEMORY_RESOURCE_H
 
 #include <private/backend/HandleAllocator.h>
+
 #include <utils/Mutex.h>
 
 #include <atomic>

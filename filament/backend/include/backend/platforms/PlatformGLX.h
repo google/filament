@@ -17,26 +17,26 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_GLX_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_GLX_H
 
-#include <stdint.h>
-
-#include "bluegl/BlueGL.h"
-#include <GL/glx.h>
-
+#include <backend/DriverEnums.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
-#include <backend/DriverEnums.h>
+#include <bluegl/BlueGL.h>
+
+#include <GL/glx.h>
 
 #include <shared_mutex>
 #include <thread>
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
+#include <stdint.h>
 
 namespace filament::backend {
 
 /**
  * A concrete implementation of OpenGLPlatform that supports GLX.
  */
-class PlatformGLX : public OpenGLPlatform {
+class UTILS_SHARED_LINKING PlatformGLX : public OpenGLPlatform {
 protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface

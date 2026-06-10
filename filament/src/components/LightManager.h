@@ -19,9 +19,9 @@
 
 #include "downcast.h"
 
-#include "backend/DriverApiForward.h"
-
 #include <filament/LightManager.h>
+
+#include <backend/DriverApiForward.h>
 
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>
@@ -126,7 +126,7 @@ public:
     UTILS_NOINLINE void setIntensity(Instance i, float intensity, IntensityUnit unit) noexcept;
     UTILS_NOINLINE void setFalloff(Instance i, float radius) noexcept;
     UTILS_NOINLINE void setShadowCaster(Instance i, bool shadowCaster) noexcept;
-    UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
+    UTILS_NOINLINE void setSunAngularRadiusRad(Instance i, float angularRadiusRad) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
 
@@ -198,8 +198,8 @@ public:
         return mManager[i].intensity;
     }
 
-    float getSunAngularRadius(Instance const i) const noexcept {
-        return mManager[i].sunAngularRadius;
+    float getSunAngularRadiusRad(Instance const i) const noexcept {
+        return mManager[i].sunAngularRadiusRad;
     }
 
     float getSunHaloSize(Instance const i) const noexcept {
@@ -305,7 +305,7 @@ private:
                 Field<COLOR>                color;
                 Field<SHADOW_PARAMS>        shadowParams;
                 Field<SPOT_PARAMS>          spotParams;
-                Field<SUN_ANGULAR_RADIUS>   sunAngularRadius;
+                Field<SUN_ANGULAR_RADIUS>   sunAngularRadiusRad;
                 Field<SUN_HALO_SIZE>        sunHaloSize;
                 Field<SUN_HALO_FALLOFF>     sunHaloFalloff;
                 Field<INTENSITY>            intensity;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/linux/Mutex.h>
-
 #include "futex.h"
+
+#include <utils/linux/Mutex.h>
 
 namespace utils {
 

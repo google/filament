@@ -17,19 +17,19 @@
 #ifndef TNT_FILAMAT_MATERIAL_CHUNK_H
 #define TNT_FILAMAT_MATERIAL_CHUNK_H
 
+#include <private/filament/Variant.h>
+
 #include <filament/MaterialChunkType.h>
 
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/Unflattener.h>
 
-#include <private/filament/Variant.h>
-
-#include <tsl/robin_map.h>
-
 #include <backend/DriverEnums.h>
 
-#include <utils/Invocable.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+
+#include <tsl/robin_map.h>
 
 namespace filaflat {
 

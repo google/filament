@@ -28,6 +28,7 @@
 #include "VulkanMemory.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
+
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
@@ -37,18 +38,18 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Panic.h>
-#include <private/utils/FeatureFlagManager.h>
-
-#ifndef NDEBUG
-#include <set>  // For VulkanDriver::debugCommandBegin
-#endif
 
 #include <chrono>
 #include <mutex>
+#ifndef NDEBUG
+#include <set>  // For VulkanDriver::debugCommandBegin
+#endif
 
 using namespace bluevk;
 
@@ -704,6 +705,12 @@ void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vert
     mResourceManager.associateHandle(vbh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (!vbh) {
         return;
@@ -1115,7 +1122,7 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::ImmutableCString&& tag)
     }
 
     {
-        std::lock_guard<std::mutex> guard(sync->lock);
+        std::lock_guard guard(sync->lock);
         sync->sync = mPlatform->createSync(fenceStatus);
     }
 
@@ -1218,6 +1225,10 @@ Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
+    return mResourceManager.allocHandle<VulkanVertexBuffer>();
+}
+
+Handle<HwVertexBuffer> VulkanDriver::createVertexBufferAsyncS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBuffer>();
 }
 
@@ -2666,13 +2677,22 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
 
 void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     FVK_SYSTRACE_SCOPE();
-    if (skipDueToEmptyRenderPass()) {
+
+    mRenderPrimitiveState.bound = false;
+    if (UTILS_VERY_UNLIKELY(skipDueToEmptyRenderPass())) {
         return;
     }
 
+    auto prim = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
+
+    if (UTILS_VERY_UNLIKELY(!prim->vertexBuffer->isValid())) {
+        return;
+    }
+    // This determines whether a draw call will be made or not.
+    mRenderPrimitiveState.bound = true;
+
     VulkanCommandBuffer* commands = mCurrentRenderPass.commandBuffer;
     VkCommandBuffer cmdbuffer = commands->buffer();
-    auto prim = resource_ptr<VulkanRenderPrimitive>::cast(&mResourceManager, rph);
     commands->acquire(prim);
 
     // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
@@ -2770,6 +2790,12 @@ void VulkanDriver::prepareDraw() {
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
+
+    // Don't draw if no render primitive has been bound
+    if (UTILS_VERY_UNLIKELY(!mRenderPrimitiveState.bound)) {
+        return;
+    }
+
     prepareDraw();
 
     // Finally, make the actual draw call. TODO: support subranges

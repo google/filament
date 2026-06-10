@@ -22,12 +22,13 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
-#include <utils/Invocable.h>
 #include <utils/CString.h>
+#include <utils/Invocable.h>
+
+#include <math/mat3.h>
 
 #include <stddef.h>
 #include <stdint.h>
-#include <math/mat3.h>
 
 namespace filament::backend {
 
@@ -40,7 +41,7 @@ class Driver;
  *          upon return.
  *
  */
-class OpenGLPlatform : public Platform {
+class UTILS_SHARED_LINKING OpenGLPlatform : public Platform {
 protected:
 
     /*

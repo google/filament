@@ -97,6 +97,7 @@ void BackendTest::initializeDriver() {
         driverConfig.asynchronousMode = Platform::AsynchronousMode::THREAD_PREFERRED;
     }
     driver = mPlatform->createDriver(nullptr, driverConfig);
+    assert_invariant(driver);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }
 
@@ -143,12 +144,14 @@ filament::backend::Viewport BackendTest::getFullViewport() const {
    };
 }
 
-filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(double4 color) {
+filament::backend::RenderPassParams BackendTest::getClearColorDepthRenderPass(double4 color,
+        double depth) {
     RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR;
+    params.flags.clear = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.clearColor = color;
+    params.clearDepth = depth;
     return params;
 }
 

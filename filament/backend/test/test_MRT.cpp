@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
@@ -65,8 +64,6 @@ TEST_F(BackendTest, MRT) {
 
         TrianglePrimitive triangle(api);
 
-        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
-
         // Create two Textures.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
         Handle<HwTexture> textureA = addCleanup(api.createTexture(
@@ -104,7 +101,7 @@ TEST_F(BackendTest, MRT) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         api.startCapture(0);

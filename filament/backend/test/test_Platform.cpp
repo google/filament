@@ -16,14 +16,14 @@
 
 #include "BackendTest.h"
 
+#include <private/backend/Driver.h>
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/Platform.h>
 
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
-
-#include <private/backend/Driver.h>
-#include <private/backend/PlatformFactory.h>
 
 namespace test {
 
@@ -49,6 +49,15 @@ TEST_F(PlatformTest, GetDeviceInfo) {
         platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, driver);
         platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VENDOR, driver);
         platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VERSION, driver);
+
+        // Test that calling with nullptr driver on supported types returns empty CString
+        EXPECT_TRUE(platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, nullptr)
+                        .empty());
+        EXPECT_TRUE(
+                platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VENDOR, nullptr).empty());
+        EXPECT_TRUE(
+                platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_VERSION, nullptr).empty());
+
 
         // Death tests for Vulkan info on OpenGL platform
 #ifdef __EXCEPTIONS

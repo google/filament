@@ -37,7 +37,7 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
         const MaterialBuilder::PropertyList& actual) {
     for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
         if (expected[i] != actual[i]) {
-            const auto& propString = Enums::toString<Property>(Property(i));
+            const auto& propString = Enums::toString<Property>(static_cast<Property>(i));
             return ::testing::AssertionFailure()
                     << "actual[" << propString << "] (" << actual[i]
                     << ") != expected[" << propString << "] (" << expected[i] << ")";
@@ -46,17 +46,18 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
     return ::testing::AssertionSuccess();
 }
 
-std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
-        const std::string& fragmentCode, const std::string& vertexCode = "",
-        filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT,
-        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE,
-        filamat::MaterialBuilder::VertexDomain vertexDomain = filamat::MaterialBuilder::VertexDomain::OBJECT) {
+std::string shaderWithAllProperties(const ShaderStage type,
+        const std::string& fragmentCode,
+        const std::string& vertexCode = "",
+        const MaterialBuilder::Shading shadingModel = MaterialBuilder::Shading::LIT,
+        const MaterialBuilder::RefractionMode refractionMode = MaterialBuilder::RefractionMode::NONE,
+        const MaterialBuilder::VertexDomain vertexDomain = MaterialBuilder::VertexDomain::OBJECT) {
 
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(fragmentCode.c_str());
     builder.materialVertex(vertexCode.c_str());
-    builder.platform(filamat::MaterialBuilder::Platform::MOBILE);
-    builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
+    builder.platform(MaterialBuilder::Platform::MOBILE);
+    builder.optimization(MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
     builder.refractionMode(refractionMode);
     builder.vertexDomain(vertexDomain);
@@ -76,12 +77,12 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionName) {
-    auto name = getFunctionName("main(");
+    const auto name = getFunctionName("main(");
     EXPECT_EQ(name, "main");
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionNameNoParenthesis) {
-    auto name = getFunctionName("main");
+    const auto name = getFunctionName("main");
     EXPECT_EQ(name, "main");
 }
 
@@ -106,14 +107,13 @@ protected:
 };
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
@@ -123,7 +123,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
         }
@@ -133,8 +133,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::VERTEX,
-            fragmentCode, vertexCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode, vertexCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
@@ -145,7 +144,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
 
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void notAffectingInput(in MaterialInputs material) {
             material.baseColor = vec4(0.8);
         }
@@ -155,8 +154,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
@@ -166,26 +164,25 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = vec4(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
         }
@@ -196,41 +193,38 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::VERTEX,
-            fragmentCode, vertexCode,
-            MaterialBuilder::Shading::LIT,
-            MaterialBuilder::RefractionMode::NONE,
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode, vertexCode,
+            MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
             MaterialBuilder::VertexDomain::DEVICE);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
+    expected[size_t(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor.rgb = vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
 
         void setBaseColor(inout vec4 aliasBaseColor) {
             aliasBaseColor = vec4(0.8,0.1,0.2,1.0);
@@ -242,19 +236,18 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSwizzling) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
 
         void setBaseColor(inout float aliasedRed) {
             aliasedRed = 0.8;
@@ -266,19 +259,18 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSw
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexIntoStruct) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
 
         float setBaseColorOtherFunction(inout vec4 myBaseColor) {
             myBaseColor = vec4(0.8,0.1,0.2,1.0);
@@ -295,19 +287,18 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
 
         float setBaseColorOtherFunction(inout MaterialInputs foo) {
             foo.baseColor = vec4(0.8,0.1,0.2,1.0);
@@ -324,134 +315,127 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 // Tests all attributes in Property type.
 TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = vec4(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.roughness = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::ROUGHNESS)] = true;
+    expected[size_t(MaterialBuilder::Property::ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.metallic = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::METALLIC)] = true;
+    expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.reflectance= 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::REFLECTANCE)] = true;
+    expected[size_t(MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.ambientOcclusion = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
+    expected[size_t(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.clearCoat = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.absorption = vec3(0.0);
@@ -460,23 +444,21 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "",
-            filamat::MaterialBuilder::Shading::LIT,
-            filamat::MaterialBuilder::RefractionMode::CUBEMAP);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::CUBEMAP);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
+    expected[size_t(MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[size_t(MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(MaterialBuilder::Property::IOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerDispersion) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.absorption = vec3(0.0);
@@ -486,42 +468,40 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDispersion) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode, "", filamat::MaterialBuilder::Shading::LIT,
-            filamat::MaterialBuilder::RefractionMode::CUBEMAP);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::CUBEMAP);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::DISPERSION)] = true;
+    expected[size_t(MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[size_t(MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[size_t(MaterialBuilder::Property::IOR)] = true;
+    expected[size_t(MaterialBuilder::Property::DISPERSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.clearCoatRoughness = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "");
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "");
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.clearCoat = 0.8;
@@ -529,214 +509,203 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "");
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "");
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.thickness= 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "",
-            filamat::MaterialBuilder::Shading::SUBSURFACE);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::THICKNESS)] = true;
+    expected[size_t(MaterialBuilder::Property::THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.subsurfacePower = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "",
-            filamat::MaterialBuilder::Shading::SUBSURFACE);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
+    expected[size_t(MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.subsurfaceColor= vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "",
-            filamat::MaterialBuilder::Shading::SUBSURFACE);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.anisotropyDirection = vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
+    expected[size_t(MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.anisotropy = 0.8;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY)] = true;
+    expected[size_t(MaterialBuilder::Property::ANISOTROPY)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.sheenColor = vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
-            "",
-            filamat::MaterialBuilder::Shading::CLOTH);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::CLOTH);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::SHEEN_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::SHEEN_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.sheenRoughness = 1.0;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
+    expected[size_t(MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.normal= vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
+    expected[size_t(MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.bentNormal = vec3(0.8);
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::BENT_NORMAL)] = true;
+    expected[size_t(MaterialBuilder::Property::BENT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerShadowStrength) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.shadowStrength = 0.1;
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::SHADOW_STRENGTH)] = true;
+    expected[size_t(MaterialBuilder::Property::SHADOW_STRENGTH)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
-    std::string fragmentCode(R"(
+    const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.postLightingColor = vec4(1.0);
@@ -744,111 +713,110 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
-            fragmentCode);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
-    expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
+    expected[size_t(MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
 TEST_F(MaterialCompiler, EmptyName) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
         }
     )");
 
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     // The material should compile successfully with an empty name
     builder.name("");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
 }
 
 TEST_F(MaterialCompiler, Uv0AndUv1) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     // Requiring both sets of UV coordinates should not fail.
     builder.require(filament::VertexAttribute::UV0);
     builder.require(filament::VertexAttribute::UV1);
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, FiveCustomVariables) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
     builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
     builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
     builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
     builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, FourCustomVariablesAndColorAttribute) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.require(filament::VertexAttribute::COLOR);
     builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
     builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
     builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
     builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, FiveCustomVariablesAndColorAttributeFails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.require(filament::VertexAttribute::COLOR);
     builder.variable(MaterialBuilder::Variable::CUSTOM0, "custom0");
     builder.variable(MaterialBuilder::Variable::CUSTOM1, "custom1");
     builder.variable(MaterialBuilder::Variable::CUSTOM2, "custom2");
     builder.variable(MaterialBuilder::Variable::CUSTOM3, "custom3");
     builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomVariable4AndColorAttributeFails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.require(filament::VertexAttribute::COLOR);
     builder.variable(MaterialBuilder::Variable::CUSTOM4, "custom4");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, Arrays) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
 
     builder.parameter("f4", 1, UniformType::FLOAT4);
     builder.parameter("f1", 1, UniformType::FLOAT);
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomSurfaceShadingRequiresLit) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.customSurfaceShading(true);
     builder.shading(filament::Shading::UNLIT);
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomSurfaceShadingRequiresFunction) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.customSurfaceShading(true);
     builder.shading(filament::Shading::LIT);
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomSurfaceShadingHasFunction) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
         }
@@ -862,16 +830,16 @@ TEST_F(MaterialCompiler, CustomSurfaceShadingHasFunction) {
         }
     )");
 
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.customSurfaceShading(true);
     builder.shading(filament::Shading::LIT);
     builder.material(shaderCode.c_str());
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, ConstantParameter) {
-  std::string shaderCode(R"(
+  const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             if (materialConstants_myBoolConstant) {
@@ -887,7 +855,7 @@ TEST_F(MaterialCompiler, ConstantParameter) {
             float aFloat = materialConstants_myFloatConstant;
         }
     )");
-  filamat::MaterialBuilder builder;
+  MaterialBuilder builder;
   builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
   builder.constant("myIntConstant", ConstantType::INT, 123);
   builder.constant("myBoolConstant", ConstantType::BOOL, true);
@@ -896,14 +864,14 @@ TEST_F(MaterialCompiler, ConstantParameter) {
   builder.shading(filament::Shading::LIT);
   builder.material(shaderCode.c_str());
   builder.materialVertex(vertexCode.c_str());
-  filamat::Package result = builder.build(*jobSystem);
+  const Package result = builder.build(*jobSystem);
   EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, ConstantParameterSameName) {
 #ifdef __EXCEPTIONS
     EXPECT_THROW({
-        filamat::MaterialBuilder builder;
+        MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
         builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
     }, utils::PostconditionPanic);
@@ -913,114 +881,114 @@ TEST_F(MaterialCompiler, ConstantParameterSameName) {
 TEST_F(MaterialCompiler, ConstantParameterWrongType) {
 #ifdef __EXCEPTIONS
     EXPECT_THROW({
-        filamat::MaterialBuilder builder;
+        MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
     }, utils::PostconditionPanic);
 #endif
 }
 
 TEST_F(MaterialCompiler, FeatureLevel0Sampler2D) {
-  std::string shaderCode(R"(
+  const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = texture(materialParams_sampler, vec2(0.0, 0.0));
         }
     )");
-  filamat::MaterialBuilder builder;
+  MaterialBuilder builder;
   builder.parameter("sampler", SamplerType::SAMPLER_2D);
 
   builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
   builder.shading(filament::Shading::UNLIT);
   builder.material(shaderCode.c_str());
-  filamat::Package result = builder.build(*jobSystem);
+  const Package result = builder.build(*jobSystem);
   EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, SamplerTransformName) {
-  std::string shaderCode(R"(
+  const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
             material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
-  filamat::MaterialBuilder builder;
+  MaterialBuilder builder;
   builder.parameter("sampler", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT,
           ParameterPrecision::DEFAULT, true, false, "sampler_transform");
 
   builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
   builder.shading(filament::Shading::UNLIT);
   builder.material(shaderCode.c_str());
-  filamat::Package result = builder.build(*jobSystem);
+  const Package result = builder.build(*jobSystem);
   EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, SamplerMissingTransformName) {
-  std::string shaderCode(R"(
+  const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
             material.baseColor = texture(materialParams_sampler, uvw.xy);
         }
     )");
-  filamat::MaterialBuilder builder;
+  MaterialBuilder builder;
   builder.parameter("sampler", SamplerType::SAMPLER_2D);
 
   builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
   builder.shading(filament::Shading::UNLIT);
   builder.material(shaderCode.c_str());
-  filamat::Package result = builder.build(*jobSystem);
+  const Package result = builder.build(*jobSystem);
   EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
-  std::string shaderCode(R"(
+  const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = texture(materialParams_sampler, vec3(0.0, 0.0));
         }
     )");
-  filamat::MaterialBuilder builder;
+  MaterialBuilder builder;
   builder.parameter("sampler", SamplerType::SAMPLER_2D);
 
   builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
   builder.shading(filament::Shading::UNLIT);
   builder.material(shaderCode.c_str());
-  filamat::Package result = builder.build(*jobSystem);
+  const Package result = builder.build(*jobSystem);
   EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, EmbedMaterialSourceSucceeds) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = vec4(1.);
         }
     )");
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.materialSource(shaderCode);
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, ClientApiLevelUnstableNoUseOfUnstableApiSucceeds) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor = vec4(1.);
         }
     )");
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, ClientApiLevelUnstableUseOfUnstableApiSucceeds) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         // Emulate an unstable api added in the public shaders
         #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
         /* @unstable-api */
@@ -1032,16 +1000,16 @@ TEST_F(MaterialCompiler, ClientApiLevelUnstableUseOfUnstableApiSucceeds) {
             material.baseColor = vec4(unstableApi());
         }
     )");
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, ClientApiLevelReleasedUseOfUnstableApiFails) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         // Emulate an unstable api added in the public shaders
         #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
         /* @unstable-api */
@@ -1053,90 +1021,90 @@ TEST_F(MaterialCompiler, ClientApiLevelReleasedUseOfUnstableApiFails) {
             material.baseColor = vec4(unstableApi());
         }
     )");
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     builder.setApiLevel(filament::RELEASED_MATERIAL_API_LEVEL);
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomOutputSuccess) {
-    std::string shaderCode(R"(
+    const std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.customOutput = uvec4(1, 2, 3, 4);
         }
     )");
 
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.material(shaderCode.c_str());
     builder.shading(filament::Shading::UNLIT);
     builder.blending(filament::BlendingMode::OPAQUE);
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput");
 
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomOutputFeatureLevel0Fails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomOutputMoreThanOneFails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput");
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput1");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomOutputLitFails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
     builder.shading(filament::Shading::LIT);
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
 TEST_F(MaterialCompiler, CustomOutputTransparentFails) {
-    filamat::MaterialBuilder builder;
+    MaterialBuilder builder;
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
     builder.shading(filament::Shading::UNLIT);
     builder.blending(filament::BlendingMode::TRANSPARENT);
-    builder.output(filamat::MaterialBuilder::VariableQualifier::OUT,
-                   filamat::MaterialBuilder::OutputTarget::COLOR,
-                   filamat::MaterialBuilder::Precision::DEFAULT,
-                   filamat::MaterialBuilder::OutputType::UINT4,
+    builder.output(MaterialBuilder::VariableQualifier::OUT,
+                   MaterialBuilder::OutputTarget::COLOR,
+                   MaterialBuilder::Precision::DEFAULT,
+                   MaterialBuilder::OutputType::UINT4,
                    "customOutput");
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
 }
 
@@ -1148,17 +1116,17 @@ TEST_F(MaterialCompiler, WgslConversionBakedColor) {
             material.baseColor = getColor();
         }
     )");
-    filamat::MaterialBuilder builder;
-    builder.targetApi(filamat::MaterialBuilderBase::TargetApi::WEBGPU);
+    MaterialBuilder builder;
+    builder.targetApi(MaterialBuilderBase::TargetApi::WEBGPU);
     builder.material(bakedColorCodeFrag.c_str());
-    builder.shading(filamat::MaterialBuilder::Shading::UNLIT);
+    builder.shading(MaterialBuilder::Shading::UNLIT);
     builder.name("BakedColor");
     builder.culling(CullingMode::NONE);
     builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
     builder.require(filament::VertexAttribute::COLOR);
     builder.variantFilter(static_cast<filament::UserVariantFilterMask>(
             filament::UserVariantFilterBit::SKINNING | filament::UserVariantFilterBit::STE));
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 
@@ -1179,10 +1147,10 @@ TEST_F(MaterialCompiler, WgslConversionSandboxLitTransparent) {
         material.emissive = materialParams.emissive;
     }
     )");
-    filamat::MaterialBuilder builder;
-    builder.targetApi(filamat::MaterialBuilderBase::TargetApi::WEBGPU);
+    MaterialBuilder builder;
+    builder.targetApi(MaterialBuilderBase::TargetApi::WEBGPU);
     builder.material(litTransparentCodeFrag.c_str());
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
+    builder.shading(MaterialBuilder::Shading::LIT);
     builder.name("LitTransparent");
     builder.blending(filament::BlendingMode::TRANSPARENT);
     builder.specularAntiAliasing(true);
@@ -1201,7 +1169,7 @@ TEST_F(MaterialCompiler, WgslConversionSandboxLitTransparent) {
 
     builder.variantFilter(static_cast<filament::UserVariantFilterMask>(
             filament::UserVariantFilterBit::SKINNING | filament::UserVariantFilterBit::STE));
-    filamat::Package result = builder.build(*jobSystem);
+    const Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
 }
 #endif

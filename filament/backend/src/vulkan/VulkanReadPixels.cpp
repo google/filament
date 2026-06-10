@@ -20,11 +20,12 @@
 #include "VulkanCommands.h"
 #include "VulkanHandles.h"
 #include "VulkanTexture.h"
+
 #include "vulkan/utils/Conversion.h"  // getComponentType()
 #include "vulkan/utils/Image.h"
 
-#include <utils/Log.h>
 #include <utils/compiler.h>
+#include <utils/Log.h>
 
 using namespace bluevk;
 

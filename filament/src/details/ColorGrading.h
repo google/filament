@@ -19,11 +19,15 @@
 
 #include "downcast.h"
 
-#include <backend/Handle.h>
-
 #include <filament/ColorGrading.h>
 
+#include <backend/Handle.h>
+
 #include <math/mathfwd.h>
+
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #include <cstddef>
 #include <cstdint>
@@ -57,6 +61,15 @@ private:
     uint32_t mDimension;
     bool mIsOneDimensional;
     bool mIsLDR;
+
+#if defined(__ARM_NEON)
+    static void generateDefaultLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
+    static void generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
+    static void colorGradingAdjustmentsNeon(
+            float32x4_t& vr, float32x4_t& vg, float32x4_t& vb,
+            Config const& config, Builder const& builder) noexcept;
+#endif
+
 };
 
 FILAMENT_DOWNCAST(ColorGrading)

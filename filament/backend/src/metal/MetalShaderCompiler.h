@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_METAL_METALSHADERCOMPILER_H
 #define TNT_FILAMENT_BACKEND_METAL_METALSHADERCOMPILER_H
 
-#include "CompilerThreadPool.h"
-
 #include "CallbackManager.h"
+#include "CompilerThreadPool.h"
 
 #include <backend/CallbackHandler.h>
 #include <backend/Program.h>

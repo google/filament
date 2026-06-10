@@ -16,7 +16,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
 #include "Shader.h"
@@ -158,7 +157,7 @@ TEST_F(BackendTest, TextureViewLod) {
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);

@@ -25,14 +25,16 @@
 #include "details/Scene.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/utils/Tracing.h>
-#include <private/backend/DriverApi.h>
 
 #include <filament/Box.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include <private/backend/DriverApi.h>
+
 #include <backend/DriverEnums.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/architecture.h>
 #include <utils/BinaryTreeArray.h>
@@ -133,7 +135,7 @@ size_t Froxelizer::getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi)
     // Make sure that targetSize is 16-byte aligned so that it'll fit properly into an array of
     // uvec4. The maximum size is 64K entries, because we're using 16 bits indices.
     size_t const targetSize = (driverApi.getMaxUniformBufferSize() / 16) * 16;
-    return std::min(size_t(std::numeric_limits<uint16_t>::max()), targetSize);
+    return std::min(size_t(std::numeric_limits<uint16_t>::max() + 1), targetSize);
 }
 
 View::FroxelConfigurationInfo Froxelizer::getFroxelConfigurationInfo() const noexcept {
@@ -164,7 +166,7 @@ Froxelizer::Froxelizer(FEngine& engine)
 
     size_t const froxelRecordBufferByteCount = getFroxelRecordBufferByteCount(driverApi);
     mFroxelRecordBufferEntryCount = froxelRecordBufferByteCount / sizeof(uint8_t);
-    assert_invariant(mFroxelRecordBufferEntryCount <= std::numeric_limits<uint16_t>::max());
+    assert_invariant(mFroxelRecordBufferEntryCount <= size_t(std::numeric_limits<uint16_t>::max()) + 1);
 
     mRecordsBuffer = driverApi.createBufferObject(
             froxelRecordBufferByteCount,
@@ -659,13 +661,12 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     Slice<FroxelThreadData> froxelThreadData = mFroxelShardedData;
     memset(froxelThreadData.data(), 0, froxelThreadData.sizeInBytes());
 
-    auto& lcm = engine.getLightManager();
     auto const* UTILS_RESTRICT spheres      = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT spotParams   = lightData.data<FScene::SPOT_PARAMS>();
 
     auto process = [ this, &froxelThreadData,
-                     spheres, directions, instances, &viewMatrix, &lcm ]
+                     spheres, directions, spotParams, &viewMatrix ]
             (size_t const count, size_t const offset, size_t const stride) {
 
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FroxelizeLoop Job");
@@ -680,12 +681,12 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
-            FLightManager::Instance const li = instances[j];
+            float2 const params = spotParams[j];
             LightParams light = {
                     .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz,     // to view-space
-                    .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
+                    .cosSqr = std::min(maxCosSquared, params.x),                    // spot only
                     .axis = vn * directions[j],                                     // spot only
-                    .invSin = lcm.getSinInverse(li),                                // spot only
+                    .invSin = params.y,                                             // spot only
                     .radius = spheres[j].w,
             };
             // infinity means "point-light"

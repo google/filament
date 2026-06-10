@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_ENGINE_H
 
 
+#include <filament/ColorGrading.h>
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
@@ -32,8 +33,8 @@
 #include <initializer_list>
 #include <optional>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 
 namespace utils {
@@ -569,6 +570,13 @@ public:
          * @return A reference to this Builder for chaining calls.
          */
         Builder& features(std::initializer_list<char const *> list) noexcept;
+
+        /**
+         * Sets the builder used to create the default ColorGrading object.
+         * @param colorGrading Builder used to create the default color grading.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& colorGrading(ColorGrading::Builder const& colorGrading) noexcept;
 
 #if UTILS_HAS_THREADING
         /**

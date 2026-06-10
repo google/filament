@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_LIGHTMANAGER_H
 #define TNT_FILAMENT_LIGHTMANAGER_H
 
-#include <filament/FilamentAPI.h>
 #include <filament/Color.h>
+#include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
@@ -27,8 +27,8 @@
 #include <math/mathfwd.h>
 #include <math/quat.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
     class Entity;
@@ -625,15 +625,15 @@ public:
          *
          * The Sun as seen from Earth has an angular size of 0.526° to 0.545°
          *
-         * @param angularRadius sun's radius in degree. Default is 0.545°.
+         * @param angularRadiusDeg sun's radius in degree. Default is 0.545°.
          *
          * @return This Builder, for chaining calls.
          */
-        Builder& sunAngularRadius(float angularRadius) noexcept;
+        Builder& sunAngularRadius(float angularRadiusDeg) noexcept;
 
         /**
          * Defines the halo radius of the sun. The radius of the halo is defined as a
-         * multiplier of the sun angular radius.
+         * multiplier of the sun angular radius.  Must be at least 1.0.
          *
          * @param haloSize radius multiplier. Default is 10.0.
          *
@@ -643,7 +643,7 @@ public:
 
         /**
          * Defines the halo falloff of the sun. The falloff is a dimensionless number
-         * used as an exponent.
+         * used as an exponent. Must be at least 1.0.
          *
          * @param haloFalloff halo falloff. Default is 80.0.
          *

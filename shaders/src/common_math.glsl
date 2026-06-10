@@ -39,6 +39,16 @@ float pow5(float x) {
 }
 
 /**
+ * Computes x^4 using only multiply operations.
+ *
+ * @public-api
+ */
+float pow4(float x) {
+    float x2 = x * x;
+    return x2 * x2;
+}
+
+/**
  * Computes x^2 as a single multiplication.
  *
  * @public-api

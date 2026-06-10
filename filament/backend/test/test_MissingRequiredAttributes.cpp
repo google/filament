@@ -15,7 +15,6 @@
  */
 
 #include "BackendTest.h"
-
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
@@ -81,7 +80,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass();
+        RenderPassParams params = getClearColorDepthRenderPass();
         params.viewport = getFullViewport();
 
         api.startCapture(0);

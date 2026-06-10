@@ -20,9 +20,9 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
-#include <utils/Log.h>
-
 #include <bluevk/BlueVK.h>
+
+#include <utils/Log.h>
 
 namespace filament::backend {
 

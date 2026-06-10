@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMENT_DESCRIPTORSETS_H
 #define TNT_FILAMENT_DESCRIPTORSETS_H
 
-#include <backend/DriverEnums.h>
-
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 #include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 

@@ -83,7 +83,6 @@ public:
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU
@@ -306,7 +305,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         TrianglePrimitive const triangle(api);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorDepthRenderPass(math::float4(0, 0, 1, 1));
         params.viewport.width = t.getRenderTargetSize();
         params.viewport.height = t.getRenderTargetSize();
 
@@ -378,7 +377,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 }
 
 TEST_F(ReadPixelsTest, ReadPixelsUintClear) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // Exercises the integer-format clear path end-to-end: verifies that a uint32 value placed into
     // the `double4` clearColor round-trips bit-exact onto a `R32UI` attachment (i.e., the GL /
     // Vulkan backend selects the matching `glClearBufferuiv` / `VkClearColorValue::uint32` arm
@@ -436,7 +434,6 @@ TEST_F(ReadPixelsTest, ReadPixelsUintClear) {
 }
 
 TEST_F(ReadPixelsTest, ReadPixelsIntClear) {
-    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // Sibling of ReadPixelsUintClear: INT clear into a R32I attachment, using INT_MIN so the value
     // cannot accidentally round-trip through a UINT or FLOAT path.
     constexpr size_t renderTargetSize = 16;
@@ -533,7 +530,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+    RenderPassParams params = getClearColorDepthRenderPass(math::float4(0, 0, 1, 1));
     params.viewport.width = renderTargetSize;
     params.viewport.height = renderTargetSize;
 
