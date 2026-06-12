@@ -297,6 +297,12 @@ value_array<filament::math::quat>("quat")
     .element(&filament::math::quat::z)
     .element(&filament::math::quat::w);
 
+value_array<filament::math::quatf>("quatf")
+    .element(&filament::math::quatf::x)
+    .element(&filament::math::quatf::y)
+    .element(&filament::math::quatf::z)
+    .element(&filament::math::quatf::w);
+
 value_array<Viewport>("Viewport")
     .element(&Viewport::left)
     .element(&Viewport::bottom)
