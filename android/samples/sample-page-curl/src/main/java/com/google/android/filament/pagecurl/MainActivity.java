@@ -49,13 +49,14 @@ import com.google.android.filament.Texture;
 import com.google.android.filament.TransformManager;
 import com.google.android.filament.Viewport;
 
+import com.google.android.filament.android.ChoreographerHelper;
 import com.google.android.filament.android.DisplayHelper;
 import com.google.android.filament.android.FilamentHelper;
 import com.google.android.filament.android.TextureHelper;
 import com.google.android.filament.android.UiHelper;
 
 public class MainActivity extends Activity
-        implements Choreographer.FrameCallback, UiHelper.RendererCallback, View.OnTouchListener {
+        implements UiHelper.RendererCallback, View.OnTouchListener {
     static {
         Filament.init();
     }
@@ -63,7 +64,7 @@ public class MainActivity extends Activity
     private SurfaceView mSurfaceView;
     private UiHelper mUiHelper;
     private DisplayHelper mDisplayHelper;
-    private Choreographer mChoreographer;
+    private ChoreographerHelper mFrameScheduler;
     private Engine mEngine;
     private SwapChain mSwapChain;
     private com.google.android.filament.View mView;
@@ -112,24 +113,6 @@ public class MainActivity extends Activity
         FilamentHelper.synchronizePendingFrames(mEngine);
     }
 
-    @Override
-    public void doFrame(long frameTimeNanos) {
-        mChoreographer.postFrameCallback(this);
-
-        // Perform a rigid body rotation on the page and translate it along the Y axis.
-        final float[] transformMatrix = new float[16];
-        final double degrees = -Math.toDegrees(mPageAnimationRadians);
-        Matrix.setRotateM(transformMatrix, 0, (float) degrees, 0.0f, 1.0f, 0.0f);
-        Matrix.translateM(transformMatrix, 0, 0.0f, -0.5f, 0.0f);
-        TransformManager tcm = mEngine.getTransformManager();
-        tcm.setTransform(tcm.getInstance(mPage.renderable), transformMatrix);
-
-        if (mUiHelper.isReadyToRender() && mRenderer.beginFrame(mSwapChain, frameTimeNanos)) {
-            mRenderer.render(mView);
-            mRenderer.endFrame();
-        }
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,7 +122,6 @@ public class MainActivity extends Activity
         mSurfaceView = new SurfaceView(this);
         setContentView(mSurfaceView);
 
-        mChoreographer = Choreographer.getInstance();
 
         mDisplayHelper = new DisplayHelper(this);
 
@@ -149,6 +131,26 @@ public class MainActivity extends Activity
 
         mEngine = Engine.create();
         mRenderer = mEngine.createRenderer();
+
+        mFrameScheduler = new ChoreographerHelper(new ChoreographerHelper.Callback() {
+            @Override
+            public void onFrame(long frameTimeNanos) {
+                // Perform a rigid body rotation on the page and translate it along the Y axis.
+                final float[] transformMatrix = new float[16];
+                final double degrees = -Math.toDegrees(mPageAnimationRadians);
+                Matrix.setRotateM(transformMatrix, 0, (float) degrees, 0.0f, 1.0f, 0.0f);
+                Matrix.translateM(transformMatrix, 0, 0.0f, -0.5f, 0.0f);
+                TransformManager tcm = mEngine.getTransformManager();
+                tcm.setTransform(tcm.getInstance(mPage.renderable), transformMatrix);
+
+                if (mUiHelper.isReadyToRender() && mRenderer.beginFrame(mSwapChain, frameTimeNanos)) {
+                    mRenderer.render(mView);
+                    mRenderer.endFrame();
+                }
+            }
+        });
+        mFrameScheduler.setRenderer(mRenderer);
+
         mScene = mEngine.createScene();
         mView = mEngine.createView();
         mCamera = mEngine.createCamera(mEngine.getEntityManager().create());
@@ -198,19 +200,19 @@ public class MainActivity extends Activity
     @Override
     protected void onResume() {
         super.onResume();
-        mChoreographer.postFrameCallback(this);
+        mFrameScheduler.post();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mChoreographer.removeFrameCallback(this);
+        mFrameScheduler.remove();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mChoreographer.removeFrameCallback(this);
+        mFrameScheduler.remove();
         mUiHelper.detach();
 
         mEngine.destroyEntity(mLight);

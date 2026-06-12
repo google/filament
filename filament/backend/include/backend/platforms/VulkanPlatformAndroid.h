@@ -99,8 +99,6 @@ protected:
     VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
 
 private:
-    struct AndroidDetails;
-
     struct ExternalImageVulkanAndroid : public ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
@@ -109,7 +107,6 @@ private:
         ~ExternalImageVulkanAndroid() override;
     };
 
-    AndroidDetails& mAndroidDetails;
     int mOSVersion{};
 };
 

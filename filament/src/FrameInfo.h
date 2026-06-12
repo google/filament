@@ -75,7 +75,7 @@ struct FrameInfoImpl : public details::FrameInfo {
     // Actual presentation time of this frame
     FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
     // deadline for queuing a frame [ns]
-    CompositorTiming::time_point_ns presentDeadlineLatency{ FrameTimestamps::INVALID };
+    CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
     // display refresh rate [ns]
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
@@ -285,7 +285,10 @@ public:
 
     // call this immediately after "make current"
     void beginFrame(FSwapChain* swapChain, backend::DriverApi& driver,
-            Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
+            Config const& config, uint32_t frameId,
+            std::chrono::steady_clock::time_point vsync,
+            std::chrono::steady_clock::time_point presentDeadline,
+            std::chrono::steady_clock::time_point expectedPresent) noexcept;
 
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;

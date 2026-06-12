@@ -20,7 +20,7 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.opengl.Matrix
 import android.os.Bundle
-import android.view.Choreographer
+import com.google.android.filament.android.ChoreographerHelper
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
@@ -51,8 +51,6 @@ class MainActivity : Activity() {
     private lateinit var surfaceView: SurfaceView
     // UiHelper is provided by Filament to manage SurfaceView and SurfaceTexture
     private lateinit var uiHelper: UiHelper
-    // Choreographer is used to schedule new frames
-    private lateinit var choreographer: Choreographer
 
     // Engine creates and destroys Filament resources
     // Each engine must be accessed from a single thread of your choosing
@@ -95,8 +93,6 @@ class MainActivity : Activity() {
         surfaceView = SurfaceView(this)
         setContentView(surfaceView)
 
-        choreographer = Choreographer.getInstance()
-
         setupSurfaceView()
         setupFilament()
         setupViews()
@@ -116,6 +112,7 @@ class MainActivity : Activity() {
     private fun setupFilament() {
         engine = Engine.create()
         renderer = engine.createRenderer()
+        frameScheduler.setRenderer(renderer)
         scene = engine.createScene()
         view0 = engine.createView()
         view1 = engine.createView()
@@ -351,13 +348,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        choreographer.postFrameCallback(frameScheduler)
+        frameScheduler.post()
         animator.start()
     }
 
     override fun onPause() {
         super.onPause()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel()
     }
 
@@ -365,7 +362,7 @@ class MainActivity : Activity() {
         super.onDestroy()
 
         // Stop the animation and any pending frame
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel();
 
         // Always detach the surface before destroying the engine
@@ -399,10 +396,8 @@ class MainActivity : Activity() {
         engine.destroy()
     }
 
-    inner class FrameCallback : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            // Schedule the next frame
-            choreographer.postFrameCallback(this)
+    inner class FrameCallback : ChoreographerHelper() {
+        override fun onFrame(frameTimeNanos: Long) {
 
             // This check guarantees that we have a swap chain
             if (uiHelper.isReadyToRender) {
