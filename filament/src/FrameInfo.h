@@ -73,7 +73,7 @@ struct FrameInfoImpl : public details::FrameInfo {
     // vsync time
     time_point vsync{};
     // Actual presentation time of this frame
-    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
+    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::INVALID };
     // deadline for queuing a frame [ns]
     CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
     // display refresh rate [ns]

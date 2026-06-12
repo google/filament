@@ -47,6 +47,7 @@
 #include <jni.h>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <limits>
 #include <mutex>
@@ -103,7 +104,9 @@ struct PlatformEGLAndroid::SwapChainEGLAndroid : public SwapChainEGL {
     bool setPresentFrameId(uint64_t frameId) const noexcept;
     uint64_t getFrameId(uint64_t frameId) const noexcept;
     bool compositorTimingSupported = false;
-    bool frameTimestampsSupported = false;
+    mutable std::atomic<bool> frameTimestampsSupported{false};
+    mutable std::atomic<bool> frameTimestampsEverRetrieved{false};
+    std::atomic<uint32_t> presentCount{0};
 private:
     AndroidSwapChainHelper mImpl{};
 };
@@ -146,11 +149,21 @@ bool PlatformEGLAndroid::makeCurrent(ContextType const type,
 
     SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
     // anw can be nullptr if we're using a pbuffer surface
-    if (dsc->nativeWindow) {
+    if (dsc && dsc->nativeWindow) {
         auto [err, valid] = NativeWindow::isValid(dsc->nativeWindow);
         FILAMENT_CHECK_POSTCONDITION(!err && valid) << kNativeWindowInvalidMsg << dsc->sur;
     }
     return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
+}
+
+void PlatformEGLAndroid::commit(SwapChain* swapChain) noexcept {
+    if (UTILS_LIKELY(swapChain)) {
+        SwapChainEGLAndroid* const sc = static_cast<SwapChainEGLAndroid*>(swapChain);
+        if (UTILS_LIKELY(sc->sur != EGL_NO_SURFACE)) {
+            sc->presentCount.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+    PlatformEGL::commit(swapChain);
 }
 
 void PlatformEGLAndroid::beginFrame(
@@ -339,7 +352,7 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
         return false;
     }
 
-    if (!static_cast<SwapChainEGLAndroid const *>(swapchain)->frameTimestampsSupported) {
+    if (!sc->frameTimestampsSupported.load(std::memory_order_relaxed)) {
         return false;
     }
 
@@ -364,10 +377,17 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
         EGLBoolean const success = eglGetFrameTimestampsANDROID(getEglDisplay(), sur, hwFrameId,
                 names.size(), names.data(), values.data());
         if (UTILS_UNLIKELY(!success)) {
-            // reset current error to EGL_SUCCESS
-            eglGetError();
+            EGLint const err = eglGetError();
+            if (err == EGL_BAD_SURFACE ||
+                (!sc->frameTimestampsEverRetrieved.load(std::memory_order_relaxed) &&
+                 sc->presentCount.load(std::memory_order_relaxed) >= 3)) {
+                LOG(WARNING) << "eglGetFrameTimestampsANDROID failed with error " << err
+                        << ". Disabling frame timestamps query.";
+                sc->frameTimestampsSupported.store(false, std::memory_order_relaxed);
+            }
             return false;
         }
+        sc->frameTimestampsEverRetrieved.store(true, std::memory_order_relaxed);
         outFrameTimestamps->requestedPresentTime = values[0];
         outFrameTimestamps->acquireTime = values[1];
         outFrameTimestamps->latchTime = values[2];
@@ -391,7 +411,7 @@ Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uin
                         EGL_COMPOSITE_INTERVAL_ANDROID) &&
                 eglGetCompositorTimingSupportedANDROID(dpy, sc->sur,
                         EGL_COMPOSITE_TO_PRESENT_LATENCY_ANDROID);
-        sc->frameTimestampsSupported =
+        sc->frameTimestampsSupported.store(
                 eglGetFrameTimestampSupportedANDROID(dpy, sc->sur,
                         EGL_REQUESTED_PRESENT_TIME_ANDROID) &&
                 eglGetFrameTimestampSupportedANDROID(dpy, sc->sur,
@@ -409,12 +429,12 @@ Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uin
                 eglGetFrameTimestampSupportedANDROID(dpy, sc->sur,
                         EGL_DEQUEUE_READY_TIME_ANDROID) &&
                 eglGetFrameTimestampSupportedANDROID(dpy, sc->sur,
-                        EGL_READS_DONE_TIME_ANDROID);
+                        EGL_READS_DONE_TIME_ANDROID), std::memory_order_relaxed);
     }
     // This is expected to be a low frequency log, only turned on in debug builds
     DLOG(INFO) << "anw: " << nativeWindow
             << ", compositorTimingSupported=" << sc->compositorTimingSupported
-            << ", frameTimestampsSupported=" << sc->frameTimestampsSupported;
+            << ", frameTimestampsSupported=" << sc->frameTimestampsSupported.load(std::memory_order_relaxed);
     return sc;
 }
 
