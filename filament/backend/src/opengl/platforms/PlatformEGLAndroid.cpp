@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "AndroidFrameCallback.h"
 #include "AndroidNativeWindow.h"
 #include "AndroidSwapChainHelper.h"
 #include "ExternalStreamManagerAndroid.h"
@@ -109,14 +108,9 @@ private:
     AndroidSwapChainHelper mImpl{};
 };
 
-struct PlatformEGLAndroid::AndroidDetails {
-    AndroidFrameCallback androidFrameCallback;
-};
-
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGLAndroid::PlatformEGLAndroid() noexcept
-        : mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
+PlatformEGLAndroid::PlatformEGLAndroid() noexcept  {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
@@ -124,12 +118,10 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
-    delete &mAndroidDetails;
 }
 
 void PlatformEGLAndroid::terminate() noexcept {
     mPerformanceHintManager.terminate();
-    mAndroidDetails.androidFrameCallback.terminate();
     if (mExternalStreamManager) {
         ExternalStreamManagerAndroid::destroy(mExternalStreamManager);
         mExternalStreamManager = nullptr;
@@ -270,8 +262,6 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
 
-    mAndroidDetails.androidFrameCallback.init();
-
     return driver;
 }
 
@@ -292,15 +282,6 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
     if (!swapchain) {
         return false;
     }
-
-    AndroidFrameCallback::Timeline const preferredTimeline{
-            mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-
-    outCompositorTiming->expectedPresentLatency =
-        preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
-
-    outCompositorTiming->compositeDeadlineLatency =
-        preferredTimeline.frameTimelineDeadline - preferredTimeline.frameTime;
 
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;

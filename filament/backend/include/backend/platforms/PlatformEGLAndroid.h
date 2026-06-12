@@ -177,7 +177,6 @@ protected:
 
 private:
     struct SwapChainEGLAndroid;
-    struct AndroidDetails;
 
     // prevent derived classes' implementations to call through
     [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
@@ -194,7 +193,6 @@ private:
 
     int mOSVersion;
     ExternalStreamManagerAndroid* mExternalStreamManager = nullptr;
-    AndroidDetails& mAndroidDetails;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
     using clock = std::chrono::high_resolution_clock;
