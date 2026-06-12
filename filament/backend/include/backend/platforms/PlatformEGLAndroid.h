@@ -174,6 +174,7 @@ protected:
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
+    void commit(SwapChain* swapChain) noexcept override;
 
 private:
     struct SwapChainEGLAndroid;
