@@ -16,16 +16,16 @@
 
 #include <gltfio/TextureProvider.h>
 
-#include <string>
-#include <vector>
+#include <filament/Engine.h>
+#include <filament/Texture.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 
-#include <filament/Engine.h>
-#include <filament/Texture.h>
-
 #include <stb_image.h>
+
+#include <string>
+#include <vector>
 
 using namespace filament;
 using namespace utils;
@@ -227,12 +227,14 @@ void StbProvider::cancelDecoding() {
         if (info->state != TextureState::DECODING) {
             continue;
         }
-        // Deleting data here should be safe thread-wise as the only other place where
+        // Freeing data here should be safe thread-wise as the only other place where
         // decodedTexelsBaseMipmap is loaded is in the job threads, and we have waited them to
         // completion above. We also expect the TextureProvider API calls to be made only from one
         // thread.
         if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
-            delete [] (uint8_t*) data;
+            if (data != DECODING_ERROR) {
+                stbi_image_free((void*) data);
+            }
         }
         info->state = TextureState::POPPED;
     }

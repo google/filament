@@ -110,7 +110,6 @@ private:
 };
 
 struct PlatformEGLAndroid::AndroidDetails {
-    AndroidProducerThrottling producerThrottling;
     AndroidFrameCallback androidFrameCallback;
 };
 
@@ -213,7 +212,7 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 
     // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
     // to attach this thread to the JVM before we initialize PerformanceHintManager.
-    if (PerformanceHintManager::isSupported()) {
+    if (PerformanceHintManager::isSupported() && VirtualMachineEnv::hasVirtualMachine()) {
         (void)VirtualMachineEnv::get().getEnvironment();
     }
 
@@ -741,12 +740,27 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const sou
 
 
 bool PlatformEGLAndroid::isProducerThrottlingControlSupported() const {
-    return mAndroidDetails.producerThrottling.isSupported();
+    return NativeWindow::isProducerThrottlingSupported();
 }
 
 int32_t PlatformEGLAndroid::setProducerThrottlingEnabled(
-    EGLNativeWindowType const nativeWindow, bool const enabled) const {
-    return mAndroidDetails.producerThrottling.setProducerThrottlingEnabled(nativeWindow, enabled);
+        EGLNativeWindowType const nativeWindow, bool const enabled) const {
+    return NativeWindow::setProducerThrottlingEnabled(
+            static_cast<ANativeWindow*>(nativeWindow), enabled);
+}
+utils::tribool PlatformEGLAndroid::isFrameRateChangeSupported(void* const nativeWindow) const noexcept {
+    return NativeWindow::isFrameRateChangeSupported(static_cast<ANativeWindow*>(nativeWindow));
+}
+
+int PlatformEGLAndroid::setFrameRate(SwapChain const* const swapchain, float const frameRate,
+        FrameRateCompatibility const compatibility,
+        ChangeFrameRateStrategy const strategy) noexcept {
+    auto const* const sc = static_cast<SwapChainEGLAndroid const*>(swapchain);
+    if (sc && sc->nativeWindow) {
+        return NativeWindow::setFrameRate(
+                static_cast<ANativeWindow*>(sc->nativeWindow), frameRate, compatibility, strategy);
+    }
+    return -ENOSYS;
 }
 
 // ---------------------------------------------------------------------------------------------

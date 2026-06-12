@@ -1164,7 +1164,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     swapChain.inc();
     mResourceManager.associateHandle(sch.getId(), std::move(tag));
 
-    std::unique_lock<std::mutex> lock(mTiming.lock);
+    utils::LockGuard const lock(mTiming.lock);
     mTiming.nativeSwapchains.emplace(sch.getId(), swapChain->swapChain);
 }
 
@@ -1390,8 +1390,23 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     }
     swapChain.dec();
 
-    std::unique_lock<std::mutex> lock(mTiming.lock);
+    utils::LockGuard const lock(mTiming.lock);
     mTiming.nativeSwapchains.erase(sch.getId());
+}
+
+void VulkanDriver::setFrameRate(Handle<HwSwapChain> const sch, float const frameRate,
+        Platform::FrameRateCompatibility const compatibility,
+        Platform::ChangeFrameRateStrategy const strategy) {
+    if (!sch) {
+        return;
+    }
+    auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+    if (swapChain) {
+        int const err = mPlatform->setFrameRate(swapChain->swapChain, frameRate, compatibility, strategy);
+        if (err < 0) {
+            FVK_LOGW << "Platform::setFrameRate returned an error: " << err;
+        }
+    }
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
@@ -1715,6 +1730,7 @@ bool VulkanDriver::isMSAASwapChainSupported(uint32_t) {
 bool VulkanDriver::isProtectedContentSupported() {
     return mContext.isProtectedMemorySupported();
 }
+
 
 bool VulkanDriver::isStereoSupported() {
     switch (mStereoscopicType) {
@@ -2288,7 +2304,7 @@ bool VulkanDriver::queryCompositorTiming(Handle<HwSwapChain> const swapChain,
     }
 
     HandleId const id = swapChain.getId();
-    std::unique_lock<std::mutex> lock(mTiming.lock);
+    utils::UniqueLock lock(mTiming.lock);
     auto& swapchains = mTiming.nativeSwapchains;
     if (auto itr = swapchains.find(id); itr != swapchains.end()) {
         lock.unlock();
@@ -2304,7 +2320,7 @@ bool VulkanDriver::queryFrameTimestamps(Handle<HwSwapChain> const swapChain, uin
         return false;
     }
     HandleId const id = swapChain.getId();
-    std::unique_lock<std::mutex> lock(mTiming.lock);
+    utils::UniqueLock lock(mTiming.lock);
     auto& swapchains = mTiming.nativeSwapchains;
     if (auto itr = swapchains.find(id); itr != swapchains.end()) {
         lock.unlock();

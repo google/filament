@@ -2469,6 +2469,22 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     }
 }
 
+void OpenGLDriver::setFrameRate(Handle<HwSwapChain> sch, float const frameRate,
+        Platform::FrameRateCompatibility const compatibility,
+        Platform::ChangeFrameRateStrategy const strategy) {
+    DEBUG_MARKER()
+
+    if (sch) {
+        GLSwapChain const* const sc = handle_cast<GLSwapChain*>(sch);
+        if (sc && sc->swapChain) {
+            int const err = mPlatform.setFrameRate(sc->swapChain, frameRate, compatibility, strategy);
+            if (err < 0) {
+                LOG(WARNING) << "Platform::setFrameRate returned an error: " << err;
+            }
+        }
+    }
+}
+
 void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
     DEBUG_MARKER()
 
@@ -2990,6 +3006,7 @@ bool OpenGLDriver::isMSAASwapChainSupported(uint32_t const samples) {
 bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
+
 
 bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.

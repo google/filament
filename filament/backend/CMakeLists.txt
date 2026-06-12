@@ -605,6 +605,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp
             test/test_MsaaSwapChain.cpp
+            test/test_FrameRateControl.cpp
             test/test_MRT.cpp
             test/test_PushConstants.cpp
             test/test_LoadImage.cpp

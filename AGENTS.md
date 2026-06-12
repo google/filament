@@ -25,3 +25,6 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 
 ### 4. Commit Conventions
 *   **Commit Messages**: Commit messages should be formatted with the 50/72 rule: 50 is the maximum number of characters of the commit title, and 72 is the maximum character length of the commit body.
+
+### 5. Cross-Platform Language Bindings
+*   [skills/bindings_synchronization/SKILL.md](skills/bindings_synchronization/SKILL.md): Synchronization guidelines for Java/JNI (Android) and JavaScript/TypeScript (Web/WASM) when public C++ APIs change.

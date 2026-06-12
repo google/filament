@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.72.0
+
+- filamat: support push constants in fragment stage [⚠️ **Recompile Materials**]
+
 ## v1.71.6
 
 - engine: Optimize Color Grading with NEON on armv8+ devices. Performance improvements between 1.3x and 4.5x

@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
-#include <filament/Skybox.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include <backend/PixelBufferDescriptor.h>
+
 #include <utils/EntityManager.h>
 
-#include <backend/PixelBufferDescriptor.h>
+#include <gtest/gtest.h>
 
 using namespace filament;
 using namespace backend;
@@ -131,4 +131,29 @@ TEST_F(RenderingTest, ClearGreen) {
         callbackCalled = true;
     });
     EXPECT_TRUE(callbackCalled);
+}
+
+TEST_F(RenderingTest, VisibleRenderableCount) {
+    EXPECT_EQ(mView->getVisibleRenderableCount(), -1);
+
+    View* viewB = mEngine->createView();
+    viewB->setViewport({0, 0, 16, 16});
+    viewB->setScene(mScene);
+    viewB->setCamera(mCamera);
+    viewB->setPostProcessingEnabled(false);
+
+    EXPECT_EQ(viewB->getVisibleRenderableCount(), -1);
+
+    bool callbackCalled = false;
+    runTest([this, viewB, &callbackCalled](uint8_t const*, uint32_t, uint32_t) {
+        EXPECT_EQ(mView->getVisibleRenderableCount(), 1);
+        EXPECT_EQ(viewB->getVisibleRenderableCount(), -1);
+        callbackCalled = true;
+    });
+    EXPECT_TRUE(callbackCalled);
+
+    mView->setScene(nullptr);
+    EXPECT_EQ(mView->getVisibleRenderableCount(), -1);
+
+    mEngine->destroy(viewB);
 }

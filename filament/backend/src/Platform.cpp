@@ -21,6 +21,7 @@
 #include <utils/ostream.h>
 
 #include <atomic>
+#include <cerrno>
 #include <utility>
 
 #include <stddef.h>
@@ -138,6 +139,15 @@ bool Platform::setPresentFrameId(SwapChain const*, uint64_t) noexcept {
 bool Platform::queryFrameTimestamps(SwapChain const*, uint64_t, FrameTimestamps*) const noexcept {
     return false;
 }
+utils::tribool Platform::isFrameRateChangeSupported(void*) const noexcept {
+    return utils::tribool::kFalse;
+}
+
+int Platform::setFrameRate(SwapChain const*, float,
+        FrameRateCompatibility, ChangeFrameRateStrategy) noexcept {
+    return -ENOSYS;
+}
+
 
 void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
     utils::LockGuard const lock(mMutex);

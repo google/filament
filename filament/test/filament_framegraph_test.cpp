@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "TextureCache.h"
 
 #include "details/Texture.h"
 
+#include "fg/details/DependencyGraph.h"
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
-#include "fg/details/DependencyGraph.h"
 
-#include <private/backend/CommandStream.h>
 #include <private/backend/CircularBuffer.h>
+#include <private/backend/CommandStream.h>
 #include <private/backend/PlatformFactory.h>
 
 #include <backend/DriverEnums.h>
@@ -36,6 +34,8 @@
 
 #include <utils/Logger.h>
 #include <utils/StaticString.h>
+
+#include <gtest/gtest.h>
 
 #include <array>
 #include <cstdint>
@@ -47,6 +47,7 @@ class MockResourceAllocator final : public TextureCacheInterface {
     uint32_t handle = 0;
     struct MockDisposer final : public TextureCacheDisposerInterface {
         void destroy(TextureHandle) noexcept override {}
+        void removeTextureCache(TextureCacheInterface*) noexcept override {}
     } disposer;
 
 public:
@@ -74,10 +75,6 @@ public:
     }
 
     void destroyTexture(TextureHandle h) noexcept override {
-    }
-
-    TextureCacheDisposerInterface& getDisposer() noexcept override {
-        return disposer;
     }
 };
 
