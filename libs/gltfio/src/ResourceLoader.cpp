@@ -247,31 +247,39 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
                 continue;
             }
 
-            cgltf_size bufferSize = 0;
-            cgltf_size totalOffset = 0;
-            uint8_t* bytes = nullptr;
-            uint8_t* srcBuffer = nullptr;
+            if (srcMatrices->type != cgltf_type_mat4 ||
+                    srcMatrices->component_type != cgltf_component_type_r_32f) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, unsupported accessor type.";
+                continue;
+            }
+            if (srcMatrices->count < srcSkin.joints_count) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor count is too small.";
+                continue;
+            }
 
+            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
+            const cgltf_size viewSize = srcMatrices->buffer_view->size;
+            const cgltf_size offsetInView = srcMatrices->offset;
+            if (offsetInView > viewSize || requiredBytes > viewSize - offsetInView) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer view bounds.";
+                continue;
+            }
+
+            uint8_t* srcBuffer = nullptr;
             if (srcMatrices->buffer_view->has_meshopt_compression) {
                 if (!srcMatrices->buffer_view->data) {
                     LOG(WARNING) << "Cannot copy inverse bind matrices, compressed buffer data is null.";
                     continue;
                 }
-                bufferSize = srcMatrices->buffer_view->size;
-                totalOffset = srcMatrices->offset;
-                bytes = (uint8_t*) srcMatrices->buffer_view->data;
-                srcBuffer = bytes + totalOffset;
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->data + offsetInView;
             } else {
-                bufferSize = srcMatrices->buffer_view->buffer->size;
-                totalOffset = srcMatrices->offset + srcMatrices->buffer_view->offset;
-                bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-                srcBuffer = bytes + totalOffset;
-            }
-
-            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
-            if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
-                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
-                continue;
+                const cgltf_size bufferSize = srcMatrices->buffer_view->buffer->size;
+                const cgltf_size totalOffset = srcMatrices->buffer_view->offset + offsetInView;
+                if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
+                    LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
+                    continue;
+                }
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
             }
 
             memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);

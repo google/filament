@@ -18,6 +18,7 @@
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/FilamentInstance.h>
 #include <gltfio/math.h>
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
@@ -31,6 +32,7 @@
 
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
+#include <utils/Panic.h>
 #include <utils/Path.h>
 
 #include <math/mathfwd.h>
@@ -38,8 +40,10 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <unordered_map>
+#include <unistd.h>
 
 using namespace filament;
 using namespace backend;
@@ -287,6 +291,73 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
     EXPECT_TRUE(mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder == nullptr);
     EXPECT_EQ(mEngine->getTextureCount(), 3);    
 #endif
+}
+
+TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() / ("gltfio_m7_" + std::to_string(getpid()));
+    const fs::path attackerDir = root / "attacker";
+    fs::create_directories(attackerDir);
+
+    const fs::path secretPath = root / "secret.bin";
+    {
+        std::ofstream out(secretPath, std::ios::binary);
+        ASSERT_TRUE(out.good());
+        const float identity[16] = {
+                1.0f, 0.0f, 0.0f, 0.0f,
+                0.0f, 1.0f, 0.0f, 0.0f,
+                0.0f, 0.0f, 1.0f, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f,
+        };
+        const float secret[16] = {
+                1337.0f, 1338.0f, 1339.0f, 1340.0f,
+                1341.0f, 1342.0f, 1343.0f, 1344.0f,
+                1345.0f, 1346.0f, 1347.0f, 1348.0f,
+                1349.0f, 1350.0f, 1351.0f, 1352.0f,
+        };
+        out.write(reinterpret_cast<const char*>(identity), sizeof(identity));
+        out.write(reinterpret_cast<const char*>(secret), sizeof(secret));
+    }
+
+    const fs::path gltfPath = attackerDir / "evil.gltf";
+    {
+        std::ofstream out(gltfPath);
+        ASSERT_TRUE(out.good());
+        out << R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+               R"("nodes":[{"name":"root","skin":0,"children":[1,2]},{"name":"joint0"},{"name":"joint1"}],)"
+               R"("skins":[{"joints":[1,2],"inverseBindMatrices":0}],)"
+               R"("buffers":[{"uri":"../secret.bin","byteLength":128}],)"
+               R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":64}],)"
+               R"("accessors":[{"bufferView":0,"byteOffset":0,"componentType":5126,"count":1,"type":"MAT4"}]})";
+    }
+
+    std::ifstream in(gltfPath, std::ifstream::binary | std::ifstream::ate);
+    ASSERT_TRUE(in.good());
+    const auto contentSize = in.tellg();
+    in.seekg(0, std::ifstream::beg);
+    std::vector<uint8_t> buffer(static_cast<size_t>(contentSize));
+    ASSERT_TRUE(in.read(reinterpret_cast<char*>(buffer.data()), contentSize));
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ResourceLoader* resourceLoader = new ResourceLoader({
+            mEngine, gltfPath.string().c_str(), false,
+    });
+
+    FilamentAsset* asset = assetLoader->createAsset(buffer.data(), buffer.size());
+    ASSERT_NE(asset, nullptr);
+    EXPECT_TRUE(resourceLoader->loadResources(asset));
+
+    FilamentInstance* instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    EXPECT_EQ(instance->getSkinCount(), 1u);
+    EXPECT_EQ(instance->getJointCountAt(0), 2u);
+    EXPECT_THROW((void) instance->getInverseBindMatricesAt(0), utils::PreconditionPanic);
+
+    assetLoader->destroyAsset(asset);
+    delete resourceLoader;
+    AssetLoader::destroy(&assetLoader);
+
+    fs::remove_all(root);
 }
 
 int main(int argc, char** argv) {
