@@ -284,7 +284,29 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
     }
 }
 
-inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
+static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, uint32_t bindingSize) {
+    if (!accessor->buffer_view) {
+        return false;
+    }
+    cgltf_size capacity = 0;
+    cgltf_size totalOffset = 0;
+    if (accessor->buffer_view->has_meshopt_compression) {
+        capacity = accessor->buffer_view->size;
+        totalOffset = accessor->offset;
+    } else {
+        if (!accessor->buffer_view->buffer) {
+            return false;
+        }
+        capacity = accessor->buffer_view->buffer->size;
+        totalOffset = accessor->buffer_view->offset + accessor->offset;
+    }
+    if (totalOffset >= capacity) {
+        return false;
+    }
+    return bindingSize <= capacity - totalOffset;
+}
+
+inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
         UriDataCacheHandle uriDataCache) {
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
     const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
@@ -502,6 +524,11 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
 
+            if (!indexAccessorFitsBuffer(accessor, size)) {
+                LOG(ERROR) << "Index accessor size exceeds buffer capacity.";
+                return false;
+            }
+
             if (accessor->component_type == cgltf_component_type_r_8u) {
                 if (size_t(size) > std::numeric_limits<size_t>::max() / 2) {
                     LOG(WARNING) << "Index buffer size would overflow on conversion, skipping.";
@@ -597,6 +624,7 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     slot.morphTargetOffset);
         }
     }
+    return true;
 }
 
 } // anonymous namespace
@@ -711,7 +739,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
 
     if (!isExtendedAlgo) {
-        utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache);
+        if (!utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache)) {
+            return false;
+        }
 
         // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
         // as tangent generation.
@@ -728,7 +758,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             return false;
         }
 
-        uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache);
+        if (!uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache)) {
+            return false;
+        }
 
         // Compute surface orientation quaternions if necessary. This is similar to sparse data in
         // that we need to generate the contents of a GPU buffer by processing one or more CPU

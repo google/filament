@@ -39,7 +39,9 @@
 
 #include <cstdint>
 #include <fstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 using namespace filament;
 using namespace backend;
@@ -287,6 +289,117 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
     EXPECT_TRUE(mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder == nullptr);
     EXPECT_EQ(mEngine->getTextureCount(), 3);    
 #endif
+}
+
+namespace {
+
+static void appendU32LE(std::vector<uint8_t>& dst, uint32_t value) {
+    dst.push_back(uint8_t(value & 0xffu));
+    dst.push_back(uint8_t((value >> 8u) & 0xffu));
+    dst.push_back(uint8_t((value >> 16u) & 0xffu));
+    dst.push_back(uint8_t((value >> 24u) & 0xffu));
+}
+
+static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
+    std::string json = std::string(R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["KHR_materials_unlit"],
+  "buffers": [
+    { "byteLength": 13 }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 12 },
+    { "buffer": 0, "byteOffset": 12, "byteLength": 1 }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC3",
+      "min": [0, 0, 0],
+      "max": [0, 0, 0]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5121,
+      "count": )") +
+            std::to_string(indexCount) +
+            R"(,
+      "type": "SCALAR"
+    }
+  ],
+  "materials": [
+    {
+      "extensions": {
+        "KHR_materials_unlit": {}
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 0 },
+          "indices": 1,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    { "mesh": 0 }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    std::vector<uint8_t> bin(13, 0);
+    while ((bin.size() % 4u) != 0u) {
+        bin.push_back(0);
+    }
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), bin.begin(), bin.end());
+
+    return glb;
+}
+
+} // namespace
+
+TEST_F(glTFIOTest, RejectsOversizedEightBitIndexAccessor) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> glb = makeMalformedEightBitIndexGlb(100000000u);
+    FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    loader->destroyAsset(asset);
+    AssetLoader::destroy(&loader);
 }
 
 int main(int argc, char** argv) {
