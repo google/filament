@@ -16,24 +16,24 @@
 
 #include "ArchiveCache.h"
 
-#include <filament/Material.h>
-
 #include <uberz/ArchiveEnums.h>
 #include <uberz/ReadableArchive.h>
 
+#include <filament/Material.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
-#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <zstd.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 using namespace utils;
