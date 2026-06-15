@@ -87,9 +87,9 @@ static std::vector<uint8_t> makeMeshoptPayload(size_t vertexCount, size_t stride
     return encoded;
 }
 
-static std::string makeOversizedMeshoptGlbJson(uint64_t meshoptCount, size_t meshoptEncodedSize,
-        uint64_t bufferByteLength, size_t stride) {
-    const uint64_t decodedSize = meshoptCount * stride;
+static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncodedSize,
+        size_t bufferByteLength, size_t stride) {
+    const size_t decodedSize = meshoptCount * stride;
     return std::string(R"({
   "asset": { "version": "2.0" },
   "extensionsUsed": ["EXT_meshopt_compression"],
@@ -122,12 +122,11 @@ static std::string makeOversizedMeshoptGlbJson(uint64_t meshoptCount, size_t mes
 })";
 }
 
-static std::vector<uint8_t> makeOversizedMeshoptGlb(uint64_t meshoptCount, size_t stride) {
+static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride) {
     static constexpr size_t kEncodedVertexCount = 256;
     const std::vector<uint8_t> meshopt = makeMeshoptPayload(kEncodedVertexCount, stride);
 
-    std::string json = makeOversizedMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(),
-            stride);
+    std::string json = makeMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(), stride);
     while ((json.size() % 4u) != 0u) {
         json.push_back(' ');
     }
@@ -378,11 +377,11 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
 #endif
 }
 
-TEST_F(glTFIOTest, MeshoptOversizedDecodeRejectsGracefully) {
-    static constexpr uint64_t kOversizedMeshoptCount = 0x40000000ull;
+TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
     static constexpr size_t kMeshoptStride = 4;
+    const size_t maxCount = std::numeric_limits<size_t>::max() / kMeshoptStride;
 
-    const std::vector<uint8_t> glb = makeOversizedMeshoptGlb(kOversizedMeshoptCount, kMeshoptStride);
+    const std::vector<uint8_t> glb = makeMeshoptGlb(maxCount, kMeshoptStride);
 
     AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
     ASSERT_NE(assetLoader, nullptr);
