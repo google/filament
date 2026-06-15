@@ -259,6 +259,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
 void FMaterial::compile(CompilerPriorityQueue const priority,
         FixedCapacityVector<Variant> const& variants,
+        FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -274,7 +275,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
-            for (auto const specKey : DynamicSpecConstKey::getAllPossibleKeys()) {
+            for (auto const specKey : specKeys) {
                 if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
