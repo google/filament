@@ -854,7 +854,7 @@ bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
     // truncated by reserve()/resize() while the loop below iterates the full 64-bit count,
     // which would write past the allocation. A count larger than the bytes remaining in the
     // chunk cannot be valid either. Reject both before sizing the container.
-    if (numConstants > materialConstants->max_size() ||
+    if (numConstants > std::numeric_limits<decltype(materialConstants->size())>::max() ||
             unflattener.willOverflow(numConstants)) {
         return false;
     }
@@ -906,7 +906,7 @@ bool ChunkMaterialPushConstants::unflatten(Unflattener& unflattener,
     // truncated by reserve()/resize() while the loop below iterates the full 64-bit count,
     // which would write past the allocation. A count larger than the bytes remaining in the
     // chunk cannot be valid either. Reject both before sizing the container.
-    if (numConstants > materialPushConstants->max_size() ||
+    if (numConstants > std::numeric_limits<decltype(materialPushConstants->size())>::max() ||
             unflattener.willOverflow(numConstants)) {
         return false;
     }
