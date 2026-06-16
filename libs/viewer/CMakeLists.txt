@@ -43,6 +43,7 @@ set(MATERIAL_SRCS
         src/materials/Refractive.mat
         src/materials/Subsurface.mat
         src/materials/Cloth.mat
+        src/materials/Masked.mat
 )
 
 get_resgen_vars(${RESOURCE_DIR} shapr_materials)
@@ -112,6 +113,12 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/Transparent.filamat"
+        DEPENDS src/materials/MaterialHelpersShading.fxh
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/Masked.filamat"
         DEPENDS src/materials/MaterialHelpersShading.fxh
         APPEND
 )

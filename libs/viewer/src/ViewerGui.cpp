@@ -55,6 +55,48 @@ std::string g_ArtRootPathStr {};
 namespace filament {
 namespace viewer {
 
+void ViewerGui::applyDebugSpotlightState(DebugSpotlightState& s) {
+    if (!s.enabled) {
+        if (s.created) {
+            mScene->remove(s.entity);
+        }
+        return;
+    }
+
+    const math::float3 position{s.position[0], s.position[1], s.position[2]};
+    const math::float3 rawDirection{s.direction[0], s.direction[1], s.direction[2]};
+    const math::float3 direction = length(rawDirection) > 1e-6f
+            ? normalize(rawDirection) : math::float3{0.0f, 0.0f, -1.0f};
+
+    const float innerRad = s.innerConeDeg * math::f::DEG_TO_RAD;
+    const float outerRad = std::max(s.outerConeDeg * math::f::DEG_TO_RAD, innerRad + 1e-3f);
+    const float falloff = std::max(s.falloffMultiplier * 2.0f, 1.0f);
+
+    const auto linearColor = Color::toLinear(RgbType::sRGB,
+            math::float3{s.color[0], s.color[1], s.color[2]});
+
+    if (!s.created) {
+        s.entity = utils::EntityManager::get().create();
+        LightManager::Builder(LightManager::Type::FOCUSED_SPOT)
+            .castShadows(true)
+            .build(*mEngine, s.entity);
+        s.created = true;
+    }
+
+    auto& lm = mEngine->getLightManager();
+    auto inst = lm.getInstance(s.entity);
+    lm.setPosition(inst, position);
+    lm.setDirection(inst, direction);
+    lm.setColor(inst, linearColor);
+    lm.setIntensity(inst, s.intensity);
+    lm.setFalloff(inst, falloff);
+    lm.setSpotLightCone(inst, innerRad, outerRad);
+
+    if (!mScene->hasEntity(s.entity)) {
+        mScene->addEntity(s.entity);
+    }
+}
+
 // Taken from MeshAssimp.cpp
 static int loadTexture(Engine* engine, const std::string& filePath, Texture** map,
     bool sRGB, bool hasAlpha, int numChannels, const std::string& artRootPathStr) {
@@ -507,6 +549,26 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
         Material::Builder()
         .package(SHAPR_MATERIALS_SUBSURFACE_DATA, SHAPR_MATERIALS_SUBSURFACE_SIZE)
         .build(*mEngine);
+    mShaprGeneralMaterials[5] =
+        Material::Builder()
+        .package(SHAPR_MATERIALS_MASKED_DATA, SHAPR_MATERIALS_MASKED_SIZE)
+        .build(*mEngine);
+
+    // Three debug spotlights, one along each axis, aimed back at the origin.
+    constexpr float kAxisDistance = 3.0f;
+    mDebugSpotlights[0].position = {kAxisDistance, 0.0f, 0.0f};
+    mDebugSpotlights[0].direction = {-1.0f, 0.0f, 0.0f};
+    mDebugSpotlights[0].color = {1.0f, 0.25f, 0.25f}; // X: red
+    mDebugSpotlights[1].position = {0.0f, kAxisDistance, 0.0f};
+    mDebugSpotlights[1].direction = {0.0f, -1.0f, 0.0f};
+    mDebugSpotlights[1].color = {0.25f, 1.0f, 0.25f}; // Y: green
+    mDebugSpotlights[2].position = {0.0f, 0.0f, kAxisDistance};
+    mDebugSpotlights[2].direction = {0.0f, 0.0f, -1.0f};
+    mDebugSpotlights[2].color = {0.25f, 0.25f, 1.0f}; // Z: blue
+    for (auto& state : mDebugSpotlights) {
+        state.enabled = true;
+        applyDebugSpotlightState(state);
+    }
 }
 
 ViewerGui::~ViewerGui() {
@@ -523,6 +585,12 @@ ViewerGui::~ViewerGui() {
         mEngine->destroy(textureEntry.second);
     }
     mEngine->destroy(mSunlight);
+    for (auto& state : mDebugSpotlights) {
+        if (state.created) {
+            mEngine->destroy(state.entity);
+        }
+    }
+
     delete mImGuiHelper;
 }
 
@@ -973,7 +1041,7 @@ std::string ViewerGui::validateTweaks(const TweakableMaterial& tweaks) {
         // Infer the expected texture format if no explicit cue was given by the caller
         if (expectedFormat == filament::Texture::InternalFormat::UNUSED) {
             if (IsColor) {
-                if (tweaks.mShaderType == TweakableMaterial::MaterialType::Transparent || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
+                if (tweaks.mMaskedColorChange || tweaks.mShaderType == TweakableMaterial::MaterialType::Transparent || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive || tweaks.mShaderType == TweakableMaterial::MaterialType::Masked) {
                     expectedFormat = filament::Texture::InternalFormat::SRGB8_A8;
                     expectedChannelCount = 4;
                 }
@@ -1155,6 +1223,10 @@ void ViewerGui::updateUserInterface() {
                             if (ImGui::RadioButton("Subsurface", tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface)) {
                                 changeMaterialTypeTo(TweakableMaterial::MaterialType::Subsurface);
                             }
+                            ImGui::SameLine();
+                            if (ImGui::RadioButton("Masked", tweaks.mShaderType == TweakableMaterial::MaterialType::Masked)) {
+                                changeMaterialTypeTo(TweakableMaterial::MaterialType::Masked);
+                            }
                         }
                     }
 
@@ -1316,6 +1388,8 @@ void ViewerGui::updateUserInterface() {
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mAbsorption.useDerivedQuantity) << 11u;
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mSheenColor.useDerivedQuantity) << 12u;
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mSubsurfaceColor.useDerivedQuantity) << 13u;
+                    usageFlags |= static_cast<std::uint32_t>(tweaks.mMaskedColorChange) << 14u;
+                    usageFlags |= static_cast<std::uint32_t>(tweaks.mNotOrientDefault) << 15u;
                     matInstance->setParameter("usageFlags", usageFlags);
 
                     setTextureIfPresent(tweaks.mBaseColor.isFile, tweaks.mBaseColor.filename, "baseColor");
@@ -1339,7 +1413,7 @@ void ViewerGui::updateUserInterface() {
                     matInstance->setParameter("roughnessScale", tweaks.mRoughnessScale.value);
                     setTextureIfPresent(tweaks.mRoughness.isFile, tweaks.mRoughness.filename, "roughness");
                     matInstance->setParameter("roughnessUvScaler", tweaks.mRoughnessUvScaler.value);
-                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth || tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Cloth || tweaks.mShaderType == TweakableMaterial::MaterialType::Subsurface || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive || tweaks.mShaderType == TweakableMaterial::MaterialType::Masked) {
                         setTextureIfPresent(tweaks.mOcclusion.isFile, tweaks.mOcclusion.filename, "occlusion");
                         matInstance->setParameter("occlusion", tweaks.mOcclusion.value);
                     }
@@ -1379,7 +1453,7 @@ void ViewerGui::updateUserInterface() {
                         matInstance->setParameter("subsurfaceTint", tweaks.mSubsurfaceTint.value * tweaks.mSubsurfaceIntensity.value);
                     }
 
-                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive) {
+                    if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Refractive || tweaks.mShaderType == TweakableMaterial::MaterialType::Masked) {
                         // Transparent materials do not expose anisotropy and sheen, these are not present in their UBOs
                         matInstance->setParameter("anisotropy", tweaks.mAnisotropy.value);
                         matInstance->setParameter("anisotropyDirection", normalize(tweaks.mAnisotropyDirection.value));
@@ -1391,7 +1465,7 @@ void ViewerGui::updateUserInterface() {
                             matInstance->setParameter("sheenColor", tweaks.mSheenColor.value);
                             matInstance->setParameter("sheenIntensity", 1.0f);
                         }
-                        if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque) {
+                        if (tweaks.mShaderType == TweakableMaterial::MaterialType::Opaque || tweaks.mShaderType == TweakableMaterial::MaterialType::Masked) {
                             setTextureIfPresent(tweaks.mSheenRoughness.isFile, tweaks.mSheenRoughness.filename, "sheenRoughness");
                         }
                         matInstance->setParameter("sheenRoughness", tweaks.mSheenRoughness.value);
@@ -1643,6 +1717,57 @@ void ViewerGui::updateUserInterface() {
                 });
             }
         }
+
+    if (ImGui::CollapsingHeader("Debug Spotlights")) {
+    ImGui::Indent();
+    ImGui::TextDisabled("Three debug spotlights, each pointing at the workspace origin.");
+    ImGui::Separator();
+
+    for (int i = 0; i < kDebugSpotlightCount; ++i) {
+        ImGui::PushID(i);
+        auto& state = mDebugSpotlights[i];
+        bool changed = false;
+
+        const std::string header = "Spotlight " + std::to_string(i + 1) + (state.enabled ? " (on)" : " (off)");
+        if (ImGui::CollapsingHeader(header.c_str(), i == 0 ? ImGuiTreeNodeFlags_DefaultOpen : 0)) {
+            changed |= ImGui::Checkbox("Enabled", &state.enabled);
+            ImGui::BeginDisabled(!state.enabled);
+
+            changed |= ImGui::DragFloat("Intensity (lm)", &state.intensity, 100.0f, 0.0f, 1'000'000.0f);
+            changed |= ImGui::ColorEdit3("Color", state.color.data());
+            changed |= ImGui::DragFloat("Outer cone / umbra (°)", &state.outerConeDeg, 0.5f, 1.0f, 89.0f);
+            changed |= ImGui::DragFloat("Inner cone / penumbra (°)", &state.innerConeDeg, 0.5f, 0.0f, 89.0f);
+            
+            // Penumbra clamping logic (guarantees `changed` flag is ticked)
+            if (state.innerConeDeg > state.outerConeDeg) {
+                state.innerConeDeg = state.outerConeDeg;
+                changed = true;
+            }
+
+            // Modified Position Section
+            changed |= ImGui::DragFloat3("Position (XYZ)", state.position.data(), 0.1f);
+            changed |= ImGui::DragFloat("Falloff multiplier", &state.falloffMultiplier, 0.1f, 0.01f, 100.0f);
+
+            changed |= ImGui::DragFloat3("Forward vector", state.direction.data(), 0.05f, -1.0f, 1.0f);
+            if (ImGui::Button("Aim at workspace center")) {
+                const math::float3 toCenter = -math::float3{state.position[0], state.position[1], state.position[2]};
+                if (length(toCenter) > 1e-6f) {
+                    const auto dir = normalize(toCenter);
+                    state.direction = {dir.x, dir.y, dir.z};
+                    changed = true;
+                }
+            }
+            ImGui::EndDisabled();
+        }
+
+        if (changed) {
+            applyDebugSpotlightState(state);
+        }
+        ImGui::PopID();
+    }
+    ImGui::Unindent();
+}
+
         if (ImGui::CollapsingHeader("Shadows")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
             int mapSize = light.shadowOptions.mapSize;
@@ -1867,7 +1992,7 @@ void ViewerGui::updateUserInterface() {
     });
 
     applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
-            lights.data(), lights.size(), &lm, mScene, mView);
+                lights.data(), lights.size(), &lm, mScene, mView);
 
     // Set IBL options
     {        

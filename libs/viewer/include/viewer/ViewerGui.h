@@ -38,6 +38,7 @@
 #include <math/mat4.h>
 #include <math/vec3.h>
 
+#include <array>
 #include <functional>
 #include <vector>
 
@@ -272,6 +273,27 @@ private:
     View* const mView;
     const utils::Entity mSunlight;
 
+    // Three debug spotlights, each independently positionable/colorable, pointing at the model.
+    struct DebugSpotlightState {
+        bool enabled = false;
+        float intensity = 32800.0f; // lumens
+        std::array<float, 3> color = {1.0f, 1.0f, 1.0f}; // sRGB
+        float outerConeDeg = 9.5f;
+        float innerConeDeg = 1.0f;
+
+        // Explicit 3D position (X, Y, Z) in meters from workspace origin
+        std::array<float, 3> position = {0.0f, 0.0f, 0.0f};
+
+        float falloffMultiplier = 4.010f;
+        std::array<float, 3> direction = {0.0f, 0.0f, 1.0f};
+
+        utils::Entity entity;
+        bool created = false;
+    };
+    static constexpr int kDebugSpotlightCount = 3;
+    std::array<DebugSpotlightState, kDebugSpotlightCount> mDebugSpotlights{};
+    void applyDebugSpotlightState(DebugSpotlightState& state);
+
     // Lazily instantiated fields.
     filagui::ImGuiHelper* mImGuiHelper = nullptr;
 
@@ -320,7 +342,7 @@ private:
     std::string mLastSavedFileName;
     std::unordered_map<std::string, TweakableMaterial> mTweakedMaterials{};
     std::vector<filament::MaterialInstance*> mMaterialInstances{};
-    Material const* mShaprGeneralMaterials[5]{};
+    Material const* mShaprGeneralMaterials[6]{};
     std::unordered_map<std::string, filament::Texture*> mTextures{};
     std::unordered_map<std::string, int> mTextureFileChannels{};
     bool mVisibility[10]{ true, true, true, true, true, true, true, true, true, true };

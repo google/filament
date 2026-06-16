@@ -1,5 +1,26 @@
 #include <viewer/TweakableMaterial.h>
 
+static const char* materialTypeToString(TweakableMaterial::MaterialType type) {
+    switch (type) {
+        case TweakableMaterial::MaterialType::Opaque:      return "Opaque";
+        case TweakableMaterial::MaterialType::Transparent: return "Transparent";
+        case TweakableMaterial::MaterialType::Refractive:  return "Refractive";
+        case TweakableMaterial::MaterialType::Cloth:       return "Cloth";
+        case TweakableMaterial::MaterialType::Subsurface:  return "Subsurface";
+        case TweakableMaterial::MaterialType::Masked:      return "Masked";
+    }
+    return "Opaque";
+}
+
+static TweakableMaterial::MaterialType materialTypeFromString(const std::string& s) {
+    if (s == "Transparent") return TweakableMaterial::MaterialType::Transparent;
+    if (s == "Refractive")  return TweakableMaterial::MaterialType::Refractive;
+    if (s == "Cloth")       return TweakableMaterial::MaterialType::Cloth;
+    if (s == "Subsurface")  return TweakableMaterial::MaterialType::Subsurface;
+    if (s == "Masked")      return TweakableMaterial::MaterialType::Masked;
+    return TweakableMaterial::MaterialType::Opaque;
+}
+
 TweakableMaterial::TweakableMaterial() {
     mSpecularIntensity.value = 1.0f;    
     mAnisotropyDirection.value = { 1.0f, 0.0f, 0.0f };
@@ -17,10 +38,11 @@ TweakableMaterial::TweakableMaterial() {
 json TweakableMaterial::toJson() {
     json result{};
 
-    //result["materialType"] = mMaterialType;
-    result["shaderType"] = mShaderType;
+    result["shaderType"] = materialTypeToString(mShaderType);
 
     result["useWard"] = mUseWard;
+    result["maskedColorChange"] = mMaskedColorChange;       
+    result["notOrientDefault"] = mNotOrientDefault;    
 
     writeTexturedToJson(result, "baseColor", mBaseColor);
     result["tintColor"] = mTintColor.value;
@@ -80,16 +102,25 @@ json TweakableMaterial::toJson() {
 }
 
 void TweakableMaterial::fromJson(const json& source) {
-    // handle renaming materialType to shaderType
+    // handle renaming materialType to shaderType; also handles migration from integer to string format
+    auto readShaderType = [&](const json& val) {
+        if (val.is_string()) {
+            mShaderType = materialTypeFromString(val.get<std::string>());
+        } else {
+            mShaderType = static_cast<MaterialType>(val.get<int>());
+        }
+    };
     if (source.find("shaderType") != source.cend()) {
-        mShaderType = source["shaderType"];
+        readShaderType(source["shaderType"]);
     } else {
-        mShaderType = source["materialType"];
+        readShaderType(source["materialType"]);
     }
 
-    bool isAlpha = (mShaderType == TweakableMaterial::MaterialType::Transparent) || (mShaderType == TweakableMaterial::MaterialType::Refractive);
-
     readValueFromJson(source, "useWard", mUseWard, false);
+    readValueFromJson(source, "maskedColorChange", mMaskedColorChange, false);
+    readValueFromJson(source, "notOrientDefault", mNotOrientDefault, false);
+
+    bool isAlpha = mMaskedColorChange || (mShaderType == TweakableMaterial::MaterialType::Transparent) || (mShaderType == TweakableMaterial::MaterialType::Refractive) || (mShaderType == TweakableMaterial::MaterialType::Masked);
 
     readTexturedFromJson(source, "baseColor", mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
     readValueFromJson(source, "tintColor", mTintColor, { 1.0f, 1.0f, 1.0f });
@@ -220,6 +251,8 @@ void TweakableMaterial::resetWithType(MaterialType newType) {
     mAbsorption.useDerivedQuantity = false;
     mSheenColor.useDerivedQuantity = false;
     mUseWard = false;
+    mMaskedColorChange = false;
+    mNotOrientDefault = false;
     mDoRelease = false;
 
     mShaderType = newType;
@@ -246,7 +279,7 @@ void TweakableMaterial::drawUI(const std::string& header) {
 
         mBaseColor.addWidget("baseColor");
         if (mBaseColor.isFile) {
-            bool isAlpha = (mShaderType == MaterialType::Transparent || mShaderType == MaterialType::Refractive);
+            bool isAlpha = (mMaskedColorChange || mShaderType == MaterialType::Transparent || mShaderType == MaterialType::Refractive || mShaderType == MaterialType::Masked);
             enqueueTextureRequest(mBaseColor, true, isAlpha, isAlpha ? 4 : 3);
         }
 
@@ -310,7 +343,27 @@ void TweakableMaterial::drawUI(const std::string& header) {
 
         if (ImGui::CollapsingHeader("Metal (anisotropy, etc.) settings")) {
             mAnisotropy.addWidget("anisotropy", -1.0f, 1.0f);
-            
+
+            // This is more intuitive to toggle like this
+            ImGui::Separator();
+            ImGui::LabelText("anisotropy direction", "anisotropy direction");
+            ImGuiExt::DirectionWidget("anisotropyDirection", mAnisotropyDirection.value.v);
+        }
+        break;
+    }
+    case MaterialType::Masked: {
+        if (ImGui::CollapsingHeader("Sheen settings")) {
+            mSheenColor.addWidget("sheen color");
+            if (mSheenColor.useDerivedQuantity) {
+                mSheenIntensity.addWidget("auto-sheen intensity");
+            }
+            mSheenRoughness.addWidget("sheen roughness");
+            if (mSheenRoughness.isFile) enqueueTextureRequest(mSheenRoughness);
+        }
+
+        if (ImGui::CollapsingHeader("Metal (anisotropy, etc.) settings")) {
+            mAnisotropy.addWidget("anisotropy", -1.0f, 1.0f);
+
             // This is more intuitive to toggle like this
             ImGui::Separator();
             ImGui::LabelText("anisotropy direction", "anisotropy direction");
@@ -374,6 +427,8 @@ void TweakableMaterial::drawUI(const std::string& header) {
 
     if (ImGui::CollapsingHeader("Shader setup")) {
         ImGui::Checkbox("Use Ward specular normal distribution", &mUseWard);
+        ImGui::Checkbox("Apply tint only where alpha > 0.3", &mMaskedColorChange);
+        ImGui::Checkbox("Lock orientation to one axis, biplanar-blend the other two", &mNotOrientDefault);
     }
 }
 

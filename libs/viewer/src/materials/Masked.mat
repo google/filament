@@ -1,0 +1,168 @@
+material {
+    name : Masked,
+    blending : masked,
+    specularAntiAliasing : true,
+    doubleSided: true,
+    postLightingBlending : transparent,
+    parameters : [
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Attributes that may have a texture assigned to them. A single control to set their value when
+        // no texture is selected is optional but always named as the material, if present.
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        {
+            type : sampler2d,
+            name : baseColorTexture
+        },
+        {
+            type : float4,
+            name : baseColor
+        },
+
+        {
+            type : float3,
+            name : tintColor,
+        },
+
+        {
+            type : sampler2d,
+            name : normalTexture
+        },
+
+        {
+            type : sampler2d,
+            name : roughnessTexture
+        },
+        {
+            type : float,
+            name : roughness
+        },
+
+        {
+            type : sampler2d,
+            name : clearCoatNormalTexture
+        },
+
+        {
+            type : sampler2d,
+            name : clearCoatRoughnessTexture
+        },
+        {
+            type : float,
+            name : clearCoatRoughness
+        },
+
+        {
+            type : sampler2d,
+            name : metallicTexture
+        },
+        {
+            type : float,
+            name : metallic
+        },
+
+        {
+            type : sampler2d,
+            name : occlusionTexture
+        },
+        {
+            type : float,
+            name : occlusion
+        },
+
+        {
+            type : sampler2d,
+            name : sheenRoughnessTexture
+        },
+        {
+            type : float,
+            name : sheenRoughness
+        },
+        {
+            type : float,
+            name : roughnessUvScaler
+        },
+        {
+            type : float2,
+            name : emissiveControl
+        },
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Texture lookup scaling that transforms world coordinates to triplanar coordinates
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+
+        { // .r: baseColor, .g: normal|roughness|metallic, .b: clearCoat{Normal|Roughness|value} scaler, .a: ior, transmission, microThickness texture scalers
+            type : float4,
+            name : textureScaler
+        },
+        { // this is a compatibility attribute with the GltfViewer extra tweaks
+            type : float4,
+            name : scalingControl
+        },
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // material attributes that are purely driven by UBO values
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        {
+            type : float,
+            name : clearCoat
+        },
+        {
+            type : float,
+            name : roughnessScale
+        },
+        {
+            type : float,
+            name : anisotropy
+        },
+        {
+            type : float3,
+            name : anisotropyDirection
+        },
+        {
+            type : float3,
+            name : sheenColor
+        },
+        {
+            type : float,
+            name : sheenIntensity
+        },
+        {
+            type : float4,
+            name : ambientColor
+        },
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Material texture usage and various other control flags
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        {
+            type : float4,
+            name : basicIntensities
+        },
+        {
+            type : uint,
+            name : usageFlags
+        },
+        {
+            type : uint,
+            name : debugUsageFlags
+        }
+    ],
+    variables: [
+        objectSpacePosition,
+        objectSpaceNormal
+    ],
+    quality : high
+}
+
+vertex {
+    #include "MaterialHelpersVertex.fxh"
+
+    void materialVertex(inout MaterialVertexInputs material) {
+        ProcessVertex(material);
+    }
+}
+
+fragment {
+    #include "MaterialHelpersShading.fxh"
+
+    void material(inout MaterialInputs material) {
+        ApplyStandardMaterialFragment(material);
+    }
+}
