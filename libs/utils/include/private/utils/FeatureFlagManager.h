@@ -92,6 +92,7 @@ public:
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
             bool enable_asynchronous_operation = false;
+            bool enable_priority_override_mitigation = false;
         } backend;
         struct {
             bool check_crc32_after_loading = false;
