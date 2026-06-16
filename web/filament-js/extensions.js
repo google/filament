@@ -60,11 +60,14 @@ Filament.shadowOptions = function(overrides) {
         shadowNearHint: 1.0,
         shadowFarHint: 100.0,
         stable: false,
+        lispsm: true,
         polygonOffsetConstant: 0.5,
         polygonOffsetSlope: 2.0,
         screenSpaceContactShadows: false,
         stepCount: 8,
-        maxShadowDistance: 0.3
+        maxShadowDistance: 0.3,
+        shadowBulbRadius: 0.02,
+        transform: [0, 0, 0, 1]
     };
     return Object.assign(options, overrides);
 };

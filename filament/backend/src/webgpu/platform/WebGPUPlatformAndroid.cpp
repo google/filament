@@ -38,14 +38,10 @@
 
 namespace filament::backend {
 
-struct WebGPUPlatformAndroid::AndroidDetails {};
-
-WebGPUPlatformAndroid::WebGPUPlatformAndroid() noexcept
-        : mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
+WebGPUPlatformAndroid::WebGPUPlatformAndroid() noexcept {
 }
 
 WebGPUPlatformAndroid::~WebGPUPlatformAndroid() noexcept {
-    delete &mAndroidDetails;
 }
 
 std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformAndroid::getAdapterOptions() {
