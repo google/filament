@@ -16,6 +16,8 @@
 
 #include "PerformanceCounters.h"
 
+#include <utils/compiler.h>
+
 #include <benchmark/benchmark.h>
 
 #include <utils/memalign.h>
@@ -99,7 +101,7 @@ static void BM_memcpy(benchmark::State& state) {
 
     {
         // PerformanceCounters const pc(state);
-        for (auto _: state) {
+        for (auto _ UTILS_UNUSED: state) {
             memcpy(dst.data(), src.data(), size);
             benchmark::DoNotOptimize(dst);
             benchmark::DoNotOptimize(src);
@@ -119,7 +121,7 @@ static void BM_memset(benchmark::State& state) {
 
     {
         // PerformanceCounters const pc(state);
-        for (auto _: state) {
+        for (auto _ UTILS_UNUSED: state) {
             memset(src.data(), 0, size);
             benchmark::DoNotOptimize(src);
         }

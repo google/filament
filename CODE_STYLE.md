@@ -19,6 +19,7 @@ The guiding principles of the filament code style and code formatting can be res
 - spaces around operators and after `;`
 - class access modifiers are not indented
 - last line of `.cpp` or `.h` file must be an empty line
+- there should be no trailing white spaces on any line
 
 ```c++
 for (int i = 0; i < max; i++) {

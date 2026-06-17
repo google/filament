@@ -64,6 +64,14 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
     if (decompSize == ZSTD_CONTENTSIZE_UNKNOWN || decompSize == ZSTD_CONTENTSIZE_ERROR) {
         PANIC_POSTCONDITION("Decompression error.");
     }
+    // Reject implausibly large declared sizes to prevent unbounded allocation
+    // from attacker-controlled archive files (decompression bomb).
+    static constexpr uint64_t MAX_ARCHIVE_DECOMPRESSED_SIZE = 256ull * 1024ull * 1024ull; // 256 MiB
+    if (UTILS_UNLIKELY(decompSize > MAX_ARCHIVE_DECOMPRESSED_SIZE)) {
+        utils::slog.e << "ArchiveCache: decompressed size exceeds limit (" << decompSize
+                      << " bytes)" << utils::io::endl;
+        return;
+    }
     uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
     ZSTD_decompress(basePointer, decompSize, archiveData, archiveByteCount);
     mArchive = (ReadableArchive*) basePointer;

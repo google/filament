@@ -74,7 +74,6 @@
 #include <mutex>
 #include <new>
 #include <type_traits>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -316,6 +315,10 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 
     mShaderCompilerService.init();
 
+    // Create the backend thread's state after mContext is fully initialized
+    mBackendState = mContext.createState();
+    assert_invariant(mBackendState);
+
     if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
 
@@ -340,13 +343,12 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
             };
             mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
         } else {
+            // The worker operates on the same backend (engine) thread for the Amortization mode,
+            // so use the same state.
+            mWorkerState = mBackendState;
             mJobWorker = AmortizationWorker::create(mJobQueue);
         }
     }
-
-    // Create the backend thread's state after mContext is fully initialized
-    mBackendState = mContext.createState();
-    assert_invariant(mBackendState);
 }
 
 OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)

@@ -17,16 +17,16 @@
 #ifndef TNT_FILAMENT_SAMPLE_GRID_H
 #define TNT_FILAMENT_SAMPLE_GRID_H
 
-#include <filament/Engine.h>
 #include <filament/Box.h>
 #include <filament/Camera.h>
+#include <filament/Engine.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 
+#include <utils/Entity.h>
+
 #include <math/mat4.h>
 #include <math/vec3.h>
-
-#include <utils/Entity.h>
 
 #include <functional>
 

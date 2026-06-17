@@ -25,39 +25,38 @@
 #define GL_TEXTURE_WRAP_S                 0x2802
 #define GL_TEXTURE_WRAP_T                 0x2803
 
+#include "generated/resources/filamentapp.h"
+
 #include <filamentapp/MeshAssimp.h>
 
-#include <stdlib.h>
-#include <string.h>
+#include <filament/Color.h>
+#include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/Material.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
+#include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
+
+#include <backend/DriverEnums.h>
+
+#include <math/norm.h>
+#include <math/TVecHelpers.h>
+#include <math/vec3.h>
+
+#include <assimp/cimport.h>
+#include <assimp/Importer.hpp>
+#include <assimp/pbrmaterial.h>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <stb_image.h>
 
 #include <array>
 #include <iostream>
 
-#include <filament/Color.h>
-#include <filament/VertexBuffer.h>
-#include <filament/Engine.h>
-#include <filament/IndexBuffer.h>
-#include <filament/Material.h>
-#include <filament/Renderer.h>
-#include <filament/Scene.h>
-#include <filament/RenderableManager.h>
-#include <filament/TransformManager.h>
-
-#include <math/norm.h>
-#include <math/vec3.h>
-#include <math/TVecHelpers.h>
-
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/pbrmaterial.h>
-
-#include <stb_image.h>
-
-#include <backend/DriverEnums.h>
-
-#include "generated/resources/filamentapp.h"
+#include <stdlib.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filamat;

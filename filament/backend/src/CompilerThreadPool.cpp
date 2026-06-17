@@ -57,8 +57,9 @@ void CompilerThreadPool::init(uint32_t const threadCount,
             while (true) {
                 UniqueLock lock(mQueueLock);
                 mQueueCondition.wait(lock, [this]() UTILS_NO_THREAD_SAFETY_ANALYSIS {
-                    return mExitRequested ||
-                            (!std::ranges::all_of(mQueues, [](auto&& q) { return q.empty(); }));
+                    // TODO: can be replaced with std::ranges once client fully supports c++20
+                    return mExitRequested || (!std::all_of(mQueues.begin(), mQueues.end(),
+                                                     [](auto&& q) { return q.empty(); }));
                 });
 
                 if (UTILS_UNLIKELY(mExitRequested)) {

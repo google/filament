@@ -124,6 +124,9 @@ TextureCache::TextureCache(Engine::Config const& config, DriverApi& driverApi) n
         : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi),
           mDisposer(std::make_shared<TextureCacheDisposer>(driverApi)) {
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+    mDebugger = std::make_unique<Debugger>();
+#endif
 }
 
 TextureCache::TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
@@ -131,6 +134,9 @@ TextureCache::TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
         : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi),
           mDisposer(std::move(disposer)) {
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+    mDebugger = std::make_unique<Debugger>();
+#endif
 }
 
 TextureCache::~TextureCache() noexcept {
@@ -145,7 +151,7 @@ void TextureCache::terminate() noexcept {
     }
 }
 
-RenderTargetHandle TextureCache::createRenderTarget(StaticString name,
+RenderTargetHandle TextureCache::createRenderTarget(StaticString const name,
         TargetBufferFlags const targetBufferFlags, uint32_t const width, uint32_t const height,
         uint8_t const samples, uint8_t const layerCount, MRT const color, TargetBufferInfo const depth,
         TargetBufferInfo const stencil) noexcept {
@@ -158,7 +164,7 @@ void TextureCache::destroyRenderTarget(RenderTargetHandle const h) noexcept {
     mBackend.destroyRenderTarget(h);
 }
 
-TextureHandle TextureCache::createTexture(StaticString name,
+TextureHandle TextureCache::createTexture(StaticString const name,
         SamplerType const target, uint8_t const levels, TextureFormat const format, uint8_t samples,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         std::array<TextureSwizzle, 4> const swizzle,
@@ -168,7 +174,7 @@ TextureHandle TextureCache::createTexture(StaticString name,
     samples = samples ? samples : uint8_t(1);
 
     using TS = TextureSwizzle;
-    constexpr const auto defaultSwizzle = std::array{
+    constexpr auto defaultSwizzle = std::array{
         TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
 
     // do we have a suitable texture in the cache?
@@ -176,18 +182,40 @@ TextureHandle TextureCache::createTexture(StaticString name,
     TextureKey const key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
     if constexpr (mEnabled) {
         auto& textureCache = mTextureCache;
-        auto it = textureCache.find(key);
+        auto const it = textureCache.find(key);
         if (UTILS_LIKELY(it != textureCache.end())) {
             // we do, move the entry to the in-use list, and remove from the cache
             handle = it->second.handle;
             mCacheSize -= it->second.size;
             textureCache.erase(it);
         } else {
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+            StaticString evictedName;
+            EvictionReason reason;
+            if (mDebugger && mDebugger->checkRecentEviction(key, evictedName, reason)) {
+                const char* reasonStr = "";
+                switch (reason) {
+                    case EvictionReason::SKIPPED_FRAME:
+                        reasonStr = "it was evicted when a frame was skipped";
+                        break;
+                    case EvictionReason::AGED_OUT:
+                        reasonStr = "it aged out (unused for too many frames)";
+                        break;
+                    case EvictionReason::UNIQUE_AGE_LIMIT:
+                        reasonStr = "the cache exceeded the unique age groups limit (capacity constraint)";
+                        break;
+                }
+                LOG(INFO) << "TextureCache: texture '" << name.c_str()
+                          << "' (w=" << width << ", h=" << height << ", format=" << (int)format
+                          << ") created because compatible texture '" << evictedName.c_str()
+                          << "' was recently evicted from cache because " << reasonStr << ".";
+            }
+#endif
             // we don't, allocate a new texture and populate the in-use list
             handle = mBackend.createTexture(
                     target, levels, format, samples, width, height, depth, usage, name);
             if (swizzle != defaultSwizzle) {
-                TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
+                TextureHandle const swizzledHandle = mBackend.createTextureViewSwizzle(
                         handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], name);
                 mBackend.destroyTexture(handle);
                 handle = swizzledHandle;
@@ -260,7 +288,10 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
         if ((ageDiff >= MAX_AGE_SKIPPED_FRAME && skippedFrame) ||
             (ageDiff >= mCacheMaxAge && evictedCount < MAX_EVICTION_COUNT)) {
             evictedCount++;
-            it = purge(it);
+            auto const reason = (ageDiff >= MAX_AGE_SKIPPED_FRAME && skippedFrame)
+                    ? EvictionReason::SKIPPED_FRAME
+                    : EvictionReason::AGED_OUT;
+            it = purge(it, reason);
         } else {
             // build the set of ages present in the cache after eviction
             ages.set(std::min(size_t(31), ageDiff));
@@ -280,37 +311,48 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
         for (auto it = textureCache.begin(); it != textureCache.end();) {
             const size_t ageDiff = age - it->second.age;
             if (ageDiff >= maxAge) {
-                it = purge(it);
+                it = purge(it, EvictionReason::UNIQUE_AGE_LIMIT);
             } else {
                 ++it;
             }
         }
     }
+
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+    if (mDebugger) {
+        mDebugger->ageRecentEvictions(mAge);
+    }
+#endif
 }
 
 UTILS_NOINLINE
 void TextureCache::dump(bool const brief) const noexcept {
     constexpr float MiB = 1.0f / float(1u << 20u);
-    DLOG(INFO) << "# entries=" << mTextureCache.size() << ", sz=" << (float) mCacheSize * MiB
+    DLOG(INFO) << "# entries=" << mTextureCache.size() << ", sz=" << float(mCacheSize) * MiB
                << " MiB"
-               << ", max=" << (float) mCacheSizeHiWaterMark * MiB << " MiB";
+               << ", max=" << float(mCacheSizeHiWaterMark) * MiB << " MiB";
     if (!brief) {
         for (auto const& it : mTextureCache) {
             auto w = it.first.width;
             auto h = it.first.height;
             auto f = FTexture::getFormatSize(it.first.format);
             DLOG(INFO) << it.first.name.c_str() << ": w=" << w << ", h=" << h << ", f=" << f
-                       << ", sz=" << (float) it.second.size * MiB;
+                       << ", sz=" << float(it.second.size) * MiB;
         }
     }
 }
 
 TextureCache::CacheContainer::iterator
 TextureCache::purge(
-        CacheContainer::iterator const& pos) {
+        CacheContainer::iterator const& pos, EvictionReason reason) {
     // DLOG(INFO) << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age;
     mBackend.destroyTexture(pos->second.handle);
     mCacheSize -= pos->second.size;
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+    if (mDebugger) {
+        mDebugger->recordEviction(pos->first, reason, mAge);
+    }
+#endif
     return mTextureCache.erase(pos);
 }
 
@@ -337,15 +379,13 @@ void TextureCacheDisposer::destroy(TextureHandle const handle) noexcept {
     }
 }
 
-void TextureCacheDisposer::checkout(TextureHandle handle,
-        TextureCache::TextureKey key) {
+void TextureCacheDisposer::checkout(TextureHandle handle, TextureCache::TextureKey key) {
     mInUseTextures.emplace(handle, key);
 }
 
-std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(
-        TextureHandle handle) {
+std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(TextureHandle handle) {
     // find the texture in the in-use list (it must be there!)
-    auto it = mInUseTextures.find(handle);
+    auto const it = mInUseTextures.find(handle);
     assert_invariant(it != mInUseTextures.end());
     if (it == mInUseTextures.end()) {
         return std::nullopt;
@@ -354,6 +394,61 @@ std::optional<TextureCache::TextureKey> TextureCacheDisposer::checkin(
     // remove it from the in-use list
     mInUseTextures.erase(it);
     return key;
+}
+
+void TextureCache::Debugger::recordEviction(TextureKey const& key,
+        EvictionReason const reason, size_t const age) noexcept {
+    auto const it = std::find_if(mRecentEvictions.begin(), mRecentEvictions.end(), [&key](auto const& entry) {
+        return entry.key == key;
+    });
+    if (it != mRecentEvictions.end()) {
+        it->evictionAge = age;
+        it->reason = reason;
+        return;
+    }
+    mRecentEvictions.push_back({key, age, reason});
+    if (mRecentEvictions.size() > mConfig.historyLimit) {
+        mRecentEvictions.erase(mRecentEvictions.begin());
+    }
+}
+
+bool TextureCache::Debugger::checkRecentEviction(TextureKey const& key,
+        StaticString& evictedName, EvictionReason& outReason) noexcept {
+    auto const it = std::ranges::find_if(mRecentEvictions, [&key](auto const& entry) {
+        return entry.key == key;
+    });
+    if (it != mRecentEvictions.end()) {
+        evictedName = it->key.name;
+        outReason = it->reason;
+        return true;
+    }
+
+    // Check for a partial match (same dimensions and format) to help debug parameter mismatch
+    for (auto const& entry : mRecentEvictions) {
+        if (entry.key.width == key.width &&
+            entry.key.height == key.height &&
+            entry.key.format == key.format) {
+            LOG(INFO) << "TextureCache partial match: requested '" << key.name.c_str()
+                      << "' matches evicted '" << entry.key.name.c_str()
+                      << "' in size/format, but differs on: "
+                      << (entry.key.target != key.target ? "target " : "")
+                      << (entry.key.levels != key.levels ? "levels " : "")
+                      << (entry.key.samples != key.samples ? "samples " : "")
+                      << (entry.key.usage != key.usage ? "usage " : "")
+                      << (entry.key.swizzle != key.swizzle ? "swizzle " : "");
+        }
+    }
+    return false;
+}
+
+void TextureCache::Debugger::ageRecentEvictions(size_t const age) noexcept {
+    for (auto it = mRecentEvictions.begin(); it != mRecentEvictions.end();) {
+        if (age - it->evictionAge > mConfig.recentEvictionThreshold) {
+            it = mRecentEvictions.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 } // namespace filament

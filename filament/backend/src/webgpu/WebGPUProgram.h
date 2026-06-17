@@ -19,6 +19,8 @@
 
 #include "DriverBase.h"
 
+#include "webgpu/WebGPUPushConstantDescription.h"
+
 #include <webgpu/webgpu_cpp.h>
 
 namespace filament::backend {
@@ -33,6 +35,7 @@ class WebGPUProgram final : public HwProgram {
 public:
     WebGPUProgram(wgpu::Device const&, Program const&);
 
+    WebGPUPushConstantDescription pushConstantDescription;
     wgpu::ShaderModule vertexShaderModule = nullptr;
     wgpu::ShaderModule fragmentShaderModule = nullptr;
     wgpu::ShaderModule computeShaderModule = nullptr;

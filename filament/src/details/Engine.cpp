@@ -68,9 +68,7 @@
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
-#include <utils/compiler.h>
 #include <utils/CString.h>
-#include <utils/debug.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>

@@ -24,7 +24,6 @@
 #include <bluevk/BlueVK.h>
 
 #include <utils/compiler.h>
-
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
@@ -481,7 +480,9 @@ public:
     }
 
 protected:
-    struct VulkanSync : public Platform::Sync {
+    struct VulkanSync : public Sync {
+        explicit VulkanSync(std::shared_ptr<VulkanCmdFence> fence) noexcept
+            : fenceStatus(std::move(fence)) {}
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
 

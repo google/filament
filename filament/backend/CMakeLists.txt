@@ -319,6 +319,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPipelineLayoutCache.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPUPushConstantDescription.cpp
+            src/webgpu/WebGPUPushConstantDescription.h
             src/webgpu/WebGPUQueueManager.cpp
             src/webgpu/WebGPUQueueManager.h
             src/webgpu/WebGPURenderPassMipmapGenerator.cpp

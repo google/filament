@@ -33,7 +33,7 @@ static void BM_JobSystem(benchmark::State& state) {
 
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (auto _ UTILS_UNUSED: state) {
             js.runAndWait(js.create(nullptr, &emptyJob));
         }
     }
@@ -48,7 +48,7 @@ static void BM_JobSystemAsChildren4k(benchmark::State& state) {
 
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (auto _ UTILS_UNUSED: state) {
             auto root = js.create(nullptr, &emptyJob);
             for (size_t i = 0; i < 4095; i++) {
                 js.run(js.create(root, &emptyJob));
@@ -67,7 +67,7 @@ static void BM_JobSystemParallelFor(benchmark::State& state) {
 
     {
         PerformanceCounters pc(state);
-        for (auto _ : state) {
+        for (auto _ UTILS_UNUSED: state) {
             auto job = jobs::parallel_for(js, nullptr, 0, 4096,
                     [](uint32_t start, uint32_t count) { }, jobs::CountSplitter<1>());
             js.runAndWait(job);

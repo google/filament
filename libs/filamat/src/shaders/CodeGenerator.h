@@ -111,7 +111,8 @@ public:
     // generate declarations for non-custom "in" variables
     utils::io::sstream& generateSurfaceShaderInputs(utils::io::sstream& out, ShaderStage stage,
             const filament::AttributeBitset& attributes, filament::Interpolation interpolation,
-            MaterialBuilder::PushConstantList const& pushConstants) const;
+            MaterialBuilder::PushConstantList const& pushConstants,
+            uint32_t pushConstantOffset = 0) const;
     static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage stage);
 
     // generate declarations for custom output variables
@@ -172,7 +173,7 @@ public:
 
     utils::io::sstream& generatePushConstants(utils::io::sstream& out,
             MaterialBuilder::PushConstantList const& pushConstants,
-            size_t const layoutLocation) const;
+            size_t const layoutLocation, uint32_t startOffset) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generateSurfaceGetters(utils::io::sstream& out, ShaderStage stage);

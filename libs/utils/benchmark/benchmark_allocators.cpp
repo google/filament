@@ -55,7 +55,7 @@ Allocators::~Allocators() = default;
 BENCHMARK_F(Allocators, poolAllocator_nolock)(benchmark::State& state) {
     auto& pool = mPoolAllocatorNoLock;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         Payload* p = pool.alloc<Payload>(1);
         pool.free(p);
     }
@@ -64,7 +64,7 @@ BENCHMARK_F(Allocators, poolAllocator_nolock)(benchmark::State& state) {
 BENCHMARK_DEFINE_F(Allocators, poolAllocator_std_mutex)(benchmark::State& state) {
     auto& pool = mPoolAllocatorStdMutex;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         Payload* p = pool.alloc<Payload>(1);
         pool.free(p);
     }
@@ -73,7 +73,7 @@ BENCHMARK_DEFINE_F(Allocators, poolAllocator_std_mutex)(benchmark::State& state)
 BENCHMARK_DEFINE_F(Allocators, poolAllocator_utils_mutex)(benchmark::State& state) {
     auto& pool = mPoolAllocatorUtilsMutex;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         Payload* p = pool.alloc<Payload>(1);
         pool.free(p);
     }
@@ -82,7 +82,7 @@ BENCHMARK_DEFINE_F(Allocators, poolAllocator_utils_mutex)(benchmark::State& stat
 BENCHMARK_DEFINE_F(Allocators, poolAllocator_atomic)(benchmark::State& state) {
     auto& pool = mPoolAllocatorAtomic;
     PerformanceCounters pc(state);
-    for (auto _ : state) {
+    for (auto _ UTILS_UNUSED: state) {
         Payload* p = pool.alloc<Payload>(1);
         pool.free(p);
     }

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/RefCountedMap.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -229,7 +229,7 @@ TEST(RefCountedMapTest, SmartPointerType_GetsValue) {
     RefCountedMap<KeyType, SmartPointerType> map;
     RefCountedMap<KeyType, SmartPointerType> const& constMap = map;
 
-    ValueType* a1 = map.acquire(1, []() { return std::make_unique<size_t>(1); });
+    map.acquire(1, []() { return std::make_unique<size_t>(1); });
 
     ValueType& v1 = map.get(1);
     EXPECT_EQ(v1, 1);

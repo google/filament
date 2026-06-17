@@ -48,10 +48,25 @@ class Driver;
  */
 class UTILS_PUBLIC Platform {
 public:
-    struct SwapChain {};
-    struct Fence {};
-    struct Stream {};
-    struct Sync {};
+    struct SwapChain {
+    protected:
+        ~SwapChain() = default;
+    };
+
+    struct Fence {
+    protected:
+        ~Fence() = default;
+    };
+
+    struct Stream {
+    protected:
+        ~Stream() = default;
+    };
+
+    struct Sync {
+    protected:
+        ~Sync() = default;
+    };
 
     using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
 
@@ -114,11 +129,10 @@ public:
         duration_ns compositeInterval;
 
         /**
-         * The timestamp [ns] since epoch of the next time the compositor will begin composition.
-         * This is effectively the deadline for when the compositor must receive a newly queued
-         * frame.
+         * The time delta [ns] between the start of composition and the next time the compositor will begin composition.
+         * This is effectively the deadline for when the compositor must receive a newly queued frame.
          */
-        time_point_ns compositeDeadline;
+        duration_ns compositeDeadlineLatency;
 
         /**
          * The time delta [ns] between the start of composition and the expected present time of

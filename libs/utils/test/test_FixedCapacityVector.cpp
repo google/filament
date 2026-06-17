@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -112,8 +112,8 @@ TEST(FixedCapacityVectorTest, Constructors) {
     EXPECT_EQ(v_move[1], "pixelflinger");
     EXPECT_EQ(v_move[2], "pixelflinger");
     EXPECT_EQ(v_move[3], "pixelflinger");
-    EXPECT_EQ(v_size_proto.capacity(), 0);
-    EXPECT_EQ(v_size_proto.size(), 0);
+    EXPECT_EQ(v_size_proto.capacity(), 0); // NOLINT(clang-analyzer-cplusplus.Move)
+    EXPECT_EQ(v_size_proto.size(), 0);     // NOLINT(clang-analyzer-cplusplus.Move)
 
     auto v_capacity = FixedCapacityVector<std::string>::with_capacity(4);
     EXPECT_EQ(v_capacity.capacity(), 4);

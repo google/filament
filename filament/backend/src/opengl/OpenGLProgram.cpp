@@ -34,7 +34,6 @@
 #include <utils/Log.h>
 
 #include <algorithm>
-#include <algorithm>
 #include <array>
 #include <new>
 #include <string_view>

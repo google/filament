@@ -17,21 +17,97 @@
 #include "details/DebugRegistry.h"
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <algorithm>
+#include <array>
 #include <functional>
 #include <string_view>
 #include <utility>
+
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace filament::math;
 using namespace utils;
 
 namespace filament {
+
+namespace {
+
+constexpr size_t MAX_PROPERTY_NAME_LENGTH = 128;
+constexpr size_t MAX_PROPERTY_VALUE_LENGTH = 128;
+
+template<typename T>
+bool parse(const char* val, T& out) { return false; }
+
+template<>
+bool parse(const char* val, bool& out) {
+    std::string_view const value(val);
+    if (value == "1" || value == "true") { out = true; return true; }
+    if (value == "0" || value == "false") { out = false; return true; }
+    return false;
+}
+
+template<>
+bool parse(const char* val, int& out) { return sscanf(val, "%d", &out) == 1; }
+template<>
+bool parse(const char* val, float& out) { return sscanf(val, "%f", &out) == 1; }
+template<>
+bool parse(const char* val, float2& out) { return sscanf(val, "%f %f", &out.x, &out.y) == 2; }
+template<>
+bool parse(const char* val, float3& out) { return sscanf(val, "%f %f %f", &out.x, &out.y, &out.z) == 3; }
+template<>
+bool parse(const char* val, float4& out) { return sscanf(val, "%f %f %f %f", &out.x, &out.y, &out.z, &out.w) == 4; }
+
+template<typename T>
+bool update(void* p, const char* val) {
+    T v;
+    if (parse(val, v)) {
+        T& current = *static_cast<T*>(p);
+        if (current != v) {
+            current = v;
+            return true;
+        }
+    }
+    return false;
+}
+
+#ifdef __ANDROID__
+std::string_view getPropertyFromEnvironment(char const* const name, size_t nameLen,
+        std::array<char, MAX_PROPERTY_VALUE_LENGTH>& storage) {
+    // since API 26 there is no limit to the property name
+    char propertyName[MAX_PROPERTY_NAME_LENGTH];
+    snprintf(propertyName, MAX_PROPERTY_NAME_LENGTH, "debug.%s", name);
+    int const length = __system_property_get(propertyName, storage.data());
+    if (length > 0) {
+        return { storage.data(), size_t(length) };
+    }
+    return {};
+}
+#else
+std::string_view getPropertyFromEnvironment(char const* const name, size_t nameLen,
+        std::array<char, MAX_PROPERTY_VALUE_LENGTH>&) {
+    utils::CString cname {name, nameLen };
+    std::replace(cname.data(), cname.data() + nameLen, '.', '_');
+    char const* const env = getenv(cname.data());
+    return env ? std::string_view{ env } : std::string_view{};
+}
+#endif
+
+} // namespace
 
 FDebugRegistry::FDebugRegistry() noexcept = default;
 
@@ -59,11 +135,38 @@ void const* FDebugRegistry::getPropertyAddress(const char* name) const noexcept 
     return info.first;
 }
 
-void FDebugRegistry::registerProperty(std::string_view const name, void* p, Type,
+void FDebugRegistry::registerProperty(std::string_view const name, void* p, Type type,
         std::function<void()> fn) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
         propertyMap[name] = { p, std::move(fn) };
+
+        std::array<char, MAX_PROPERTY_VALUE_LENGTH> storage;
+        char propertyName[MAX_PROPERTY_NAME_LENGTH];
+        size_t const len = std::min(name.size(), sizeof(propertyName) - 1);
+        memcpy(propertyName, name.data(), len);
+        propertyName[len] = '\0';
+
+        std::string_view const value = getPropertyFromEnvironment(propertyName, len, storage);
+        if (!value.empty()) {
+            char const* val = value.data();
+            bool changed = false;
+            switch (type) {
+                case BOOL:   changed = update<bool>(p, val);   break;
+                case INT:    changed = update<int>(p, val);    break;
+                case FLOAT:  changed = update<float>(p, val);  break;
+                case FLOAT2: changed = update<float2>(p, val); break;
+                case FLOAT3: changed = update<float3>(p, val); break;
+                case FLOAT4: changed = update<float4>(p, val); break;
+            }
+            if (changed) {
+                LOG(INFO) << "DebugRegistry: overriding " << name << " to " << value;
+                auto const& info = propertyMap[name];
+                if (info.second) {
+                    info.second();
+                }
+            }
+        }
     }
 }
 

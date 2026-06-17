@@ -17,14 +17,15 @@
 #ifndef TNT_FILAMENT_SAMPLE_CUBE_H
 #define TNT_FILAMENT_SAMPLE_CUBE_H
 
-#include <vector>
-
-#include <filament/Engine.h>
 #include <filament/Box.h>
 #include <filament/Camera.h>
+#include <filament/Engine.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+
 #include <utils/Entity.h>
+
+#include <vector>
 
 class Cube {
 public:

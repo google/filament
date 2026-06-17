@@ -73,10 +73,10 @@ int NativeWindow::frameTimestampsSupportsPresent(ANativeWindow* anw, bool* outSu
 
 int NativeWindow::getCompositorTiming(ANativeWindow* anw,
         int64_t* compositeDeadline, int64_t* compositeInterval,
-        int64_t* compositeToPresentLatency) {
+        int64_t* compositeToPresent) {
     NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
     return pWindow->perform(anw, GET_COMPOSITOR_TIMING,
-            compositeDeadline, compositeInterval, compositeToPresentLatency);
+            compositeDeadline, compositeInterval, compositeToPresent);
 }
 
 int NativeWindow::getFrameTimestamps(ANativeWindow* anw,
