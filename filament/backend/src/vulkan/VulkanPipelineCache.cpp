@@ -21,10 +21,12 @@
 
 #include "vulkan/utils/Conversion.h"
 
+#include <private/utils/Tracing.h>
+
+#include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
@@ -102,8 +104,12 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
             pipelineIter != mPipelines.end()) {
         auto& pipeline = pipelineIter.value();
         pipeline.lastUsed = mCurrentTime;
+        FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                "Pipeline(Hit)", "program", mBoundProgram.c_str_safe());
         return &pipeline;
     }
+    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "Pipeline(Miss)", "program", mBoundProgram.c_str_safe());
     PipelineCacheEntry cacheEntry {
         .handle = createPipeline(mPipelineRequirements),
         .lastUsed = mCurrentTime,
@@ -182,23 +188,29 @@ void VulkanPipelineCache::asyncPrewarmCache(
     // Note: we keep a ref to vprogram in this lambda so that the shader modules don't get
     // destroyed before we call createPipeline(). We can catch this in some cases, to avoid
     // compiling too many unnecessary already-destroyed-materials.
-    mCompilerThreadPool.queue(priority, token, [this, vprogram, key, dynamicOptions, cmh]() mutable {
-        if (vprogram->isParallelCompilationCanceled()) {
-            FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
-            return;
-        }
+    mCompilerThreadPool.queue(
+        priority, token, [this, vprogram, key, dynamicOptions, cmh, priority]() mutable {
+            UTILS_UNUSED_IN_RELEASE const CompilerPriorityQueue priorityQueue = priority;
+            FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                    "asyncPrewarmCache(Job)",
+                    "program", vprogram->programString.c_str_safe(),
+                    "priority", static_cast<uint32_t>(priorityQueue));
+            if (vprogram->isParallelCompilationCanceled()) {
+                FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
+                return;
+            }
 
-        VkPipeline pipeline = createPipeline(key, dynamicOptions);
-        mCallbackManager.put(cmh);
-        // We don't actually need this pipeline, we just wanted to force the driver to cache
-        // the pipeline's information.
-        if (pipeline != VK_NULL_HANDLE) {
-            vkDestroyPipeline(mDevice, pipeline, VKALLOC);
-        } else {
-            FVK_LOGW << "Failed to create a pipeline during prewarming, draw-time pipeline "
-                        "creation may fail.";
-        }
-    });
+            VkPipeline pipeline = createPipeline(key, dynamicOptions);
+            mCallbackManager.put(cmh);
+            // We don't actually need this pipeline, we just wanted to force the
+            // driver to cache the pipeline's information.
+            if (pipeline != VK_NULL_HANDLE) {
+                vkDestroyPipeline(mDevice, pipeline, VKALLOC);
+            } else {
+                FVK_LOGW << "Failed to create a pipeline during prewarming, draw-time pipeline "
+                            "creation may fail.";
+            }
+        });
 }
 
 VkPipeline VulkanPipelineCache::createPipeline(
@@ -442,6 +454,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
 void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept {
     mPipelineRequirements.shaders[0] = program->getVertexShader();
     mPipelineRequirements.shaders[1] = program->getFragmentShader();
+    mBoundProgram = program->programString;
 
     // If this is a debug build, validate the current shader.
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)

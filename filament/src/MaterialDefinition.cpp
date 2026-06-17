@@ -670,6 +670,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(
         ProgramSpecialization const& specialization,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(engine.hasFeatureLevel(featureLevel));
+
     Program pb;
     switch (materialDomain) {
         case MaterialDomain::SURFACE:

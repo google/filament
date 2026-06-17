@@ -35,6 +35,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -473,8 +475,29 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "prepareProgram(variant found)",
+                            "name", getMaterial()->getName().c_str_safe(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "priority", static_cast<uint32_t>(priority));
                     prepareProgram(driver, variant, priority);
+                } else {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "requested variant missing",
+                            "name", getMaterial()->getName().c_str_safe(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "priority", static_cast<uint32_t>(priority));
                 }
+            }
+        }
+    } else {
+        for (auto const variant: definition.getVariants()) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "parallel compilation disabled",
+                        "name", getMaterial()->getName().c_str_safe(),
+                        "variantKey", static_cast<uint32_t>(variant.key),
+                        "priority", static_cast<uint32_t>(priority));
             }
         }
     }
