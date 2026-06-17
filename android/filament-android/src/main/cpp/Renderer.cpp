@@ -177,10 +177,10 @@ Java_com_google_android_filament_Renderer_nReadPixelsEx(JNIEnv *env, jclass,
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
-Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv *env, jclass, jlong nativeRenderer) {
+Java_com_google_android_filament_Renderer_nGetMaterialTime(JNIEnv *env, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     return wrapJni<jdouble>(env, [=]() {
-        return renderer->getUserTime();
+        return renderer->getMaterialTime();
     });
 }
 
@@ -189,6 +189,14 @@ Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv *env, jclass, jl
     Renderer *renderer = (Renderer *) nativeRenderer;
     wrapJni(env, [=]() {
         renderer->resetUserTime();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetMaterialTimeEpoch(JNIEnv *env, jclass, jlong nativeRenderer, jlong monotonicClockNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->setMaterialTimeEpoch(monotonicClockNanos);
     });
 }
 
@@ -270,9 +278,25 @@ Java_com_google_android_filament_Renderer_nGetFrameToSkipCount(JNIEnv *, jclass 
     return renderer->getFrameToSkipCount();
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Renderer_nHasGpuFallenBehind(JNIEnv *env, jclass, jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    return wrapJni<jboolean>(env, [=]() {
+        return (jboolean) renderer->hasGpuFallenBehind();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nPauseRenderThread(JNIEnv *env, jclass, jlong nativeRenderer, jlong durationNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->pauseRenderThread(durationNanos);
+    });
+}
+
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Renderer_nGetMaxFrameHistorySize(JNIEnv *, jclass ,
+Java_com_google_android_filament_Renderer_nGetMaxFrameHistorySize(JNIEnv *env, jclass ,
     jlong nativeRenderer) {
     Renderer const* renderer = (Renderer const*) nativeRenderer;
     return static_cast<jint>(renderer->getMaxFrameHistorySize());

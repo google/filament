@@ -73,6 +73,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <thread>
 #include <utility>
 
 #ifdef __ANDROID__
@@ -204,8 +205,12 @@ void FRenderer::terminate(FEngine& engine) {
     mResourceAllocator->terminate();
 }
 
-void FRenderer::resetUserTime() {
-    mUserEpoch = std::chrono::steady_clock::now();
+void FRenderer::setMaterialTimeEpoch(int64_t const monotonic_clock_ns) {
+    setMaterialTimeEpoch(std::chrono::steady_clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns)));
+}
+
+void FRenderer::setMaterialTimeEpoch(std::chrono::steady_clock::time_point const monotonic_clock) {
+    mUserEpoch = monotonic_clock;
 }
 
 TextureFormat FRenderer::getHdrFormat(const FView& view, bool const translucent) const noexcept {
@@ -337,6 +342,21 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     engine.gc();
 
     mFrameSkipper.frameSkipped();
+}
+
+bool FRenderer::hasGpuFallenBehind() const noexcept {
+    if (UTILS_VERY_UNLIKELY(mEngine.hasExceptionBeenRethrown())) {
+        return false;
+    }
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    return !mFrameSkipper.shouldRenderFrame(driver);
+}
+
+void FRenderer::pauseRenderThread(uint64_t const duration_ns) {
+    mEngine.getDriverApi().queueCommand([duration_ns]() {
+        std::this_thread::sleep_for(std::chrono::nanoseconds(duration_ns));
+    });
 }
 
 bool FRenderer::shouldRenderFrame() const noexcept {
