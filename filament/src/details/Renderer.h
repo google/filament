@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DETAILS_RENDERER_H
 
 #include "Allocators.h"
+#include "BufferStuffingDetector.h"
 #include "downcast.h"
 #include "FrameInfo.h"
 #include "FrameSkipper.h"
@@ -234,6 +235,7 @@ private:
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 1; // id 0 is reserved for standalone views
+    uint32_t mLastSubmittedFrameId = 1;
     FrameInfoManager mFrameInfoManager;
 #if FILAMENT_LOG_FRAME_INFO
     FrameHistoryStream mFrameHistoryStream;
@@ -260,7 +262,7 @@ private:
     std::chrono::steady_clock::time_point mPresentationTime{};
     std::chrono::steady_clock::time_point mDesiredPresentationTime{};
     std::unique_ptr<TextureCache> mResourceAllocator{};
-    int64_t mLastFrameId = -1;
+    mutable BufferStuffingDetector mBufferStuffingDetector;
 };
 
 FILAMENT_DOWNCAST(Renderer)

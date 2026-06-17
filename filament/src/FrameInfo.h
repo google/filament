@@ -303,6 +303,15 @@ public:
     utils::FixedCapacityVector<Renderer::FrameInfo>
             getFrameInfoHistory(size_t historySize = MAX_FRAMETIME_HISTORY) const;
 
+    /*
+     * Exposes the user frame history directly as a Slice without copying.
+     * The returned Slice remains valid until the next call to updateUserHistory()
+     * or until this FrameInfoManager is destroyed.
+     */
+    utils::Slice<const Renderer::FrameInfo> getFrameInfoHistorySlice() const noexcept {
+        return mUserFrameHistory;
+    }
+
     // This is for testing only. Wait until all pending GPU fence metrics are fully processed
     // by the background job queue. This ensures that the frame history is fully populated
     // before the test assertions are evaluated.
