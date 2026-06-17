@@ -67,6 +67,10 @@ const char* checkedCString(ReadableArchive* archive, size_t archiveSize,
 } // namespace
 
 bool convertOffsetsToPointers(ReadableArchive* archive, size_t archiveSize) {
+    if (!archive) {
+        LOG(ERROR) << "Uberz archive pointer is null";
+        return false;
+    }
     if (archiveSize < sizeof(ReadableArchive)) {
         LOG(ERROR) << "Uberz archive header is truncated";
         return false;

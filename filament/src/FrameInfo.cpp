@@ -95,7 +95,11 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
 }
 
 void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
-        Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point const vsync) noexcept {
+        Config const& config,
+        uint32_t frameId,
+        std::chrono::steady_clock::time_point const vsync,
+        std::chrono::steady_clock::time_point const presentDeadline,
+        std::chrono::steady_clock::time_point const expectedPresent) noexcept {
     auto const now = std::chrono::steady_clock::now();
 
     auto& history = mFrameTimeHistory;
@@ -126,16 +130,24 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 
     // store the current time
     front.vsync = vsync;
+    front.presentDeadline = FrameTimestamps::INVALID;
+    front.expectedPresentLatency = FrameTimestamps::INVALID;
     front.beginFrame = now;
 
+    if (presentDeadline.time_since_epoch().count()) {
+        front.presentDeadline = presentDeadline.time_since_epoch().count();
+    }
+
+    if (expectedPresent.time_since_epoch().count()) {
+        front.expectedPresentLatency = (expectedPresent - vsync).count();
+    }
     // store compositor timings if supported
+
     CompositorTiming compositorTiming{};
     if (driver.isCompositorTimingSupported() &&
         driver.queryCompositorTiming(swapChain->getHwHandle(), &compositorTiming)) {
-        front.presentDeadlineLatency = compositorTiming.compositeDeadlineLatency;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
-        front.expectedPresentLatency = compositorTiming.expectedPresentLatency;
     }
 
     if (mHasTimerQueries) {
@@ -317,8 +329,9 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
     for (; i < c && historySize; ++i, --historySize) {
         auto& entry = history[i];
 
-        // retrieve the displayPresentTime only we don't already have it
-        if (entry.displayPresent == Renderer::FrameInfo::PENDING) {
+        // retrieve the displayPresentTime only when we don't already have it
+        if (entry.displayPresent == Renderer::FrameInfo::PENDING ||
+            entry.displayPresent == Renderer::FrameInfo::INVALID) {
             FrameTimestamps frameTimestamps{
                 .displayPresentTime = FrameTimestamps::INVALID
             };
@@ -359,7 +372,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .gpuFrameComplete               = toTimepoint(entry.gpuFrameComplete),
                 .vsync                          = toTimepoint(entry.vsync),
                 .displayPresent                 = entry.displayPresent,
-                .presentDeadline                = toTimepoint(entry.vsync) + entry.presentDeadlineLatency,
+                .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
                 .compositionToPresentLatency    = entry.compositionToPresentLatency,
                 .expectedPresentLatency         = entry.expectedPresentLatency
