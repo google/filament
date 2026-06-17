@@ -704,10 +704,13 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("getMaterialTime", &Renderer::getMaterialTime)
     .function("getUserTime", &Renderer::getUserTime)
     .function("resetUserTime", &Renderer::resetUserTime)
+    .function("setMaterialTimeEpoch", select_overload<void(int64_t)>(&Renderer::setMaterialTimeEpoch))
     .function("skipNextFrames", &Renderer::skipNextFrames)
     .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
+    .function("pauseRenderThread", select_overload<void(uint64_t)>(&Renderer::pauseRenderThread))
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", select_overload<void(int64_t)>(&Renderer::setPresentationTime))
