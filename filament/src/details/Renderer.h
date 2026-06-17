@@ -84,7 +84,11 @@ public:
 
     math::float4 getShaderUserTime() const { return mShaderUserTime; }
 
-    void resetUserTime();
+    void setMaterialTimeEpoch(int64_t monotonic_clock_ns);
+    void setMaterialTimeEpoch(std::chrono::steady_clock::time_point monotonic_clock);
+    inline void resetUserTime() {
+        setMaterialTimeEpoch(clock::now());
+    }
 
     void skipNextFrames(size_t frameCount) noexcept {
         mFrameSkipper.skipNextFrames(frameCount);
@@ -93,6 +97,10 @@ public:
     size_t getFrameToSkipCount() const noexcept {
         return mFrameSkipper.getFrameToSkipCount();
     }
+
+    bool hasGpuFallenBehind() const noexcept;
+
+    void pauseRenderThread(uint64_t duration_ns);
 
     // renders a single standalone view. The view must have a a custom rendertarget.
     void renderStandaloneView(FView const* view);
@@ -195,7 +203,7 @@ private:
     backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
     Epoch getUserEpoch() const { return mUserEpoch; }
-    double getUserTime() const noexcept {
+    double getMaterialTime() const noexcept {
         duration const d = clock::now() - getUserEpoch();
         // convert the duration (whatever it is) to a duration in seconds encoded as double
         return std::chrono::duration<double>(d).count();
