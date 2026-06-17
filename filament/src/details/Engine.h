@@ -40,6 +40,7 @@
 #include "details/ColorGrading.h"
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
+#include "details/FramePacer.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
@@ -58,6 +59,7 @@
 
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
+#include <filament/FramePacer.h>
 #include <filament/IndirectLight.h>
 #include <filament/Material.h>
 #include <filament/Skybox.h>
@@ -361,6 +363,7 @@ public:
             MaterialDefinition const& definition) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
+    FFramePacer* createFramePacer(const FramePacer::Builder& builder) noexcept;
     FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;
     FStream* createStream(const Stream::Builder& builder) noexcept;
     FRenderTarget* createRenderTarget(const RenderTarget::Builder& builder) noexcept;
@@ -398,6 +401,7 @@ public:
     bool destroy(const FMaterial* p);
     bool destroy(const FMaterialInstance* p);
     bool destroy(const FRenderer* p);
+    bool destroy(const FFramePacer* p);
     bool destroy(const FScene* p);
     bool destroy(const FSkybox* p);
     bool destroy(const FColorGrading* p);
@@ -665,6 +669,7 @@ private:
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };
+    ResourceList<FFramePacer> mFramePacers{ "FramePacer" };
     ResourceList<FView> mViews{ "View" };
     ResourceList<FScene> mScenes{ "Scene" };
     ResourceList<FSwapChain> mSwapChains{ "SwapChain" };
