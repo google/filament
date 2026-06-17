@@ -161,6 +161,46 @@ public class Renderer {
     };
 
     /**
+     * Timing information about a frame.
+     * @see #getFrameInfoHistory(FrameInfo[])
+     */
+    public static class FrameInfo {
+        /** Value not supported or unavailable. */
+        public static final long INVALID = -1;
+        /** Value not yet available (pending completion). */
+        public static final long PENDING = -2;
+
+        /** Monotonically increasing frame identifier. */
+        public int frameId = 0;
+        /** Frame duration on the GPU in nanoseconds [ns]. */
+        public long gpuFrameDuration = 0;
+        /** Denoised frame duration on the GPU in nanoseconds [ns]. */
+        public long denoisedGpuFrameDuration = 0;
+        /** Renderer.beginFrame() time since epoch [ns]. */
+        public long beginFrame = 0;
+        /** Renderer.endFrame() time since epoch [ns]. */
+        public long endFrame = 0;
+        /** Backend thread time of frame start since epoch [ns]. */
+        public long backendBeginFrame = 0;
+        /** Backend thread time of frame end since epoch [ns]. */
+        public long backendEndFrame = 0;
+        /** GPU thread time of frame end since epoch [ns] or 0. */
+        public long gpuFrameComplete = 0;
+        /** VSYNC hardware time of this frame since epoch [ns]. */
+        public long vsync = 0;
+        /** Actual presentation time of this frame since epoch [ns]. */
+        public long displayPresent = 0;
+        /** Deadline for queuing a frame [ns]. */
+        public long presentDeadline = 0;
+        /** Display refresh rate period [ns]. */
+        public long displayPresentInterval = 0;
+        /** Time between the start of composition and the expected present time [ns]. */
+        public long compositionToPresentLatency = 0;
+        /** Time between vsync and the system's expected presentation time [ns]. */
+        public long expectedPresentLatency = 0;
+    }
+
+    /**
      * Indicates that the <code>dstSwapChain</code> passed into {@link #copyFrame} should be
      * committed after the frame has been copied.
      *
@@ -209,6 +249,30 @@ public class Renderer {
             mDisplayInfo = new DisplayInfo();
         }
         return mDisplayInfo;
+    }
+
+    /**
+     * Retrieve a history of frame timing information. The maximum frame history size is
+     * given by {@link #getMaxFrameHistorySize()}.
+     * <p>
+     * All or part of the history can be lost when using a different SwapChain in beginFrame().
+     * Provide a pre-allocated array of {@link FrameInfo} to receive historical records without
+     * garbage collection allocations.
+     * </p>
+     * @param outHistory pre-allocated array of FrameInfo.
+     * @return the number of FrameInfo populated.
+     * @see #beginFrame
+     */
+    public int getFrameInfoHistory(@NonNull FrameInfo[] outHistory) {
+        return nGetFrameInfoHistory(getNativeObject(), outHistory);
+    }
+
+    /**
+     * @return the maximum supported frame history size.
+     * @see #getFrameInfoHistory
+     */
+    public int getMaxFrameHistorySize() {
+        return nGetMaxFrameHistorySize(getNativeObject());
     }
 
     /**
@@ -826,4 +890,7 @@ public class Renderer {
 
     private static native void nSkipNextFrames(long nativeObject, int frameCount);
     private static native int nGetFrameToSkipCount(long nativeObject);
+
+    private static native int nGetFrameInfoHistory(long nativeRenderer, FrameInfo[] outHistory);
+    private static native int nGetMaxFrameHistorySize(long nativeRenderer);
 }
