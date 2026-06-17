@@ -685,8 +685,10 @@ public:
 
 
     /**
-     * Returns the time in seconds of the last call to beginFrame(). This value is constant for all
-     * views rendered during a frame. The epoch is set with setMaterialTimeEpoch().
+     * Returns the material time in seconds evaluated for the current frame. This value is constant for all
+     * views rendered during a frame. When available, this time is projected forward to the predicted
+     * presentation time on the display; otherwise, it evaluates at the vsync time of beginFrame().
+     * The epoch is set with setMaterialTimeEpoch().
      *
      * In materials, this value can be queried using `vec4 getUserTime()`. The value returned
      * is a highp vec4 encoded as follows:

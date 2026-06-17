@@ -63,9 +63,11 @@ if (FILAMENT_BUILD_TESTING)
                 filament_AtlasAllocator_test.cpp
                 test_BufferAllocator.cpp
                 test_BufferAllocatorStress.cpp
+                test_BufferStuffingDetector.cpp
                 test_CircularQueue.cpp
                 test_compact.cpp
                 test_FenceManager.cpp
+                test_FramePacer.cpp
                 test_UboManager.cpp
                 test_VertexBuffer.cpp
                 filament_test_exposure.cpp
