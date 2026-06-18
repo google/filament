@@ -46,6 +46,7 @@
 #define FILAMENT_TRACING_ASYNC_BEGIN(category, name, cookie)
 #define FILAMENT_TRACING_ASYNC_END(category, name, cookie)
 #define FILAMENT_TRACING_VALUE(category, name, val)
+#define FILAMENT_TRACING_EVENT(category, name, ...)
 
 #endif
 

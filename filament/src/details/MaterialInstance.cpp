@@ -35,6 +35,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -473,10 +475,37 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+#ifndef NDEBUG
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "prepareProgram(variant found)",
+                            "name", getMaterial()->getName().c_str_safe(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "priority", static_cast<uint32_t>(priority));
+#endif
                     prepareProgram(driver, variant, priority);
+#ifndef NDEBUG
+                } else {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "requested variant missing",
+                            "name", getMaterial()->getName().c_str_safe(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "priority", static_cast<uint32_t>(priority));
+#endif
                 }
             }
         }
+#ifndef NDEBUG
+    } else {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "parallel compilation disabled",
+                        "name", getMaterial()->getName().c_str_safe(),
+                        "variantKey", static_cast<uint32_t>(variant.key),
+                        "priority", static_cast<uint32_t>(priority));
+            }
+        }
+#endif
     }
 
     if (callback) {
