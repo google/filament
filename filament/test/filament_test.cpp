@@ -23,6 +23,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/Renderer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
@@ -1706,6 +1707,7 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
             renderer->endFrame();
         }
         engine->flushAndWait();
+        downcast(renderer)->waitForFrameHistory();
     }
 
     size_t count = 0;
@@ -1719,31 +1721,30 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
         }
     }
 
-    // Pushing fence waits to the background JobSystem (when the GPU frame complete metric is active)
-    // introduces a race condition between getNewFrames() and the thread-pool worker setting entry.ready.
-    // Depending on thread scheduling (or synchronous vs. async driver completion), at least 3
-    // and up to 5 frames may be ready immediately.
-    EXPECT_GE(count, 3u);
-    EXPECT_LE(count, 5u);
+    // Exactly 4 frames (1, 2, 3, 4) are ready during the last
+    // updateUserHistory call inside beginFrame of the 5th frame.
+    EXPECT_EQ(count, 4u);
 
     size_t count2 = 0;
     for (auto fi : logger.getNewFrames()) {
         (void)fi;
         count2++;
     }
-    // Any remaining frames from the initial 5 may finish between the two calls.
-    EXPECT_LE(count2, 5u - count);
+    EXPECT_EQ(count2, 0u);
 
     renderer->skipFrame((6 + 1) * 16666666);
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     if (renderer->beginFrame(swapChain, (7 + 1) * 16666666)) {
         renderer->endFrame();
     }
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     renderer->skipFrame();
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     size_t validCount = 0;
     size_t missingCount = 0;
@@ -1756,11 +1757,8 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
     }
 
     // Across the entire test, 6 valid frames were submitted (5 initially, 1 after skipping).
-    // Depending on whether the final frame has completed or is still pending on a background worker,
-    // the total number of valid frames delivered across all three polls will be either 5 or 6.
     size_t const totalValid = count + count2 + validCount;
-    EXPECT_GE(totalValid, 5u);
-    EXPECT_LE(totalValid, 6u);
+    EXPECT_EQ(totalValid, 6u);
     EXPECT_EQ(missingCount, 1u);
 
     engine->destroy(swapChain);
