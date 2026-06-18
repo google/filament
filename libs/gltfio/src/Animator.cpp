@@ -160,7 +160,40 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
     }
 }
 
+static bool accessorFitsView(const cgltf_accessor* accessor) {
+    const cgltf_buffer_view* view = accessor->buffer_view;
+    if (!view || accessor->is_sparse || accessor->count == 0) {
+        return false;
+    }
+    const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+    const cgltf_size stride = accessor->stride ? accessor->stride : elementSize;
+    if (elementSize == 0 || stride == 0 || accessor->offset > view->size) {
+        return false;
+    }
+    const cgltf_size available = view->size - accessor->offset;
+    if (elementSize > available) {
+        return false;
+    }
+    return accessor->count <= (available - elementSize) / stride + 1;
+}
+
+static bool validateSampler(const cgltf_animation_sampler& sampler) {
+    if (!sampler.input || !sampler.output) {
+        return false;
+    }
+    if (sampler.input->type != cgltf_type_scalar ||
+            sampler.input->component_type != cgltf_component_type_r_32f) {
+        return false;
+    }
+    return accessorFitsView(sampler.input) && accessorFitsView(sampler.output);
+}
+
 static bool validateAnimation(const cgltf_animation& anim) {
+    for (cgltf_size j = 0; j < anim.samplers_count; ++j) {
+        if (!validateSampler(anim.samplers[j])) {
+            return false;
+        }
+    }
     for (cgltf_size j = 0; j < anim.channels_count; ++j) {
         const cgltf_animation_channel& channel = anim.channels[j];
         const cgltf_animation_sampler* sampler = channel.sampler;
@@ -178,7 +211,11 @@ static bool validateAnimation(const cgltf_animation& anim) {
             components = channel.target_node->mesh->primitives[0].targets_count;
         }
         cgltf_size values = sampler->interpolation == cgltf_interpolation_type_cubic_spline ? 3 : 1;
-        if (sampler->input->count * components * values != sampler->output->count) {
+        if (components == 0 || sampler->output->count % values != 0) {
+            return false;
+        }
+        cgltf_size outputCount = sampler->output->count / values;
+        if (outputCount % components != 0 || outputCount / components != sampler->input->count) {
             return false;
         }
     }
@@ -263,6 +300,9 @@ size_t Animator::getAnimationCount() const {
 }
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
+    if (animationIndex >= mImpl->animations.size()) {
+        return;
+    }
     const Animation& anim = mImpl->animations[animationIndex];
     time = time == anim.duration ? time : fmod(time, anim.duration);
     TransformManager& transformManager = *mImpl->transformManager;
