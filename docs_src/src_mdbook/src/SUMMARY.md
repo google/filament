@@ -24,6 +24,8 @@
     - [sky](./samples/web/sky.md)
 - [Technical Notes](./notes/README.md)
   - [Material Properties](./notes/material_properties.md)
+  - [AI Assistant Guidelines](./notes/AI_CONTEXT.md)
+  - [Gemini in Android Studio](./notes/gemini_android_studio.md)
   - [Release](./release/README.md)
     - [CocoaPods](./release/cocoapods.md)
     - [Maven](./release/maven.md)
