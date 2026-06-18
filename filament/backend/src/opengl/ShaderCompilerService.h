@@ -128,6 +128,8 @@ private:
 
     uint32_t mShaderCompilerThreadCount = 0u;
     Mode mMode = Mode::UNDEFINED; // valid after init() is called
+    utils::JobSystem::Priority mCompilerThreadPriority = utils::JobSystem::Priority::DISPLAY;
+    bool mPriorityOverrideEnabled = true;
 
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;

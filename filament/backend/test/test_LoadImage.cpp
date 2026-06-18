@@ -231,8 +231,6 @@ public:
 };
 
 TEST_F(LoadImageTest, UpdateImage2D) {
-    SKIP_IF(Backend::VULKAN, "b/453776547");
-
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 1875922935;
 
