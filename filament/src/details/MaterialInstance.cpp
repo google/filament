@@ -496,7 +496,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         }
 #ifndef NDEBUG
     } else {
-        for (auto const variant: definition.getVariants()) {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled",
