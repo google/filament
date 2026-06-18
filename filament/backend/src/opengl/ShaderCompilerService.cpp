@@ -583,14 +583,9 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
             // We need this program right now, make sure the job is finished.
             if (auto job = mCompilerThreadPool.dequeue(token)) {
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                        "compile(Job not ready)", "name", token->name.c_str_safe(),
+                        "compile(Waiting)", "name", token->name.c_str_safe(),
                         "program", token->programString.c_str_safe());
                 job();// The job hasn't started yet, so execute it now.
-            } else if (!token->isReady()) {
-                // The job is running but hasn't finished.
-                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                        "compile(Wait)", "name", token->name.c_str_safe(),
-                        "program", token->programString.c_str_safe());
             }
 
             // This may block if the job was already taken by a thread ahead of the `dequeue`
