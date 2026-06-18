@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <gltfio/Animator.h>
-#include <gltfio/math.h>
-
+#include "downcast.h"
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "FTrsTransformManager.h"
-#include "downcast.h"
 
-#include <filament/VertexBuffer.h>
+#include <gltfio/Animator.h>
+#include <gltfio/math.h>
+
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/Log.h>
 
