@@ -31,5 +31,5 @@ You are an expert assistant for Android application development. When writing gr
 ## 2. Dynamic Context Sharing in Android Studio
 
 To ensure Gemini in Android Studio leverages project-level documentation:
-1. **Reference files in prompt**: You can directly drag or reference `docs/AI_CONTEXT.md` into the Gemini chat window or tag it to instruct the model to use it as context.
+1. **Reference files in prompt**: You can directly drag or reference `docs_src/src_mdbook/src/notes/AI_CONTEXT.md` into the Gemini chat window or tag it to instruct the model to use it as context.
 2. **Javadoc integration**: Android Studio AIs dynamically index APIs using their attached Javadocs. Filament's JSR-305 nullability annotations (`@NonNull`, `@Nullable`) and detailed library Javadocs in the Filament AAR will guide the AI to generate safe, null-checked API calls.
