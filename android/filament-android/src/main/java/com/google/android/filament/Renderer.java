@@ -268,19 +268,45 @@ public class Renderer {
     }
 
     /**
-     * Set the time at which the frame must be presented to the display.
+     * Set the time at which the frame must be presented to the display hardware.
      *
-     * This must be called between {@link #beginFrame} and {@link #endFrame}.
+     * This value is used to configure the hardware and must typically be strictly smaller than the
+     * desired presentation time (i.e. it must include some headroom but not too much). For instance,
+     * on Android, it is typically set to desired_presentation_time - vsync_period / 2. This behavior
+     * can vary on other platforms.
      *
-     * @param monotonicClockNanos  The time in nanoseconds corresponding to the system monotonic
-     *                             up-time clock. The presentation time is typically set in the
-     *                             middle of the period of interest and cannot be too far in the
-     *                             future as it is limited by how many buffers are available in
-     *                             the display sub-system. Typically it is set to 1 or 2 vsync
-     *                             periods away.
+     * This must be called before {@link #endFrame}.
+     *
+     * @param monotonicClockNanos  The presentation configuration timestamp in nanoseconds on the steady clock.
      */
     public void setPresentationTime(long monotonicClockNanos) {
         nSetPresentationTime(getNativeObject(), monotonicClockNanos);
+    }
+
+    /**
+     * Set the real desired presentation time targeted for this frame.
+     *
+     * Unlike setPresentationTime(), which configures hardware headroom, this is the exact target
+     * presentation time and is used for FrameInfo frame history reporting.
+     *
+     * This must be called before {@link #endFrame}.
+     *
+     * @param monotonicClockNanos  The desired presentation timestamp in nanoseconds on the steady clock.
+     */
+    public void setDesiredPresentationTime(long monotonicClockNanos) {
+        nSetDesiredPresentationTime(getNativeObject(), monotonicClockNanos);
+    }
+
+    /**
+     * Set the deadline timestamp on the steady clock by which CPU and GPU rendering must complete
+     * for the buffer to meet its target display latching window.
+     *
+     * This must be called before {@link #endFrame}.
+     *
+     * @param monotonicClockNanos  The deadline timestamp on the steady clock in nanoseconds.
+     */
+    public void setRenderingDeadline(long monotonicClockNanos) {
+        nSetRenderingDeadline(getNativeObject(), monotonicClockNanos);
     }
 
     /**
@@ -766,6 +792,8 @@ public class Renderer {
     }
 
     private static native void nSetPresentationTime(long nativeObject, long monotonicClockNanos);
+    private static native void nSetDesiredPresentationTime(long nativeObject, long monotonicClockNanos);
+    private static native void nSetRenderingDeadline(long nativeObject, long monotonicClockNanos);
     private static native void nSetVsyncTime(long nativeObject, long steadyClockTimeNano);
     private static native void nSkipFrame(long nativeObject, long vsyncSteadyClockTimeNano);
     private static native boolean nShouldRenderFrame(long nativeObject);

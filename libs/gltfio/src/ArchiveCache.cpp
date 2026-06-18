@@ -16,24 +16,24 @@
 
 #include "ArchiveCache.h"
 
-#include <filament/Material.h>
-
 #include <uberz/ArchiveEnums.h>
 #include <uberz/ReadableArchive.h>
 
+#include <filament/Material.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
-#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <zstd.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 using namespace utils;
@@ -73,7 +73,19 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
         return;
     }
     uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
-    ZSTD_decompress(basePointer, decompSize, archiveData, archiveByteCount);
+    if (UTILS_UNLIKELY(basePointer == nullptr)) {
+        utils::slog.e << "ArchiveCache: failed to allocate decompression buffer ("
+                      << decompSize << " bytes)" << utils::io::endl;
+        return;
+    }
+    const size_t decompressed = ZSTD_decompress(basePointer, decompSize, archiveData,
+            archiveByteCount);
+    if (UTILS_UNLIKELY(ZSTD_isError(decompressed))) {
+        utils::slog.e << "ArchiveCache: decompression failed: " << ZSTD_getErrorName(decompressed)
+                      << utils::io::endl;
+        utils::aligned_free(basePointer);
+        return;
+    }
     mArchive = (ReadableArchive*) basePointer;
     if (!convertOffsetsToPointers(mArchive, decompSize)) {
         utils::aligned_free(basePointer);

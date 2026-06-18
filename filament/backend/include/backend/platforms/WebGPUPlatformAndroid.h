@@ -39,10 +39,6 @@ public:
 
 protected:
     std::vector<wgpu::RequestAdapterOptions> getAdapterOptions() override;
-
-private:
-    struct AndroidDetails;
-    AndroidDetails& mAndroidDetails;
 };
 
 } // namespace filament::backend

@@ -21,12 +21,14 @@
 #include "CompilerThreadPool.h"
 #include "OpenGLBlobCache.h"
 #include "OpenGLDriver.h"
+#include "ThreadPriorityOverride.h"
 
 #include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <private/utils/FeatureFlagManager.h>
 #include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
@@ -91,8 +93,9 @@ static std::array<std::string_view, 3> splitShaderSource(std::string_view source
 struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     ~OpenGLProgramToken() override;
 
-    OpenGLProgramToken(ShaderCompilerService& compiler, CString const& name) noexcept
-            : compiler(compiler), name(name), handle(compiler.issueCallbackHandle()) {
+    OpenGLProgramToken(ShaderCompilerService& compiler, CString const& name, bool const priorityOverrideEnabled) noexcept
+            : compiler(compiler), name(name), handle(compiler.issueCallbackHandle()),
+              priorityOverride(priorityOverrideEnabled) {
     }
 
     ShaderCompilerService& compiler;
@@ -118,8 +121,12 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // This may block until the token is ready to be used.
     void wait() const noexcept {
         UniqueLock l(lock);
-        while (!signaled) {
-            cond.wait(l);
+        if (!signaled) {
+            priorityOverride.startOverride();
+            while (!signaled) {
+                cond.wait(l);
+            }
+            priorityOverride.endOverride();
         }
     }
 
@@ -150,6 +157,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     mutable Mutex lock;
     mutable Condition cond;
     bool signaled UTILS_GUARDED_BY(lock) = false;
+    mutable ThreadPriorityOverride priorityOverride;
 
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;
@@ -202,6 +210,12 @@ bool ShaderCompilerService::isParallelShaderCompileSupported() const noexcept {
 }
 
 void ShaderCompilerService::init() noexcept {
+    auto const* featureFlagManager = mDriver.getDriverConfig().featureFlagManager;
+    if (featureFlagManager) {
+        mPriorityOverrideEnabled = featureFlagManager->getFeatureFlag(
+                "backend.enable_priority_override_mitigation").value_or(true);
+    }
+
     if (UTILS_UNLIKELY(mDriver.getDriverConfig().disableParallelShaderCompile)) {
         // user disabled parallel shader compile
         mMode = Mode::SYNCHRONOUS;
@@ -241,7 +255,8 @@ void ShaderCompilerService::init() noexcept {
         // By default, we use one thread at the same priority as the gl thread. This is the
         // safest choice that avoids priority inversions.
         uint32_t poolSize = 1;
-        JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
+        JobSystem::Priority priority = mPriorityOverrideEnabled ? 
+                JobSystem::Priority::BACKGROUND : JobSystem::Priority::DISPLAY;
 
         auto const& renderer = mDriver.getContext().renderer;
         // Some drivers support parallel shader compilation well, so we use N
@@ -260,6 +275,7 @@ void ShaderCompilerService::init() noexcept {
         }
 
         mShaderCompilerThreadCount = poolSize;
+        mCompilerThreadPriority = priority;
         mCompilerThreadPool.init(mShaderCompilerThreadCount,
                 [&platform = mDriver.mPlatform, priority] {
                     // give the thread a name
@@ -296,7 +312,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
 
     // Create a token. A callback condition (handle) is internally created upon token creation.
-    auto token = std::make_shared<OpenGLProgramToken>(*this, name);
+    auto token = std::make_shared<OpenGLProgramToken>(*this, name, mPriorityOverrideEnabled);
     if (UTILS_UNLIKELY(gl.isES2())) {
         token->attributes = std::move(program.getAttributes());
     }
@@ -350,6 +366,7 @@ void ShaderCompilerService::compileProgram(
                             assert_invariant(tokenState == OpenGLProgramToken::State::CANCELED);
                             return;
                         }
+                        token->priorityOverride.registerCurrentThread();
                         // Try retrieving the program from the cache first. If no program found,
                         // a normal compilation/linking process is performed.
                         if (!tryRetrievingProgram(mBlobCache, mDriver.mPlatform, program, token)) {
@@ -382,6 +399,7 @@ void ShaderCompilerService::compileProgram(
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
+                        token->priorityOverride.restoreDefaultPriority(mCompilerThreadPriority);
                         // Updates the token's state. If the token is canceled while this function
                         // executes, this update notifies `tick` that GL resource loading is
                         // complete, allowing `tick` to proceed with resource destruction.
