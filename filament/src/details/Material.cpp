@@ -294,7 +294,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         }
 #ifndef NDEBUG
     } else {
-        for (UTILS_UNUSED_IN_RELEASE auto const variant : variants) {
+        for (auto const variant : variants) {
             FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                     "parallel compilation disabled",
                     "name", getName().c_str(),

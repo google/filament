@@ -350,16 +350,15 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 void ShaderCompilerService::compileProgram(
         program_token_t const& token, Program&& program) {
     auto& gl = mDriver.getContext();
-    CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
+    CompilerPriorityQueue const priority = program.getPriorityQueue();
     switch (mMode) {
         case Mode::THREAD_POOL: {
-            mCompilerThreadPool.queue(priorityQueue, token,
-                    [this, &gl, program = std::move(program), token, priorityQueue]() mutable {
-                        UTILS_UNUSED const CompilerPriorityQueue priority = priorityQueue;
+            mCompilerThreadPool.queue(priority, token,
+                    [this, &gl, program = std::move(program), token]() mutable {
                         FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                                 "compileProgram", "name", token->name.c_str_safe(),
                                 "program", token->programString.c_str_safe(),
-                                "priority", static_cast<uint32_t>(priority));
+                                "priority", static_cast<uint32_t>(program.getPriorityQueue()));
                         // The compilation job has just begun. At this point, the token's state must
                         // be either WAITING or CANCELED.
                         assert_invariant(token->state == OpenGLProgramToken::State::WAITING ||
@@ -430,7 +429,7 @@ void ShaderCompilerService::compileProgram(
                 compileShaders(gl, std::move(program.getShadersSource()),
                         program.getSpecializationConstants(), program.isMultiview(), token);
 
-                runAtNextTick(priorityQueue, token, [this, token](Job const&) {
+                runAtNextTick(priority, token, [this, token](Job const&) {
                     assert_invariant(mMode != Mode::THREAD_POOL);
                     if (mMode == Mode::ASYNCHRONOUS) {
                         // Check link completion if link was initiated.

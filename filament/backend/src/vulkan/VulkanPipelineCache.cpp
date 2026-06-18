@@ -190,11 +190,11 @@ void VulkanPipelineCache::asyncPrewarmCache(
     // compiling too many unnecessary already-destroyed-materials.
     mCompilerThreadPool.queue(
         priority, token, [this, vprogram, key, dynamicOptions, cmh, priority]() mutable {
-            UTILS_UNUSED_IN_RELEASE const CompilerPriorityQueue priorityQueue = priority;
+            (void)priority; // Suppresses "unused variable" warnings when tracing is disabled
             FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                     "asyncPrewarmCache(Job)",
                     "program", vprogram->programString.c_str_safe(),
-                    "priority", static_cast<uint32_t>(priorityQueue));
+                    "priority", static_cast<uint32_t>(priority));
             if (vprogram->isParallelCompilationCanceled()) {
                 FVK_LOGD << "Skipping prewarm for a program that has been destroyed already.";
                 return;
