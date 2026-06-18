@@ -390,4 +390,8 @@ FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
     return result;
 }
 
+void FrameInfoManager::waitForGpu() {
+    mJobQueue.drain();
+}
+
 } // namespace filament
