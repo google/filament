@@ -711,7 +711,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
 
     if (!isExtendedAlgo) {
-        utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache);
+        if (!utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache)) {
+            return false;
+        }
 
         // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
         // as tangent generation.
