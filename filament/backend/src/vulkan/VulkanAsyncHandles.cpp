@@ -24,6 +24,8 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
+#include <utils/ostream.h>
+#include <utils/sstream.h>
 
 #include <chrono>
 #include <cstdint>
@@ -109,6 +111,10 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       mInfo(new(std::nothrow) PipelineInfo(builder)),
       mDevice(device) {
+
+    utils::io::sstream ss;
+    ss << builder;
+    programString = utils::CString(ss.c_str());
 
     Program::ShaderSource const& blobs = builder.getShadersSource();
     auto& modules = mInfo->shaders;

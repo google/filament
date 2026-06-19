@@ -44,6 +44,7 @@ PERFETTO_USE_CATEGORIES_FROM_NAMESPACE(tracing);
 #define FILAMENT_TRACING_ASYNC_BEGIN(category, name, cookie)
 #define FILAMENT_TRACING_ASYNC_END(category, name, cookie)
 #define FILAMENT_TRACING_VALUE(category, name, val)
+#define FILAMENT_TRACING_EVENT(category, name, ...)
 
 #else
 
@@ -77,6 +78,9 @@ PERFETTO_USE_CATEGORIES_FROM_NAMESPACE(tracing);
 
 #define FILAMENT_TRACING_VALUE(category, name, val) \
         TRACE_COUNTER(category, name, val)
+
+#define FILAMENT_TRACING_EVENT(category, name, ...) \
+        TRACE_EVENT(category, name, ##__VA_ARGS__)
 
 #endif // FILAMENT_TRACING_MODE != FILAMENT_TRACING_MODE_DISABLED
 

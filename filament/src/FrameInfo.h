@@ -303,6 +303,11 @@ public:
     utils::FixedCapacityVector<Renderer::FrameInfo>
             getFrameInfoHistory(size_t historySize = MAX_FRAMETIME_HISTORY) const;
 
+    // This is for testing only. Wait until all pending GPU fence metrics are fully processed
+    // by the background job queue. This ensures that the frame history is fully populated
+    // before the test assertions are evaluated.
+    void waitForGpu();
+
 private:
     using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;
     static void denoiseFrameTime(FrameHistoryQueue& history, Config const& config) noexcept;

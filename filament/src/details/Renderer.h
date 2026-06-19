@@ -173,6 +173,14 @@ public:
         return MAX_FRAMETIME_HISTORY;
     }
 
+    // This is for testing only. Wait until all FrameInfo jobs are fully processed.
+    // Note that we do not wish for this to be called from Engine's flushAndWait() because
+    // flushAndWait() is typically used at engine shutdown, and there is no need to wait for
+    // frame history to complete at shutdown.
+    void waitForFrameHistory() {
+        mFrameInfoManager.waitForGpu();
+    }
+
 private:
     friend class Renderer;
     using Command = RenderPass::Command;

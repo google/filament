@@ -44,6 +44,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -239,6 +241,10 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "name", getName().c_str(),
+            "variantKey", static_cast<uint32_t>(variantSpec),
+            "priority", static_cast<uint32_t>(priority));
     FMaterialInstance* mi = getDefaultInstance();
     if (callback) {
         mi->compile(priority, variantSpec, handler,
@@ -254,6 +260,10 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         FixedCapacityVector<Variant> const& variants,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "name", getName().c_str(), "variant count", variants.size(),
+            "parallel comp supported",
+            mEngine.getDriverApi().isParallelShaderCompileSupported());
     DriverApi& driver = mEngine.getDriverApi();
     FMaterialInstance* mi = getDefaultInstance();
 
@@ -264,9 +274,34 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
             if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
+#ifndef NDEBUG
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "prepareProgram(variant found)",
+                        "name", getName().c_str(),
+                        "variantKey", static_cast<uint32_t>(variant.key),
+                        "priority", static_cast<uint32_t>(priority));
+#endif
                 mi->prepareProgram(driver, variant, priority);
+#ifndef NDEBUG
+            } else {
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "requested variant missing",
+                        "name", getName().c_str(),
+                        "variantKey", static_cast<uint32_t>(variant.key),
+                        "priority", static_cast<uint32_t>(priority));
+#endif
             }
         }
+#ifndef NDEBUG
+    } else {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
+            FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                    "parallel compilation disabled",
+                    "name", getName().c_str(),
+                    "variantKey", static_cast<uint32_t>(variant.key),
+                    "priority", static_cast<uint32_t>(priority));
+        }
+#endif
     }
 
     compileAllPrograms(priority, handler, std::move(callback));
