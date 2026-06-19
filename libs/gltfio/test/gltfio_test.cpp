@@ -35,11 +35,16 @@
 
 #include <math/mathfwd.h>
 
+#include <meshoptimizer.h>
+
 #include <gtest/gtest.h>
 
 #include <cstdint>
 #include <fstream>
+#include <limits>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 using namespace filament;
 using namespace backend;
@@ -62,6 +67,89 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
+
+namespace {
+
+static void appendU32LE(std::vector<uint8_t>& dst, uint32_t value) {
+    dst.push_back(uint8_t(value & 0xffu));
+    dst.push_back(uint8_t((value >> 8u) & 0xffu));
+    dst.push_back(uint8_t((value >> 16u) & 0xffu));
+    dst.push_back(uint8_t((value >> 24u) & 0xffu));
+}
+
+static std::vector<uint8_t> makeMeshoptPayload(size_t vertexCount, size_t stride) {
+    std::vector<uint8_t> vertices(vertexCount * stride, 0);
+    std::vector<uint8_t> encoded(meshopt_encodeVertexBufferBound(vertexCount, stride));
+    const size_t encodedSize = meshopt_encodeVertexBuffer(encoded.data(), encoded.size(),
+            vertices.data(), vertexCount, stride);
+    EXPECT_GT(encodedSize, 0u);
+    encoded.resize(encodedSize);
+    return encoded;
+}
+
+static std::string makeMeshoptGlbJson(size_t meshoptCount, size_t meshoptEncodedSize,
+        size_t bufferByteLength, size_t stride) {
+    const size_t decodedSize = meshoptCount * stride;
+    return std::string(R"({
+  "asset": { "version": "2.0" },
+  "extensionsUsed": ["EXT_meshopt_compression"],
+  "buffers": [
+    { "byteLength": )") + std::to_string(bufferByteLength) + R"( }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": )" + std::to_string(decodedSize) + R"(,
+      "extensions": {
+        "EXT_meshopt_compression": {
+          "buffer": 0,
+          "byteOffset": 0,
+          "byteLength": )" + std::to_string(meshoptEncodedSize) + R"(,
+          "byteStride": )" + std::to_string(stride) + R"(,
+          "count": )" + std::to_string(meshoptCount) + R"(,
+          "mode": "ATTRIBUTES",
+          "filter": "NONE"
+        }
+      }
+    }
+  ],
+  "nodes": [],
+  "scenes": [
+    { "nodes": [] }
+  ],
+  "scene": 0
+})";
+}
+
+static std::vector<uint8_t> makeMeshoptGlb(size_t meshoptCount, size_t stride) {
+    static constexpr size_t kEncodedVertexCount = 256;
+    const std::vector<uint8_t> meshopt = makeMeshoptPayload(kEncodedVertexCount, stride);
+
+    std::string json = makeMeshoptGlbJson(meshoptCount, meshopt.size(), meshopt.size(), stride);
+    while ((json.size() % 4u) != 0u) {
+        json.push_back(' ');
+    }
+
+    const uint32_t jsonSize = uint32_t(json.size());
+    const uint32_t binSize = uint32_t(meshopt.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+    appendU32LE(glb, 0x46546c67u);
+    appendU32LE(glb, 2u);
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);
+    glb.insert(glb.end(), json.begin(), json.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);
+    glb.insert(glb.end(), meshopt.begin(), meshopt.end());
+    return glb;
+}
+
+} // namespace
 
 class glTFData {
 public:
@@ -287,6 +375,25 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
     EXPECT_TRUE(mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder == nullptr);
     EXPECT_EQ(mEngine->getTextureCount(), 3);    
 #endif
+}
+
+TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
+    static constexpr size_t kMeshoptStride = 4;
+    const size_t maxCount = std::numeric_limits<size_t>::max() / kMeshoptStride;
+
+    const std::vector<uint8_t> glb = makeMeshoptGlb(maxCount, kMeshoptStride);
+
+    AssetLoader* assetLoader = AssetLoader::create({mEngine, mMaterialProvider, mNameManager});
+    ASSERT_NE(assetLoader, nullptr);
+
+    FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({mEngine, ".", false});
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
 }
 
 int main(int argc, char** argv) {
