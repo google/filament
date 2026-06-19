@@ -39,6 +39,7 @@
 #include <meshoptimizer.h>
 
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -392,6 +393,33 @@ TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
     EXPECT_FALSE(resourceLoader.loadResources(asset));
 
     assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// A mesh may carry morph-target names (mesh.extras.targetNames) whose count is parsed independently
+// of its morph-target count. When the mesh has no primitives the morph-target count is zero, so the
+// two counts can disagree. createRenderable() must size its name copy by the morph-target count and
+// not by the (independent) name count; otherwise it writes past the names storage. This loads such
+// a mesh and requires that it parses without an out-of-bounds access (validated under ASan) and
+// retains no more morph-target names than morph targets.
+TEST_F(glTFIOTest, MalformedMeshTargetNamesWithoutPrimitives) {
+    static char const* const kGltf =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"extras":{"targetNames":["t0","t1","t2","t3","t4","t5","t6","t7"]}}]})";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+
+    EXPECT_NE(asset, nullptr);
+    if (asset != nullptr) {
+        Entity const* renderables = asset->getRenderableEntities();
+        for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; ++i) {
+            EXPECT_EQ(asset->getMorphTargetCountAt(renderables[i]), 0u);
+        }
+        assetLoader->destroyAsset(asset);
+    }
     AssetLoader::destroy(&assetLoader);
 }
 
