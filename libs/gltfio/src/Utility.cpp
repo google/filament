@@ -108,9 +108,15 @@ bool decodeMeshoptCompression(cgltf_data* data) {
                 << " (actual=" << compression->count << ") given stride of " << compression->stride
                 << ".";
 
+        const size_t decodedSize = compression->count * compression->stride;
+
         // This memory is freed by cgltf.
-        void* destination = malloc(compression->count * compression->stride);
-        assert_invariant(destination);
+        void* destination = malloc(decodedSize);
+        if (UTILS_UNLIKELY(!destination)) {
+            slog.e << "gltfio: meshopt decompression allocation failed ("
+                   << decodedSize << " bytes)" << io::endl;
+            return false;
+        }
 
         int error = 0;
         switch (compression->mode) {
