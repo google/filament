@@ -822,7 +822,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
             }
 
             UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
-            for (int tindex = 0; tindex < numMorphTargets; ++tindex) {
+            // createPrimitives() caps the per-primitive morph-target count at MAX_MORPH_TARGETS and
+            // sizes slotIndices accordingly; iterate only over the slots that exist so a mesh with
+            // more morph targets than the cap does not index slotIndices out of bounds.
+            const size_t numSlots = outputPrim->slotIndices.size();
+            for (int tindex = 0; tindex < numMorphTargets && (size_t) tindex < numSlots; ++tindex) {
                 const cgltf_morph_target& inTarget = inputPrim->targets[tindex];
                 for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
                     const cgltf_attribute& attribute = inTarget.attributes[aindex];
