@@ -67,6 +67,10 @@ void Renderer::setRenderingDeadline(std::chrono::steady_clock::time_point const 
     downcast(this)->setRenderingDeadline(monotonic_clock);
 }
 
+void Renderer::setFrameScheduleTime(std::chrono::steady_clock::time_point const time) noexcept {
+    downcast(this)->setFrameScheduleTime(time);
+}
+
 void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }
