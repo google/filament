@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <gltfio/Animator.h>
-#include <gltfio/math.h>
-
+#include "downcast.h"
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "FTrsTransformManager.h"
-#include "downcast.h"
 
-#include <filament/VertexBuffer.h>
+#include <gltfio/Animator.h>
+#include <gltfio/math.h>
+
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/Log.h>
 
@@ -177,6 +177,26 @@ static bool validateAnimation(const cgltf_animation& anim) {
             }
             components = channel.target_node->mesh->primitives[0].targets_count;
         }
+        cgltf_type expectedType;
+        switch (channel.target_path) {
+            case cgltf_animation_path_type_translation:
+            case cgltf_animation_path_type_scale:
+                expectedType = cgltf_type_vec3;
+                break;
+            case cgltf_animation_path_type_rotation:
+                expectedType = cgltf_type_vec4;
+                break;
+            case cgltf_animation_path_type_weights:
+                expectedType = cgltf_type_scalar;
+                break;
+            case cgltf_animation_path_type_invalid:
+            case cgltf_animation_path_type_max_enum:
+                return false;
+        }
+        if (sampler->output->type != expectedType) {
+            return false;
+        }
+
         cgltf_size values = sampler->interpolation == cgltf_interpolation_type_cubic_spline ? 3 : 1;
         if (sampler->input->count * components * values != sampler->output->count) {
             return false;
