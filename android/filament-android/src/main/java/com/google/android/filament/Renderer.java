@@ -198,6 +198,8 @@ public class Renderer {
         public long compositionToPresentLatency = 0;
         /** Time between vsync and the system's expected presentation time [ns]. */
         public long expectedPresentLatency = 0;
+        /** Frame scheduling callback entry time since epoch [ns]. */
+        public long frameScheduleTime = 0;
     }
 
     /**
@@ -371,6 +373,17 @@ public class Renderer {
      */
     public void setRenderingDeadline(long monotonicClockNanos) {
         nSetRenderingDeadline(getNativeObject(), monotonicClockNanos);
+    }
+
+    /**
+     * Sets the physical clock time when the frame scheduling callback was entered.
+     * This is used by the frame pacer and pipeline estimator to accurately
+     * measure the active CPU duration (including app logic running before beginFrame).
+     *
+     * @param timeSteadyClockNano Monotonic steady clock timestamp in nanoseconds since epoch.
+     */
+    public void setFrameScheduleTime(long timeSteadyClockNano) {
+        nSetFrameScheduleTime(getNativeObject(), timeSteadyClockNano);
     }
 
     /**
@@ -905,6 +918,7 @@ public class Renderer {
     private static native void nSetPresentationTime(long nativeObject, long monotonicClockNanos);
     private static native void nSetDesiredPresentationTime(long nativeObject, long monotonicClockNanos);
     private static native void nSetRenderingDeadline(long nativeObject, long monotonicClockNanos);
+    private static native void nSetFrameScheduleTime(long nativeObject, long timeSteadyClockNano);
     private static native void nSetVsyncTime(long nativeObject, long steadyClockTimeNano);
     private static native void nSkipFrame(long nativeObject, long vsyncSteadyClockTimeNano);
     private static native boolean nShouldRenderFrame(long nativeObject);

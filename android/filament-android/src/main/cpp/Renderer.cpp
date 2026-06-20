@@ -256,6 +256,15 @@ Java_com_google_android_filament_Renderer_nSetRenderingDeadline(JNIEnv *env, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetFrameScheduleTime(JNIEnv *env, jclass ,
+    jlong nativeRenderer, jlong timeSteadyClockNano) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->setFrameScheduleTime(timeSteadyClockNano);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv *, jclass,
     jlong nativeRenderer, jlong steadyClockTimeNano) {
     Renderer *renderer = (Renderer *) nativeRenderer;
@@ -323,6 +332,7 @@ Java_com_google_android_filament_Renderer_nGetFrameInfoHistory(JNIEnv *env, jcla
         jfieldID displayPresentInterval;
         jfieldID compositionToPresentLatency;
         jfieldID expectedPresentLatency;
+        jfieldID frameScheduleTime;
         explicit JniFrameInfoState(JNIEnv* env) noexcept {
             jclass frameInfoClass = env->FindClass("com/google/android/filament/Renderer$FrameInfo");
             frameId = env->GetFieldID(frameInfoClass, "frameId", "I");
@@ -339,6 +349,7 @@ Java_com_google_android_filament_Renderer_nGetFrameInfoHistory(JNIEnv *env, jcla
             displayPresentInterval = env->GetFieldID(frameInfoClass, "displayPresentInterval", "J");
             compositionToPresentLatency = env->GetFieldID(frameInfoClass, "compositionToPresentLatency", "J");
             expectedPresentLatency = env->GetFieldID(frameInfoClass, "expectedPresentLatency", "J");
+            frameScheduleTime = env->GetFieldID(frameInfoClass, "frameScheduleTime", "J");
         }
     } jniState(env);
 
@@ -371,6 +382,7 @@ Java_com_google_android_filament_Renderer_nGetFrameInfoHistory(JNIEnv *env, jcla
         env->SetLongField(obj, jniState.displayPresentInterval, info.displayPresentInterval);
         env->SetLongField(obj, jniState.compositionToPresentLatency, info.compositionToPresentLatency);
         env->SetLongField(obj, jniState.expectedPresentLatency, info.expectedPresentLatency);
+        env->SetLongField(obj, jniState.frameScheduleTime, info.frameScheduleTime);
 
         env->DeleteLocalRef(obj);
     }

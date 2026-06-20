@@ -292,6 +292,10 @@ void FRenderer::setRenderingDeadline(std::chrono::steady_clock::time_point const
     mRenderingDeadline = monotonic_clock;
 }
 
+void FRenderer::setFrameScheduleTime(std::chrono::steady_clock::time_point const time) noexcept {
+    mFrameScheduleTime = time;
+}
+
 void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
 }
@@ -391,6 +395,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
                     << fi->vsync << ", "
                     << fi->displayPresentInterval << ", "
                     << fi->gpuFrameDuration << ", "
+                    << (fi->frameScheduleTime - fi->vsync) << ", "
                     << (fi->beginFrame - fi->vsync) << ", "
                     << (fi->endFrame - fi->vsync) << ", "
                     << (fi->backendBeginFrame - fi->vsync) << ", "
@@ -488,7 +493,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         mFrameInfoManager.updateUserHistory(swapChain, driver);
         mFrameInfoManager.beginFrame(swapChain, driver, {
             .historySize = mFrameRateOptions.history
-        }, mFrameId, appVsync, renderingDeadline, desiredPresentationTime);
+        }, mFrameId, appVsync, renderingDeadline, desiredPresentationTime, mFrameScheduleTime);
+        mFrameScheduleTime = {};
 
         mLastSubmittedFrameId = mFrameId;
 

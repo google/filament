@@ -82,6 +82,8 @@ struct FrameInfoImpl : public details::FrameInfo {
     CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
     // system's expected present latency from vsync [ns]
     CompositorTiming::duration_ns expectedPresentLatency{ FrameTimestamps::INVALID };
+    // main thread callback schedule time
+    time_point frameScheduleTime{};
 
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
@@ -288,7 +290,8 @@ public:
             Config const& config, uint32_t frameId,
             std::chrono::steady_clock::time_point vsync,
             std::chrono::steady_clock::time_point presentDeadline,
-            std::chrono::steady_clock::time_point expectedPresent) noexcept;
+            std::chrono::steady_clock::time_point expectedPresent,
+            std::chrono::steady_clock::time_point frameScheduleTime = {}) noexcept;
 
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;

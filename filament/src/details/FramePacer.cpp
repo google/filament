@@ -312,7 +312,7 @@ void FFramePacer::applyPresentationTime(FRenderer* renderer) const {
     renderer->setPresentationTime(mAdjustedPresentation);
     renderer->setRenderingDeadline(mRenderingDeadline);
     renderer->setDesiredPresentationTime(mTargetPresentationTime);
-    // renderer->setFrameScheduleTime(mFrameScheduleTime);
+    renderer->setFrameScheduleTime(mFrameScheduleTime);
 
     if constexpr (false) {
         LOG(INFO) << "Expected latency: "

@@ -112,6 +112,7 @@ public:
     void setDesiredPresentationTime(std::chrono::steady_clock::time_point monotonic_clock) noexcept;
     void setRenderingDeadline(int64_t monotonic_clock_ns) noexcept;
     void setRenderingDeadline(std::chrono::steady_clock::time_point monotonic_clock) noexcept;
+    void setFrameScheduleTime(std::chrono::steady_clock::time_point time) noexcept;
 
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
@@ -261,6 +262,7 @@ private:
     std::chrono::steady_clock::time_point mRenderingDeadline{};
     std::chrono::steady_clock::time_point mPresentationTime{};
     std::chrono::steady_clock::time_point mDesiredPresentationTime{};
+    std::chrono::steady_clock::time_point mFrameScheduleTime{};
     std::unique_ptr<TextureCache> mResourceAllocator{};
     mutable BufferStuffingDetector mBufferStuffingDetector;
 };

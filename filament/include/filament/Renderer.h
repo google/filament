@@ -110,6 +110,7 @@ public:
         duration_ns displayPresentInterval; //!< display refresh rate [ns]
         duration_ns compositionToPresentLatency; //!< time between the start of composition and the expected present time [ns]
         duration_ns expectedPresentLatency; //!< time between vsync and the system's expected presentation time [ns]
+        time_point_ns frameScheduleTime;    //!< frame scheduling callback entry time since epoch [ns]
     };
 
     /**
@@ -798,6 +799,26 @@ public:
      * @return true if the GPU pipeline is delayed, false if ready.
      */
     bool hasGpuFallenBehind() const noexcept;
+
+    /**
+     * Sets the physical clock time when the frame scheduling callback was entered.
+     * This is used by the frame pacer and pipeline estimator to accurately
+     * measure the active CPU duration (including app logic running before beginFrame).
+     *
+     * @param time Monotonic steady clock time_point.
+     */
+    void setFrameScheduleTime(std::chrono::steady_clock::time_point time) noexcept;
+
+    /**
+     * Sets the physical clock time when the frame scheduling callback was entered.
+     * Helper overload accepting raw nanoseconds since epoch.
+     *
+     * @param timeSteadyClockNano Monotonic steady clock timestamp in nanoseconds since epoch.
+     */
+    inline void setFrameScheduleTime(uint64_t timeSteadyClockNano) noexcept {
+        setFrameScheduleTime(std::chrono::steady_clock::time_point(
+                std::chrono::steady_clock::duration(timeSteadyClockNano)));
+    }
 
     /**
      * Stalls the render thread (GPU submission pipeline) for the given duration in nanoseconds.

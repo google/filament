@@ -99,7 +99,8 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
         uint32_t frameId,
         std::chrono::steady_clock::time_point const vsync,
         std::chrono::steady_clock::time_point const presentDeadline,
-        std::chrono::steady_clock::time_point const expectedPresent) noexcept {
+        std::chrono::steady_clock::time_point const expectedPresent,
+        std::chrono::steady_clock::time_point const frameScheduleTime) noexcept {
     auto const now = std::chrono::steady_clock::now();
 
     auto& history = mFrameTimeHistory;
@@ -130,6 +131,8 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 
     // store the current time
     front.vsync = vsync;
+    front.frameScheduleTime = frameScheduleTime.time_since_epoch().count() > 0 ?
+            frameScheduleTime : now;
     front.presentDeadline = FrameTimestamps::INVALID;
     front.expectedPresentLatency = FrameTimestamps::INVALID;
     front.beginFrame = now;
@@ -375,7 +378,8 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
                 .compositionToPresentLatency    = entry.compositionToPresentLatency,
-                .expectedPresentLatency         = entry.expectedPresentLatency
+                .expectedPresentLatency         = entry.expectedPresentLatency,
+                .frameScheduleTime              = toTimepoint(entry.frameScheduleTime)
         });
     }
     std::swap(mUserFrameHistory, result);

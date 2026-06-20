@@ -84,14 +84,7 @@ public:
      * @param targetPercentile Desired confidence interval percentile.
      * @return Standard normal distribution Z-score.
      */
-    static double getZScore(TargetPercentile const targetPercentile) noexcept {
-        switch (targetPercentile) {
-            case TargetPercentile::P50: return 0.0;
-            case TargetPercentile::P90: return 1.282;
-            case TargetPercentile::P95: return 1.645;
-        }
-        return 0.0;
-    }
+    static double getZScore(TargetPercentile const targetPercentile) noexcept;
 
     /**
      * Evaluates historical frame telemetry to recommend ideal throughput and latency sizing.
@@ -103,9 +96,7 @@ public:
      */
     static Estimation estimate(FrameInfoHistory history,
             TargetPercentile const targetPercentile = TargetPercentile::P90,
-            std::chrono::nanoseconds targetVsyncInterval = std::chrono::nanoseconds(16666666)) noexcept {
-        return estimate(history, getZScore(targetPercentile), targetVsyncInterval);
-    }
+            std::chrono::nanoseconds targetVsyncInterval = std::chrono::nanoseconds(16666666)) noexcept;
 
     /**
      * Evaluates historical frame telemetry using a custom standard normal distribution Z-score.
@@ -116,113 +107,7 @@ public:
      * @return Recommended Estimation containing frame duration, refresh rate, structural latency, and safe delay.
      */
     static Estimation estimate(FrameInfoHistory history, double const zScore,
-            std::chrono::nanoseconds targetVsyncInterval = std::chrono::nanoseconds(16666666)) noexcept {
-        if (history.empty()) {
-            return Estimation{};
-        }
-
-        uint32_t const count = static_cast<uint32_t>(history.size());
-        uint32_t countGpu = 0;
-
-        double sumMain = 0.0;
-        double sumBackend = 0.0;
-        double sumGpu = 0.0;
-
-        for (uint32_t i = 0; i < count; ++i) {
-            auto const& frameInfo = history[i];
-            sumMain += static_cast<double>(frameInfo.endFrame - frameInfo.vsync);
-            sumBackend += static_cast<double>(frameInfo.backendEndFrame - frameInfo.backendBeginFrame);
-            if (frameInfo.gpuFrameDuration > 0) {
-                sumGpu += static_cast<double>(frameInfo.gpuFrameDuration);
-                countGpu++;
-            }
-        }
-
-        double const meanMain = sumMain / count;
-        double const meanBackend = sumBackend / count;
-        double const meanGpu = countGpu > 0 ? sumGpu / countGpu : 0.0;
-
-        double varianceMain = 0.0;
-        double varianceBackend = 0.0;
-        double varianceGpu = 0.0;
-
-        if (count > 1) {
-            double squareSumMain = 0.0;
-            double squareSumBackend = 0.0;
-            for (uint32_t i = 0; i < count; ++i) {
-                auto const& frameInfo = history[i];
-                double const durationMain = static_cast<double>(frameInfo.endFrame - frameInfo.vsync);
-                squareSumMain += (durationMain - meanMain) * (durationMain - meanMain);
-
-                double const durationBackend = static_cast<double>(frameInfo.backendEndFrame - frameInfo.backendBeginFrame);
-                squareSumBackend += (durationBackend - meanBackend) * (durationBackend - meanBackend);
-            }
-            varianceMain = squareSumMain / (count - 1);
-            varianceBackend = squareSumBackend / (count - 1);
-        }
-
-        if (countGpu > 1) {
-            double squareSumGpu = 0.0;
-            for (uint32_t i = 0; i < count; ++i) {
-                auto const& frameInfo = history[i];
-                if (frameInfo.gpuFrameDuration > 0) {
-                    double const durationGpu = static_cast<double>(frameInfo.gpuFrameDuration);
-                    squareSumGpu += (durationGpu - meanGpu) * (durationGpu - meanGpu);
-                }
-            }
-            varianceGpu = squareSumGpu / (countGpu - 1);
-        }
-
-        double const standardDeviationMain = std::sqrt(varianceMain);
-        double const standardDeviationBackend = std::sqrt(varianceBackend);
-        double const standardDeviationGpu = std::sqrt(varianceGpu);
-
-        // Step B: Calculate Effective Workload per Stage
-        // EffectiveWork = mean + (Z-Score * stdDev)
-        double const effectiveMain = std::max(0.0, meanMain + (zScore * standardDeviationMain));
-        double const effectiveBackend = std::max(0.0, meanBackend + (zScore * standardDeviationBackend));
-        double const effectiveGpu = std::max(0.0, meanGpu + (zScore * standardDeviationGpu));
-
-        // Step C: Calculate Ideal Throughput (Frame Time)
-        // IdealFrameTime = max(EffectiveWork_main, EffectiveWork_backend, EffectiveWork_gpu)
-        double idealFrameTimeNs = std::max({effectiveMain, effectiveBackend, effectiveGpu});
-        if (idealFrameTimeNs <= 0.0) {
-            idealFrameTimeNs = 16666666.0;
-        }
-
-        // Step D: Calculate Ideal Structural Latency (Pipeline Depth)
-        // TotalTransitTime = EffectiveWork_main + EffectiveWork_backend + EffectiveWork_gpu
-        double const totalTransitTimeNs = effectiveMain + effectiveBackend + effectiveGpu;
-
-        // IdealLatencyFrames = ceil(TotalTransitTime / IdealFrameTime)
-        uint32_t idealLatency = static_cast<uint32_t>(std::ceil(totalTransitTimeNs / idealFrameTimeNs));
-        if (idealLatency < 1) {
-            idealLatency = 1;
-        }
-
-        float const idealFrameRate = static_cast<float>(1e9 / idealFrameTimeNs);
-
-        // Step E: Calculate Maximum Safe Delay (Slack time before CPU work starts)
-        // safeDelay = (idealLatency * targetVsyncInterval) - totalTransitTime
-        //
-        // Note on Conservatism:
-        // By summing the individual worst-case stage durations (totalTransitTimeNs) rather than the
-        // statistically combined variance (which would use the root-sum-of-squares of their standard
-        // deviations), we assume worst-case anomalies can happen in all stages simultaneously during
-        // the same frame. This provides a highly robust safety margin, ensuring that delaying starting
-        // the frame by this amount will not result in stutters under our target percentile.
-        double const budgetNs = idealLatency * static_cast<double>(targetVsyncInterval.count());
-        double const safeDelayNs = budgetNs - totalTransitTimeNs;
-
-        Estimation estimation;
-        estimation.idealFrameDuration = std::chrono::nanoseconds(static_cast<int64_t>(idealFrameTimeNs));
-        estimation.idealFrameRate     = idealFrameRate;
-        estimation.idealLatencyFrames = idealLatency;
-        estimation.safeDelayDuration  = std::chrono::nanoseconds(
-                static_cast<int64_t>(std::max(0.0, safeDelayNs)));
-
-        return estimation;
-    }
+            std::chrono::nanoseconds targetVsyncInterval = std::chrono::nanoseconds(16666666)) noexcept;
 };
 
 

@@ -78,6 +78,7 @@ set(SRCS
         src/FilamentBuilder.cpp
         src/FrameInfo.cpp
         src/FramePacer.cpp
+        src/FramePipelineEstimator.cpp
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
