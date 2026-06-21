@@ -53,6 +53,8 @@ public:
 
     double getTime() const override;
 
+    void startRendering(std::function<bool()> doFrame) override;
+
 private:
     Config mConfig;
     mutable std::unordered_map<FilamentApp::Window::Handle, void*> mNativeWindowMap;

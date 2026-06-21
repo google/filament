@@ -55,13 +55,15 @@ public:
     void pollEvents(std::vector<AppEvent>& events) override;
 
     uint32_t getMouseState(int* x, int* y) const override;
+
     bool isWindowFocused(FilamentApp::Window::Handle window) const override { return true; }
-    bool isVsyncSupported() const override { return false; }
 
     double getTime() const override;
 
     void onFrameFinished(FilamentApp::Window::Handle window, filament::Engine* engine,
             filament::Renderer* renderer) override;
+
+    void startRendering(std::function<bool()> doFrame) override;
 
 private:
     struct WindowInfo {

@@ -26,6 +26,7 @@
 #include <filament/Renderer.h>
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace filament::app {
@@ -128,11 +129,6 @@ public:
     virtual bool isWindowFocused(FilamentApp::Window::Handle window) const { return true; }
 
     /**
-     * Returns whether this platform supports vsync-like behavior (e.g., sleeping).
-     */
-    virtual bool isVsyncSupported() const { return true; }
-
-    /**
      * Returns the current time in seconds.
      */
     virtual double getTime() const = 0;
@@ -145,6 +141,17 @@ public:
      */
     virtual void onFrameFinished(FilamentApp::Window::Handle window, filament::Engine* engine,
             filament::Renderer* renderer) {}
+
+    /**
+     * Yields main thread to the display manager to let it drive rendering.
+     *
+     * On Android, this will not block but provide the app with the doFrame() function, which can
+     * then be called from the Choreographer.
+     *
+     * Similarly, on the Web/WASM (*not* the headless HtmlDisplayManager), the render will be driven
+     * by requestAnimationFrame().
+     */
+    virtual void startRendering(std::function<bool()> doFrame) = 0;
 };
 
 } // namespace filament::app
