@@ -35,9 +35,8 @@
 
 #include <math/mathfwd.h>
 
-#include <meshoptimizer.h>
-
 #include <gtest/gtest.h>
+#include <meshoptimizer.h>
 
 #include <cstdint>
 #include <fstream>
