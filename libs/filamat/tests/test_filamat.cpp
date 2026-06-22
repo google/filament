@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "sca/ASTHelpers.h"
 #include "sca/GLSLTools.h"
+
 #include "shaders/ShaderGenerator.h"
 
 #include <filamat/Enums.h>
@@ -25,6 +24,8 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 
@@ -202,6 +203,30 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+    )");
+    std::string vertexCode(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpacePosition = vec4(2.0);
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode, vertexCode,
+            MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
+            MaterialBuilder::VertexDomain::DEVICE);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[size_t(MaterialBuilder::Property::CLIP_SPACE_POSITION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
