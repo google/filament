@@ -21,8 +21,8 @@
 
 #include <tsl/robin_map.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct FFilamentAsset;
 struct cgltf_primitive;

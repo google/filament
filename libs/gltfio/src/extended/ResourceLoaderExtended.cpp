@@ -18,8 +18,9 @@
 
 #include "../FFilamentAsset.h"
 
-#include <backend/BufferDescriptor.h>
 #include <filament/BufferObject.h>
+
+#include <backend/BufferDescriptor.h>
 
 #include <cgltf.h>
 

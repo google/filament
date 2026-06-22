@@ -17,6 +17,8 @@
 #ifndef GLTFIO_FFILAMENTINSTANCE_H
 #define GLTFIO_FFILAMENTINSTANCE_H
 
+#include "downcast.h"
+
 #include <gltfio/FilamentInstance.h>
 
 #include <utils/CString.h>
@@ -28,8 +30,6 @@
 #include <tsl/robin_set.h>
 
 #include <vector>
-
-#include "downcast.h"
 
 struct cgltf_node;
 
