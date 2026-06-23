@@ -1383,6 +1383,13 @@ error:
         goto error;
     }
 
+    if (mProperties[size_t(Property::CLIP_SPACE_TRANSFORM)] &&
+        mProperties[size_t(Property::CLIP_SPACE_POSITION)]) {
+        LOG(WARNING) << "Warning: material \"" << mMaterialName.c_str()
+                     << "\" writes to both clipSpaceTransform and clipSpacePosition. "
+                     << "clipSpacePosition will take precedence and clipSpaceTransform will be ignored.";
+    }
+
     if (!runSemanticAnalysis(&info, semanticCodeGenParams)) {
         goto error;
     }
