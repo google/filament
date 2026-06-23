@@ -52,7 +52,8 @@ std::string shaderWithAllProperties(const ShaderStage type,
         const std::string& vertexCode = "",
         const MaterialBuilder::Shading shadingModel = MaterialBuilder::Shading::LIT,
         const MaterialBuilder::RefractionMode refractionMode = MaterialBuilder::RefractionMode::NONE,
-        const MaterialBuilder::VertexDomain vertexDomain = MaterialBuilder::VertexDomain::OBJECT) {
+        const MaterialBuilder::VertexDomain vertexDomain = MaterialBuilder::VertexDomain::OBJECT,
+        const uint32_t targetApiLevel = filament::UNSTABLE_MATERIAL_API_LEVEL) {
 
     MaterialBuilder builder;
     builder.material(fragmentCode.c_str());
@@ -62,6 +63,7 @@ std::string shaderWithAllProperties(const ShaderStage type,
     builder.shading(shadingModel);
     builder.refractionMode(refractionMode);
     builder.vertexDomain(vertexDomain);
+    builder.setApiLevel(targetApiLevel);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -218,9 +220,9 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
         }
     )");
 
-    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode, vertexCode,
-            MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
-            MaterialBuilder::VertexDomain::DEVICE);
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode,
+            vertexCode, MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
+            MaterialBuilder::VertexDomain::DEVICE, filament::UNSTABLE_MATERIAL_API_LEVEL);
 
     GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };

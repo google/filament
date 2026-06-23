@@ -31,7 +31,7 @@ struct MaterialVertexInputs {
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
     mat4 clipSpaceTransform;
 #endif // MATERIAL_HAS_CLIP_SPACE_TRANSFORM
-#ifdef MATERIAL_HAS_CLIP_SPACE_POSITION
+#if defined(MATERIAL_HAS_CLIP_SPACE_POSITION) && CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
     vec4 clipSpacePosition;
 #endif // MATERIAL_HAS_CLIP_SPACE_POSITION
 #endif // VERTEX_DOMAIN_DEVICE
@@ -89,7 +89,7 @@ void initMaterialVertex(out MaterialVertexInputs material) {
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
     material.clipSpaceTransform = mat4(1.0);
 #endif
-#ifdef MATERIAL_HAS_CLIP_SPACE_POSITION
+#if defined(MATERIAL_HAS_CLIP_SPACE_POSITION) && CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
     material.clipSpacePosition = vec4(0.0, 0.0, 0.0, 1.0);
 #endif // MATERIAL_HAS_CLIP_SPACE_POSITION
 #endif

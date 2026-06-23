@@ -176,7 +176,7 @@ void main() {
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
-#if defined(MATERIAL_HAS_CLIP_SPACE_POSITION)
+#if defined(MATERIAL_HAS_CLIP_SPACE_POSITION) && CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
     position = material.clipSpacePosition;
 #else
     position = getPosition();
