@@ -178,15 +178,11 @@ void main() {
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
 #if defined(MATERIAL_HAS_CLIP_SPACE_POSITION) && CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
     position = material.clipSpacePosition;
+#elif defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM) && !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
+    position = getMaterialClipSpaceTransform(material) * getPosition();
 #else
     position = getPosition();
-
-#if !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
-#if defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM)
-    position = getMaterialClipSpaceTransform(material) * position;
 #endif
-#endif // !USE_OPTIMIZED_DEPTH_VERTEX_SHADER
-#endif // MATERIAL_HAS_CLIP_SPACE_POSITION
 
 #if defined(MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED)
     // Apply the clip-space transform which is normally part of the projection
