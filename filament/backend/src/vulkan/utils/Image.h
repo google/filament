@@ -56,10 +56,10 @@ enum class VulkanLayout : uint8_t {
 };
 
 struct VulkanLayoutTransition {
-    VkImage image;
-    VulkanLayout oldLayout;
-    VulkanLayout newLayout;
-    VkImageSubresourceRange subresources;
+    VkImage image {};
+    VulkanLayout oldLayout {};
+    VulkanLayout newLayout {};
+    VkImageSubresourceRange subresources {};
 };
 
 namespace fvkutils {

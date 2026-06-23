@@ -42,6 +42,7 @@
 #define FILAMENT_TRACING_ASYNC_BEGIN(category, name, cookie)
 #define FILAMENT_TRACING_ASYNC_END(category, name, cookie)
 #define FILAMENT_TRACING_VALUE(category, name, val)
+#define FILAMENT_TRACING_EVENT(category, name, ...)
 
 #else
 
@@ -60,6 +61,10 @@
 // scope body.
 // It also automatically creates a Tracing context
 #define FILAMENT_TRACING_NAME(category, name) ::utils::details::ScopedTracing ___tracer(name)
+
+// Treat FILAMENT_TRACING_EVENT same as FILAMENT_TRACING_NAME
+#define FILAMENT_TRACING_EVENT(category, name, ...) \
+  FILAMENT_TRACING_NAME(category, name)
 
 // Denotes that a new frame has started processing.
 #define FILAMENT_TRACING_FRAME_ID(category, frame) \

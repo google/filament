@@ -29,6 +29,10 @@ using filament::uberz::convertOffsetsToPointers;
 
 namespace {
 
+TEST(ReadableArchiveTest, RejectsNullArchivePointer) {
+    EXPECT_FALSE(convertOffsetsToPointers(nullptr, 64));
+}
+
 TEST(ReadableArchiveTest, RejectsSpecsOffsetOutsideBuffer) {
     alignas(8) std::array<uint8_t, 64> storage {};
     auto* archive = reinterpret_cast<ReadableArchive*>(storage.data());
