@@ -595,16 +595,10 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
         }
 
         case Mode::ASYNCHRONOUS: {
-            // Technically the shader compilation may not have finished yet. To deal with the case,
-            // ideally, we should wait here until the compilation is finished. However, for now, we
-            // just log warnings here instead of repeatedly checking compile status. If this turns
-            // out to be a real issue later, we would need to consider doing the canonical way.
-            if (!isCompileCompleted(token)) {
-                LOG(INFO)
-                        << "Shader compilation for OpenGL program " << token->name.c_str_safe()
-                        << " is not completed yet. The following program link may be slow.";
-            }
-
+            // Technically the shader compilation may not have finished yet. In that case, the
+            // `linkProgram` call below will block until the shader compilation is completed as
+            // the internal call `glGetShaderiv(shader, GL_COMPILE_STATUS, &status);` should
+            // guarantee it.
             linkProgram(mDriver.getContext(), token);
             break;
         }
