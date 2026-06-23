@@ -16,11 +16,12 @@
 
 #include "AssetLoaderExtended.h"
 
+#include "TangentsJobExtended.h"
+
 #include "../DracoCache.h"
 #include "../FFilamentAsset.h"
 #include "../GltfEnums.h"
 #include "../Utility.h"
-#include "TangentsJobExtended.h"
 
 #include <filament/BufferObject.h>
 
