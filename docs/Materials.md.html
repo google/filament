@@ -2234,6 +2234,16 @@ struct MaterialVertexInputs {
 };
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+!!! TIP: clipSpacePosition and clipSpaceTransform
+    When `vertexDomain` is set to `device`, the final clip-space position of a vertex is computed using one of the 3 paths, evaluated in the following order of precedence:
+
+    1. If `clipSpacePosition` is written to: `position = material.clipSpacePosition;` (skips `clipSpaceTransform` entirely)
+    2. If `clipSpaceTransform` is written to: `position = material.clipSpaceTransform * getPosition();`
+    3. Default: `position = getPosition();`
+
+    Overriding `clipSpacePosition` directly is necessary for attribute-less rendering (where `bufferCount` is `0`). In such setups, the default vertex position will be a zero vector `vec4(0.0)`,
+    which cannot be translated into a valid position by applying a `clipSpaceTransform` matrix.
+
 !!! TIP: worldPosition
     To achieve good precision, the `worldPosition` coordinate in the vertex shader is shifted by the
     camera position. To get the true world-space position, users can use
