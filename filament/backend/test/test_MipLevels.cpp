@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "SharedShadersConstants.h"
 #include "TrianglePrimitive.h"
 
 #include <backend/DriverEnums.h>
@@ -27,26 +28,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-namespace {
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Shaders
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-std::string fragmentTexturedLod (R"(#version 450 core
-
-layout(location = 0) out vec4 fragColor;
-layout(location = 0) in vec2 uv;
-
-layout(binding = 0, set = 0) uniform sampler2D backend_test_sib_tex;
-
-void main() {
-    fragColor = textureLod(backend_test_sib_tex, uv, 1);
-}
-)");
-
-}
 
 namespace test {
 
@@ -65,23 +46,16 @@ TEST_F(BackendTest, TextureViewLod) {
         api.makeCurrent(swapChain, swapChain);
 
         Shader whiteShader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest {
-            .mVertexType = VertexShaderType::Textured,
+            .mVertexType = VertexShaderType::Noop,
             .mFragmentType = FragmentShaderType::White,
-            .mUniformType = ShaderUniformType::Sampler
+            .mUniformType = ShaderUniformType::None,
         });
 
         // Create a program that samples a texture.
-        std::string vertexShader = SharedShaders::getVertexShaderText(
-                VertexShaderType::Textured, ShaderUniformType::Sampler);
-        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo {
-            "backend_test", "sib_tex", 0,
-            SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-        Shader texturedShader(api, *mCleanup, ShaderConfig {
-           .vertexShader = vertexShader,
-           .fragmentShader = fragmentTexturedLod,
-           .uniforms = {{
-               "backend_test_sib_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
-           }}
+        Shader texturedShader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest {
+            .mVertexType = VertexShaderType::Textured,
+            .mFragmentType = FragmentShaderType::TexturedLod,
+            .mUniformType = ShaderUniformType::Sampler
         });
 
         // Create a texture that has 4 mip levels. Each level is a different color.
