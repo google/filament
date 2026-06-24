@@ -350,6 +350,16 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
       mAsynchronousMode(driverConfig.asynchronousMode) {
 
+    if (mAsynchronousMode != AsynchronousMode::NONE) {
+        mJobQueue = JobQueue::create();
+        // In Phase 1, always use AmortizationWorker for Vulkan, until Phase 2 is implemented, even
+        // when the requested mode is THREAD_PREFERRED. Vulkan's single-threaded backend and
+        // explicit synchronization model make the ThreadWorker hard to implement without
+        // significant infrastructure refactor (transfer queues, thread-safe VMA, etc), which will
+        // be done in Phase 2.
+        mJobWorker = AmortizationWorker::create(mJobQueue);
+    }
+
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
             new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), mContext);
@@ -432,6 +442,19 @@ utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguages(
 }
 
 void VulkanDriver::terminate() {
+    // Flush all pending asynchronous tasks. Some tasks may end up posting follow-up operations to
+    // the `ServiceThread` (e.g., via CountdownCallbackHandler or any user-provided handlers). So we
+    // early stop the ServiceThread to ensure these are processed as well. Tasks posted to the main
+    // thread (due to no user handler) during this process are handled later by `Driver::purge`
+    // within `FEngine::shutdown`.
+    if (getJobWorker()) {
+        getJobWorker()->terminate();
+    }
+    if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
+        stopServiceThread();
+    }
+
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
     // to those commands are no longer referenced.
     finish(0);
@@ -496,6 +519,11 @@ void VulkanDriver::terminate() {
 
 void VulkanDriver::tick(int) {
     mCommands.updateFences();
+
+    if (getJobWorker()) {
+        // This number is randomly/heuristically chosen. Consider making the number optional.
+        getJobWorker()->process(5);
+    }
 
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
@@ -695,20 +723,34 @@ void VulkanDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     vbi.dec();
 }
 
-void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih, utils::ImmutableCString&& tag) {
-    FVK_SYSTRACE_SCOPE();
+void VulkanDriver::createVertexBufferCommon(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, bool asynchronous, utils::ImmutableCString&& tag) {
     auto vbi = resource_ptr<VulkanVertexBufferInfo>::cast(&mResourceManager, vbih);
     auto vb = resource_ptr<VulkanVertexBuffer>::make(&mResourceManager, vbh, mContext, mStagePool,
             vertexCount, vbi);
+    vb->asynchronous = asynchronous;
     vb.inc();
     mResourceManager.associateHandle(vbh.getId(), std::move(tag));
+}
+
+void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih, utils::ImmutableCString&& tag) {
+    FVK_SYSTRACE_SCOPE();
+    createVertexBufferCommon(vbh, vertexCount, vbih, /* asynchronous = */ false, std::move(tag));
 }
 
 void VulkanDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
         Handle<HwVertexBufferInfo> vbih, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FVK_SYSTRACE_SCOPE();
+
+    // This doesn't allocate GPU memory yet, so call it synchronously on the backend thread.
+    createVertexBufferCommon(vbh, vertexCount, vbih, /* asynchronous = */ true, std::move(tag));
+
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -717,23 +759,50 @@ void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     }
     FVK_SYSTRACE_SCOPE();
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
-    vb.dec();
+    if (vb->asynchronous && getJobQueue()) {
+        // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
+        // update for this handle.
+        getJobQueue()->push([vb = std::move(vb)]() mutable {
+            vb.dec();
+        });
+    } else {
+        vb.dec();
+    }
+}
+
+void VulkanDriver::createIndexBufferCommon(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, bool asynchronous, utils::ImmutableCString&& tag) {
+    auto elementSize = (uint8_t) getElementTypeSize(elementType);
+    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mContext, mAllocator,
+            mStagePool, mBufferCache, elementSize, indexCount);
+    ib->asynchronous = asynchronous;
+    ib.inc();
+    mResourceManager.associateHandle(ibh.getId(), std::move(tag));
 }
 
 void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage, utils::ImmutableCString&& tag) {
     FVK_SYSTRACE_SCOPE();
-    auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mContext, mAllocator,
-            mStagePool, mBufferCache, elementSize, indexCount);
-    ib.inc();
-    mResourceManager.associateHandle(ibh.getId(), std::move(tag));
+    createIndexBufferCommon(ibh, elementType, indexCount, /* asynchronous = */ false,
+            std::move(tag));
 }
 
 void VulkanDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FVK_SYSTRACE_SCOPE();
+
+    // Create the resource synchronously on the backend thread because:
+    //  1. VMA (also a part of ResourceManager) is not thread-safe
+    //  2. and the resource allocated via VMA must be almost immediately ready for use.
+    // Only the callback is deferred through the JobQueue to preserve FIFO ordering.
+    createIndexBufferCommon(ibh, elementType, indexCount, /* asynchronous = */ true,
+            std::move(tag));
+
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
@@ -742,22 +811,50 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     }
     FVK_SYSTRACE_SCOPE();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
-    ib.dec();
+    if (ib->asynchronous && getJobQueue()) {
+        // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
+        // update for this handle.
+        getJobQueue()->push([ib = std::move(ib)]() mutable {
+            ib.dec();
+        });
+    } else {
+        ib.dec();
+    }
+}
+
+void VulkanDriver::createBufferObjectCommon(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, BufferUsage usage, bool asynchronous,
+        utils::ImmutableCString&& tag) {
+    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mContext, mAllocator,
+            mStagePool, mBufferCache, byteCount, bindingType, usage);
+    bo->asynchronous = asynchronous;
+    bo.inc();
+    mResourceManager.associateHandle(boh.getId(), std::move(tag));
 }
 
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag) {
     FVK_SYSTRACE_SCOPE();
-    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mContext, mAllocator,
-            mStagePool, mBufferCache, byteCount, bindingType, usage);
-    bo.inc();
-    mResourceManager.associateHandle(boh.getId(), std::move(tag));
+    createBufferObjectCommon(boh, byteCount, bindingType, usage, /* asynchronous = */ false,
+            std::move(tag));
 }
 
 void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FVK_SYSTRACE_SCOPE();
+
+    // Create the resource synchronously on the backend thread because:
+    //  1. VMA (also a part of ResourceManager) is not thread-safe
+    //  2. and the resource allocated via VMA must be almost immediately ready for use.
+    // Only the callback is deferred through the JobQueue to preserve FIFO ordering.
+    createBufferObjectCommon(boh, byteCount, bindingType, usage, /* asynchronous = */ true,
+            std::move(tag));
+
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
@@ -766,13 +863,20 @@ void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     }
     FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    bo.dec();
+    if (bo->asynchronous && getJobQueue()) {
+        // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
+        // update for this handle.
+        getJobQueue()->push([bo = std::move(bo)]() mutable {
+            bo.dec();
+        });
+    } else {
+        bo.dec();
+    }
 }
 
-void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+void VulkanDriver::createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, utils::ImmutableCString&& tag) {
-    FVK_SYSTRACE_SCOPE();
+        TextureUsage usage, bool asynchronous, utils::ImmutableCString&& tag) {
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mResourceManager, &mCommands,
             target, levels, format, samples, w, h, depth, usage, mStagePool);
@@ -783,15 +887,34 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     auto const defaultLayout = texture->getDefaultLayout();
     texture->transitionLayout(&commandsBuf, primaryViewRange, defaultLayout);
 
+    texture->asynchronous = asynchronous;
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
+void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, utils::ImmutableCString&& tag) {
+    FVK_SYSTRACE_SCOPE();
+    createTextureCommon(th, target, levels, format, samples, w, h, depth, usage,
+            /* asynchronous = */ false, std::move(tag));
 }
 
 void VulkanDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
         void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FVK_SYSTRACE_SCOPE();
+
+    // This directly allocate GPU memory (not via VMA) and is executed on the backend thread for now.
+    // NOTE: We could improve this by using the JobQueue in Phase 2.
+    createTextureCommon(th, target, levels, format, samples, w, h, depth, usage,
+            /* asynchronous = */ true, std::move(tag));
+
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
@@ -804,7 +927,7 @@ void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> sr
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
-void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+void VulkanDriver::createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a, utils::ImmutableCString&& tag) {
     TextureSwizzle const swizzleArray[] = { r, g, b, a };
@@ -812,15 +935,30 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
+    // The `asynchronous` flag is inherited from the source in the VulkanTexture constructor.
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
+}
+
+void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a, utils::ImmutableCString&& tag) {
+    createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
 }
 
 void VulkanDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
-    // TODO: implement this.
+    FVK_SYSTRACE_SCOPE();
+
+    // This doesn't allocate GPU memory yet, so call it synchronously on the backend thread.
+    createTextureViewSwizzleCommon(th, srch, r, g, b, a, std::move(tag));
+
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, handler, callback, user]() {
+        scheduleCallback(handler, user, callback);
+    });
 }
 
 void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::SamplerType target,
@@ -890,7 +1028,7 @@ void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
     assert_invariant(false && "Not supported in Vulkan backend");
 }
 
-void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+void VulkanDriver::importTextureCommon(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, utils::ImmutableCString&& tag) {
@@ -899,14 +1037,25 @@ void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
+void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+        TextureUsage usage, utils::ImmutableCString&& tag) {
+    importTextureCommon(th, id, target, levels, format, samples, w, h, depth, usage,
+            std::move(tag));
+}
+
 void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
         void* user, utils::ImmutableCString&& tag) {
-    // not supported in this backend
-    assert_invariant(false && "Not supported in Vulkan backend");
-    mResourceManager.associateHandle(th.getId(), std::move(tag));
+    importTextureCommon(th, id, target, levels, format, samples, w, h, depth, usage,
+            std::move(tag));
+    // Still fire the callback to avoid deadlocking the frontend's `CountdownCallbackHandler`. In
+    // release builds where the assert is compiled out, an unfired callback would leave
+    // mCreationComplete stuck at false, causing deferred destruction to spin forever.
+    scheduleCallback(handler, user, callback);
 }
 
 void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
@@ -914,8 +1063,20 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+
+    // Must happen immediately on the backend thread. Removes from ExternalImageManager's tracking
+    // map. Only the dec() ref-release is deferred in the async path.
     mExternalImageManager.removeExternallySampledTexture(texture);
-    texture.dec();
+
+    if (texture->asynchronous && getJobQueue()) {
+        // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
+        // update for this handle.
+        getJobQueue()->push([texture = std::move(texture)]() mutable {
+            texture.dec();
+        });
+    } else {
+        texture.dec();
+    }
 }
 
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils::ImmutableCString&& tag) {
@@ -1289,23 +1450,23 @@ Handle<HwTexture> VulkanDriver::importTextureAsyncS() noexcept {
 }
 
 AsyncCallId VulkanDriver::update3DImageAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId VulkanDriver::setVertexBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId VulkanDriver::updateBufferObjectAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 AsyncCallId VulkanDriver::updateIndexBufferAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
@@ -1367,8 +1528,8 @@ MemoryMappedBufferHandle VulkanDriver::mapBufferS() noexcept {
 }
 
 AsyncCallId VulkanDriver::queueCommandAsyncS() noexcept {
-    // TODO: implement this.
-    return InvalidAsyncCallId;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->issueJobId();
 }
 
 void VulkanDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
@@ -1765,7 +1926,7 @@ bool VulkanDriver::isDepthClampSupported() {
 }
 
 bool VulkanDriver::isAsynchronousModeEnabled() {
-    return false;
+    return getJobQueue() != nullptr;
 }
 
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1868,52 +2029,102 @@ size_t VulkanDriver::getUniformBufferOffsetAlignment() {
     return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
 
+void VulkanDriver::setVertexBufferObjectCommon(resource_ptr<VulkanVertexBuffer> vb, uint32_t index,
+        resource_ptr<VulkanBufferObject> bo) {
+    assert_invariant(bo->bindingType == BufferObjectBinding::VERTEX);
+    vb->setBuffer(bo, index);
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    assert_invariant(bo->bindingType == BufferObjectBinding::VERTEX);
-    vb->setBuffer(bo, index);
+    setVertexBufferObjectCommon(vb, index, bo);
 }
 
 void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+
+    // We cannot pass a resource handle into the lambda because the `cast` method has a strict
+    // precondition, which is "the handle must not have been marked as destroyed". If an app
+    // destroys a resource on the backend thread while an asynchronous update job for the same
+    // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
+    // pass a resource_ptr instead, which is ref-counted.
+    auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
+    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+
+    getJobQueue()->push([this, vb, bo, index, handler, callback, user]() mutable {
+        setVertexBufferObjectCommon(vb, index, bo);
+        scheduleCallback(handler, user, callback);
+    }, jobId);
+}
+
+void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
+        BufferDescriptor&& p, uint32_t byteOffset) {
+    VulkanCommandBuffer& commands = mCommands.get();
+    commands.acquire(ib);
+    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
+    scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
-    commands.acquire(ib);
-    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
-
-    scheduleDestroy(std::move(p));
+    updateIndexBufferCommon(ib, std::move(p), byteOffset);
 }
 
 void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
         BufferDescriptor&& p, uint32_t byteOffset, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+
+    // We cannot pass a resource handle into the lambda because the `cast` method has a strict
+    // precondition, which is "the handle must not have been marked as destroyed". If an app
+    // destroys a resource on the backend thread while an asynchronous update job for the same
+    // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
+    // pass a resource_ptr instead, which is ref-counted.
+    auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
+
+    getJobQueue()->push([this, ib, p = std::move(p), byteOffset, handler, callback,
+            user]() mutable {
+        updateIndexBufferCommon(ib, std::move(p), byteOffset);
+        scheduleCallback(handler, user, callback);
+    }, jobId);
+}
+
+void VulkanDriver::updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo,
+        BufferDescriptor&& bd, uint32_t byteOffset) {
+    VulkanCommandBuffer& commands = mCommands.get();
+    commands.acquire(bo);
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    scheduleDestroy(std::move(bd));
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
-
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    commands.acquire(bo);
-
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
-
-    scheduleDestroy(std::move(bd));
+    updateBufferObjectCommon(bo, std::move(bd), byteOffset);
 }
 
 void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t byteOffset, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+
+    // We cannot pass a resource handle into the lambda because the `cast` method has a strict
+    // precondition, which is "the handle must not have been marked as destroyed". If an app
+    // destroys a resource on the backend thread while an asynchronous update job for the same
+    // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
+    // pass a resource_ptr instead, which is ref-counted.
+    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+
+    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset, handler, callback,
+            user]() mutable {
+        updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+        scheduleCallback(handler, user, callback);
+    }, jobId);
 }
 
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
@@ -1935,19 +2146,40 @@ void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
     // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
 }
 
+void VulkanDriver::update3DImageCommon(resource_ptr<VulkanTexture> texture, uint32_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height,
+        uint32_t depth, PixelBufferDescriptor&& data) {
+    texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
+    scheduleDestroy(std::move(data));
+}
+
 void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
         uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
-    texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
-    scheduleDestroy(std::move(data));
+    update3DImageCommon(texture, level, xoffset, yoffset, zoffset, width, height, depth,
+            std::move(data));
 }
 
 void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width,
         uint32_t height, uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
         CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+
+    // We cannot pass a resource handle into the lambda because the `cast` method has a strict
+    // precondition, which is "the handle must not have been marked as destroyed". If an app
+    // destroys a resource on the backend thread while an asynchronous update job for the same
+    // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
+    // pass a resource_ptr instead, which is ref-counted.
+    auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+
+    getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
+            data = std::move(data), handler, callback, user]() mutable {
+        update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
+                std::move(data));
+        scheduleCallback(handler, user, callback);
+    }, jobId);
 }
 
 void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -2893,12 +3125,18 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void VulkanDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
         CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
-    // TODO: implement this.
+    assert_invariant(getJobQueue());
+    getJobQueue()->push([this, command = std::move(command), handler, callback, user]() mutable {
+        if (command) {
+            command();
+        }
+        scheduleCallback(handler, user, callback);
+    }, jobId);
 }
 
 bool VulkanDriver::cancelAsyncJob(AsyncCallId jobId) {
-    // TODO: implement this.
-    return false;
+    assert_invariant(getJobQueue());
+    return getJobQueue()->cancel(jobId);
 }
 
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
