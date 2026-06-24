@@ -1190,6 +1190,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
         case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
         case Property::SHADOW_STRENGTH:             return "SHADOW_STRENGTH";
+        case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
     }
 }
 

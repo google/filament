@@ -404,12 +404,13 @@ void OpenGLDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
-    // wait for the GPU again because JobWorker might have queued more work.
-    glFinish();
-
     if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
         stopServiceThread();
     }
+
+    // wait for the GPU again because JobWorker might have queued more work.
+    glFinish();
 
     mContext.destroyState(mBackendState);
     mBackendState = nullptr;
