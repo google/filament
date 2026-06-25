@@ -282,19 +282,18 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
                             "name", getName().c_str(),
                             "variantKey", static_cast<uint32_t>(variant.key),
                             "specKey", static_cast<uint32_t>(specKey.key),
-                            "priority", static_cast<uint32_t>(priority),);
+                            "priority", static_cast<uint32_t>(priority));
 #endif
                     mi->prepareProgram(driver, variant, specKey, priority);
-#ifndef NDEBUG
                 } else {
+#ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                             "requested variant missing",
                             "name", getName().c_str(),
                             "variantKey", static_cast<uint32_t>(variant.key),
                             "specKey", static_cast<uint32_t>(specKey.key),
                             "priority", static_cast<uint32_t>(priority));
-    #endif
-                        mi->prepareProgram(driver, variant, specKey, priority);
+#endif
                 }
             }
         }
