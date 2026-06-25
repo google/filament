@@ -29,6 +29,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 using namespace bluevk;
@@ -657,20 +658,6 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     // back to the buffer's size.
     size_t const writeSize = bpp > 0 ? width * height * depth * bpp : data.size;
 
-    void* mapped = nullptr;
-    fvkmemory::resource_ptr<VulkanStageImage::Resource> stage
-            = mState->mStagePool.acquireImage(data.format, data.type, width, height);
-    vmaMapMemory(mState->mAllocator, stage->memory(), &mapped);
-    adjustedMemcpy(mapped, data, width, height, depth);
-    vmaUnmapMemory(mState->mAllocator, stage->memory());
-    vmaFlushAllocation(mState->mAllocator, stage->memory(), 0, writeSize);
-
-    VulkanCommandBuffer& commands = mState->mCommands->get();
-    VkCommandBuffer const cmdbuf = commands.buffer();
-    commands.acquire(stage);
-    commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
-
-    // TODO: support blit-based format conversion for 3D images and cubemaps.
     uint32_t layer = 0;
     uint32_t layerCount = 1;
     uint32_t dstZOffset = zoffset;
@@ -685,29 +672,61 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
         dstDepth = 1;
     }
 
-    VkOffset3D const srcRect[2] { {0, 0, 0}, {int32_t(width), int32_t(height), 1} };
-    VkOffset3D const dstRect[2] {
-        { int32_t(xoffset), int32_t(yoffset), int32_t(dstZOffset) },
-        { int32_t(xoffset + width), int32_t(yoffset + height), int32_t(dstZOffset + dstDepth) }
-    };
+    // We map 3D textures and 2D arrays into a "tall" 2D staging image.
+    // This is because Vulkan staging images with VK_IMAGE_TILING_LINEAR strictly require
+    // arrayLayers == 1 and depth == 1. Rather than complicating VulkanStagePool to handle
+    // 3D staging allocations (which violates the linear tiling spec), we allocate a simple
+    // 2D image tall enough to hold all slices vertically. The contiguous nature of
+    // adjustedMemcpy perfectly matches this layout, allowing us to easily copy the chunks
+    // into the 3D destination via multiple VkImageBlit regions.
+    uint32_t const numSlices = dstDepth > layerCount ? dstDepth : layerCount;
+    uint32_t const stagingHeight = height * numSlices;
+
+    void* mapped = nullptr;
+    fvkmemory::resource_ptr<VulkanStageImage::Resource> stage
+            = mState->mStagePool.acquireImage(data.format, data.type, width, stagingHeight);
+    vmaMapMemory(mState->mAllocator, stage->memory(), &mapped);
+    adjustedMemcpy(mapped, data, width, height, depth);
+    vmaUnmapMemory(mState->mAllocator, stage->memory());
+    vmaFlushAllocation(mState->mAllocator, stage->memory(), 0, writeSize);
+
+    VulkanCommandBuffer& commands = mState->mCommands->get();
+    VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stage);
+    commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
     VkImageAspectFlags const aspect = getImageAspect();
-
-    VkImageBlit const blitRegions[1] = {{
-        .srcSubresource = { aspect, 0, 0, 1 },
-        .srcOffsets = { srcRect[0], srcRect[1] },
-        .dstSubresource = { aspect, uint32_t(miplevel), layer, layerCount },
-        .dstOffsets = { dstRect[0], dstRect[1] }
-    }};
-
     VkImageSubresourceRange const range = { aspect, miplevel, 1, layer, layerCount };
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(&commands, range, newLayout);
 
+    utils::FixedCapacityVector<VkImageBlit> blitRegions(numSlices);
+    for (uint32_t i = 0; i < numSlices; i++) {
+        VkOffset3D const srcRect[2]{
+            { 0, int32_t(i * height), 0 },
+            { int32_t(width), int32_t((i + 1) * height), 1 },
+        };
+        VkOffset3D const dstRect[2]{
+            { int32_t(xoffset), int32_t(yoffset), int32_t(dstZOffset + (dstDepth > 1 ? i : 0)) },
+            {
+                int32_t(xoffset + width),
+                int32_t(yoffset + height),
+                int32_t(dstZOffset + (dstDepth > 1 ? i : 0) + 1),
+            },
+        };
+        blitRegions[i] = {
+            .srcSubresource = { aspect, 0, 0, 1 },
+            .srcOffsets = { srcRect[0], srcRect[1] },
+            .dstSubresource = { aspect, uint32_t(miplevel), layer + (layerCount > 1 ? i : 0), 1 },
+            .dstOffsets = { dstRect[0], dstRect[1] },
+        };
+    }
+
     vkCmdBlitImage(cmdbuf, stage->image(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            mState->mTextureImage, fvkutils::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
+            mState->mTextureImage, fvkutils::getVkLayout(newLayout), numSlices, blitRegions.data(),
+            VK_FILTER_NEAREST);
 
     transitionLayout(&commands, range, oldLayout);
 }
@@ -716,7 +735,8 @@ VulkanLayout VulkanTexture::getDefaultLayout() const {
     return mState->mDefaultLayout;
 }
 
-VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange const& range, VkImageViewType type) {
+VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange const& range,
+        VkImageViewType type) {
     assert_invariant(mState->mYcbcr.conversion == VK_NULL_HANDLE &&
                      "We are not yet supporting external image as attachments.");
     if (type == VK_IMAGE_VIEW_TYPE_2D) {
