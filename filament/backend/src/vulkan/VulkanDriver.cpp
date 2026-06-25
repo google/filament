@@ -997,10 +997,9 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
             mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
-            vkformat, conversion,
-            imgData.internal.stagingMemory, imgData.internal.stagingBuffer, externalImage,
-            metadata.samples, metadata.width, metadata.height,
-            metadata.layers, usage, mStagePool);
+            vkformat, conversion, imgData.internal.stagingMemory, imgData.internal.stagingBuffer,
+            externalImage, static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
+            metadata.width, metadata.height, metadata.layers, usage, mStagePool);
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
@@ -1693,9 +1692,9 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
                     auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager,
                             mContext, mPlatform->getDevice(), mAllocator, &mResourceManager,
-                            &mCommands, vkimage, memory, vkformat, conversion,
-                            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
-                            metadata.samples,
+                            &mCommands, vkimage, memory, vkformat, conversion, VK_NULL_HANDLE,
+                            VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+                            static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
                             metadata.width, metadata.height, metadata.layers,
                             metadata.filamentUsage, mStagePool);
 
