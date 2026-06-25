@@ -100,5 +100,8 @@ if (FILAMENT_BUILD_TESTING)
     if (ANDROID)
         add_executable(test_compiler compiler_test.cpp)
         target_link_libraries(test_compiler PRIVATE gtest utils EGL GLESv3)
+
+        add_executable(test_framerate test_framerate.cpp)
+        target_link_libraries(test_framerate PRIVATE filament gtest utils mediandk android)
     endif()
 endif()

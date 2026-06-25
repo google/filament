@@ -611,6 +611,7 @@ public:
 
     static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
         FView const* view,
+        FMaterial const* material,
         utils::tribool shadowReceiver,
         utils::tribool skinning) noexcept;
 

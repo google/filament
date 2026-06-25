@@ -616,6 +616,14 @@ Java_com_google_android_filament_View_nGetFogEntity(JNIEnv *env, jclass clazz,
 }
 
 extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetVisibleRenderableCount(JNIEnv *env, jclass clazz,
+        jlong nativeView) {
+    View *view = (View *) nativeView;
+    return (jint)view->getVisibleRenderableCount();
+}
+
+extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nClearFrameHistory(JNIEnv *env, jclass clazz,
         jlong nativeView, jlong nativeEngine) {

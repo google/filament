@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_LOCALPROGRAMCACHE_H
 #define TNT_FILAMENT_LOCALPROGRAMCACHE_H
 
+#include "DynamicSpecConstKey.h"
 #include "MaterialDefinition.h"
 
 #include <private/filament/Variant.h>
@@ -43,11 +44,22 @@ class LocalProgramCache {
 public:
     using Programs = utils::Slice<const backend::Handle<backend::HwProgram>>;
     using SpecializationConstants = utils::Slice<const backend::Program::SpecializationConstant>;
+    using CacheKey = uint32_t;
 
     LocalProgramCache() = default;
     LocalProgramCache(LocalProgramCache const& other);
 
     LocalProgramCache& operator=(LocalProgramCache const& other);
+
+    static CacheKey mapCacheEntryKey(Variant const variant,
+            DynamicSpecConstKey specKey) noexcept {
+        // Decouple depth variants from the dynamic specialization space
+        if (Variant::isValidDepthVariant(variant)) {
+            specKey = DynamicSpecConstKey{0};
+        }
+        return (variant.key << DYNAMIC_SPEC_CONST_KEY_BITS) |
+               (specKey.key & ((1 << DYNAMIC_SPEC_CONST_KEY_BITS) - 1));
+    }
 
     // Initialize for use in a Material.
     void initializeForMaterial(FEngine& engine, FMaterial const& material,
@@ -64,21 +76,24 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
-            Variant const variant,
+            Variant const variant, DynamicSpecConstKey const specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        CacheKey const mappedKey = mapCacheEntryKey(variant, specKey);
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         if (UTILS_LIKELY(program)) {
             return program;
         }
-        return prepareProgramSlow(driver, variant, priorityQueue);
+        return prepareProgramSlow(driver, variant, specKey, priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant variant,
+            DynamicSpecConstKey const specKey) const noexcept {
         variant = filterVariantForGetProgram(variant);
-        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        CacheKey const mappedKey = mapCacheEntryKey(variant, specKey);
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[mappedKey];
         assert_invariant(program);
         return program;
     }
@@ -123,14 +138,13 @@ public:
                     constants) noexcept;
 
 private:
-    // Apply any pending specialization constants. Invalidates programs as necessary.
-    void flushConstants() const;
-
     backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
             Variant const variant,
+            DynamicSpecConstKey const specKey,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept;
 
-    ProgramSpecialization getProgramSpecialization(Variant variant) const noexcept;
+    ProgramSpecialization getProgramSpecialization(Variant variant,
+            DynamicSpecConstKey specKey) const noexcept;
 
     Variant filterVariantForGetProgram(Variant const variant) const noexcept;
 

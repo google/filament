@@ -257,9 +257,30 @@ void FRenderer::initializeClearFlags() noexcept {
     mClearFlags = getClearFlags();
 }
 
-void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) const {
-    FEngine::DriverApi& driver = mEngine.getDriverApi();
-    driver.setPresentationTime(monotonic_clock_ns);
+void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) noexcept {
+    using namespace std::chrono;
+    mPresentationTime = steady_clock::time_point(nanoseconds(monotonic_clock_ns));
+}
+
+void FRenderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+    mPresentationTime = monotonic_clock;
+}
+
+void FRenderer::setDesiredPresentationTime(int64_t const monotonic_clock_ns) noexcept {
+    using namespace std::chrono;
+    mDesiredPresentationTime = steady_clock::time_point(nanoseconds(monotonic_clock_ns));
+}
+
+void FRenderer::setDesiredPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+    mDesiredPresentationTime = monotonic_clock;
+}
+
+void FRenderer::setRenderingDeadline(int64_t const monotonic_clock_ns) noexcept {
+    setRenderingDeadline(std::chrono::steady_clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns)));
+}
+
+void FRenderer::setRenderingDeadline(std::chrono::steady_clock::time_point const monotonic_clock) noexcept {
+    mRenderingDeadline = monotonic_clock;
 }
 
 void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
@@ -465,13 +486,25 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
                         1'000'000'000.0 / mDisplayInfo.refreshRate),
                 mFrameId);
 
+        auto const presentationTime = mPresentationTime;
+        auto const desiredPresentationTime = mDesiredPresentationTime;
+        auto const renderingDeadline = mRenderingDeadline;
+        mPresentationTime = {};
+        mDesiredPresentationTime = {};
+        mRenderingDeadline = {};
+
+        if (presentationTime.time_since_epoch().count()) {
+            driver.setPresentationTime(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    presentationTime.time_since_epoch()).count());
+        }
+
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
 
         mFrameInfoManager.updateUserHistory(swapChain, driver);
         mFrameInfoManager.beginFrame(swapChain, driver, {
             .historySize = mFrameRateOptions.history
-        }, mFrameId, appVsync);
+        }, mFrameId, appVsync, renderingDeadline, desiredPresentationTime);
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         engine.prepare(driver);

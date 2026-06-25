@@ -106,7 +106,11 @@ Program& Program::multiview(bool const multiview) noexcept {
 
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
     out << "Program{";
-    builder.mLogger(builder.mName, out);
+    if (builder.mLogger) {
+        builder.mLogger(builder.mName, out);
+    } else {
+        out << builder.mName.c_str_safe();
+    }
     out << "}";
     return out;
 }

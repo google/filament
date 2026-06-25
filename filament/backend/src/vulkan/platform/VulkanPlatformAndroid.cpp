@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "AndroidFrameCallback.h"
+#include "AndroidNativeWindow.h"
 
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/utils/Image.h"
@@ -166,12 +166,6 @@ uint32_t selectMemoryTypeForExternalImage(VkPhysicalDevice physicalDevice, VkDev
 
 // ---------------------------------------------------------------------------------------------
 
-struct VulkanPlatformAndroid::AndroidDetails {
-    AndroidFrameCallback androidFrameCallback;
-};
-
-// ---------------------------------------------------------------------------------------------
-
 VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid() {
     if (__builtin_available(android 26, *)) {
         if (aHardwareBuffer) {
@@ -182,8 +176,7 @@ VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid()
 
 // ---------------------------------------------------------------------------------------------
 
-VulkanPlatformAndroid::VulkanPlatformAndroid() :
-        mAndroidDetails(*(new(std::nothrow) AndroidDetails{})) {
+VulkanPlatformAndroid::VulkanPlatformAndroid() {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
@@ -191,7 +184,6 @@ VulkanPlatformAndroid::VulkanPlatformAndroid() :
 }
 
 VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept {
-    delete &mAndroidDetails;
 }
 
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
@@ -685,15 +677,11 @@ int VulkanPlatformAndroid::getOSVersion() const noexcept {
 }
 
 void VulkanPlatformAndroid::terminate() {
-    mAndroidDetails.androidFrameCallback.terminate();
     VulkanPlatform::terminate();
 }
 
 Driver* VulkanPlatformAndroid::createDriver(void* sharedContext, DriverConfig const& driverConfig) {
     Driver* driver = VulkanPlatform::createDriver(sharedContext, driverConfig);
-    if (driver) {
-        mAndroidDetails.androidFrameCallback.init();
-    }
     return driver;
 }
 
@@ -706,15 +694,6 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
     if (!swapchain) {
         return false;
     }
-
-    AndroidFrameCallback::Timeline const preferredTimeline{
-        mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-
-    outCompositorTiming->expectedPresentLatency =
-        preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
-
-    outCompositorTiming->compositeDeadlineLatency =
-        preferredTimeline.frameTimelineDeadline - preferredTimeline.frameTime;
 
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;
@@ -740,4 +719,15 @@ bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uin
     return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
+utils::tribool VulkanPlatformAndroid::isFrameRateChangeSupported(void* const nativeWindow) const noexcept {
+    return NativeWindow::isFrameRateChangeSupported(static_cast<ANativeWindow*>(nativeWindow));
+}
+
+int VulkanPlatformAndroid::setFrameRate(SwapChain const* swapchain, float frameRate,
+        FrameRateCompatibility compatibility, ChangeFrameRateStrategy strategy) noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const*>(swapchain);
+    return vulkanSwapchain ? vulkanSwapchain->setFrameRate(frameRate, compatibility, strategy) : -1;
+}
+
 } // namespace filament::backend
+

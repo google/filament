@@ -1074,6 +1074,8 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
+        ImGui::SliderFloat("Frame rate", &mSettings.viewer.cameraFrameRate, 0.0f, 120.0f, "%.0f Hz");
+
         // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {
             ImGui::Checkbox("Ground shadow", &mSettings.viewer.groundPlaneEnabled);

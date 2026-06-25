@@ -314,6 +314,7 @@ struct ViewerOptions {
     sRGBColor backgroundColor = { 0.0f };
     bool autoScaleEnabled = true;
     bool autoInstancingEnabled = false;
+    float cameraFrameRate = 0.0f;
 };
 
 struct DebugOptions {

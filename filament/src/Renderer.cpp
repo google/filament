@@ -47,6 +47,26 @@ void Renderer::setPresentationTime(int64_t const monotonic_clock_ns) {
     downcast(this)->setPresentationTime(monotonic_clock_ns);
 }
 
+void Renderer::setPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) {
+    downcast(this)->setPresentationTime(monotonic_clock);
+}
+
+void Renderer::setDesiredPresentationTime(int64_t const monotonic_clock_ns) {
+    downcast(this)->setDesiredPresentationTime(monotonic_clock_ns);
+}
+
+void Renderer::setDesiredPresentationTime(std::chrono::steady_clock::time_point const monotonic_clock) {
+    downcast(this)->setDesiredPresentationTime(monotonic_clock);
+}
+
+void Renderer::setRenderingDeadline(int64_t const monotonic_clock_ns) {
+    downcast(this)->setRenderingDeadline(monotonic_clock_ns);
+}
+
+void Renderer::setRenderingDeadline(std::chrono::steady_clock::time_point const monotonic_clock) {
+    downcast(this)->setRenderingDeadline(monotonic_clock);
+}
+
 void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }

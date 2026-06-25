@@ -449,6 +449,10 @@ public:
         return mVisibleRenderables;
     }
 
+    int32_t getVisibleRenderableCount() const noexcept {
+        return mVisibleRenderableCount;
+    }
+
     Range const& getVisibleDirectionalShadowCasters() const noexcept {
         return mVisibleDirectionalShadowCasters;
     }
@@ -557,6 +561,8 @@ private:
         // picking query result
         PickingQueryResult result{};
     };
+
+    void invalidateSceneCache() noexcept;
 
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
@@ -667,6 +673,7 @@ private:
     Range mVisibleRenderables;
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
+    int32_t mVisibleRenderableCount = -1;
     uint32_t mRenderableUBOElementCount = 0;
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;

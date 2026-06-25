@@ -770,6 +770,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
             i = parse(tokens, i + 1, jsonChunk, &out->autoInstancingEnabled);
         } else if (compare(tok, jsonChunk, "autoScaleEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->autoScaleEnabled);
+        } else if (compare(tok, jsonChunk, "cameraFrameRate") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cameraFrameRate);
         } else {
             slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1332,7 +1334,8 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
                << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
                << "\"backgroundColor\": " << (in.backgroundColor) << ",\n"
                << "\"autoInstancingEnabled\": " << to_string(in.autoInstancingEnabled) << ",\n"
-               << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << "\n"
+               << "\"autoScaleEnabled\": " << to_string(in.autoScaleEnabled) << ",\n"
+               << "\"cameraFrameRate\": " << (in.cameraFrameRate) << "\n"
                << "}";
 }
 

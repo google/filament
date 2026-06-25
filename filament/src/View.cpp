@@ -368,6 +368,10 @@ utils::Entity View::getFogEntity() const noexcept {
     return downcast(this)->getFogEntity();
 }
 
+int32_t View::getVisibleRenderableCount() const noexcept {
+    return downcast(this)->getVisibleRenderableCount();
+}
+
 void View::clearFrameHistory(Engine& engine) noexcept {
     downcast(this)->clearFrameHistory(downcast(engine));
 }

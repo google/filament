@@ -73,6 +73,17 @@ public class SwapChain {
         mSurface = surface;
     }
 
+    public enum FrameRateCompatibility {
+        DEFAULT,
+        FIXED_SOURCE
+    }
+
+    public enum ChangeFrameRateStrategy {
+        ONLY_IF_SEAMLESS,
+        ALWAYS
+    }
+
+
     /**
      * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
      * The default implementation returns false.
@@ -109,6 +120,42 @@ public class SwapChain {
     public static boolean isMSAASwapChainSupported(@NonNull Engine engine, int samples) {
         return nIsMSAASwapChainSupported(engine.getNativeObject(), samples);
     }
+
+    /**
+     * Return whether this SwapChain supports the setFrameRate() API.
+     *
+     * When a SwapChain is newly created, the actual surface capability state may not be fully
+     * determined by the underlying OS, in which case this method will return false. Once the
+     * platform completes surface connection, this method will authoritatively return true or false.
+     *
+     * @return true if setFrameRate() is definitively supported, false otherwise.
+     */
+    public boolean isFrameRateChangeSupported() {
+        return nIsFrameRateChangeSupported(getNativeObject());
+    }
+
+
+    /**
+     * Sets the intended frame rate for this SwapChain.
+     *
+     * @param frameRate The intended frame rate in frames per second. 0.0f clears/resets the rate.
+     */
+    public void setFrameRate(float frameRate) {
+        setFrameRate(frameRate, FrameRateCompatibility.DEFAULT, ChangeFrameRateStrategy.ONLY_IF_SEAMLESS);
+    }
+
+    /**
+     * Sets the intended frame rate for this SwapChain.
+     *
+     * @param frameRate     The intended frame rate in frames per second. 0.0f clears/resets the rate.
+     * @param compatibility Frame rate compatibility mode.
+     * @param strategy      Change strategy for non-seamless transitions.
+     */
+    public void setFrameRate(float frameRate, @NonNull FrameRateCompatibility compatibility,
+            @NonNull ChangeFrameRateStrategy strategy) {
+        nSetFrameRate(getNativeObject(), frameRate, compatibility.ordinal(), strategy.ordinal());
+    }
+
 
     /**
      * @return the native <code>Object</code> this <code>SwapChain</code> was created from or null
@@ -228,4 +275,7 @@ public class SwapChain {
     private static native boolean nIsSRGBSwapChainSupported(long nativeEngine);
     private static native boolean nIsMSAASwapChainSupported(long nativeEngine, int samples);
     private static native boolean nIsProtectedContentSupported(long nativeEngine);
+    private static native boolean nIsFrameRateChangeSupported(long nativeSwapChain);
+    private static native void nSetFrameRate(long nativeSwapChain, float frameRate, int compatibility, int strategy);
 }
+

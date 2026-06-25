@@ -297,6 +297,12 @@ value_array<filament::math::quat>("quat")
     .element(&filament::math::quat::z)
     .element(&filament::math::quat::w);
 
+value_array<filament::math::quatf>("quatf")
+    .element(&filament::math::quatf::x)
+    .element(&filament::math::quatf::y)
+    .element(&filament::math::quatf::z)
+    .element(&filament::math::quatf::w);
+
 value_array<Viewport>("Viewport")
     .element(&Viewport::left)
     .element(&Viewport::bottom)
@@ -704,7 +710,9 @@ class_<Renderer>("Renderer")
     .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
-    .function("setPresentationTime", &Renderer::setPresentationTime)
+    .function("setPresentationTime", select_overload<void(int64_t)>(&Renderer::setPresentationTime))
+    .function("setDesiredPresentationTime", select_overload<void(int64_t)>(&Renderer::setDesiredPresentationTime))
+    .function("setRenderingDeadline", select_overload<void(int64_t)>(&Renderer::setRenderingDeadline))
     .function("setVsyncTime", &Renderer::setVsyncTime)
     .function("skipFrame", &Renderer::skipFrame)
     .function("shouldRenderFrame", &Renderer::shouldRenderFrame)
@@ -772,6 +780,7 @@ class_<View>("View")
     .function("getAntiAliasing", &View::getAntiAliasing)
     .function("setSampleCount", &View::setSampleCount)
     .function("getSampleCount", &View::getSampleCount)
+    .function("getVisibleRenderableCount", &View::getVisibleRenderableCount)
     .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
         self->setRenderTarget(renderTarget);
     }), allow_raw_pointers())

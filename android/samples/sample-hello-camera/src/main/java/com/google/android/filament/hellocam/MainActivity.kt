@@ -20,7 +20,7 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.opengl.Matrix
 import android.os.Bundle
-import android.view.Choreographer
+import com.google.android.filament.android.ChoreographerHelper
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
@@ -49,7 +49,6 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
     private lateinit var surfaceView: SurfaceView
     private lateinit var uiHelper: UiHelper
     private lateinit var displayHelper: DisplayHelper
-    private lateinit var choreographer: Choreographer
 
     private lateinit var engine: Engine
     private lateinit var renderer: Renderer
@@ -86,8 +85,6 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         surfaceView = SurfaceView(this)
         setContentView(surfaceView)
 
-        choreographer = Choreographer.getInstance()
-
         displayHelper = DisplayHelper(this)
 
         setupSurfaceView()
@@ -108,6 +105,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
     private fun setupFilament() {
         engine = Engine.create()
         renderer = engine.createRenderer()
+        frameScheduler.setRenderer(renderer)
         scene = engine.createScene()
         view = engine.createView()
         camera = engine.createCamera(engine.entityManager.create())
@@ -312,14 +310,14 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
 
     override fun onResume() {
         super.onResume()
-        choreographer.postFrameCallback(frameScheduler)
+        frameScheduler.post()
         animator.start()
         cameraHelper.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel()
         cameraHelper.onPause()
     }
@@ -328,7 +326,7 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         super.onDestroy()
 
         // Stop the animation and any pending frame
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel()
 
         // Always detach the surface before destroying the engine
@@ -358,10 +356,8 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
         engine.destroy()
     }
 
-    inner class FrameCallback : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            // Schedule the next frame
-            choreographer.postFrameCallback(this)
+    inner class FrameCallback : ChoreographerHelper() {
+        override fun onFrame(frameTimeNanos: Long) {
 
             // This check guarantees that we have a swap chain
             if (uiHelper.isReadyToRender) {

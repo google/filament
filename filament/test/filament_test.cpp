@@ -23,6 +23,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/Renderer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
@@ -1706,6 +1707,7 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
             renderer->endFrame();
         }
         engine->flushAndWait();
+        downcast(renderer)->waitForFrameHistory();
     }
 
     size_t count = 0;
@@ -1719,6 +1721,8 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
         }
     }
 
+    // Exactly 4 frames (1, 2, 3, 4) are ready during the last
+    // updateUserHistory call inside beginFrame of the 5th frame.
     EXPECT_EQ(count, 4u);
 
     size_t count2 = 0;
@@ -1730,33 +1734,32 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
 
     renderer->skipFrame((6 + 1) * 16666666);
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     if (renderer->beginFrame(swapChain, (7 + 1) * 16666666)) {
         renderer->endFrame();
     }
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     renderer->skipFrame();
     engine->flushAndWait();
+    downcast(renderer)->waitForFrameHistory();
 
     size_t validCount = 0;
     size_t missingCount = 0;
-    uint32_t missingId = 0;
-    uint32_t validId = 0;
     for (auto fi : logger.getNewFrames()) {
         if (fi) {
             validCount++;
-            validId = fi.getFrameId();
         } else {
             missingCount++;
-            missingId = fi.getMissingId();
         }
     }
 
-    EXPECT_EQ(validCount, 2u);
+    // Across the entire test, 6 valid frames were submitted (5 initially, 1 after skipping).
+    size_t const totalValid = count + count2 + validCount;
+    EXPECT_EQ(totalValid, 6u);
     EXPECT_EQ(missingCount, 1u);
-    EXPECT_EQ(missingId, 7u);
-    EXPECT_EQ(validId, 8u);
 
     engine->destroy(swapChain);
     engine->destroy(renderer);

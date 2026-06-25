@@ -35,6 +35,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -282,7 +284,7 @@ void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
                         getPrograms().getSpecializationConstants());
     }
 
-    uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
     mPendingSpecializationConstants[id] = value;
 }
 
@@ -292,7 +294,7 @@ T FMaterialInstance::getConstantImpl(std::string_view name) const {
     auto it = constants.find(name);
     FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
 
-    uint32_t id = it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
 
     if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
         return std::get<T>(mPendingSpecializationConstants[id]);
@@ -472,11 +474,45 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
     if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                    prepareProgram(driver, variant, priority);
+                for (auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+                    if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+#ifndef NDEBUG
+                        FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                                "prepareProgram(variant found)",
+                                "name", getMaterial()->getName().c_str_safe(),
+                                "variantKey", static_cast<uint32_t>(variant.key),
+                                "specKey", static_cast<uint32_t>(specKey.key),
+                                "priority", static_cast<uint32_t>(priority));
+#endif
+                        prepareProgram(driver, variant, specKey, priority);
+#ifndef NDEBUG
+                    } else {
+                        FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                                "requested variant missing",
+                                "name", getMaterial()->getName().c_str_safe(),
+                                "variantKey", static_cast<uint32_t>(variant.key),
+                                "specKey", static_cast<uint32_t>(specKey.key),
+                                "priority", static_cast<uint32_t>(priority));
+#endif
+                    }
                 }
             }
         }
+#ifndef NDEBUG
+    } else {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "parallel compilation disabled",
+                            "name", getMaterial()->getName().c_str_safe(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "specKey", static_cast<uint32_t>(specKey.key),
+                            "priority", static_cast<uint32_t>(priority));
+                }
+            }
+        }
+#endif
     }
 
     if (callback) {
