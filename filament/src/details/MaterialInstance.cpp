@@ -475,7 +475,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
         for (auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 for (auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
-                    if (definition.hasVariant(variant, shaderModel, isStereoSupported)) {
+                    if (definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                         FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                                 "prepareProgram(variant found)",
@@ -502,13 +502,14 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+                for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
+                        DynamicSpecConstKey::getAllPossibleKeys()) {
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                            "parallel compilation disabled",
-                            "name", getMaterial()->getName().c_str_safe(),
-                            "variantKey", static_cast<uint32_t>(variant.key),
-                            "specKey", static_cast<uint32_t>(specKey.key),
-                            "priority", static_cast<uint32_t>(priority));
+                            "parallel compilation disabled", "name",
+                            getMaterial()->getName().c_str_safe(), "variantKey",
+                            static_cast<uint32_t>(variant.key), "specKey",
+                            static_cast<uint32_t>(specKey.key), "priority",
+                            static_cast<uint32_t>(priority));
                 }
             }
         }
