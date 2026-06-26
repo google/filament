@@ -1773,7 +1773,8 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
     baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
-    baseVariant.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
+    // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
+    baseVariant.setDynamicLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
@@ -1812,6 +1813,19 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     return variants;
 }
 
+FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
+        FView const* view, FMaterial const* material) noexcept {
+    // Will add more as we turn more variants into spec constants
+    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
+    DynamicSpecConstKey baseKey;
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
+    baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
+
+    keys.push_back(baseKey);
+
+    return keys;
+}
+
 void FEngine::compile(
         CompilerPriorityQueue const priority,
         FMaterial const* material,
@@ -1821,7 +1835,9 @@ void FEngine::compile(
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
     auto const variants = getMaterialCompileVariants(view, material, shadowReceiver, skinning);
-    const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
+    auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(view, material);
+    const_cast<FMaterial*>(material)->compile(priority, variants, dynamicSpecConstKeys, handler,
+            std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------
