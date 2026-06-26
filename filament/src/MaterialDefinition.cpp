@@ -68,9 +68,8 @@ void acquireProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     if constexpr (useCache) {
         for (auto variant: definition.getVariants()) {
             specialization.variant = variant;
-            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        definition.materialDomain, definition.isVariantLit);
+            for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
+                    definition.materialDomain, definition.isVariantLit)) {
                 if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
                             isStereoSupported))) {
                     specialization.specKey = specKey;
@@ -145,9 +144,8 @@ void releaseProgramsImpl(FEngine& engine, Slice<Handle<HwProgram>> programCache,
     };
 
     for (auto variant: definition.getVariants()) {
-        for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
-            specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                    definition.materialDomain, definition.isVariantLit);
+        for (auto const specKey: DynamicSpecConstKey::getValidKeys(variant,
+                definition.materialDomain, definition.isVariantLit)) {
             if (UTILS_LIKELY(definition.isValidProgram(variant, specKey, shaderModel,
                         isStereoSupported))) {
                 LocalProgramCache::CacheKey mappedKey =
@@ -854,7 +852,8 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 Handle<HwProgram> MaterialDefinition::prepareProgram(FEngine& engine, DriverApi& driver,
         MaterialParser const& parser, ProgramSpecialization const& specialization,
         CompilerPriorityQueue priorityQueue) const {
-    if (!isValidProgram(specialization.variant, specialization.specKey, engine.getShaderModel(), driver.isStereoSupported())) {
+    if (!isValidProgram(specialization.variant, specialization.specKey, engine.getShaderModel(),
+                driver.isStereoSupported())) {
         return {};
     }
     if (UTILS_LIKELY(engine.features.engine.enable_program_cache && parser == *mMaterialParser)) {
