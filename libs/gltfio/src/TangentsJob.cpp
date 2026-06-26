@@ -16,10 +16,10 @@
 
 #include "TangentsJob.h"
 
+#include <geometry/SurfaceOrientation.h>
+
 #include <cstdlib>
 #include <memory>
-
-#include <geometry/SurfaceOrientation.h>
 
 using namespace filament::gltfio;
 using namespace filament;

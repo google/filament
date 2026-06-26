@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <cgltf.h>
-
 #include <math/vec4.h>
+
+#include <cgltf.h>
 
 namespace filament {
 

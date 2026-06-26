@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
+#include "ArchiveCache.h"
+
 #include <gltfio/MaterialProvider.h>
 
 #include <filament/MaterialInstance.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
-#include <math/mat4.h>
-
 #include <utils/Log.h>
 
-#include "ArchiveCache.h"
+#include <math/mat4.h>
 
 using namespace filament;
 using namespace filament::math;

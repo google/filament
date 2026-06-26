@@ -17,8 +17,16 @@
 #ifndef GLTFIO_FFILAMENTASSET_H
 #define GLTFIO_FFILAMENTASSET_H
 
+#include "DependencyGraph.h"
+#include "downcast.h"
+#include "DracoCache.h"
+#include "FFilamentInstance.h"
+#include "Utility.h"
+
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/MaterialProvider.h>
 #include <gltfio/NodeManager.h>
+#include <gltfio/TextureProvider.h>
 #include <gltfio/TrsTransformManager.h>
 
 #include <filament/Engine.h>
@@ -30,23 +38,14 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
-#include <gltfio/MaterialProvider.h>
-#include <gltfio/TextureProvider.h>
-
-#include <math/mat4.h>
-
 #include <utils/CString.h>
 #include <utils/Entity.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 
-#include <cgltf.h>
+#include <math/mat4.h>
 
-#include "downcast.h"
-#include "DependencyGraph.h"
-#include "DracoCache.h"
-#include "FFilamentInstance.h"
-#include "Utility.h"
+#include <cgltf.h>
 
 #include <string>
 #include <unordered_map>
