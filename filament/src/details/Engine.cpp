@@ -1814,11 +1814,12 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
 }
 
 FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
-        FView const* view) noexcept {
+        FView const* view, FMaterial const* material) noexcept {
     // Will add more as we turn more variants into spec constants
     auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
     DynamicSpecConstKey baseKey;
-    baseKey.setDynamicLighting(view->hasDynamicLighting());
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
+    baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
 
     keys.push_back(baseKey);
 
@@ -1834,7 +1835,7 @@ void FEngine::compile(
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
     auto const variants = getMaterialCompileVariants(view, material, shadowReceiver, skinning);
-    auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(view);
+    auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(view, material);
     const_cast<FMaterial*>(material)->compile(priority, variants, dynamicSpecConstKeys, handler,
             std::move(callback));
 }

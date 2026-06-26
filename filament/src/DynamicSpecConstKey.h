@@ -17,6 +17,9 @@
 #define TNT_FILAMENT_DYNAMICSPECCONSTKEY_H
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
+
+#include <filament/MaterialEnums.h>
 
 #include <utils/Slice.h>
 
@@ -40,13 +43,6 @@ struct DynamicSpecConstKey {
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
 
     static utils::Slice<const DynamicSpecConstKey> getAllPossibleKeys() noexcept;
-
-    static constexpr DynamicSpecConstKey filter(DynamicSpecConstKey key, bool isLit) noexcept {
-        if (!isLit) {
-            key.key &= ~DYNAMIC_LIGHTING;
-        }
-        return key;
-    }
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -74,6 +70,33 @@ struct DynamicSpecConstKey {
 
     constexpr void setDynamicLighting(bool v) noexcept {
         key = (key & ~DYNAMIC_LIGHTING) | (v ? DYNAMIC_LIGHTING : type_t(0));
+    }
+
+    static constexpr DynamicSpecConstKey filterUserVariant(
+            DynamicSpecConstKey key, UserVariantFilterMask filterMask) noexcept {
+        if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
+            key.setDynamicLighting(false);
+        }
+        return key;
+    }
+
+    static constexpr bool canSupportDynamicLighting(Variant const variant,
+        MaterialDomain const materialDomain, bool const isLit) noexcept {
+        return materialDomain == MaterialDomain::SURFACE && isLit &&
+               !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
+    }
+
+    static constexpr bool isValidProgramSpecKey(Variant const variant, DynamicSpecConstKey const specKey,
+            MaterialDomain const materialDomain, bool const isLit) noexcept {
+        return !specKey.hasDynamicLighting() || canSupportDynamicLighting(variant, materialDomain, isLit);
+    }
+
+    static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey specKey, MaterialDomain const materialDomain, bool const isLit) noexcept {
+        if (!canSupportDynamicLighting(variant, materialDomain, isLit)) {
+            specKey.setDynamicLighting(false);
+        }
+        return specKey;
     }
 };
 

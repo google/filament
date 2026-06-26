@@ -452,7 +452,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
-    cmdDraw.info.dynamicSpecConstKey = DynamicSpecConstKey::filter(specKey, ma->isVariantLit());
+    cmdDraw.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
+            variant, specKey, ma->getMaterialDomain(), ma->isVariantLit());
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -568,7 +569,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     if constexpr (isDepthPass) {
         cmd.info.materialVariant = variant;
-        cmd.info.dynamicSpecConstKey = specKey;
+        cmd.info.dynamicSpecConstKey = DynamicSpecConstKey::filterProgramSpecKey(
+                variant, specKey, MaterialDomain::SURFACE, true);
         cmd.info.rasterState = {};
         cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isDepthMomentsVariant(variant);
         cmd.info.rasterState.depthWrite = true;
