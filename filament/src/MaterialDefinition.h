@@ -90,7 +90,10 @@ struct MaterialDefinition {
     utils::Slice<const Variant> getVariants() const noexcept;
     utils::Slice<const Variant> getDepthVariants() const noexcept;
 
-    bool hasVariant(Variant const variant,
+    // Checks whether a given combination of Variant and DynamicSpecConstKey produces a valid and
+    // compiled shader program for this material under the specified shader model and platform
+    // capabilities.
+    bool isValidProgram(Variant const variant, DynamicSpecConstKey const specKey,
             backend::ShaderModel const sm, bool isStereoSupported) const noexcept;
 
     backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
