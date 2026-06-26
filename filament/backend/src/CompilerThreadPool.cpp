@@ -85,6 +85,8 @@ void CompilerThreadPool::init(uint32_t const threadCount,
 
                 // execute the job without holding any locks
                 lock.unlock();
+                FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "CompilerThreadPool::Job");
                 job();
             }
 

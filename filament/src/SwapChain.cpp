@@ -54,4 +54,15 @@ bool SwapChain::isProtectedContentSupported(Engine& engine) noexcept {
     return FSwapChain::isProtectedContentSupported(downcast(engine));
 }
 
+utils::tribool SwapChain::isFrameRateChangeSupported() const noexcept {
+    return downcast(this)->isFrameRateChangeSupported();
+}
+
+
+void SwapChain::setFrameRate(float const frameRate, FrameRateCompatibility const compatibility,
+        ChangeFrameRateStrategy const strategy) noexcept {
+    downcast(this)->setFrameRate(frameRate, compatibility, strategy);
+}
+
 } // namespace filament
+

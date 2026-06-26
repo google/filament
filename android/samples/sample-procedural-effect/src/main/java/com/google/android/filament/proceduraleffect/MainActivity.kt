@@ -20,7 +20,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.Choreographer
+import com.google.android.filament.android.ChoreographerHelper
 import android.view.Surface
 import android.view.SurfaceView
 import com.google.android.filament.*
@@ -41,7 +41,6 @@ class MainActivity : Activity() {
     private lateinit var surfaceView: SurfaceView
     private lateinit var uiHelper: UiHelper
     private lateinit var displayHelper: DisplayHelper
-    private lateinit var choreographer: Choreographer
 
     private lateinit var engine: Engine
     private lateinit var renderer: Renderer
@@ -62,8 +61,6 @@ class MainActivity : Activity() {
 
         surfaceView = SurfaceView(this)
         setContentView(surfaceView)
-
-        choreographer = Choreographer.getInstance()
         displayHelper = DisplayHelper(this)
 
         setupSurfaceView()
@@ -89,6 +86,7 @@ class MainActivity : Activity() {
             .build()
 
         renderer = engine.createRenderer()
+        frameScheduler.setRenderer(renderer)
         scene = engine.createScene()
         view = engine.createView()
         camera = engine.createCamera(engine.entityManager.create())
@@ -147,18 +145,18 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        choreographer.postFrameCallback(frameScheduler)
+        frameScheduler.post()
     }
 
     override fun onPause() {
         super.onPause()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         uiHelper.detach()
 
         engine.destroyEntity(renderable)
@@ -177,11 +175,10 @@ class MainActivity : Activity() {
         engine.destroy()
     }
 
-    inner class FrameCallback : Choreographer.FrameCallback {
+    inner class FrameCallback : ChoreographerHelper() {
         private var startTimeNanos: Long = 0L
 
-        override fun doFrame(frameTimeNanos: Long) {
-            choreographer.postFrameCallback(this)
+        override fun onFrame(frameTimeNanos: Long) {
 
             if (startTimeNanos == 0L) {
                 startTimeNanos = frameTimeNanos

@@ -57,7 +57,8 @@ enum class VertexShaderType : uint8_t {
 enum class FragmentShaderType : uint8_t {
     White,
     SolidColored,
-    Textured
+    Textured,
+    TexturedLod,
 };
 
 #endif //TNT_SHAREDSHADERSCONSTANTS_H

@@ -16,10 +16,12 @@
 
 #include <utils/AsyncJobQueue.h>
 #include <utils/compiler.h>
+#include <utils/CountDownLatch.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -118,6 +120,37 @@ void AsyncJobQueue::drainAndExit() {
     mCondition.notify_one();
     if (mThread.joinable()) {
         mThread.join();
+    }
+#endif
+}
+
+void AsyncJobQueue::drain() {
+#if !defined(__EMSCRIPTEN__)
+    CountDownLatch latch(1);
+    bool pushed = false;
+    {
+        LockGuard const lock(mLock);
+
+        // If the service thread is already asked to exit, we shouldn't push new jobs or wait,
+        // as doing so will cause a deadlock.
+        if (!mExitRequested) {
+            // We use a shared_ptr's custom deleter to guarantee the latch is signaled EXACTLY once.
+            // This elegantly handles edge cases:
+            // 1. cancelAll(): If cancelAll() is called, the queue is cleared and the job is destroyed
+            //    without being executed. The shared_ptr drops to 0 refs and signals the latch.
+            // 2. Normal execution: The worker thread executes the empty lambda, then destroys the job.
+            //    The shared_ptr drops to 0 refs and signals the latch.
+            std::shared_ptr<CountDownLatch> sp(&latch, [](CountDownLatch* l) {
+                l->latch();
+            });
+            mQueue.push_back([sp]() {});
+            pushed = true;
+        }
+    }
+
+    if (pushed) {
+        mCondition.notify_one();
+        latch.await();
     }
 #endif
 }

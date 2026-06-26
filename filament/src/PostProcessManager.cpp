@@ -249,14 +249,18 @@ void PostProcessManager::bindPerRenderableDescriptorSet(DriverApi& driver) const
 FMaterialInstance* PostProcessManager::getMaterialInstance(backend::DriverApi& driver,
         FMaterial const* ma, Variant::type_t variant) const {
     FMaterialInstance* mi = mMaterialInstanceManager.getMaterialInstance(ma);
-    mi->prepareProgram(driver, Variant{ variant }, backend::CompilerPriorityQueue::CRITICAL);
+    // TODO: Update this part when we have spec consts which affect post processing effects.
+    mi->prepareProgram(driver, Variant{ variant }, DynamicSpecConstKey{ 0 },
+            backend::CompilerPriorityQueue::CRITICAL);
     return mi;
 }
 
 FMaterialInstance* PostProcessManager::getMaterialInstanceWithTag(backend::DriverApi& driver,
         FMaterial const* ma, uint32_t tag, Variant::type_t variant) const {
     FMaterialInstance* mi = mMaterialInstanceManager.getMaterialInstance(ma, tag);
-    mi->prepareProgram(driver, Variant { variant }, backend::CompilerPriorityQueue::CRITICAL);
+    // TODO: Update this part when we have spec consts which affect post processing effects.
+    mi->prepareProgram(driver, Variant{ variant }, DynamicSpecConstKey{ 0 },
+            backend::CompilerPriorityQueue::CRITICAL);
     return mi;
 }
 
@@ -482,7 +486,8 @@ PipelineState PostProcessManager::getPipelineState(
         FMaterialInstance const* const mi, Variant::type_t const variant) const noexcept {
     FMaterial const* const ma = mi->getMaterial();
     return {
-            .program = mi->getProgram(Variant{ variant }),
+            // TODO: Update this part when we have spec consts which affect post processing effects.
+            .program = mi->getProgram(Variant{ variant }, DynamicSpecConstKey{0}),
             .vertexBufferInfo = mFullScreenQuadVbih,
             .pipelineLayout = {
                     .setLayout = {
@@ -1898,7 +1903,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = getMaterialInstance(driver, ma);
+                FMaterialInstance* const mi = getMaterialInstance(driver, ma, variant);
 
                 auto const pipeline = getPipelineState(mi, variant);
 
@@ -1909,7 +1914,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto inColor = driver.createTextureView(inOutColor, level, 1);
                     auto inCoc = driver.createTextureView(inOutCoc, level, 1);
                     // FIXME: is this necessary?
-                    FMaterialInstance* const mi = getMaterialInstance(driver, ma);
+                    FMaterialInstance* const mi = getMaterialInstance(driver, ma, variant);
 
                     mi->setParameter("color", inColor, SamplerParams{
                             .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
@@ -3094,7 +3099,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
                 FMaterial const* const ma = material.getMaterial(mEngine);
 
-                FMaterialInstance* mi = getMaterialInstance(driver, ma);
+                FMaterialInstance* mi = getMaterialInstance(driver, ma, variant);
                 mi->setParameter("color",  color, SamplerParams{});  // nearest
                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
                 mi->setParameter("history", history, SamplerParams{

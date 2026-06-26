@@ -16,11 +16,12 @@
 
 #include "AssetLoaderExtended.h"
 
+#include "TangentsJobExtended.h"
+
 #include "../DracoCache.h"
 #include "../FFilamentAsset.h"
 #include "../GltfEnums.h"
 #include "../Utility.h"
-#include "TangentsJobExtended.h"
 
 #include <filament/BufferObject.h>
 
@@ -530,7 +531,9 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
         if (!mCgltfBuffersLoaded) {
             return false;
         }
-        utility::decodeMeshoptCompression(gltf);
+        if (!utility::decodeMeshoptCompression(gltf)) {
+            return false;
+        }
     }
 
     utility::decodeDracoMeshes(gltf, prim, input->dracoCache);

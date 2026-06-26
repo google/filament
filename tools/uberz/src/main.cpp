@@ -189,7 +189,17 @@ int main(int argc, char* argv[]) {
             PANIC_POSTCONDITION("Decompression error.");
         }
         uint64_t* basePointer = (uint64_t*) utils::aligned_alloc(decompSize, 8);
-        ZSTD_decompress(basePointer, decompSize, archiveData, archiveSize);
+        if (UTILS_UNLIKELY(basePointer == nullptr)) {
+            cerr << "Failed to allocate decompression buffer" << endl;
+            exit(1);
+        }
+        const size_t decompressed = ZSTD_decompress(basePointer, decompSize, archiveData,
+                archiveSize);
+        if (UTILS_UNLIKELY(ZSTD_isError(decompressed))) {
+            utils::aligned_free(basePointer);
+            cerr << "Decompression failed: " << ZSTD_getErrorName(decompressed) << endl;
+            exit(1);
+        }
         existingArchive = (ReadableArchive*) basePointer;
         if (!convertOffsetsToPointers(existingArchive, decompSize)) {
             cerr << "Failed to parse existing uberz archive" << endl;

@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
-#include <exception>
+#include "common/CallbackUtils.h"
+#include "common/JniUtils.h"
 
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
+#include <filament/Material.h>
 #include <filament/MorphTargetBuffer.h>
+#include <filament/View.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
 #include <utils/tribool.h>
 
-#include <filament/Material.h>
-#include <filament/View.h>
+#include <jni.h>
 
-#include "common/CallbackUtils.h"
-#include "common/JniUtils.h"
+#include <exception>
 
 using namespace filament;
 using namespace utils;
@@ -499,8 +498,8 @@ Java_com_google_android_filament_Engine_nCompile(JNIEnv *env, jclass,
             engine->compile(
                     (backend::CompilerPriorityQueue) priority,
                     material, view,
-                    (utils::tribool::value_t) shadowReceiver,
-                    (utils::tribool::value_t) skinning,
+                    (utils::tribool::Value) shadowReceiver,
+                    (utils::tribool::Value) skinning,
                     jniCallback->getHandler(), [jniCallback](Material*){
                         JniCallback::postToJavaAndDestroy(jniCallback);
                     });

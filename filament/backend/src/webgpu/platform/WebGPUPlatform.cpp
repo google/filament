@@ -239,8 +239,8 @@ void assertLimitsAreExpressedInRequirementsStruct() {
     return false;
 }
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printInstanceDetails(wgpu::Instance const& instance) {
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
     instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures);
     FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
@@ -253,8 +253,8 @@ void printInstanceDetails(wgpu::Instance const& instance) {
                     FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
                 });
     }
-}
 #endif
+}
 
 //either returns a valid instance or panics
 [[nodiscard]] wgpu::Instance createInstance() {
@@ -292,14 +292,12 @@ void printInstanceDetails(wgpu::Instance const& instance) {
 
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create WebGPU instance.";
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printInstanceDetails(instance);
-#endif
     return instance;
 }
 
-#ifndef NDEBUG
 void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> value) {
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     static constexpr std::string_view indent = "  ";
     bool undefined = true;
     if (std::holds_alternative<uint32_t>(value)) {
@@ -316,6 +314,7 @@ void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> va
     if (undefined) {
         FWGPU_LOGI << indent << name.data() << ": UNDEFINED";
     }
+#endif
 }
 
 void printLimits(wgpu::Limits const& limits) {
@@ -353,7 +352,6 @@ void printLimits(wgpu::Limits const& limits) {
     printLimit("maxComputeWorkgroupSizeZ", limits.maxComputeWorkgroupSizeZ);
     printLimit("maxComputeWorkgroupsPerDimension", limits.maxComputeWorkgroupsPerDimension);
 }
-#endif
 
 struct AdapterDetails final {
     AdapterDetails()
@@ -403,7 +401,7 @@ void printAdapterDetails(AdapterDetails const& details) {
     wgpu::SupportedFeatures supportedFeatures{};
     details.adapter.GetFeatures(&supportedFeatures);
 
-#ifndef NDEBUG
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount
                << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
@@ -418,10 +416,8 @@ void printAdapterDetails(AdapterDetails const& details) {
     if (!details.adapter.GetLimits(&supportedLimits)) {
         FWGPU_LOGW << "Failed to get WebGPU adapter supported limits. Request limits:";
     }
-#ifndef NDEBUG
     FWGPU_LOGI << "WebGPU adapter supported limits:";
     printLimits(supportedLimits);
-#endif
 }
 
 struct AdapterDetailsHash final {

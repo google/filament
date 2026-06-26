@@ -20,8 +20,9 @@
 #include "../FFilamentAsset.h"
 #include "../Utility.h"
 
-#include <backend/BufferDescriptor.h>
 #include <gltfio/AssetLoader.h>
+
+#include <backend/BufferDescriptor.h>
 
 #include <cgltf.h>
 

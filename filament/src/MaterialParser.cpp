@@ -850,6 +850,15 @@ bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
         return false;
     }
 
+    // FixedCapacityVector::size_type is 32 bits, so a count of 2^32 or more is silently
+    // truncated by reserve()/resize() while the loop below iterates the full 64-bit count,
+    // which would write past the allocation. A count larger than the bytes remaining in the
+    // chunk cannot be valid either. Reject both before sizing the container.
+    if (numConstants > std::numeric_limits<decltype(materialConstants->size())>::max() ||
+            unflattener.willOverflow(numConstants)) {
+        return false;
+    }
+
     materialConstants->reserve(numConstants);
     materialConstants->resize(numConstants);
 
@@ -890,6 +899,15 @@ bool ChunkMaterialPushConstants::unflatten(Unflattener& unflattener,
     // Read number of constants.
     uint64_t numConstants = 0;
     if (!unflattener.read(&numConstants)) {
+        return false;
+    }
+
+    // FixedCapacityVector::size_type is 32 bits, so a count of 2^32 or more is silently
+    // truncated by reserve()/resize() while the loop below iterates the full 64-bit count,
+    // which would write past the allocation. A count larger than the bytes remaining in the
+    // chunk cannot be valid either. Reject both before sizing the container.
+    if (numConstants > std::numeric_limits<decltype(materialPushConstants->size())>::max() ||
+            unflattener.willOverflow(numConstants)) {
         return false;
     }
 

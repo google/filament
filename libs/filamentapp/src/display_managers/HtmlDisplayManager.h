@@ -21,13 +21,13 @@
 
 #include <filamentapp/Config.h>
 
+#include <utils/CString.h>
 #include <utils/Mutex.h>
 
 #include <CivetServer.h>
 
 #include <memory>
 #include <queue>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -55,17 +55,19 @@ public:
     void pollEvents(std::vector<AppEvent>& events) override;
 
     uint32_t getMouseState(int* x, int* y) const override;
+
     bool isWindowFocused(FilamentApp::Window::Handle window) const override { return true; }
-    bool isVsyncSupported() const override { return false; }
 
     double getTime() const override;
 
     void onFrameFinished(FilamentApp::Window::Handle window, filament::Engine* engine,
             filament::Renderer* renderer) override;
 
+    void startRendering(std::function<bool()> doFrame) override;
+
 private:
     struct WindowInfo {
-        std::string title;
+        utils::CString title;
         uint32_t width;
         uint32_t height;
     };

@@ -16,13 +16,9 @@
 
 #include "GLSLPostProcessor.h"
 
-#include <GlslangToSpv.h>
-#include <spirv-tools/libspirv.hpp>
+#include "MetalArgumentBuffer.h"
+#include "SpirvFixup.h"
 
-#include <spirv_glsl.hpp>
-#include <spirv_msl.hpp>
-
-#include "private/filament/DescriptorSets.h"
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
 
@@ -30,8 +26,7 @@
 #include "shaders/MaterialInfo.h"
 #include "shaders/SibGenerator.h"
 
-#include "MetalArgumentBuffer.h"
-#include "SpirvFixup.h"
+#include <private/filament/DescriptorSets.h>
 
 #include <filament/MaterialEnums.h>
 
@@ -39,6 +34,14 @@
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
+
+#include <GlslangToSpv.h>
+#include <spirv-tools/libspirv.hpp>
+#include <spirv_glsl.hpp>
+#include <spirv_msl.hpp>
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+#include <tint/tint.h>
+#endif
 
 #include <algorithm>
 #include <optional>
@@ -51,10 +54,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-
-#ifdef FILAMENT_SUPPORTS_WEBGPU
-#include <tint/tint.h>
-#endif
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -581,8 +580,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 
     if (tintReadResult != tintSuccess) {
         //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
-#ifndef FILAMENT_WEBGPU_IGNORE_TNT_READ_ERRORS
-        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
+        slog.e << "Tint Reader Error ---- : " << tintReadResult.Failure().reason << io::endl;
         spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
         spv_text text = nullptr;
         spv_diagnostic diagnostic = nullptr;
@@ -596,9 +594,9 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
                 io::endl;
         spvTextDestroy(text);
-        slog.e << "Tint Reader Error: " << tintReadResult.Failure().reason << io::endl;
+
+        spvContextDestroy(context);
         return false;
-#endif
     }
 
     tint::wgsl::writer::Options writerOptions;
