@@ -39,6 +39,7 @@
 #include <meshoptimizer.h>
 
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -392,6 +393,67 @@ TEST_F(glTFIOTest, MeshoptAllocationFailureRejectsGracefully) {
     EXPECT_FALSE(resourceLoader.loadResources(asset));
 
     assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// A mesh may carry morph-target names (mesh.extras.targetNames) whose count is parsed independently
+// of its morph-target count. When the mesh has no primitives the morph-target count is zero, so the
+// two counts can disagree. createRenderable() must size its name copy by the morph-target count and
+// not by the (independent) name count; otherwise it writes past the names storage. This loads such
+// a mesh and requires that it parses without an out-of-bounds access (validated under ASan) and
+// retains no more morph-target names than morph targets.
+TEST_F(glTFIOTest, MalformedMeshTargetNamesWithoutPrimitives) {
+    static char const* const kGltf =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"extras":{"targetNames":["t0","t1","t2","t3","t4","t5","t6","t7"]}}]})";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+
+    EXPECT_NE(asset, nullptr);
+    if (asset != nullptr) {
+        Entity const* renderables = asset->getRenderableEntities();
+        for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; ++i) {
+            EXPECT_EQ(asset->getMorphTargetCountAt(renderables[i]), 0u);
+        }
+        assetLoader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&assetLoader);
+}
+
+// createPrimitives() caps a primitive's morph-target count at MAX_MORPH_TARGETS and sizes its
+// slotIndices vector to that cap; createRenderable() must iterate the morph-slot loop over the same
+// bound, not the raw (uncapped) morph-target count, or it indexes slotIndices out of range. This
+// loads a mesh with more morph targets than the cap and requires it parses without an out-of-bounds
+// access (validated under ASan).
+TEST_F(glTFIOTest, MorphTargetsExceedingMaxDoNotOverflow) {
+    std::string targets;
+    for (int i = 0; i < 300; ++i) {
+        targets += (i == 0) ? "{\"POSITION\":1}" : ",{\"POSITION\":1}";
+    }
+    std::string const gltf =
+            "{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],"
+            "\"nodes\":[{\"mesh\":0}],"
+            "\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0},\"mode\":4,"
+            "\"targets\":[" + targets + "]}]}],"
+            "\"accessors\":["
+            "{\"bufferView\":0,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\","
+            "\"min\":[0,0,0],\"max\":[1,1,1]},"
+            "{\"bufferView\":1,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\"}],"
+            "\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":36},"
+            "{\"buffer\":0,\"byteOffset\":36,\"byteLength\":36}],"
+            "\"buffers\":[{\"byteLength\":72}]}";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltf.data()), uint32_t(gltf.size()));
+
+    EXPECT_NE(asset, nullptr);
+    if (asset != nullptr) {
+        assetLoader->destroyAsset(asset);
+    }
     AssetLoader::destroy(&assetLoader);
 }
 
