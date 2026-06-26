@@ -167,7 +167,6 @@ set(SRCS
         src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
-        src/DynamicSpecConstKey.cpp
 )
 
 set(PRIVATE_HDRS
