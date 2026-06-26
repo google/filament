@@ -16,9 +16,10 @@
 
 #include "MikktspaceImpl.h"
 
+#include <utils/Panic.h>
+
 #include <math/mat3.h>
 #include <math/norm.h>
-#include <utils/Panic.h>
 
 #include <meshoptimizer.h>
 #include <mikktspace/mikktspace.h>

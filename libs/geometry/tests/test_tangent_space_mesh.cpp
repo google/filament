@@ -16,12 +16,12 @@
 
 #include <geometry/TangentSpaceMesh.h>
 
+#include <utils/Log.h>
+
 #include <math/quat.h>
 #include <math/vec3.h>
 
 #include <gtest/gtest.h>
-
-#include <utils/Log.h>
 
 #include <vector>
 
