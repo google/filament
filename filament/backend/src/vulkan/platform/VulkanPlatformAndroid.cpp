@@ -35,6 +35,8 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <algorithm>
+#include <cmath>
 #include <new>
 #include <utility>
 
@@ -275,6 +277,11 @@ bool VulkanPlatformAndroid::copyExternalImageToMemoryYUV(
     return false;
 }
 
+// Define fallback preprocessor guards to avoid compilation errors on older Android SDKs.
+#ifndef AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE
+#define AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE 0x4000000ULL
+#endif
+
 VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImageMetadata(
     ExternalImageHandleRef image) const {
     if (__builtin_available(android 26, *)) {
@@ -290,6 +297,17 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         metadata.layers = bufferDesc.layers;
         metadata.samples = VK_SAMPLE_COUNT_1_BIT;
         metadata.isStagingRequired = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
+
+        // Calculate mip levels. Software-decoded (staging) images are always single-level.
+        // Use ilogbf (exact, exponent-based) instead of floor(log2(...)) to avoid an
+        // off-by-one for power-of-two dimensions. Mirrors FTexture::maxLevelCount().
+        if (!metadata.isStagingRequired &&
+                (bufferDesc.usage & AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE)) {
+            uint32_t const maxDimension = std::max(bufferDesc.width, bufferDesc.height);
+            metadata.mipLevels = std::max(1, std::ilogbf(float(maxDimension)) + 1);
+        } else {
+            metadata.mipLevels = 1;
+        }
 
         // Get the VkFormat directly from the driver.
         VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
@@ -440,7 +458,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
                 metadata.height,
                 1u,
             },
-            .mipLevels = 1,
+            .mipLevels = metadata.mipLevels,
             .arrayLayers = metadata.layers,
             .samples = metadata.samples,
             .usage = metadata.usage,
