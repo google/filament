@@ -15,11 +15,11 @@
  */
 
 #include "UibGenerator.h"
-#include "private/filament/UibStructs.h"
 
-#include "private/filament/BufferInterfaceBlock.h"
-
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
@@ -136,7 +136,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "aoBentNormals",          0, Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
-            // Dynamic Lighting [variant: DYN]
+            // Dynamic Lighting (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "zParams",                0, Type::FLOAT4                  },
             { "fParams",                0, Type::UINT3                   },

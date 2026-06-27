@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_RENDERPASS_H
 
 #include "Allocators.h"
+#include "DynamicSpecConstKey.h"
 #include "SharedHandle.h"
 
 #include "details/Camera.h"
@@ -269,7 +270,9 @@ public:
         bool hasHybridInstancing : 1;          //              1 bit
         bool isIndexed : 1;                    //              1 bit
 
-        uint32_t rfu[2];                       // 8 bytes
+        DynamicSpecConstKey dynamicSpecConstKey;            // 2 bytes
+        uint16_t rfu_padding;                               // 2 bytes
+        uint32_t rfu[1];                                    // 4 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 
@@ -428,6 +431,7 @@ private:
             RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
             Variant variant,
+            DynamicSpecConstKey specKey,
             math::float3 cameraPosition,
             math::float3 cameraForwardVector) const noexcept;
 
@@ -454,20 +458,19 @@ private:
             "Size of Commands jobs must be multiple of a cache-line size");
 
     static inline void generateCommands(CommandTypeFlags commandTypeFlags, Command* commands,
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
-            Variant variant, RenderFlags renderFlags,
-            FScene::VisibleMaskType visibilityMask,
-            math::float3 cameraPosition, math::float3 cameraForward,
-            uint8_t instancedStereoEyeCount) noexcept;
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, Variant variant,
+            DynamicSpecConstKey specKey, RenderFlags renderFlags,
+            FScene::VisibleMaskType visibilityMask, math::float3 cameraPosition,
+            math::float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept;
 
     template<CommandTypeFlags commandTypeFlags>
-    static Command* generateCommandsImpl(CommandTypeFlags extraFlags,
-            Command* curr, FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
-            Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-            math::float3 cameraPosition, math::float3 cameraForward,
-            uint8_t instancedStereoEyeCount) noexcept;
+    static Command* generateCommandsImpl(CommandTypeFlags extraFlags, Command* curr,
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, Variant variant,
+            DynamicSpecConstKey specKey, RenderFlags renderFlags,
+            FScene::VisibleMaskType visibilityMask, math::float3 cameraPosition,
+            math::float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept;
 
-    static void setupColorCommand(Command& cmdDraw, Variant variant,
+    static void setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey specKey,
             FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp) noexcept;
 
     static void updateSummedPrimitiveCounts(
@@ -500,6 +503,7 @@ class RenderPassBuilder {
     math::float3 mCameraForwardVector{};
     RenderPass::RenderFlags mFlags{};
     Variant mVariant{};
+    DynamicSpecConstKey mDynamicSpecConstKey{};
     ColorPassDescriptorSet const* mColorPassDescriptorSet = nullptr;
     FScene::VisibleMaskType mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
 
@@ -560,7 +564,12 @@ public:
         return *this;
     }
 
-    // variant to use
+    RenderPassBuilder& dynamicSpecConstKey(DynamicSpecConstKey const key) noexcept {
+        mDynamicSpecConstKey = key;
+        return *this;
+    }
+
+    // colorPassDescriptorSet to use
     RenderPassBuilder& colorPassDescriptorSet(ColorPassDescriptorSet const* colorPassDescriptorSet) noexcept {
         mColorPassDescriptorSet = colorPassDescriptorSet;
         return *this;
