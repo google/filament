@@ -685,24 +685,25 @@ public:
 
 
     /**
-     * Returns the time in second of the last call to beginFrame(). This value is constant for all
-     * views rendered during a frame. The epoch is set with resetUserTime().
+     * Returns the material time in seconds evaluated for the current frame. This value is constant for all
+     * views rendered during a frame. When available, this time is projected forward to the predicted
+     * presentation time on the display; otherwise, it evaluates at the vsync time of beginFrame().
+     * The epoch is set with setMaterialTimeEpoch().
      *
      * In materials, this value can be queried using `vec4 getUserTime()`. The value returned
      * is a highp vec4 encoded as follows:
      *
-     *      time.x = (float)Renderer.getUserTime();
-     *      time.y = Renderer.getUserTime() - time.x;
+     *      time.x = (float)Renderer.getMaterialTime();
+     *      time.y = Renderer.getMaterialTime() - time.x;
      *
      * It follows that the following invariants are true:
      *
-     *      (double)time.x + (double)time.y == Renderer.getUserTime()
-     *      time.x == (float)Renderer.getUserTime()
+     *      (double)time.x + (double)time.y == Renderer.getMaterialTime()
+     *      time.x == (float)Renderer.getMaterialTime()
      *
-     * This encoding allows the shader code to perform high precision (i.e. double) time
-     * calculations when needed despite the lack of double precision in the shader, for e.g.:
-     *
-     *      To compute (double)time * vertex in the material, use the following construct:
+     * This "float-float" encoding allows the shader code to perform high precision (i.e. double) time
+     * calculations when needed despite the lack of double precision in the shader (e.g. using Dekker's
+     * algorithms). For example, to compute (double)time * vertex in the material, use the following construct:
      *
      *              vec3 result = time.x * vertex + time.y * vertex;
      *
@@ -717,29 +718,62 @@ public:
      *         77h      |   1/60s
      *
      *
-     * In other words, it only possible to get microsecond accuracy for about 16s or millisecond
+     * In other words, it is only possible to get microsecond accuracy for about 16s or millisecond
      * accuracy for just under 5h.
      *
-     * This problem can be mitigated by calling resetUserTime(), or using high precision time as
+     * This problem can be mitigated by calling setMaterialTimeEpoch(), or using high precision time as
      * described above.
      *
-     * @return The time is seconds since resetUserTime() was last called.
+     * @return The time in seconds since setMaterialTimeEpoch() was last called.
      *
      * @see
-     * resetUserTime()
+     * setMaterialTimeEpoch()
      */
-    double getUserTime() const;
+    double getMaterialTime() const;
 
     /**
-     * Sets the user time epoch to now, i.e. resets the user time to zero.
+     * Backward compatibility helper for getUserTime().
+     * @deprecated Use getMaterialTime() instead.
+     */
+    inline double getUserTime() const {
+        return getMaterialTime();
+    }
+
+    /**
+     * Sets the material time epoch to the specified steady clock timestamp in nanoseconds, i.e. resets
+     * the material time to zero relative to that time.
      *
-     * Use this method used to keep the precision of time high in materials, in practice it should
+     * Use this method to keep the precision of time high in materials, in practice it should
      * be called at least when the application is paused, e.g. Activity.onPause() in Android.
      *
+     * @param monotonic_clock_ns  the steady clock timestamp in nanoseconds to set as the material time epoch.
+     *
      * @see
-     * getUserTime()
+     * getMaterialTime()
      */
-    void resetUserTime();
+    void setMaterialTimeEpoch(int64_t monotonic_clock_ns);
+
+    /**
+     * Sets the material time epoch to the specified steady clock time point, i.e. resets
+     * the material time to zero relative to that time point.
+     *
+     * Use this method to keep the precision of time high in materials, in practice it should
+     * be called at least when the application is paused, e.g. Activity.onPause() in Android.
+     *
+     * @param monotonic_clock  the time point on the steady clock to set as the material time epoch.
+     *
+     * @see
+     * getMaterialTime()
+     */
+    void setMaterialTimeEpoch(std::chrono::steady_clock::time_point monotonic_clock);
+
+    /**
+     * Backward compatibility helper for resetUserTime().
+     * @deprecated Use setMaterialTimeEpoch() instead.
+     */
+    inline void resetUserTime() {
+        setMaterialTimeEpoch(std::chrono::steady_clock::now());
+    }
 
 
     /**
@@ -753,6 +787,27 @@ public:
      * @return remaining frames to be skipped
      */
     size_t getFrameToSkipCount() const noexcept;
+
+    /**
+     * Queries whether the GPU execution has fallen behind the CPU rendering execution.
+     *
+     * This is highly useful when managing the application's presentation loop manually (e.g.
+     * with the `FramePacer`), allowing the client to proactively detect and react to a latency build-up
+     * before continuing with frame execution.
+     *
+     * @return true if the GPU pipeline is delayed, false if ready.
+     */
+    bool hasGpuFallenBehind() const noexcept;
+
+    /**
+     * Stalls the render thread (GPU submission pipeline) for the given duration in nanoseconds.
+     *
+     * This is useful for simulating long rendering frames (e.g. testing buffer stuffing recovery)
+     * without blocking the application's main event loop thread.
+     *
+     * @param duration_ns  the duration to pause the render thread in nanoseconds.
+     */
+    void pauseRenderThread(uint64_t duration_ns);
 
 protected:
     // prevent heap allocation
