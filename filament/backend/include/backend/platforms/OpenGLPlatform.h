@@ -423,6 +423,17 @@ public:
     /** @}*/
 
     /**
+     * Returns the number of mip levels backing an external image, or 1 if it is
+     * single-level / not applicable. Called by the driver before it constructs the
+     * backing texture, so the GLTexture can be created with the correct level count.
+     * The default implementation returns 1.
+     *
+     * @param externalImage The platform-specific external image.
+     * @return the number of mip levels in the external image (>= 1).
+     */
+    virtual uint8_t getExternalImageMipLevels(ExternalImageHandleRef externalImage) const noexcept;
+
+    /**
      * The method allows platforms to convert a user-supplied external image object into a new type
      * (e.g. HardwareBuffer => EGLImage). The default implementation returns source.
      * @param source Image to transform.
