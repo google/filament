@@ -292,12 +292,10 @@ bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_GLTFIO);
 
-#ifndef NDEBUG
     if (cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {
         slog.e << "Failed cgltf validation." << io::endl;
         return false;
     }
-#endif
     return true;
 }
 

@@ -26,120 +26,90 @@
 #include <stb_image_write.h>
 
 #include <chrono>
+#include <cstring>
 #include <thread>
 
 namespace filament::app {
 
+namespace {
+static constexpr uint8_t EVENT_QUIT = 0;
+static constexpr uint8_t EVENT_KEYDOWN = 1;
+static constexpr uint8_t EVENT_KEYUP = 2;
+static constexpr uint8_t EVENT_MOUSE_WHEEL = 3;
+static constexpr uint8_t EVENT_MOUSE_BUTTON_DOWN = 4;
+static constexpr uint8_t EVENT_MOUSE_BUTTON_UP = 5;
+static constexpr uint8_t EVENT_MOUSE_MOVE = 6;
+static constexpr uint8_t EVENT_RESIZE = 7;
+} // anonymous namespace
+
 using namespace utils;
+
+// If set to 0, this serves HTML from a resgen resource. Use 1 only during local development, which
+// serves files directly from the source code tree.
+#define SERVE_FROM_SOURCE_TREE 0
+
+#if SERVE_FROM_SOURCE_TREE
+namespace {
+utils::CString const BASE_URL("libs/filamentapp/src/display_managers/web");
+} // namespace
+#else
+#include "generated/web_resources/filamentapp_web_resources.h"
+#include <unordered_map>
+namespace {
+struct Asset {
+    std::string_view mime;
+    std::string_view data;
+};
+std::unordered_map<std::string_view, Asset> ASSET_MAP;
+void initAssetMap() {
+    if (!ASSET_MAP.empty()) return;
+    ASSET_MAP["/index.html"] = {
+        .mime = "text/html",
+        .data = { (char const*) FILAMENTAPP_WEB_RESOURCES_INDEX_DATA },
+    };
+    ASSET_MAP["/style.css"] = {
+        .mime = "text/css",
+        .data = { (char const*) FILAMENTAPP_WEB_RESOURCES_STYLE_DATA },
+    };
+    ASSET_MAP["/app.js"] = {
+        .mime = "text/javascript",
+        .data = { (char const*) FILAMENTAPP_WEB_RESOURCES_APP_DATA },
+    };
+}
+} // namespace
+#endif
 
 class WebHandler : public CivetHandler {
 public:
     bool handleGet(CivetServer* server, struct mg_connection* conn) override {
-        const char* html = R"(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Filament Web View</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        canvas { display: block; width: 100vw; height: 100vh; object-fit: contain; }
-        img { display: block; width: 100vw; height: 100vh; object-fit: contain; }
-    </style>
-</head>
-<body>
-    <img id="view" />
-    <script>
-        const view = document.getElementById('view');
-        const ws = new WebSocket('ws://' + location.host + '/ws');
-        ws.binaryType = 'arraybuffer';
+        const struct mg_request_info* req_info = mg_get_request_info(conn);
+        utils::CString uri(req_info->local_uri);
+        if (uri == "/") {
+            uri = utils::CString("/index.html");
+        }
 
-        ws.onmessage = (event) => {
-            const blob = new Blob([event.data], { type: 'image/png' });
-            if (view.src) URL.revokeObjectURL(view.src);
-            view.src = URL.createObjectURL(blob);
-        };
-
-        window.addEventListener('mousedown', (e) => {
-            const buffer = new ArrayBuffer(9);
-            const view = new DataView(buffer);
-            view.setUint8(0, 4); // MOUSE_BUTTON_DOWN
-            view.setUint8(1, e.button + 1);
-            view.setInt32(2, e.clientX, true);
-            view.setInt32(6, e.clientY, true);
-            ws.send(buffer);
-        });
-
-        window.addEventListener('mouseup', (e) => {
-            const buffer = new ArrayBuffer(9);
-            const view = new DataView(buffer);
-            view.setUint8(0, 5); // MOUSE_BUTTON_UP
-            view.setUint8(1, e.button + 1);
-            view.setInt32(2, e.clientX, true);
-            view.setInt32(6, e.clientY, true);
-            ws.send(buffer);
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            const buffer = new ArrayBuffer(9);
-            const view = new DataView(buffer);
-            view.setUint8(0, 6); // MOUSE_MOVE
-            view.setInt32(1, e.clientX, true);
-            view.setInt32(5, e.clientY, true);
-            ws.send(buffer);
-        });
-
-        window.addEventListener('wheel', (e) => {
-            const buffer = new ArrayBuffer(5);
-            const view = new DataView(buffer);
-            view.setUint8(0, 3); // MOUSE_WHEEL
-            view.setInt32(1, e.deltaY > 0 ? -1 : 1, true);
-            ws.send(buffer);
-        });
-
-        window.addEventListener('keydown', (e) => {
-            if (e.repeat) return;
-            // Simple mapping for demo
-            let code = 0;
-            if (e.key === 'Escape') code = 1;
-            if (e.key === 'w') code = 56;
-            if (e.key === 'a') code = 37;
-            if (e.key === 's') code = 55;
-            if (e.key === 'd') code = 40;
-            if (e.key === 'q') code = 53;
-            if (e.key === 'e') code = 41;
-
-            const buffer = new ArrayBuffer(5);
-            const view = new DataView(buffer);
-            view.setUint8(0, 1); // KEYDOWN
-            view.setUint32(1, code, true);
-            ws.send(buffer);
-        });
-
-        window.addEventListener('keyup', (e) => {
-            // Simple mapping for demo
-            let code = 0;
-            if (e.key === 'Escape') code = 1;
-            if (e.key === 'w') code = 56;
-            if (e.key === 'a') code = 37;
-            if (e.key === 's') code = 55;
-            if (e.key === 'd') code = 40;
-            if (e.key === 'q') code = 53;
-            if (e.key === 'e') code = 41;
-
-            const buffer = new ArrayBuffer(5);
-            const view = new DataView(buffer);
-            view.setUint8(0, 2); // KEYUP
-            view.setUint32(1, code, true);
-            ws.send(buffer);
-        });
-    </script>
-</body>
-</html>
-            )";
-        mg_printf(conn,
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %zd\r\n\r\n%s",
-                strlen(html), html);
-        return true;
+#if SERVE_FROM_SOURCE_TREE
+        if (uri == "/index.html" || uri == "/style.css" || uri == "/app.js") {
+            mg_send_file(conn, (BASE_URL + uri).c_str());
+            return true;
+        }
+#else
+        initAssetMap();
+        auto const& asset_itr = ASSET_MAP.find(uri);
+        if (asset_itr != ASSET_MAP.end()) {
+            auto const& mime = asset_itr->second.mime;
+            auto const& data = asset_itr->second.data;
+            mg_printf(conn,
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: %.*s\r\n"
+                    "Content-Length: %zu\r\n"
+                    "Connection: close\r\n\r\n",
+                    (int) mime.size(), mime.data(), data.size());
+            mg_write(conn, data.data(), data.size());
+            return true;
+        }
+#endif
+        return false;
     }
 };
 
@@ -164,7 +134,7 @@ bool HtmlDisplayManager::init(const Config& config) {
         }
         mWebSocketHandler = std::make_unique<WebSocketHandler>(this);
         mServer->addWebSocketHandler("/ws", mWebSocketHandler.get());
-        mServer->addHandler("/", &sWebHandler);
+        mServer->addHandler("", &sWebHandler);
     } catch (const CivetException& e) {
         slog.e << "CivetServer exception: " << e.what() << io::endl;
         return false;
@@ -186,7 +156,7 @@ FilamentApp::Window::Handle HtmlDisplayManager::createWindow(const char* title, 
     LockGuard<Mutex> lock(mMutex);
     FilamentApp::Window::Handle handle =
             (FilamentApp::Window::Handle)(uintptr_t) (mWindows.size() + 1);
-    mWindows[handle] = { title, w, h };
+    mWindows[handle] = { utils::CString(title), w, h };
     return handle;
 }
 
@@ -202,7 +172,7 @@ void* HtmlDisplayManager::getNativeWindow(FilamentApp::Window::Handle window) co
 void HtmlDisplayManager::setWindowTitle(FilamentApp::Window::Handle window, const char* title) {
     LockGuard<Mutex> lock(mMutex);
     if (mWindows.count(window)) {
-        mWindows[window].title = title;
+        mWindows[window].title = utils::CString(title);
     }
 }
 
@@ -221,7 +191,15 @@ void HtmlDisplayManager::getDrawableSize(FilamentApp::Window::Handle window, uin
     getWindowSize(window, w, h);
 }
 
+#ifdef __APPLE__
+extern "C" void pumpCocoaEvents();
+#endif
+
 void HtmlDisplayManager::pollEvents(std::vector<AppEvent>& events) {
+#ifdef __APPLE__
+    pumpCocoaEvents();
+#endif
+
     LockGuard<Mutex> lock(mMutex);
     while (!mEventQueue.empty()) {
         events.push_back(mEventQueue.front());
@@ -287,13 +265,69 @@ bool HtmlDisplayManager::WebSocketHandler::handleConnection(CivetServer* server,
 
 void HtmlDisplayManager::WebSocketHandler::handleReadyState(CivetServer* server,
         struct mg_connection* conn) {
-    LockGuard<Mutex> lock(mDisplayManager->mMutex);
-    mDisplayManager->mConnections.push_back(conn);
+    // Handshake will add to mConnections once magic is verified
 }
 
 bool HtmlDisplayManager::WebSocketHandler::handleData(CivetServer* server,
         struct mg_connection* conn, int bits, char* data, size_t data_len) {
     if (data_len < 1) return true;
+
+    int opcode = bits & 0xf;
+    if (opcode == MG_WEBSOCKET_OPCODE_TEXT) {
+        std::string_view text(data, data_len);
+        if (text.find("\"magic\":\"FILAMENT_HEADLESS\"") != std::string_view::npos &&
+                text.find("\"type\":\"handshake\"") != std::string_view::npos) {
+
+            utils::CString ack(
+                    ("{\"type\":\"handshake_ack\",\"magic\":\"FILAMENT_HEADLESS\",\"event_map\":{"
+                     "\"QUIT\":" +
+                            std::to_string(EVENT_QUIT) +
+                            ","
+                            "\"KEYDOWN\":" +
+                            std::to_string(EVENT_KEYDOWN) +
+                            ","
+                            "\"KEYUP\":" +
+                            std::to_string(EVENT_KEYUP) +
+                            ","
+                            "\"MOUSE_WHEEL\":" +
+                            std::to_string(EVENT_MOUSE_WHEEL) +
+                            ","
+                            "\"MOUSE_BUTTON_DOWN\":" +
+                            std::to_string(EVENT_MOUSE_BUTTON_DOWN) +
+                            ","
+                            "\"MOUSE_BUTTON_UP\":" +
+                            std::to_string(EVENT_MOUSE_BUTTON_UP) +
+                            ","
+                            "\"MOUSE_MOVE\":" +
+                            std::to_string(EVENT_MOUSE_MOVE) +
+                            ","
+                            "\"RESIZE\":" +
+                            std::to_string(EVENT_RESIZE) + "}}")
+                            .c_str());
+
+            mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, ack.data(), ack.size());
+
+            LockGuard<Mutex> lock(mDisplayManager->mMutex);
+            if (std::find(mDisplayManager->mConnections.begin(),
+                        mDisplayManager->mConnections.end(),
+                        conn) == mDisplayManager->mConnections.end()) {
+                mDisplayManager->mConnections.push_back(conn);
+            }
+        }
+        return true;
+    }
+
+    if (opcode != MG_WEBSOCKET_OPCODE_BINARY) {
+        return true;
+    }
+
+    {
+        LockGuard<Mutex> lock(mDisplayManager->mMutex);
+        if (std::find(mDisplayManager->mConnections.begin(), mDisplayManager->mConnections.end(),
+                    conn) == mDisplayManager->mConnections.end()) {
+            return true; // Connection not handshaked yet
+        }
+    }
 
     AppEvent event;
     uint8_t type = (uint8_t) data[0];
@@ -301,45 +335,66 @@ bool HtmlDisplayManager::WebSocketHandler::handleData(CivetServer* server,
     LockGuard<Mutex> lock(mDisplayManager->mMutex);
 
     switch (type) {
-        case 0:
+        case EVENT_QUIT:
             event.type = AppEvent::Type::QUIT;
             break;
-        case 1:
-        case 2:
+        case EVENT_KEYDOWN:
+        case EVENT_KEYUP:
             if (data_len < 5) return true;
-            event.type = (type == 1) ? AppEvent::Type::KEYDOWN : AppEvent::Type::KEYUP;
-            event.key.code = (AppKey) * (uint32_t*) &data[1];
+            event.type = (type == EVENT_KEYDOWN) ? AppEvent::Type::KEYDOWN : AppEvent::Type::KEYUP;
+            uint32_t code;
+            std::memcpy(&code, &data[1], sizeof(code));
+            event.key.code = (AppKey) code;
             event.key.modifiers = 0;
             break;
-        case 3:
+        case EVENT_MOUSE_WHEEL:
             if (data_len < 5) return true;
             event.type = AppEvent::Type::MOUSE_WHEEL;
-            event.mouseWheel.delta = *(int32_t*) &data[1];
+            std::memcpy(&event.mouseWheel.delta, &data[1], sizeof(event.mouseWheel.delta));
             break;
-        case 4:
-        case 5:
+        case EVENT_MOUSE_BUTTON_DOWN:
+        case EVENT_MOUSE_BUTTON_UP:
             if (data_len < 9) return true;
-            event.type = (type == 4) ? AppEvent::Type::MOUSE_BUTTON_DOWN
-                                     : AppEvent::Type::MOUSE_BUTTON_UP;
+            event.type = (type == EVENT_MOUSE_BUTTON_DOWN) ? AppEvent::Type::MOUSE_BUTTON_DOWN
+                                                           : AppEvent::Type::MOUSE_BUTTON_UP;
             event.mouseButton.button = (uint8_t) data[1];
-            event.mouseButton.x = *(int32_t*) &data[2];
-            event.mouseButton.y = *(int32_t*) &data[6];
+            std::memcpy(&event.mouseButton.x, &data[2], sizeof(event.mouseButton.x));
+            std::memcpy(&event.mouseButton.y, &data[6], sizeof(event.mouseButton.y));
             mDisplayManager->mMouseX = event.mouseButton.x;
             mDisplayManager->mMouseY = event.mouseButton.y;
-            if (type == 4) {
+            if (type == EVENT_MOUSE_BUTTON_DOWN) {
                 mDisplayManager->mMouseButtons |= (1 << (event.mouseButton.button - 1));
             } else {
                 mDisplayManager->mMouseButtons &= ~(1 << (event.mouseButton.button - 1));
             }
             break;
-        case 6:
+        case EVENT_MOUSE_MOVE:
             if (data_len < 9) return true;
             event.type = AppEvent::Type::MOUSE_MOVE;
-            event.mouseMove.x = *(int32_t*) &data[1];
-            event.mouseMove.y = *(int32_t*) &data[5];
+            std::memcpy(&event.mouseMove.x, &data[1], sizeof(event.mouseMove.x));
+            std::memcpy(&event.mouseMove.y, &data[5], sizeof(event.mouseMove.y));
             mDisplayManager->mMouseX = event.mouseMove.x;
             mDisplayManager->mMouseY = event.mouseMove.y;
             break;
+        case EVENT_RESIZE: {
+            if (data_len < 9) return true;
+            uint32_t width;
+            uint32_t height;
+            std::memcpy(&width, &data[1], sizeof(width));
+            std::memcpy(&height, &data[5], sizeof(height));
+            if (!mDisplayManager->mWindows.empty()) {
+                auto it = mDisplayManager->mWindows.begin();
+                it->second.width = width;
+                it->second.height = height;
+
+                event.type = AppEvent::Type::RESIZED;
+                event.windowId = it->first;
+                event.resize.w = width;
+                event.resize.h = height;
+                mDisplayManager->mEventQueue.push(event);
+            }
+            return true;
+        }
         default:
             return true;
     }

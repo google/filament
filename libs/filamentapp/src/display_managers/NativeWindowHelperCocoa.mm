@@ -79,3 +79,27 @@ void* resizeMetalLayer(void* nativeView) {
     metalLayer.contentsScale = view.window.backingScaleFactor;
     return metalLayer;
 }
+
+// When running in headless/web-server mode, the standard SDL main event pump is bypassed.
+// On macOS, if the Cocoa/AppKit event queue is not periodically pumped, the OS window manager
+// never processes layout passes or visibility changes (like orderFrontRegardless) for the
+// dummy off-screen NSWindow. Without this, Cocoa defers graphics backing store allocation
+// for the NSView, causing glReadPixels from the default framebuffer (0) to return a pitch-black
+// image. Calling this helper on the main thread processes pending events and forces
+// layout and backing store allocation. This is a necessary fix for reliable headless rendering
+// and streaming on macOS.
+extern "C" void pumpCocoaEvents() {
+    @autoreleasepool {
+        [NSApplication sharedApplication];
+        NSEvent* event;
+        do {
+            event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:[NSDate distantPast]
+                                          inMode:NSDefaultRunLoopMode
+                                         dequeue:YES];
+            if (event) {
+                [NSApp sendEvent:event];
+            }
+        } while (event);
+    }
+}
