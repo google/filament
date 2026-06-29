@@ -411,6 +411,25 @@ void MaterialDefinition::processMain() {
     perViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
     mMaterialParser->getSourceShader(&source);
+
+    processParameterNames();
+}
+
+void MaterialDefinition::processParameterNames() {
+    size_t const parameterCount = uniformInterfaceBlock.getFieldInfoList().size() +
+            samplerInterfaceBlock.getSamplerInfoList().size() +
+            (subpassInfo.isValid ? 1 : 0);
+    parameterNames.reserve(parameterCount);
+
+    for (auto const& field : uniformInterfaceBlock.getFieldInfoList()) {
+        parameterNames.insert({ field.name.data(), field.name.size() });
+    }
+    for (auto const& sampler : samplerInterfaceBlock.getSamplerInfoList()) {
+        parameterNames.insert({ sampler.name.data(), sampler.name.size() });
+    }
+    if (subpassInfo.isValid) {
+        parameterNames.insert({ subpassInfo.name.data(), subpassInfo.name.size() });
+    }
 }
 
 void MaterialDefinition::processBlendingMode() {
