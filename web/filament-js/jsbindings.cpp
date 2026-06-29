@@ -1588,12 +1588,6 @@ class_<Texture>("Texture")
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
     }), allow_raw_pointers())
-    .function("_setImageCube", EMBIND_LAMBDA(void, (Texture* self,
-            Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
-        uint32_t faceSize = pbd.pbd->size / 6;
-        Texture::FaceOffsets offsets(faceSize);
-        self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
-    }), allow_raw_pointers())
     .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
             Engine* engine, uint8_t level), {
         return self->getWidth(level);
