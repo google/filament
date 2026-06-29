@@ -878,9 +878,16 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-    FFence* fence = createFence();
-    FenceStatus const status = fence->wait(FFence::Mode::FLUSH, timeout);
-    destroy(fence);
+    FenceStatus status == FenceStatus::CONDITION_SATISFIED;
+    if constexpr (UTILS_HAS_THREADING) {
+        FFence* fence = createFence();
+        status = fence->wait(FFence::Mode::FLUSH, timeout);
+        destroy(fence);
+    } else {
+        // When executing in a single-threaded (e.g. wasm) environment, fence would
+        // fail. Instead, directly execute the outstanding commands.
+        execute();
+    }
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
