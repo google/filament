@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-#include <TargetConditionals.h>
-#include "backend/PresentCallable.h"
-#include "private/backend/CommandStream.h"
-#include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
-#include <filament/SwapChain.h>
-
+#include "CommandStreamDispatcher.h"
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalContext.h"
@@ -32,13 +27,13 @@
 #include "MetalTimerQuery.h"
 #include "MetalUtils.h"
 
-#include <backend/platforms/PlatformMetal.h>
-#include <backend/platforms/PlatformMetal-ObjC.h>
+#include <filament/SwapChain.h>
 
-#include <CoreVideo/CVMetalTexture.h>
-#include <CoreVideo/CVPixelBuffer.h>
-#include <Metal/Metal.h>
-#include <QuartzCore/QuartzCore.h>
+#include <private/backend/CommandStream.h>
+
+#include <backend/platforms/PlatformMetal-ObjC.h>
+#include <backend/platforms/PlatformMetal.h>
+#include <backend/PresentCallable.h>
 
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
@@ -46,6 +41,12 @@
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
+
+#include <CoreVideo/CVMetalTexture.h>
+#include <CoreVideo/CVPixelBuffer.h>
+#include <Metal/Metal.h>
+#include <QuartzCore/QuartzCore.h>
+#include <TargetConditionals.h>
 
 #include <algorithm>
 
@@ -1192,6 +1193,11 @@ void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     }
 }
 
+void MetalDriver::setFrameRate(Handle<HwSwapChain>, float const,
+        Platform::FrameRateCompatibility const,
+        Platform::ChangeFrameRateStrategy const) {
+}
+
 void MetalDriver::destroyStream(Handle<HwStream> sh) {
     // no-op
 }
@@ -1429,6 +1435,7 @@ bool MetalDriver::isProtectedContentSupported() {
     // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
     return false;
 }
+
 
 bool MetalDriver::isStereoSupported() {
     switch (mStereoscopicType) {

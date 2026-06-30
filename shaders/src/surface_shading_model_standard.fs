@@ -119,7 +119,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
 #if defined(HAS_COLORED_PENUMBRA)
     // Saturate the diffuse color to simulate subsurface scattering
-    vec3 penumbraColor = min(vec3(1.0 / PI), Fd / (2.0 * (1.0 - pixel.diffuseColor)));
+    vec3 penumbraColor = min(vec3(1.0 / PI), Fd / max(2.0 * (1.0 - pixel.diffuseColor), vec3(FLT_EPS)));
     Fd = mix(penumbraColor, Fd, pow4(occlusion));
 #endif
 

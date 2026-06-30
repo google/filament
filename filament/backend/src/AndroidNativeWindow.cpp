@@ -16,6 +16,8 @@
 
 #include "AndroidNativeWindow.h"
 
+#include <backend/platforms/AndroidNdk.h>
+
 #include <utils/compiler.h>
 #include <utils/Logger.h>
 
@@ -29,6 +31,19 @@
 #include <dlfcn.h>
 
 namespace filament::backend {
+
+bool NativeWindow::queuesToWindowComposer(ANativeWindow* const anw) noexcept {
+    if (!anw) {
+        return false;
+    }
+    NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
+    if (UTILS_LIKELY(pWindow->query)) {
+        int value = 0;
+        int const err = pWindow->query(anw, QUEUES_TO_WINDOW_COMPOSER, &value);
+        return err == 0 && value != 0;
+    }
+    return false;
+}
 
 std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
 #if __ANDROID_API__ >= 26
@@ -56,7 +71,7 @@ int NativeWindow::getNextFrameId(ANativeWindow* anw, uint64_t* frameId) {
     return pWindow->perform(anw, GET_NEXT_FRAME_ID, frameId);
 }
 
-int NativeWindow::enableFrameTimestamps(ANativeWindow* anw, bool enable) {
+int NativeWindow::enableFrameTimestamps(ANativeWindow* anw, bool const enable) {
     NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
     return pWindow->perform(anw, ENABLE_FRAME_TIMESTAMPS, enable);
 }
@@ -80,7 +95,7 @@ int NativeWindow::getCompositorTiming(ANativeWindow* anw,
 }
 
 int NativeWindow::getFrameTimestamps(ANativeWindow* anw,
-        uint64_t frameId,
+        uint64_t const frameId,
         int64_t* outRequestedPresentTime, int64_t* outAcquireTime,
         int64_t* outLatchTime, int64_t* outFirstRefreshStartTime,
         int64_t* outLastRefreshStartTime, int64_t* outGpuCompositionDoneTime,
@@ -94,48 +109,50 @@ int NativeWindow::getFrameTimestamps(ANativeWindow* anw,
             outDequeueReadyTime, outReleaseTime);
 }
 
-AndroidProducerThrottling::AndroidProducerThrottling() {
-    // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
-    // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
-    // not to call dlclose().
+bool NativeWindow::isProducerThrottlingSupported() noexcept {
+    return AndroidNdk::isProducerThrottlingSupported();
+}
 
-    // libnativewindow.so is not available before API level 26, this means we can't call
-    // any method above 25 (even protected by __builtin_available()).
+int32_t NativeWindow::setProducerThrottlingEnabled(ANativeWindow* const anw,
+        bool const enabled) noexcept {
+    return AndroidNdk::ANativeWindow_setProducerThrottlingEnabled(anw, enabled);
+}
 
-    void* nativeWindowLibHandle = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
-    if (nativeWindowLibHandle) {
-        mSetProducerThrottlingEnabled =
-                (int32_t(*)(ANativeWindow*, bool)) dlsym(nativeWindowLibHandle,
-                        "ANativeWindow_setProducerThrottlingEnabled");
+utils::tribool NativeWindow::isFrameRateChangeSupported(ANativeWindow* const anw) noexcept {
+    if (!anw) return utils::tribool::kFalse;
 
-        mIsProducerThrottlingEnabled =
-                (int32_t(*)(ANativeWindow*, bool*)) dlsym(nativeWindowLibHandle,
-                        "ANativeWindow_isProducerThrottlingEnabled");
+    NativeWindow const* pWindow = reinterpret_cast<NativeWindow const*>(anw);
+    if (UTILS_LIKELY(pWindow->query)) {
+        int value = 0;
+        int const err = pWindow->query(anw, QUEUES_TO_WINDOW_COMPOSER, &value);
+        if (err == 0) {
+            if (value != 0) {
+                if (__builtin_available(android 30, *)) {
+                    return utils::tribool::kTrue;
+                }
+            }
+            return utils::tribool::kFalse;
+        }
+        return utils::tribool::kIndeterminate;
+    }
+    return utils::tribool::kFalse;
+}
 
-        if (mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled) {
-            LOG(INFO) << "Producer Throttling API available";
+int NativeWindow::setFrameRate(ANativeWindow* const anw, float const frameRate,
+        Platform::FrameRateCompatibility const compatibility,
+        Platform::ChangeFrameRateStrategy const strategy) noexcept {
+    if (queuesToWindowComposer(anw)) {
+        if (__builtin_available(android 31, *)) {
+            return AndroidNdk::ANativeWindow_setFrameRateWithChangeStrategy(anw, frameRate,
+                    static_cast<int8_t>(compatibility), static_cast<int8_t>(strategy));
+        }
+        if (__builtin_available(android 30, *)) {
+            return AndroidNdk::ANativeWindow_setFrameRate(
+                    anw, frameRate, static_cast<int8_t>(compatibility));
         }
     }
-}
-
-int32_t AndroidProducerThrottling::setProducerThrottlingEnabled(
-        ANativeWindow* window, bool enabled) const {
-    if (mSetProducerThrottlingEnabled) {
-        return mSetProducerThrottlingEnabled(window, enabled);
-    }
-    return -1;
-}
-
-int32_t AndroidProducerThrottling::isProducerThrottlingEnabled(
-        ANativeWindow* window, bool* outEnabled) const {
-    if (mIsProducerThrottlingEnabled) {
-        return mIsProducerThrottlingEnabled(window, outEnabled);
-    }
-    return -1;
-}
-
-bool AndroidProducerThrottling::isSupported() const noexcept {
-    return mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled;
+    return -ENOSYS;
 }
 
 } // namespace filament::backend
+

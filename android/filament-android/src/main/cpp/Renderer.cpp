@@ -15,18 +15,19 @@
  */
 
 
-#include <jni.h>
+#include "common/CallbackUtils.h"
+#include "common/JniUtils.h"
+#include "common/NioUtils.h"
 
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
+
 #include <backend/PixelBufferDescriptor.h>
 
-#include <exception>
+#include <jni.h>
 
-#include "common/CallbackUtils.h"
-#include "common/NioUtils.h"
-#include "common/JniUtils.h"
+#include <exception>
 
 using namespace filament;
 using namespace backend;
@@ -225,6 +226,24 @@ Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *env, jcla
     Renderer *renderer = (Renderer *) nativeRenderer;
     wrapJni(env, [=]() {
         renderer->setPresentationTime(monotonicClockNanos);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetDesiredPresentationTime(JNIEnv *env, jclass ,
+    jlong nativeRenderer, jlong monotonicClockNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->setDesiredPresentationTime(monotonicClockNanos);
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetRenderingDeadline(JNIEnv *env, jclass ,
+    jlong nativeRenderer, jlong monotonicClockNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->setRenderingDeadline(std::chrono::steady_clock::time_point(std::chrono::nanoseconds(monotonicClockNanos)));
     });
 }
 

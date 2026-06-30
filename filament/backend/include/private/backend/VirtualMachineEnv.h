@@ -35,6 +35,8 @@ public:
     // can be called from any thread that already has a JniEnv
     static JNIEnv* getThreadEnvironment();
 
+    static bool hasVirtualMachine() noexcept;
+
     // must be called from the backend thread
     JNIEnv* getEnvironment() noexcept {
         JNIEnv* env = mJniEnv;

@@ -16,9 +16,26 @@
 
 #include "common/arguments.h"
 
+#include "generated/resources/gltf_demo.h"
+
+#include "materials/uberarchive.h"
+
+#include <viewer/AutomationEngine.h>
+#include <viewer/AutomationSpec.h>
+#include <viewer/ViewerGui.h>
+
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
+
+#include <filagui/ImGuiExtensions.h>
+
+#include <private/filament/EngineEnums.h>
 
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
@@ -28,37 +45,24 @@
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/SwapChain.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <gltfio/AssetLoader.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/ResourceLoader.h>
-#include <gltfio/TextureProvider.h>
-
-#include <viewer/AutomationEngine.h>
-#include <viewer/AutomationSpec.h>
-#include <viewer/ViewerGui.h>
-
 #include <camutils/Manipulator.h>
 
-#include <private/filament/EngineEnums.h>
-
 #include <utils/getopt.h>
-
-#include <utils/NameComponentManager.h>
 #include <utils/Log.h>
+#include <utils/NameComponentManager.h>
 
-#include <math/vec3.h>
-#include <math/vec4.h>
 #include <math/mat3.h>
 #include <math/norm.h>
-
-#include <imgui.h>
-#include <filagui/ImGuiExtensions.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <cgltf.h>
+#include <imgui.h>
 
 #include <algorithm>
 #include <array>
@@ -68,9 +72,6 @@
 #include <set>
 #include <sstream>
 #include <string>
-
-#include "generated/resources/gltf_demo.h"
-#include "materials/uberarchive.h"
 
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
@@ -101,6 +102,7 @@ struct App {
     FilamentAsset* asset = nullptr;
     FilamentInstance* instance = nullptr;
     NameComponentManager* names;
+    float currentFrameRate = -1.0f;
 
     MaterialProvider* materials;
     MaterialSource materialSource = JITSHADER;
@@ -1118,6 +1120,15 @@ int main(int argc, char** argv) {
                 0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
 
         engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
+
+        if (auto* swapChain = FilamentApp::get().getPrimarySwapChain()) {
+            if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
+                swapChain->setFrameRate(viewerOptions.cameraFrameRate,
+                        SwapChain::FrameRateCompatibility::DEFAULT,
+                        SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
+                app.currentFrameRate = viewerOptions.cameraFrameRate;
+            }
+        }
 
         // Note that this focal length might be different from the slider value because the
         // automation engine applies Camera::computeEffectiveFocalLength when DoF is enabled.

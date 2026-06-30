@@ -20,11 +20,22 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <stdint.h>
+
 #define FILAMENT_REQUIRES_API(x) __attribute__((__availability__(android,introduced=x)))
 
 #define FILAMENT_USE_DLSYM(api) (__ANDROID_API__ < (api))
 
 namespace filament::backend {
+
+#if __ANDROID__ && __ANDROID_API__ < 37
+extern "C" {
+int32_t ANativeWindow_setProducerThrottlingEnabled(ANativeWindow* window,
+        bool enabled);
+int32_t ANativeWindow_isProducerThrottlingEnabled(ANativeWindow* window,
+        bool* outEnabled);
+}
+#endif
 
 class AndroidNdk {
 public:
@@ -64,12 +75,88 @@ public:
 
 #endif
 
+#if FILAMENT_USE_DLSYM(30)
+    static int32_t ANativeWindow_setFrameRate(ANativeWindow* window,
+            float frameRate, int8_t compatibility) FILAMENT_REQUIRES_API(30) {
+        return ndk.ANativeWindow_setFrameRate(window, frameRate, compatibility);
+    }
+#else
+    static int32_t ANativeWindow_setFrameRate(ANativeWindow* window,
+            float frameRate, int8_t compatibility) FILAMENT_REQUIRES_API(30) {
+        return ::ANativeWindow_setFrameRate(window, frameRate, compatibility);
+    }
+#endif
+
+#if FILAMENT_USE_DLSYM(31)
+    static int32_t ANativeWindow_setFrameRateWithChangeStrategy(ANativeWindow* window,
+            float frameRate, int8_t compatibility,
+            int8_t strategy) FILAMENT_REQUIRES_API(31) {
+        return ndk.ANativeWindow_setFrameRateWithChangeStrategy(
+                window, frameRate, compatibility, strategy);
+    }
+#else
+    static int32_t ANativeWindow_setFrameRateWithChangeStrategy(ANativeWindow* window,
+            float frameRate, int8_t compatibility,
+            int8_t strategy) FILAMENT_REQUIRES_API(31) {
+        return ::ANativeWindow_setFrameRateWithChangeStrategy(
+                window, frameRate, compatibility, strategy);
+    }
+#endif
+
+#if FILAMENT_USE_DLSYM(37)
+    static int32_t ANativeWindow_setProducerThrottlingEnabled(ANativeWindow* window,
+            bool enabled) {
+        return ndk.ANativeWindow_setProducerThrottlingEnabled ?
+                ndk.ANativeWindow_setProducerThrottlingEnabled(window, enabled) : -1;
+    }
+
+    static int32_t ANativeWindow_isProducerThrottlingEnabled(ANativeWindow* window,
+            bool* outEnabled) {
+        return ndk.ANativeWindow_isProducerThrottlingEnabled ?
+                ndk.ANativeWindow_isProducerThrottlingEnabled(window, outEnabled) : -1;
+    }
+#else
+    static int32_t ANativeWindow_setProducerThrottlingEnabled(ANativeWindow* window,
+            bool enabled) {
+        return ::ANativeWindow_setProducerThrottlingEnabled(window, enabled);
+    }
+
+    static int32_t ANativeWindow_isProducerThrottlingEnabled(ANativeWindow* window,
+            bool* outEnabled) {
+        return ::ANativeWindow_isProducerThrottlingEnabled(window, outEnabled);
+    }
+#endif
+
+    static bool isProducerThrottlingSupported() noexcept {
+#if FILAMENT_USE_DLSYM(37)
+        return ndk.ANativeWindow_setProducerThrottlingEnabled &&
+                ndk.ANativeWindow_isProducerThrottlingEnabled;
+#else
+        return true;
+#endif
+    }
+
 private:
-#if FILAMENT_USE_DLSYM(26)
+#if FILAMENT_USE_DLSYM(37)
     static struct Ndk {
+#if FILAMENT_USE_DLSYM(26)
         void (*AHardwareBuffer_acquire)(AHardwareBuffer*);
         void (*AHardwareBuffer_release)(AHardwareBuffer*);
         void (*AHardwareBuffer_describe)(AHardwareBuffer const*, AHardwareBuffer_Desc*);
+#endif
+#if FILAMENT_USE_DLSYM(30)
+        int32_t (*ANativeWindow_setFrameRate)(ANativeWindow*, float, int8_t);
+#endif
+#if FILAMENT_USE_DLSYM(31)
+        int32_t (*ANativeWindow_setFrameRateWithChangeStrategy)(
+                ANativeWindow*, float, int8_t, int8_t);
+#endif
+#if FILAMENT_USE_DLSYM(37)
+        int32_t (*ANativeWindow_setProducerThrottlingEnabled)(
+                ANativeWindow*, bool);
+        int32_t (*ANativeWindow_isProducerThrottlingEnabled)(
+                ANativeWindow*, bool*);
+#endif
     } ndk;
 #endif
 };

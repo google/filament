@@ -37,6 +37,7 @@
 namespace filament {
 class Renderer;
 class Scene;
+class SwapChain;
 class View;
 } // namespace filament
 
@@ -100,6 +101,7 @@ public:
     IBL* getIBL() const noexcept { return mIBL.get(); }
     filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
+    filament::SwapChain* getPrimarySwapChain() const noexcept { return mPrimarySwapChain; }
 
     void close() { mClosed = true; }
 
@@ -276,6 +278,7 @@ private:
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
+    filament::SwapChain* mPrimarySwapChain = nullptr;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     double mTime = 0;

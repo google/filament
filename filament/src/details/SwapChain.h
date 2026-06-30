@@ -92,6 +92,11 @@ public:
 
     static bool isProtectedContentSupported(FEngine& engine) noexcept;
 
+    utils::tribool isFrameRateChangeSupported() const noexcept;
+
+    void setFrameRate(float frameRate, FrameRateCompatibility compatibility,
+            ChangeFrameRateStrategy strategy) noexcept;
+
     // This is currently only used for debugging. This allows to recreate the HwSwapChain with
     // new flags.
     void recreateWithNewFlags(FEngine& engine, uint64_t flags) noexcept;
@@ -100,6 +105,7 @@ private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mHwSwapChain;
     bool mFrameScheduledCallbackIsSet = false;
+    mutable utils::tribool mFrameRateSupportState = utils::tribool::kIndeterminate;
     void* mNativeWindow{};
     uint32_t mWidth{};
     uint32_t mHeight{};

@@ -24,9 +24,9 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
-#include "TextureCache.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
+#include "TextureCache.h"
 
 #include "components/TransformManager.h"
 
@@ -34,24 +34,27 @@
 #include "details/IndirectLight.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
-#include "details/RenderTarget.h"
 #include "details/Renderer.h"
+#include "details/RenderTarget.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
 
-#include <backend/DriverEnums.h>
-#include <backend/Handle.h>
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphTexture.h"
 
-#include <fg/FrameGraphTexture.h>
-#include <fg/FrameGraphId.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 
+#include <filament/DebugRegistry.h>
 #include <filament/Exposure.h>
 #include <filament/Frustum.h>
-#include <filament/DebugRegistry.h>
 #include <filament/View.h>
 
-#include <private/filament/UibStructs.h>
-#include <private/filament/EngineEnums.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <private/utils/Tracing.h>
 
@@ -65,16 +68,14 @@
 
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/scalar.h>
 
-#include <assert.h>
-
-#include <array>
 #include <algorithm>
-#include <cmath>
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -82,11 +83,9 @@
 #include <ratio>
 #include <utility>
 
-using namespace utils;
+#include <assert.h>
 
-#if FILAMENT_ENABLE_FGVIEWER
-#include "fg/FgviewerManager.h"
-#endif
+using namespace utils;
 
 namespace filament {
 
@@ -202,29 +201,31 @@ FView::FView(FEngine& engine)
 
 FView::~FView() noexcept = default;
 
+void FView::invalidateSceneCache() noexcept {
+    if (!mScene) {
+        mSceneCache.reset();
+    }
+    mVisibleRenderableCount = -1;
+}
+
 void FView::setScene(FScene* scene) {
     if (mScene != scene) {
         if (mScene) {
             mScene->unregisterView(this);
         }
         mScene = scene;
+        invalidateSceneCache();
         if (scene) {
             scene->registerView(this);
             if (!mSceneCache) {
                 mSceneCache = std::make_unique<FScene::SceneCacheData>();
             }
-        } else {
-            mSceneCache.reset();
         }
     }
 }
 
 void FView::terminate(FEngine& engine) {
-    if (mScene) {
-        mScene->unregisterView(this);
-        mScene = nullptr;
-    }
-    mSceneCache.reset();
+    setScene(nullptr);
 
     // Here we would cleanly free resources we've allocated, or we own (currently none).
 
@@ -880,6 +881,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         // convert to indices
         mVisibleRenderables = { 0, uint32_t(beginDirCastersOnly - beginRenderables) };
+        mVisibleRenderableCount = int32_t(mVisibleRenderables.size());
 
         mVisibleDirectionalShadowCasters = {
                 uint32_t(beginDirCasters - beginRenderables),
@@ -1702,7 +1704,7 @@ bool FView::hasContactShadows() const noexcept {
 void FView::detachScene(FScene const* scene) noexcept {
     if (mScene == scene) {
         mScene = nullptr;
-        mSceneCache.reset();
+        invalidateSceneCache();
     }
 }
 

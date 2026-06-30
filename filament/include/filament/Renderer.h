@@ -26,6 +26,8 @@
 
 #include <math/vec4.h>
 
+#include <chrono>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -107,7 +109,7 @@ public:
         time_point_ns presentDeadline;      //!< deadline for queuing a frame [ns]
         duration_ns displayPresentInterval; //!< display refresh rate [ns]
         duration_ns compositionToPresentLatency; //!< time between the start of composition and the expected present time [ns]
-        duration_ns expectedPresentLatency; //!< system's expected presentation time since epoch [ns]
+        duration_ns expectedPresentLatency; //!< time between vsync and the system's expected presentation time [ns]
     };
 
     /**
@@ -240,7 +242,7 @@ public:
      *
      * @return A constant pointer to the Engine instance this Renderer is associated to.
      */
-    inline Engine const* UTILS_NONNULL getEngine() const noexcept {
+    Engine const* UTILS_NONNULL getEngine() const noexcept {
         return const_cast<Renderer *>(this)->getEngine();
     }
 
@@ -363,18 +365,76 @@ public:
             uint64_t vsyncSteadyClockTimeNano = 0u);
 
     /**
-     * Set the time at which the frame must be presented to the display.
+     * Set the time at which the frame must be presented to the display hardware.
      *
-     * This must be called between beginFrame() and endFrame().
+     * This value is used to configure the hardware and must typically be strictly smaller than the
+     * desired presentation time (i.e. it must include some headroom but not too much). For instance,
+     * on Android, it is typically set to desired_presentation_time - vsync_period / 2. This behavior
+     * can vary on other platforms.
      *
-     * @param monotonic_clock_ns  the time in nanoseconds corresponding to the system monotonic up-time clock.
-     *                            the presentation time is typically set in the middle of the period
-     *                            of interest. The presentation time cannot be too far in the
-     *                            future because it is limited by how many buffers are available in
-     *                            the display sub-system. Typically it is set to 1 or 2 vsync periods
-     *                            away.
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock_ns  the presentation configuration timestamp in nanoseconds on the steady clock.
      */
     void setPresentationTime(int64_t monotonic_clock_ns);
+
+    /**
+     * Set the time at which the frame must be presented to the display hardware using a strong steady clock time point.
+     *
+     * This value is used to configure the hardware and must typically be strictly smaller than the
+     * desired presentation time (i.e. it must include some headroom but not too much). For instance,
+     * on Android, it is typically set to desired_presentation_time - vsync_period / 2. This behavior
+     * can vary on other platforms.
+     *
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock  the presentation configuration time point on the steady clock.
+     */
+    void setPresentationTime(std::chrono::steady_clock::time_point monotonic_clock);
+
+    /**
+     * Set the real desired presentation time targeted for this frame.
+     *
+     * Unlike setPresentationTime(), which configures hardware headroom, this is the exact target
+     * presentation time and is used for FrameInfo frame history reporting.
+     *
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock_ns  the desired presentation timestamp in nanoseconds on the steady clock.
+     */
+    void setDesiredPresentationTime(int64_t monotonic_clock_ns);
+
+    /**
+     * Set the real desired presentation time targeted for this frame.
+     *
+     * Unlike setPresentationTime(), which configures hardware headroom, this is the exact target
+     * presentation time and is used for FrameInfo frame history reporting.
+     *
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock  the desired presentation time point on the steady clock.
+     */
+    void setDesiredPresentationTime(std::chrono::steady_clock::time_point monotonic_clock);
+
+    /**
+     * Set the deadline time point on the steady clock by which CPU and GPU rendering must complete
+     * for the buffer to meet its target display latching window.
+     *
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock_ns  the deadline timestamp in nanoseconds on the steady clock.
+     */
+    void setRenderingDeadline(int64_t monotonic_clock_ns);
+
+    /**
+     * Set the deadline time point on the steady clock by which CPU and GPU rendering must complete
+     * for the buffer to meet its target display latching window.
+     *
+     * This must be called before endFrame().
+     *
+     * @param monotonic_clock  the deadline time point on the steady clock.
+     */
+    void setRenderingDeadline(std::chrono::steady_clock::time_point monotonic_clock);
 
     /**
      * Render a View into this renderer's window.

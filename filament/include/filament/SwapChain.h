@@ -24,6 +24,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/tribool.h>
 
 #include <stdint.h>
 
@@ -154,6 +155,9 @@ public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
     using FrameCompletedCallback = utils::Invocable<void(SwapChain* UTILS_NONNULL)>;
 
+    using FrameRateCompatibility = backend::Platform::FrameRateCompatibility;
+    using ChangeFrameRateStrategy = backend::Platform::ChangeFrameRateStrategy;
+
     /**
      * Requests a SwapChain with an alpha channel.
      */
@@ -275,6 +279,29 @@ public:
      * @return true if CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
      */
     static bool isMSAASwapChainSupported(Engine& engine, uint32_t samples) noexcept;
+
+    /**
+     * Return whether this SwapChain supports the setFrameRate() API.
+     *
+     * When a SwapChain is newly created, the actual surface capability state may not be fully
+     * sealed by the underlying OS. In this case, this method returns Indeterminate. Once the
+     * platform completes surface connection, the value permanently seals to True or False.
+     *
+     * @return A utils::tribool indicating True, False, or Indeterminate.
+     */
+    utils::tribool isFrameRateChangeSupported() const noexcept;
+
+    /**
+     * Sets the intended frame rate for this SwapChain.
+     *
+     * @param frameRate     The intended frame rate in frames per second. 0.0f clears/resets the rate.
+     * @param compatibility Frame rate compatibility mode (default: DEFAULT).
+     * @param strategy      Change strategy for non-seamless transitions (default: ONLY_IF_SEAMLESS).
+     */
+    void setFrameRate(float frameRate,
+            FrameRateCompatibility compatibility = FrameRateCompatibility::DEFAULT,
+            ChangeFrameRateStrategy strategy =
+                    ChangeFrameRateStrategy::ONLY_IF_SEAMLESS) noexcept;
 
     void* UTILS_NULLABLE getNativeWindow() const noexcept;
 

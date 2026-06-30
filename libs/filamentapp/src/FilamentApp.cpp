@@ -561,6 +561,7 @@ try {
     cameraGrid.reset();
     lightmapCubes.clear();
     window.reset();
+    mPrimarySwapChain = nullptr;
 
     mIBL.reset();
     mEngine->destroy(mDepthMI);
@@ -713,6 +714,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp, const Config& config, std:
         mSwapChain = engine->createSwapChain(nativeWindow,
                 filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
+    filamentApp->mPrimarySwapChain = mSwapChain;
 
     mRenderer = engine->createRenderer();
 
