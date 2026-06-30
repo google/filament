@@ -1588,12 +1588,6 @@ class_<Texture>("Texture")
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
     }), allow_raw_pointers())
-    .function("_setImageCube", EMBIND_LAMBDA(void, (Texture* self,
-            Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
-        uint32_t faceSize = pbd.pbd->size / 6;
-        Texture::FaceOffsets offsets(faceSize);
-        self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
-    }), allow_raw_pointers())
     .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
             Engine* engine, uint8_t level), {
         return self->getWidth(level);
@@ -1742,10 +1736,11 @@ class_<utils::EntityManager>("EntityManager")
     }), allow_raw_pointers())
 #endif
 
-    /// create ::method::
-    /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
-    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy));
+    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy))
+    .function("advanceEpoch", &utils::EntityManager::advanceEpoch)
+    .class_function("getMaxEntityCount", &utils::EntityManager::getMaxEntityCount)
+    .function("getEntityCount", &utils::EntityManager::getEntityCount);
 
 // DRIVER TYPES
 // ------------

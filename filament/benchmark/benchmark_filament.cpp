@@ -15,17 +15,24 @@
  */
 
 #include "Culler.h"
+#include "downcast.h"
 #include "PerformanceCounters.h"
+
+#include "details/Engine.h"
 
 #include <filament/Box.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
 #include <filament/Frustum.h>
+#include <filament/LightManager.h>
+#include <filament/RenderableManager.h>
 #include <filament/ToneMapper.h>
+#include <filament/TransformManager.h>
 
 #include <utils/Allocator.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
+#include <utils/EntityManager.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <benchmark/benchmark.h>
 
@@ -392,4 +399,70 @@ BENCHMARK_F(ColorGradingFixture, lutGenerationGeneric)(benchmark::State& state) 
 }
 BENCHMARK_F(ColorGradingFixture, lutGenerationDisplayRange)(benchmark::State& state) {
     benchmarkToneMapper<DisplayRangeToneMapper>(engine, state);
+}
+
+class EngineGcWorstCaseFixture : public benchmark::Fixture {
+protected:
+    Engine* engine = nullptr;
+    EntityManager* em = nullptr;
+    TransformManager* tcm = nullptr;
+    LightManager* lcm = nullptr;
+    RenderableManager* rcm = nullptr;
+
+public:
+    void SetUp(const benchmark::State& state) override {
+        Engine::Config config;
+        engine = Engine::Builder()
+            .backend(Engine::Backend::NOOP)
+            .config(&config)
+            .build();
+        em = &engine->getEntityManager();
+        tcm = &engine->getTransformManager();
+        lcm = &engine->getLightManager();
+        rcm = &engine->getRenderableManager();
+    }
+
+    void TearDown(const benchmark::State& state) override {
+        Engine::destroy(&engine);
+    }
+};
+
+BENCHMARK_F(EngineGcWorstCaseFixture, worstCaseSequentialGc)(benchmark::State& state) {
+    constexpr size_t TOTAL_ENTITIES = 10000;
+    constexpr size_t DESTROYED_ENTITIES = 5000;
+
+    std::vector<Entity> entities(TOTAL_ENTITIES);
+
+    PerformanceCounters pc(state);
+    for (auto _ : state) {
+        state.PauseTiming();
+        for (size_t i = 0; i < TOTAL_ENTITIES; ++i) {
+            entities[i] = em->create();
+            tcm->create(entities[i], 0, mat4f());
+            LightManager::Builder(LightManager::Type::POINT).build(*engine, entities[i]);
+            RenderableManager::Builder(1).boundingBox({{0,0,0},{1,1,1}}).build(*engine, entities[i]);
+            engine->createCamera(entities[i]);
+        }
+        em->advanceEpoch();
+
+        for (size_t i = 0; i < DESTROYED_ENTITIES; ++i) {
+            em->destroy(entities[i]);
+        }
+        em->advanceEpoch();
+
+        state.ResumeTiming();
+
+        downcast(engine)->gc();
+
+        state.PauseTiming();
+        for (size_t i = DESTROYED_ENTITIES; i < TOTAL_ENTITIES; ++i) {
+            em->destroy(entities[i]);
+        }
+        em->advanceEpoch();
+        downcast(engine)->gc();
+        entities.clear();
+        entities.resize(TOTAL_ENTITIES);
+    }
+    pc.stop();
+    state.SetItemsProcessed(state.iterations() * DESTROYED_ENTITIES);
 }

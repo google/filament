@@ -30,6 +30,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <tsl/robin_set.h>
+
 namespace filament {
 
 class FEngine;
@@ -144,6 +146,7 @@ struct MaterialDefinition {
     SamplerInterfaceBlock samplerInterfaceBlock;
     BufferInterfaceBlock uniformInterfaceBlock;
     SubpassInfo subpassInfo;
+    tsl::robin_set<std::string_view> parameterNames;
 
     BindingUniformInfoContainer bindingUniformInfo;
     AttributeInfoContainer attributeInfo;
@@ -176,6 +179,7 @@ private:
             std::unique_ptr<MaterialParser> parser);
 
     void processMain();
+    void processParameterNames();
     void processBlendingMode();
     void processSpecializationConstants(FEngine& engine);
     void processPushConstants();
