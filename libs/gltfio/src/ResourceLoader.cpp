@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
+#include "downcast.h"
+#include "FFilamentAsset.h"
+#include "GltfEnums.h"
+#include "TangentsJob.h"
+#include "Utility.h"
+
+#include "extended/ResourceLoaderExtended.h"
+
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 
-#include "GltfEnums.h"
-#include "FFilamentAsset.h"
-#include "TangentsJob.h"
-#include "downcast.h"
-#include "Utility.h"
-#include "extended/ResourceLoaderExtended.h"
+#include <geometry/Transcoder.h>
 
-#include <limits>
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/MorphTargetBuffer.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
-#include <filament/MorphTargetBuffer.h>
-
-#include <geometry/Transcoder.h>
 
 #include <private/utils/Tracing.h>
 
@@ -41,16 +41,16 @@
 #include <utils/Logger.h>
 #include <utils/Path.h>
 
-#include <cgltf.h>
-#include <meshoptimizer.h>
-
 #include <math/quat.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <cgltf.h>
+#include <meshoptimizer.h>
 #include <tsl/robin_map.h>
 
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -240,6 +240,16 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
         FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
         if (srcMatrices) {
+            if (srcMatrices->type != cgltf_type_mat4 ||
+                    srcMatrices->component_type != cgltf_component_type_r_32f) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, unsupported accessor type.";
+                continue;
+            }
+            if (srcMatrices->count < srcSkin.joints_count) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor count is too small.";
+                continue;
+            }
+
             if (!srcMatrices->buffer_view ||
                 (!srcMatrices->buffer_view->has_meshopt_compression &&
                  (!srcMatrices->buffer_view->buffer || !srcMatrices->buffer_view->buffer->data))) {
@@ -247,31 +257,29 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
                 continue;
             }
 
-            cgltf_size bufferSize = 0;
-            cgltf_size totalOffset = 0;
-            uint8_t* bytes = nullptr;
-            uint8_t* srcBuffer = nullptr;
+            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
+            const cgltf_size viewSize = srcMatrices->buffer_view->size;
+            const cgltf_size offsetInView = srcMatrices->offset;
+            if (offsetInView > viewSize || requiredBytes > viewSize - offsetInView) {
+                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer view bounds.";
+                continue;
+            }
 
+            uint8_t* srcBuffer = nullptr;
             if (srcMatrices->buffer_view->has_meshopt_compression) {
                 if (!srcMatrices->buffer_view->data) {
                     LOG(WARNING) << "Cannot copy inverse bind matrices, compressed buffer data is null.";
                     continue;
                 }
-                bufferSize = srcMatrices->buffer_view->size;
-                totalOffset = srcMatrices->offset;
-                bytes = (uint8_t*) srcMatrices->buffer_view->data;
-                srcBuffer = bytes + totalOffset;
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->data + offsetInView;
             } else {
-                bufferSize = srcMatrices->buffer_view->buffer->size;
-                totalOffset = srcMatrices->offset + srcMatrices->buffer_view->offset;
-                bytes = (uint8_t*) srcMatrices->buffer_view->buffer->data;
-                srcBuffer = bytes + totalOffset;
-            }
-
-            const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
-            if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
-                LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
-                continue;
+                const cgltf_size bufferSize = srcMatrices->buffer_view->buffer->size;
+                const cgltf_size totalOffset = srcMatrices->buffer_view->offset + offsetInView;
+                if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
+                    LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
+                    continue;
+                }
+                srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
             }
 
             memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
@@ -284,7 +292,29 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
     }
 }
 
-inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
+static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, uint32_t bindingSize) {
+    if (!accessor->buffer_view) {
+        return false;
+    }
+    cgltf_size capacity = 0;
+    cgltf_size totalOffset = 0;
+    if (accessor->buffer_view->has_meshopt_compression) {
+        capacity = accessor->buffer_view->size;
+        totalOffset = accessor->offset;
+    } else {
+        if (!accessor->buffer_view->buffer) {
+            return false;
+        }
+        capacity = accessor->buffer_view->buffer->size;
+        totalOffset = accessor->buffer_view->offset + accessor->offset;
+    }
+    if (totalOffset >= capacity) {
+        return false;
+    }
+    return bindingSize <= capacity - totalOffset;
+}
+
+inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
         UriDataCacheHandle uriDataCache) {
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
     const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;
@@ -419,10 +449,10 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         if (accessor->buffer_view) {
             if (accessor->buffer_view->has_meshopt_compression) {
                 bufferData = (const uint8_t*) accessor->buffer_view->data;
-                data = bufferData + accessor->offset;
-            } else {
+                if (bufferData) data = bufferData + accessor->offset;
+            } else if (accessor->buffer_view->buffer) {
                 bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-                data = utility::computeBindingOffset(accessor) + bufferData;
+                if (bufferData) data = utility::computeBindingOffset(accessor) + bufferData;
             }
         }
         const uint32_t size = utility::computeBindingSize(accessor);
@@ -435,19 +465,28 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 // Conversion path (handles null buffer_view internally via unpacking)
                 cgltf_size maxCount = accessor->count;
                 if (accessor->buffer_view) {
-                    const cgltf_size bufferSize = accessor->buffer_view->buffer->size;
-                    const cgltf_size totalOffset = accessor->buffer_view->offset + accessor->offset;
-
-                    if (totalOffset >= bufferSize) {
-                        continue;
+                    cgltf_size capacity = 0;
+                    cgltf_size totalOffset = 0;
+                    if (accessor->buffer_view->has_meshopt_compression) {
+                        capacity = accessor->buffer_view->size;
+                        totalOffset = accessor->offset;
+                    } else if (accessor->buffer_view->buffer) {
+                        capacity = accessor->buffer_view->buffer->size;
+                        totalOffset = accessor->buffer_view->offset + accessor->offset;
                     }
 
-                    const cgltf_size availableBytes = bufferSize - totalOffset;
-                    const cgltf_size stride = accessor->stride;
-                    const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+                    if (capacity > 0) {
+                        if (totalOffset >= capacity) {
+                            continue;
+                        }
 
-                    if (stride > 0 && availableBytes >= elementSize) {
-                        maxCount = 1 + (availableBytes - elementSize) / stride;
+                        const cgltf_size availableBytes = capacity - totalOffset;
+                        const cgltf_size stride = accessor->stride;
+                        const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+
+                        if (stride > 0 && availableBytes >= elementSize) {
+                            maxCount = 1 + (availableBytes - elementSize) / stride;
+                        }
                     }
                 }
 
@@ -502,6 +541,11 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
 
+            if (!indexAccessorFitsBuffer(accessor, size)) {
+                LOG(ERROR) << "Index accessor size exceeds buffer capacity.";
+                return false;
+            }
+
             if (accessor->component_type == cgltf_component_type_r_8u) {
                 if (size_t(size) > std::numeric_limits<size_t>::max() / 2) {
                     LOG(WARNING) << "Index buffer size would overflow on conversion, skipping.";
@@ -530,14 +574,21 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         assert(slot.morphTargetBuffer);
 
         if (utility::requiresPacking(accessor)) {
-            const cgltf_size bufferSize = accessor->buffer_view->buffer->size;
-            const cgltf_size totalOffset = accessor->buffer_view->offset + accessor->offset;
+            cgltf_size capacity = 0;
+            cgltf_size totalOffset = 0;
+            if (accessor->buffer_view->has_meshopt_compression) {
+                capacity = accessor->buffer_view->size;
+                totalOffset = accessor->offset;
+            } else if (accessor->buffer_view->buffer) {
+                capacity = accessor->buffer_view->buffer->size;
+                totalOffset = accessor->buffer_view->offset + accessor->offset;
+            }
             
-            if (totalOffset >= bufferSize) {
+            if (capacity == 0 || totalOffset >= capacity) {
                 continue;
             }
             
-            const cgltf_size availableBytes = bufferSize - totalOffset;
+            const cgltf_size availableBytes = capacity - totalOffset;
             const cgltf_size stride = accessor->stride;
             const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
             
@@ -597,6 +648,7 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
                     slot.morphTargetOffset);
         }
     }
+    return true;
 }
 
 } // anonymous namespace
@@ -711,7 +763,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
     cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
 
     if (!isExtendedAlgo) {
-        utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache);
+        if (!utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache)) {
+            return false;
+        }
 
         // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
         // as tangent generation.
@@ -728,7 +782,9 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             return false;
         }
 
-        uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache);
+        if (!uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache)) {
+            return false;
+        }
 
         // Compute surface orientation quaternions if necessary. This is similar to sparse data in
         // that we need to generate the contents of a GPU buffer by processing one or more CPU

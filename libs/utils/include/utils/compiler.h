@@ -187,12 +187,15 @@
 #if __has_attribute(maybe_unused) || (defined(_MSC_VER) && _MSC_VER >= 1911)
 #define UTILS_UNUSED [[maybe_unused]]
 #define UTILS_UNUSED_IN_RELEASE [[maybe_unused]]
+#define UTILS_UNUSED_WITHOUT_TRACING [[maybe_unused]]
 #elif __has_attribute(unused)
 #define UTILS_UNUSED __attribute__((unused))
 #define UTILS_UNUSED_IN_RELEASE __attribute__((unused))
+#define UTILS_UNUSED_WITHOUT_TRACING __attribute__((unused))
 #else
 #define UTILS_UNUSED
 #define UTILS_UNUSED_IN_RELEASE
+#define UTILS_UNUSED_WITHOUT_TRACING
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900

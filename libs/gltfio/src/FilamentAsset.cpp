@@ -15,6 +15,8 @@
  */
 
 #include "FFilamentAsset.h"
+#include "GltfEnums.h"
+#include "Wireframe.h"
 
 #include <gltfio/Animator.h>
 
@@ -24,9 +26,6 @@
 #include <utils/EntityManager.h>
 #include <utils/Log.h>
 #include <utils/NameComponentManager.h>
-
-#include "GltfEnums.h"
-#include "Wireframe.h"
 
 using namespace filament;
 using namespace utils;

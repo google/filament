@@ -48,6 +48,9 @@ public:
     // blocks until all jobs are executed and quits the thread
     void drainAndExit();
 
+    // blocks until all currently queued jobs are executed
+    void drain();
+
     // adds a job to the queue. no-op if drainAndExit() was called.
     void push(Job&& job);
 

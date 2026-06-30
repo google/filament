@@ -57,9 +57,6 @@
 
 #include <filagui/ImGuiHelper.h>
 
-#include <filamentapp/Cube.h>
-#include <filamentapp/Grid.h>
-
 #include <stb_image.h>
 
 #include <algorithm>
@@ -101,14 +98,17 @@ FilamentApp::~FilamentApp() {
     }
 }
 
-View* FilamentApp::getGuiView() const noexcept {
-    return mImGuiHelper->getView();
-}
+View* FilamentApp::getGuiView() const noexcept { return mImGuiHelper->getView(); }
 
-void FilamentApp::run(const Config& config, SetupCallback setupCallback,
-        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
-        PreRenderCallback preRender, PostRenderCallback postRender,
-        size_t width, size_t height) {
+void FilamentApp::run(Config const& config, SetupCallback setupCallback,
+        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback, PreRenderCallback preRender,
+        PostRenderCallback postRender, size_t width, size_t height) {
+
+    mCleanupCallback = cleanupCallback;
+    mImguiCallback = imguiCallback;
+    mPreRender = preRender;
+    mPostRender = postRender;
+    mIsSplitView = config.splitView;
 
     // Note that we need to determine the backend in order to build custom platforms.
     Engine::Backend backend = filament::app::resolveBackend(config.backend);
@@ -163,8 +163,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     }
 
     mWindowTitle = config.title;
-    std::unique_ptr<FilamentApp::Window> window(
+    mWindow.reset(
             new FilamentApp::Window(this, config, config.title, mCameraParams, width, height));
+    Window* window = mWindow.get();
 
     mDepthMaterial = Material::Builder()
             .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
@@ -180,17 +181,16 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
             .build(*mEngine);
 
-    std::unique_ptr<Cube> cameraCube{ new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }) };
-    std::unique_ptr<Grid> cameraGrid{ new Grid(*mEngine, mTransparentMaterial, { 1, 1, 0 }) };
+    mCameraCube.reset(new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }));
+    mCameraGrid.reset(new Grid(*mEngine, mTransparentMaterial, { 1, 1, 0 }));
 
     // we can't cull the light-frustum because it's not applied a rigid transform
     // and currently, filament assumes that for culling
-    std::vector<Cube> lightmapCubes;
-    lightmapCubes.reserve(4);
-    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 1, 0 }, false);
-    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 0, 1 }, false);
-    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 1, 0 }, false);
-    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 0, 0 }, false);
+    mLightmapCubes.reserve(4);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 1, 0 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 0, 1 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 1, 0 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 0, 0 }, false);
 
     mScene = mEngine->createScene();
 
@@ -198,9 +198,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     window->mMainView->getView()->setFroxelVizEnabled(true);
 
     if (config.splitView) {
-        mScene->addEntity(cameraCube->getSolidRenderable());
-        mScene->addEntity(cameraCube->getWireFrameRenderable());
-        for (auto&& cube : lightmapCubes) {
+        mScene->addEntity(mCameraCube->getSolidRenderable());
+        mScene->addEntity(mCameraCube->getWireFrameRenderable());
+        for (auto&& cube: mLightmapCubes) {
             mScene->addEntity(cube.getSolidRenderable());
             mScene->addEntity(cube.getWireFrameRenderable());
         }
@@ -216,7 +216,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     }
 
     // froxel debug grid always added (but hidden)
-    mScene->addEntity(cameraGrid->getWireFrameRenderable());
+    mScene->addEntity(mCameraGrid->getWireFrameRenderable());
 
     loadDirt(config);
     loadIBL(config);
@@ -234,221 +234,220 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
     }
 
-    bool mousePressed[3] = { false };
+    mDisplayManager->startRendering([this] { return doFrame(); });
+}
 
-    int sidebarWidth = mCameraParams.sidebarWidth;
-    float cameraFocalLength = mCameraParams.focalLength;
-    float cameraNear = mCameraParams.near;
-    float cameraFar = mCameraParams.far;
-    WindowCameraParams oldCamera = mCameraParams;
 
+bool FilamentApp::doFrame() {
 #ifdef __EXCEPTIONS
 try {
 #endif
-    while (!mClosed) {
-        uint32_t width, height;
-        mDisplayManager->getWindowSize(window->mWindow, &width, &height);
+    Window* window = mWindow.get();
+    if (!window) {
+        return true;
+    }
 
-        if (oldCamera != mCameraParams) {
-            window->configureCamerasForWindow(mCameraParams);
-            oldCamera = mCameraParams;
-        }
+    if (!UTILS_HAS_THREADING) {
+        mEngine->execute();
+    }
 
-        if (!UTILS_HAS_THREADING) {
-            mEngine->execute();
-        }
+    // Allow the app to animate the scene if desired.
+    if (mAnimation) {
+        mAnimation(mEngine, window->mMainView->getView(), mDisplayManager->getTime());
+    }
 
-        // Allow the app to animate the scene if desired.
-        if (mAnimation) {
-            mAnimation(mEngine, window->mMainView->getView(), mDisplayManager->getTime());
-        }
+    // Loop over fresh events twice: first stash them and let ImGui process them, then allow
+    // the app to process the stashed events. This is done because ImGui might wish to block
+    // certain events from the app (e.g., when dragging the mouse over an obscuring window).
+    std::vector<filament::app::AppEvent> events;
+    mDisplayManager->pollEvents(events);
 
-        // Loop over fresh events twice: first stash them and let ImGui process them, then allow
-        // the app to process the stashed events. This is done because ImGui might wish to block
-        // certain events from the app (e.g., when dragging the mouse over an obscuring window).
-        std::vector<filament::app::AppEvent> events;
-        mDisplayManager->pollEvents(events);
-
-        for (const auto& event: events) {
-            if (mImGuiHelper) {
-                ImGuiIO& io = ImGui::GetIO();
-                switch (event.type) {
-                    case AppEvent::Type::MOUSE_WHEEL: {
-                        io.MouseWheel += event.mouseWheel.delta;
-                        break;
-                    }
-                    case AppEvent::Type::MOUSE_BUTTON_DOWN: {
-                        if (event.mouseButton.button == 1) mousePressed[0] = true;
-                        if (event.mouseButton.button == 3) mousePressed[1] = true;
-                        if (event.mouseButton.button == 2) mousePressed[2] = true;
-                        break;
-                    }
-                    case AppEvent::Type::KEYDOWN:
-                    case AppEvent::Type::KEYUP: {
-                        io.AddKeyEvent(ImGuiMod_Ctrl,
-                                (event.key.modifiers & AppKeyModifier::CTRL) != 0);
-                        io.AddKeyEvent(ImGuiMod_Shift,
-                                (event.key.modifiers & AppKeyModifier::SHIFT) != 0);
-                        io.AddKeyEvent(ImGuiMod_Alt,
-                                (event.key.modifiers & AppKeyModifier::ALT) != 0);
-                        io.AddKeyEvent(ImGuiMod_Super,
-                                (event.key.modifiers & AppKeyModifier::SUPER) != 0);
-                        io.AddKeyEvent(filamentapp_utils::AppKeyToImGuiKey(event.key.code),
-                                event.type == AppEvent::Type::KEYDOWN);
-                        break;
-                    }
-                    case AppEvent::Type::TEXTINPUT: {
-                        io.AddInputCharactersUTF8(event.text.text);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-        }
-
-        // Now, loop over the events a second time for app-side processing.
-        for (const auto& event: events) {
-            ImGuiIO* io = mImGuiHelper ? &ImGui::GetIO() : nullptr;
+    for (const auto& event: events) {
+        if (mImGuiHelper) {
+            ImGuiIO& io = ImGui::GetIO();
             switch (event.type) {
-                case AppEvent::Type::QUIT:
-                    mClosed = true;
+                case AppEvent::Type::MOUSE_WHEEL: {
+                    io.MouseWheel += event.mouseWheel.delta;
                     break;
+                }
+                case AppEvent::Type::MOUSE_BUTTON_DOWN: {
+                    if (event.mouseButton.button == 1) mMousePressed[0] = true;
+                    if (event.mouseButton.button == 3) mMousePressed[1] = true;
+                    if (event.mouseButton.button == 2) mMousePressed[2] = true;
+                    break;
+                }
                 case AppEvent::Type::KEYDOWN:
-                    if (event.key.code == AppKey::ESCAPE) {
-                        mClosed = true;
-                    }
-#ifndef NDEBUG
-                    if (event.key.code == AppKey::PRINT_SCREEN) {
-                        DebugRegistry& debug = mEngine->getDebugRegistry();
-                        bool* captureFrame =
-                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                        *captureFrame = true;
-                    }
-#endif
-                    window->keyDown(event.key.code);
+                case AppEvent::Type::KEYUP: {
+                    io.AddKeyEvent(ImGuiMod_Ctrl,
+                            (event.key.modifiers & AppKeyModifier::CTRL) != 0);
+                    io.AddKeyEvent(ImGuiMod_Shift,
+                            (event.key.modifiers & AppKeyModifier::SHIFT) != 0);
+                    io.AddKeyEvent(ImGuiMod_Alt,
+                            (event.key.modifiers & AppKeyModifier::ALT) != 0);
+                    io.AddKeyEvent(ImGuiMod_Super,
+                            (event.key.modifiers & AppKeyModifier::SUPER) != 0);
+                    io.AddKeyEvent(filamentapp_utils::AppKeyToImGuiKey(event.key.code),
+                            event.type == AppEvent::Type::KEYDOWN);
                     break;
-                case AppEvent::Type::KEYUP:
-                    window->keyUp(event.key.code);
+                }
+                case AppEvent::Type::TEXTINPUT: {
+                    io.AddInputCharactersUTF8(event.text.text);
                     break;
-                case AppEvent::Type::MOUSE_WHEEL:
-                    if (!io || !io->WantCaptureMouse) window->mouseWheel(event.mouseWheel.delta);
-                    break;
-                case AppEvent::Type::MOUSE_BUTTON_DOWN:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseDown(event.mouseButton.button, event.mouseButton.x,
-                                event.mouseButton.y);
-                    break;
-                case AppEvent::Type::MOUSE_BUTTON_UP:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseUp(event.mouseButton.x, event.mouseButton.y);
-                    break;
-                case AppEvent::Type::MOUSE_MOVE:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseMoved(event.mouseMove.x, event.mouseMove.y);
-                    break;
-                case AppEvent::Type::DROP_FILE:
-                    if (mDropHandler) {
-                        mDropHandler(event.dropFile.path);
-                    }
-                    break;
-                case AppEvent::Type::RESIZED:
-                    window->resize(mCameraParams);
-                    // Call the resize callback, if this FilamentApp has one. This must be done
-                    // after configureCamerasForWindow, so the viewports are correct.
-                    if (mResize) {
-                        mResize(mEngine, window->mMainView->getView());
-                    }
-                    break;
+                }
                 default:
                     break;
             }
         }
+    }
 
-        // Calculate the time step.
-        static double lastTime = 0;
-        double now = mDisplayManager->getTime();
-        const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
-        lastTime = now;
+    // Now, loop over the events a second time for app-side processing.
+    for (const auto& event: events) {
+        if (mClosed) {
+            break;
+        }
+        ImGuiIO* io = mImGuiHelper ? &ImGui::GetIO() : nullptr;
+        switch (event.type) {
+            case AppEvent::Type::QUIT:
+                mClosed = true;
+                break;
+            case AppEvent::Type::KEYDOWN:
+                if (event.key.code == AppKey::ESCAPE) {
+                    mClosed = true;
+                }
+#ifndef NDEBUG
+                if (event.key.code == AppKey::PRINT_SCREEN) {
+                    DebugRegistry& debug = mEngine->getDebugRegistry();
+                    bool* captureFrame =
+                            debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                    *captureFrame = true;
+                }
+#endif
+                window->keyDown(event.key.code);
+                break;
+            case AppEvent::Type::KEYUP:
+                window->keyUp(event.key.code);
+                break;
+            case AppEvent::Type::MOUSE_WHEEL:
+                if (!io || !io->WantCaptureMouse) window->mouseWheel(event.mouseWheel.delta);
+                break;
+            case AppEvent::Type::MOUSE_BUTTON_DOWN:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseDown(event.mouseButton.button, event.mouseButton.x,
+                            event.mouseButton.y);
+                break;
+            case AppEvent::Type::MOUSE_BUTTON_UP:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseUp(event.mouseButton.x, event.mouseButton.y);
+                break;
+            case AppEvent::Type::MOUSE_MOVE:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseMoved(event.mouseMove.x, event.mouseMove.y);
+                break;
+            case AppEvent::Type::DROP_FILE:
+                if (mDropHandler) {
+                    mDropHandler(event.dropFile.path);
+                }
+                break;
+            case AppEvent::Type::RESIZED:
+                window->resize(mCameraParams);
+                // Call the resize callback, if this FilamentApp has one. This must be done
+                // after configureCamerasForWindow, so the viewports are correct.
+                if (mResize) {
+                    mResize(mEngine, window->mMainView->getView());
+                }
+                break;
+            default:
+                break;
+        }
+    }
 
-        // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
-        // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
-        if (mImGuiHelper) {
+    // Note that shutdown() does not destroy the DisplayManager, but the destructor does. The
+    // return here will go back to the caller, which is a DisplayManager.
+    if (mClosed) {
+        shutdown();
+        return true;
+    }
 
-            // Inform ImGui of the current window size in case it was resized.
-            uint32_t windowWidth, windowHeight;
-            uint32_t displayWidth, displayHeight;
-            mDisplayManager->getWindowSize(window->mWindow, &windowWidth, &windowHeight);
-            mDisplayManager->getDrawableSize(window->mWindow, &displayWidth, &displayHeight);
-            mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
-                    windowWidth > 0 ? ((float) displayWidth / windowWidth) : 0,
-                    displayHeight > 0 ? ((float) displayHeight / windowHeight) : 0);
+    // Calculate the time step.
+    static double lastTime = 0;
+    double now = mDisplayManager->getTime();
+    const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
+    lastTime = now;
 
-            // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
-            // from our event handler)
-            ImGuiIO& io = ImGui::GetIO();
-            int mx, my;
-            uint32_t buttons = mDisplayManager->getMouseState(&mx, &my);
-            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-            io.MouseDown[0] = mousePressed[0] || (buttons & (1 << 0)) != 0;
-            io.MouseDown[1] = mousePressed[1] || (buttons & (1 << 2)) != 0;
-            io.MouseDown[2] = mousePressed[2] || (buttons & (1 << 1)) != 0;
-            mousePressed[0] = mousePressed[1] = mousePressed[2] = false;
+    // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
+    // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
+    if (mImGuiHelper) {
+        // Inform ImGui of the current window size in case it was resized.
+        uint32_t windowWidth, windowHeight;
+        uint32_t displayWidth, displayHeight;
+        mDisplayManager->getWindowSize(window->mWindow, &windowWidth, &windowHeight);
+        mDisplayManager->getDrawableSize(window->mWindow, &displayWidth, &displayHeight);
+        mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
+                windowWidth > 0 ? ((float) displayWidth / windowWidth) : 0,
+                displayHeight > 0 ? ((float) displayHeight / windowHeight) : 0);
 
-            if (mDisplayManager->isWindowFocused(window->mWindow)) {
-                io.MousePos = ImVec2((float)mx, (float)my);
-            }
+        // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
+        // from our event handler)
+        ImGuiIO& io = ImGui::GetIO();
+        int mx, my;
+        uint32_t buttons = mDisplayManager->getMouseState(&mx, &my);
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        io.MouseDown[0] = mMousePressed[0] || (buttons & (1 << 0)) != 0;
+        io.MouseDown[1] = mMousePressed[1] || (buttons & (1 << 2)) != 0;
+        io.MouseDown[2] = mMousePressed[2] || (buttons & (1 << 1)) != 0;
+        mMousePressed[0] = mMousePressed[1] = mMousePressed[2] = false;
 
-            // Populate the UI Scene.
-            mImGuiHelper->render(timeStep, imguiCallback);
+        if (mDisplayManager->isWindowFocused(window->mWindow)) {
+            io.MousePos = ImVec2((float) mx, (float) my);
         }
 
-        // Update the camera manipulators for each view.
-        for (auto const& view : window->mViews) {
-            auto* cm = view->getCameraManipulator();
-            if (cm) {
-                cm->update(timeStep);
-            }
+        // Populate the UI Scene.
+        mImGuiHelper->render(timeStep, mImguiCallback);
+    }
+
+    // Update the camera manipulators for each view.
+    for (auto const& view: window->mViews) {
+        auto* cm = view->getCameraManipulator();
+        if (cm) {
+            cm->update(timeStep);
         }
+    }
 
-        // Update the position and orientation of the two cameras.
-        filament::math::float3 eye, center, up;
-        window->mMainCameraMan->getLookAt(&eye, &center, &up);
-        window->mMainCamera->lookAt(eye, center, up);
+    // Update the position and orientation of the two cameras.
+    filament::math::float3 eye, center, up;
+    window->mMainCameraMan->getLookAt(&eye, &center, &up);
+    window->mMainCamera->lookAt(eye, center, up);
 
-        window->mDebugCameraMan->getLookAt(&eye, &center, &up);
-        window->mDebugCamera->lookAt(eye, center, up);
-        window->mDebugCamera->setExposure(
-            window->mMainCamera->getAperture(),
-            window->mMainCamera->getShutterSpeed(),
-            window->mMainCamera->getSensitivity());
+    window->mDebugCameraMan->getLookAt(&eye, &center, &up);
+    window->mDebugCamera->lookAt(eye, center, up);
+    window->mDebugCamera->setExposure(window->mMainCamera->getAperture(),
+            window->mMainCamera->getShutterSpeed(), window->mMainCamera->getSensitivity());
 
-        window->mOrthoCamera->setExposure(
-            window->mMainCamera->getAperture(),
-            window->mMainCamera->getShutterSpeed(),
-            window->mMainCamera->getSensitivity());
+    window->mOrthoCamera->setExposure(window->mMainCamera->getAperture(),
+            window->mMainCamera->getShutterSpeed(), window->mMainCamera->getSensitivity());
 
-        auto const fci = window->mMainView->getView()->getFroxelConfigurationInfo();
-        if (UTILS_UNLIKELY(fci.age != mFroxelInfoAge)) {
-            mFroxelInfoAge = fci.age;
-            auto width = fci.info.width;
-            auto height = fci.info.height;
-            auto depth = fci.info.depth;
-            auto froxelDimension = fci.info.froxelDimension;
-            auto viewportWidth = fci.info.viewportWidth;
-            auto viewportHeight = fci.info.viewportHeight;
-            auto zLightFar = fci.info.zLightFar;
-            auto linearizer = fci.info.linearizer;
-            auto p = fci.info.p;
-            auto ct = fci.info.clipTransform;
-            cameraGrid->update(width, height, depth,
+    auto const fci = window->mMainView->getView()->getFroxelConfigurationInfo();
+    if (UTILS_UNLIKELY(fci.age != mFroxelInfoAge)) {
+        mFroxelInfoAge = fci.age;
+        auto width = fci.info.width;
+        auto height = fci.info.height;
+        auto depth = fci.info.depth;
+        auto froxelDimension = fci.info.froxelDimension;
+        auto viewportWidth = fci.info.viewportWidth;
+        auto viewportHeight = fci.info.viewportHeight;
+        auto zLightFar = fci.info.zLightFar;
+        auto linearizer = fci.info.linearizer;
+        auto p = fci.info.p;
+        auto ct = fci.info.clipTransform;
+        mCameraGrid->update(
+                width, height, depth,
                 [=](int const i) {
-                    float x = float(2 * i * froxelDimension.x) / float(viewportWidth ) - 1.0f;
+                    float x = float(2 * i * froxelDimension.x) / float(viewportWidth) - 1.0f;
                     x = (x - ct.z) / ct.x;
                     return x;
                 },
                 [=](int const j) {
-                    float y =  float(2 * j * froxelDimension.y) / float(viewportHeight) - 1.0f;
+                    float y = float(2 * j * froxelDimension.y) / float(viewportHeight) - 1.0f;
                     y = (y - ct.w) / ct.y;
                     return y;
                 },
@@ -458,88 +457,84 @@ try {
                     float const z_clip_dx = k == 0 ? 1.0f : c.z / c.w;
                     float const z_clip_gl = (1 - z_clip_dx) * 2.0f - 1.0f;
                     return z_clip_gl;
-            });
-        }
+                });
+    }
 
-        auto& rcm = mEngine->getRenderableManager();
-        if (config.splitView) {
-            rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()),     0x3, mCameraFrustumEnabled);
-            rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, mCameraFrustumEnabled);
-        }
-        rcm.setLayerMask(rcm.getInstance(cameraGrid->getWireFrameRenderable()), 0x3, mFroxelGridEnabled);
+    auto& rcm = mEngine->getRenderableManager();
+    if (mIsSplitView) {
+        rcm.setLayerMask(rcm.getInstance(mCameraCube->getSolidRenderable()), 0x3,
+                mCameraFrustumEnabled);
+        rcm.setLayerMask(rcm.getInstance(mCameraCube->getWireFrameRenderable()), 0x3,
+                mCameraFrustumEnabled);
+    }
+    rcm.setLayerMask(rcm.getInstance(mCameraGrid->getWireFrameRenderable()), 0x3,
+            mFroxelGridEnabled);
 
-        // Update the cube distortion matrix used for frustum visualization.
-        auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
-        // show/hide the cascades
-        for (size_t i = 0 ; i < 4; i++) {
-            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
-            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
-        }
-        if (!csm.empty()) {
-            for (size_t i = 0, c = csm.size(); i < c; i++) {
-                if (csm[i]) {
-                    lightmapCubes[i].mapFrustum(*mEngine, csm[i]);
-                }
-                uint8_t const layer = csm[i] ? mDirectionalShadowFrustumEnabled : 0x0;
-                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()), 0x3, layer);
-                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()), 0x3, layer);
+    // Update the cube distortion matrix used for frustum visualization.
+    auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+    // show/hide the cascades
+    for (size_t i = 0; i < 4; i++) {
+        rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
+        rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
+    }
+    if (!csm.empty()) {
+        for (size_t i = 0, c = csm.size(); i < c; i++) {
+            if (csm[i]) {
+                mLightmapCubes[i].mapFrustum(*mEngine, csm[i]);
             }
-        }
-
-        cameraCube->mapFrustum(*mEngine, window->mMainCamera);
-        cameraGrid->mapFrustum(*mEngine, window->mMainCamera);
-
-        // Delay rendering for roughly one monitor refresh interval
-        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
-        // For now, we'll use a fixed 16ms sleep for SDL-like platforms to match original behavior.
-        // HtmlDisplayManager might not need this if it has its own throttling.
-        if (mDisplayManager->isVsyncSupported()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-
-        Renderer* renderer = window->getRenderer();
-
-        if (preRender) {
-            preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
-        }
-
-        if (mReconfigureCameras) {
-            window->configureCamerasForWindow(mCameraParams);
-            mReconfigureCameras = false;
-        }
-
-        if (config.splitView) {
-            if(!window->mOrthoView->getView()->hasCamera()) {
-                auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
-                if (!csm.empty()) {
-                    // here we could choose the cascade
-                    Camera const* debugDirectionalShadowCamera = csm[0];
-                    if (debugDirectionalShadowCamera) {
-                        window->mOrthoView->setCamera(
-                                const_cast<Camera*>(debugDirectionalShadowCamera));
-                    }
-                }
-            }
-        }
-
-        if (renderer->beginFrame(window->getSwapChain())) {
-            for (filament::View* offscreenView: mOffscreenViews) {
-                renderer->render(offscreenView);
-            }
-            for (auto const& view: window->mViews) {
-                renderer->render(view->getView());
-            }
-
-            mDisplayManager->onFrameFinished(window->mWindow, mEngine, renderer);
-
-            if (postRender) {
-                postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
-            }
-            renderer->endFrame();
-        } else {
-            ++mSkippedFrames;
+            uint8_t const layer = csm[i] ? mDirectionalShadowFrustumEnabled : 0x0;
+            rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getSolidRenderable()), 0x3,
+                    layer);
+            rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getWireFrameRenderable()), 0x3,
+                    layer);
         }
     }
+
+    mCameraCube->mapFrustum(*mEngine, window->mMainCamera);
+    mCameraGrid->mapFrustum(*mEngine, window->mMainCamera);
+    Renderer* renderer = window->getRenderer();
+
+    if (mPreRender) {
+        mPreRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
+    }
+
+    if (mReconfigureCameras) {
+        window->configureCamerasForWindow(mCameraParams);
+        mReconfigureCameras = false;
+    }
+
+    if (mIsSplitView) {
+        if (!window->mOrthoView->getView()->hasCamera()) {
+            auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+            if (!csm.empty()) {
+                // here we could choose the cascade
+                Camera const* debugDirectionalShadowCamera = csm[0];
+                if (debugDirectionalShadowCamera) {
+                    window->mOrthoView->setCamera(
+                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                }
+            }
+        }
+    }
+
+    if (renderer->beginFrame(window->getSwapChain())) {
+        for (filament::View* offscreenView: mOffscreenViews) {
+            renderer->render(offscreenView);
+        }
+        for (auto const& view: window->mViews) {
+            renderer->render(view->getView());
+        }
+
+        mDisplayManager->onFrameFinished(window->mWindow, mEngine, renderer);
+
+        if (mPostRender) {
+            mPostRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
+        }
+        renderer->endFrame();
+    } else {
+        ++mSkippedFrames;
+    }
+
 #ifdef __EXCEPTIONS
 } catch (Panic const& e) {
     LOG(ERROR) << "Filament exception (terminate cleanly): " << e.what();
@@ -550,18 +545,21 @@ try {
     LOG(ERROR) << "Unknown exception! (terminate cleanly)";
 }
 #endif
+    return false;
+}
 
+void FilamentApp::shutdown() {
     if (mImGuiHelper) {
         mImGuiHelper.reset();
     }
 
-    cleanupCallback(mEngine, window->mMainView->getView(), mScene);
+    mCleanupCallback(mEngine, mWindow->mMainView->getView(), mScene);
 
-    cameraCube.reset();
-    cameraGrid.reset();
-    lightmapCubes.clear();
-    window.reset();
-    mPrimarySwapChain = nullptr;
+    mCameraCube.reset();
+    mCameraGrid.reset();
+    mLightmapCubes.clear();
+    mWindow.reset();
+    mPrimarySwapChain = nullptr;    
 
     mIBL.reset();
     mEngine->destroy(mDepthMI);
@@ -574,9 +572,11 @@ try {
 
     if (mVulkanPlatform) {
         filament::app::destroyVulkanPlatform(mVulkanPlatform);
+        mVulkanPlatform = nullptr;
     }
     if (mWebGPUPlatform) {
         filament::app::destroyWebGPUPlatform(mWebGPUPlatform);
+        mWebGPUPlatform = nullptr;
     }
 }
 
@@ -694,7 +694,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp, const Config& config, std:
           mEngine(filamentApp->mEngine),
           mConfig(config),
           mIsHeadless(config.headless) {
-
     mWindow =
             mDisplayManager->createWindow(title.c_str(), w, h, config.resizeable, config.headless);
 
@@ -893,6 +892,17 @@ void FilamentApp::Window::configureCamerasForWindow(WindowCameraParams const& ca
         mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
         dpiScaleX = (float) width / virtualWidth;
         dpiScaleY = (float) height / virtualHeight;
+    } else {
+        uint32_t width, height;
+        mDisplayManager->getWindowSize(mWindow, &width, &height);
+        if (width != mWidth || height != mHeight) {
+            mWidth = width;
+            mHeight = height;
+            if (mSwapChain) {
+                mEngine->destroy(mSwapChain);
+            }
+            mSwapChain = mEngine->createSwapChain((uint32_t) width, (uint32_t) height);
+        }
     }
 
     const uint32_t width = mWidth;

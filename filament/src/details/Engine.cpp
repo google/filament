@@ -1735,6 +1735,7 @@ bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant
 
 FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         FView const* view,
+        FMaterial const* material,
         tribool const shadowReceiver,
         tribool const skinning) noexcept {
 
@@ -1768,19 +1769,26 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         }
     };
 
+    // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    baseVariant.setDirectionalLighting(view->hasDirectionalLighting());
-    baseVariant.setDynamicLighting(view->hasDynamicLighting());
+    baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
+    baseVariant.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
     baseVariant.setFog(view->hasFog());
-    baseVariant.setShadowSampler2D(view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
+    baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 
     variants.push_back(baseVariant);
     apply(0, skinning, &Variant::setSkinning);
-    apply(0, shadowReceiver, &Variant::setShadowReceiver);
+    // Only respect shadowReceiver variant when the shading model is lit or hasShadowMultiplier.
+    if (isMaterialLit) {
+        apply(0, shadowReceiver, &Variant::setShadowReceiver);
+    } else {
+        apply(0, tribool(false), &Variant::setShadowReceiver);
+    }
 
     Variant depthVariant{};
-    if (view->hasShadowing()) {
+    if (isMaterialLit && view->hasShadowing()) {
         // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
         depthVariant = Variant{Variant::DEPTH_VARIANT};
         depthVariant.setDepthMoments(view->getShadowType() == ShadowType::VSM);
@@ -1812,7 +1820,7 @@ void FEngine::compile(
         tribool const skinning,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
-    auto const variants = getMaterialCompileVariants(view, shadowReceiver, skinning);
+    auto const variants = getMaterialCompileVariants(view, material, shadowReceiver, skinning);
     const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
 }
 

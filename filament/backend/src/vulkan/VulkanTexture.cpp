@@ -29,6 +29,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
 using namespace bluevk;
@@ -233,6 +234,23 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
 
 void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, size_t height,
         size_t depth) {
+    // This method copies a sub-region from the source PixelBufferDescriptor (p)
+    // into the destination mapped memory.
+    //
+    // Source Buffer (p):                                Destination Memory (mapped):
+    // <------------------ pbdStride ------------------->
+    // +------------------------------------------------+
+    // |                                     ^          |
+    // |            padding / top            | p.top    |
+    // |                                     v          |
+    // |  <-- p.left --> <------- width -------->       |    <------- width -------->
+    // |  +------------+------------------------+-------+ ^  +----------------------+ ^
+    // |  | (skipped)  |         (copy)         | (skip)| |  |        (copy)        | |
+    // |  |            |                        |       | |  |                      | | height
+    // |  +------------+------------------------+-------+ v  +----------------------+ v
+    // |                                                |
+    // +------------------------------------------------+
+    //
     uint8_t* buf = (uint8_t*) p.buffer;
     size_t const pixelSize = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
     size_t const pbdStride = p.stride ? p.stride : width;
@@ -242,20 +260,22 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
     if (UTILS_UNLIKELY(pixelSize > 0 && (p.left > 0 || p.top > 0 || pbdStride > width))) {
         size_t const pbdRowSize =
                 PixelBufferDescriptor::computeDataSize(p.format, p.type, pbdStride, 1, p.alignment);
-        size_t const pbdHeight = p.size / pixelSize / pbdStride / depth;
+        size_t const pbdHeight = p.size / pbdRowSize / depth;
         size_t const pbdLayerSize = pbdRowSize * pbdHeight;
 
         size_t const rowSize = width * pixelSize;
         size_t const layerSize = width * height * pixelSize;
 
+        assert_invariant(pbdStride >= p.left + width);
         // Size of a row to write
-        size_t const writeSize = std::min(pbdStride - p.left, width) * pixelSize;
+        size_t const writeSize = width * pixelSize;
 
+        assert_invariant(pbdHeight - p.top >= height);
         for (size_t z = 0; z < depth; z++) {
-            for (size_t y = p.top; y < pbdHeight; y++) {
+            for (size_t y = 0; y < height; y++) {
                 uint8_t* buf = (uint8_t*) p.buffer +
-                               ((p.left * pixelSize) + (y * pbdRowSize) + (z * pbdLayerSize));
-                uint8_t* curMapped = (uint8_t*) mapped + ((y - p.top) * rowSize + z * layerSize);
+                               ((p.left * pixelSize) + ((y + p.top) * pbdRowSize) + (z * pbdLayerSize));
+                uint8_t* curMapped = (uint8_t*) mapped + (y * rowSize + z * layerSize);
                 memcpy(curMapped, buf, writeSize);
             }
         }
@@ -547,9 +567,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     const VkFormat hostFormat = fvkutils::getVkFormat(hostData->format, hostData->type);
     const VkFormat deviceFormat = fvkutils::getVkFormatLinear(mState->mVkFormat);
     if (hostFormat != deviceFormat && hostFormat != VK_FORMAT_UNDEFINED) {
-        assert_invariant(xoffset == 0 && yoffset == 0 && zoffset == 0 &&
-                "Offsets not yet supported when format conversion is required.");
-        updateImageWithBlit(*hostData, width, height, depth, miplevel);
+        updateImageWithBlit(*hostData, width, height, depth, xoffset, yoffset, zoffset, miplevel);
         return;
     }
 
@@ -632,16 +650,41 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 }
 
 void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint32_t width,
-        uint32_t height, uint32_t depth, uint32_t miplevel) {
+        uint32_t height, uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t miplevel) {
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
     // Note: if bpp = 0, we're dealing with a compressed format; we should fall
     // back to the buffer's size.
     size_t const writeSize = bpp > 0 ? width * height * depth * bpp : data.size;
 
+    uint32_t layer = 0;
+    uint32_t layerCount = 1;
+    uint32_t dstZOffset = zoffset;
+    uint32_t dstDepth = depth;
+
+    if (    target == SamplerType::SAMPLER_2D_ARRAY ||
+            target == SamplerType::SAMPLER_CUBEMAP ||
+            target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
+        layer = zoffset;
+        layerCount = depth;
+        dstZOffset = 0;
+        dstDepth = 1;
+    }
+
+    // We map 3D textures and 2D arrays into a "tall" 2D staging image.
+    // This is because Vulkan staging images with VK_IMAGE_TILING_LINEAR strictly require
+    // arrayLayers == 1 and depth == 1. Rather than complicating VulkanStagePool to handle
+    // 3D staging allocations (which violates the linear tiling spec), we allocate a simple
+    // 2D image tall enough to hold all slices vertically. The contiguous nature of
+    // adjustedMemcpy perfectly matches this layout, allowing us to easily copy the chunks
+    // into the 3D destination via multiple VkImageBlit regions.
+    uint32_t const numSlices = dstDepth > layerCount ? dstDepth : layerCount;
+    uint32_t const stagingHeight = height * numSlices;
+
     void* mapped = nullptr;
     fvkmemory::resource_ptr<VulkanStageImage::Resource> stage
-            = mState->mStagePool.acquireImage(data.format, data.type, width, height);
+            = mState->mStagePool.acquireImage(data.format, data.type, width, stagingHeight);
     vmaMapMemory(mState->mAllocator, stage->memory(), &mapped);
     adjustedMemcpy(mapped, data, width, height, depth);
     vmaUnmapMemory(mState->mAllocator, stage->memory());
@@ -652,28 +695,38 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     commands.acquire(stage);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
-    // TODO: support blit-based format conversion for 3D images and cubemaps.
-    constexpr int layer = 0;
-
-    VkOffset3D const rect[2] { {0, 0, 0}, {int32_t(width), int32_t(height), 1} };
-
     VkImageAspectFlags const aspect = getImageAspect();
-
-    VkImageBlit const blitRegions[1] = {{
-        .srcSubresource = { aspect, 0, 0, 1 },
-        .srcOffsets = { rect[0], rect[1] },
-        .dstSubresource = { aspect, uint32_t(miplevel), layer, 1 },
-        .dstOffsets = { rect[0], rect[1] }
-    }};
-
-    VkImageSubresourceRange const range = { aspect, miplevel, 1, layer, 1 };
+    VkImageSubresourceRange const range = { aspect, miplevel, 1, layer, layerCount };
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(&commands, range, newLayout);
 
+    utils::FixedCapacityVector<VkImageBlit> blitRegions(numSlices);
+    for (uint32_t i = 0; i < numSlices; i++) {
+        VkOffset3D const srcRect[2]{
+            { 0, int32_t(i * height), 0 },
+            { int32_t(width), int32_t((i + 1) * height), 1 },
+        };
+        VkOffset3D const dstRect[2]{
+            { int32_t(xoffset), int32_t(yoffset), int32_t(dstZOffset + (dstDepth > 1 ? i : 0)) },
+            {
+                int32_t(xoffset + width),
+                int32_t(yoffset + height),
+                int32_t(dstZOffset + (dstDepth > 1 ? i : 0) + 1),
+            },
+        };
+        blitRegions[i] = {
+            .srcSubresource = { aspect, 0, 0, 1 },
+            .srcOffsets = { srcRect[0], srcRect[1] },
+            .dstSubresource = { aspect, uint32_t(miplevel), layer + (layerCount > 1 ? i : 0), 1 },
+            .dstOffsets = { dstRect[0], dstRect[1] },
+        };
+    }
+
     vkCmdBlitImage(cmdbuf, stage->image(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            mState->mTextureImage, fvkutils::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
+            mState->mTextureImage, fvkutils::getVkLayout(newLayout), numSlices, blitRegions.data(),
+            VK_FILTER_NEAREST);
 
     transitionLayout(&commands, range, oldLayout);
 }
@@ -682,7 +735,8 @@ VulkanLayout VulkanTexture::getDefaultLayout() const {
     return mState->mDefaultLayout;
 }
 
-VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange const& range, VkImageViewType type) {
+VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange const& range,
+        VkImageViewType type) {
     assert_invariant(mState->mYcbcr.conversion == VK_NULL_HANDLE &&
                      "We are not yet supporting external image as attachments.");
     if (type == VK_IMAGE_VIEW_TYPE_2D) {

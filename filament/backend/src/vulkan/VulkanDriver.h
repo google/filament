@@ -43,6 +43,7 @@
 #include "backend/DriverEnums.h"
 
 #include "DriverBase.h"
+#include "JobQueue.h"
 #include "private/backend/Driver.h"
 
 #include <utils/FixedCapacityVector.h>
@@ -129,6 +130,33 @@ private:
     void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask descriptorSetMask);
 
+    // Common methods shared by the synchronous and asynchronous variants of the driver API.
+    void createVertexBufferCommon(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
+            Handle<HwVertexBufferInfo> vbih, bool asynchronous, utils::ImmutableCString&& tag);
+    void createIndexBufferCommon(Handle<HwIndexBuffer> ibh, ElementType elementType,
+            uint32_t indexCount, bool asynchronous, utils::ImmutableCString&& tag);
+    void createBufferObjectCommon(Handle<HwBufferObject> boh, uint32_t byteCount,
+            BufferObjectBinding bindingType, BufferUsage usage, bool asynchronous,
+            utils::ImmutableCString&& tag);
+    void createTextureCommon(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+            TextureUsage usage, bool asynchronous, utils::ImmutableCString&& tag);
+    void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
+            backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+            backend::TextureSwizzle a, utils::ImmutableCString&& tag);
+    void importTextureCommon(Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
+            TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+            TextureUsage usage, utils::ImmutableCString&& tag);
+    void setVertexBufferObjectCommon(resource_ptr<VulkanVertexBuffer> vb, uint32_t index,
+            resource_ptr<VulkanBufferObject> bo);
+    void updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib, BufferDescriptor&& p,
+            uint32_t byteOffset);
+    void updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo, BufferDescriptor&& bd,
+            uint32_t byteOffset);
+    void update3DImageCommon(resource_ptr<VulkanTexture> texture, uint32_t level, uint32_t xoffset,
+            uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
+            PixelBufferDescriptor&& data);
+
     // Common preamble for indexed and non-indexed draws: handles deferred pipeline-layout
     // binding (for external samplers) and commits descriptor sets.
     void prepareDraw();
@@ -142,6 +170,9 @@ private:
     bool skipDueToEmptyRenderPass() const {
         return !bool(mCurrentRenderPass.renderTarget);
     }
+
+    JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
 
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
@@ -223,6 +254,9 @@ private:
     backend::StereoscopicType const mStereoscopicType;
     uint8_t const mStereoscopicEyeCount;
     backend::AsynchronousMode const mAsynchronousMode;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 
     uint8_t mTicksSinceLastGc = 0;
 

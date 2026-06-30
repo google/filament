@@ -1116,57 +1116,6 @@ public class Texture {
     }
 
     /**
-     * <code>setImage</code> is used to specify all six images of a cubemap level and
-     * follows exactly the OpenGL conventions
-     *
-     *  <p>This <code>Texture</code> instance must use
-     *  {@link Sampler#SAMPLER_CUBEMAP SAMPLER_CUBEMAP}.</p>
-     *
-     * @param engine                {@link Engine} this texture is associated to. Must be the
-     *                              instance passed to {@link Builder#build Builder.build()}.
-     * @param level                 Level to set the image for. Must be less than {@link #getLevels()}.
-     * @param buffer                Client-side buffer containing the image to set.
-     *                              <code>buffer</code>'s {@link Format format} must match that
-     *                              of {@link #getFormat()}
-     * @param faceOffsetsInBytes    Offsets in bytes into <code>buffer</code> for all six images.
-     *                              The offsets are specified in the following order:
-     *                              +x, -x, +y, -y, +z, -z.
-     *
-     * <p><code>faceOffsetsInBytes</code> are offsets in byte in the <code>buffer</code> relative
-     * to the current {@link Buffer#position()}. Use {@link CubemapFace} to index the
-     * <code>faceOffsetsInBytes</code> array. All six faces must be tightly packed.</p>
-     *
-     * @exception BufferOverflowException if the specified parameters would result in reading
-     * outside of <code>buffer</code>.
-     *
-     * @see Builder#sampler
-     * @see PixelBufferDescriptor
-     * @deprecated use {@link #setImage(Engine, int, int, int, int, int, int, int, PixelBufferDescriptor)}
-     */
-     @Deprecated
-    public void setImage(@NonNull Engine engine, @IntRange(from = 0) int level,
-            @NonNull PixelBufferDescriptor buffer,
-            @NonNull @Size(min = 6) int[] faceOffsetsInBytes) {
-        int result;
-        if (buffer.type == COMPRESSED) {
-            result = nSetImageCubemapCompressed(getNativeObject(), engine.getNativeObject(), level,
-                    buffer.storage, buffer.storage.remaining(),
-                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
-                    buffer.compressedSizeInBytes, buffer.compressedFormat.ordinal(),
-                    faceOffsetsInBytes, buffer.handler, buffer.callback);
-        } else {
-            result = nSetImageCubemap(getNativeObject(), engine.getNativeObject(), level,
-                    buffer.storage, buffer.storage.remaining(),
-                    buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
-                    buffer.stride, buffer.format.ordinal(),
-                    faceOffsetsInBytes, buffer.handler, buffer.callback);
-        }
-        if (result < 0) {
-            throw new BufferOverflowException();
-        }
-    }
-
-    /**
      * Specifies the external image to associate with this <code>Texture</code>.
      *
      *  <p>This <code>Texture</code> instance must use
@@ -1406,16 +1355,6 @@ public class Texture {
             Buffer storage, int remaining, int left, int top, int type, int alignment,
             int compressedSizeInBytes, int compressedFormat,
             Object handler, Runnable callback);
-
-    private static native int nSetImageCubemap(long nativeTexture, long nativeEngine,
-            int level, Buffer storage, int remaining, int left, int top, int type,
-            int alignment, int stride, int format,
-            int[] faceOffsetsInBytes, Object handler, Runnable callback);
-
-    private static native int nSetImageCubemapCompressed(long nativeTexture, long nativeEngine,
-            int level, Buffer storage, int remaining, int left, int top, int type,
-            int alignment, int compressedSizeInBytes, int compressedFormat,
-            int[] faceOffsetsInBytes, Object handler, Runnable callback);
 
     private static native void nSetExternalImage(
             long nativeObject, long nativeEngine, long eglImage);
