@@ -877,7 +877,7 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-    FenceStatus status == FenceStatus::CONDITION_SATISFIED;
+    FenceStatus status = FenceStatus::CONDITION_SATISFIED;
     if constexpr (UTILS_HAS_THREADING) {
         FFence* fence = createFence();
         status = fence->wait(FFence::Mode::FLUSH, timeout);
