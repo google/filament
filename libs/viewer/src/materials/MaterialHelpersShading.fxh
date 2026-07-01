@@ -242,7 +242,6 @@ struct BiplanarCommonData {
     BiplanarAxes axes;
 };
 
-// Original untouched Biplanar data generator for when IsNotOriented is FALSE
 BiplanarData GenerateBiplanarData(in BiplanarCommonData btCommon, float scaler) {
     // Depending on the resolution of the texture, we may want to multiply the texture coordinates
     vec3 queryPos = scaler * btCommon.rotatedVectorToMatCenter;
@@ -251,25 +250,71 @@ BiplanarData GenerateBiplanarData(in BiplanarCommonData btCommon, float scaler) 
     // Store the query data
     BiplanarData result = DEFAULT_BIPLANAR_DATA;
 
-    // Position requires fixed flipping operations for correct texture orientation, especially for wrapping around the Z-axis.
-    vec2 uvQueries[3] = vec2[3](
-        queryPos.yz * vec2(1.0, -1.0),
-        -queryPos.xz,
-        queryPos.xy
-    );
-
-    result.maxPos = uvQueries[axes.maximum.x];
-    result.medPos = uvQueries[axes.median.x];
-
-    // Derivatives are based on the scaled pos, without the flipping shenanigans going on above 
     vec3 dpdx = dFdx(queryPos);
     vec3 dpdy = dFdy(queryPos);
 
-    result.maxDpDx = vec2(dpdx[axes.maximum.y], dpdx[axes.maximum.z]);
-    result.maxDpDy = vec2(dpdy[axes.maximum.y], dpdy[axes.maximum.z]);
+    if (IsNotOriented()) {
+        float signX = SIGN_NO_ZERO(btCommon.orientedNormal.x);
+        float signY = SIGN_NO_ZERO(btCommon.orientedNormal.y);
+        float signZ = SIGN_NO_ZERO(btCommon.orientedNormal.z);
 
-    result.medDpDx = vec2(dpdx[axes.median.y], dpdx[axes.median.z]);
-    result.medDpDy = vec2(dpdy[axes.median.y], dpdy[axes.median.z]);
+        // --- Analytic Polar Derivatives for Z-Plane (Top Cap) ---
+        // Prevents the nasty mipmap seam at the atan() wrap-around.
+        float r2 = queryPos.x * queryPos.x + queryPos.y * queryPos.y + 1e-6; // add epsilon to prevent division by zero
+        float r = sqrt(r2);
+        
+        float dudx = -queryPos.y / (r2 * 6.2831853);
+        float dudy =  queryPos.x / (r2 * 6.2831853);
+        float dvdx =  queryPos.x / r;
+        float dvdy =  queryPos.y / r;
+
+        vec2 dpdx_polar = vec2(dudx * dpdx.x + dudy * dpdx.y, dvdx * dpdx.x + dvdy * dpdx.y);
+        vec2 dpdy_polar = vec2(dudx * dpdy.x + dudy * dpdy.y, dvdx * dpdy.x + dvdy * dpdy.y);
+
+        // --- UV Layout ---
+        vec2 uvQueries[3] = vec2[3](
+            vec2(queryPos.y * signX, queryPos.z),               // X-Plane Wrap
+            vec2(-queryPos.x * signY, queryPos.z),              // Y-Plane Wrap
+            vec2(atan(queryPos.y, queryPos.x) / 6.2831853, r)   // Z-Plane Polar Wrap
+        );
+
+        vec2 dpx_arr[3] = vec2[3](
+            vec2(dpdx.y * signX, dpdx.z),
+            vec2(-dpdx.x * signY, dpdx.z),
+            dpdx_polar
+        );
+
+        vec2 dpy_arr[3] = vec2[3](
+            vec2(dpdy.y * signX, dpdy.z),
+            vec2(-dpdy.x * signY, dpdy.z),
+            dpdy_polar
+        );
+
+        result.maxPos = uvQueries[axes.maximum.x];
+        result.medPos = uvQueries[axes.median.x];
+
+        result.maxDpDx = dpx_arr[axes.maximum.x];
+        result.maxDpDy = dpy_arr[axes.maximum.x];
+
+        result.medDpDx = dpx_arr[axes.median.x];
+        result.medDpDy = dpy_arr[axes.median.x];
+    } else {
+        // Original behavior
+        vec2 uvQueries[3] = vec2[3](
+            queryPos.yz * vec2(1.0, -1.0),
+            -queryPos.xz,
+            queryPos.xy
+        );
+
+        result.maxPos = uvQueries[axes.maximum.x];
+        result.medPos = uvQueries[axes.median.x];
+
+        result.maxDpDx = vec2(dpdx[axes.maximum.y], dpdx[axes.maximum.z]);
+        result.maxDpDy = vec2(dpdy[axes.maximum.y], dpdy[axes.maximum.z]);
+
+        result.medDpDx = vec2(dpdx[axes.median.y], dpdx[axes.median.z]);
+        result.medDpDy = vec2(dpdy[axes.median.y], dpdy[axes.median.z]);
+    }
 
     // Weights are selected by most relevant axes
     result.mainWeight = weights[axes.maximum.x];
@@ -305,33 +350,6 @@ const float kSupportThreshold = 0.25;
 const float kSupportThresholdInv = 1.0 / (1.0 - kSupportThreshold);
 
 vec4 BiplanarTexture(sampler2D tex, float scaler, in BiplanarCommonData btCommon) {
-    // -------------------------------------------------------------------------
-    // DEDICATED WRAP BLEND: 3-Plane mapping with locked V axis
-    // -------------------------------------------------------------------------
-    if (IsNotOriented()) {
-        vec3 p = scaler * btCommon.rotatedVectorToMatCenter;
-        vec3 weights = btCommon.normalWeights;
-
-        // X-Plane (Side): U = Y, V = Z
-        vec2 uvX = vec2(p.y, p.z);
-        vec4 valX = textureGrad(tex, uvX, dFdx(uvX), dFdy(uvX));
-
-        // Y-Plane (Side): U = X, V = Z 
-        vec2 uvY = vec2(p.x, p.z);
-        vec4 valY = textureGrad(tex, uvY, dFdx(uvY), dFdy(uvY));
-
-        // Z-Plane (Top/Bottom): U = X, V = Y
-        vec2 uvZ = vec2(p.x, p.y);
-        vec4 valZ = textureGrad(tex, uvZ, dFdx(uvZ), dFdy(uvZ));
-
-        // Normalize weights explicitly just in case
-        float sum = weights.x + weights.y + weights.z + 1e-6;
-        return (valX * weights.x + valY * weights.y + valZ * weights.z) / sum;
-    }
-    
-    // -------------------------------------------------------------------------
-    // ORIGINAL BIPLANAR BLEND
-    // -------------------------------------------------------------------------
     // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
     BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
@@ -385,38 +403,7 @@ vec3 swizzleIvec(vec3 x, ivec3 i) {
 // Refer to https://iquilezles.org/articles/biplanar/
 // Refer to (basic triplanar mapping) https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
 vec3 BiplanarNormalMap(sampler2D normalMap, float scaler, bool useSwizzledNormalMaps, float normalIntensity, in BiplanarCommonData btCommon) {
-    // -------------------------------------------------------------------------
-    // DEDICATED WRAP NORMAL MAPPING
-    // -------------------------------------------------------------------------
-    if (IsNotOriented()) {
-        vec3 p = scaler * btCommon.rotatedVectorToMatCenter;
-        vec3 n = btCommon.orientedNormal;
-        vec3 w = btCommon.normalWeights;
-
-        // X-Major Plane: U = Y, V = Z
-        vec2 uvX = vec2(p.y, p.z);
-        vec2 pX = SampleNormalMap(normalMap, uvX, dFdx(uvX), dFdy(uvX), useSwizzledNormalMaps);
-        vec3 tX = UnpackNormal(pX, NormalMapScale(n, 0, normalIntensity));
-        vec3 nX = vec3(tX.z * SIGN_NO_ZERO(n.x), tX.x, tX.y);
-
-        // Y-Major Plane: U = X, V = Z
-        vec2 uvY = vec2(p.x, p.z);
-        vec2 pY = SampleNormalMap(normalMap, uvY, dFdx(uvY), dFdy(uvY), useSwizzledNormalMaps);
-        vec3 tY = UnpackNormal(pY, NormalMapScale(n, 1, normalIntensity));
-        vec3 nY = vec3(tY.x, tY.z * SIGN_NO_ZERO(n.y), tY.y);
-
-        // Z-Major Plane: U = X, V = Y
-        vec2 uvZ = vec2(p.x, p.y);
-        vec2 pZ = SampleNormalMap(normalMap, uvZ, dFdx(uvZ), dFdy(uvZ), useSwizzledNormalMaps);
-        vec3 tZ = UnpackNormal(pZ, NormalMapScale(n, 2, normalIntensity));
-        vec3 nZ = vec3(tZ.x, tZ.y, tZ.z * SIGN_NO_ZERO(n.z));
-
-        return normalize(nX * w.x + nY * w.y + nZ * w.z);
-    }
-
-    // -------------------------------------------------------------------------
-    // ORIGINAL BIPLANAR NORMAL MAPPING
-    // -------------------------------------------------------------------------
+    // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
     BiplanarAxes axes = btCommon.axes;
     BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
@@ -503,8 +490,6 @@ void ApplyBaseColor(inout MaterialInputs material, in BiplanarCommonData btCommo
     float checkA = 1.0;
 
 #if defined(MATERIAL_HAS_BASE_COLOR)
-    // btCommon.normalWeights/axes are already locked to a single axis by
-    // ComputeBiplanarCommonData() when IsNotOriented() is set, so no re-derivation is needed here.
     if (IsBaseColorTextured()) {
 #if defined(BLENDING_ENABLED) || defined(MATERIAL_HAS_REFRACTION) || defined(BLEND_MODE_MASKED)
         material.baseColor.rgba = BiplanarTexture(materialParams_baseColorTexture,
@@ -558,7 +543,7 @@ void ApplyBaseColor(inout MaterialInputs material, in BiplanarCommonData btCommo
 }
 
 void ApplyEmissive(inout MaterialInputs material) {
-    material.emissive = float4( material.baseColor.rgb * materialParams.emissiveControl.x, materialParams.emissiveControl.y);
+    material.emissive = float4( material.baseColor.rgb *  materialParams.emissiveControl.x, materialParams.emissiveControl.y);
 }
 
 void ApplyOcclusion(inout MaterialInputs material, in BiplanarCommonData btCommon) {
