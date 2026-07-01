@@ -26,7 +26,6 @@
 #include <utils/debug.h>
 #include <utils/Entity.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/PagedArenaBitsetPool.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
@@ -38,7 +37,7 @@ class UTILS_PRIVATE FTrsTransformManager : public TrsTransformManager {
 public:
     using Instance = TrsTransformManager::Instance;
 
-    explicit FTrsTransformManager(utils::EntityManager& em) noexcept : mManager(em) {}
+    FTrsTransformManager() noexcept {}
 
     ~FTrsTransformManager() noexcept {
         assert_invariant(mManager.getComponentCount() == 0);
@@ -60,10 +59,6 @@ public:
 
     void create(utils::Entity entity, const float3& translation,
                 const quatf& rotation, const float3& scale) {
-        utils::Entity zombie;
-        if (UTILS_UNLIKELY(mManager.popPendingZombie(entity, zombie))) {
-            destroy(zombie);
-        }
         if (UTILS_UNLIKELY(mManager.hasComponent(entity))) {
             destroy(entity);
         }
@@ -75,16 +70,16 @@ public:
         }
     }
 
-    void destroyComponents(utils::Entity const* entities, size_t const count) noexcept {
-        mManager.removeComponents(entities, count);
-    }
-
     void destroy(utils::Entity e) noexcept {
-        destroyComponents(&e, 1);
+        if (Instance const ci = mManager.getInstance(e); ci) {
+            mManager.removeComponent(e);
+        }
     }
 
-    void gc() noexcept {
-        mManager.gc(this, &FTrsTransformManager::destroyComponents);
+    void gc(utils::EntityManager& em) noexcept {
+        mManager.gc(em, [this](Entity e) {
+            destroy(e);
+        });
     }
 
     void setTranslation(Instance ci, const float3& translation) noexcept {
@@ -138,7 +133,6 @@ private:
             float3>;
 
     struct Sim : public Base {
-        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "TrsTransformManager") {}
         using Base::gc;
         using Base::swap;
 
