@@ -45,6 +45,7 @@
     - [CI: backend](./dup/test_ci_backend.md)
     - [CI: renderdiff](./dup/test_ci_renderdiff.md)
     - [CI: sizeguard](./dup/test_ci_sizeguard.md)
+    - [CI: unit tests](./dup/test_ci_unit_test.md)
   - [Libraries](./notes/libs.md)
     - [bluegl](./dup/bluegl.md)
     - [bluevk](./dup/bluevk.md)
