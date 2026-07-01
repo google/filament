@@ -567,13 +567,13 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     constexpr float kAxisDistance = 3.0f;
     mDebugSpotlights[0].position = {kAxisDistance, 0.0f, 0.0f};
     mDebugSpotlights[0].direction = {-1.0f, 0.0f, 0.0f};
-    mDebugSpotlights[0].color = {1.0f, 0.25f, 0.25f}; // X: red
+    mDebugSpotlights[0].color = {1.0f, 0.25f, 0.25f}; 
     mDebugSpotlights[1].position = {0.0f, kAxisDistance, 0.0f};
     mDebugSpotlights[1].direction = {0.0f, -1.0f, 0.0f};
-    mDebugSpotlights[1].color = {0.25f, 1.0f, 0.25f}; // Y: green
+    mDebugSpotlights[1].color = {0.25f, 1.0f, 0.25f}; 
     mDebugSpotlights[2].position = {0.0f, 0.0f, kAxisDistance};
     mDebugSpotlights[2].direction = {0.0f, 0.0f, -1.0f};
-    mDebugSpotlights[2].color = {0.25f, 0.25f, 1.0f}; // Z: blue
+    mDebugSpotlights[2].color = {0.25f, 0.25f, 1.0f};
     for (auto& state : mDebugSpotlights) {
         state.enabled = true;
         applyDebugSpotlightState(state);
@@ -2027,7 +2027,7 @@ void ViewerGui::updateUserInterface() {
     });
 
     applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
-                lights.data(), lights.size(), &lm, mScene, mView);
+            lights.data(), lights.size(), &lm, mScene, mView);
 
     // Set IBL options
     {        

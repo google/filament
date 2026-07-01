@@ -294,19 +294,6 @@ BiplanarCommonData ComputeBiplanarCommonData(in FragmentData fragmentData) {
     BiplanarCommonData res;
     res.orientedNormal = fragmentData.normal * getMaterialOrientationMatrix();
     res.normalWeights = ComputeWeights(res.orientedNormal);
-    
-    // Lock the biplanar projection to a single fixed axis (Z) and blend only X/Y, so
-    // texturing stays consistent across the model instead of orienting per-fragment.
-    if (IsNotOriented()) {
-        res.normalWeights.z = 0.0;
-        float sum = res.normalWeights.x + res.normalWeights.y;
-        if (sum > 0.0001) {
-            res.normalWeights.xy /= sum;
-        } else {
-            res.normalWeights.x = 1.0;
-        }
-    }
-    
     res.axes = ComputeBiplanarPlanes(res.normalWeights);
     res.rotatedVectorToMatCenter = (fragmentData.pos - getMaterialOrientationCenter());
     res.rotatedVectorToMatCenter *= getMaterialOrientationMatrix();
@@ -494,9 +481,10 @@ void ApplyBaseColor(inout MaterialInputs material, in BiplanarCommonData btCommo
 #if defined(DRAW_WEIGHTS)
     if((materialParams.debugUsageFlags & 1u ) != 0u) {
         vec3 vn = material.normal.xyz * getMaterialOrientationMatrix();
-        mat3 complementerMatrix = mat3(0.0, 1.0, 1.0,    
-                                    1.0, 0.0, 1.0,    
-                                    1.0, 1.0, 0.0);   
+        // If an axis has negative value, a complementer color is calculated using the following matrix
+        mat3 complementerMatrix = mat3(0.0, 1.0, 1.0,    // -X => cyan
+                                    1.0, 0.0, 1.0,    // -Y => magenta
+                                    1.0, 1.0, 0.0);   // -Z => yellow
         material.baseColor = vec4(clamp(vn, 0.0, 1.0) + clamp(-vn, 0.0, 1.0) * complementerMatrix, 1.0);
     }
 #endif
