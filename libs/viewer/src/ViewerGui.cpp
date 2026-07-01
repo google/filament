@@ -1398,7 +1398,7 @@ void ViewerGui::updateUserInterface() {
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mSheenColor.useDerivedQuantity) << 12u;
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mSubsurfaceColor.useDerivedQuantity) << 13u;
                     usageFlags |= static_cast<std::uint32_t>(tweaks.mMaskedColorChange) << 14u;
-                    usageFlags |= static_cast<std::uint32_t>(tweaks.mNotOrientDefault) << 15u;
+                    usageFlags |= static_cast<std::uint32_t>(tweaks.mFixedUvsUp) << 15u;
                     matInstance->setParameter("usageFlags", usageFlags);
 
                     setTextureIfPresent(tweaks.mBaseColor.isFile, tweaks.mBaseColor.filename, "baseColor");
@@ -1430,7 +1430,7 @@ void ViewerGui::updateUserInterface() {
                     setTextureIfPresent(tweaks.mClearCoatNormal.isFile, tweaks.mClearCoatNormal.filename, "clearCoatNormal");
                     setTextureIfPresent(tweaks.mClearCoatRoughness.isFile, tweaks.mClearCoatRoughness.filename, "clearCoatRoughness");
 
-                    matInstance->setParameter("textureScaler", math::float4(tweaks.mBaseTextureScale * 0.05, tweaks.mNormalTextureScale * 0.05, tweaks.mClearCoatTextureScale * 0.05, tweaks.mRefractiveTextureScale * 0.05));
+                    matInstance->setParameter("textureScaler", math::float4(tweaks.mBaseTextureScale, tweaks.mNormalTextureScale, tweaks.mClearCoatTextureScale, tweaks.mRefractiveTextureScale));
                     math::float4 gammaBaseColor{}; 
                     gammaBaseColor.r = std::pow(tweaks.mBaseColor.value.r, 2.22f); 
                     gammaBaseColor.g = std::pow(tweaks.mBaseColor.value.g, 2.22f);

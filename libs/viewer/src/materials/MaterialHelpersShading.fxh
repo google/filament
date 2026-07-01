@@ -36,7 +36,7 @@
 // 12    doDeriveSheenColor             materialParams.usageFlags & 4096
 // 13    doDeriveSubsurfaceColor        materialParams.usageFlags & 8192
 // 14    maskedColorChange              materialParams.usageFlags & 16384
-// 15    notOrientDefault               materialParams.usageFlags & 32768
+// 15    fixedUvsUp                       materialParams.usageFlags & 32768
 //
 // Our ASTC compressor lays out the coordinates as XXXY but our BC5 compressor lays them out as XY.
 // The useSwizzledNormalMaps flag indicates if data is stored as XY or XXXY (so we can sample the 
@@ -104,7 +104,7 @@ bool IsMaskedColorChange() {
     return ( materialParams.usageFlags & 16384u ) != 0u;
 }
 
-bool IsNotOriented() {
+bool IsFixedUVsUp() {
     return ( materialParams.usageFlags & 32768u ) != 0u;
 }
 
@@ -253,7 +253,7 @@ BiplanarData GenerateBiplanarData(in BiplanarCommonData btCommon, float scaler) 
     vec3 dpdx = dFdx(queryPos);
     vec3 dpdy = dFdy(queryPos);
 
-    if (IsNotOriented()) {
+    if (IsFixedUVsUp()) {
         float signX = SIGN_NO_ZERO(btCommon.orientedNormal.x);
         float signY = SIGN_NO_ZERO(btCommon.orientedNormal.y);
         float signZ = SIGN_NO_ZERO(btCommon.orientedNormal.z);
