@@ -242,6 +242,7 @@ struct BiplanarCommonData {
     BiplanarAxes axes;
 };
 
+// Original untouched Biplanar data generator for when IsNotOriented is FALSE
 BiplanarData GenerateBiplanarData(in BiplanarCommonData btCommon, float scaler) {
     // Depending on the resolution of the texture, we may want to multiply the texture coordinates
     vec3 queryPos = scaler * btCommon.rotatedVectorToMatCenter;
@@ -304,6 +305,33 @@ const float kSupportThreshold = 0.25;
 const float kSupportThresholdInv = 1.0 / (1.0 - kSupportThreshold);
 
 vec4 BiplanarTexture(sampler2D tex, float scaler, in BiplanarCommonData btCommon) {
+    // -------------------------------------------------------------------------
+    // DEDICATED WRAP BLEND: 3-Plane mapping with locked V axis
+    // -------------------------------------------------------------------------
+    if (IsNotOriented()) {
+        vec3 p = scaler * btCommon.rotatedVectorToMatCenter;
+        vec3 weights = btCommon.normalWeights;
+
+        // X-Plane (Side): U = Y, V = Z
+        vec2 uvX = vec2(p.y, p.z);
+        vec4 valX = textureGrad(tex, uvX, dFdx(uvX), dFdy(uvX));
+
+        // Y-Plane (Side): U = X, V = Z 
+        vec2 uvY = vec2(p.x, p.z);
+        vec4 valY = textureGrad(tex, uvY, dFdx(uvY), dFdy(uvY));
+
+        // Z-Plane (Top/Bottom): U = X, V = Y
+        vec2 uvZ = vec2(p.x, p.y);
+        vec4 valZ = textureGrad(tex, uvZ, dFdx(uvZ), dFdy(uvZ));
+
+        // Normalize weights explicitly just in case
+        float sum = weights.x + weights.y + weights.z + 1e-6;
+        return (valX * weights.x + valY * weights.y + valZ * weights.z) / sum;
+    }
+    
+    // -------------------------------------------------------------------------
+    // ORIGINAL BIPLANAR BLEND
+    // -------------------------------------------------------------------------
     // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
     BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
@@ -357,7 +385,38 @@ vec3 swizzleIvec(vec3 x, ivec3 i) {
 // Refer to https://iquilezles.org/articles/biplanar/
 // Refer to (basic triplanar mapping) https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
 vec3 BiplanarNormalMap(sampler2D normalMap, float scaler, bool useSwizzledNormalMaps, float normalIntensity, in BiplanarCommonData btCommon) {
-    // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
+    // -------------------------------------------------------------------------
+    // DEDICATED WRAP NORMAL MAPPING
+    // -------------------------------------------------------------------------
+    if (IsNotOriented()) {
+        vec3 p = scaler * btCommon.rotatedVectorToMatCenter;
+        vec3 n = btCommon.orientedNormal;
+        vec3 w = btCommon.normalWeights;
+
+        // X-Major Plane: U = Y, V = Z
+        vec2 uvX = vec2(p.y, p.z);
+        vec2 pX = SampleNormalMap(normalMap, uvX, dFdx(uvX), dFdy(uvX), useSwizzledNormalMaps);
+        vec3 tX = UnpackNormal(pX, NormalMapScale(n, 0, normalIntensity));
+        vec3 nX = vec3(tX.z * SIGN_NO_ZERO(n.x), tX.x, tX.y);
+
+        // Y-Major Plane: U = X, V = Z
+        vec2 uvY = vec2(p.x, p.z);
+        vec2 pY = SampleNormalMap(normalMap, uvY, dFdx(uvY), dFdy(uvY), useSwizzledNormalMaps);
+        vec3 tY = UnpackNormal(pY, NormalMapScale(n, 1, normalIntensity));
+        vec3 nY = vec3(tY.x, tY.z * SIGN_NO_ZERO(n.y), tY.y);
+
+        // Z-Major Plane: U = X, V = Y
+        vec2 uvZ = vec2(p.x, p.y);
+        vec2 pZ = SampleNormalMap(normalMap, uvZ, dFdx(uvZ), dFdy(uvZ), useSwizzledNormalMaps);
+        vec3 tZ = UnpackNormal(pZ, NormalMapScale(n, 2, normalIntensity));
+        vec3 nZ = vec3(tZ.x, tZ.y, tZ.z * SIGN_NO_ZERO(n.z));
+
+        return normalize(nX * w.x + nY * w.y + nZ * w.z);
+    }
+
+    // -------------------------------------------------------------------------
+    // ORIGINAL BIPLANAR NORMAL MAPPING
+    // -------------------------------------------------------------------------
     BiplanarAxes axes = btCommon.axes;
     BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
@@ -499,7 +558,7 @@ void ApplyBaseColor(inout MaterialInputs material, in BiplanarCommonData btCommo
 }
 
 void ApplyEmissive(inout MaterialInputs material) {
-    material.emissive = float4( material.baseColor.rgb *  materialParams.emissiveControl.x, materialParams.emissiveControl.y);
+    material.emissive = float4( material.baseColor.rgb * materialParams.emissiveControl.x, materialParams.emissiveControl.y);
 }
 
 void ApplyOcclusion(inout MaterialInputs material, in BiplanarCommonData btCommon) {
