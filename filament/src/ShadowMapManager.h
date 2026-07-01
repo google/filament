@@ -204,6 +204,10 @@ private:
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
+    void cullDirectionalShadowCasters(FView const& view,
+            FScene::RenderableSoa& renderableData, CameraInfo const& cameraInfo,
+            math::float3 const& direction, float wsOneTexel) noexcept;
+
     ShadowTechnique updateSpotShadowMaps(FEngine& engine,
             FScene::LightSoa const& lightData) const noexcept;
 
@@ -289,6 +293,7 @@ private:
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
     bool mDisableBlitIntoTextureArray = false;
+    utils::FixedCapacityVector<Culler::result_type> mTighterCullingBuffer;
 
     ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());
