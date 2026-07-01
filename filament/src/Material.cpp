@@ -142,6 +142,10 @@ bool Material::hasParameter(const char* name) const noexcept {
     return downcast(this)->hasParameter(name);
 }
 
+bool Material::hasParameter(std::string_view name) const noexcept {
+    return downcast(this)->hasParameter(name);
+}
+
 bool Material::isSampler(const char* name) const noexcept {
     return downcast(this)->isSampler(name);
 }

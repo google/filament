@@ -76,9 +76,6 @@ class UTILS_PUBLIC Texture : public FilamentAPI {
 public:
     static constexpr size_t BASE_LEVEL = 0;
 
-    //! Face offsets for all faces of a cubemap
-    struct FaceOffsets;
-
     using PixelBufferDescriptor = backend::PixelBufferDescriptor;    //!< Geometry of a pixel buffer
     using Sampler = backend::SamplerType;                            //!< Type of sampler
     using InternalFormat = backend::TextureFormat;                   //!< Internal texel format
@@ -443,33 +440,6 @@ public:
     }
 
     /**
-     * Specify all six images of a cube map level.
-     *
-     * This method follows exactly the OpenGL conventions.
-     *
-     * @param engine        Engine this texture is associated to.
-     * @param level         Level to set the image for.
-     * @param buffer        Client-side buffer containing the images to set.
-     * @param faceOffsets   Offsets in bytes into \p buffer for all six images. The offsets
-     *                      are specified in the following order: +x, -x, +y, -y, +z, -z
-     *
-     * @attention \p engine must be the instance passed to Builder::build()
-     * @attention \p level must be less than getLevels().
-     * @attention \p buffer's Texture::Format must match that of getFormat().
-     * @attention This Texture instance must use Sampler::SAMPLER_CUBEMAP or it has no effect
-     *
-     * @see Texture::CubemapFace, Builder::sampler()
-     *
-     * @deprecated Instead, use setImage(Engine& engine, size_t level,
-     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-     *              uint32_t width, uint32_t height, uint32_t depth,
-     *              PixelBufferDescriptor&& buffer)
-     */
-    UTILS_DEPRECATED
-    void setImage(Engine& engine, size_t level,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
-
-    /**
      * An asynchronous version of `setImage()`.
      * Updates a sub-image of a 3D texture or 2D texture array for a level. Cubemaps are treated
      * like a 2D array of six layers.
@@ -669,50 +639,6 @@ public:
      * @see Builder::async()
      */
     bool isCreationComplete() const noexcept;
-
-    /** @deprecated */
-    struct FaceOffsets {
-        using size_type = size_t;
-        union {
-            struct {
-                size_type px;   //!< +x face offset in bytes
-                size_type nx;   //!< -x face offset in bytes
-                size_type py;   //!< +y face offset in bytes
-                size_type ny;   //!< -y face offset in bytes
-                size_type pz;   //!< +z face offset in bytes
-                size_type nz;   //!< -z face offset in bytes
-            };
-            size_type offsets[6];
-        };
-        size_type  operator[](size_t n) const noexcept { return offsets[n]; }
-        size_type& operator[](size_t n) { return offsets[n]; }
-        FaceOffsets() noexcept = default;
-        explicit FaceOffsets(size_type faceSize) noexcept {
-            px = faceSize * 0;
-            nx = faceSize * 1;
-            py = faceSize * 2;
-            ny = faceSize * 3;
-            pz = faceSize * 4;
-            nz = faceSize * 5;
-        }
-        FaceOffsets(const FaceOffsets& rhs) noexcept {
-            px = rhs.px;
-            nx = rhs.nx;
-            py = rhs.py;
-            ny = rhs.ny;
-            pz = rhs.pz;
-            nz = rhs.nz;
-        }
-        FaceOffsets& operator=(const FaceOffsets& rhs) noexcept {
-            px = rhs.px;
-            nx = rhs.nx;
-            py = rhs.py;
-            ny = rhs.ny;
-            pz = rhs.pz;
-            nz = rhs.nz;
-            return *this;
-        }
-    };
 
 protected:
     // prevent heap allocation

@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
+#include "downcast.h"
 #include "FNodeManager.h"
 
 #include <utils/Log.h>
-
-#include "downcast.h"
 
 using namespace utils;
 

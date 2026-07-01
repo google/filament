@@ -470,47 +470,66 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
     UserVariantFilterMask const variantFilter =
             ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
     ShaderModel const shaderModel = engine.getShaderModel();
+    MaterialDomain const materialDomain = definition.materialDomain;
+    bool const isMaterialLit = definition.isVariantLit;
 
     if (UTILS_LIKELY(driver.isParallelShaderCompileSupported())) {
         for (auto const variant: definition.getVariants()) {
-            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                for (auto const specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
-                    if (definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
+            // The variant is filtered by the user, skip it.
+            if (variantFilter && variant != Variant::filterUserVariant(variant, variantFilter))
+                continue;
+
+            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+                // Although certain variant bits were migrated to specialization constants, we
+                // still evaluate them against the variant filter mask to prune unnecessary
+                // shader permutations from the compilation queue.
+                if (variantFilter &&
+                        specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
+                    continue;
+
+                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
+                        materialDomain, isMaterialLit);
+
+                if (definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
-                        FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                                "prepareProgram(variant found)",
-                                "name", getMaterial()->getName().c_str_safe(),
-                                "variantKey", static_cast<uint32_t>(variant.key),
-                                "specKey", static_cast<uint32_t>(specKey.key),
-                                "priority", static_cast<uint32_t>(priority));
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "prepareProgram(variant found)", "name",
+                            getMaterial()->getName().c_str_safe(), "variantKey",
+                            static_cast<uint32_t>(variant.key), "specKey",
+                            static_cast<uint32_t>(specKey.key), "priority",
+                            static_cast<uint32_t>(priority));
 #endif
-                        prepareProgram(driver, variant, specKey, priority);
+                    prepareProgram(driver, variant, specKey, priority);
 #ifndef NDEBUG
-                    } else {
-                        FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                                "requested variant missing",
-                                "name", getMaterial()->getName().c_str_safe(),
-                                "variantKey", static_cast<uint32_t>(variant.key),
-                                "specKey", static_cast<uint32_t>(specKey.key),
-                                "priority", static_cast<uint32_t>(priority));
+                } else {
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "requested variant missing", "name",
+                            getMaterial()->getName().c_str_safe(), "variantKey",
+                            static_cast<uint32_t>(variant.key), "specKey",
+                            static_cast<uint32_t>(specKey.key), "priority",
+                            static_cast<uint32_t>(priority));
 #endif
-                    }
                 }
             }
         }
 #ifndef NDEBUG
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant: definition.getVariants()) {
-            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-                for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
-                        DynamicSpecConstKey::getAllPossibleKeys()) {
-                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
-                            "parallel compilation disabled", "name",
-                            getMaterial()->getName().c_str_safe(), "variantKey",
-                            static_cast<uint32_t>(variant.key), "specKey",
-                            static_cast<uint32_t>(specKey.key), "priority",
-                            static_cast<uint32_t>(priority));
-                }
+            if (variantFilter && variant != Variant::filterUserVariant(variant, variantFilter))
+                continue;
+
+            for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
+                    DynamicSpecConstKey::getAllPossibleKeys()) {
+                if (variantFilter &&
+                        specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
+                    continue;
+
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "parallel compilation disabled", "name",
+                        getMaterial()->getName().c_str_safe(), "variantKey",
+                        static_cast<uint32_t>(variant.key), "specKey",
+                        static_cast<uint32_t>(specKey.key), "priority",
+                        static_cast<uint32_t>(priority));
             }
         }
 #endif
