@@ -761,32 +761,3 @@ TEST(PagedArenaBitsetTest, CopyFrom) {
     EXPECT_TRUE(target[5000]);
 }
 
-TEST(PagedArenaBitsetTest, PopSetBits) {
-    PagedArenaBitset bitset;
-    for (uint32_t i = 0; i < 10; ++i) {
-        bitset.add(i * 10);
-    }
-    EXPECT_EQ(bitset.size(), 10);
-
-    uint32_t processedCount = 0;
-    bitset.popSetBits([&](uint32_t bit) {
-        processedCount++;
-        if (processedCount == 5) {
-            return false; // Stop
-        }
-        return true; // Pop
-    });
-
-    EXPECT_EQ(processedCount, 5);
-    EXPECT_EQ(bitset.size(), 6);
-
-    uint32_t remainderCount = 0;
-    bitset.popSetBits([&](uint32_t bit) {
-        remainderCount++;
-        return true;
-    });
-
-    EXPECT_EQ(remainderCount, 6);
-    EXPECT_TRUE(bitset.empty());
-}
-

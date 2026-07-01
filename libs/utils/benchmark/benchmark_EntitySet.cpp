@@ -801,51 +801,6 @@ BENCHMARK_TEMPLATE(BM_bitset_Merge6, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectSize6, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_MergeSize6, PagedArenaBitset)->Range(10, 100000);
 
-template<typename Policy>
-void BM_bitset_PopSetBits(benchmark::State& state) {
-    size_t const count = state.range(0);
-    std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
-
-    Policy set;
-    size_t idx = 0;
-    while (idx < count) {
-        uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
-        size_t const batchSize = std::min<size_t>(count - idx, 100);
-        for (size_t j = 0; j < batchSize; ++j) {
-            set.add((g << 17) | ((base + j) & 0x1FFFF));
-        }
-        idx += batchSize;
-    }
-
-    std::vector<Policy> temps(kInPlaceBatchSize);
-
-    for (auto _ : state) {
-        state.PauseTiming();
-        for (auto& t : temps) {
-            t.copyFrom(set);
-        }
-        state.ResumeTiming();
-
-        for (auto& t : temps) {
-            uint32_t processed = 0;
-            t.popSetBits([&](uint32_t bit) {
-                processed++;
-                if (processed == count / 2) {
-                    return false; // Stop halfway
-                }
-                return true;
-            });
-            benchmark::DoNotOptimize(t);
-        }
-    }
-    state.SetItemsProcessed(state.iterations() * kInPlaceBatchSize);
-}
-
-BENCHMARK_TEMPLATE(BM_bitset_PopSetBits, PagedArenaBitset)->Range(10, 100000)->Iterations(10);
-
 BENCHMARK_TEMPLATE(BM_bitset_IntersectMulti2, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectMulti6, PagedArenaBitset)->Range(10, 100000);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectChained6, PagedArenaBitset)->Range(10, 100000);
