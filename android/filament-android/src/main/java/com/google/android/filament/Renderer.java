@@ -161,6 +161,46 @@ public class Renderer {
     };
 
     /**
+     * Timing information about a frame.
+     * @see #getFrameInfoHistory(FrameInfo[])
+     */
+    public static class FrameInfo {
+        /** Value not supported or unavailable. */
+        public static final long INVALID = -1;
+        /** Value not yet available (pending completion). */
+        public static final long PENDING = -2;
+
+        /** Monotonically increasing frame identifier. */
+        public int frameId = 0;
+        /** Frame duration on the GPU in nanoseconds [ns]. */
+        public long gpuFrameDuration = 0;
+        /** Denoised frame duration on the GPU in nanoseconds [ns]. */
+        public long denoisedGpuFrameDuration = 0;
+        /** Renderer.beginFrame() time since epoch [ns]. */
+        public long beginFrame = 0;
+        /** Renderer.endFrame() time since epoch [ns]. */
+        public long endFrame = 0;
+        /** Backend thread time of frame start since epoch [ns]. */
+        public long backendBeginFrame = 0;
+        /** Backend thread time of frame end since epoch [ns]. */
+        public long backendEndFrame = 0;
+        /** GPU thread time of frame end since epoch [ns] or 0. */
+        public long gpuFrameComplete = 0;
+        /** VSYNC hardware time of this frame since epoch [ns]. */
+        public long vsync = 0;
+        /** Actual presentation time of this frame since epoch [ns]. */
+        public long displayPresent = 0;
+        /** Deadline for queuing a frame [ns]. */
+        public long presentDeadline = 0;
+        /** Display refresh rate period [ns]. */
+        public long displayPresentInterval = 0;
+        /** Time between the start of composition and the expected present time [ns]. */
+        public long compositionToPresentLatency = 0;
+        /** Time between vsync and the system's expected presentation time [ns]. */
+        public long expectedPresentLatency = 0;
+    }
+
+    /**
      * Indicates that the <code>dstSwapChain</code> passed into {@link #copyFrame} should be
      * committed after the frame has been copied.
      *
@@ -209,6 +249,30 @@ public class Renderer {
             mDisplayInfo = new DisplayInfo();
         }
         return mDisplayInfo;
+    }
+
+    /**
+     * Retrieve a history of frame timing information. The maximum frame history size is
+     * given by {@link #getMaxFrameHistorySize()}.
+     * <p>
+     * All or part of the history can be lost when using a different SwapChain in beginFrame().
+     * Provide a pre-allocated array of {@link FrameInfo} to receive historical records without
+     * garbage collection allocations.
+     * </p>
+     * @param outHistory pre-allocated array of FrameInfo.
+     * @return the number of FrameInfo populated.
+     * @see #beginFrame
+     */
+    public int getFrameInfoHistory(@NonNull FrameInfo[] outHistory) {
+        return nGetFrameInfoHistory(getNativeObject(), outHistory);
+    }
+
+    /**
+     * @return the maximum supported frame history size.
+     * @see #getFrameInfoHistory
+     */
+    public int getMaxFrameHistorySize() {
+        return nGetMaxFrameHistorySize(getNativeObject());
     }
 
     /**
@@ -703,23 +767,24 @@ public class Renderer {
     /**
      * Returns a timestamp (in seconds) for the last call to {@link #beginFrame}. This value is
      * constant for all {@link View views} rendered during a frame. The epoch is set with
-     * {@link #resetUserTime}.
+     * {@link #setMaterialTimeEpoch}.
      * <br>
      * <p>In materials, this value can be queried using <code>vec4 getUserTime()</code>. The value
      * returned is a <code>highp vec4</code> encoded as follows:</p>
      * <pre>
-     *      time.x = (float)Renderer.getUserTime();
-     *      time.y = Renderer.getUserTime() - time.x;
+     *      time.x = (float)Renderer.getMaterialTime();
+     *      time.y = Renderer.getMaterialTime() - time.x;
      * </pre>
      *
      * It follows that the following invariants are true:
      * <pre>
-     *      (double)time.x + (double)time.y == Renderer.getUserTime()
-     *      time.x == (float)Renderer.getUserTime()
+     *      (double)time.x + (double)time.y == Renderer.getMaterialTime()
+     *      time.x == (float)Renderer.getMaterialTime()
      * </pre>
      *
-     * This encoding allows the shader code to perform high precision (i.e. double) time
-     * calculations when needed despite the lack of double precision in the shader, e.g.:
+     * This "float-float" encoding allows the shader code to perform high precision (i.e. double) time
+     * calculations when needed despite the lack of double precision in the shader (e.g. using Dekker's
+     * algorithms), e.g.:
      * <br>
      *      To compute <code>(double)time * vertex</code> in the material, use the following construct:
      * <pre>
@@ -740,28 +805,49 @@ public class Renderer {
      * <p>
      *
      * In other words, it is only possible to get microsecond accuracy for about 16s or millisecond
-     * accuracy for just under 5h. This problem can be mitigated by calling {@link #resetUserTime},
+     * accuracy for just under 5h. This problem can be mitigated by calling {@link #setMaterialTimeEpoch},
      * or using high precision time as described above.
      *
-     * @return the time in seconds since {@link #resetUserTime} was last called
+     * @return the time in seconds since {@link #setMaterialTimeEpoch} was last called
      *
-     * @see #resetUserTime
+     * @see #setMaterialTimeEpoch
      */
-    public double getUserTime() {
-        return nGetUserTime(getNativeObject());
+    public double getMaterialTime() {
+        return nGetMaterialTime(getNativeObject());
     }
 
     /**
-     * Sets the user time epoch to now, i.e. resets the user time to zero.
+     * Backward compatibility helper for getUserTime().
+     * @deprecated Use getMaterialTime() instead.
+     */
+    @Deprecated
+    public double getUserTime() {
+        return getMaterialTime();
+    }
+
+    /**
+     * Backward compatibility helper for resetUserTime().
+     * @deprecated Use setMaterialTimeEpoch() instead.
+     */
+    @Deprecated
+    public void resetUserTime() {
+        nResetUserTime(getNativeObject());
+    }
+
+    /**
+     * Sets the material time epoch to the specified steady clock timestamp in nanoseconds, i.e. resets
+     * the material time to zero relative to that time.
      * <br>
-     * <p>Use this method used to keep the precision of time high in materials, in practice it should
+     * <p>Use this method to keep the precision of time high in materials, in practice it should
      * be called at least when the application is paused, e.g.
      * <code>Activity.onPause</code> in Android.</p>
      *
-     * @see #getUserTime
+     * @param monotonicClockNanos  The steady clock timestamp in nanoseconds to set as the material time epoch.
+     *
+     * @see #getMaterialTime
      */
-    public void resetUserTime() {
-        nResetUserTime(getNativeObject());
+    public void setMaterialTimeEpoch(long monotonicClockNanos) {
+        nSetMaterialTimeEpoch(getNativeObject(), monotonicClockNanos);
     }
 
     /**
@@ -770,6 +856,31 @@ public class Renderer {
      */
     public void skipNextFrames(int frameCount) {
         nSkipNextFrames(getNativeObject(), frameCount);
+    }
+
+    /**
+     * Queries whether the GPU execution has fallen behind the CPU rendering execution.
+     *
+     * <p>This is highly useful when managing the application's presentation loop manually (e.g.
+     * with the `FramePacer`), allowing the client to proactively detect and react to a latency build-up
+     * before continuing with frame execution.
+     *
+     * @return true if the GPU pipeline is delayed, false if ready.
+     */
+    public boolean hasGpuFallenBehind() {
+        return nHasGpuFallenBehind(getNativeObject());
+    }
+
+    /**
+     * Stalls the render thread (GPU submission pipeline) for the given duration in nanoseconds.
+     * <br>
+     * <p>This is useful for simulating long rendering frames (e.g. testing buffer stuffing recovery)
+     * without blocking the application's main event loop thread.</p>
+     *
+     * @param durationNanos  The duration to pause the render thread in nanoseconds.
+     */
+    public void pauseRenderThread(long durationNanos) {
+        nPauseRenderThread(getNativeObject(), durationNanos);
     }
 
     /**
@@ -816,8 +927,9 @@ public class Renderer {
             Buffer storage, int remaining,
             int left, int top, int type, int alignment, int stride, int format,
             Object handler, Runnable callback);
-    private static native double nGetUserTime(long nativeRenderer);
+    private static native double nGetMaterialTime(long nativeRenderer);
     private static native void nResetUserTime(long nativeRenderer);
+    private static native void nSetMaterialTimeEpoch(long nativeRenderer, long monotonicClockNanos);
     private static native void nSetDisplayInfo(long nativeRenderer, float refreshRate);
     private static native void nSetFrameRateOptions(long nativeRenderer,
             float interval, float headRoomRatio, float scaleRate, int history);
@@ -826,4 +938,9 @@ public class Renderer {
 
     private static native void nSkipNextFrames(long nativeObject, int frameCount);
     private static native int nGetFrameToSkipCount(long nativeObject);
+    private static native boolean nHasGpuFallenBehind(long nativeObject);
+    private static native void nPauseRenderThread(long nativeObject, long durationNanos);
+
+    private static native int nGetFrameInfoHistory(long nativeRenderer, FrameInfo[] outHistory);
+    private static native int nGetMaxFrameHistorySize(long nativeRenderer);
 }

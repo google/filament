@@ -54,6 +54,7 @@ class Camera;
 class ColorGrading;
 class DebugRegistry;
 class Fence;
+class FramePacer;
 class IndexBuffer;
 class SkinningBuffer;
 class IndirectLight;
@@ -986,6 +987,7 @@ public:
     bool destroy(const Material* UTILS_NULLABLE p);
     bool destroy(const MaterialInstance* UTILS_NULLABLE p); //!< Destroys a MaterialInstance object.
     bool destroy(const Renderer* UTILS_NULLABLE p);         //!< Destroys a Renderer object.
+    bool destroy(const FramePacer* UTILS_NULLABLE p);       //!< Destroys a FramePacer object.
     bool destroy(const Scene* UTILS_NULLABLE p);            //!< Destroys a Scene object.
     bool destroy(const Skybox* UTILS_NULLABLE p);           //!< Destroys a SkyBox object.
     bool destroy(const ColorGrading* UTILS_NULLABLE p);     //!< Destroys a ColorGrading object.

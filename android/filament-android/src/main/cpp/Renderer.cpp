@@ -177,10 +177,10 @@ Java_com_google_android_filament_Renderer_nReadPixelsEx(JNIEnv *env, jclass,
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
-Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv *env, jclass, jlong nativeRenderer) {
+Java_com_google_android_filament_Renderer_nGetMaterialTime(JNIEnv *env, jclass, jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     return wrapJni<jdouble>(env, [=]() {
-        return renderer->getUserTime();
+        return renderer->getMaterialTime();
     });
 }
 
@@ -189,6 +189,14 @@ Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv *env, jclass, jl
     Renderer *renderer = (Renderer *) nativeRenderer;
     wrapJni(env, [=]() {
         renderer->resetUserTime();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetMaterialTimeEpoch(JNIEnv *env, jclass, jlong nativeRenderer, jlong monotonicClockNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->setMaterialTimeEpoch(monotonicClockNanos);
     });
 }
 
@@ -268,4 +276,104 @@ Java_com_google_android_filament_Renderer_nGetFrameToSkipCount(JNIEnv *, jclass 
     jlong nativeRenderer) {
     Renderer *renderer = (Renderer *) nativeRenderer;
     return renderer->getFrameToSkipCount();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Renderer_nHasGpuFallenBehind(JNIEnv *env, jclass, jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    return wrapJni<jboolean>(env, [=]() {
+        return (jboolean) renderer->hasGpuFallenBehind();
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nPauseRenderThread(JNIEnv *env, jclass, jlong nativeRenderer, jlong durationNanos) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    wrapJni(env, [=]() {
+        renderer->pauseRenderThread(durationNanos);
+    });
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Renderer_nGetMaxFrameHistorySize(JNIEnv *env, jclass ,
+    jlong nativeRenderer) {
+    Renderer const* renderer = (Renderer const*) nativeRenderer;
+    return static_cast<jint>(renderer->getMaxFrameHistorySize());
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Renderer_nGetFrameInfoHistory(JNIEnv *env, jclass ,
+    jlong nativeRenderer, jobjectArray outHistory) {
+    Renderer const* renderer = (Renderer const*) nativeRenderer;
+
+    static const struct JniFrameInfoState {
+        jfieldID frameId;
+        jfieldID gpuFrameDuration;
+        jfieldID denoisedGpuFrameDuration;
+        jfieldID beginFrame;
+        jfieldID endFrame;
+        jfieldID backendBeginFrame;
+        jfieldID backendEndFrame;
+        jfieldID gpuFrameComplete;
+        jfieldID vsync;
+        jfieldID displayPresent;
+        jfieldID presentDeadline;
+        jfieldID displayPresentInterval;
+        jfieldID compositionToPresentLatency;
+        jfieldID expectedPresentLatency;
+        explicit JniFrameInfoState(JNIEnv* env) noexcept {
+            jclass frameInfoClass = env->FindClass("com/google/android/filament/Renderer$FrameInfo");
+            frameId = env->GetFieldID(frameInfoClass, "frameId", "I");
+            gpuFrameDuration = env->GetFieldID(frameInfoClass, "gpuFrameDuration", "J");
+            denoisedGpuFrameDuration = env->GetFieldID(frameInfoClass, "denoisedGpuFrameDuration", "J");
+            beginFrame = env->GetFieldID(frameInfoClass, "beginFrame", "J");
+            endFrame = env->GetFieldID(frameInfoClass, "endFrame", "J");
+            backendBeginFrame = env->GetFieldID(frameInfoClass, "backendBeginFrame", "J");
+            backendEndFrame = env->GetFieldID(frameInfoClass, "backendEndFrame", "J");
+            gpuFrameComplete = env->GetFieldID(frameInfoClass, "gpuFrameComplete", "J");
+            vsync = env->GetFieldID(frameInfoClass, "vsync", "J");
+            displayPresent = env->GetFieldID(frameInfoClass, "displayPresent", "J");
+            presentDeadline = env->GetFieldID(frameInfoClass, "presentDeadline", "J");
+            displayPresentInterval = env->GetFieldID(frameInfoClass, "displayPresentInterval", "J");
+            compositionToPresentLatency = env->GetFieldID(frameInfoClass, "compositionToPresentLatency", "J");
+            expectedPresentLatency = env->GetFieldID(frameInfoClass, "expectedPresentLatency", "J");
+        }
+    } jniState(env);
+
+    jsize const arrayLength = env->GetArrayLength(outHistory);
+    if (arrayLength <= 0) {
+        return 0;
+    }
+
+    auto const history = renderer->getFrameInfoHistory(static_cast<size_t>(arrayLength));
+    jsize const count = static_cast<jsize>(history.size());
+
+    for (jsize i = 0; i < count; ++i) {
+        jobject obj = env->GetObjectArrayElement(outHistory, i);
+        if (!obj) {
+            continue;
+        }
+
+        auto const& info = history[i];
+        env->SetIntField(obj,  jniState.frameId, static_cast<jint>(info.frameId));
+        env->SetLongField(obj, jniState.gpuFrameDuration, info.gpuFrameDuration);
+        env->SetLongField(obj, jniState.denoisedGpuFrameDuration, info.denoisedGpuFrameDuration);
+        env->SetLongField(obj, jniState.beginFrame, info.beginFrame);
+        env->SetLongField(obj, jniState.endFrame, info.endFrame);
+        env->SetLongField(obj, jniState.backendBeginFrame, info.backendBeginFrame);
+        env->SetLongField(obj, jniState.backendEndFrame, info.backendEndFrame);
+        env->SetLongField(obj, jniState.gpuFrameComplete, info.gpuFrameComplete);
+        env->SetLongField(obj, jniState.vsync, info.vsync);
+        env->SetLongField(obj, jniState.displayPresent, info.displayPresent);
+        env->SetLongField(obj, jniState.presentDeadline, info.presentDeadline);
+        env->SetLongField(obj, jniState.displayPresentInterval, info.displayPresentInterval);
+        env->SetLongField(obj, jniState.compositionToPresentLatency, info.compositionToPresentLatency);
+        env->SetLongField(obj, jniState.expectedPresentLatency, info.expectedPresentLatency);
+
+        env->DeleteLocalRef(obj);
+    }
+
+    return count;
 }

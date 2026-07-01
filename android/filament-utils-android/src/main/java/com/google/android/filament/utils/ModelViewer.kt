@@ -19,12 +19,15 @@ package com.google.android.filament.utils
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
+import androidx.annotation.RequiresApi
 import com.google.android.filament.*
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FramePacer
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
@@ -100,7 +103,15 @@ class ModelViewer(
     val view: View
     val camera: Camera
     val renderer: Renderer
+    val framePacer: FramePacer
     @Entity val light: Int
+
+    val vsyncPeriodNanos: Long
+        get() = if (this::displayHelper.isInitialized) {
+            displayHelper.display?.let { DisplayHelper.getRefreshPeriodNanos(it) } ?: 16666666L
+        } else {
+            16666666L
+        }
 
     var indirectLightCubemap: Texture? = null
     var skyboxCubemap: Texture? = null
@@ -133,6 +144,7 @@ class ModelViewer(
         view = engine.createView()
         view.scene = scene
         view.camera = camera
+        framePacer = FramePacer.Builder().targetFrameRate(60.0f).build(engine)
 
         materialProvider = UbershaderProvider(engine)
         assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
@@ -321,6 +333,37 @@ class ModelViewer(
         if (!uiHelper.isReadyToRender) {
             return false
         }
+        if (!framePacer.setupFrame(frameTimeNanos, vsyncPeriodNanos)) {
+            return false
+        }
+        if (framePacer.hasGpuFallenBehind(renderer)) {
+            renderer.skipFrame(frameTimeNanos)
+            return false
+        }
+        return doRender(frameTimeNanos)
+    }
+
+    /**
+     * Renders the model and updates the Filament camera using Android 13+ FrameData.
+     *
+     * @param frameData VSYNC telemetry object received in a {@link android.view.Choreographer.VsyncCallback}
+     */
+    @RequiresApi(33)
+    fun render(frameData: Choreographer.FrameData): Boolean {
+        if (!uiHelper.isReadyToRender) {
+            return false
+        }
+        if (!framePacer.setupFrame(frameData, vsyncPeriodNanos)) {
+            return false
+        }
+        if (framePacer.hasGpuFallenBehind(renderer)) {
+            renderer.skipFrame(frameData.frameTimeNanos)
+            return false
+        }
+        return doRender(frameData.frameTimeNanos)
+    }
+
+    private fun doRender(frameTimeNanos: Long): Boolean {
 
         // Allow the resource loader to finalize textures that have become ready.
         resourceLoader.asyncUpdateLoad()
@@ -337,7 +380,10 @@ class ModelViewer(
                 upward[0], upward[1], upward[2])
         }
 
-        // Render the scene, unless the renderer wants to skip the frame.
+        // Apply presentation time before beginning frame.
+        framePacer.applyPresentationTime(renderer)
+
+        // Render the scene.
         var rendered = false
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
             rendered = true
@@ -410,6 +456,7 @@ class ModelViewer(
         materialProvider.destroyMaterials()
         materialProvider.destroy()
         resourceLoader.destroy()
+        framePacer.destroy(engine)
 
         if (indirectLightCubemap != null) {
             engine.destroyTexture(indirectLightCubemap!!)
