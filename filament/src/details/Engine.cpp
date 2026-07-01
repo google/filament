@@ -300,7 +300,6 @@ FEngine::FEngine(Builder const& builder) :
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
         mRenderableManager(*this),
-        mTransformManager(mEntityManager),
         mLightManager(*this),
         mCameraManager(*this),
         mMaterialCache(builder->mConfig.materialCacheCapacity, builder->mConfig.programCacheCapacity),
@@ -797,26 +796,28 @@ void FEngine::prepare(DriverApi& driver) {
 
 void FEngine::gc() {
     JobSystem& js = getJobSystem();
-    JobSystem::Job* asyncJob = nullptr;
+    auto *rootJob = js.createJob();
+
+    js.run(
+            jobs::createJob(js, rootJob, [this] {
+                // These are safe to GC *sequentially* from a worker thread.
+                // The JobSystem acts as a release/acquire operation.
+                mLightManager.gc(mEntityManager);
+                mTransformManager.gc(mEntityManager);
+                mCameraManager.gc(*this, mEntityManager);
+            }));
 
     if (isAsynchronousModeEnabled()) {
-        asyncJob = js.createJob();
-        js.run(jobs::createJob(js, asyncJob, &FEngine::gcDeferredAsyncObjectDestruction, this));
+        // gcDeferredAsyncObjectDestruction() is thread-safe in this context because
+        // 1. JobSystem provides the release/acquire operation
+        // 2. it's only used from the main thread, which we are blocking during the gc
+        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, this));
     }
 
-    mLightManager.gc();
-    mTransformManager.gc();
-    mCameraManager.gc(*this);
-    mRenderableManager.gc(getDriverApi());
+    // RenderableManager cannot be gc'ed from a different thread, because it needs the DriverAPI
+    mRenderableManager.gc(mEntityManager, getDriverApi());
 
-    // Because the managers just updated their watermarks to the current epoch,
-    // advanceEpoch() will see the highest possible safe threshold, allowing
-    // it to reclaim the maximum amount of global IDs this frame.
-    mEntityManager.advanceEpoch();
-
-    if (asyncJob) {
-        js.runAndWait(asyncJob);
-    }
+    js.runAndWait(rootJob);
 }
 
 void FEngine::gcDeferredAsyncObjectDestruction() {
@@ -1169,7 +1170,7 @@ FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
 }
 
 void FEngine::destroyCameraComponent(Entity const entity) noexcept {
-    mCameraManager.destroy(entity, *this);
+    mCameraManager.destroy(*this, entity);
 }
 
 
@@ -1427,7 +1428,7 @@ void FEngine::destroy(Entity const e) {
     mRenderableManager.destroy(e, getDriverApi());
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
-    mCameraManager.destroy(e, *this);
+    mCameraManager.destroy(*this, e);
 }
 
 bool FEngine::isValid(const FBufferObject* p) const {

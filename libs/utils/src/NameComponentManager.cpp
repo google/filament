@@ -21,36 +21,27 @@ namespace utils {
 
 static constexpr size_t NAME = 0;
 
-NameComponentManager::NameComponentManager(EntityManager& em)
-        : SingleInstanceComponentManager<CString>(em, "NameComponentManager") {
+NameComponentManager::NameComponentManager(EntityManager&) {
 }
 
 NameComponentManager::~NameComponentManager() = default;
 
-void NameComponentManager::setName(Instance const instance, const char* name) noexcept {
+void NameComponentManager::setName(Instance instance, const char* name) noexcept {
     if (instance) {
         elementAt<NAME>(instance) = CString{ name };
     }
 }
 
-const char* NameComponentManager::getName(Instance const instance) const noexcept {
+const char* NameComponentManager::getName(Instance instance) const noexcept {
     return elementAt<NAME>(instance).c_str();
 }
 
-void NameComponentManager::addComponent(Entity const e) {
-    Entity zombie;
-    if (UTILS_UNLIKELY(popPendingZombie(e, zombie))) {
-        destroy(zombie);
-    }
+void NameComponentManager::addComponent(Entity e) {
     SingleInstanceComponentManager::addComponent(e);
 }
 
-void NameComponentManager::removeComponent(Entity const e) {
+void NameComponentManager::removeComponent(Entity e) {
     SingleInstanceComponentManager::removeComponent(e);
-}
-
-void NameComponentManager::destroyComponents(Entity const* entities, size_t const count) noexcept {
-    SingleInstanceComponentManager::removeComponents(entities, count);
 }
 
 } // namespace utils
