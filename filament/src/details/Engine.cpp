@@ -1773,8 +1773,6 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
     baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
-    // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
-    baseVariant.setDynamicLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());

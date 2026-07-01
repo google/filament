@@ -304,8 +304,14 @@ public class Material {
     public static class UserVariantFilterBit {
         /** Directional lighting */
         public static int DIRECTIONAL_LIGHTING = 0x01;
-        /** Dynamic lighting */
+
+        /** Dynamic lighting
+         * Since dynamic lighting was migrated to specialization constants, filtering this bit no
+         * longer affects the size of offline compiled materials (.filamat). However, we keep it
+         * for pruning unnecessary pipeline compilations at runtime.
+        */
         public static int DYNAMIC_LIGHTING = 0x02;
+
         /** Shadow receiver */
         public static int SHADOW_RECEIVER = 0x04;
         /** Skinning */

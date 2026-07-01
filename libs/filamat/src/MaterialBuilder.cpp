@@ -950,9 +950,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     if (v.variant.hasDirectionalLighting()) {
                         continue;
                     }
-                    if (v.variant.hasDynamicLighting()) {
-                        continue;
-                    }
                 }
                 if (filament::Variant::isShadowReceiverVariant(v.variant)) {
                     continue;
