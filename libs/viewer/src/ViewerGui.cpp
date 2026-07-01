@@ -92,6 +92,15 @@ void ViewerGui::applyDebugSpotlightState(DebugSpotlightState& s) {
     lm.setFalloff(inst, falloff);
     lm.setSpotLightCone(inst, innerRad, outerRad);
 
+    lm.setShadowCaster(inst, s.castShadows);
+    LightManager::ShadowOptions shadowOptions;
+    shadowOptions.mapSize = static_cast<uint32_t>(s.shadowMapSize);
+    shadowOptions.constantBias = s.shadowConstantBias;
+    shadowOptions.normalBias = s.shadowNormalBias;
+    shadowOptions.shadowBulbRadius = s.shadowBulbRadius;
+    shadowOptions.screenSpaceContactShadows = s.screenSpaceContactShadows;
+    lm.setShadowOptions(inst, shadowOptions);
+
     if (!mScene->hasEntity(s.entity)) {
         mScene->addEntity(s.entity);
     }
@@ -1756,6 +1765,32 @@ void ViewerGui::updateUserInterface() {
                     state.direction = {dir.x, dir.y, dir.z};
                     changed = true;
                 }
+            }
+
+            if (ImGui::CollapsingHeader("Shadow settings")) {
+                changed |= ImGui::Checkbox("Cast shadows", &state.castShadows);
+                ImGui::BeginDisabled(!state.castShadows);
+
+                static const char* kMapSizes[] = { "256", "512", "1024", "2048", "4096" };
+                static const int kMapSizeValues[] = { 256, 512, 1024, 2048, 4096 };
+                int mapSizeIndex = 2;
+                for (int j = 0; j < IM_ARRAYSIZE(kMapSizeValues); ++j) {
+                    if (kMapSizeValues[j] == state.shadowMapSize) {
+                        mapSizeIndex = j;
+                        break;
+                    }
+                }
+                if (ImGui::Combo("Shadow map size", &mapSizeIndex, kMapSizes, IM_ARRAYSIZE(kMapSizes))) {
+                    state.shadowMapSize = kMapSizeValues[mapSizeIndex];
+                    changed = true;
+                }
+
+                changed |= ImGui::DragFloat("Constant bias", &state.shadowConstantBias, 0.0001f, 0.0f, 0.1f, "%.4f");
+                changed |= ImGui::DragFloat("Normal bias", &state.shadowNormalBias, 0.05f, 0.0f, 10.0f);
+                changed |= ImGui::DragFloat("Shadow bulb radius (soft shadows)", &state.shadowBulbRadius, 0.005f, 0.0f, 1.0f);
+                changed |= ImGui::Checkbox("Screen-space contact shadows", &state.screenSpaceContactShadows);
+
+                ImGui::EndDisabled();
             }
             ImGui::EndDisabled();
         }

@@ -287,6 +287,14 @@ private:
         float falloffMultiplier = 4.010f;
         std::array<float, 3> direction = {0.0f, 0.0f, 1.0f};
 
+        // Shadow settings
+        bool castShadows = true;
+        int shadowMapSize = 1024;
+        float shadowConstantBias = 0.001f;
+        float shadowNormalBias = 1.0f;
+        float shadowBulbRadius = 0.02f;
+        bool screenSpaceContactShadows = false;
+
         utils::Entity entity;
         bool created = false;
     };
