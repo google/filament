@@ -21,13 +21,13 @@
 
 #include <filamentapp/Config.h>
 
+#include <utils/CString.h>
 #include <utils/Mutex.h>
 
 #include <CivetServer.h>
 
 #include <memory>
 #include <queue>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -67,7 +67,7 @@ public:
 
 private:
     struct WindowInfo {
-        std::string title;
+        utils::CString title;
         uint32_t width;
         uint32_t height;
     };

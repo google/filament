@@ -362,10 +362,8 @@ FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     return mDefaultMaterialInstance;
 }
 
-bool FMaterial::hasParameter(const char* name) const noexcept {
-    return mDefinition.uniformInterfaceBlock.hasField(name) ||
-           mDefinition.samplerInterfaceBlock.hasSampler(name) ||
-            mDefinition.subpassInfo.name == CString(name);
+bool FMaterial::hasParameter(std::string_view name) const noexcept {
+    return mDefinition.parameterNames.find(name) != mDefinition.parameterNames.end();
 }
 
 bool FMaterial::isSampler(const char* name) const noexcept {

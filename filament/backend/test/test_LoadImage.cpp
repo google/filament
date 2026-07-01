@@ -387,8 +387,6 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
-    SKIP_IF(Backend::VULKAN, "b/454040142");
-
     auto& api = getDriverApi();
     api.startCapture();
 
@@ -540,7 +538,6 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
-    SKIP_IF(Backend::VULKAN, "b/453776983");
     auto& api = getDriverApi();
     api.startCapture();
 

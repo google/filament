@@ -117,7 +117,7 @@ public:
     // Creates an instance of this material, specifying the batching mode.
     FMaterialInstance* createInstance(const char* name) const noexcept;
 
-    bool hasParameter(const char* name) const noexcept;
+    bool hasParameter(std::string_view name) const noexcept;
 
     bool isSampler(const char* name) const noexcept;
 

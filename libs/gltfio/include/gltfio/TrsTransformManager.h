@@ -21,9 +21,10 @@
 
 #include <utils/compiler.h>
 #include <utils/EntityInstance.h>
+
+#include <math/mat4.h>
 #include <math/quat.h>
 #include <math/vec3.h>
-#include <math/mat4.h>
 
 using namespace filament::math;
 

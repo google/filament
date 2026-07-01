@@ -25,9 +25,10 @@
 
 #include <math/vec4.h>
 
+#include <tsl/robin_map.h>
+
 #include <initializer_list>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 #include <assert.h>
@@ -196,7 +197,7 @@ private:
 
     utils::CString mName;
     utils::FixedCapacityVector<FieldInfo> mFieldInfoList;
-    std::unordered_map<std::string_view , uint32_t> mInfoMap;
+    tsl::robin_map<std::string_view, uint32_t> mInfoMap;
     uint32_t mSize = 0; // size in bytes rounded to multiple of 4
     Alignment mAlignment = Alignment::std140;
     Target mTarget = Target::UNIFORM;

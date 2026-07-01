@@ -17,12 +17,12 @@
 #ifndef GLTFIO_ASSETLOADER_H
 #define GLTFIO_ASSETLOADER_H
 
-#include <filament/Engine.h>
-#include <filament/Material.h>
-
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
 #include <gltfio/MaterialProvider.h>
+
+#include <filament/Engine.h>
+#include <filament/Material.h>
 
 #include <utils/compiler.h>
 

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
+#include <ktxreader/Ktx2Reader.h>
+
 #include <gltfio/TextureProvider.h>
-
-#include <string>
-#include <vector>
-
-#include <utils/JobSystem.h>
 
 #include <filament/Engine.h>
 #include <filament/Texture.h>
 
-#include <ktxreader/Ktx2Reader.h>
+#include <utils/JobSystem.h>
+
+#include <string>
+#include <vector>
 
 using namespace filament;
 using namespace utils;

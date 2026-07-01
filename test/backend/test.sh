@@ -44,7 +44,7 @@ echo "Building ${BACKEND_TEST_TARGET}..."
 set +e
 
 GTEST_FILTER_ARG=""
-BACKENDS=("opengl" "vulkan")
+BACKENDS=("opengl" "vulkan" "webgpu")
 for arg in "$@"
 do
     if [[ "$arg" == --gtest_filter* ]] ; then
