@@ -44,7 +44,7 @@ public:
 
     void terminate() noexcept;
 
-    void gc() noexcept;
+    void gc(utils::EntityManager& em) noexcept;
 
     /*
      * Component Manager APIs
@@ -80,11 +80,7 @@ public:
 
     void create(const Builder& builder, utils::Entity entity);
 
-    void destroyComponents(utils::Entity const* entities, size_t count) noexcept;
-
-    void destroy(utils::Entity e) noexcept {
-        destroyComponents(&e, 1);
-    }
+    void destroy(utils::Entity e) noexcept;
 
     void prepare(backend::DriverApi& driver) const noexcept;
 
@@ -153,7 +149,7 @@ public:
     }
 
     bool isPointLight(Instance const i) const noexcept {
-        return getType(i) == Type::POINT;
+        return getType(i) == Type::POINT; 
     }
 
     bool isSpotLight(Instance const i) const noexcept {
@@ -171,7 +167,7 @@ public:
     }
 
     bool isSunLight(Instance const i) const noexcept {
-        return getType(i) == Type::SUN;
+        return getType(i) == Type::SUN; 
     }
 
     uint32_t getShadowMapSize(Instance const i) const noexcept {
@@ -292,7 +288,6 @@ private:
     >;
 
     struct Sim : public Base {
-        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "LightManager") {}
         using Base::gc;
         using Base::swap;
 

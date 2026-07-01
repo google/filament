@@ -365,9 +365,6 @@ public:
 
     static PagedArenaBitset merge(const PagedArenaBitset& a, const PagedArenaBitset& b);
 
-    static PagedArenaBitset& mergeSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
-            Slice<const PagedArenaBitset* const> inputs);
-
     // ----------------------------------------------------------------------------------------------------------------
     // difference
     // ----------------------------------------------------------------------------------------------------------------
@@ -549,9 +546,9 @@ private:
     static_assert(WORDS_PER_PAGE == 64, "WORDS_PER_PAGE must be 64 to match the 64-bit activeWordsMask!");
 
     // Do NOT pad or align this struct to 64 bytes (576) or 512 bytes.
-    // Maintaining a non-cache-line-multiple size (520) creates a natural
-    // memory stagger. In Multi-Way operations (Merge6, Intersect6), this stagger
-    // prevents 4K Cache Set Aliasing and L1 Cache Thrashing, resulting in
+    // Maintaining a non-cache-line-multiple size (520) creates a natural 
+    // memory stagger. In Multi-Way operations (Merge6, Intersect6), this stagger 
+    // prevents 4K Cache Set Aliasing and L1 Cache Thrashing, resulting in 
     // up to an 8x performance increase.
     struct Page {
         uint64_t activeWordsMask = 0;
@@ -585,6 +582,9 @@ private:
     template<typename Collection>
     static PagedArenaBitset& mergeInternal(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
             const Collection& inputs);
+
+    static PagedArenaBitset& mergeSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL
+            out, Slice<const PagedArenaBitset* const> inputs);
 
     template<typename Collection>
     static uint32_t mergeSizeInternal(const Collection& inputs);

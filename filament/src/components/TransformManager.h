@@ -28,16 +28,13 @@
 
 #include <math/mat4.h>
 
-#include <utility>
-#include <variant>
-
 namespace filament {
 
 class UTILS_PRIVATE FTransformManager : public TransformManager {
 public:
     using Instance = Instance;
 
-    explicit FTransformManager(utils::EntityManager& em) noexcept;
+    FTransformManager() noexcept;
     ~FTransformManager() noexcept;
 
     // free-up all resources
@@ -88,11 +85,7 @@ public:
 
     void create(utils::Entity entity, Instance parent, const math::mat4& localTransform);
 
-    void destroyComponents(utils::Entity const* entities, size_t count) noexcept;
-
-    void destroy(utils::Entity e) noexcept {
-        destroyComponents(&e, 1);
-    }
+    void destroy(utils::Entity e) noexcept;
 
     void setParent(Instance i, Instance newParent) noexcept;
 
@@ -112,7 +105,7 @@ public:
 
     void commitLocalTransformTransaction() noexcept;
 
-    void gc() noexcept;
+    void gc(utils::EntityManager& em) noexcept;
 
     void registerChangeCallback(void const* token, utils::SingleInstanceComponentManagerBase::ChangeCallback callback) noexcept {
         mManager.registerChangeCallback(token, std::move(callback));
@@ -159,8 +152,6 @@ public:
 private:
     struct Sim;
 
-    void createImpl(utils::Entity entity, Instance parent, std::variant<math::mat4, math::mat4f> localTransform);
-
     void validateNode(Instance i) noexcept;
     void removeNode(Instance i) noexcept;
     void updateNode(Instance i) noexcept;
@@ -201,7 +192,6 @@ private:
     >;
 
     struct Sim : public Base {
-        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "TransformManager") {}
         using Base::gc;
         using Base::swap;
 

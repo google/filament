@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/PagedArenaBitset.h>
-
 #include <gtest/gtest.h>
+
+#include <utils/PagedArenaBitset.h>
 
 #include <algorithm>
 #include <cstddef>

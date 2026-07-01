@@ -77,25 +77,10 @@ public class EntityManager {
         return mNativeObject;
     }
 
-    public void advanceEpoch() {
-        nAdvanceEpoch(mNativeObject);
-    }
-
-    public int getMaxEntityCount() {
-        return nGetMaxEntityCount();
-    }
-
-    public int getEntityCount() {
-        return nGetEntityCount(mNativeObject);
-    }
-
     private static native long nGetEntityManager();
     private static native void nCreateArray(long nativeEntityManager, int n, int[] entities);
     private static native int nCreate(long nativeEntityManager);
     private static native void nDestroyArray(long nativeEntityManager, int n, int[] entities);
     private static native void nDestroy(long nativeEntityManager, int entity);
     private static native boolean nIsAlive(long nativeEntityManager, int entity);
-    private static native void nAdvanceEpoch(long nativeEntityManager);
-    private static native int nGetMaxEntityCount();
-    private static native int nGetEntityCount(long nativeEntityManager);
 }

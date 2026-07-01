@@ -24,7 +24,6 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Entity.h>
-#include <utils/PagedArenaBitsetPool.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
@@ -34,7 +33,7 @@ class UTILS_PRIVATE FNodeManager : public NodeManager {
 public:
     using Instance = NodeManager::Instance;
 
-    explicit FNodeManager(utils::EntityManager& em) noexcept : mManager(em) {}
+    FNodeManager() noexcept {}
 
     ~FNodeManager() noexcept {
         assert_invariant(mManager.getComponentCount() == 0);
@@ -51,10 +50,6 @@ public:
     }
 
     void create(utils::Entity entity) {
-        utils::Entity zombie;
-        if (UTILS_UNLIKELY(mManager.popPendingZombie(entity, zombie))) {
-            destroy(zombie);
-        }
         if (UTILS_UNLIKELY(mManager.hasComponent(entity))) {
             destroy(entity);
         }
@@ -62,16 +57,16 @@ public:
         assert_invariant(ci);
     }
 
-    void destroyComponents(utils::Entity const* entities, size_t const count) noexcept {
-        mManager.removeComponents(entities, count);
-    }
-
     void destroy(utils::Entity e) noexcept {
-        destroyComponents(&e, 1);
+        if (Instance const ci = mManager.getInstance(e); ci) {
+            mManager.removeComponent(e);
+        }
     }
 
-    void gc() noexcept {
-        mManager.gc(this, &FNodeManager::destroyComponents);
+    void gc(utils::EntityManager& em) noexcept {
+        mManager.gc(em, [this](Entity e) {
+            destroy(e);
+        });
     }
 
     void setMorphTargetNames(Instance ci, utils::FixedCapacityVector<CString> names) noexcept {
@@ -112,7 +107,6 @@ private:
             SceneMask>;                           // 4
 
     struct Sim : public Base {
-        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "NodeManager") {}
         using Base::gc;
         using Base::swap;
 

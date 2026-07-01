@@ -92,7 +92,7 @@ public:
     // free-up all resources
     void terminate(backend::DriverApi& driver) noexcept;
 
-    void gc(backend::DriverApi& driver) noexcept;
+    void gc(utils::EntityManager& em, backend::DriverApi& driver) noexcept;
 
     /*
      * Component Manager APIs
@@ -128,11 +128,7 @@ public:
 
     void create(const Builder& builder, utils::Entity entity);
 
-    void destroyComponents(utils::Entity const* entities, size_t count, backend::DriverApi& driver) noexcept;
-
-    void destroy(utils::Entity e, backend::DriverApi& driver) noexcept {
-        destroyComponents(&e, 1, driver);
-    }
+    void destroy(utils::Entity e, backend::DriverApi& driver) noexcept;
 
     // The client API should have taken an Engine&, but it doesn't, so that's a workaround
     // so we can keep the API as it is.
@@ -173,7 +169,7 @@ public:
     }
     void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0);
-    void setSkinningBuffer(Instance instance, FSkinningBuffer const* skinningBuffer,
+    void setSkinningBuffer(Instance instance, FSkinningBuffer* skinningBuffer,
             size_t count, size_t offset);
 
     inline void setMorphing(Instance instance, MorphType type);
@@ -231,14 +227,14 @@ public:
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     size_t getInstanceCount(Instance instance) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
-            size_t primitiveIndex, FMaterialInstance const* mi);
+            size_t primitiveIndex, FMaterialInstance const* materialInstance);
     void clearMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex);
     MaterialInstance* getMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            PrimitiveType type, FVertexBuffer const* vertices, FIndexBuffer const* indices,
+            PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,
             size_t offset, size_t count) noexcept;
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            PrimitiveType type, FVertexBuffer const* vertices,
+            PrimitiveType type, FVertexBuffer* vertices,
             size_t offset, size_t count) noexcept;
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
     uint16_t getBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
@@ -312,7 +308,6 @@ private:
     >;
 
     struct Sim : public Base {
-        explicit Sim(utils::EntityManager& em) noexcept : Base(em, "RenderableManager") {}
         using Base::gc;
         using Base::swap;
 

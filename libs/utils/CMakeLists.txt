@@ -253,8 +253,7 @@ if (FILAMENT_BUILD_TESTING AND NOT WASM)
             benchmark/benchmark_JobSystem.cpp
             benchmark/benchmark_mutex.cpp
             benchmark/benchmark_memcpy.cpp
-            benchmark/benchmark_EntitySet.cpp
-            benchmark/benchmark_EntityManager.cpp)
+            benchmark/benchmark_EntitySet.cpp)
 
 
     add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
