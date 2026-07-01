@@ -1,26 +1,5 @@
 #include <viewer/TweakableMaterial.h>
 
-static const char* materialTypeToString(TweakableMaterial::MaterialType type) {
-    switch (type) {
-        case TweakableMaterial::MaterialType::Opaque:      return "Opaque";
-        case TweakableMaterial::MaterialType::Transparent: return "Transparent";
-        case TweakableMaterial::MaterialType::Refractive:  return "Refractive";
-        case TweakableMaterial::MaterialType::Cloth:       return "Cloth";
-        case TweakableMaterial::MaterialType::Subsurface:  return "Subsurface";
-        case TweakableMaterial::MaterialType::Masked:      return "Masked";
-    }
-    return "Opaque";
-}
-
-static TweakableMaterial::MaterialType materialTypeFromString(const std::string& s) {
-    if (s == "Transparent") return TweakableMaterial::MaterialType::Transparent;
-    if (s == "Refractive")  return TweakableMaterial::MaterialType::Refractive;
-    if (s == "Cloth")       return TweakableMaterial::MaterialType::Cloth;
-    if (s == "Subsurface")  return TweakableMaterial::MaterialType::Subsurface;
-    if (s == "Masked")      return TweakableMaterial::MaterialType::Masked;
-    return TweakableMaterial::MaterialType::Opaque;
-}
-
 TweakableMaterial::TweakableMaterial() {
     mSpecularIntensity.value = 1.0f;    
     mAnisotropyDirection.value = { 1.0f, 0.0f, 0.0f };
@@ -38,7 +17,7 @@ TweakableMaterial::TweakableMaterial() {
 json TweakableMaterial::toJson() {
     json result{};
 
-    result["shaderType"] = materialTypeToString(mShaderType);
+    result["shaderType"] = mShaderType;
 
     result["useWard"] = mUseWard;
     result["maskedColorChange"] = mMaskedColorChange;       
@@ -102,18 +81,11 @@ json TweakableMaterial::toJson() {
 }
 
 void TweakableMaterial::fromJson(const json& source) {
-    // handle renaming materialType to shaderType; also handles migration from integer to string format
-    auto readShaderType = [&](const json& val) {
-        if (val.is_string()) {
-            mShaderType = materialTypeFromString(val.get<std::string>());
-        } else {
-            mShaderType = static_cast<MaterialType>(val.get<int>());
-        }
-    };
+    // handle renaming materialType to shaderType
     if (source.find("shaderType") != source.cend()) {
-        readShaderType(source["shaderType"]);
+        mShaderType = source["shaderType"];
     } else {
-        readShaderType(source["materialType"]);
+        mShaderType = source["materialType"];
     }
 
     readValueFromJson(source, "useWard", mUseWard, false);
