@@ -116,7 +116,13 @@ void main() {
 #if MATERIAL_FEATURE_LEVEL == 0
     if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
         if (frameUniforms.rec709 != 0) {
+#if defined(BLEND_MODE_TRANSPARENT)
+            unpremultiply(fragColor);
             fragColor.rgb = pow(fragColor.rgb, vec3(0.45454));
+            fragColor.rgb *= fragColor.a;
+#else
+            fragColor.rgb = pow(fragColor.rgb, vec3(0.45454));
+#endif
         }
     }
 #endif
