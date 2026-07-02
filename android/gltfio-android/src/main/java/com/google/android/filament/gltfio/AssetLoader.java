@@ -188,6 +188,13 @@ public class AssetLoader {
         asset.clearNativeObject();
     }
 
+    /**
+     * Performs a Garbage Collection sweep over all internal component managers.
+     */
+    public void gc() {
+        nGc(mNativeObject);
+    }
+
     private static native long nCreateAssetLoader(long nativeEngine, Object provider,
             long nativeEntities);
     private static native void nDestroyAssetLoader(long nativeLoader);
@@ -197,4 +204,5 @@ public class AssetLoader {
     private static native long nCreateInstance(long nativeLoader, long nativeAsset);
     private static native void nEnableDiagnostics(long nativeLoader, boolean enable);
     private static native void nDestroyAsset(long nativeLoader, long nativeAsset);
+    private static native void nGc(long nativeLoader);
 }

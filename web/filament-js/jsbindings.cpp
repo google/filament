@@ -2223,7 +2223,11 @@ class_<AssetLoader>("gltfio$AssetLoader")
     // Destroys the given asset and all of its associated Filament objects. This includes
     // components, material instances, vertex buffers, index buffers, and textures.
     // asset ::argument:: the Filament asset created using AssetLoader
-    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers());
+    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers())
+    
+    // gc ::method::
+    // Performs a Garbage Collection sweep over all internal component managers.
+    .function("gc", &AssetLoader::gc, allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights), {

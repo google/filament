@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2026 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,6 +99,7 @@ void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
 
     // Process bitsets if any were returned (Clean frames will simply skip this loop)
     if (UTILS_LIKELY(!mMissedGarbage.empty())) {
+        LockGuard<Mutex> lock(mEbrEntitiesLock);
         mCollapsedGarbage.clear();
         for (auto const* garbageBits : mMissedGarbage) {
             PagedArenaBitset::intersect(&mCollapsedGarbage, mEntities, *garbageBits);
@@ -183,6 +184,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
         SoaAllocator const allocator) noexcept {
     Instance ci = 0;
     if (!e.isNull()) {
+        resume();
         if (isAmortizationSupported()) {
             checkZombieCollisionPanic(e);
         }
@@ -190,7 +192,10 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
         if (!hasComponent(e)) {
             ci = allocator(context, e);
             mInstanceMap[e] = ci;
-            mEntities.add(e.getId());
+            {
+                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                mEntities.add(e.getId());
+            }
             notifyChange(e);
         } else {
             ci = mInstanceMap[e];
@@ -203,7 +208,7 @@ SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* conte
 
 
 void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* entities, size_t const count,
-        void* context, SoaDeallocator deallocator) noexcept {
+        void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
     auto& map = mInstanceMap;
     for (size_t k = 0; k < count; ++k) {
         Entity const e = entities[k];
@@ -219,23 +224,36 @@ void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* enti
             }
 
             map.erase(pos);
-            mEntities.remove(e.getId());
+
+            // We only need to lock mEbrEntitiesLock when writing (mutating) mEntities because the
+            // global timeline thread (EntityManager) can read it concurrently. Since component
+            // managers only run on the main thread, read-only accesses to mEntities from this
+            // class do not need synchronization.
+            {
+                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                mEntities.remove(e.getId());
+            }
+
             notifyChange(e);
         }
+    }
+
+    // Lock-free read check: safe because no other thread mutates mEntities.
+    if (mEntities.empty()) {
+        suspend();
     }
 }
 
 SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(EntityManager& em, ImmutableCString name,
         bool const amortizationSupported) noexcept
         : mEntityManager(em), mName(std::move(name)), mAmortizationSupported(amortizationSupported) {
-    mEntityManager.registerWatermark(&mWatermark, mName);
 }
 
 SingleInstanceComponentManagerBase::~SingleInstanceComponentManagerBase() noexcept {
-    mEntityManager.unregisterWatermark(&mWatermark);
+    suspend();
 }
 
-SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept
+SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS
         : mInstanceMap(std::move(rhs.mInstanceMap)),
           mEntities(std::move(rhs.mEntities)),
           mPendingDestruction(std::move(rhs.mPendingDestruction)),
@@ -248,13 +266,16 @@ SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(SingleIns
           mChangeCallbacks(std::move(rhs.mChangeCallbacks)),
           mBitsets(std::move(rhs.mBitsets)) {
     std::copy_n(rhs.mDirtyEntities, rhs.mDirtyCount, mDirtyEntities);
+    mSuspended = rhs.mSuspended;
     mWatermark.store(rhs.mWatermark.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName);
+    if (!mSuspended) {
+        mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName, &mEntities, &mEbrEntitiesLock);
+    }
 }
 
-SingleInstanceComponentManagerBase& SingleInstanceComponentManagerBase::operator=(SingleInstanceComponentManagerBase&& rhs) noexcept {
+SingleInstanceComponentManagerBase& SingleInstanceComponentManagerBase::operator=(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
     if (UTILS_LIKELY(this != &rhs)) {
-        mEntityManager.unregisterWatermark(&mWatermark);
+        suspend();
 
         mEntities = std::move(rhs.mEntities);
         mPendingDestruction = std::move(rhs.mPendingDestruction);
@@ -267,8 +288,11 @@ SingleInstanceComponentManagerBase& SingleInstanceComponentManagerBase::operator
         mChangeCallbacks = std::move(rhs.mChangeCallbacks);
         mBitsets = std::move(rhs.mBitsets);
         std::copy_n(rhs.mDirtyEntities, rhs.mDirtyCount, mDirtyEntities);
+        mSuspended = rhs.mSuspended;
         mWatermark.store(rhs.mWatermark.load(std::memory_order_relaxed), std::memory_order_relaxed);
-        mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName);
+        if (!mSuspended) {
+            mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName, &mEntities, &mEbrEntitiesLock);
+        }
     }
     return *this;
 }
