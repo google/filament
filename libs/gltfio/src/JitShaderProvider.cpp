@@ -21,10 +21,10 @@
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/Hash.h>
-#include <utils/sstream.h>
 
 #include <tsl/robin_map.h>
 
+#include <iostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -83,9 +83,9 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     }();
 
     for (auto& filterStr : variantFilters) {
+        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
         if (std::string_view(filterStr) == "dynamicLighting") {
-            io::sstream warningMessage;
-            warningMessage << "Warning: dynamicLighting variant filter is deprecated and ignored.";
+            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored.";
             continue;
         }
         mVariantFilter |= (uint32_t)strToEnum.at(filterStr);

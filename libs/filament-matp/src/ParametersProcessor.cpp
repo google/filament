@@ -1343,6 +1343,7 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
+        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
         if (s == "dynamicLighting") {
             std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored." << std::endl;
             continue;

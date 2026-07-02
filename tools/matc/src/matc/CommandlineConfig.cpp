@@ -210,6 +210,7 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
         if (item == "directionalLighting") {
             variantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
         } else if (item == "dynamicLighting") {
+            // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
             std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored."
                     << std::endl;
         } else if (item == "shadowReceiver") {
