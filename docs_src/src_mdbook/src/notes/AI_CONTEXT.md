@@ -4,12 +4,20 @@ Use this document to provide expert context about the Filament rendering engine 
 
 ---
 
+## Key Directives (TL;DR)
+1.  **ECS Entity Component Lifecycle**: First call `engine->destroy(entity)` to strip components, then call `engine->getEntityManager().destroy(entity)` to free the entity ID.
+2.  **Engine-Managed Objects**: Never use standard C++ `delete` on pointers returned by `Engine`. Always destroy them via `engine->destroy(ptr)`.
+3.  **Math Types**: Always use `filament::math` types (vectors, matrices, quaternions) instead of external types like GLM.
+4.  **Vertex Attributes**: Align attributes in your `VertexBuffer` builders with custom material definitions (.mat).
+
+---
+
 ## 1. Filament Engine Core Architecture
 
 Filament is a real-time, physically-based rendering (PBR) engine. It has a strict thread separation model: a main thread where the user modifies scene state, and a render command queue thread that communicates with GPU APIs.
 
 ### The Core Rendering Pipeline
-To render anything in Filament, you must establish these five core entities:
+To render anything in Filament, you must establish these six core entities:
 1.  **Engine**: The main context and factory. Keeps track of all GPU resources and worker threads.
 2.  **SwapChain**: Represents the native platform window or render target surface.
 3.  **Renderer**: Manages frame command submissions (`beginFrame`, `render`, `endFrame`).

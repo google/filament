@@ -4,12 +4,6 @@ This file defines machine-readable rules and instructions for AI agents (like An
 
 ---
 
-## Filament AI SDK Rules
+## Core Guidelines & Skills
 
-AI agents **must** consult and follow the corresponding skill files under the `skills/` directory:
-
-### 1. Lifetime Management
-*   [skills/filament_lifetime/SKILL.md](skills/filament_lifetime/SKILL.md): Core resource management instructions enforcing correct creation and destruction cycles for Filament components and engine objects.
-
-### 2. Math Conventions
-*   [skills/filament_math/SKILL.md](skills/filament_math/SKILL.md): Math primitives and namespace constraints (`filament::math` types instead of third-party templates).
+AI agents will automatically discover, load, and enforce all guidelines and skills located in the `skills/*/SKILL.md` directories. Refer to those files directly for specialized instructions on memory lifecycles, resource management, and math types.
