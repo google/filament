@@ -100,12 +100,12 @@ struct DynamicSpecConstKey {
 
     struct ValidKeys;
 
-    static constexpr ValidKeys getValidKeys(Variant const variant,
+    [[nodiscard]] static constexpr ValidKeys getValidKeys(Variant const variant,
             MaterialDomain const materialDomain, bool const isLit) noexcept;
 };
 
 struct DynamicSpecConstKey::ValidKeys {
-    std::array<DynamicSpecConstKey, 2> keys;
+    std::array<DynamicSpecConstKey, DYNAMIC_SPEC_CONST_KEY_COUNT> keys;
     uint8_t size = 0;
 
     const DynamicSpecConstKey* begin() const noexcept { return keys.data(); }
