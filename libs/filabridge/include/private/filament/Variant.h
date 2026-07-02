@@ -105,7 +105,7 @@ struct Variant {
 
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR_VARIANT=       S2D |       SRE            ;
-    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR;
+    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR | FOG;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -143,21 +143,11 @@ struct Variant {
    }
 
     static constexpr bool isValidStandardVariant(Variant variant) noexcept {
-        // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED0_MASK  = S2D | FOG | SRE | DYN | DIR;
-        constexpr type_t RESERVED0_VALUE = S2D | FOG | SRE;
-
-        // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED1_MASK  = S2D | SRE | DYN | DIR;
-        constexpr type_t RESERVED1_VALUE = SRE;
-
         // can't have VSM without shadow receiver
         constexpr type_t RESERVED2_MASK  = S2D | SRE;
         constexpr type_t RESERVED2_VALUE = S2D;
 
         return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
-               ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
-               ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE) &&
                ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
     }
 
