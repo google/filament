@@ -221,6 +221,12 @@ void FFilamentInstance::recomputeBoundingBoxes() {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
                 size_t jointIndex = joints[i][j];
+                // A malicious or malformed glTF can put a JOINTS_0 index >= joints_count;
+                // instanceSkin.joints and assetSkin.inverseBindMatrices are both joints_count-sized,
+                // so guard both against out-of-bounds access.
+                if (UTILS_UNLIKELY(jointIndex >= instanceSkin.joints.size())) {
+                    continue;
+                }
                 Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
                 mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
