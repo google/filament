@@ -14,50 +14,48 @@
  * limitations under the License.
  */
 
+#include "material_sandbox.h"
+
 #include "common/arguments.h"
 
-#include <iostream>
-#include <string>
-#include <map>
-#include <vector>
-
-#include <utils/getopt.h>
-
-#include <imgui.h>
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filagui/ImGuiExtensions.h>
 
-#include <utils/Path.h>
-
 #include <filament/Camera.h>
+#include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
 #include <filament/Exposure.h>
-#include <filament/DebugRegistry.h>
-#include <filament/IndirectLight.h>
 #include <filament/IndexBuffer.h>
+#include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
-#include <filament/View.h>
 #include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
-#include <math/vec4.h>
 #include <math/norm.h>
+#include <math/vec4.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/IBL.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/MeshAssimp.h>
+#include <imgui.h>
 
-#include "material_sandbox.h"
-
+#include <iostream>
+#include <map>
 #include <ranges>
+#include <string>
+#include <vector>
 
 using namespace math;
 using namespace filament;
