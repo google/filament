@@ -14,50 +14,48 @@
  * limitations under the License.
  */
 
+#include "material_sandbox.h"
+
 #include "common/arguments.h"
 
-#include <iostream>
-#include <string>
-#include <map>
-#include <vector>
-
-#include <utils/getopt.h>
-
-#include <imgui.h>
+#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
+#include <filamentapp/IBL.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filagui/ImGuiExtensions.h>
 
-#include <utils/Path.h>
-
 #include <filament/Camera.h>
+#include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
 #include <filament/Exposure.h>
-#include <filament/DebugRegistry.h>
-#include <filament/IndirectLight.h>
 #include <filament/IndexBuffer.h>
+#include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/TransformManager.h>
-#include <filament/View.h>
 #include <filament/VertexBuffer.h>
+#include <filament/View.h>
+
+#include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
-#include <math/vec4.h>
 #include <math/norm.h>
+#include <math/vec4.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/IBL.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/MeshAssimp.h>
+#include <imgui.h>
 
-#include "material_sandbox.h"
-
+#include <iostream>
+#include <map>
 #include <ranges>
+#include <string>
+#include <vector>
 
 using namespace math;
 using namespace filament;
@@ -886,14 +884,23 @@ static void gui(Engine* engine, View*) {
 
         if (ImGui::CollapsingHeader("Debug")) {
             DebugRegistry& debug = engine->getDebugRegistry();
+
+            auto debugCheckbox = [&debug](const char* label, const char* name) {
+                if (bool* p = debug.getPropertyAddress<bool>(name)) {
+                    ImGui::Checkbox(label, p);
+                }
+            };
+            auto debugSliderFloat = [&debug](const char* label, const char* name, float min, float max) {
+                if (float* p = debug.getPropertyAddress<float>(name)) {
+                    ImGui::SliderFloat(label, p, min, max);
+                }
+            };
+
             ImGui::Indent();
-            ImGui::Checkbox("Camera at origin",
-                    debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
+            debugCheckbox("Camera at origin", "d.view.camera_at_origin");
             ImGui::Checkbox("Stable Shadow Map", &params.stableShadowMap);
-            ImGui::Checkbox("Light Far uses shadow casters",
-                    debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
-            ImGui::Checkbox("Focus shadow casters",
-                    debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+            debugCheckbox("Light Far uses shadow casters", "d.shadowmap.far_uses_shadowcasters");
+            debugCheckbox("Focus shadow casters", "d.shadowmap.focus_shadowcasters");
 
             ImGui::SliderFloat("Normal bias", &params.normalBias, 0.0f, 4.0f);
             ImGui::SliderFloat("Constant bias", &params.constantBias, 0.0f, 1.0f);
@@ -902,10 +909,8 @@ static void gui(Engine* engine, View*) {
 
             ImGui::Checkbox("Enable LiSPSM", &params.lispsm);
             if (params.lispsm) {
-                ImGui::SliderFloat("dzn",
-                        debug.getPropertyAddress<float>("d.shadowmap.dzn"), 0.0f, 1.0f);
-                ImGui::SliderFloat("dzf",
-                        debug.getPropertyAddress<float>("d.shadowmap.dzf"),-1.0f, 0.0f);
+                debugSliderFloat("dzn", "d.shadowmap.dzn", 0.0f, 1.0f);
+                debugSliderFloat("dzf", "d.shadowmap.dzf", -1.0f, 0.0f);
             }
             ImGui::Unindent();
         }
