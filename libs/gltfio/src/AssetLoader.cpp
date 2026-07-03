@@ -956,6 +956,13 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
+            // A malformed glTF (KHR_materials_variants) can reference a variant index that is out of
+            // range of the top-level `variants` array. cgltf only rejects this in cgltf_validate(),
+            // which runs later (in ResourceLoader::loadResources), so guard here to avoid an
+            // out-of-bounds access of mVariants before validation happens.
+            if (UTILS_UNLIKELY(variantIndex >= instance->mVariants.size())) {
+                continue;
+            }
             const cgltf_material* material = srcPrim.mappings[i].material;
             bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
