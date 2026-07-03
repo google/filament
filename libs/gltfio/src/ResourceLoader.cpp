@@ -314,6 +314,42 @@ static bool indexAccessorFitsBuffer(cgltf_accessor const* accessor, uint32_t bin
     return bindingSize <= capacity - totalOffset;
 }
 
+// After EXT_meshopt_compression decompression, an index buffer backed by a meshopt-compressed buffer
+// view has not been bounds-checked against the vertex count. cgltf_validate() runs earlier (in
+// loadCgltfBuffers, before decodeMeshoptCompression) and its index-bound check inspects the pre-decode
+// fallback bytes, not the decoded index values, so an out-of-range decoded index is not caught. Plain
+// (non-meshopt) index accessors are already validated by cgltf_validate(), so only meshopt-compressed
+// index buffers need to be re-checked here. Reject the asset if any decoded index references a vertex
+// outside the primitive's POSITION accessor, to prevent an out-of-bounds access during tangent
+// generation or GPU upload.
+static bool validateMeshoptIndexBounds(cgltf_data const* gltf) {
+    for (size_t mi = 0, mn = gltf->meshes_count; mi < mn; ++mi) {
+        cgltf_mesh const& mesh = gltf->meshes[mi];
+        for (size_t pi = 0, pn = mesh.primitives_count; pi < pn; ++pi) {
+            cgltf_primitive const& prim = mesh.primitives[pi];
+            cgltf_accessor const* indices = prim.indices;
+            if (!indices || !indices->buffer_view ||
+                    !indices->buffer_view->has_meshopt_compression) {
+                continue;
+            }
+            cgltf_size vertexCount = 0;
+            for (size_t ai = 0, an = prim.attributes_count; ai < an; ++ai) {
+                if (prim.attributes[ai].type == cgltf_attribute_type_position) {
+                    vertexCount = prim.attributes[ai].data->count;
+                    break;
+                }
+            }
+            for (cgltf_size i = 0, n = indices->count; i < n; ++i) {
+                if (cgltf_accessor_read_index(indices, i) >= vertexCount) {
+                    LOG(ERROR) << "Meshopt-compressed index buffer references a vertex out of range.";
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
         UriDataCacheHandle uriDataCache) {
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
@@ -779,6 +815,12 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
         if (!utility::decodeMeshoptCompression((cgltf_data*) gltf)) {
+            return false;
+        }
+
+        // cgltf_validate() checked index bounds before meshopt decompression, so re-validate the
+        // decoded meshopt index buffers against their vertex counts now.
+        if (!validateMeshoptIndexBounds(gltf)) {
             return false;
         }
 
