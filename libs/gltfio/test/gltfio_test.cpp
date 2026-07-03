@@ -462,6 +462,35 @@ TEST_F(glTFIOTest, MorphTargetsExceedingMaxDoNotOverflow) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// createMaterialVariants() indexes the instance's mVariants vector (sized to the top-level
+// KHR_materials_variants `variants` count) by the per-primitive mapping `variant`, which comes
+// straight from the glTF. cgltf only rejects an out-of-range mapping variant in cgltf_validate(),
+// which runs later (in ResourceLoader::loadResources), so createAsset() must guard the index itself
+// or it accesses mVariants out of bounds. This loads a mesh whose mapping variant index exceeds the
+// declared variant count and requires it parses without an out-of-bounds access (validated under ASan).
+TEST_F(glTFIOTest, MalformedMaterialVariantMappingIndex) {
+    static char const* const kGltf =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("extensionsUsed":["KHR_materials_variants"],)"
+            R"("extensions":{"KHR_materials_variants":{"variants":[{"name":"red"}]}},)"
+            R"("nodes":[{"mesh":0}],"materials":[{}],)"
+            R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"mode":4,"material":0,)"
+            R"("extensions":{"KHR_materials_variants":{"mappings":[{"material":0,"variants":[1000]}]}}}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,1]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+
+    EXPECT_NE(asset, nullptr);
+    if (asset != nullptr) {
+        assetLoader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&assetLoader);
+}
+
 namespace {
 
 static std::vector<uint8_t> makeMalformedEightBitIndexGlb(uint32_t indexCount) {
