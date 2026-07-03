@@ -24,7 +24,9 @@
 
 #include <tsl/robin_map.h>
 
+#include <iostream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 using namespace filamat;
@@ -71,7 +73,6 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
         strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
@@ -82,6 +83,11 @@ JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
     }();
 
     for (auto& filterStr : variantFilters) {
+        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
+        if (std::string_view(filterStr) == "dynamicLighting") {
+            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored.";
+            continue;
+        }
         mVariantFilter |= (uint32_t)strToEnum.at(filterStr);
     }
     MaterialBuilder::init();

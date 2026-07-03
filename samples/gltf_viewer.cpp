@@ -672,7 +672,6 @@ int main(int argc, char** argv) {
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
-                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 
             // and then, everything else at low priority, except STE, which is very uncommon.
