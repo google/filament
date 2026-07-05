@@ -250,6 +250,10 @@ struct Variant {
             // when the shading mode is unlit, remove all the lighting variants
             return variant & UNLIT_MASK;
         }
+        // Dynamic lighting is now handled via dynamic specialization constants.
+        // We strip the DYN bit to prevent compiling duplicate identical variants.
+        variant.key &= ~DYN;
+
         // if shadow receiver is disabled, we pick the shadow sampler
         if (!(variant.key & SRE)) {
             return variant & ~S2D;

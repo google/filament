@@ -916,32 +916,42 @@ int main(int argc, char** argv) {
 
             if (ImGui::CollapsingHeader("Debug")) {
                 auto& debug = engine->getDebugRegistry();
+
+                auto debugCheckbox = [&debug](const char* label, const char* name) {
+                    if (bool* p = debug.getPropertyAddress<bool>(name)) {
+                        ImGui::Checkbox(label, p);
+                    }
+                };
+                auto debugSliderFloat = [&debug](const char* label, const char* name, float min, float max) {
+                    if (float* p = debug.getPropertyAddress<float>(name)) {
+                        ImGui::SliderFloat(label, p, min, max);
+                    }
+                };
+                auto debugSliderInt = [&debug](const char* label, const char* name, int min, int max) {
+                    if (int* p = debug.getPropertyAddress<int>(name)) {
+                        ImGui::SliderInt(label, p, min, max);
+                    }
+                };
+
                 if (engine->getBackend() == Engine::Backend::METAL) {
                     if (ImGui::Button("Capture frame")) {
-                        bool* captureFrame =
-                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                        *captureFrame = true;
+                        if (bool* captureFrame = debug.getPropertyAddress<bool>("d.renderer.doFrameCapture")) {
+                            *captureFrame = true;
+                        }
                     }
                 }
                 if (ImGui::Button("Screenshot")) {
                     app.screenshot = true;
                 }
-                ImGui::Checkbox("Disable buffer padding",
-                        debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
-                ImGui::Checkbox("Disable sub-passes",
-                        debug.getPropertyAddress<bool>("d.renderer.disable_subpasses"));
-                ImGui::Checkbox("Camera at origin",
-                        debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
+                debugCheckbox("Disable buffer padding", "d.renderer.disable_buffer_padding");
+                debugCheckbox("Disable sub-passes", "d.renderer.disable_subpasses");
+                debugCheckbox("Camera at origin", "d.view.camera_at_origin");
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
                 ImGui::SliderFloat("Origin", &app.originDistance, 0, 1);
-                ImGui::Checkbox("Far uses shadow casters",
-                        debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
-                ImGui::Checkbox("Focus shadow casters",
-                        debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
-                ImGui::Checkbox("Disable light frustum alignment",
-                        debug.getPropertyAddress<bool>("d.shadowmap.disable_light_frustum_align"));
-                ImGui::Checkbox("Depth clamp",
-                        debug.getPropertyAddress<bool>("d.shadowmap.depth_clamp"));
+                debugCheckbox("Far uses shadow casters", "d.shadowmap.far_uses_shadowcasters");
+                debugCheckbox("Focus shadow casters", "d.shadowmap.focus_shadowcasters");
+                debugCheckbox("Disable light frustum alignment", "d.shadowmap.disable_light_frustum_align");
+                debugCheckbox("Depth clamp", "d.shadowmap.depth_clamp");
 
                 bool debugDirectionalShadowmap;
                 if (debug.getProperty("d.shadowmap.debug_directional_shadowmap",
@@ -951,25 +961,21 @@ int main(int argc, char** argv) {
                             debugDirectionalShadowmap);
                 }
 
-                ImGui::Checkbox("Display Shadow Texture",
-                        debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture"));
-                if (*debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture")) {
-                    int layerCount;
-                    int levelCount;
-                    debug.getProperty("d.shadowmap.display_shadow_texture_layer_count", &layerCount);
-                    debug.getProperty("d.shadowmap.display_shadow_texture_level_count", &levelCount);
-                    ImGui::Indent();
-                    ImGui::SliderFloat("scale", debug.getPropertyAddress<float>(
-                                    "d.shadowmap.display_shadow_texture_scale"), 0.0f, 8.0f);
-                    ImGui::SliderFloat("contrast", debug.getPropertyAddress<float>(
-                                    "d.shadowmap.display_shadow_texture_power"), 0.0f, 2.0f);
-                    ImGui::SliderInt("layer", debug.getPropertyAddress<int>(
-                                    "d.shadowmap.display_shadow_texture_layer"), 0, layerCount - 1);
-                    ImGui::SliderInt("level", debug.getPropertyAddress<int>(
-                                    "d.shadowmap.display_shadow_texture_level"), 0, levelCount - 1);
-                    ImGui::SliderInt("channel", debug.getPropertyAddress<int>(
-                                    "d.shadowmap.display_shadow_texture_channel"), 0, 3);
-                    ImGui::Unindent();
+                if (bool* displayShadowTexture = debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture")) {
+                    ImGui::Checkbox("Display Shadow Texture", displayShadowTexture);
+                    if (*displayShadowTexture) {
+                        int layerCount;
+                        int levelCount;
+                        debug.getProperty("d.shadowmap.display_shadow_texture_layer_count", &layerCount);
+                        debug.getProperty("d.shadowmap.display_shadow_texture_level_count", &levelCount);
+                        ImGui::Indent();
+                        debugSliderFloat("scale", "d.shadowmap.display_shadow_texture_scale", 0.0f, 8.0f);
+                        debugSliderFloat("contrast", "d.shadowmap.display_shadow_texture_power", 0.0f, 2.0f);
+                        debugSliderInt("layer", "d.shadowmap.display_shadow_texture_layer", 0, layerCount - 1);
+                        debugSliderInt("level", "d.shadowmap.display_shadow_texture_level", 0, levelCount - 1);
+                        debugSliderInt("channel", "d.shadowmap.display_shadow_texture_channel", 0, 3);
+                        ImGui::Unindent();
+                    }
                 }
 
                 bool cameraFrustum = FilamentApp::get().isCameraFrustumEnabled();
@@ -1023,9 +1029,9 @@ int main(int argc, char** argv) {
                             nullptr, 0.0f, 1.0f, { 0, 100 });
                 }
 #ifndef NDEBUG
-                ImGui::SliderFloat("Kp", debug.getPropertyAddress<float>("d.view.pid.kp"), 0, 2);
-                ImGui::SliderFloat("Ki", debug.getPropertyAddress<float>("d.view.pid.ki"), 0, 10);
-                ImGui::SliderFloat("Kd", debug.getPropertyAddress<float>("d.view.pid.kd"), 0, 10);
+                debugSliderFloat("Kp", "d.view.pid.kp", 0, 2);
+                debugSliderFloat("Ki", "d.view.pid.ki", 0, 10);
+                debugSliderFloat("Kd", "d.view.pid.kd", 0, 10);
 #endif
                 const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
                 bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;

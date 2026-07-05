@@ -259,6 +259,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
 void FMaterial::compile(CompilerPriorityQueue const priority,
         FixedCapacityVector<Variant> const& variants,
+        FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -271,10 +272,14 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = driver.isStereoSupported();
     bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
+    bool const isMaterialLit = mDefinition.isVariantLit;
+    MaterialDomain const materialDomain = mDefinition.materialDomain;
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
-            for (auto const specKey : DynamicSpecConstKey::getAllPossibleKeys()) {
+            for (auto specKey : specKeys) {
+                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
+                        materialDomain, isMaterialLit);
                 if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
@@ -300,8 +305,9 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 #ifndef NDEBUG
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
-            for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
-                    DynamicSpecConstKey::getAllPossibleKeys()) {
+            for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
+                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
+                        materialDomain, isMaterialLit);
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled", "name", getName().c_str(), "variantKey",
                         static_cast<uint32_t>(variant.key), "specKey",
@@ -356,10 +362,8 @@ FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     return mDefaultMaterialInstance;
 }
 
-bool FMaterial::hasParameter(const char* name) const noexcept {
-    return mDefinition.uniformInterfaceBlock.hasField(name) ||
-           mDefinition.samplerInterfaceBlock.hasSampler(name) ||
-            mDefinition.subpassInfo.name == CString(name);
+bool FMaterial::hasParameter(std::string_view name) const noexcept {
+    return mDefinition.parameterNames.find(name) != mDefinition.parameterNames.end();
 }
 
 bool FMaterial::isSampler(const char* name) const noexcept {
