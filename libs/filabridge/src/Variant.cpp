@@ -218,8 +218,8 @@ static auto const gPostProcessVariants{ details::get_post_process_variants() };
 static_assert(reserved_is_not_valid());
 static_assert(reserved_variant_count() == 148);
 static_assert(valid_variant_count() == 108);
-static_assert(vertex_variant_count() == 40);
-static_assert(fragment_variant_count() == 27);
+static_assert(vertex_variant_count() == 32 - 0 + 8 - 0);   // 40
+static_assert(fragment_variant_count() == 32 - 8 + 4 - 1); // 27
 
 } // namespace details
 

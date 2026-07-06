@@ -144,11 +144,11 @@ struct Variant {
 
     static constexpr bool isValidStandardVariant(Variant variant) noexcept {
         // can't have VSM without shadow receiver
-        constexpr type_t RESERVED2_MASK  = S2D | SRE;
-        constexpr type_t RESERVED2_VALUE = S2D;
+        constexpr type_t RESERVED_MASK = S2D | SRE;
+        constexpr type_t RESERVED_VALUE = S2D;
 
         return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
-               ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
+               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
     }
 
     static constexpr bool isVertexVariant(Variant variant) noexcept {
