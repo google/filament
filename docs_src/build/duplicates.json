@@ -106,6 +106,9 @@
     "filament/backend/test/README.md": {
         "dest": "dup/backend_test.md"
     },
+    "test/filament-unit-test/README.md": {
+        "dest": "dup/test_ci_unit_test.md"
+    },
     "out/cmake-wasm-release/web/examples/examples/triangle/triangle.md": {
         "dest": "samples/web/triangle.md"
     },
