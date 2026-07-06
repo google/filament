@@ -961,6 +961,8 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
             // which runs later (in ResourceLoader::loadResources), so guard here to avoid an
             // out-of-bounds access of mVariants before validation happens.
             if (UTILS_UNLIKELY(variantIndex >= instance->mVariants.size())) {
+                slog.w << "gltfio: Ignoring out-of-range KHR_materials_variants mapping index "
+                       << variantIndex << io::endl;
                 continue;
             }
             const cgltf_material* material = srcPrim.mappings[i].material;

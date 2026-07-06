@@ -482,7 +482,7 @@ TEST_F(glTFIOTest, MalformedMaterialVariantMappingIndex) {
 
     AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     FilamentAsset* const asset = assetLoader->createAsset(
-            reinterpret_cast<uint8_t const*>(kGltf), uint32_t(std::strlen(kGltf)));
+            reinterpret_cast<uint8_t const*>(kGltf), static_cast<uint32_t>(std::strlen(kGltf)));
 
     EXPECT_NE(asset, nullptr);
     if (asset != nullptr) {
