@@ -30,7 +30,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 72;
+static constexpr size_t MATERIAL_VERSION = 73;
 
 // Those are the api levels that are used in the source material file (.mat)
 //
@@ -45,29 +45,29 @@ static constexpr uint32_t UNSTABLE_MATERIAL_API_LEVEL = 2;
  * Supported shading models
  */
 enum class Shading : uint8_t {
-    UNLIT,                  //!< no lighting applied, emissive possible
-    LIT,                    //!< default, standard lighting
-    SUBSURFACE,             //!< subsurface lighting model
-    CLOTH,                  //!< cloth lighting model
-    SPECULAR_GLOSSINESS,    //!< legacy lighting model
+    UNLIT,               //!< no lighting applied, emissive possible
+    LIT,                 //!< default, standard lighting
+    SUBSURFACE,          //!< subsurface lighting model
+    CLOTH,               //!< cloth lighting model
+    SPECULAR_GLOSSINESS, //!< legacy lighting model
 };
 
 /**
  * Attribute interpolation types in the fragment shader
  */
 enum class Interpolation : uint8_t {
-    SMOOTH,                 //!< default, smooth interpolation
-    FLAT                    //!< flat interpolation
+    SMOOTH, //!< default, smooth interpolation
+    FLAT    //!< flat interpolation
 };
 
 /**
  * Shader quality, affect some global quality parameters
  */
 enum class ShaderQuality : int8_t {
-    DEFAULT = -1,   // LOW on mobile, HIGH on desktop
-    LOW     = 0,    // enable optimizations that can slightly affect correctness
-    NORMAL  = 1,    // normal quality, correctness honored
-    HIGH    = 2     // higher quality (e.g. better upscaling, etc...)
+    DEFAULT = -1, // LOW on mobile, HIGH on desktop
+    LOW = 0,      // enable optimizations that can slightly affect correctness
+    NORMAL = 1,   // normal quality, correctness honored
+    HIGH = 2      // higher quality (e.g. better upscaling, etc...)
 };
 
 /**
@@ -119,10 +119,10 @@ enum class TransparencyMode : uint8_t {
  * Supported types of vertex domains.
  */
 enum class VertexDomain : uint8_t {
-    OBJECT,                 //!< vertices are in object space, default
-    WORLD,                  //!< vertices are in world space
-    VIEW,                   //!< vertices are in view space
-    DEVICE                  //!< vertices are in normalized device space
+    OBJECT, //!< vertices are in object space, default
+    WORLD,  //!< vertices are in world space
+    VIEW,   //!< vertices are in view space
+    DEVICE  //!< vertices are in normalized device space
     // when adding more entries, make sure to update VERTEX_DOMAIN_COUNT
 };
 
@@ -133,22 +133,22 @@ enum VertexAttribute : uint8_t {
     // Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
     // be read as integers in the shaders
 
-    POSITION        = 0, //!< XYZ position (float3)
-    TANGENTS        = 1, //!< tangent, bitangent and normal, encoded as a quaternion (float4)
-    COLOR           = 2, //!< vertex color (float4)
-    UV0             = 3, //!< texture coordinates (float2)
-    UV1             = 4, //!< texture coordinates (float2)
-    BONE_INDICES    = 5, //!< indices of 4 bones, as unsigned integers (uvec4)
-    BONE_WEIGHTS    = 6, //!< weights of the 4 bones (normalized float4)
+    POSITION = 0,     //!< XYZ position (float3)
+    TANGENTS = 1,     //!< tangent, bitangent and normal, encoded as a quaternion (float4)
+    COLOR = 2,        //!< vertex color (float4)
+    UV0 = 3,          //!< texture coordinates (float2)
+    UV1 = 4,          //!< texture coordinates (float2)
+    BONE_INDICES = 5, //!< indices of 4 bones, as unsigned integers (uvec4)
+    BONE_WEIGHTS = 6, //!< weights of the 4 bones (normalized float4)
     // -- we have 1 unused slot here --
-    CUSTOM0         = 8,
-    CUSTOM1         = 9,
-    CUSTOM2         = 10,
-    CUSTOM3         = 11,
-    CUSTOM4         = 12,
-    CUSTOM5         = 13,
-    CUSTOM6         = 14,
-    CUSTOM7         = 15,
+    CUSTOM0 = 8,
+    CUSTOM1 = 9,
+    CUSTOM2 = 10,
+    CUSTOM3 = 11,
+    CUSTOM4 = 12,
+    CUSTOM5 = 13,
+    CUSTOM6 = 14,
+    CUSTOM7 = 15,
 
     // Aliases for legacy vertex morphing.
     // See RenderableManager::Builder::morphing().
@@ -166,70 +166,86 @@ enum VertexAttribute : uint8_t {
 
 constexpr std::string_view to_string(VertexAttribute attr) noexcept {
     switch (attr) {
-        case VertexAttribute::POSITION:     return "POSITION";
-        case VertexAttribute::TANGENTS:     return "TANGENTS";
-        case VertexAttribute::COLOR:        return "COLOR";
-        case VertexAttribute::UV0:          return "UV0";
-        case VertexAttribute::UV1:          return "UV1";
-        case VertexAttribute::BONE_INDICES: return "BONE_INDICES";
-        case VertexAttribute::BONE_WEIGHTS: return "BONE_WEIGHTS";
-        case VertexAttribute::CUSTOM0:      return "CUSTOM0";
-        case VertexAttribute::CUSTOM1:      return "CUSTOM1";
-        case VertexAttribute::CUSTOM2:      return "CUSTOM2";
-        case VertexAttribute::CUSTOM3:      return "CUSTOM3";
-        case VertexAttribute::CUSTOM4:      return "CUSTOM4";
-        case VertexAttribute::CUSTOM5:      return "CUSTOM5";
-        case VertexAttribute::CUSTOM6:      return "CUSTOM6";
-        case VertexAttribute::CUSTOM7:      return "CUSTOM7";
+        case VertexAttribute::POSITION:
+            return "POSITION";
+        case VertexAttribute::TANGENTS:
+            return "TANGENTS";
+        case VertexAttribute::COLOR:
+            return "COLOR";
+        case VertexAttribute::UV0:
+            return "UV0";
+        case VertexAttribute::UV1:
+            return "UV1";
+        case VertexAttribute::BONE_INDICES:
+            return "BONE_INDICES";
+        case VertexAttribute::BONE_WEIGHTS:
+            return "BONE_WEIGHTS";
+        case VertexAttribute::CUSTOM0:
+            return "CUSTOM0";
+        case VertexAttribute::CUSTOM1:
+            return "CUSTOM1";
+        case VertexAttribute::CUSTOM2:
+            return "CUSTOM2";
+        case VertexAttribute::CUSTOM3:
+            return "CUSTOM3";
+        case VertexAttribute::CUSTOM4:
+            return "CUSTOM4";
+        case VertexAttribute::CUSTOM5:
+            return "CUSTOM5";
+        case VertexAttribute::CUSTOM6:
+            return "CUSTOM6";
+        case VertexAttribute::CUSTOM7:
+            return "CUSTOM7";
     }
     return "UNKNOWN";
 }
 
 static constexpr size_t MAX_LEGACY_MORPH_TARGETS = 4;
-static constexpr size_t MAX_MORPH_TARGETS = 256; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
+static constexpr size_t MAX_MORPH_TARGETS =
+        256; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
 static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 
 /**
  * Material domains
  */
 enum class MaterialDomain : uint8_t {
-    SURFACE         = 0, //!< shaders applied to renderables
-    POST_PROCESS    = 1, //!< shaders applied to rendered buffers
-    COMPUTE         = 2, //!< compute shader
+    SURFACE = 0,      //!< shaders applied to renderables
+    POST_PROCESS = 1, //!< shaders applied to rendered buffers
+    COMPUTE = 2,      //!< compute shader
 };
 
 /**
  * Specular occlusion
  */
 enum class SpecularAmbientOcclusion : uint8_t {
-    NONE            = 0, //!< no specular occlusion
-    SIMPLE          = 1, //!< simple specular occlusion
-    BENT_NORMALS    = 2, //!< more accurate specular occlusion, requires bent normals
+    NONE = 0,         //!< no specular occlusion
+    SIMPLE = 1,       //!< simple specular occlusion
+    BENT_NORMALS = 2, //!< more accurate specular occlusion, requires bent normals
 };
 
 /**
  * Refraction
  */
 enum class RefractionMode : uint8_t {
-    NONE            = 0, //!< no refraction
-    CUBEMAP         = 1, //!< refracted rays go to the ibl cubemap
-    SCREEN_SPACE    = 2, //!< refracted rays go to screen space
+    NONE = 0,         //!< no refraction
+    CUBEMAP = 1,      //!< refracted rays go to the ibl cubemap
+    SCREEN_SPACE = 2, //!< refracted rays go to screen space
 };
 
 /**
  * Refraction type
  */
 enum class RefractionType : uint8_t {
-    SOLID           = 0, //!< refraction through solid objects (e.g. a sphere)
-    THIN            = 1, //!< refraction through thin objects (e.g. window)
+    SOLID = 0, //!< refraction through solid objects (e.g. a sphere)
+    THIN = 1,  //!< refraction through thin objects (e.g. window)
 };
 
 /**
  * Reflection mode
  */
 enum class ReflectionMode : uint8_t {
-    DEFAULT         = 0, //! reflections sample from the scene's IBL only
-    SCREEN_SPACE    = 1, //! reflections sample from screen space, and fallback to the scene's IBL
+    DEFAULT = 0,      //! reflections sample from the scene's IBL only
+    SCREEN_SPACE = 1, //! reflections sample from screen space, and fallback to the scene's IBL
 };
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
@@ -237,38 +253,38 @@ using AttributeBitset = utils::bitset32;
 
 static constexpr size_t MATERIAL_PROPERTIES_COUNT = 32;
 enum class Property : uint8_t {
-    BASE_COLOR,              //!< float4, all shading models
-    ROUGHNESS,               //!< float,  lit shading models only
-    METALLIC,                //!< float,  all shading models, except unlit and cloth
-    REFLECTANCE,             //!< float,  all shading models, except unlit and cloth
-    AMBIENT_OCCLUSION,       //!< float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT,              //!< float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT_ROUGHNESS,    //!< float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT_NORMAL,       //!< float,  lit shading models only, except subsurface and cloth
-    ANISOTROPY,              //!< float,  lit shading models only, except subsurface and cloth
-    ANISOTROPY_DIRECTION,    //!< float3, lit shading models only, except subsurface and cloth
-    THICKNESS,               //!< float,  subsurface shading model only
-    SUBSURFACE_POWER,        //!< float,  subsurface shading model only
-    SUBSURFACE_COLOR,        //!< float3, subsurface and cloth shading models only
-    SHEEN_COLOR,             //!< float3, lit shading models only, except subsurface
-    SHEEN_ROUGHNESS,         //!< float3, lit shading models only, except subsurface and cloth
-    SPECULAR_COLOR,          //!< float3, specular-glossiness shading model only
-    GLOSSINESS,              //!< float,  specular-glossiness shading model only
-    EMISSIVE,                //!< float4, all shading models
-    NORMAL,                  //!< float3, all shading models only, except unlit
-    POST_LIGHTING_COLOR,     //!< float4, all shading models
-    POST_LIGHTING_MIX_FACTOR,//!< float, all shading models
-    CLIP_SPACE_TRANSFORM,    //!< mat4,   vertex shader only
-    ABSORPTION,              //!< float3, how much light is absorbed by the material
-    TRANSMISSION,            //!< float,  how much light is refracted through the material
-    IOR,                     //!< float,  material's index of refraction
-    DISPERSION,              //!< float,  material's dispersion
-    MICRO_THICKNESS,         //!< float, thickness of the thin layer
-    BENT_NORMAL,             //!< float3, all shading models only, except unlit
-    SPECULAR_FACTOR,         //!< float, lit shading models only, except subsurface and cloth
-    SPECULAR_COLOR_FACTOR,   //!< float3, lit shading models only, except subsurface and cloth
-    SHADOW_STRENGTH,         //!< float, [0, 1] strength of shadows received by this material
-    CLIP_SPACE_POSITION,     //!< float4, vertex shader only
+    BASE_COLOR,               //!< float4, all shading models
+    ROUGHNESS,                //!< float,  lit shading models only
+    METALLIC,                 //!< float,  all shading models, except unlit and cloth
+    REFLECTANCE,              //!< float,  all shading models, except unlit and cloth
+    AMBIENT_OCCLUSION,        //!< float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT,               //!< float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT_ROUGHNESS,     //!< float,  lit shading models only, except subsurface and cloth
+    CLEAR_COAT_NORMAL,        //!< float,  lit shading models only, except subsurface and cloth
+    ANISOTROPY,               //!< float,  lit shading models only, except subsurface and cloth
+    ANISOTROPY_DIRECTION,     //!< float3, lit shading models only, except subsurface and cloth
+    THICKNESS,                //!< float,  subsurface shading model only
+    SUBSURFACE_POWER,         //!< float,  subsurface shading model only
+    SUBSURFACE_COLOR,         //!< float3, subsurface and cloth shading models only
+    SHEEN_COLOR,              //!< float3, lit shading models only, except subsurface
+    SHEEN_ROUGHNESS,          //!< float3, lit shading models only, except subsurface and cloth
+    SPECULAR_COLOR,           //!< float3, specular-glossiness shading model only
+    GLOSSINESS,               //!< float,  specular-glossiness shading model only
+    EMISSIVE,                 //!< float4, all shading models
+    NORMAL,                   //!< float3, all shading models only, except unlit
+    POST_LIGHTING_COLOR,      //!< float4, all shading models
+    POST_LIGHTING_MIX_FACTOR, //!< float, all shading models
+    CLIP_SPACE_TRANSFORM,     //!< mat4,   vertex shader only
+    ABSORPTION,               //!< float3, how much light is absorbed by the material
+    TRANSMISSION,             //!< float,  how much light is refracted through the material
+    IOR,                      //!< float,  material's index of refraction
+    DISPERSION,               //!< float,  material's dispersion
+    MICRO_THICKNESS,          //!< float, thickness of the thin layer
+    BENT_NORMAL,              //!< float3, all shading models only, except unlit
+    SPECULAR_FACTOR,          //!< float, lit shading models only, except subsurface and cloth
+    SPECULAR_COLOR_FACTOR,    //!< float3, lit shading models only, except subsurface and cloth
+    SHADOW_STRENGTH,          //!< float, [0, 1] strength of shadows received by this material
+    CLIP_SPACE_POSITION,      //!< float4, vertex shader only
 
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
@@ -276,23 +292,23 @@ enum class Property : uint8_t {
 using UserVariantFilterMask = uint32_t;
 
 enum class UserVariantFilterBit : UserVariantFilterMask {
-    DIRECTIONAL_LIGHTING        = 0x01,         //!< Directional lighting
-    DYNAMIC_LIGHTING            = 0x02,         //!< Dynamic lighting
-    SHADOW_RECEIVER             = 0x04,         //!< Shadow receiver
-    SKINNING                    = 0x08,         //!< Skinning
-    FOG                         = 0x10,         //!< Fog
-    VSM                         = 0x20,         //!< Variance shadow maps
-    SSR                         = 0x40,         //!< Screen-space reflections
-    STE                         = 0x80,         //!< Instanced stereo rendering
-    ALL                         = 0xFF,
+    DIRECTIONAL_LIGHTING = 0x01, //!< Directional lighting
+    DYNAMIC_LIGHTING = 0x02,     //!< Dynamic lighting
+    SHADOW_RECEIVER = 0x04,      //!< Shadow receiver
+    SKINNING = 0x08,             //!< Skinning
+    FOG = 0x10,                  //!< Fog
+    VSM = 0x20,                  //!< Variance shadow maps
+    SSR = 0x40,                  //!< Screen-space reflections
+    STE = 0x80,                  //!< Instanced stereo rendering
+    ALL = 0xFF,
 };
 
 } // namespace filament
 
-template<> struct utils::EnableBitMaskOperators<filament::UserVariantFilterBit>
-        : public std::true_type {};
+template<>
+struct utils::EnableBitMaskOperators<filament::UserVariantFilterBit> : public std::true_type {};
 
-template<> struct utils::EnableIntegerOperators<filament::UserVariantFilterBit>
-        : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::UserVariantFilterBit> : public std::true_type {};
 
 #endif
