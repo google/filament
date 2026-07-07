@@ -537,6 +537,8 @@ export class View {
     public isStencilBufferEnabled(): boolean;
     public setTransparentPickingEnabled(enabled: boolean): void;
     public isTransparentPickingEnabled(): boolean;
+    public setTighterShadowCasterCullingEnabled(enabled: boolean): void;
+    public isTighterShadowCasterCullingEnabled(): boolean;
 }
 
 export class TransformManager {

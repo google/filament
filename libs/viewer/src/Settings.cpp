@@ -356,6 +356,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->stencilBufferEnabled);
         } else if (compare(tok, jsonChunk, "visibleLayers") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->visibleLayers);
+        } else if (compare(tok, jsonChunk, "tighterShadowCasterCulling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->tighterShadowCasterCulling);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -859,6 +861,7 @@ void applySettings(Engine* engine, const ViewSettings& settings, View* dest) {
     dest->setBlendMode(static_cast<View::BlendMode>(settings.blendMode));
     dest->setStencilBufferEnabled(settings.stencilBufferEnabled);
     dest->setVisibleLayers(settings.visibleLayers, settings.visibleLayers);
+    dest->setTighterShadowCasterCullingEnabled(settings.tighterShadowCasterCulling);
 }
 
 template <typename T>

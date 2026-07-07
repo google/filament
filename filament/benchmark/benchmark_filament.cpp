@@ -24,8 +24,8 @@
 #include <filament/ToneMapper.h>
 
 #include <utils/Allocator.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <benchmark/benchmark.h>
 
@@ -45,6 +45,7 @@ protected:
     std::vector<float3> boxesCenter;
     std::vector<float3> boxesExtent;
     std::vector<float4> spheres;
+    std::vector<float4> planes12;
     Culler::result_type* UTILS_RESTRICT visibles = nullptr;
 
 
@@ -76,6 +77,11 @@ public:
             };
         }
 
+        planes12.resize(12);
+        for (size_t i = 0; i < 12; i++) {
+            planes12[i] = float4(rand(gen), rand(gen), rand(gen), rand(gen));
+        }
+
         visibles = (Culler::result_type*)utils::aligned_alloc(batch * sizeof(*visibles), 32);
     }
 
@@ -89,6 +95,18 @@ BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
         PerformanceCounters pc(state);
         for (UTILS_UNUSED auto _ : state) {
             Culler::Test::intersects(visibles, frustum, boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * BATCH_SIZE);
+    }
+}
+
+BENCHMARK_F(FilamentCullingFixture, boxCulling12Planes)(benchmark::State& state) {
+    {
+        PerformanceCounters pc(state);
+        for (auto _ : state) {
+            Culler::Test::intersects(visibles, planes12.data(), boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
         }
         benchmark::ClobberMemory();
         pc.stop();

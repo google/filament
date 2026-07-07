@@ -979,6 +979,8 @@ void ViewerGui::updateUserInterface() {
             ImGui::Checkbox("Stable Shadows", &light.sunlight.shadowOptions.stable);
             ImGui::Checkbox("Enable LiSPSM", &light.sunlight.shadowOptions.lispsm);
 
+            ImGui::Checkbox("Enable Tighter Caster Culling", &mSettings.view.tighterShadowCasterCulling);
+
             int shadowType = (int)mSettings.view.shadowType;
             ImGui::Combo("Shadow type", &shadowType, "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
             mSettings.view.shadowType = (ShadowType)shadowType;
