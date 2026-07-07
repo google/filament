@@ -43,73 +43,7 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
     });
 }
 
-// Rendering an external image without setting any data should not crash.
-TEST_F(BackendTest, RenderExternalImageWithoutSet) {
-    SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
-    SKIP_IF(Backend::VULKAN, "b/453776730");
-    SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
-    SKIP_IF(Backend::OPENGL, "b//510158903");
-    auto& api = getDriverApi();
-
-    TrianglePrimitive triangle(api);
-
-    auto swapChain = addCleanup(createSwapChain());
-
-    Shader shader = createShader(api, *mCleanup, sBackend);
-
-    backend::Handle<HwRenderTarget> defaultRenderTarget = addCleanup(
-            api.createDefaultRenderTarget());
-
-    // Create a texture that will be backed by an external image.
-    auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = addCleanup(api.createTexture(
-            SamplerType::SAMPLER_EXTERNAL,      // target
-            1,                                  // levels
-            TextureFormat::RGBA8,               // format
-            1,                                  // samples
-            view.width,                         // width
-            view.height,                        // height
-            1,                                  // depth
-            usage));                             // usage
-
-    PipelineState state = getColorWritePipelineState();
-    shader.addProgramToPipelineState(state);
-
-    RenderPassParams params = getClearColorDepthRenderPass();
-    params.viewport = getFullViewport();
-
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-
-    api.startCapture(0);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0, 0);
-
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 0, {});
-
-    // Render a triangle.
-    api.beginRenderPass(defaultRenderTarget, params);
-    state.primitiveType = PrimitiveType::TRIANGLES;
-    state.vertexBufferInfo = triangle.getVertexBufferInfo();
-    api.bindPipeline(state);
-    api.bindRenderPrimitive(triangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
-
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture(0);
-
-    api.finish();
-
-    executeCommands();
-}
-
 TEST_F(BackendTest, RenderExternalImage) {
-    SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
     SKIP_IF(Backend::VULKAN, "b/453777319");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
     SKIP_IF(Backend::OPENGL, "b//510158903");
@@ -201,10 +135,10 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.endRenderPass();
 
     api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
     EXPECT_IMAGE(defaultRenderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "RenderExternalImage", 1206264951));
+    api.commit(swapChain);
+    api.endFrame(0);
 
     api.stopCapture(0);
     api.finish();

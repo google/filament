@@ -17,11 +17,14 @@
 #include "SDLDisplayManager.h"
 
 #include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp.h>
 #include <filamentapp/NativeWindowHelper.h>
 
 #include <utils/Panic.h>
 
 #include <SDL_syswm.h>
+
+#include <thread>
 
 namespace filament::app {
 
@@ -454,6 +457,14 @@ AppKey SDLDisplayManager::mapKey(SDL_Scancode scancode) {
             return AppKey::SLASH;
         default:
             return AppKey::UNKNOWN;
+    }
+}
+
+void SDLDisplayManager::startRendering(std::function<bool()> doFrame) {
+    while (!doFrame()) {
+        // Delay rendering for roughly one monitor refresh interval
+        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 

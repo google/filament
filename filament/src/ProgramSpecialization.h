@@ -16,6 +16,8 @@
 #ifndef TNT_FILAMENT_PROGRAMSPECIALIZATION_H
 #define TNT_FILAMENT_PROGRAMSPECIALIZATION_H
 
+#include "DynamicSpecConstKey.h"
+
 #include <private/filament/Variant.h>
 
 #include <backend/Program.h>
@@ -40,6 +42,7 @@ struct ProgramSpecialization {
     // with identical shader programs.
     uint32_t materialCrc32;
     Variant variant;
+    DynamicSpecConstKey specKey;
     utils::Slice<const backend::Program::SpecializationConstant> specializationConstants;
 
     size_t hash() const noexcept;

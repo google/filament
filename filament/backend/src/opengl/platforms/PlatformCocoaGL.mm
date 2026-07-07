@@ -52,6 +52,7 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
+    std::vector<NSWindow*> mHeadlessWindows;
     mutable utils::Mutex mAdditionalContextsLock;
     std::vector<NSOpenGLContext*> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
@@ -89,49 +90,53 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
     // -[NSWindow frame], -[NSView superview],
     // -[NSView setPostsFrameChangedNotifications:],
     // -[NSView setPostsBoundsChangedNotifications:]
-    dispatch_async(dispatch_get_main_queue(), ^(void) {
-        NSView* strongView = weakView;
-        NSMutableArray* strongObservers = weakObservers;
-        if ((weakView == nil) || (weakObservers == nil)) {
-            return;
-        }
-        @synchronized (strongObservers) {
-            this->currentBounds = [strongView convertRectToBacking: strongView.bounds];
-            this->currentWindowFrame = strongView.window.frame;
+    //
+    // We use dispatch_sync to ensure the window/view state is fully initialized and observers
+    // are attached before the driver thread proceeds, preventing race conditions during
+    // early frame rendering.
+    dispatch_sync(dispatch_get_main_queue(), ^(void) {
+      NSView* strongView = weakView;
+      NSMutableArray* strongObservers = weakObservers;
+      if ((weakView == nil) || (weakObservers == nil)) {
+          return;
+      }
+      @synchronized(strongObservers) {
+          this->currentBounds = [strongView convertRectToBacking:strongView.bounds];
+          this->currentWindowFrame = strongView.window.frame;
 
-            id<NSObject> observer = [NSNotificationCenter.defaultCenter
-                addObserverForName: NSWindowDidResizeNotification
-                object: strongView.window
-                queue: nil
-                usingBlock: notificationHandler];
-            [strongObservers addObject: observer];
-            observer = [NSNotificationCenter.defaultCenter
-                addObserverForName: NSWindowDidMoveNotification
-                object: strongView.window
-                queue: nil
-                usingBlock: notificationHandler];
-           [strongObservers addObject: observer];
+          id<NSObject> observer = [NSNotificationCenter.defaultCenter
+                  addObserverForName:NSWindowDidResizeNotification
+                              object:strongView.window
+                               queue:nil
+                          usingBlock:notificationHandler];
+          [strongObservers addObject:observer];
+          observer =
+                  [NSNotificationCenter.defaultCenter addObserverForName:NSWindowDidMoveNotification
+                                                                  object:strongView.window
+                                                                   queue:nil
+                                                              usingBlock:notificationHandler];
+          [strongObservers addObject:observer];
 
-            NSView* aView = strongView;
-            while (aView != nil) {
-                aView.postsFrameChangedNotifications = YES;
-                aView.postsBoundsChangedNotifications = YES;
-                observer = [NSNotificationCenter.defaultCenter
-                    addObserverForName: NSViewFrameDidChangeNotification
-                    object: aView
-                    queue: nil
-                    usingBlock: notificationHandler];
-                [strongObservers addObject: observer];
-                observer = [NSNotificationCenter.defaultCenter
-                    addObserverForName: NSViewBoundsDidChangeNotification
-                    object: aView
-                    queue: nil
-                    usingBlock: notificationHandler];
-                [strongObservers addObject: observer];
-                
-                aView = aView.superview;
-            }
-        }
+          NSView* aView = strongView;
+          while (aView != nil) {
+              aView.postsFrameChangedNotifications = YES;
+              aView.postsBoundsChangedNotifications = YES;
+              observer = [NSNotificationCenter.defaultCenter
+                      addObserverForName:NSViewFrameDidChangeNotification
+                                  object:aView
+                                   queue:nil
+                              usingBlock:notificationHandler];
+              [strongObservers addObject:observer];
+              observer = [NSNotificationCenter.defaultCenter
+                      addObserverForName:NSViewBoundsDidChangeNotification
+                                  object:aView
+                                   queue:nil
+                              usingBlock:notificationHandler];
+              [strongObservers addObject:observer];
+
+              aView = aView.superview;
+          }
+      }
     });
 }
 
@@ -247,10 +252,34 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
 }
 
 Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
-    NSView* nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+    __block NSView* nsView = nil;
+    __block NSWindow* nsWindow = nil;
 
-    // adding the pointer to the array retains the NSView
-    pImpl->mHeadlessSwapChains.push_back(nsView);
+    // On macOS, if an NSView is not attached to an active NSWindow that has been ordered
+    // front, the OS may defer the allocation of the underlying graphics backing store.
+    // This is problematic for headless rendering where we want to use glReadPixels on the
+    // default framebuffer (0). We create a hidden, borderless, transparent window and
+    // order it front to force the allocation.
+    //
+    // We use dispatch_sync to ensure the window and view are fully initialized and the
+    // backing store is ready before the Driver thread continues.
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      NSRect frame = NSMakeRect(-10000, -10000, width, height);
+      nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+
+      nsWindow = [[NSWindow alloc] initWithContentRect:frame
+                                             styleMask:NSWindowStyleMaskBorderless
+                                               backing:NSBackingStoreBuffered
+                                                 defer:NO];
+      [nsWindow setContentView:nsView];
+      [nsWindow setReleasedWhenClosed:NO];
+      [nsWindow setAlphaValue:0.0];
+      [nsWindow orderFrontRegardless];
+
+      // Mutate vectors on the main thread to remain consistent with destroySwapChain.
+      pImpl->mHeadlessSwapChains.push_back(nsView);
+      pImpl->mHeadlessWindows.push_back(nsWindow);
+    });
 
     CocoaGLSwapChain* swapChain = new CocoaGLSwapChain( nsView );
 
@@ -263,12 +292,19 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
         pImpl->mCurrentSwapChain = nullptr;
     }
 
-    auto& v = pImpl->mHeadlessSwapChains;
-    auto it = std::find(v.begin(), v.end(), cocoaSwapChain->view);
-    if (it != v.end()) {
-        // removing the pointer from the array releases the NSView
-        v.erase(it);
-    }
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      auto& views = pImpl->mHeadlessSwapChains;
+      auto& windows = pImpl->mHeadlessWindows;
+      auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
+      if (it != views.end()) {
+          size_t index = std::distance(views.begin(), it);
+          views.erase(it);
+          if (index < windows.size()) {
+              windows.erase(windows.begin() + index);
+          }
+      }
+    });
+
     delete cocoaSwapChain;
 }
 

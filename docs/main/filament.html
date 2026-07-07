@@ -1111,7 +1111,7 @@ The clear coat roughness parameter is remapped and clamped in a similar way to t
 <span class="line">    <span class="hljs-type">float</span> Frc = (Dc * Vc) * Fc;</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// account for energy loss in the base layer</span></span>
-<span class="line">    <span class="hljs-keyword">return</span> color * ((Fd + Fr * (<span class="hljs-number">1.0</span> - Fc)) * (<span class="hljs-number">1.0</span> - Fc) + Frc);</span>
+<span class="line">    <span class="hljs-keyword">return</span> color * ((Fd + Fr) * (<span class="hljs-number">1.0</span> - Fc) + Frc);</span>
 <span class="line">}</span></code></pre><center><div class="listingcaption tilde"><a class="target" name="listing_clearcoatbrdf">&nbsp;</a><b style="font-style:normal;">Listing&nbsp;14:</b> Implementation of the clear coat BRDF in GLSL</div></center>
 <a class="target" name="baselayermodification">&nbsp;</a><a class="target" name="materialsystem/clearcoatmodel/baselayermodification">&nbsp;</a><a class="target" name="toc4.9.4">&nbsp;</a><h3 id="base-layer-modification"><a class="header" href="#base-layer-modification">Base layer modification</a></h3>
 <p>

@@ -28,6 +28,7 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utils/CString.h>
 #include <utils/Mutex.h>
 
 #include <chrono>
@@ -78,6 +79,8 @@ struct VulkanProgram : public HwProgram, fvkmemory::ThreadSafeResource {
 
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
+
+    utils::CString programString;
 
     /**
      * Cancels any parallel compilation jobs that have not yet run for this

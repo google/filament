@@ -23,10 +23,10 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <GlslangToSpv.h>
+#include <gmock/gmock.h>
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
-#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -130,31 +130,20 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
     tShader.setAutoMapBindings(true);
 
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
-
-    if (!ok) {
-        std::cerr << "ERROR: Unable to parse " <<
-            (stage == ShaderStage::VERTEX ? "vertex" : "fragment") << " shader:" << std::endl;
-        std::cerr << tShader.getInfoLog() << std::endl;
-        assert_invariant(false);
-    }
+    EXPECT_THAT(ok, ::testing::IsTrue()) <<
+            "ERROR: Unable to parse " <<
+            (stage == ShaderStage::VERTEX ? "vertex" : "fragment") << " shader:" <<
+            tShader.getInfoLog();
 
     program.addShader(&tShader);
+
     bool linkOk = program.link(msg);
-    if (!linkOk) {
-        std::cerr << tShader.getInfoLog() << std::endl;
-        assert_invariant(false);
-    }
+    EXPECT_THAT(linkOk, ::testing::IsTrue()) << tShader.getInfoLog();
 
     SpirvBlob spirv;
-
     GlslangToSpv(*program.getIntermediate(language), spirv);
 
     std::string result;
-
-    assert_invariant(backend == Backend::OPENGL ||
-           backend == Backend::METAL  ||
-           backend == Backend::VULKAN ||
-           backend == Backend::WEBGPU);
 
     if (backend == Backend::OPENGL) {
         if (isMobile) {
@@ -171,7 +160,7 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };
     } else if (backend == Backend::WEBGPU){
-        filamat::GLSLPostProcessor::spirvToWgsl(&spirv, &result);
+        EXPECT_THAT(filamat::GLSLPostProcessor::spirvToWgsl(&spirv, &result), ::testing::IsTrue());
         return { result.c_str(), result.c_str() + result.length() + 1 };
     }
 

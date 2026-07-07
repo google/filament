@@ -108,9 +108,15 @@ bool decodeMeshoptCompression(cgltf_data* data) {
                 << " (actual=" << compression->count << ") given stride of " << compression->stride
                 << ".";
 
+        const size_t decodedSize = compression->count * compression->stride;
+
         // This memory is freed by cgltf.
-        void* destination = malloc(compression->count * compression->stride);
-        assert_invariant(destination);
+        void* destination = malloc(decodedSize);
+        if (UTILS_UNLIKELY(!destination)) {
+            slog.e << "gltfio: meshopt decompression allocation failed ("
+                   << decodedSize << " bytes)" << io::endl;
+            return false;
+        }
 
         int error = 0;
         switch (compression->mode) {
@@ -286,12 +292,10 @@ bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_GLTFIO);
 
-#ifndef NDEBUG
     if (cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {
         slog.e << "Failed cgltf validation." << io::endl;
         return false;
     }
-#endif
     return true;
 }
 

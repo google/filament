@@ -17,10 +17,10 @@
 #ifndef GLTFIO_FILAMENTASSET_H
 #define GLTFIO_FILAMENTASSET_H
 
+#include <gltfio/NodeManager.h>
+
 #include <filament/Box.h>
 #include <filament/TextureSampler.h>
-
-#include <gltfio/NodeManager.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>

@@ -30,6 +30,7 @@
 
 #include <math/mathfwd.h>
 
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -379,6 +380,9 @@ public:
 
     //! Indicates whether a parameter of the given name exists on this material.
     bool hasParameter(const char* UTILS_NONNULL name) const noexcept;
+
+    //! Indicates whether a parameter of the given name exists on this material.
+    bool hasParameter(std::string_view name) const noexcept;
 
     //! Indicates whether an existing parameter is a sampler or not.
     bool isSampler(const char* UTILS_NONNULL name) const noexcept;

@@ -127,6 +127,18 @@ void main() {
     fragColor = texture(test_tex, uv);
 })" };
         }
+        case FragmentShaderType::TexturedLod: {
+            return ShaderText{
+                R"(
+#version 450 core
+precision mediump int; precision highp float;
+layout(location = 0) out vec4 fragColor;
+layout(location = 0) in vec2 uv;
+)", R"(
+void main() {
+    fragColor = textureLod(test_tex, uv, 1);
+})" };
+        }
         default:
             return std::nullopt;
     }
@@ -161,7 +173,7 @@ layout(binding = 0, set = 0) uniform Params {
         }
         case ShaderUniformType::Sampler: {
             return R"(
-layout(location = 0, set = 0) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 )";
         }
         default:
