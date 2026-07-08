@@ -540,7 +540,7 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, mEngine);
 
-    out->slotIndices.resize(morphTargets.size());
+    out->slotIndices.assign(targetsCount, -1);
 
     for (size_t i = 0; i < slots.size(); i++) {
         auto& slot = slots[i];

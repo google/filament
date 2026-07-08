@@ -880,7 +880,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
                             auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
                                     fAsset->mResourceInfo).slots;
 
-                            if (isFirstMorphSetup) {
+                            if (isFirstMorphSetup && outputPrim->slotIndices[tindex] >= 0) {
                                 BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
 
                                 assert_invariant(slot.slot == tindex);
