@@ -633,6 +633,98 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     fs::remove_all(root);
 }
 
+namespace {
+
+// Builds a minimal GLB: one unlit-material primitive with two morph targets.
+// target[0] has POSITION only; target[1] has POSITION + TANGENT.
+// With the buggy resize(morphTargets.size()), the unlit filter drops target[0],
+// leaving slotIndices with size 1. Writing slotIndices[1] (target[1]'s raw index)
+// then overflows the heap allocation. With the fix (assign(targetsCount, -1)) the
+// vector is sized to 2 from the start and no overflow occurs.
+static std::vector<uint8_t> makeUnlitMorphTangentGlb() {
+    // 4 buffer views, each 36 bytes (3 × VEC3 float), total 144 bytes.
+    std::string const json = R"({
+  "asset": {"version": "2.0"},
+  "extensionsUsed": ["KHR_materials_unlit"],
+  "scene": 0,
+  "scenes": [{"nodes": [0]}],
+  "nodes": [{"mesh": 0}],
+  "materials": [{"extensions": {"KHR_materials_unlit": {}}}],
+  "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "material": 0,
+    "targets": [{"POSITION": 1}, {"POSITION": 2, "TANGENT": 3}]}]}],
+  "accessors": [
+    {"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,0,0]},
+    {"bufferView":1,"componentType":5126,"count":3,"type":"VEC3"},
+    {"bufferView":2,"componentType":5126,"count":3,"type":"VEC3"},
+    {"bufferView":3,"componentType":5126,"count":3,"type":"VEC3"}
+  ],
+  "bufferViews": [
+    {"buffer":0,"byteOffset":0,"byteLength":36},
+    {"buffer":0,"byteOffset":36,"byteLength":36},
+    {"buffer":0,"byteOffset":72,"byteLength":36},
+    {"buffer":0,"byteOffset":108,"byteLength":36}
+  ],
+  "buffers": [{"byteLength":144}]
+})";
+
+    std::string paddedJson = json;
+    while ((paddedJson.size() % 4u) != 0u) {
+        paddedJson.push_back(' ');
+    }
+
+    std::vector<uint8_t> bin(144, 0);
+
+    const uint32_t jsonSize = uint32_t(paddedJson.size());
+    const uint32_t binSize  = uint32_t(bin.size());
+    const uint32_t totalSize = 12u + 8u + jsonSize + 8u + binSize;
+
+    std::vector<uint8_t> glb;
+    glb.reserve(totalSize);
+    appendU32LE(glb, 0x46546c67u);   // "glTF"
+    appendU32LE(glb, 2u);             // version
+    appendU32LE(glb, totalSize);
+    appendU32LE(glb, jsonSize);
+    appendU32LE(glb, 0x4e4f534au);   // "JSON"
+    glb.insert(glb.end(), paddedJson.begin(), paddedJson.end());
+    appendU32LE(glb, binSize);
+    appendU32LE(glb, 0x004e4942u);   // "BIN\0"
+    glb.insert(glb.end(), bin.begin(), bin.end());
+    return glb;
+}
+
+} // namespace
+
+// Extended loader: unlit primitive with 2 morph targets where only target[1] has TANGENT.
+// The unlit filter skips target[0]; with the old resize(morphTargets.size()) that left
+// slotIndices with length 1 while slotIndices[1] (raw index) was still written — heap OOB.
+// With assign(targetsCount, -1) the array covers both targets and no overflow occurs.
+TEST_F(glTFIOTest, ExtendedLoaderUnlitMorphTargetSlotIndicesInBounds) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "extended loader unsupported on this platform";
+    }
+
+    AssetConfigurationExtended ext{};
+    ext.gltfPath = "test.glb";
+
+    AssetConfiguration config{};
+    config.engine = mEngine;
+    config.materials = mMaterialProvider;
+    config.names = mNameManager;
+    config.ext = &ext;
+
+    AssetLoader* loader = AssetLoader::create(config);
+    ASSERT_NE(loader, nullptr);
+
+    std::vector<uint8_t> const glb = makeUnlitMorphTangentGlb();
+    FilamentAsset* asset = loader->createAsset(glb.data(), uint32_t(glb.size()));
+    EXPECT_NE(asset, nullptr);
+
+    if (asset) {
+        loader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&loader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
