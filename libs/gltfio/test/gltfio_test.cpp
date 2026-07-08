@@ -633,6 +633,39 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     fs::remove_all(root);
 }
 
+#include "ext_slotindices_glb.inc"
+
+// Extended (desktop) loader: a material-less primitive whose morph target[0] is POSITION-only and
+// target[1] carries a TANGENT. The morph-target filter in AssetLoaderExtended::createPrimitive
+// dropped target[0] (no tangent, no material) while slotIndices was written at the raw morph-target
+// index, so a later kept target's index underflowed the array -- a heap out-of-bounds write. Now
+// that every morph target is represented, the asset loads without an out-of-bounds access.
+TEST_F(glTFIOTest, ExtendedLoaderMorphTargetSlotIndicesInBounds) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "extended loader unsupported on this platform";
+    }
+
+    AssetConfigurationExtended ext{};
+    ext.gltfPath = "test.glb";
+
+    AssetConfiguration config{};
+    config.engine = mEngine;
+    config.materials = mMaterialProvider;
+    config.names = mNameManager;
+    config.ext = &ext;
+
+    AssetLoader* loader = AssetLoader::create(config);
+    ASSERT_NE(loader, nullptr);
+
+    FilamentAsset* asset = loader->createAsset(EXT_SLOTINDICES_GLB, sizeof(EXT_SLOTINDICES_GLB));
+    EXPECT_NE(asset, nullptr);
+
+    if (asset) {
+        loader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&loader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

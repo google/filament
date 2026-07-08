@@ -452,7 +452,6 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     Aabb const baseAabb(out->aabb);
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
-        bool morphTargetHasNormals = false;
         cgltf_morph_target const& target = prim->targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < target.attributes_count; aindex++) {
             cgltf_attribute const& attribute = target.attributes[aindex];
@@ -484,16 +483,14 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
                 out->aabb.min = min(out->aabb.min, targetAabb.min);
                 out->aabb.max = max(out->aabb.max, targetAabb.max);
             }
-
-            if (atype == cgltf_attribute_type_tangent) {
-                morphTargetHasNormals = true;
-                morphTargets.push_back(targetIndex);
-            }
         }
-        // Generate flat normals if necessary.
-        if (!morphTargetHasNormals && prim->material && !prim->material->unlit) {
-            morphTargets.push_back(targetIndex);
-        }
+        // Every morph target contributes a buffer slot (its POSITION deltas are uploaded and its
+        // tangent space is computed). The slotIndices array populated below is indexed downstream
+        // in FAssetLoader::createRenderable by the *raw* morph-target index, which also requires
+        // each slot's .slot to equal that index. Representing only a filtered subset of targets
+        // here desynchronizes slotIndices from that consumer and underflows it -- an out-of-bounds
+        // write when an earlier target is skipped -- and drops the skipped targets' POSITION data.
+        morphTargets.push_back(targetIndex);
     }
 
     // We provide a single dummy buffer (filled with 0xff) for all unfulfilled vertex requirements.
