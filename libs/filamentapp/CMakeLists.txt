@@ -42,14 +42,20 @@ set(SRCS
         src/Sphere.cpp
         src/PlatformHelper.cpp
         src/PlatformHelper.h
-        src/KeyInputConversion.h
         src/DisplayManager.h
         src/AppEvent.h
-        src/display_managers/SDLDisplayManager.h
-        src/display_managers/SDLDisplayManager.cpp
-        src/display_managers/HtmlDisplayManager.h
-        src/display_managers/HtmlDisplayManager.cpp
+        src/FilamentAppGui.h
+        src/FilamentAppGui.cpp
 )
+
+if (IS_HOST_PLATFORM)
+    list(APPEND SRCS
+            src/display_managers/SDLDisplayManager.h
+            src/display_managers/SDLDisplayManager.cpp
+            src/display_managers/HtmlDisplayManager.h
+            src/display_managers/HtmlDisplayManager.cpp
+    )
+endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
@@ -61,21 +67,30 @@ endif()
 set(LIBS
         assimp
         camutils
-        civetweb
-        filagui
         filamat
         filament
         filament-iblprefilter
         geometry
         image
-        imageio
-        imgui
         ktxreader
         math
-        sdl2
         stb
         utils
 )
+
+if (IS_HOST_PLATFORM)
+    list(APPEND LIBS
+        civetweb
+        filagui
+        imgui
+        imageio
+        sdl2
+    )
+else()
+    list(APPEND LIBS
+        imageio-lite
+    )
+endif()
 
 set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
@@ -224,11 +239,19 @@ if (FILAMENT_SUPPORTS_WEBGPU)
 target_link_libraries(${TARGET} PRIVATE dawncpp_headers)
 endif()
 
-target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources filamentapp-web-resources)
+if (IS_HOST_PLATFORM)
+    target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources filamentapp-web-resources)
+else()
+    target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources)
+endif()
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
+target_include_directories(${TARGET} PRIVATE
+        ${GENERATION_ROOT}
+        ${ROOT_DIR}/imageio/include
+        ${ROOT_DIR}/../third_party/libassimp/include
+)
 
 # ==================================================================================================
 # Compiler flags
@@ -248,3 +271,13 @@ if (_isMultiConfig)
 else()
     target_compile_definitions(${TARGET} PRIVATE RELATIVE_ASSET_PATH=".")
 endif()
+
+if (IS_HOST_PLATFORM)
+    target_compile_definitions(${TARGET} PRIVATE FILAMENTAPP_HAS_SDL FILAMENTAPP_HAS_IMGUI FILAMENTAPP_HAS_WEB_UI)
+endif()
+
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+install(TARGETS filamentapp filamentapp-resources ARCHIVE DESTINATION lib/${DIST_DIR} LIBRARY DESTINATION lib/${DIST_DIR})

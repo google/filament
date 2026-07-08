@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FILAMENTAPP_KEYINPUTCONVERSION_H
-#define TNT_FILAMENT_FILAMENTAPP_KEYINPUTCONVERSION_H
-
-#include "AppEvent.h"
-
+#include "FilamentAppGui.h"
+#include "DisplayManager.h"
+#if defined(FILAMENTAPP_HAS_IMGUI)
+#include <filagui/ImGuiHelper.h>
 #include <imgui.h>
 
-namespace filamentapp_utils {
-
-using namespace filament::app;
-
-ImGuiKey AppKeyToImGuiKey(AppKey key) {
+namespace {
+ImGuiKey AppKeyToImGuiKey(filament::app::AppKey key) {
+    using namespace filament::app;
     switch (key) {
         case AppKey::TAB:
             return ImGuiKey_Tab;
@@ -270,7 +267,109 @@ ImGuiKey AppKeyToImGuiKey(AppKey key) {
     }
     return ImGuiKey_None;
 }
+} // namespace
+#endif
 
-} // namespace filamentapp_utils
+using namespace filament::app;
 
-#endif // TNT_FILAMENT_FILAMENTAPP_KEYINPUTCONVERSION_H
+struct FilamentAppGui::Impl {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    std::unique_ptr<filagui::ImGuiHelper> helper;
+#endif
+};
+
+FilamentAppGui::FilamentAppGui(filament::Engine* engine, filament::View* view,
+        const utils::Path& fontPath)
+        : pImpl(new Impl()) {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    pImpl->helper = std::make_unique<filagui::ImGuiHelper>(engine, view, fontPath);
+#endif
+}
+
+FilamentAppGui::~FilamentAppGui() { delete pImpl; }
+
+void FilamentAppGui::processAppEvents(std::vector<filament::app::AppEvent> const& events) {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    if (!pImpl->helper) return;
+
+    ImGuiIO& io = ImGui::GetIO();
+    for (const auto& event: events) {
+        switch (event.type) {
+            case AppEvent::Type::MOUSE_WHEEL: {
+                io.MouseWheel += event.mouseWheel.delta;
+                break;
+            }
+            case AppEvent::Type::MOUSE_BUTTON_DOWN: {
+                // Handled in render() based on display manager state for now,
+                // but we could also process them here.
+                break;
+            }
+            case AppEvent::Type::KEYDOWN:
+            case AppEvent::Type::KEYUP: {
+                io.AddKeyEvent(ImGuiMod_Ctrl, (event.key.modifiers & AppKeyModifier::CTRL) != 0);
+                io.AddKeyEvent(ImGuiMod_Shift, (event.key.modifiers & AppKeyModifier::SHIFT) != 0);
+                io.AddKeyEvent(ImGuiMod_Alt, (event.key.modifiers & AppKeyModifier::ALT) != 0);
+                io.AddKeyEvent(ImGuiMod_Super, (event.key.modifiers & AppKeyModifier::SUPER) != 0);
+                io.AddKeyEvent(AppKeyToImGuiKey(event.key.code),
+                        event.type == AppEvent::Type::KEYDOWN);
+                break;
+            }
+            case AppEvent::Type::TEXTINPUT: {
+                io.AddInputCharactersUTF8(event.text.text);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+#endif
+}
+
+bool FilamentAppGui::wantCaptureMouse() const {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    if (pImpl->helper) {
+        ImGuiIO& io = ImGui::GetIO();
+        return io.WantCaptureMouse;
+    }
+#endif
+    return false;
+}
+
+void FilamentAppGui::render(float timeStep, filament::app::DisplayManager* displayManager,
+        void* window, FilamentApp::ImGuiCallback imguiCallback, bool mousePressed[3]) {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    if (pImpl->helper) {
+        uint32_t windowWidth, windowHeight;
+        uint32_t displayWidth, displayHeight;
+        displayManager->getWindowSize(window, &windowWidth, &windowHeight);
+        displayManager->getDrawableSize(window, &displayWidth, &displayHeight);
+        pImpl->helper->setDisplaySize(windowWidth, windowHeight,
+                windowWidth > 0 ? ((float) displayWidth / windowWidth) : 0,
+                displayHeight > 0 ? ((float) displayHeight / windowHeight) : 0);
+
+        ImGuiIO& io = ImGui::GetIO();
+        int mx, my;
+        uint32_t buttons = displayManager->getMouseState(&mx, &my);
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        io.MouseDown[0] = mousePressed[0] || (buttons & (1 << 0)) != 0;
+        io.MouseDown[1] = mousePressed[1] || (buttons & (1 << 2)) != 0;
+        io.MouseDown[2] = mousePressed[2] || (buttons & (1 << 1)) != 0;
+        mousePressed[0] = mousePressed[1] = mousePressed[2] = false;
+
+        if (displayManager->isWindowFocused(window)) {
+            io.MousePos = ImVec2((float) mx, (float) my);
+        }
+
+        pImpl->helper->render(timeStep, imguiCallback);
+    }
+#endif
+}
+
+filament::View* FilamentAppGui::getView() const noexcept {
+#if defined(FILAMENTAPP_HAS_IMGUI)
+    if (pImpl->helper) {
+        return pImpl->helper->getView();
+    }
+#endif
+    return nullptr;
+}
