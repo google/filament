@@ -545,8 +545,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
             material.multiBounceAO : shaderModel == ShaderModel::DESKTOP;
     CodeGenerator::generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
 
-    bool const coloredPenumbra = material.hasColoredPenumbra;
-    CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA", coloredPenumbra ? 1u : 0u);
+    CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA", material.hasColoredPenumbra);
 
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
