@@ -633,6 +633,38 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     fs::remove_all(root);
 }
 
+#include "morph_tangent_typeconf_glb.inc"
+
+// A morph-target NORMAL/TANGENT accessor may declare an arbitrary element type. Such accessors
+// skip the getElementType validation in createPrimitive and are consumed by the tangent-space
+// job in ResourceLoader, which unpacks them into a fixed 3-float-per-vertex scratch buffer. A
+// matrix-typed (e.g. MAT4, 16-component) accessor therefore causes more floats to be written per
+// element than the buffer holds -- a heap out-of-bounds write on the default, all-platform
+// loader, from an untrusted, cgltf_validate-clean .glb.
+//
+// This test loads such a file. Before the fix it produced a heap-buffer-overflow (visible under
+// AddressSanitizer) while computing tangents; after the fix the unsupported accessor type is
+// rejected at load, so createAsset returns null and no out-of-bounds access occurs.
+TEST_F(glTFIOTest, MorphTargetTangentInvalidTypeIsRejected) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    FilamentAsset* asset = loader->createAsset(MORPH_TANGENT_TYPECONF_GLB,
+            sizeof(MORPH_TANGENT_TYPECONF_GLB));
+
+    // The MAT4-typed morph tangent accessor must be rejected at load.
+    EXPECT_EQ(asset, nullptr);
+
+    if (asset) {
+        // Defense in depth: if a future change lets the asset load, resource loading (which runs
+        // the tangent-space computation) must still not perform an out-of-bounds access.
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        resourceLoader.loadResources(asset);
+        loader->destroyAsset(asset);
+    }
+    AssetLoader::destroy(&loader);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
