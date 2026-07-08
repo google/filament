@@ -1728,3 +1728,69 @@ TEST_F(FramePacerTest, TimeBasedLatencyVsyncRounding) {
 
     mEngine->destroy(pacerCandidate);
 }
+
+// Test Suite 32: Verify that clock drift relative to true hardware period does not accumulate
+// and cause timeline expected presentation time to drift into a later vsync interval (causing stutter).
+// This test targets 45 FPS on a 60Hz display, which is an inexact frame rate (exactAchieved = false),
+// and therefore relies on Rigid Anchoring.
+TEST_F(FramePacerTest, PhaseDriftWithTimelineMatching) {
+    TimePoint start = TimePoint(std::chrono::steady_clock::now());
+
+    // Nominal period used by FramePacer configuration: 16.666ms (60.0 Hz display)
+    Duration nominalPeriod = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
+
+    // True hardware oscillator period: 16.650264ms (slightly faster)
+    Duration truePeriod = std::chrono::nanoseconds(16650264);
+
+    // We target 45 FPS, which is inexact on 60Hz (22.22ms step vs 16.66ms hardware period)
+    FramePacer* pacer = FramePacer::Builder()
+                        .targetFrameRate(45.0f)
+                        .latency(std::chrono::nanoseconds(33333333)) // 33.3ms latency
+                        .build(*mEngine);
+    ASSERT_NE(pacer, nullptr);
+
+    int acceptedFrameCount = 0;
+
+    // Run the looper for 2000 VSYNC ticks (approx 33 seconds)
+    for (int i = 0; i < 2000; ++i) {
+        TimePoint currentVsync = start + (truePeriod * i);
+
+        FramePacer::VsyncTick tick;
+        tick.baseTime = currentVsync;
+        tick.vsyncPeriod = nominalPeriod;
+
+        // Simulate 4 timeline candidates that track the true VSYNC grid (T+1, T+2, T+3, T+4 true Vsyncs)
+        std::vector<FramePacer::HardwareTimeline> timelines = {
+            {currentVsync + truePeriod, currentVsync + truePeriod - std::chrono::milliseconds(5)},
+            {currentVsync + truePeriod * 2, currentVsync + truePeriod * 2 - std::chrono::milliseconds(5)},
+            {currentVsync + truePeriod * 3, currentVsync + truePeriod * 3 - std::chrono::milliseconds(5)},
+            {currentVsync + truePeriod * 4, currentVsync + truePeriod * 4 - std::chrono::milliseconds(5)}
+        };
+        tick.timelines = utils::Slice<const FramePacer::HardwareTimeline>(timelines.data(), timelines.size());
+
+        FramePacer::FrameStatus status = pacer->setupFrame(tick);
+
+        if (status == FramePacer::FrameStatus::SKIPPED_SPURIOUS) {
+            // Skips must always occur at expected 4*k + 2 phase: 2, 6, 10, 14...
+            // If the phase drifts, it will eventually skip at a different index (e.g. 4*k).
+            EXPECT_EQ(i % 4, 2)
+                    << "Cadence phase shifted at VSYNC " << i << "! Expected skip at phase 2, but skipped at phase " <<
+                        (i % 4);
+        }
+
+        if (status == FramePacer::FrameStatus::ACCEPTED) {
+            acceptedFrameCount++;
+
+            TimePoint expectedPresent = pacer->getExpectedPresentationTime();
+            Duration offset = (expectedPresent - start) % truePeriod;
+            Duration error = std::min(offset, truePeriod - offset);
+
+            EXPECT_LT(error, std::chrono::microseconds(10))
+                    << "Drift accumulated at VSYNC " << i << " (accepted frame " << acceptedFrameCount
+                    << ")! Expected presentation time " << expectedPresent.time_since_epoch().count()
+                    << " is not aligned with true VSYNC grid. Error = " << error.count() << " ns.";
+        }
+    }
+
+    mEngine->destroy(pacer);
+}

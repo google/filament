@@ -273,12 +273,18 @@ FramePacer::FrameStatus FFramePacer::setupFrame(VsyncTick const& tick) {
                 matchHardwareTimeline(tick, projectedPresentation, mHardwarePeriod);
     }
 
+    // Calculate the drift between our projected timeline and the actual matched timeline
+    duration_t const snapOffset = candidatePresentation - projectedPresentation;
+
     // Advance our ideal render time for the upcoming frame cycle.
     if (UTILS_LIKELY(exactAchieved)) {
         mExpectedBaseTime = syntheticBaseTime + targetStep;
     } else {
         mExpectedBaseTime += targetStep;
     }
+
+    // Apply the timeline snap to our internal clock to permanently prevent drift
+    mExpectedBaseTime += snapOffset;
 
     // Monotonic Presentation Guard:
     // If the candidate presentation timestamp is less than or equal to the presentation time
