@@ -51,8 +51,14 @@ struct CocoaGLSwapChain : public Platform::SwapChain {
 struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
+
+    utils::Mutex mHeadlessResourcesLock;
+
+    // These resources will only be written to from the main thread, but they could be read
+    // from the backend thread.
     std::vector<NSView*> mHeadlessSwapChains;
     std::vector<NSWindow*> mHeadlessWindows;
+
     mutable utils::Mutex mAdditionalContextsLock;
     std::vector<NSOpenGLContext*> mAdditionalContexts UTILS_GUARDED_BY(mAdditionalContextsLock);
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
@@ -76,7 +82,7 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
         , currentWindowFrame(NSZeroRect) {
     NSView* __weak weakView = view;
     NSMutableArray* __weak weakObservers = observers;
-    
+
     void (^notificationHandler)(NSNotification *notification) = ^(NSNotification *notification) {
         NSView* strongView = weakView;
         if ((weakView != nil) && (weakObservers != nil)) {
@@ -84,7 +90,7 @@ CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
             this->currentWindowFrame = strongView.window.frame;
         }
     };
-    
+
     // Various methods below should only be called from the main thread:
     // -[NSView bounds], -[NSView convertRectToBacking:], -[NSView window],
     // -[NSWindow frame], -[NSView superview],
@@ -263,22 +269,27 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t h
     //
     // We use dispatch_sync to ensure the window and view are fully initialized and the
     // backing store is ready before the Driver thread continues.
+    // TODO: this might be problematic if someone was both driving the rendering on the main thread
+    // and using headless swapchains.
     dispatch_sync(dispatch_get_main_queue(), ^{
-      NSRect frame = NSMakeRect(-10000, -10000, width, height);
-      nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
+        NSRect frame = NSMakeRect(-10000, -10000, width, height);
+        nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
 
-      nsWindow = [[NSWindow alloc] initWithContentRect:frame
-                                             styleMask:NSWindowStyleMaskBorderless
-                                               backing:NSBackingStoreBuffered
-                                                 defer:NO];
-      [nsWindow setContentView:nsView];
-      [nsWindow setReleasedWhenClosed:NO];
-      [nsWindow setAlphaValue:0.0];
-      [nsWindow orderFrontRegardless];
+        nsWindow = [[NSWindow alloc] initWithContentRect:frame
+                                               styleMask:NSWindowStyleMaskBorderless
+                                                 backing:NSBackingStoreBuffered
+                                                   defer:NO];
+        [nsWindow setContentView:nsView];
+        [nsWindow setReleasedWhenClosed:NO];
+        [nsWindow setAlphaValue:0.0];
+        [nsWindow orderFrontRegardless];
 
-      // Mutate vectors on the main thread to remain consistent with destroySwapChain.
-      pImpl->mHeadlessSwapChains.push_back(nsView);
-      pImpl->mHeadlessWindows.push_back(nsWindow);
+        // Mutate vectors on the main thread to remain consistent with destroySwapChain.
+        {
+            utils::LockGuard const lock(pImpl->mHeadlessResourcesLock);
+            pImpl->mHeadlessSwapChains.push_back(nsView);
+            pImpl->mHeadlessWindows.push_back(nsWindow);
+        }
     });
 
     CocoaGLSwapChain* swapChain = new CocoaGLSwapChain( nsView );
@@ -292,19 +303,34 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
         pImpl->mCurrentSwapChain = nullptr;
     }
 
-    dispatch_sync(dispatch_get_main_queue(), ^{
-      auto& views = pImpl->mHeadlessSwapChains;
-      auto& windows = pImpl->mHeadlessWindows;
-      auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
-      if (it != views.end()) {
-          size_t index = std::distance(views.begin(), it);
-          views.erase(it);
-          if (index < windows.size()) {
-              windows.erase(windows.begin() + index);
-          }
-      }
-    });
+    // First see if the swapchain is associated with a headless view
+    NSView* headlessView = nullptr;
+    {
+        utils::LockGuard const lock(pImpl->mHeadlessResourcesLock);
+        auto& views = pImpl->mHeadlessSwapChains;
+        if (auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
+                it != views.end()) {
+            headlessView = *it;
+        }
+    }
 
+    if (headlessView) {
+       // Delete the no longer needed headless view and window on the main thread. Note that this
+       // call is non-blocking.
+       dispatch_async(dispatch_get_main_queue(), ^{
+            utils::LockGuard const lock(pImpl->mHeadlessResourcesLock);
+            auto& views = pImpl->mHeadlessSwapChains;
+            auto& windows = pImpl->mHeadlessWindows;
+            if (auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
+                    it != views.end()) {
+                size_t index = std::distance(views.begin(), it);
+                views.erase(it);
+                if (index < windows.size()) {
+                    windows.erase(windows.begin() + index);
+                }
+            }
+        });
+    }
     delete cocoaSwapChain;
 }
 
