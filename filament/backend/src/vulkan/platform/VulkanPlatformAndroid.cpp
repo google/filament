@@ -277,11 +277,6 @@ bool VulkanPlatformAndroid::copyExternalImageToMemoryYUV(
     return false;
 }
 
-// Define fallback preprocessor guards to avoid compilation errors on older Android SDKs.
-#ifndef AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE
-#define AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE 0x4000000ULL
-#endif
-
 VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImageMetadata(
     ExternalImageHandleRef image) const {
     if (__builtin_available(android 26, *)) {
