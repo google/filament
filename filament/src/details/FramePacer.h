@@ -42,18 +42,22 @@ public:
     void configure(Configuration const& config);
     Configuration const& getConfiguration() const noexcept { return mConfig; }
     FrameStatus setupFrame(VsyncTick const& tick);
+    bool setupExtraFrame() noexcept;
     bool hasGpuFallenBehind(FRenderer const* renderer);
     void applyPresentationTime(FRenderer* renderer) const;
     time_point_t getExpectedPresentationTime() const noexcept;
     time_point_t getRenderingDeadline() const noexcept;
     std::chrono::nanoseconds getEffectiveLatency() const noexcept;
+    PacingStatus getPacingStatus() const noexcept;
+    void resetPacing() noexcept;
+
 
     float getSelectedFrameRate() const noexcept;
     bool isExactFrameRateAchieved() const noexcept;
 
 private:
     using TargetStepResult = std::pair<duration_t, bool>;
-    using HardwareTimelineResult = std::tuple<time_point_t, time_point_t, time_point_t>;
+    using HardwareTimelineResult = std::tuple<time_point_t, time_point_t, time_point_t, duration_t>;
 
     Configuration mConfig;
     duration_t mHardwarePeriod = std::chrono::duration_cast<duration_t>(
@@ -68,14 +72,16 @@ private:
     time_point_t mFrameScheduleTime;
     bool mExactFrameRateAchieved = true;
     bool mConfigLatencyChanged = false;
+    PacingStatus mPacingStatus = PacingStatus::STEADY;
 
     // Returns { targetStep, exactAchieved }
     static TargetStepResult calculateTargetStep(float targetFrameRate, duration_t hardwarePeriod);
     void syncExpectedBaseTimeWithVsync(time_point_t baseTime, duration_t targetStep);
     bool shouldSkipVsync(time_point_t baseTime) const;
 
-    // Returns { candidatePresentation, candidateDeadline, candidateAdjustedPresentation }
-    static HardwareTimelineResult matchHardwareTimeline(VsyncTick const& tick, time_point_t projectedPresentation, duration_t hardwarePeriod);
+    // Returns { candidatePresentation, candidateDeadline, candidateAdjustedPresentation, minIdealDiff }
+    static HardwareTimelineResult matchHardwareTimeline(VsyncTick const& tick, time_point_t projectedPresentation,
+            time_point_t idealPresentation, duration_t hardwarePeriod);
 };
 FILAMENT_DOWNCAST(FramePacer)
 

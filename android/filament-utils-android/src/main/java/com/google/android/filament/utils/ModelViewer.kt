@@ -75,6 +75,19 @@ class ModelViewer(
     var animator: Animator? = null
         private set
 
+    /**
+     * If true, ModelViewer automatically calculates the elapsed time using the
+     * FramePacer and updates the animation.
+     */
+    var autoPlayAnimations = true
+
+    /**
+     * The index of the active animation to auto-play.
+     */
+    var activeAnimationIndex = 0
+
+    private var animationStartTimeNanos: Long = 0L
+
     @Suppress("unused")
     val progress
         get() = resourceLoader.asyncGetLoadProgress()
@@ -305,6 +318,7 @@ class ModelViewer(
             }
             it.updateBoneMatrices()
         }
+        animationStartTimeNanos = 0L
 
         // 4. Re-apply the unit cube transform to clear custom scaling/translation
         clearRootTransform()
@@ -323,6 +337,7 @@ class ModelViewer(
             assetLoader.destroyAsset(asset)
             this.asset = null
             this.animator = null
+            this.animationStartTimeNanos = 0L
         }
     }
 
@@ -343,7 +358,31 @@ class ModelViewer(
             renderer.skipFrame(frameTimeNanos)
             return false
         }
-        return doRender(frameTimeNanos)
+        if (framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STUFFED) {
+            /*
+             * DISPLAY_STUFFED indicates that our presentation timeline is currently bloated 1 frame
+             * further into the future than our ideal latency target due to an earlier slipped frame.
+             *
+             * For a simple viewer like ModelViewer where animations directly track expected presentation time,
+             * we intentionally skip this CPU render tick so SurfaceFlinger can drain the extra pre-buffered
+             * frame and instantly drop our queue depth back down to minimum latency (STEADY).
+             *
+             * Note for production engines: If an application has its own decoupled simulation/animation pacer,
+             * instead of jumping or hitching on a skip, it can time-dilate its animation clock across
+             * subsequent frames to absorb the catch-up smoothly over several intervals. Alternatively, if
+             * preserving 100% frame cadence is more important than minimum latency, an application may
+             * ignore DISPLAY_STUFFED and continue rendering to let Relative Presentation Pacing absorb the slip.
+             */
+            framePacer.resetPacing()
+            return false
+        }
+        var rendered = updateAnimationAndRender(frameTimeNanos)
+        if (rendered && framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STARVING) {
+            if (framePacer.setupExtraFrame()) {
+                updateAnimationAndRender(frameTimeNanos)
+            }
+        }
+        return rendered
     }
 
     /**
@@ -363,7 +402,48 @@ class ModelViewer(
             renderer.skipFrame(frameData.frameTimeNanos)
             return false
         }
-        return doRender(frameData.frameTimeNanos)
+        if (framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STUFFED) {
+            /*
+             * DISPLAY_STUFFED indicates that our presentation timeline is currently bloated 1 frame
+             * further into the future than our ideal latency target due to an earlier slipped frame.
+             *
+             * For a simple viewer like ModelViewer where animations directly track expected presentation time,
+             * we intentionally skip this CPU render tick so SurfaceFlinger can drain the extra pre-buffered
+             * frame and instantly drop our queue depth back down to minimum latency (STEADY).
+             *
+             * Note for production engines: If an application has its own decoupled simulation/animation pacer,
+             * instead of jumping or hitching on a skip, it can time-dilate its animation clock across
+             * subsequent frames to absorb the catch-up smoothly over several intervals. Alternatively, if
+             * preserving 100% frame cadence is more important than minimum latency, an application may
+             * ignore DISPLAY_STUFFED and continue rendering to let Relative Presentation Pacing absorb the slip.
+             */
+            framePacer.resetPacing()
+            return false
+        }
+        var rendered = updateAnimationAndRender(frameData.frameTimeNanos)
+        if (rendered && framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STARVING) {
+            if (framePacer.setupExtraFrame()) {
+                updateAnimationAndRender(frameData.frameTimeNanos)
+            }
+        }
+        return rendered
+    }
+
+    private fun updateAnimationAndRender(frameTimeNanos: Long): Boolean {
+        if (autoPlayAnimations) {
+            animator?.let {
+                if (it.animationCount > 0) {
+                    val presentationTime = framePacer.expectedPresentationTimeNanos
+                    if (animationStartTimeNanos == 0L) {
+                        animationStartTimeNanos = presentationTime
+                    }
+                    val elapsedTimeSeconds = (presentationTime - animationStartTimeNanos).toDouble() / 1_000_000_000
+                    it.applyAnimation(activeAnimationIndex, elapsedTimeSeconds.toFloat())
+                    it.updateBoneMatrices()
+                }
+            }
+        }
+        return doRender(frameTimeNanos)
     }
 
     private fun doRender(frameTimeNanos: Long): Boolean {

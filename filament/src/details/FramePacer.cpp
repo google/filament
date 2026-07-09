@@ -163,8 +163,8 @@ bool FFramePacer::shouldSkipVsync(time_point_t const baseTime) const {
     return skipped;
 }
 
-FFramePacer::HardwareTimelineResult FFramePacer::matchHardwareTimeline(
-        VsyncTick const& tick, time_point_t projectedPresentation, duration_t const hardwarePeriod) {
+FFramePacer::HardwareTimelineResult FFramePacer::matchHardwareTimeline(VsyncTick const& tick,
+        time_point_t projectedPresentation, time_point_t const idealPresentation, duration_t const hardwarePeriod) {
 
     if (UTILS_LIKELY(!tick.timelines.empty())) {
         size_t const lastIdx = tick.timelines.size() - 1;
@@ -172,13 +172,14 @@ FFramePacer::HardwareTimelineResult FFramePacer::matchHardwareTimeline(
         time_point_t bestDeadline = tick.timelines[lastIdx].deadline;
         time_point_t bestAdjusted;
         if (lastIdx > 0) {
-            time_point_t prevExpected = tick.timelines[lastIdx - 1].expectedPresentationTime;
+            time_point_t const prevExpected = tick.timelines[lastIdx - 1].expectedPresentationTime;
             bestAdjusted = prevExpected + (bestMatch - prevExpected) / 2;
         } else {
             bestAdjusted = bestMatch - (hardwarePeriod / 2);
         }
 
         duration_t minDiff = duration_t::max();
+        duration_t minIdealDiff = duration_t::max();
 
         for (size_t i = 0; i < tick.timelines.size(); ++i) {
             auto const [expectedPresentationTime, deadline] = tick.timelines[i];
@@ -200,14 +201,20 @@ FFramePacer::HardwareTimelineResult FFramePacer::matchHardwareTimeline(
                     bestAdjusted = expected - (hardwarePeriod / 2);
                 }
             }
+
+            duration_t const idealDiff = std::chrono::abs(expected - idealPresentation);
+            if (idealDiff < minIdealDiff) {
+                minIdealDiff = idealDiff;
+            }
         }
-        return { bestMatch, bestDeadline, bestAdjusted };
+        return { bestMatch, bestDeadline, bestAdjusted, minIdealDiff };
     }
 
     return {
         projectedPresentation,
         projectedPresentation - hardwarePeriod,
-        projectedPresentation - (hardwarePeriod / 2)
+        projectedPresentation - (hardwarePeriod / 2),
+        duration_t::max()
     };
 }
 
@@ -247,7 +254,8 @@ FramePacer::FrameStatus FFramePacer::setupFrame(VsyncTick const& tick) {
     // If we've already warmed up and achieved an exact target step, we accumulate presentation
     // iteratively. This compresses the queue depth dynamically to absorb CPU scheduling delays.
     if (UTILS_LIKELY(exactAchieved && !mConfigLatencyChanged &&
-            mLastTargetPresentationTime.time_since_epoch().count() > 0)) {
+            mLastTargetPresentationTime != time_point_t() &&
+            mLastTargetPresentationTime >= syntheticBaseTime)) {
         projectedPresentation = mLastTargetPresentationTime + targetStep;
     } else {
         // Rigid Anchoring:
@@ -257,8 +265,10 @@ FramePacer::FrameStatus FFramePacer::setupFrame(VsyncTick const& tick) {
         mConfigLatencyChanged = false;
     }
 
-    auto [candidatePresentation, candidateDeadline, candidateAdjusted] =
-            matchHardwareTimeline(tick, projectedPresentation, mHardwarePeriod);
+    time_point_t const idealPresentation = mExpectedBaseTime + mConfig.latency;
+
+    auto [candidatePresentation, candidateDeadline, candidateAdjusted, minIdealDiff] =
+            matchHardwareTimeline(tick, projectedPresentation, idealPresentation, mHardwarePeriod);
 
     // Buffer Underflow Detection:
     // If the matched timeline's deadline is in the past, it's physically impossible to hit.
@@ -266,11 +276,23 @@ FramePacer::FrameStatus FFramePacer::setupFrame(VsyncTick const& tick) {
     if (UTILS_UNLIKELY(candidateDeadline <= tick.frameScheduleTime)) {
         // Abandon Relative Presentation Pacing and rigidly reset the queue depth
         mLastTargetPresentationTime = {};
-        projectedPresentation = mExpectedBaseTime + mConfig.latency;
+        projectedPresentation = idealPresentation;
 
         // Re-match with the rigidly reset anchor
-        std::tie(candidatePresentation, candidateDeadline, candidateAdjusted) =
-                matchHardwareTimeline(tick, projectedPresentation, mHardwarePeriod);
+        std::tie(candidatePresentation, candidateDeadline, candidateAdjusted, minIdealDiff) =
+                matchHardwareTimeline(tick, projectedPresentation, idealPresentation, mHardwarePeriod);
+    }
+
+    mPacingStatus = PacingStatus::STEADY;
+    if (minIdealDiff != duration_t::max()) {
+        duration_t const actualDiff = std::chrono::abs(candidatePresentation - idealPresentation);
+        if (actualDiff > minIdealDiff + std::chrono::microseconds(100)) {
+            if (candidatePresentation < idealPresentation) {
+                mPacingStatus = PacingStatus::DISPLAY_STARVING;
+            } else {
+                mPacingStatus = PacingStatus::DISPLAY_STUFFED;
+            }
+        }
     }
 
     // Calculate the drift between our projected timeline and the actual matched timeline
@@ -321,11 +343,21 @@ void FFramePacer::applyPresentationTime(FRenderer* renderer) const {
     renderer->setFrameScheduleTime(mFrameScheduleTime);
 
     if constexpr (false) {
+        const char* statusStr = "UNKNOWN";
+        switch (mPacingStatus) {
+            case PacingStatus::STEADY: statusStr = "STEADY"; break;
+            case PacingStatus::DISPLAY_STARVING: statusStr = "STARVING"; break;
+            case PacingStatus::DISPLAY_STUFFED: statusStr = "STUFFED"; break;
+        }
+
         LOG(INFO) << "Expected latency: "
                 << std::chrono::duration<float, std::milli>(mTargetPresentationTime - mCurrentFrameBaseTime).count()
                 << " ms, config latency: "
                 << std::chrono::duration<float, std::milli>(mConfig.latency).count()
-                << " ms";
+                << " ms, target fps: "
+                << mConfig.targetFrameRate
+                << ", status: "
+                << statusStr;
     }
 
     if constexpr (false) {
@@ -355,6 +387,34 @@ std::chrono::nanoseconds FFramePacer::getEffectiveLatency() const noexcept {
     return mTargetPresentationTime - mCurrentFrameBaseTime;
 }
 
+FramePacer::PacingStatus FFramePacer::getPacingStatus() const noexcept {
+    return mPacingStatus;
+}
+
+void FFramePacer::resetPacing() noexcept {
+    mExpectedBaseTime = {};
+    mLastTargetPresentationTime = {};
+}
+
+bool FFramePacer::setupExtraFrame() noexcept {
+    if (UTILS_LIKELY(mLastTargetPresentationTime != time_point_t())) {
+        duration_t const targetStep = mActiveTargetStep > duration_t::zero() ? mActiveTargetStep : mHardwarePeriod;
+        time_point_t const idealPresentation = mCurrentFrameBaseTime + mConfig.latency;
+
+        if (UTILS_UNLIKELY(mLastTargetPresentationTime + targetStep > idealPresentation + std::chrono::microseconds(100))) {
+            return false;
+        }
+
+        mLastTargetPresentationTime += targetStep;
+        mTargetPresentationTime     += targetStep;
+        mRenderingDeadline          += targetStep;
+        mAdjustedPresentation       += targetStep;
+
+        return true;
+    }
+    return false;
+}
+
 float FFramePacer::getSelectedFrameRate() const noexcept {
     if (mActiveTargetStep > duration_t::zero()) {
         float const seconds = std::chrono::duration<float>(mActiveTargetStep).count();
@@ -369,7 +429,7 @@ bool FFramePacer::isExactFrameRateAchieved() const noexcept {
 
 #if defined(__ANDROID__)
 std::vector<FramePacer::HardwareTimeline>& FramePacer::extractTimelines(
-        std::vector<FramePacer::HardwareTimeline>& out,
+        std::vector<HardwareTimeline>& out,
         const AChoreographerFrameCallbackData* data) noexcept {
     out.clear();
 
@@ -378,14 +438,14 @@ std::vector<FramePacer::HardwareTimeline>& FramePacer::extractTimelines(
     }
 
     if (__builtin_available(android 33, *)) {
-        size_t count = AChoreographerFrameCallbackData_getFrameTimelinesLength(data);
+        size_t const count = AChoreographerFrameCallbackData_getFrameTimelinesLength(data);
         out.reserve(count);
 
         for (size_t i = 0; i < count; ++i) {
             int64_t expectedNanos = AChoreographerFrameCallbackData_getFrameTimelineExpectedPresentationTimeNanos(data, i);
             int64_t deadlineNanos = AChoreographerFrameCallbackData_getFrameTimelineDeadlineNanos(data, i);
 
-            FramePacer::HardwareTimeline timeline;
+            HardwareTimeline timeline;
             timeline.expectedPresentationTime = time_point_t(std::chrono::nanoseconds(expectedNanos));
             timeline.deadline                 = time_point_t(std::chrono::nanoseconds(deadlineNanos));
             out.push_back(timeline);

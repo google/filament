@@ -423,7 +423,6 @@ class MainActivity : Activity() {
     }
 
     inner class FrameCallback : ChoreographerHelper() {
-        private val startTime = System.nanoTime()
         override fun onFrame(frameTimeNanos: Long, frameData: Any?) {
             loadStartFence?.let {
                 if (it.wait(Fence.Mode.FLUSH, 0) == Fence.FenceStatus.CONDITION_SATISFIED) {
@@ -465,13 +464,6 @@ class MainActivity : Activity() {
                 }
             }
 
-            modelViewer.animator?.apply {
-                if (animationCount > 0) {
-                    val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
-                    applyAnimation(0, elapsedTimeSeconds.toFloat())
-                }
-                updateBoneMatrices()
-            }
 
             if (Build.VERSION.SDK_INT >= 33 && frameData is Choreographer.FrameData) {
                 modelViewer.render(frameData)
