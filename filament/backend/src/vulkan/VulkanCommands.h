@@ -213,7 +213,8 @@ class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
             VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
-            VulkanContext const& context, VulkanSemaphoreManager* semaphoreManager);
+            VulkanContext const& context, VulkanSemaphoreManager* semaphoreManager,
+            bool asyncAvailable);
 
     void terminate();
 
@@ -223,6 +224,10 @@ public:
     // Creates a "current" protected capable command buffer if none exists, otherwise
     // returns the current one.
     VulkanCommandBuffer& getProtected();
+
+    // Returns the async capable command buffer or a nullptr if Async is not available on this
+    // platform.
+    VulkanCommandBuffer& getAsync();
 
     // Submits the current command buffer if it exists, then sets "current" to null.
     // If there are no outstanding commands then nothing happens and this returns false.
@@ -275,6 +280,8 @@ private:
 
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
+
+    std::unique_ptr<CommandBufferPool> mAsyncPool;
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
