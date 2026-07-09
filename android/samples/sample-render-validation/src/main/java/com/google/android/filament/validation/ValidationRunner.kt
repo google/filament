@@ -153,6 +153,7 @@ class ValidationRunner(
 
         // Setting the camera manipulator to null enables changing the camera outside of ModelViewer
         val newModelViewer = ModelViewer(surfaceView, engine, manipulator=null)
+        newModelViewer.autoPlayAnimations = false
 
         // Update the reference in MainActivity (via callback)
         callback?.onModelViewerRecreated(newModelViewer)

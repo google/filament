@@ -100,6 +100,12 @@ public:
         ACCEPTED         = 0,   //!< The frame is approved for rendering.
     };
 
+    enum class PacingStatus : int8_t {
+        STEADY           = 0,   //!< Operating at or near the optimal configured latency.
+        DISPLAY_STARVING = -1,  //!< Latency has shrunk. The display is starving for buffers.
+        DISPLAY_STUFFED  = 1    //!< Latency has bloated. The display queue is stuffed.
+    };
+
     /**
      * Telemetry for a single expected hardware presentation timeline.
      */
@@ -243,6 +249,52 @@ public:
     FrameStatus setupFrame(const VsyncTick& tick);
 
     /**
+     * Advances the internal pacing pipeline to target an extra presentation frame in the future,
+     * without advancing the ideal cadence clock (mExpectedBaseTime).
+     *
+     * This method is explicitly designed for latency recovery (Buffer Stuffing). If the pipeline
+     * reports PacingStatus::DISPLAY_STARVING, the application may yield, OR it may choose to render
+     * an extra frame during the current Vsync callback to mechanically stuff the queue depth back
+     * to its target latency.
+     *
+     * Calling this method instantly extrapolates the presentation timestamp one target frame period
+     * into the future. The subsequent call to `applyPresentationTime` will emit this new timestamp,
+     * allowing the queue to grow without the FramePacer erroneously rejecting the next real Vsync
+     * as spurious.
+     *
+     * This method acts as a safeguard against runaway clock extrapolation. It returns true if
+     * the timestamp was successfully advanced, or false if it refused to stuff another frame
+     * because the pipeline is already at or beyond the configured target latency.
+     *
+     * \code
+     * if (pacer->setupFrame(tick) == FramePacer::FrameStatus::ACCEPTED) {
+     *     pacer->applyPresentationTime(renderer);
+     *     if (renderer->beginFrame(swapChain)) {
+     *         renderer->render(view);
+     *         renderer->endFrame();
+     *     }
+     *
+     *     // Automatically recover queue depth by stuffing an extra frame
+     *     // If the application was starved by multiple frames, it will receive DISPLAY_STARVING
+     *     // over consecutive Vsync callbacks, naturally amortizing the recovery over time.
+     *     if (pacer->getPacingStatus() == FramePacer::PacingStatus::DISPLAY_STARVING) {
+     *         if (pacer->setupExtraFrame()) {
+     *             pacer->applyPresentationTime(renderer); // Emit the future-shifted timestamp
+     *             if (renderer->beginFrame(swapChain)) {
+     *                 // Optional: advance simulation state again here
+     *                 renderer->render(view);
+     *                 renderer->endFrame();
+     *             }
+     *         }
+     *     }
+     * }
+     * \endcode
+     *
+     * @return true if the timestamp was safely advanced, false if refused to prevent over-stuffing.
+     */
+    bool setupExtraFrame() noexcept;
+
+    /**
      * Checks if the GPU rendering pipeline has fallen behind the CPU submission rate.
      *
      * If the GPU is delayed, this method returns true and automatically rolls back any internal
@@ -297,6 +349,42 @@ public:
      * @return The active target latency in nanoseconds.
      */
     std::chrono::nanoseconds getEffectiveLatency() const noexcept;
+
+    /**
+     * Returns the current flow control status of the pacing pipeline.
+     *
+     * If the pipeline is DISPLAY_STARVING, the application may choose to recover
+     * by skipping a frame to rebuild queue depth and calling resetPacing().
+     *
+     * @return The active PacingStatus.
+     */
+    PacingStatus getPacingStatus() const noexcept;
+
+    /**
+     * Forces the FramePacer to abandon its relative pacing state and rigidly re-anchor
+     * to the configured target latency on the next frame.
+     *
+     * The application can call this when recovering from a dropped frame or to manually
+     * re-establish the queue depth.
+     *
+     * \code
+     * if (pacer->setupFrame(tick) == FramePacer::FrameStatus::ACCEPTED) {
+     *     // Alternatively to rendering an extra frame via setupExtraFrame(), the application
+     *     // can accept a one-frame judder and recover queue depth by resetting the pacer.
+     *     // This forces the next frame to rigidly re-anchor to the target latency.
+     *     if (pacer->getPacingStatus() == FramePacer::PacingStatus::DISPLAY_STARVING) {
+     *         pacer->resetPacing();
+     *     }
+     *
+     *     pacer->applyPresentationTime(renderer);
+     *     if (renderer->beginFrame(swapChain)) {
+     *         renderer->render(view);
+     *         renderer->endFrame();
+     *     }
+     * }
+     * \endcode
+     */
+    void resetPacing() noexcept;
 
     /**
      * Returns the actual pacing frame rate selected during the active frame pacing cycle.

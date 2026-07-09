@@ -1346,7 +1346,7 @@ TEST_F(FramePacerTest, BufferStuffingDetectorComprehensive) {
     EXPECT_FALSE(detector.shouldSkipFrame({history.data(), history.size()}, 99));
 }
 
-// Test Suite 26: Verify that passing the last submitted frame ID (mLastSubmittedFrameId)
+// Test Suite 25: Verify that passing the last submitted frame ID (mLastSubmittedFrameId)
 // correctly anchors mLastFrameId to the submitted frame rather than an unrecorded skipped frame
 // so that subsequent checks do not evaluate stale history relative to a skipped frame ID.
 TEST_F(FramePacerTest, BufferStuffingDetectorStaleHistoryRecovery) {
@@ -1413,7 +1413,7 @@ TEST_F(FramePacerTest, BufferStuffingDetector_HealthyNewestStuffedOlder) {
     EXPECT_FALSE(detector.shouldSkipFrame({history.data(), history.size()}, 100));
 }
 
-// Test Suite 25: Verify that reducing latencyFrames dynamically triggers the Monotonic Presentation Guard
+// Test Suite 26: Verify that reducing latencyFrames dynamically triggers the Monotonic Presentation Guard
 // to skip non-monotonic presentation targets (scheduling <= previous presentation timestamp).
 TEST_F(FramePacerTest, MonotonicPresentationGuard) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
@@ -1459,7 +1459,7 @@ TEST_F(FramePacerTest, MonotonicPresentationGuard) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 26: Buffer Stuffing (Relative Presentation Pacing) Absorbs Small Delays
+// Test Suite 27: Buffer Stuffing (Relative Presentation Pacing) Absorbs Small Delays
 TEST_F(FramePacerTest, BufferStuffingAbsorbsSmallDelay) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1523,7 +1523,7 @@ TEST_F(FramePacerTest, BufferStuffingAbsorbsSmallDelay) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 27: Massive Delay Forces Buffer Underflow Reset
+// Test Suite 28: Massive Delay Forces Buffer Underflow Reset
 TEST_F(FramePacerTest, BufferUnderflowForcesLatencyReset) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1567,7 +1567,7 @@ TEST_F(FramePacerTest, BufferUnderflowForcesLatencyReset) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 28: Latency Config Change forces a reset
+// Test Suite 29: Latency Config Change forces a reset
 TEST_F(FramePacerTest, LatencyConfigChangeForcesReset) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1597,7 +1597,7 @@ TEST_F(FramePacerTest, LatencyConfigChangeForcesReset) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 29: Hardware Refresh Rate Change is absorbed organically
+// Test Suite 30: Hardware Refresh Rate Change is absorbed organically
 TEST_F(FramePacerTest, HardwarePeriodChangeIsAbsorbed) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1642,7 +1642,7 @@ TEST_F(FramePacerTest, HardwarePeriodChangeIsAbsorbed) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 30: Inexact Framerate Disables Buffer Stuffing to prevent Quantization Drag
+// Test Suite 31: Inexact Framerate Disables Buffer Stuffing to prevent Quantization Drag
 TEST_F(FramePacerTest, InexactFramerateDisablesBufferStuffing) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1670,7 +1670,7 @@ TEST_F(FramePacerTest, InexactFramerateDisablesBufferStuffing) {
     mEngine->destroy(pacer);
 }
 
-// Test Suite 31: Verify that time-based latency automatically rounds and scales to vsync periods
+// Test Suite 32: Verify that time-based latency automatically rounds and scales to vsync periods
 TEST_F(FramePacerTest, TimeBasedLatencyVsyncRounding) {
     TimePoint start = TimePoint(std::chrono::steady_clock::now());
     Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
@@ -1729,7 +1729,7 @@ TEST_F(FramePacerTest, TimeBasedLatencyVsyncRounding) {
     mEngine->destroy(pacerCandidate);
 }
 
-// Test Suite 32: Verify that clock drift relative to true hardware period does not accumulate
+// Test Suite 33: Verify that clock drift relative to true hardware period does not accumulate
 // and cause timeline expected presentation time to drift into a later vsync interval (causing stutter).
 // This test targets 45 FPS on a 60Hz display, which is an inexact frame rate (exactAchieved = false),
 // and therefore relies on Rigid Anchoring.
@@ -1791,6 +1791,230 @@ TEST_F(FramePacerTest, PhaseDriftWithTimelineMatching) {
                     << " is not aligned with true VSYNC grid. Error = " << error.count() << " ns.";
         }
     }
+
+    mEngine->destroy(pacer);
+}
+
+// Test Suite 34: Verify Flow Control API (PacingStatus and resetPacing)
+TEST_F(FramePacerTest, FlowControlPacingStatus) {
+    TimePoint start = TimePoint(std::chrono::steady_clock::now());
+    Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
+
+    FramePacer* pacer = FramePacer::Builder()
+                        .targetFrameRate(60.0f)
+                        .latencyFrames(2)
+                        .build(*mEngine);
+    ASSERT_NE(pacer, nullptr);
+
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+
+    // Cycle 0: Start up. We hit ideal (Timeline 2).
+    std::vector<FramePacer::HardwareTimeline> candidates = {
+        {start + period60Hz, start + period60Hz - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 2), start + (period60Hz * 2) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 3), start + (period60Hz * 3) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick0;
+    tick0.baseTime = start;
+    tick0.vsyncPeriod = period60Hz;
+    tick0.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates.data(), candidates.size());
+    EXPECT_EQ(pacer->setupFrame(tick0), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+
+    // Apply presentation time to advance mLastTargetPresentationTime
+    Renderer* renderer = mEngine->createRenderer();
+    pacer->applyPresentationTime(renderer);
+
+    // Cycle 1: CPU Starves and drops a frame.
+    // Base time jumps 2 periods, but relative pacing only advances 1 period.
+    FramePacer::VsyncTick tick1;
+    tick1.baseTime = start + (period60Hz * 2);
+    tick1.vsyncPeriod = period60Hz;
+
+    std::vector<FramePacer::HardwareTimeline> candidates1 = {
+        {start + (period60Hz * 3), start + (period60Hz * 3) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 4), start + (period60Hz * 4) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 5), start + (period60Hz * 5) - std::chrono::milliseconds(4)}
+    };
+    tick1.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates1.data(), candidates1.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick1), FramePacer::FrameStatus::ACCEPTED);
+
+    // Pipeline is now starved (locked into an earlier timeline than ideal)
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::DISPLAY_STARVING);
+
+    // Recover using resetPacing()
+    pacer->resetPacing();
+
+    // setupFrame again for the same cycle to see it rigidly anchor back to ideal (Timeline 2)
+    EXPECT_EQ(pacer->setupFrame(tick1), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+
+    mEngine->destroy(renderer);
+    mEngine->destroy(pacer);
+}
+
+// Test Suite 35: Verify Queue Stuffing via setupExtraFrame
+TEST_F(FramePacerTest, FlowControlStuffQueue) {
+    TimePoint start = TimePoint(std::chrono::steady_clock::now());
+    Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
+
+    FramePacer* pacer = FramePacer::Builder()
+                        .targetFrameRate(60.0f)
+                        .latencyFrames(2)
+                        .build(*mEngine);
+    ASSERT_NE(pacer, nullptr);
+    Renderer* renderer = mEngine->createRenderer();
+
+    // Cycle 0: Start up. We hit ideal.
+    std::vector<FramePacer::HardwareTimeline> candidates = {
+        {start + period60Hz, start + period60Hz - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 2), start + (period60Hz * 2) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 3), start + (period60Hz * 3) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick0;
+    tick0.baseTime = start;
+    tick0.vsyncPeriod = period60Hz;
+    tick0.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates.data(), candidates.size());
+    EXPECT_EQ(pacer->setupFrame(tick0), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 2));
+    pacer->applyPresentationTime(renderer);
+
+    // Cycle 1: CPU Starves and drops a frame.
+    // Base time jumps 2 periods, but relative pacing only advances 1 period.
+    FramePacer::VsyncTick tick1;
+    tick1.baseTime = start + (period60Hz * 2);
+    tick1.vsyncPeriod = period60Hz;
+    std::vector<FramePacer::HardwareTimeline> candidates1 = {
+        {start + (period60Hz * 3), start + (period60Hz * 3) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 4), start + (period60Hz * 4) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 5), start + (period60Hz * 5) - std::chrono::milliseconds(4)}
+    };
+    tick1.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates1.data(), candidates1.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick1), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::DISPLAY_STARVING);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 3));
+    pacer->applyPresentationTime(renderer);
+
+    // Now we recover using the setupExtraFrame mechanism
+    EXPECT_TRUE(pacer->setupExtraFrame());
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 4));
+    // (In reality, we would apply presentation time and render a frame here)
+    pacer->applyPresentationTime(renderer);
+
+    // Cycle 2: Next real Vsync arrives (16.6ms later)
+    FramePacer::VsyncTick tick2;
+    tick2.baseTime = start + (period60Hz * 3);
+    tick2.vsyncPeriod = period60Hz;
+    std::vector<FramePacer::HardwareTimeline> candidates2 = {
+        {start + (period60Hz * 4), start + (period60Hz * 4) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 5), start + (period60Hz * 5) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 6), start + (period60Hz * 6) - std::chrono::milliseconds(4)}
+    };
+    tick2.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates2.data(), candidates2.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick2), FramePacer::FrameStatus::ACCEPTED);
+
+    // Everything should be fully recovered and STEADY
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 5));
+    pacer->applyPresentationTime(renderer);
+
+    mEngine->destroy(renderer);
+    mEngine->destroy(pacer);
+}
+
+// Test Suite 36: Verify setupExtraFrame safeguard against overstuffing
+TEST_F(FramePacerTest, FlowControlRefuseOverstuffing) {
+    TimePoint start = TimePoint(std::chrono::steady_clock::now());
+    Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
+
+    FramePacer* pacer = FramePacer::Builder()
+                        .targetFrameRate(60.0f)
+                        .latencyFrames(1) // 1 frame latency
+                        .build(*mEngine);
+    ASSERT_NE(pacer, nullptr);
+
+    // Cycle 0: Start up. We hit ideal (1 frame latency).
+    std::vector<FramePacer::HardwareTimeline> candidates = {
+        {start + period60Hz, start + period60Hz - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 2), start + (period60Hz * 2) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick0;
+    tick0.baseTime = start;
+    tick0.vsyncPeriod = period60Hz;
+    tick0.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates.data(), candidates.size());
+    EXPECT_EQ(pacer->setupFrame(tick0), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+
+    // We are perfectly on schedule. Calling setupExtraFrame should be rejected.
+    EXPECT_FALSE(pacer->setupExtraFrame());
+
+    mEngine->destroy(pacer);
+}
+
+// Test Suite 37: Verify instant clock recovery and exact alignment after a skipped vsync callback
+TEST_F(FramePacerTest, SkippedVsyncCallbackInstantRecovery) {
+    TimePoint start = TimePoint(std::chrono::steady_clock::now());
+    Duration period60Hz = std::chrono::duration_cast<Duration>(std::chrono::duration<float>(1.0f / 60.0f));
+
+    FramePacer* pacer = FramePacer::Builder()
+                        .targetFrameRate(60.0f)
+                        .latencyFrames(1)
+                        .build(*mEngine);
+    ASSERT_NE(pacer, nullptr);
+
+    // Callback 0 arrives at t=0, the list of timelines is [16.6, 33.3, ...]. We select 16.6.
+    std::vector<FramePacer::HardwareTimeline> candidates0 = {
+        {start + period60Hz, start + period60Hz - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 2), start + (period60Hz * 2) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick0;
+    tick0.baseTime = start;
+    tick0.frameScheduleTime = start;
+    tick0.vsyncPeriod = period60Hz;
+    tick0.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates0.data(), candidates0.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick0), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + period60Hz);
+
+    // Callback 1 arrives at t=33.3 (it was so delayed it skipped a whole vsync period of 16.6).
+    // The list of timelines is [50.0, 66.6, ...].
+    std::vector<FramePacer::HardwareTimeline> candidates1 = {
+        {start + (period60Hz * 3), start + (period60Hz * 3) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 4), start + (period60Hz * 4) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick1;
+    tick1.baseTime = start + (period60Hz * 2);
+    tick1.frameScheduleTime = start + (period60Hz * 2);
+    tick1.vsyncPeriod = period60Hz;
+    tick1.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates1.data(), candidates1.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick1), FramePacer::FrameStatus::ACCEPTED);
+    // Because of syncExpectedBaseTimeWithVsync + snapOffset, we instantly recover:
+    // our presentation time matches the exact first entry in the timeline (50.0ms / 3 periods)
+    // right on schedule at 1-frame latency (STEADY, not STUFFED nor STARVING).
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 3));
+
+    // Callback 2 arrives at t=50.0 right on time.
+    // Verify that we do not lag behind and smoothly pick up the very next entry (66.6ms / 4 periods).
+    std::vector<FramePacer::HardwareTimeline> candidates2 = {
+        {start + (period60Hz * 4), start + (period60Hz * 4) - std::chrono::milliseconds(4)},
+        {start + (period60Hz * 5), start + (period60Hz * 5) - std::chrono::milliseconds(4)}
+    };
+    FramePacer::VsyncTick tick2;
+    tick2.baseTime = start + (period60Hz * 3);
+    tick2.frameScheduleTime = start + (period60Hz * 3);
+    tick2.vsyncPeriod = period60Hz;
+    tick2.timelines = utils::Slice<const FramePacer::HardwareTimeline>(candidates2.data(), candidates2.size());
+
+    EXPECT_EQ(pacer->setupFrame(tick2), FramePacer::FrameStatus::ACCEPTED);
+    EXPECT_EQ(pacer->getPacingStatus(), FramePacer::PacingStatus::STEADY);
+    EXPECT_EQ(pacer->getExpectedPresentationTime(), start + (period60Hz * 4));
 
     mEngine->destroy(pacer);
 }

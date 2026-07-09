@@ -16,7 +16,6 @@
 
 #include "details/FramePacer.h"
 
-#include "downcast.h"
 #include "FilamentAPI-impl.h"
 
 #include "details/Engine.h"
@@ -81,6 +80,10 @@ FramePacer::FrameStatus FramePacer::setupFrame(const VsyncTick& tick) {
     return downcast(this)->setupFrame(tick);
 }
 
+bool FramePacer::setupExtraFrame() noexcept {
+    return downcast(this)->setupExtraFrame();
+}
+
 void FramePacer::applyPresentationTime(Renderer* renderer) {
     downcast(this)->applyPresentationTime(downcast(renderer));
 }
@@ -107,6 +110,14 @@ float FramePacer::getSelectedFrameRate() const noexcept {
 
 bool FramePacer::isExactFrameRateAchieved() const noexcept {
     return downcast(this)->isExactFrameRateAchieved();
+}
+
+FramePacer::PacingStatus FramePacer::getPacingStatus() const noexcept {
+    return downcast(this)->getPacingStatus();
+}
+
+void FramePacer::resetPacing() noexcept {
+    downcast(this)->resetPacing();
 }
 
 } // namespace filament

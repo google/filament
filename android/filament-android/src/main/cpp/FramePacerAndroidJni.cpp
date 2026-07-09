@@ -91,25 +91,19 @@ Java_com_google_android_filament_android_FramePacer_nSetupFrame(JNIEnv* env, jcl
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_android_FramePacer_nGetExpectedPresentationTime(JNIEnv* env, jclass, jlong nativeObject) {
     auto pacer = (FramePacer*) nativeObject;
-    return filament::android::wrapJni<jlong>(env, [=]() {
-        return (jlong) pacer->getExpectedPresentationTime().time_since_epoch().count();
-    });
+    return (jlong) pacer->getExpectedPresentationTime().time_since_epoch().count();
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_android_FramePacer_nGetRenderingDeadline(JNIEnv* env, jclass, jlong nativeObject) {
     auto pacer = (FramePacer*) nativeObject;
-    return filament::android::wrapJni<jlong>(env, [=]() {
-        return (jlong) pacer->getRenderingDeadline().time_since_epoch().count();
-    });
+    return (jlong) pacer->getRenderingDeadline().time_since_epoch().count();
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_android_FramePacer_nGetEffectiveLatencyNanos(JNIEnv* env, jclass, jlong nativeObject) {
     auto pacer = (FramePacer*) nativeObject;
-    return filament::android::wrapJni<jlong>(env, [=]() {
-        return (jlong) pacer->getEffectiveLatency().count();
-    });
+    return (jlong) pacer->getEffectiveLatency().count();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -144,17 +138,31 @@ Java_com_google_android_filament_android_FramePacer_nConfigure(JNIEnv* env, jcla
 extern "C" JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_android_FramePacer_nGetSelectedFrameRate(JNIEnv* env, jclass, jlong nativeObject) {
     auto pacer = (FramePacer*) nativeObject;
-    return filament::android::wrapJni<jfloat>(env, [=]() {
-        return (jfloat) pacer->getSelectedFrameRate();
-    });
+    return (jfloat) pacer->getSelectedFrameRate();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_android_FramePacer_nIsExactFrameRateAchieved(JNIEnv* env, jclass, jlong nativeObject) {
     auto pacer = (FramePacer*) nativeObject;
-    return filament::android::wrapJni<jboolean>(env, [=]() {
-        return (jboolean) pacer->isExactFrameRateAchieved();
-    });
+    return (jboolean) pacer->isExactFrameRateAchieved();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_android_FramePacer_nGetPacingStatus(JNIEnv* env, jclass, jlong nativeObject) {
+    auto pacer = (FramePacer*) nativeObject;
+    return (jint) pacer->getPacingStatus();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_android_FramePacer_nResetPacing(JNIEnv* env, jclass, jlong nativeObject) {
+    auto pacer = (FramePacer*) nativeObject;
+    pacer->resetPacing();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_android_FramePacer_nSetupExtraFrame(JNIEnv* env, jclass, jlong nativeObject) {
+    auto pacer = (FramePacer*) nativeObject;
+    return (jboolean) pacer->setupExtraFrame();
 }
 
 extern "C" JNIEXPORT void JNICALL
