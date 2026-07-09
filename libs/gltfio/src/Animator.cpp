@@ -616,6 +616,9 @@ void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
     assert_invariant(instance->mSkins.size() == asset->mSkins.size());
     size_t skinIndex = 0;
     for (const auto& skin : instance->mSkins) {
+        if (UTILS_UNLIKELY(skinIndex >= asset->mSkins.size())) {
+            break;
+        }
         const auto& assetSkin = asset->mSkins[skinIndex++];
         size_t njoints = skin.joints.size();
         boneMatrices.resize(njoints);

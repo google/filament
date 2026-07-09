@@ -239,37 +239,41 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
         }
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
         FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
-        if (srcMatrices) {
+
+        // Validate and copy the inverse bind matrices. On any failure we log a warning and fall
+        // through to emplace_back with identity matrices. The skin entry must always be pushed so
+        // that asset->mSkins stays index-aligned with instance->mSkins, which is built separately
+        // by importSkins() without these checks and always has exactly skins_count entries.
+        [&]() {
+            if (!srcMatrices) return;
             if (srcMatrices->type != cgltf_type_mat4 ||
                     srcMatrices->component_type != cgltf_component_type_r_32f) {
                 LOG(WARNING) << "Cannot copy inverse bind matrices, unsupported accessor type.";
-                continue;
+                return;
             }
             if (srcMatrices->count < srcSkin.joints_count) {
                 LOG(WARNING) << "Cannot copy inverse bind matrices, accessor count is too small.";
-                continue;
+                return;
             }
-
             if (!srcMatrices->buffer_view ||
-                (!srcMatrices->buffer_view->has_meshopt_compression &&
-                 (!srcMatrices->buffer_view->buffer || !srcMatrices->buffer_view->buffer->data))) {
+                    (!srcMatrices->buffer_view->has_meshopt_compression &&
+                     (!srcMatrices->buffer_view->buffer ||
+                      !srcMatrices->buffer_view->buffer->data))) {
                 LOG(WARNING) << "Cannot copy inverse bind matrices, missing buffer view or buffer data.";
-                continue;
+                return;
             }
-
             const cgltf_size requiredBytes = srcSkin.joints_count * sizeof(mat4f);
             const cgltf_size viewSize = srcMatrices->buffer_view->size;
             const cgltf_size offsetInView = srcMatrices->offset;
             if (offsetInView > viewSize || requiredBytes > viewSize - offsetInView) {
                 LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer view bounds.";
-                continue;
+                return;
             }
-
             uint8_t* srcBuffer = nullptr;
             if (srcMatrices->buffer_view->has_meshopt_compression) {
                 if (!srcMatrices->buffer_view->data) {
                     LOG(WARNING) << "Cannot copy inverse bind matrices, compressed buffer data is null.";
-                    continue;
+                    return;
                 }
                 srcBuffer = (uint8_t*) srcMatrices->buffer_view->data + offsetInView;
             } else {
@@ -277,13 +281,13 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
                 const cgltf_size totalOffset = srcMatrices->buffer_view->offset + offsetInView;
                 if (totalOffset > bufferSize || requiredBytes > bufferSize - totalOffset) {
                     LOG(WARNING) << "Cannot copy inverse bind matrices, accessor data exceeds buffer bounds.";
-                    continue;
+                    return;
                 }
                 srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
             }
-
             memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
-        }
+        }();
+
         FFilamentAsset::Skin skin{
                 .name = std::move(name),
                 .inverseBindMatrices = std::move(inverseBindMatrices),
