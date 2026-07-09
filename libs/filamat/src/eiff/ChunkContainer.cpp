@@ -15,6 +15,7 @@
  */
 
 #include "ChunkContainer.h"
+
 #include "Flattener.h"
 
 namespace filamat {

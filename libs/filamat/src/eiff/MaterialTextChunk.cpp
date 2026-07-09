@@ -15,6 +15,7 @@
  */
 
 #include "MaterialTextChunk.h"
+
 #include "Flattener.h"
 #include "LineDictionary.h"
 #include "ShaderEntry.h"
@@ -25,9 +26,9 @@
 #include <utils/ostream.h>
 
 #include <algorithm>
-#include <cstdint>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <string>
 #include <string_view>

@@ -17,12 +17,12 @@
 #ifndef TNT_METALARGUMENTBUFFER_H
 #define TNT_METALARGUMENTBUFFER_H
 
+#include <backend/DriverEnums.h>
+
 #include <iostream>
 #include <string>
 #include <variant>
 #include <vector>
-
-#include <backend/DriverEnums.h>
 
 namespace filamat {
 
