@@ -86,7 +86,7 @@ jobs:
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         run: |
-          cd build/linux && printf "y" | ./build.sh presubmit-with-test
+          cd build/linux && printf "y" | ./build.sh presubmit
       - name: Test - material parser
         run: |
           out/cmake-release/filament/test/test_material_parser
@@ -363,7 +363,8 @@ jobs:
         # We need to build before clang-tidy can run analysis
         run: |
           # This will build for all three desktop backends on mac
-          ./build.sh -p desktop debug gltf_viewer
+          # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build
+          ./build.sh -b -p desktop debug
           # This will build and install the release build
           ./build.sh -p desktop release && ninja -C out/cmake-release install
       - name: Check - clang-tidy (exception escape)
@@ -385,6 +386,8 @@ jobs:
           else
             bash test/code-correctness/check-headers.sh ${{ github.sha }}
           fi
+      - name: Check - Filament unit tests
+        run: bash test/filament-unit-test/test.sh
 
   test-backend:
     name: test-backend

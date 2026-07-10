@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "eiff/LineDictionary.h"
+
 #include <private/filament/LineDictionaryUtils.h>
+
+#include <gtest/gtest.h>
 
 #include <string>
 

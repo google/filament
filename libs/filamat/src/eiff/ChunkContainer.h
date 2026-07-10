@@ -17,10 +17,10 @@
 #ifndef TNT_FILAMAT_CHUNK_CONTAINER_H
 #define TNT_FILAMAT_CHUNK_CONTAINER_H
 
-#include <filament/MaterialChunkType.h>
-
 #include "Chunk.h"
 #include "SimpleFieldChunk.h"
+
+#include <filament/MaterialChunkType.h>
 
 #include <memory>
 #include <vector>

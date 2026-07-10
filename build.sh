@@ -40,8 +40,6 @@ function print_help {
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
-    echo "    -u"
-    echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
     echo "    -E"
@@ -191,8 +189,6 @@ ISSUE_CMAKE_ALWAYS=false
 
 ANDROID_SAMPLES=()
 BUILD_ANDROID_SAMPLES=false
-
-RUN_TESTS=false
 
 INSTALL_COMMAND=
 
@@ -871,32 +867,6 @@ function validate_build_command {
     set -e
 }
 
-function run_test {
-    local test=$1
-    # The input string might contain arguments, so we use "set -- $test" to replace $1 with the
-    # first whitespace-separated token in the string.
-    # shellcheck disable=SC2086
-    set -- ${test}
-    local test_name=$(basename "$1")
-    # shellcheck disable=SC2086
-    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
-}
-
-function run_tests {
-    if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
-        if ! echo "TypeScript $(tsc --version)" ; then
-            tsc --noEmit \
-                third_party/gl-matrix/gl-matrix.d.ts \
-                web/filament-js/filament.d.ts \
-                web/filament-js/test.ts
-        fi
-    else
-        while read -r test; do
-            run_test "${test}"
-        done < build/common/test_list.txt
-    fi
-}
-
 function check_debug_release_build {
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" || \
           "${ISSUE_RELEASE_BUILD}" == "true" || \
@@ -913,7 +883,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
+while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:E" opt; do
     case ${opt} in
         h)
             print_help
@@ -1022,10 +992,6 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
                     ;;
                 esac
             done
-            ;;
-        u)
-            ISSUE_DEBUG_BUILD=true
-            RUN_TESTS=true
             ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
@@ -1169,10 +1135,6 @@ fi
 
 if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
     check_debug_release_build build_wasm
-fi
-
-if [[ "${RUN_TESTS}" == "true" ]]; then
-    run_tests
 fi
 
 if [[ "${PRINT_MATDBG_HELP}" == "true" ]]; then
