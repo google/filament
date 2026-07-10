@@ -400,7 +400,7 @@ public class LightManager {
          *
          * @see View.SoftShadowOptions#penumbraScale
          */
-        float penumbraScale = 1.0f;
+        public float penumbraScale = 1.0f;
 
         /**
          * Sets a light-specific scale factor applied to the PCSS geometric ratio before clamping.
@@ -420,7 +420,7 @@ public class LightManager {
          *
          * @see View.SoftShadowOptions#penumbraRatioScale
          */
-        float penumbraRatioScale = 1.0f;
+        public float penumbraRatioScale = 1.0f;
 
         /**
          * Sets a light-specific maximum geometric ratio applied to Percentage-Closer Soft Shadows (PCSS),
@@ -439,7 +439,7 @@ public class LightManager {
          *
          * @see View.SoftShadowOptions#maxPenumbraRatio
          */
-        public float maxPenumbraRatio = 10.0f;
+        public float maxPenumbraRatio = 0.0f;
 
         /**
          * Sets a light-specific maximum world-space radius used during the PCSS blocker search,
@@ -460,7 +460,7 @@ public class LightManager {
          *
          * @see View.SoftShadowOptions#maxSearchRadius
          */
-        public float maxSearchRadius = 1.0f;
+        public float maxSearchRadius = 0.0f;
     }
 
     public static class ShadowCascades {

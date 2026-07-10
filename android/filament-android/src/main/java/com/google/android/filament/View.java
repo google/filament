@@ -959,7 +959,8 @@ public class View {
      */
     public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
         mSoftShadowOptions = options;
-        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale,
+                options.maxPenumbraRatio, options.maxSearchRadius);
     }
 
     /**
@@ -1418,7 +1419,8 @@ public class View {
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
     private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, boolean highPrecision, float minVarianceScale, float lightBleedReduction);
-    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale,
+            float maxPenumbraRatio, float maxSearchRadius);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);

@@ -2,13 +2,14 @@
 
 #include "Settings_generated.h"
 
+#include "jsonParseUtils.h"
+
 #include <filament/Options.h>
+
 #include <utils/Log.h>
 
-#include <ostream>
 #include <cstring>
-
-#include "jsonParseUtils.h"
+#include <ostream>
 
 using namespace utils;
 

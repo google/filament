@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <filament/LightManager.h>
-#include <common/JniUtils.h>
 
 #include <utils/Entity.h>
+
+#include <common/JniUtils.h>
+#include <jni.h>
 
 #include <algorithm>
 
@@ -97,7 +97,7 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
             .stable = (bool)stable,
             .lispsm = (bool)lispsm,
             .polygonOffsetConstant = polygonOffsetConstant,
-            .polygonOffsetSlope = polygonOffsetConstant,
+            .polygonOffsetSlope = polygonOffsetSlope,
             .screenSpaceContactShadows = (bool)screenSpaceContactShadows,
             .stepCount = uint8_t(stepCount),
             .maxShadowDistance = maxShadowDistance,

@@ -367,7 +367,7 @@ private:
     bool mHasVisibleShadows : 1;                                            // :1
     UTILS_UNUSED bool mReservedBit : 1;                                     // :1
     uint8_t mFace           : 3;                                            // :3
-    uint8_t mReserved[2] = {};                                              // 2
+    UTILS_UNUSED uint8_t mReserved[2] = {};                                 // 2
     math::ushort2 mOffset{};                                                // 4
     float mWrapExponent = 0.0f;                                             // 4
 };
