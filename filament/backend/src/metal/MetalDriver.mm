@@ -268,7 +268,7 @@ MetalDriver::~MetalDriver() noexcept {
     // Notify any pending asynchronous MTLSharedEvent listener blocks that the MetalDriver
     // is being destroyed. This avoids executing blocks accessing a dangling driver pointer.
     {
-        std::lock_guard<std::mutex> lock(mContext->driverLifetimeTracker->mutex);
+        utils::LockGuard const lock(mContext->driverLifetimeTracker->mutex);
         mContext->driverLifetimeTracker->driver = nullptr;
     }
     TrackedMetalBuffer::setPlatform(nullptr);

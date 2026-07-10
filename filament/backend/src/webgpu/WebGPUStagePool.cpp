@@ -29,7 +29,7 @@ wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
         std::shared_ptr<WebGPUSubmissionState> submissionState) {
     wgpu::Buffer buffer;
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         auto iter = mBuffers.lower_bound(requiredSize);
         if (iter != mBuffers.end()) {
             buffer = iter->second;
@@ -56,7 +56,7 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
                     if (!data->webGPUStagePool) {
                         return;
                     }
-                    std::lock_guard<std::mutex> lock(data->webGPUStagePool->mMutex);
+                    utils::LockGuard const lock(data->webGPUStagePool->mMutex);
                     data->webGPUStagePool->mBuffers.insert(
                             { data->buffer.GetSize(), data->buffer });
                 } else {

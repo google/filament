@@ -20,10 +20,10 @@
 #import <Foundation/Foundation.h>
 
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 
 #include <atomic>
 #include <functional>
-#include <mutex>
 #include <vector>
 
 class MetalErrorQueue {
@@ -33,7 +33,7 @@ public:
     }
 
     void push(NSError* error) {
-        std::lock_guard<std::mutex> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         mErrors.push_back(error);
         mHasErrors.store(true, std::memory_order_relaxed);
     }
@@ -44,7 +44,7 @@ public:
         }
         std::vector<NSError*> errors;
         {
-            std::lock_guard<std::mutex> lock(mMutex);
+            utils::LockGuard const lock(mMutex);
             std::swap(mErrors, errors);
             mHasErrors.store(false, std::memory_order_relaxed);
         }
@@ -56,7 +56,7 @@ public:
 
 private:
     std::vector<NSError*> mErrors;
-    std::mutex mMutex;
+    utils::Mutex mMutex;
 
     // Optimization to avoid locking the mutex at each call to flush.
     std::atomic<bool> mHasErrors;

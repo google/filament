@@ -21,33 +21,37 @@
  * @file Mutex.h
  * @brief Custom low-overhead mutex primitives for Filament.
  *
- * Filament provides two types of mutexes: C++ standard std::mutex and custom utils::Mutex.
- * Choosing the correct one is a critical tradeoff between runtime performance, cache hygiene,
- * and OS scheduler integration.
+ * Filament prefers custom `utils::Mutex` over C++ standard `std::mutex` across all engine code.
  *
- * ARCHITECTURAL TRADEOFFS & CHOICE CRITERIA:
+ * WHY `utils::Mutex` IS PREFERRED OVER `std::mutex`:
  *
- * 1. Use C++ standard std::mutex when:
- *    - HIGH RISK OF PRIORITY INVERSION: The lock is shared between threads running at significantly
- *      different priorities (e.g., the critical Display/Render thread vs. low-priority background loader
- *      threads). std::mutex leverages OS-level pthread mutexes which support Priority Inheritance (PI)
- *      protocols, temporarily elevating the low-priority holder to prevent render pipeline stalls.
- *    - CONDITION VARIABLE SYNCHRON_VARIABLE: The lock is used in conjunction with condition variables
- *      (std::condition_variable) to block/sleep threads (e.g. CommandBufferQueue). Standard condition
- *      variables require std::mutex to operate natively and efficiently with the OS scheduler.
- *    - HIGH CONTENTION: The locked section is heavily contended, allowing modern CPU architectures
- *      (like ARMv8.1+ LSE) to utilize single-instruction atomics resolved dynamically at startup (IFUNCs).
+ * 1. UNIFIED CONCURRENCY & DEADLOCK DEBUGGING (`-u` / `FILAMENT_DEBUG_MUTEX`):
+ *    When `FILAMENT_DEBUG_MUTEX` or `UTILS_DEBUG_MUTEX` is enabled, `utils::Mutex` transparently
+ *    instruments every lock acquisition and release across the engine. It maintains a global dependency
+ *    graph verified via BFS during `lock()` and `try_lock()` to detect multi-threaded lock-order inversions
+ *    and recursive self-deadlocks on non-recursive locks, logging exact creation and acquisition `CallStack`s.
+ *    Raw `std::mutex` instances are completely untracked and invisible to this debugging facility.
  *
- * 2. Use custom utils::Mutex when:
- *    - CACHE & MEMORY FOOTPRINT IS CRITICAL: utils::Mutex is only 4 bytes (a single futex-based uint32_t)
- *      compared to standard std::mutex which is 40 bytes. For classes allocated in large numbers (such as
- *      fences, sync points, or handle maps), reducing size by 10x prevents padding bloat and maintains
- *      optimal cache line alignment hygiene (avoiding false sharing).
- *    - SAME-PRIORITY ACCESS: The lock is shared only between threads of identical high priorities
- *      (e.g., Main thread and Driver thread, both DISPLAY priority), eliminating priority inversion risks.
- *    - EXTREMELY BRIEF HOLD TIMES / LOW CONTENTION: The lock is taken for simple pointer swaps or list
- *      insertions. The fully-inlined userspace compare-and-swap (CAS) assembly fast-path executes
- *      instantly without incurring PLT/dynamic library call overhead or kernel syscalls.
+ * 2. CACHE & MEMORY FOOTPRINT HYGIENE:
+ *    On Android and Linux (`linuxutil::Mutex`), `utils::Mutex` is only 4 bytes (a single atomic uint32_t
+ *    futex word), compared to `std::mutex` (`pthread_mutex_t`), which consumes 40 bytes. For objects embedded
+ *    in high quantities (fences, sync points, handle allocators, or queue buffers), `utils::Mutex` prevents
+ *    struct bloat and preserves cache-line density and alignment hygiene.
+ *
+ * 3. FAST-PATH INLINING & HIGH CONTENTION PERFORMANCE:
+ *    `utils::Mutex` uses fully inlined atomic compare-and-swap (`compare_exchange_strong`) userspace
+ *    fast-paths. When uncontended, acquisition and release execute with zero PLT/dynamic library overhead or
+ *    kernel syscalls. Under contention (`LOCKED_CONTENDED`), `utils::Mutex` drops directly into OS kernel
+ *    futex sleep (`futex_wait_ex`), matching standard mutex high-contention efficiency without overhead.
+ *
+ * 4. CONDITION VARIABLE COMPATIBILITY:
+ *    `utils::Condition` (`Condition::wait` and `wait_until`) is explicitly templated on the mutex type (`template <typename M>`)
+ *    and works seamlessly with `std::unique_lock<utils::Mutex>` or `utils::UniqueLock<utils::Mutex>`.
+ *
+ * NOTE ON PRIORITY INVERSION:
+ *    C++ `std::mutex` (backed by POSIX `pthread_mutex_t`) does NOT prevent priority inversions out of the
+ *    box, because standard libraries initialize mutex attributes to `PTHREAD_PRIO_NONE` (rather than
+ *    `PTHREAD_PRIO_INHERIT`). Therefore, `std::mutex` provides no priority inheritance advantage over `utils::Mutex`.
  */
 
 #include <utils/compiler.h>

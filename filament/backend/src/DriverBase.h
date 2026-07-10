@@ -26,14 +26,13 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/Condition.h>
 #include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/Mutex.h>
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
 #include <thread>
 #include <tuple>
 #include <utility>
@@ -323,17 +322,17 @@ protected:
 private:
     const Platform::DriverConfig mDriverConfig;
 
-    mutable std::mutex mPurgeLock;
+    mutable utils::Mutex mPurgeLock;
     std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks UTILS_GUARDED_BY(mPurgeLock);
 
     std::thread mServiceThread;
-    mutable std::mutex mServiceThreadLock;
-    mutable std::condition_variable mServiceThreadCondition;
+    mutable utils::Mutex mServiceThreadLock;
+    mutable utils::Condition mServiceThreadCondition;
     std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue UTILS_GUARDED_BY(mServiceThreadLock);
     bool mExitRequested UTILS_GUARDED_BY(mServiceThreadLock) = false;
 
-    mutable std::condition_variable mFenceCondition;
-    mutable std::mutex mFenceMutex;
+    mutable utils::Condition mFenceCondition;
+    mutable utils::Mutex mFenceMutex;
     std::atomic<bool> mHasUnrecoverableError UTILS_GUARDED_BY(mFenceMutex){false};
 };
 

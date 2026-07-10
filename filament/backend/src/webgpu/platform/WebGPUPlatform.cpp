@@ -28,11 +28,12 @@
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
+#include <utils/Mutex.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <functional>
-#include <mutex>
 #include <sstream>// for one-time-ish setup string concatenation, namely error messaging
 #include <unordered_set>
 #include <utility>
@@ -471,7 +472,7 @@ struct AdapterDetailsHash final {
     // make the series of requests asynchronously, collecting compatible adapter results...
     std::unordered_set<AdapterDetails, AdapterDetailsHash> compatibleAdapters;
     compatibleAdapters.reserve(requests.size());
-    std::mutex adaptersMutex;
+    utils::Mutex adaptersMutex;
     std::vector<wgpu::Future> futures(requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
         wgpu::RequestAdapterOptions const& options = requests[i];
@@ -492,7 +493,7 @@ struct AdapterDetailsHash final {
                         FILAMENT_CHECK_POSTCONDITION(readyAdapter.GetInfo(&details.info))
                                 << "Failed to get info for adapter (options: "
                                 << adapterOptionsToString(options) << ")";
-                        const std::lock_guard<std::mutex> lock(adaptersMutex);
+                        utils::LockGuard const lock(adaptersMutex);
                         compatibleAdapters.emplace(std::move(details.info), details.powerPreference,
                                 std::move(details.adapter));
                         return;

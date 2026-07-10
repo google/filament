@@ -23,13 +23,14 @@
 
 #import <Foundation/Foundation.h>
 
+#include <utils/Mutex.h>
+
 #include <atomic>
-#include <mutex>
 
 namespace filament::backend {
 
 struct PlatformMetalImpl {
-    std::mutex mLock;   // locks mDevice and mCommandQueue
+    utils::Mutex mLock;   // locks mDevice and mCommandQueue
     id<MTLDevice> mDevice = nil;
     id<MTLCommandQueue> mCommandQueue = nil;
 
@@ -61,7 +62,7 @@ Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::Dri
 
 
 bool PlatformMetal::initialize() noexcept {
-    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    utils::LockGuard const lock(pImpl->mLock);
 
     MetalDevice device{};
     pImpl->createDeviceImpl(device);
@@ -79,18 +80,18 @@ bool PlatformMetal::initialize() noexcept {
 }
 
 void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
-    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    utils::LockGuard const lock(pImpl->mLock);
     pImpl->createDeviceImpl(outDevice);
 }
 
 void PlatformMetal::createCommandQueue(
         MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
-    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    utils::LockGuard const lock(pImpl->mLock);
     pImpl->createCommandQueueImpl(device, outCommandQueue);
 }
 
 void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
-    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    utils::LockGuard const lock(pImpl->mLock);
     id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
     [commandBuffer enqueue];
     outCommandBuffer.commandBuffer = commandBuffer;

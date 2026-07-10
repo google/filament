@@ -73,18 +73,19 @@
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
+#include <utils/Condition.h>
 #include <utils/CountDownLatch.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/JobSystem.h>
 #include <utils/memalign.h>
+#include <utils/Mutex.h>
 #include <utils/Slice.h>
 #include <utils/tribool.h>
 
 #include <cstddef>
 #include <chrono>
-#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <new>
@@ -92,7 +93,6 @@
 #include <string_view>
 #include <random>
 #include <thread>
-#include <mutex>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -693,8 +693,8 @@ private:
     mutable utils::Mutex mFenceListLock;
     ResourceList<FFence> mFences UTILS_GUARDED_BY(mFenceListLock){"Fence"};
 
-    mutable std::mutex mFenceLock;
-    mutable std::condition_variable mFenceCondition;
+    mutable utils::Mutex mFenceLock;
+    mutable utils::Condition mFenceCondition;
     bool mFenceHasUnrecoverableError = false;
 
     // the sync list is accessed from multiple threads, because they are
