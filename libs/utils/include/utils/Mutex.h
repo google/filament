@@ -59,6 +59,13 @@
 #include <utils/generic/Mutex.h>
 #endif
 
+#if defined(UTILS_DEBUG_MUTEX) || defined(FILAMENT_DEBUG_MUTEX)
+#include <utils/debug/Mutex.h>
+namespace utils {
+using Mutex = debug::Mutex;
+} // namespace utils
+#endif
+
 namespace utils {
 
 /**

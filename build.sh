@@ -25,6 +25,8 @@ function print_help {
     echo "        Enable matdbg."
     echo "    -t"
     echo "        Enable fgviewer."
+    echo "    -u"
+    echo "        Enable utils::Mutex debugging (lock-order inversion and self-deadlock detection)."
     echo "    -f"
     echo "        Always invoke CMake before incremental builds."
     echo "    -g"
@@ -204,6 +206,8 @@ MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
 FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=OFF"
 FGVIEWER_GRADLE_OPTION=""
+MUTEX_DEBUG_OPTION="-DFILAMENT_DEBUG_MUTEX=OFF"
+MUTEX_DEBUG_GRADLE_OPTION=""
 
 MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
@@ -276,6 +280,7 @@ function build_tools_for_split_build {
         ${WEBGPU_OPTION} \
         ${architectures} \
         ${EXCEPTIONS_OPTION} \
+        ${MUTEX_DEBUG_OPTION} \
         ../..
 
     ${BUILD_COMMAND} ${WEB_HOST_TOOLS}
@@ -320,6 +325,7 @@ function build_desktop_target {
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -386,6 +392,7 @@ function build_wasm_with_target {
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-wasm-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
@@ -466,6 +473,7 @@ function build_android_target {
             ${STEREOSCOPIC_OPTION} \
             ${ENABLE_PERFETTO} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -579,6 +587,7 @@ function build_android {
             ${MATDBG_GRADLE_OPTION} \
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
+            ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -634,6 +643,7 @@ function build_android {
             ${MATDBG_GRADLE_OPTION} \
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
+            ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -708,6 +718,7 @@ function build_ios_target {
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -883,7 +894,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:E" opt; do
+while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:Eu" opt; do
     case ${opt} in
         h)
             print_help
@@ -908,6 +919,11 @@ while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:E" opt; do
             PRINT_FGVIEWER_HELP=true
             FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=ON"
             FGVIEWER_GRADLE_OPTION="-Pcom.google.android.filament.fgviewer"
+            ;;
+        u)
+            MUTEX_DEBUG_OPTION="-DFILAMENT_DEBUG_MUTEX=ON"
+            MUTEX_DEBUG_GRADLE_OPTION="-Pcom.google.android.filament.mutexdebug"
+            echo "Enabled utils::Mutex debugging"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
