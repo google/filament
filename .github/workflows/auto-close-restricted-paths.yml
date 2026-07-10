@@ -1,0 +1,107 @@
+name: 'Auto-close restricted path edits'
+
+# This workflow automatically closes pull requests from external contributors
+# that attempt to modify files within restricted directories (like .github or libs/gltfio).
+#
+# Pull Requests carrying the "internal" label/tag are exempt from this
+# auto-close restriction (serving as an escape hatch).
+#
+# We use 'pull_request_target' because it runs in the context of the base
+# repository, granting it the necessary permissions to close PRs from forks.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-close-restricted-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-close PR if it touches restricted paths
+        uses: actions/github-script@v7
+        env:
+          MSG_GITHUB: >
+            Thank you for your contribution. To maintain the security and stability of our CI/CD pipelines,
+            modifications to the `.github` directory are restricted to project maintainers.
+
+            As a result, this Pull Request has been automatically closed. If you have suggestions for
+            improvements or bug fixes related to our GitHub configuration, please open an issue to discuss
+            them with the team first. We appreciate your understanding.
+          MSG_GLTFIO: >
+            Thank you for your contribution. To ensure consistency and stability of the glTF loader library,
+            modifications to the `libs/gltfio` directory are restricted to project maintainers.
+
+            As a result, this Pull Request has been automatically closed. If you have suggestions for
+            improvements or bug fixes, please open an issue to discuss them with the team first. We appreciate
+            your understanding.
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+
+            const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner,
+              repo,
+              username: context.payload.pull_request.user.login,
+            });
+            const isMaintainer = ['admin', 'maintain', 'write'].includes(permission.permission);
+
+            if (isMaintainer) {
+              console.log(`User ${context.payload.pull_request.user.login} is a maintainer. Skipping check.`);
+              return;
+            }
+
+            const labels = context.payload.pull_request.labels || [];
+            const hasInternalLabel = labels.some(l => l.name === 'internal');
+
+            if (hasInternalLabel) {
+              console.log(`Pull Request #${pull_number} has the "internal" label. Skipping restricted paths check.`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+            });
+
+            const restrictions = [
+              {
+                path: '.github/',
+                message: process.env.MSG_GITHUB.trim()
+              },
+              {
+                path: 'libs/gltfio/',
+                message: process.env.MSG_GLTFIO.trim()
+              }
+            ];
+
+            let matchedRestriction = null;
+            for (const restriction of restrictions) {
+              if (files.some(f => f.filename.startsWith(restriction.path))) {
+                matchedRestriction = restriction;
+                break;
+              }
+            }
+
+            if (matchedRestriction) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pull_number,
+                body: matchedRestriction.message,
+              });
+
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number,
+                state: 'closed',
+              });
+
+              console.log(`Closed PR #${pull_number} because it touched the restricted path: ${matchedRestriction.path}`);
+            }
