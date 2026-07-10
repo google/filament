@@ -18,6 +18,8 @@ set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
 # ==================================================================================================
 
 set(PUBLIC_HDRS
+        include/filamentapp/AssetLoader.h
+        include/filamentapp/DesktopAssetLoader.h
         include/filamentapp/Config.h
         include/filamentapp/Cube.h
         include/filamentapp/Grid.h
@@ -31,6 +33,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Cube.cpp
+        src/DesktopAssetLoader.cpp
         src/Grid.cpp
         src/FilamentApp.cpp
         src/IBL.cpp
