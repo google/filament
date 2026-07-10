@@ -266,6 +266,36 @@ struct Variant {
     static Variant filterUserVariant(
             Variant variant, UserVariantFilterMask filterMask) noexcept;
 
+    template <typename T>
+    UTILS_NOINLINE friend T& operator<<(T& out, Variant variant) noexcept {
+        if (variant.key == 0) {
+            return out << "(none)";
+        }
+        out << "(";
+        bool first = true;
+        auto print = [&](const char* name) {
+            if (!first) out << " | ";
+            out << name;
+            first = false;
+        };
+        if (variant.key & STE) print("STE");
+        if (variant.key & DEP) {
+            if (variant.key & MNT) print("MNT");
+            if (variant.key & PCK) print("PCK");
+
+            print("DEP");
+        } else {
+            if (variant.key & S2D) print("S2D");
+            if (variant.key & FOG) print("FOG");
+        }
+
+        if (variant.key & SKN) print("SKN");
+        if (variant.key & SRE) print("SRE");
+        if (variant.key & DYN) print("DYN");
+        if (variant.key & DIR) print("DIR");
+        return out << ")";
+    }
+
 private:
     void set(bool v, type_t mask) noexcept {
         key = (key & ~mask) | (v ? mask : type_t(0));
