@@ -20,8 +20,15 @@
 #include <mutex>
 
 namespace utils {
+namespace generic {
 
 using Mutex = std::mutex;
+
+} // namespace generic
+
+#if !defined(UTILS_DEBUG_MUTEX) && !defined(FILAMENT_DEBUG_MUTEX)
+using Mutex = generic::Mutex;
+#endif
 
 } // namespace utils
 
