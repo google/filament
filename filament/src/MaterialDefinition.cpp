@@ -806,7 +806,7 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
             << "The material '" << name.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "vertex shader (variant="
-            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
+            << variant << ", filtered=" << vertexVariant << ").";
 
     /*
      * Fragment shader
@@ -821,7 +821,7 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
             << "The material '" << name.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "fragment shader (variant="
-            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
+            << variant << ", filtered=" << fragmentVariant << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
@@ -830,10 +830,9 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
             .diagnostics(name,
                     [variant, vertexVariant, fragmentVariant](CString const& name,
                             io::ostream& out) -> io::ostream& {
-                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
-                                   << io::dec << "), vertexVariant=(" << io::hex
-                                   << +vertexVariant.key << io::dec << "), fragmentVariant=("
-                                   << io::hex << +fragmentVariant.key << io::dec << ")";
+                        return out << name.c_str_safe() << ", variant=" << variant
+                                   << ", vertexVariant=" << vertexVariant
+                                   << ", fragmentVariant=" << fragmentVariant;
                     });
 
     if (UTILS_UNLIKELY(parser.getShaderLanguage() == ShaderLanguage::ESSL1)) {

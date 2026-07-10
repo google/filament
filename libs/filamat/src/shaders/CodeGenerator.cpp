@@ -207,30 +207,40 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
 
     switch (material.stereoscopicType) {
     case StereoscopicType::INSTANCED:
-        generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
+        generateDefine(out, "FILAMENT_STEREO_INSTANCED");
         break;
     case StereoscopicType::MULTIVIEW:
-        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW");
         break;
     case StereoscopicType::NONE:
         break;
     }
 
     if (stage == ShaderStage::VERTEX) {
-        generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
-        generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
+        if (material.flipUV) {
+            generateDefine(out, "FLIP_UV_ATTRIBUTE");
+        }
+        if (material.useLegacyMorphing) {
+            generateDefine(out, "LEGACY_MORPHING");
+        }
     }
     if (stage == ShaderStage::FRAGMENT) {
-        generateDefine(out, "FILAMENT_LINEAR_FOG", material.linearFog);
-        generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION", material.shadowFarAttenuation);
-        generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH", material.userMaterialHasCustomDepth);
+        if (material.linearFog) {
+            generateDefine(out, "FILAMENT_LINEAR_FOG");
+        }
+        if (material.shadowFarAttenuation) {
+            generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION");
+        }
+        if (material.userMaterialHasCustomDepth) {
+            generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH");
+        }
     }
 
     if (stage == ShaderStage::VERTEX) {
-        generateDefine(out, "VARYING", "out");
-        generateDefine(out, "ATTRIBUTE", "in");
+        generateValueDefine(out, "VARYING", "out");
+        generateValueDefine(out, "ATTRIBUTE", "in");
     } else if (stage == ShaderStage::FRAGMENT) {
-        generateDefine(out, "VARYING", "in");
+        generateValueDefine(out, "VARYING", "in");
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -243,7 +253,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         }
     };
 
-    generateDefine(out, getShadingDefine(material.shading), true);
+    generateDefine(out, getShadingDefine(material.shading));
 
     generateQualityDefine(out, material.quality);
 
@@ -345,8 +355,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
     // Api level enforcement.
-    generateDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
-    generateDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", filament::UNSTABLE_MATERIAL_API_LEVEL);
+    generateValueDefine(out, "CLIENT_MATERIAL_API_LEVEL", apiLevel);
+    generateValueDefine(out, "UNSTABLE_MATERIAL_API_LEVEL", filament::UNSTABLE_MATERIAL_API_LEVEL);
 
     out << "\n";
     return out;
@@ -453,7 +463,7 @@ io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, Shader
 
     out << "\n";
     attributes.forEachSetBit([&out, &attributeDatabase](size_t i) {
-        generateDefine(out, attributeDatabase[i].getDefineName().c_str(), true);
+        generateDefine(out, attributeDatabase[i].getDefineName().c_str());
     });
 
     if (stage == ShaderStage::VERTEX) {
@@ -864,19 +874,18 @@ void CodeGenerator::fixupExternalSamplers(
 }
 
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, bool value) {
-    if (value) {
-        out << "#define " << name << "\n";
-    }
+io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name) {
+    out << "#define " << name << "\n";
     return out;
 }
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, uint32_t value) {
+io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name, uint32_t value) {
     out << "#define " << name << " " << value << "\n";
     return out;
 }
 
-io::sstream& CodeGenerator::generateDefine(io::sstream& out, const char* name, const char* string) {
+io::sstream& CodeGenerator::generateValueDefine(io::sstream& out, const char* name,
+        const char* string) {
     out << "#define " << name << " " << string << "\n";
     return out;
 }
