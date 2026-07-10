@@ -293,9 +293,8 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         metadata.samples = VK_SAMPLE_COUNT_1_BIT;
         metadata.isStagingRequired = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
 
-        // Calculate mip levels. Software-decoded (staging) images are always single-level.
-        // Use ilogbf (exact, exponent-based) instead of floor(log2(...)) to avoid an
-        // off-by-one for power-of-two dimensions. Mirrors FTexture::maxLevelCount().
+        // Calculate mip levels. Use ilogbf (exact, exponent-based) instead of floor(log2(...)) to
+        // avoid an off-by-one for power-of-two dimensions. Mirrors FTexture::maxLevelCount().
         if (bufferDesc.usage & AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE) {
             uint32_t const maxDimension = std::max(bufferDesc.width, bufferDesc.height);
             metadata.mipLevels = std::max(1, std::ilogbf(float(maxDimension)) + 1);
