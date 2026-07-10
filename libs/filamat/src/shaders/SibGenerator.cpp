@@ -16,10 +16,10 @@
 
 #include "SibGenerator.h"
 
-#include "private/filament/Variant.h"
-#include "private/filament/EngineEnums.h"
-#include "private/filament/SamplerInterfaceBlock.h"
-#include "private/filament/SibStructs.h"
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SibStructs.h>
+#include <private/filament/Variant.h>
 
 #include <backend/DriverEnums.h>
 

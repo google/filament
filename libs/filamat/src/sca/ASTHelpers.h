@@ -17,9 +17,10 @@
 #ifndef TNT_SCAHELPERS_H_H
 #define TNT_SCAHELPERS_H_H
 
+#include <intermediate.h>
+
 #include <string>
 #include <vector>
-#include <intermediate.h>
 
 class TIntermNode;
 

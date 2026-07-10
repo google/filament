@@ -615,6 +615,9 @@ public:
         utils::tribool shadowReceiver,
         utils::tribool skinning) noexcept;
 
+    static utils::FixedCapacityVector<DynamicSpecConstKey> getMaterialCompileDynamicSpecConstKey(
+        FView const* view, FMaterial const* material) noexcept;
+
 private:
     explicit FEngine(Builder const& builder);
     void init();

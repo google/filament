@@ -110,13 +110,14 @@ public:
 
     void compile(CompilerPriorityQueue priority,
         utils::FixedCapacityVector<Variant> const& variants,
+        utils::FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
         backend::CallbackHandler* handler,
         utils::Invocable<void(Material*)>&& callback) noexcept;
 
     // Creates an instance of this material, specifying the batching mode.
     FMaterialInstance* createInstance(const char* name) const noexcept;
 
-    bool hasParameter(const char* name) const noexcept;
+    bool hasParameter(std::string_view name) const noexcept;
 
     bool isSampler(const char* name) const noexcept;
 

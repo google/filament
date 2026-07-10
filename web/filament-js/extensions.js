@@ -453,11 +453,6 @@ Filament.loadClassExtensions = function() {
         pbd.delete();
     }
 
-    Filament.Texture.prototype.setImageCube = function(engine, level, pbd) {
-        this._setImageCube(engine, level, pbd);
-        pbd.delete();
-    }
-
     Filament.Texture.prototype.getWidth = function(engine, level = 0) {
         return this._getWidth(engine, level);
     }
