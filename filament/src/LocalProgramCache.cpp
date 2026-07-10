@@ -125,7 +125,7 @@ Handle<HwProgram> LocalProgramCache::prepareProgramSlow(DriverApi& driver, Varia
     }
 
     FILAMENT_CHECK_POSTCONDITION(result)
-            << "Requested variant " << (uint32_t) variant.key << " with specKey "
+            << "Requested variant " << variant << " with specKey "
             << (uint32_t) specKey.key << " does not exist for material " << mMaterial->getName();
 
     return mCachedPrograms[mappedKey] = result;
