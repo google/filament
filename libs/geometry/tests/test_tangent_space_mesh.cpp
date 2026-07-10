@@ -16,12 +16,12 @@
 
 #include <geometry/TangentSpaceMesh.h>
 
+#include <utils/Log.h>
+
 #include <math/quat.h>
 #include <math/vec3.h>
 
 #include <gtest/gtest.h>
-
-#include <utils/Log.h>
 
 #include <vector>
 
@@ -425,6 +425,21 @@ TEST_F(TangentSpaceMeshTest, Lengyel) {
         EXPECT_PRED2(isAlmostEqual3, cross(n, t), b);
     }
     TangentSpaceMesh::destroy(mesh);
+}
+
+TEST_F(TangentSpaceMeshTest, OobTriangleIndexAborts) {
+    float3 positions[] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+    uint3 triangles[] = {{100, 1, 2}};  // index 100 >= vertexCount 3
+
+    EXPECT_DEATH({
+        TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        TangentSpaceMesh::destroy(mesh);
+    }, "");
 }
 
 int main(int argc, char** argv) {
