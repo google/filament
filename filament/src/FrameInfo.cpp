@@ -50,7 +50,7 @@ using namespace backend;
 FrameInfoManager::FrameInfoManager(FEngine& engine, DriverApi& driver) noexcept
     : mJobQueue("FrameInfoGpuComplete", JobSystem::Priority::URGENT_DISPLAY),
       mHasTimerQueries(driver.isFrameTimeSupported()),
-      mDisableGpuFrameComplete(engine.features.engine.frame_info.disable_gpu_frame_complete_metric) {
+      mDisableGpuFrameComplete(engine.features.engine.frame_info.disable_gpu_complete_metric) {
     if (mHasTimerQueries) {
         for (auto& query : mQueries) {
             query.handle = driver.createTimerQuery();
