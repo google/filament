@@ -14,9 +14,9 @@
 * limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
 #include "MetalArgumentBuffer.h"
+
+#include <gtest/gtest.h>
 
 using namespace filamat;
 using namespace filament::backend;
