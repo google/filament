@@ -23,7 +23,7 @@ namespace backend {
 
 bool MetalResourceTracker::trackResource(CommandBuffer buffer, Resource resource,
         ResourceDeleter deleter) {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     auto found = mResources.find(buffer);
     if (found == mResources.end()) {
@@ -39,7 +39,7 @@ bool MetalResourceTracker::trackResource(CommandBuffer buffer, Resource resource
 }
 
 void MetalResourceTracker::clearResources(CommandBuffer buffer) {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     auto found = mResources.find(buffer);
     if (found == mResources.end()) {

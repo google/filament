@@ -1652,13 +1652,13 @@ void FEngine::setPaused(bool const paused) {
 }
 
 void FEngine::setFenceUnrecoverableError() noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     mFenceHasUnrecoverableError = true;
     mFenceCondition.notify_all();
 }
 
 void FEngine::signalFence(FenceSignal& signal, FenceSignal::State s) noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     signal.mState = s;
     mFenceCondition.notify_all();
 }

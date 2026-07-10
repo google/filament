@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_UTIL_ASYNCWORKCOUNTER_H
 #define TNT_FILAMENT_BACKEND_UTIL_ASYNCWORKCOUNTER_H
 
-#include <condition_variable>
-#include <mutex>
+#include <utils/Condition.h>
+#include <utils/Mutex.h>
 
 namespace filament::backend::webgpuutils {
 
@@ -57,8 +57,8 @@ public:
     bool isIdle();
 
 private:
-    std::mutex mMutex;
-    std::condition_variable mFinishedCondition;
+    utils::Mutex mMutex;
+    utils::Condition mFinishedCondition;
     int mTasksInProgress{ 0 };
 };
 

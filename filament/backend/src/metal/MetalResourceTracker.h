@@ -17,11 +17,10 @@
 #ifndef TNT_METALRESOURCETRACKER_H
 #define TNT_METALRESOURCETRACKER_H
 
+#include <utils/Mutex.h>
+
 #include <tsl/robin_map.h>
 #include <tsl/robin_set.h>
-
-#include <functional>
-#include <mutex>
 
 namespace filament {
 namespace backend {
@@ -72,7 +71,7 @@ private:
     // Synchronizes access to the map.
     // trackResource and clearResources may be called on separate threads (the engine thread and a
     // Metal callback thread, for example).
-    std::mutex mMutex;
+    utils::Mutex mMutex;
 };
 
 } // namespace backend
