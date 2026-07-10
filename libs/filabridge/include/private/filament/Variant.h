@@ -105,7 +105,7 @@ struct Variant {
 
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR_VARIANT=       S2D |       SRE            ;
-    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR;
+    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR | FOG;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -143,22 +143,12 @@ struct Variant {
    }
 
     static constexpr bool isValidStandardVariant(Variant variant) noexcept {
-        // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED0_MASK  = S2D | FOG | SRE | DYN | DIR;
-        constexpr type_t RESERVED0_VALUE = S2D | FOG | SRE;
-
-        // can't have shadow receiver if we don't have any lighting
-        constexpr type_t RESERVED1_MASK  = S2D | SRE | DYN | DIR;
-        constexpr type_t RESERVED1_VALUE = SRE;
-
         // can't have VSM without shadow receiver
-        constexpr type_t RESERVED2_MASK  = S2D | SRE;
-        constexpr type_t RESERVED2_VALUE = S2D;
+        constexpr type_t RESERVED_MASK = S2D | SRE;
+        constexpr type_t RESERVED_VALUE = S2D;
 
         return ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) &&
-               ((variant.key & RESERVED0_MASK) != RESERVED0_VALUE) &&
-               ((variant.key & RESERVED1_MASK) != RESERVED1_VALUE) &&
-               ((variant.key & RESERVED2_MASK) != RESERVED2_VALUE);
+               ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
     }
 
     static constexpr bool isVertexVariant(Variant variant) noexcept {
@@ -275,6 +265,36 @@ struct Variant {
 
     static Variant filterUserVariant(
             Variant variant, UserVariantFilterMask filterMask) noexcept;
+
+    template <typename T>
+    UTILS_NOINLINE friend T& operator<<(T& out, Variant variant) noexcept {
+        if (variant.key == 0) {
+            return out << "(none)";
+        }
+        out << "(";
+        bool first = true;
+        auto print = [&](const char* name) {
+            if (!first) out << " | ";
+            out << name;
+            first = false;
+        };
+        if (variant.key & STE) print("STE");
+        if (variant.key & DEP) {
+            if (variant.key & MNT) print("MNT");
+            if (variant.key & PCK) print("PCK");
+
+            print("DEP");
+        } else {
+            if (variant.key & S2D) print("S2D");
+            if (variant.key & FOG) print("FOG");
+        }
+
+        if (variant.key & SKN) print("SKN");
+        if (variant.key & SRE) print("SRE");
+        if (variant.key & DYN) print("DYN");
+        if (variant.key & DIR) print("DIR");
+        return out << ")";
+    }
 
 private:
     void set(bool v, type_t mask) noexcept {
