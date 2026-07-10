@@ -17,13 +17,13 @@
 #ifndef TNT_FILAMAT_MATERIALINFO_H
 #define TNT_FILAMAT_MATERIALINFO_H
 
-#include <backend/DriverEnums.h>
-
-#include <filament/MaterialEnums.h>
-
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>

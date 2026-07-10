@@ -317,9 +317,9 @@ try {
 #ifndef NDEBUG
                 if (event.key.code == AppKey::PRINT_SCREEN) {
                     DebugRegistry& debug = mEngine->getDebugRegistry();
-                    bool* captureFrame =
-                            debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                    *captureFrame = true;
+                    if (bool* captureFrame = debug.getPropertyAddress<bool>("d.renderer.doFrameCapture")) {
+                        *captureFrame = true;
+                    }
                 }
 #endif
                 window->keyDown(event.key.code);
