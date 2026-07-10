@@ -49,158 +49,180 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
 
     bool const litVariants = material.isLit || material.hasShadowMultiplier;
 
-    CodeGenerator::generateDefine(out, "VARIANT_HAS_DIRECTIONAL_LIGHTING",
-            litVariants && variant.hasDirectionalLighting());
-    CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING",
-            litVariants && filament::Variant::isShadowReceiverVariant(variant));
-    CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
-            filament::Variant::isShadowSampler2DVariant(variant) ||
-            filament::Variant::isDepthMomentsVariant(variant));
-    CodeGenerator::generateDefine(out, "VARIANT_HAS_STEREO",
-            hasStereo(variant, featureLevel));
-    CodeGenerator::generateDefine(out, "VARIANT_DEPTH",
-            filament::Variant::isValidDepthVariant(variant));
+    if (litVariants && variant.hasDirectionalLighting()) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_DIRECTIONAL_LIGHTING");
+    }
+    if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING");
+    }
+    if (filament::Variant::isShadowSampler2DVariant(variant) ||
+            filament::Variant::isDepthMomentsVariant(variant)) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM");
+    }
+    if (hasStereo(variant, featureLevel)) {
+        CodeGenerator::generateDefine(out, "VARIANT_HAS_STEREO");
+    }
+    if (filament::Variant::isValidDepthVariant(variant)) {
+        CodeGenerator::generateDefine(out, "VARIANT_DEPTH");
+    }
 
     switch (stage) {
         case ShaderStage::VERTEX:
-        CodeGenerator::generateDefine(out, "VARIANT_HAS_SKINNING_OR_MORPHING",
-                hasSkinningOrMorphing(variant, featureLevel));
+            if (hasSkinningOrMorphing(variant, featureLevel)) {
+                CodeGenerator::generateDefine(out, "VARIANT_HAS_SKINNING_OR_MORPHING");
+            }
             break;
         case ShaderStage::FRAGMENT:
-            CodeGenerator::generateDefine(out, "VARIANT_HAS_FOG",
-                    filament::Variant::isFogVariant(variant));
-            CodeGenerator::generateDefine(out, "VARIANT_HAS_PICKING",
-                    filament::Variant::isPickingVariant(variant));
-            CodeGenerator::generateDefine(out, "VARIANT_HAS_SSR",
-                    filament::Variant::isSSRVariant(variant));
+            if (filament::Variant::isFogVariant(variant)) {
+                CodeGenerator::generateDefine(out, "VARIANT_HAS_FOG");
+            }
+            if (filament::Variant::isPickingVariant(variant)) {
+                CodeGenerator::generateDefine(out, "VARIANT_HAS_PICKING");
+            }
+            if (filament::Variant::isSSRVariant(variant)) {
+                CodeGenerator::generateDefine(out, "VARIANT_HAS_SSR");
+            }
             break;
         case ShaderStage::COMPUTE:
             break;
     }
 
     out << '\n';
-    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL",
+    CodeGenerator::generateValueDefine(out, "MATERIAL_FEATURE_LEVEL",
         static_cast<uint32_t>(featureLevel));
 
-    CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER",
-            material.hasShadowMultiplier);
+    if (material.hasShadowMultiplier) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER");
+    }
 
-    CodeGenerator::generateDefine(out, "MATERIAL_HAS_LIGHTING", hasLighting(material, variant));
+    if (hasLighting(material, variant)) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_LIGHTING");
+    }
 
-    CodeGenerator::generateDefine(out, "MATERIAL_HAS_INSTANCES", material.instanced);
+    if (material.instanced) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_INSTANCES");
+    }
 
-    CodeGenerator::generateDefine(out, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED",
-            material.vertexDomainDeviceJittered);
+    if (material.vertexDomainDeviceJittered) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED");
+    }
 
-    CodeGenerator::generateDefine(out, "MATERIAL_HAS_TRANSPARENT_SHADOW",
-            material.hasTransparentShadow);
+    if (material.hasTransparentShadow) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_TRANSPARENT_SHADOW");
+    }
 
     if (stage == ShaderStage::FRAGMENT) {
         // We only support both screen-space refractions and reflections at the same time.
         // And the MATERIAL_HAS_REFRACTION/MATERIAL_HAS_REFLECTIONS defines signify if
         // refraction/reflections are supported by the material.
 
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_REFRACTION",
-                material.refractionMode != RefractionMode::NONE);
         if (material.refractionMode != RefractionMode::NONE) {
-            CodeGenerator::generateDefine(out, "REFRACTION_MODE_CUBEMAP",
+            CodeGenerator::generateDefine(out, "MATERIAL_HAS_REFRACTION");
+        }
+        if (material.refractionMode != RefractionMode::NONE) {
+            CodeGenerator::generateValueDefine(out, "REFRACTION_MODE_CUBEMAP",
                     uint32_t(RefractionMode::CUBEMAP));
-            CodeGenerator::generateDefine(out, "REFRACTION_MODE_SCREEN_SPACE",
+            CodeGenerator::generateValueDefine(out, "REFRACTION_MODE_SCREEN_SPACE",
                     uint32_t(RefractionMode::SCREEN_SPACE));
             switch (material.refractionMode) {
                 case RefractionMode::NONE:
                     // can't be here
                     break;
                 case RefractionMode::CUBEMAP:
-                    CodeGenerator::generateDefine(out, "REFRACTION_MODE",
+                    CodeGenerator::generateValueDefine(out, "REFRACTION_MODE",
                             "REFRACTION_MODE_CUBEMAP");
                     break;
                 case RefractionMode::SCREEN_SPACE:
-                    CodeGenerator::generateDefine(out, "REFRACTION_MODE",
+                    CodeGenerator::generateValueDefine(out, "REFRACTION_MODE",
                             "REFRACTION_MODE_SCREEN_SPACE");
                     break;
             }
-            CodeGenerator::generateDefine(out, "REFRACTION_TYPE_SOLID",
+            CodeGenerator::generateValueDefine(out, "REFRACTION_TYPE_SOLID",
                     uint32_t(RefractionType::SOLID));
-            CodeGenerator::generateDefine(out, "REFRACTION_TYPE_THIN",
+            CodeGenerator::generateValueDefine(out, "REFRACTION_TYPE_THIN",
                     uint32_t(RefractionType::THIN));
             switch (material.refractionType) {
                 case RefractionType::SOLID:
-                    CodeGenerator::generateDefine(out, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
+                    CodeGenerator::generateValueDefine(out, "REFRACTION_TYPE", "REFRACTION_TYPE_SOLID");
                     break;
                 case RefractionType::THIN:
-                    CodeGenerator::generateDefine(out, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
+                    CodeGenerator::generateValueDefine(out, "REFRACTION_TYPE", "REFRACTION_TYPE_THIN");
                     break;
             }
         }
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_REFLECTIONS",
-                material.reflectionMode == ReflectionMode::SCREEN_SPACE);
+        if (material.reflectionMode == ReflectionMode::SCREEN_SPACE) {
+            CodeGenerator::generateDefine(out, "MATERIAL_HAS_REFLECTIONS");
+        }
 
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY",
-                material.hasDoubleSidedCapability);
+        if (material.hasDoubleSidedCapability) {
+            CodeGenerator::generateDefine(out, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY");
+        }
 
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_SURFACE_SHADING",
-                material.hasCustomSurfaceShading);
+        if (material.hasCustomSurfaceShading) {
+            CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_SURFACE_SHADING");
+        }
 
         out << '\n';
         switch (material.blendingMode) {
             case BlendingMode::OPAQUE:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_OPAQUE", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_OPAQUE");
                 break;
             case BlendingMode::TRANSPARENT:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_TRANSPARENT", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_TRANSPARENT");
                 break;
             case BlendingMode::ADD:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_ADD", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_ADD");
                 break;
             case BlendingMode::MASKED:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_MASKED", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_MASKED");
                 break;
             case BlendingMode::FADE:
                 // Fade is a special case of transparent
-                CodeGenerator::generateDefine(out, "BLEND_MODE_TRANSPARENT", true);
-                CodeGenerator::generateDefine(out, "BLEND_MODE_FADE", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_TRANSPARENT");
+                CodeGenerator::generateDefine(out, "BLEND_MODE_FADE");
                 break;
             case BlendingMode::MULTIPLY:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_MULTIPLY", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_MULTIPLY");
                 break;
             case BlendingMode::SCREEN:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_SCREEN", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_SCREEN");
                 break;
             case BlendingMode::CUSTOM:
-                CodeGenerator::generateDefine(out, "BLEND_MODE_CUSTOM", true);
+                CodeGenerator::generateDefine(out, "BLEND_MODE_CUSTOM");
                 break;
         }
 
         switch (material.postLightingBlendingMode) {
             case BlendingMode::OPAQUE:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_OPAQUE", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_OPAQUE");
                 break;
             case BlendingMode::TRANSPARENT:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_TRANSPARENT", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_TRANSPARENT");
                 break;
             case BlendingMode::ADD:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_ADD", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_ADD");
                 break;
             case BlendingMode::MULTIPLY:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_MULTIPLY", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_MULTIPLY");
                 break;
             case BlendingMode::SCREEN:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_SCREEN", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_SCREEN");
                 break;
             case BlendingMode::CUSTOM:
-                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_CUSTOM", true);
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_CUSTOM");
                 break;
             default:
                 break;
         }
 
         out << '\n';
-        CodeGenerator::generateDefine(out, "GEOMETRIC_SPECULAR_AA",
-                material.specularAntiAliasing && material.isLit);
+        if (material.specularAntiAliasing && material.isLit) {
+            CodeGenerator::generateDefine(out, "GEOMETRIC_SPECULAR_AA");
+        }
 
-        CodeGenerator::generateDefine(out, "CLEAR_COAT_IOR_CHANGE",
-                material.clearCoatIorChange);
+        if (material.clearCoatIorChange) {
+            CodeGenerator::generateDefine(out, "CLEAR_COAT_IOR_CHANGE");
+        }
     }
 }
 
@@ -221,27 +243,29 @@ void ShaderGenerator::generateSurfaceMaterialVariantProperties(io::sstream& out,
             properties[static_cast<int>(MaterialBuilder::Property::BENT_NORMAL)]        ||
             properties[static_cast<int>(MaterialBuilder::Property::CLEAR_COAT_NORMAL)];
 
-    CodeGenerator::generateDefine(out, "MATERIAL_NEEDS_TBN", hasTBN);
+    if (hasTBN) {
+        CodeGenerator::generateDefine(out, "MATERIAL_NEEDS_TBN");
+    }
 
     // Additional, user-provided defines.
     for (const auto& define : defines) {
-        CodeGenerator::generateDefine(out, define.name.c_str(), define.value.c_str());
+        CodeGenerator::generateValueDefine(out, define.name.c_str(), define.value.c_str());
     }
 }
 
 void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain const domain) noexcept {
     switch (domain) {
         case VertexDomain::OBJECT:
-            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_OBJECT", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_OBJECT");
             break;
         case VertexDomain::WORLD:
-            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_WORLD", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_WORLD");
             break;
         case VertexDomain::VIEW:
-            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_VIEW", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_VIEW");
             break;
         case VertexDomain::DEVICE:
-            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_DEVICE", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_DEVICE");
             break;
     }
 }
@@ -249,13 +273,13 @@ void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain
 void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out,
         ShaderStage const, MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const&, PostProcessVariant const variant) noexcept {
-    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
+    CodeGenerator::generateValueDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
     switch (variant) {
         case PostProcessVariant::OPAQUE:
-            CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 1u);
+            CodeGenerator::generateValueDefine(out, "POST_PROCESS_OPAQUE", 1u);
             break;
         case PostProcessVariant::TRANSLUCENT:
-            CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 0u);
+            CodeGenerator::generateValueDefine(out, "POST_PROCESS_OPAQUE", 0u);
             break;
     }
 }
@@ -411,8 +435,9 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
                     (material.blendingMode == BlendingMode::TRANSPARENT ||
                      material.blendingMode == BlendingMode::FADE));
 
-    CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER",
-            useOptimizedDepthVertexShader);
+    if (useOptimizedDepthVertexShader) {
+        CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER");
+    }
 
     generateSurfaceMaterialVariantDefines(vs, ShaderStage::VERTEX, featureLevel, material, variant);
 
@@ -539,13 +564,15 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     auto const defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
-    CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
+    CodeGenerator::generateValueDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
     bool const multiBounceAO = material.multiBounceAOSet ?
             material.multiBounceAO : shaderModel == ShaderModel::DESKTOP;
-    CodeGenerator::generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
+    CodeGenerator::generateValueDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u);
 
-    CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA", material.hasColoredPenumbra);
+    if (material.hasColoredPenumbra) {
+        CodeGenerator::generateDefine(fs, "HAS_COLORED_PENUMBRA");
+    }
 
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
@@ -616,7 +643,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
 
     if (!filament::Variant::isValidDepthVariant(variant)) {
         if (!mOutputs.empty()) {
-            CodeGenerator::generateDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
+            CodeGenerator::generateValueDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
             for (const auto& output: mOutputs) {
                 cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
                         output.qualifier, output.precision, output.type);
@@ -708,7 +735,7 @@ std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shade
 
     generateUserSpecConstants(cg, s, mConstants);
 
-    CodeGenerator::generateDefine(s, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
+    CodeGenerator::generateValueDefine(s, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
 
     CodeGenerator::generateSurfaceTypes(s, ShaderStage::COMPUTE);
 
@@ -753,7 +780,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
 
     generateUserSpecConstants(cg, vs, mConstants);
 
-    CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
+    CodeGenerator::generateValueDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
     // custom material variables
     size_t variableIndex = 0;
@@ -831,14 +858,14 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
 
     // Generate post-process outputs.
     if (!mOutputs.empty()) {
-        CodeGenerator::generateDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
+        CodeGenerator::generateValueDefine(fs, "HAS_CUSTOM_OUTPUT", 1u);
         for (const auto& output: mOutputs) {
             if (output.target == MaterialBuilder::OutputTarget::COLOR) {
                 cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
                         output.qualifier, output.precision, output.type);
             }
             if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
-                CodeGenerator::generateDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);
+                CodeGenerator::generateValueDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);
             }
         }
     }
