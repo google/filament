@@ -54,8 +54,7 @@ struct PlatformCocoaGLImpl {
 
     utils::Mutex mHeadlessResourcesLock;
 
-    // These resources will only be written to from the main thread, but they could be read
-    // from the backend thread.
+    // These resources can be accessed from two threads (main and backend).
     std::vector<NSView*> mHeadlessSwapChains;
     std::vector<NSWindow*> mHeadlessWindows;
 
@@ -303,34 +302,36 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
         pImpl->mCurrentSwapChain = nullptr;
     }
 
+    NSWindow* headlessWindow = nil;
+    NSView* swapChainView = cocoaSwapChain->view;
+
+    // Sever the strong reference so it isn't released on the calling thread
+    // when cocoaSwapChain is deleted.
+    cocoaSwapChain->view = nil;
+
     // First see if the swapchain is associated with a headless view
-    NSView* headlessView = nullptr;
     {
         utils::LockGuard const lock(pImpl->mHeadlessResourcesLock);
         auto& views = pImpl->mHeadlessSwapChains;
-        if (auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
+        auto& windows = pImpl->mHeadlessWindows;
+        if (auto it = std::find(views.begin(), views.end(), swapChainView);
                 it != views.end()) {
-            headlessView = *it;
+            size_t index = std::distance(views.begin(), it);
+            views.erase(it);
+
+            if (index < windows.size()) {
+                 headlessWindow = windows[index];
+                 windows.erase(windows.begin() + index);
+            }
         }
     }
 
-    if (headlessView) {
-       // Delete the no longer needed headless view and window on the main thread. Note that this
-       // call is non-blocking.
-       dispatch_async(dispatch_get_main_queue(), ^{
-            utils::LockGuard const lock(pImpl->mHeadlessResourcesLock);
-            auto& views = pImpl->mHeadlessSwapChains;
-            auto& windows = pImpl->mHeadlessWindows;
-            if (auto it = std::find(views.begin(), views.end(), cocoaSwapChain->view);
-                    it != views.end()) {
-                size_t index = std::distance(views.begin(), it);
-                views.erase(it);
-                if (index < windows.size()) {
-                    windows.erase(windows.begin() + index);
-                }
-            }
-        });
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Capture the ARC pointers so they are released on the main thread.
+        (void)headlessWindow;
+        (void)swapChainView;
+    });
+
     delete cocoaSwapChain;
 }
 
