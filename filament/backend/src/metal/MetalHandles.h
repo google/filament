@@ -32,6 +32,7 @@
 #include <utils/bitset.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 
 #include <math/vec2.h>
@@ -41,7 +42,6 @@
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
 #include <atomic>
-#include <condition_variable>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -187,7 +187,7 @@ private:
     NSUInteger headlessWidth = 0;
     NSUInteger headlessHeight = 0;
     CAMetalLayer* layer = nullptr;
-    std::shared_ptr<std::mutex> layerDrawableMutex;
+    std::shared_ptr<utils::Mutex> layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
     uint64_t flags;

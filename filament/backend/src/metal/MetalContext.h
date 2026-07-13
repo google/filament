@@ -29,6 +29,7 @@
 #include <QuartzCore/QuartzCore.h>
 
 #include <utils/FixedCircularBuffer.h>
+#include <utils/Mutex.h>
 
 #include <array>
 #include <atomic>
@@ -47,7 +48,7 @@ namespace backend {
 class MetalDriver;
 
 struct DriverLifetimeTracker {
-    std::mutex mutex;
+    utils::Mutex mutex;
     MetalDriver* driver = nullptr;
 };
 

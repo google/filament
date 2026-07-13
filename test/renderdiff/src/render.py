@@ -26,56 +26,13 @@ from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
 import test_config
 from results import RESULT_OK, RESULT_FAILED
 
-def _render_single_model(gltf_viewer, test_json_path, named_output_dir,
-                         test_name, backend, model, model_path, opengl_lib, vk_icd):
-  # We need to pass along the old environment because it might include set up from vulkansdk.
-  env = os.environ.copy()
-  if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
-    env |= {
-      'LD_LIBRARY_PATH': opengl_lib,
-      # for macOS
-      'DYLD_LIBRARY_PATH': opengl_lib,
-    }
-
-  if backend == 'vulkan' and os.path.exists(vk_icd):
-    env |= {
-      'VK_ICD_FILENAMES': vk_icd,
-      'VK_DRIVER_FILES': vk_icd,
-      # Uncomment when there's a problem finding the vk driver
-      # 'VK_LOADER_DEBUG': 'all',
-    }
-
-  out_name = f'{test_name}.{backend}.{model}'
-  test_desc = out_name
-
-  working_dir = f'/tmp/renderdiff/{backend}/{model}'
-  mkdir_p(working_dir)
-
-  important_print(f'Rendering {test_desc}')
-
-  out_code, output = execute(
-    f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
-    cwd=working_dir,
-    env=env, capture_output=True
-  )
-
-  result = ''
-  if out_code == 0:
-    result = RESULT_OK
-    out_tif_basename = f'{out_name}.tif'
-    out_tif_name = f'{named_output_dir}/{out_tif_basename}'
-    mv_f(f'{working_dir}/{test_name}0.tif', out_tif_name)
-    mv_f(f'{working_dir}/{test_name}0.json', f'{named_output_dir}/{test_name}.json')
-    important_print(f'{test_desc} rendering succeeded. output=\n{output}')
-  else:
-    result = RESULT_FAILED
-    important_print(f'{test_desc} rendering failed with error={out_code}output=\n{output}')
-
-  return {
-    'name': out_name,
-    'result': result,
-    'result_code': out_code,
-  }
+from renderers import (
+    RenderTestCase,
+    NativeRenderer,
+    OpenGLRenderer,
+    VulkanRenderer,
+    WebGPUDesktopRenderer,
+)
 
 def _render_test_config(gltf_viewer,
             test_config,
@@ -106,17 +63,32 @@ def _render_test_config(gltf_viewer,
       for backend in test.backends:
         if backend == 'vulkan':
           assert vk_icd, "VK ICD must be specified when testing vulkan backend"
+          renderer = VulkanRenderer(gltf_viewer_abs, vk_icd)
+        elif backend == 'opengl':
+          renderer = OpenGLRenderer(gltf_viewer_abs, opengl_lib)
+        elif backend == 'webgpu':
+          renderer = WebGPUDesktopRenderer(gltf_viewer_abs)
+        else:
+          renderer = NativeRenderer(gltf_viewer_abs)
+
         for model in test.models:
           test_name = f'{test.name}.{backend}.{model}'
           if test_filter and not fnmatch.fnmatch(test_name, test_filter):
             print(f'Skipping {test_name} because it does not match filter')
             continue
           model_path = os.path.abspath(test_config.models[model])
+
+          test_case = RenderTestCase(
+              test_name=test.name,
+              backend=backend,
+              model=model,
+              model_path=model_path,
+              test_json_path=test_json_path,
+              output_dir=named_output_dir
+          )
+
           futures.append(
-            executor.submit(_render_single_model, gltf_viewer_abs,
-                    test_json_path, named_output_dir,
-                    test.name, backend, model, model_path,
-                    opengl_lib, vk_icd))
+            executor.submit(renderer.render, test_case))
 
     for future in concurrent.futures.as_completed(futures):
       results.append(future.result())

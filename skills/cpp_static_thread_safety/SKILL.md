@@ -13,12 +13,12 @@ Filament leverages Clang's static thread safety analysis to verify lock holding 
 
 ## 1. Selecting the Correct Lock Primitive
 
-*   **Standard Primitives (`std::mutex` & `std::condition_variable`)**:
-    *   *Use Case*: Heavy producer-consumer queues or structures performing blocking wait loops (`wait()`).
-    *   *Rationale*: Required for native kernel thread scheduling, priority queues, and preventing priority inversion stutters via Priority Inheritance (PI).
-*   **Lightweight Primitives (`utils::Mutex` & `utils::Condition`)**:
-    *   *Use Case*: High-frequency, low-contention locks guarding simple structures (like hashmap lookups or state changes) with **zero condition waits**.
-    *   *Rationale*: Custom 4-byte futex wrappers (compared to standard mutex's 40 bytes) that minimize cache-line footprint in hot render paths.
+*   **Filament Primitives (`utils::Mutex` & `utils::Condition`) — MANDATORY**:
+    *   *Rule*: All engine, backend, and utility code under `filament/` must use `utils::Mutex` and `utils::Condition` exclusively. Do **not** use `std::mutex` or `std::condition_variable`.
+    *   *Deadlock & Order Debugging*: `utils::Mutex` transparently integrates with Filament's compile-time lock debugging facility (`FILAMENT_DEBUG_MUTEX` / `-u`). When enabled, it maintains a global cycle dependency graph via BFS during `lock()` and `try_lock()`, immediately trapping lock-order inversions and self-deadlocks with exact `CallStack` traces. Any locks defined via `std::mutex` bypass this tracker entirely and remain invisible to deadlock diagnostics.
+    *   *Memory & Cache Hygiene*: On Android and Linux (`linuxutil::Mutex`), `utils::Mutex` is only 4 bytes (a single atomic futex word) versus 40 bytes for `std::mutex`. For structures allocated in large volumes or embedded in handles/fences, this 10x size reduction prevents struct bloat and maintains cache-line density.
+    *   *Condition Variable Support*: `utils::Condition` (`Condition::wait` / `wait_until`) is explicitly templated (`template <typename M>`) to work seamlessly with `UniqueLock<utils::Mutex>` for producer-consumer queues and blocking wait loops.
+    *   *Priority Inversion Reality*: C++ standard `std::mutex` (`pthread_mutex_t`) does **not** provide priority inheritance out of the box (`PTHREAD_PRIO_NONE`). Therefore, `std::mutex` offers zero priority inversion protection over `utils::Mutex`.
 
 ---
 

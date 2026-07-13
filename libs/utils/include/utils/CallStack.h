@@ -123,7 +123,7 @@ private:
     };
 
     size_t m_frame_count = 0;
-    StackFrameInfo m_stack[NUM_FRAMES];
+    StackFrameInfo m_stack[NUM_FRAMES] = {};
 };
 
 } // namespace utils
