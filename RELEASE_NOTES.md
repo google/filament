@@ -10,7 +10,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.74.0
 
 
-## v1.73.1
+## v1.73.1 (no-op)
 
 
 ## v1.73.0
