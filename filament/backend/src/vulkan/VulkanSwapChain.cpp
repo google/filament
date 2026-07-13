@@ -99,12 +99,16 @@ void VulkanSwapChain::update() {
         mColors.push_back(colorTexture);
     }
 
-    mDepth = fvkmemory::resource_ptr<VulkanTexture>::construct(mResourceManager, mContext, device,
-            mAllocator, mResourceManager, mCommands, bundle.depth, VK_NULL_HANDLE,
-            bundle.depthFormat, VK_NULL_HANDLE /*ycrcb */,
-            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
-            1, bundle.extent.width,
-            bundle.extent.height, bundle.layerCount, depthUsage, mStagePool);
+    if (bundle.depth != VK_NULL_HANDLE) {
+        mDepth = fvkmemory::resource_ptr<VulkanTexture>::construct(mResourceManager, mContext, device,
+                mAllocator, mResourceManager, mCommands, bundle.depth, VK_NULL_HANDLE,
+                bundle.depthFormat, VK_NULL_HANDLE /*ycrcb */,
+                VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+                1, bundle.extent.width,
+                bundle.extent.height, bundle.layerCount, depthUsage, mStagePool);
+    } else {
+        mDepth = {};
+    }
 
     mExtent = bundle.extent;
     mLayerCount = bundle.layerCount;
