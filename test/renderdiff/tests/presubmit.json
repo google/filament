@@ -40,9 +40,46 @@
             "name": "ssr_models",
             "models": ["DamagedHelmet"],
             "rendering": {}
+        },
+        {
+            "name": "point_light_models",
+            "models": ["lucy"],
+            "rendering": {}
         }
     ],
     "tests": [
+        {
+            "name": "PointLights",
+            "description": "Point lights test",
+            "apply_presets": ["base", "point_light_models"],
+            "rendering": {
+                "lighting.iblIntensity": 0.0,
+                "lighting.enableSunlight": false,
+                "lighting.lights": [
+                    {
+                        "type": "POINT",
+                        "position": [4.0, 0.0, 0.0],
+                        "color": [1.0, 0.1, 0.1],
+                        "intensity": 100000000.0,
+                        "falloff": 10.0
+                    },
+                    {
+                        "type": "POINT",
+                        "position": [-4.0, 0.0, 0.0],
+                        "color": [0.1, 0.1, 1.0],
+                        "intensity": 100000000.0,
+                        "falloff": 10.0
+                    },
+                    {
+                        "type": "POINT",
+                        "position": [0.0, 0.0, 4.0],
+                        "color": [0.1, 1.0, 0.1],
+                        "intensity": 100000000.0,
+                        "falloff": 10.0
+                    }
+                ]
+            }
+        },
         {
             "name": "Bloom",
             "description": "Bloom",
