@@ -1072,7 +1072,11 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
-        ImGui::SliderFloat("Frame rate", &mSettings.viewer.cameraFrameRate, 0.0f, 120.0f, "%.0f Hz");
+        // we don't have a way to report the real value of SwapChain::isFrameRateChangeSupported(),
+        // for now we assume it's supported in remote more only
+        if (isRemoteMode()) {
+            ImGui::SliderFloat("Frame rate", &mSettings.viewer.cameraFrameRate, 0.0f, 120.0f, "%.0f Hz");
+        }
 
         // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {
