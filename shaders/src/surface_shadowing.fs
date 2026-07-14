@@ -336,7 +336,7 @@ float ShadowSample_EVSSM(const bool DIRECTIONAL, const highp sampler2DArray shad
     // 3. Inject Noise (Rotates the grid and jitters the anchor)
     #if defined(SHADOW_SAMPLING_EVSSM_NOISE) && SHADOW_SAMPLING_EVSSM_NOISE == 1
         highp float noise = interleavedGradientNoise(gl_FragCoord.xy);
-        highp float theta = noise * 6.28318530718;
+        highp float theta = noise * (2.0 * PI);
         highp float cosT = cos(theta);
         highp float sinT = sin(theta);
 

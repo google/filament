@@ -189,7 +189,7 @@ void ShadowMapManager::updateShadowUbo(FEngine const& engine, FView const& view,
         // But we're limited by the number of mip levels we have relative to the shadowmap resolution.
         // We must always use the first cascade parameters for this calculation.
         float2 const wsTexelSizeAtOneMeter0 = getCascadeShaderParameters(0).texelSizeAtOneMeterWs;
-        maxSearchRadius = computeDynamicMaxSearchRadius(PCSS_MIP_LEVELS,
+        maxSearchRadius = computeDynamicMaxSearchRadius(PCSS_MIP_LEVELS - 1,
                 std::max(wsTexelSizeAtOneMeter0.x, wsTexelSizeAtOneMeter0.y));
     }
 
