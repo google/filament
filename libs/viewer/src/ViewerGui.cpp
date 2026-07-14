@@ -1073,7 +1073,7 @@ void ViewerGui::updateUserInterface() {
         ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
 
         // we don't have a way to report the real value of SwapChain::isFrameRateChangeSupported(),
-        // for now we assume it's supported in remote more only
+        // for now we assume it's supported in remote mode only
         if (isRemoteMode()) {
             ImGui::SliderFloat("Frame rate", &mSettings.viewer.cameraFrameRate, 0.0f, 120.0f, "%.0f Hz");
         }
