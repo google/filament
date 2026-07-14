@@ -150,7 +150,7 @@ jobs:
         run: |
           python3 test/sizeguard/dump_artifact_size.py out/*.aar > current_size.json
           BYPASS_ARG=""
-          if python3 test/sizeguard/check_bypass.py ${{ steps.get_commit_msg.outputs.hash }}; then
+          if python3 test/sizeguard/check_bypass.py ${{ steps.get_commit_msg.outputs.hashes }}; then
               BYPASS_ARG="--bypass"
           fi
           python3 test/sizeguard/check_size.py current_size.json \
@@ -233,7 +233,7 @@ jobs:
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
         run: |
-          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hash }}
+          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hashes }}
 
   test-renderdiff:
     name: test-renderdiff

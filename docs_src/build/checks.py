@@ -40,32 +40,33 @@ WEB_SRC_DIR = os.path.abspath(os.path.join(CUR_DIR, '../../web/'))
 
 SRC_SRC_DIRS = [MARKDEEP_SRC_DIR, MDBOOK_SRC_DIR, RAW_SRC_DIR, WEB_SRC_DIR]
 
-def get_edited_files(commit_hash):
+def get_edited_files(commit_hashes):
   INSERT = '#####?????'
-  res, ret = execute(f'git show --name-only --pretty=%b{INSERT} {commit_hash}')
-  assert res == 0, f'Failed to get edited filed {res}: ' + ret
   files = []
-  _, after = ret.split(INSERT)
-  for r in filter(lambda a: len(a) > 0, after.split('\n')):
-    if r.startswith('commit'):
-      break
-    files.append(os.path.abspath(os.path.join(ROOT_DIR, r)))
+  for commit_hash in commit_hashes:
+    res, ret = execute(f'git show --name-only --pretty=%b{INSERT} {commit_hash}')
+    assert res == 0, f'Failed to get edited filed {res}: ' + ret
+    _, after = ret.split(INSERT)
+    for r in filter(lambda a: len(a) > 0, after.split('\n')):
+      if r.startswith('commit'):
+        break
+      files.append(os.path.abspath(os.path.join(ROOT_DIR, r)))
   return files
 
 # Returns True if there were no direct edits to '/docs'
-def check_no_direct_edits(commit_hash, printing=True):
-  bad = [f'\t{f}' for f in get_edited_files(commit_hash) if f.startswith('docs/')]
+def check_no_direct_edits(commit_hashes, printing=True):
+  bad = [f'\t{f}' for f in get_edited_files(commit_hashes) if f.startswith('docs/')]
   if printing and len(bad) > 0:
     print(f'Found edits to /docs:\n' + '\n'.join(bad))
   return len(bad) == 0
 
 # Returns True if docs sources have been modified
-def check_has_source_edits(commit_hash, printing=True):
+def check_has_source_edits(commit_hashes, printing=True):
   config = {}
   with open(f'{CUR_DIR}/duplicates.json') as config_txt:
     config = json.loads(config_txt.read())
   source_files = set(os.path.abspath(os.path.join(ROOT_DIR, k)) for k in config.keys())
-  edited_files = set(get_edited_files(commit_hash))
+  edited_files = set(get_edited_files(commit_hashes))
 
   # find any changes to docs_src sources
   is_docs_src_edit = lambda f: any(f.startswith(prefix) for prefix in SRC_SRC_DIRS)
@@ -79,13 +80,14 @@ def check_has_source_edits(commit_hash, printing=True):
   return len(final_edited) > 0
 
 # Returns true in a given TAG is found in the commit msg
-def commit_msg_has_tag(commit_hash, tag, printing=True):
-  res, ret = execute(f'git log -n1 --pretty=%B {commit_hash}', cwd=ROOT_DIR)
-  for l in ret.split('\n'):
-    if tag == l.strip():
-      if printing:
-        print(f'Found tag={tag} in commit={commit_hash}')
-      return True
+def commit_msg_has_tag(commit_hashes, tag, printing=True):
+  for commit_hash in commit_hashes:
+    res, ret = execute(f'git log -n1 --pretty=%B {commit_hash}', cwd=ROOT_DIR)
+    for l in ret.split('\n'):
+      if tag == l.strip():
+        if printing:
+          print(f'Found tag={tag} in commit={commit_hash}')
+        return True
   return False
 
 if __name__ == "__main__":
@@ -126,8 +128,12 @@ if __name__ == "__main__":
       )
   )
 
-  args, _ = parser.parse_known_args(sys.argv[1:len(sys.argv) - 1])
-  commit_hash = sys.argv[-1]
+  args, unknown = parser.parse_known_args(sys.argv[1:])
+  commit_hashes = unknown
+
+  if not commit_hashes:
+    print("Must provide at least one commit hash", file=sys.stderr)
+    exit(1)
 
   assert not (args.do_and and args.do_or), "Must not supply both '--do-and' and '--do-or'"
   assert args.do_and or args.do_or, "Must supply argument '--do-and' or '--do-or'"
@@ -141,10 +147,10 @@ if __name__ == "__main__":
   res = []
   for cond in conds:
     if cond.startswith('-'):
-      f = lambda: not possible_conditions[cond.replace('-', '')]()
+      f = lambda: not possible_conditions[cond.replace('-', '')](commit_hashes)
     else:
-      f = possible_conditions[cond]
-    res.append(f(commit_hash))
+      f = lambda: possible_conditions[cond](commit_hashes)
+    res.append(f())
 
   if args.do_and:
     exit(0 if all(res) else 1)

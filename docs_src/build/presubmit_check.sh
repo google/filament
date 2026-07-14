@@ -14,6 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-COMMIT_HASH=$1
-python3 docs_src/build/checks.py --do-or="no_direct_edits,commit_docs_allow_direct_edits" $COMMIT_HASH ||\
+COMMIT_HASHES=$@
+python3 docs_src/build/checks.py --do-or="no_direct_edits,commit_docs_allow_direct_edits" $COMMIT_HASHES ||\
     (echo "Direct edits to /docs are not allowed. Please see /docs_src/README.md if you need to bypass this check." && exit 1)
