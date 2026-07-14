@@ -2685,7 +2685,7 @@ type aliases:
 **getWorldOffset()**                | float3   |  [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead
 **getUserWorldFromWorldMatrix()**   | float4x4 |  Matrix that converts from world space to API-level (user) world space.
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
-**getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
+**getUserTime()**                   | float4   |  Current time in seconds: `(float)time`, `time - (float)time`, `0`, `0` (where `time` is double-precision)
 **getUserTimeMod(float m)**         | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera
 **getEV100()**                      | float    |  [Exposure value at ISO 100](https://en.wikipedia.org/wiki/Exposure_value) of the camera
@@ -2694,6 +2694,12 @@ type aliases:
     To achieve good precision, the "world space" in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can use `getUserWorldFromWorldMatrix()` to transform `getWorldCameraPosition()`.
+
+!!! TIP: High-precision time
+    `getUserTime()` is encoded using a "float-float" representation to emulate double-precision time
+    with two single-precision floats: `getUserTime().x` holds the float time value, while `getUserTime().y`
+    contains the residual (the difference between double and single precision). This enables shaders
+    to implement high-precision calculations (e.g. for animations) using Dekker's algorithms.
 
 ### Material globals
 
