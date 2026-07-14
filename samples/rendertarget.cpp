@@ -53,7 +53,8 @@ struct Vertex {
     float2 uv;
 };
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     utils::Entity lightEntity;
     Material* meshMaterial;
     MaterialInstance* meshMatInstance;
@@ -107,18 +108,18 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-static void setReflectionMode(App& app, App::ReflectionMode mode) {
+static void setReflectionMode(AppState& app, AppState::ReflectionMode mode) {
     switch (mode) {
-    case App::ReflectionMode::RENDERABLES:
-        app.offscreenScene->addEntity(app.reflectedMonkey);
-        app.offscreenScene->remove(app.monkeyMesh.renderable);
-        app.offscreenView->setFrontFaceWindingInverted(false);
-        break;
-    case App::ReflectionMode::CAMERA:
-        app.offscreenScene->addEntity(app.monkeyMesh.renderable);
-        app.offscreenScene->remove(app.reflectedMonkey);
-        app.offscreenView->setFrontFaceWindingInverted(true);
-        break;
+        case AppState::ReflectionMode::RENDERABLES:
+            app.offscreenScene->addEntity(app.reflectedMonkey);
+            app.offscreenScene->remove(app.monkeyMesh.renderable);
+            app.offscreenView->setFrontFaceWindingInverted(false);
+            break;
+        case AppState::ReflectionMode::CAMERA:
+            app.offscreenScene->addEntity(app.monkeyMesh.renderable);
+            app.offscreenScene->remove(app.reflectedMonkey);
+            app.offscreenView->setFrontFaceWindingInverted(true);
+            break;
     }
     app.mode = mode;
 }
@@ -147,7 +148,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:m:";
     static const utils::getopt::option OPTIONS[] = {
         { "help", utils::getopt::no_argument,       nullptr, 'h' },
@@ -169,9 +170,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'm':
                 if (arg == "camera") {
-                    app->mode = App::ReflectionMode::CAMERA;
+                    app->mode = AppState::ReflectionMode::CAMERA;
                 } else if (arg == "renderables") {
-                    app->mode = App::ReflectionMode::RENDERABLES;
+                    app->mode = AppState::ReflectionMode::RENDERABLES;
                 } else {
                     std::cerr << "Unrecognized mode. Must be 'camera'|'renderables'.\n";
                     exit(1);
@@ -183,7 +184,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
-    App app{};
+    AppState app;
     app.config.title = "rendertarget";
     handleCommandLineArguments(argc, argv, &app);
 
@@ -214,7 +215,7 @@ int main(int argc, char** argv) {
         app.offscreenView->setViewport({0, 0, vp.width, vp.height});
         app.offscreenCamera = engine->createCamera(em.create());
         app.offscreenView->setCamera(app.offscreenCamera);
-        FilamentApp::get().addOffscreenView(app.offscreenView);
+        app.filamentApp.addOffscreenView(app.offscreenView);
 
         // Position and orient the mirror in an interesting way.
         float3 c = app.quadCenter = {-2, 0, -5};
@@ -282,7 +283,7 @@ int main(int argc, char** argv) {
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
         scene->addEntity(app.monkeyMesh.renderable);
 
-        // Create a reflected monkey, which is used only for App::ReflectionMode::RENDERABLES.
+        // Create a reflected monkey, which is used only for AppState::ReflectionMode::RENDERABLES.
         app.reflectedMonkey = em.create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
@@ -337,7 +338,7 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         auto& tcm = engine->getTransformManager();
 
         // Animate the monkey by spinning and sliding back and forth along Z.
@@ -359,17 +360,17 @@ int main(int argc, char** argv) {
         app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection,
                 camera.getNear(), camera.getCullingFar());
         switch (app.mode) {
-            case App::ReflectionMode::RENDERABLES:
+            case AppState::ReflectionMode::RENDERABLES:
                 tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
                 app.offscreenCamera->setModelMatrix(model);
                 break;
-            case App::ReflectionMode::CAMERA:
+            case AppState::ReflectionMode::CAMERA:
                 app.offscreenCamera->setModelMatrix(reflection * model);
                 break;
         }
     });
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+    app.filamentApp.run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
 
     return 0;
 }

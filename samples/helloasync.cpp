@@ -116,7 +116,8 @@ static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
     return utils::getopt::optind;
 }
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     // Global data
     Engine* engine = nullptr;
     Entity camera;
@@ -437,7 +438,7 @@ int main(int argc, char** argv) {
     config.asynchronousMode = backend::AsynchronousMode::THREAD_PREFERRED;
     handleCommandLineArguments(argc, argv, config);
 
-    App app;
+    AppState app;
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
@@ -458,16 +459,16 @@ int main(int argc, char** argv) {
         view->setPostProcessingEnabled(false);
 
         // Pre-calculate the layout transform for each object in a centered 2D grid arrangement.
-        const float rowStart = (App::ROW_COUNT - 1) * 0.5f;
-        for (int i = 0; i < App::OBJECT_COUNT; ++i) {
-            int row = i / App::OBJECT_COUNT_PER_ROW;
-            int col = i % App::OBJECT_COUNT_PER_ROW;
+        const float rowStart = (AppState::ROW_COUNT - 1) * 0.5f;
+        for (int i = 0; i < AppState::OBJECT_COUNT; ++i) {
+            int row = i / AppState::OBJECT_COUNT_PER_ROW;
+            int col = i % AppState::OBJECT_COUNT_PER_ROW;
 
             // Calculate number of items in this row to center it horizontally.
             // Usually equal to OBJECT_COUNT_PER_ROW, except for the last partial row.
-            int colCountForThisRow = std::min(
-                    App::OBJECT_COUNT - (row * App::OBJECT_COUNT_PER_ROW),
-                    App::OBJECT_COUNT_PER_ROW);
+            int colCountForThisRow =
+                    std::min(AppState::OBJECT_COUNT - (row * AppState::OBJECT_COUNT_PER_ROW),
+                            AppState::OBJECT_COUNT_PER_ROW);
             float colStart = (colCountForThisRow - 1) * 0.5f;
 
             auto s = math::mat4f::scaling(math::float3(0.4f, 0.4f, 0.4f));
@@ -515,7 +516,7 @@ int main(int argc, char** argv) {
             app.loadImage();
             app.createMaterial();
             // Load renderables synchronously
-            for (int i = 0; i < App::OBJECT_COUNT; ++i) {
+            for (int i = 0; i < AppState::OBJECT_COUNT; ++i) {
                 void* data = &app.objectData[i];
                 app.createTexture(data);
                 app.updateTexture(data);
@@ -534,7 +535,7 @@ int main(int argc, char** argv) {
         // completion callbacks after cleanup.
         app.shuttingDown = true;
 
-        for (int i = 0; i < App::OBJECT_COUNT; ++i) {
+        for (int i = 0; i < AppState::OBJECT_COUNT; ++i) {
             auto& data = app.objectData[i];
             if (data.renderable) {
                 engine->destroy(data.renderable);
@@ -564,9 +565,9 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         auto& tm = engine->getTransformManager();
-        for (int i = 0; i < App::OBJECT_COUNT; ++i) {
+        for (int i = 0; i < AppState::OBJECT_COUNT; ++i) {
             auto& data = app.objectData[i];
             if (!data.renderable) {
                 continue; // Skip updating transform for renderables that are not loaded yet.
@@ -576,7 +577,7 @@ int main(int argc, char** argv) {
         }
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

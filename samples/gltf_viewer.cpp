@@ -93,7 +93,8 @@ enum MaterialSource {
     UBERSHADER,
 };
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Engine* engine;
     ViewerGui* viewer;
     Config config;
@@ -225,7 +226,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
     return in.tellg();
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:f:i:usc:rt:y:b:evg:dw:x";
     static const utils::getopt::option OPTIONS[] = {
         { "help",              utils::getopt::no_argument,          nullptr, 'h' },
@@ -359,7 +360,7 @@ static bool loadSettings(const char* filename, Settings* out) {
     return serializer.readJson(json.data(), contentSize, out);
 }
 
-static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
+static void createGroundPlane(Engine* engine, Scene* scene, AppState& app) {
     auto& em = EntityManager::get();
     Material* shadowMaterial = Material::Builder()
             .package(GLTF_DEMO_GROUNDSHADOW_DATA, GLTF_DEMO_GROUNDSHADOW_SIZE)
@@ -456,19 +457,19 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& app) {
+static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, AppState& app) {
     Material* material = Material::Builder()
             .package(GLTF_DEMO_OVERDRAW_DATA, GLTF_DEMO_OVERDRAW_SIZE)
             .build(*engine);
 
-    const float3 overdrawColors[App::Scene::OVERDRAW_LAYERS] = {
-            {0.0f, 0.0f, 1.0f},     // blue         (overdrawn 1 time)
-            {0.0f, 1.0f, 0.0f},     // green        (overdrawn 2 times)
-            {1.0f, 0.0f, 1.0f},     // magenta      (overdrawn 3 times)
-            {1.0f, 0.0f, 0.0f}      // red          (overdrawn 4+ times)
+    const float3 overdrawColors[AppState::Scene::OVERDRAW_LAYERS] = {
+        { 0.0f, 0.0f, 1.0f }, // blue         (overdrawn 1 time)
+        { 0.0f, 1.0f, 0.0f }, // green        (overdrawn 2 times)
+        { 1.0f, 0.0f, 1.0f }, // magenta      (overdrawn 3 times)
+        { 1.0f, 0.0f, 0.0f }  // red          (overdrawn 4+ times)
     };
 
-    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+    for (auto i = 0; i < AppState::Scene::OVERDRAW_LAYERS; i++) {
         MaterialInstance* matInstance = material->createInstance();
         // TODO: move this to the material definition.
         matInstance->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::E);
@@ -479,7 +480,7 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& 
         matInstance->setParameter("color", overdrawColors[i]);
         app.scene.overdrawMaterialInstances[i] = matInstance;
     }
-    auto& lastMi = app.scene.overdrawMaterialInstances[App::Scene::OVERDRAW_LAYERS - 1];
+    auto& lastMi = app.scene.overdrawMaterialInstances[AppState::Scene::OVERDRAW_LAYERS - 1];
     // This seems backwards, but it isn't. The comparison function compares:
     // the reference value (left side) <= stored stencil value (right side)
     lastMi->setStencilCompareFunction(MaterialInstance::StencilCompareFunc::LE);
@@ -503,15 +504,16 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& 
 
     auto& em = EntityManager::get();
     const auto& matInstances = app.scene.overdrawMaterialInstances;
-    for (auto i = 0; i < App::Scene::OVERDRAW_LAYERS; i++) {
+    for (auto i = 0; i < AppState::Scene::OVERDRAW_LAYERS; i++) {
         Entity overdrawEntity = em.create();
         RenderableManager::Builder(1)
-                .boundingBox({{}, {1.0f, 1.0f, 1.0f}})
+                .boundingBox({ {}, { 1.0f, 1.0f, 1.0f } })
                 .material(0, matInstances[i])
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer,
+                        0, 3)
                 .culling(false)
-                .priority(7u)   // ensure the overdraw primitives are drawn last
-                .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
+                .priority(7u) // ensure the overdraw primitives are drawn last
+                .layerMask(0xFF, 1u << AppState::Scene::OVERDRAW_VISIBILITY_LAYER)
                 .build(*engine, overdrawEntity);
         scene->addEntity(overdrawEntity);
         app.scene.overdrawVisualizer[i] = overdrawEntity;
@@ -522,7 +524,7 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App& 
     app.scene.fullScreenTriangleIndexBuffer = indexBuffer;
 }
 
-static void onClick(App& app, View* view, ImVec2 pos) {
+static void onClick(AppState& app, View* view, ImVec2 pos) {
     view->pick(pos.x, pos.y, [&app](View::PickingQueryResult const& result){
         if (const char* name = app.asset->getName(result.renderable); name) {
             app.notificationText = name;
@@ -612,7 +614,7 @@ static bool checkGLTFAsset(const utils::Path& filename) {
 
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
 
     app.config.title = "Filament";
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
@@ -684,7 +686,7 @@ int main(int argc, char** argv) {
     };
 
     auto setupIBL = [&app]() {
-        auto ibl = FilamentApp::get().getIBL();
+        auto ibl = app.filamentApp.getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
             app.viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
@@ -932,7 +934,7 @@ int main(int argc, char** argv) {
                 ImGui::Indent();
                 ImGui::Text("%zu entities in the asset", app.asset->getEntityCount());
                 ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
-                ImGui::Text("%zu skipped frames", FilamentApp::get().getSkippedFrameCount());
+                ImGui::Text("%zu skipped frames", app.filamentApp.getSkippedFrameCount());
                 ImGui::Unindent();
             }
 
@@ -1000,13 +1002,13 @@ int main(int argc, char** argv) {
                     }
                 }
 
-                bool cameraFrustum = FilamentApp::get().isCameraFrustumEnabled();
+                bool cameraFrustum = app.filamentApp.isCameraFrustumEnabled();
                 ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
-                FilamentApp::get().setCameraFrustumEnabled(cameraFrustum);
+                app.filamentApp.setCameraFrustumEnabled(cameraFrustum);
 
-                bool shadowFrustum = FilamentApp::get().isDirectionalShadowFrustumEnabled();
+                bool shadowFrustum = app.filamentApp.isDirectionalShadowFrustumEnabled();
                 ImGui::Checkbox("Show Shadow Frustum", &shadowFrustum);
-                FilamentApp::get().setDirectionalShadowFrustumEnabled(shadowFrustum);
+                app.filamentApp.setDirectionalShadowFrustumEnabled(shadowFrustum);
 
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
@@ -1014,7 +1016,7 @@ int main(int argc, char** argv) {
                     ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
                     debug.setProperty("d.lighting.debug_froxel_visualization",
                             debugFroxelVisualization);
-                    FilamentApp::get().setFroxelGridEnabled(debugFroxelVisualization);
+                    app.filamentApp.setFroxelGridEnabled(debugFroxelVisualization);
                 }
 
                 auto dataSource = debug.getDataSource("d.view.frame_info");
@@ -1055,11 +1057,12 @@ int main(int argc, char** argv) {
                 debugSliderFloat("Ki", "d.view.pid.ki", 0, 10);
                 debugSliderFloat("Kd", "d.view.pid.kd", 0, 10);
 #endif
-                const auto overdrawVisibilityBit = (1u << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                const auto overdrawVisibilityBit =
+                        (1u << AppState::Scene::OVERDRAW_VISIBILITY_LAYER);
                 bool visualizeOverdraw = view->getVisibleLayers() & overdrawVisibilityBit;
                 ImGui::Checkbox("Visualize overdraw", &visualizeOverdraw);
                 view->setVisibleLayers(overdrawVisibilityBit,
-                        (uint8_t)visualizeOverdraw << App::Scene::OVERDRAW_VISIBILITY_LAYER);
+                        (uint8_t) visualizeOverdraw << AppState::Scene::OVERDRAW_VISIBILITY_LAYER);
                 app.viewer->getSettings().view.stencilBufferEnabled = visualizeOverdraw;
             }
 
@@ -1152,7 +1155,7 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine*, View*) {
         app.viewer->updateUserInterface();
 
-        FilamentApp::get().setSidebarWidth(app.viewer->getSidebarWidth());
+        app.filamentApp.setSidebarWidth(app.viewer->getSidebarWidth());
     };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
@@ -1164,7 +1167,7 @@ int main(int argc, char** argv) {
 
         engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
 
-        if (auto* swapChain = FilamentApp::get().getPrimarySwapChain()) {
+        if (auto* swapChain = app.filamentApp.getPrimarySwapChain()) {
             if (swapChain->isFrameRateChangeSupported().is_true()) {
                 if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
                     swapChain->setFrameRate(viewerOptions.cameraFrameRate,
@@ -1184,8 +1187,8 @@ int main(int argc, char** argv) {
                                   std::max(0.1f, focusDistance)) *
                           1000.0;
         }
-        FilamentApp::get().setCameraFocalLength(focalLength);
-        FilamentApp::get().setCameraNearFar(app.viewer->getSettings().camera.near,
+        app.filamentApp.setCameraFocalLength(focalLength);
+        app.filamentApp.setCameraNearFar(app.viewer->getSettings().camera.near,
                 app.viewer->getSettings().camera.far);
 
         size_t const cameraCount = app.asset->getCameraEntityCount();
@@ -1208,7 +1211,7 @@ int main(int argc, char** argv) {
         static bool stereoscopicEnabled = false;
         if (stereoscopicEnabled != view->getStereoscopicOptions().enabled) {
             // Stereo was turned on/off.
-            FilamentApp::get().reconfigureCameras();
+            app.filamentApp.reconfigureCameras();
             stereoscopicEnabled = view->getStereoscopicOptions().enabled;
         }
 
@@ -1266,7 +1269,7 @@ int main(int argc, char** argv) {
             app.screenshot = false;
         }
         if (app.automationEngine->shouldClose()) {
-            FilamentApp::get().close();
+            app.filamentApp.close();
             return;
         }
         AutomationEngine::ViewerContent const content = {
@@ -1284,11 +1287,11 @@ int main(int argc, char** argv) {
         app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
 
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.animate(animate);
-    filamentApp.resize(resize);
 
-    filamentApp.setDropHandler([&](std::string_view path) {
+    app.filamentApp.animate(animate);
+    app.filamentApp.resize(resize);
+
+    app.filamentApp.setDropHandler([&](std::string_view path) {
         utils::Path filename = getPathForGLTFAsset(path);
         if (!filename.isEmpty()) {
             if (checkGLTFAsset(filename)) {
@@ -1305,12 +1308,12 @@ int main(int argc, char** argv) {
 
         filename = getPathForIBLAsset(path);
         if (!filename.isEmpty()) {
-            FilamentApp::get().loadIBL(path);
+            app.filamentApp.loadIBL(path);
             setupIBL();
         }
     });
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
+    app.filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
 
     return 0;
 }

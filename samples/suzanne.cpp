@@ -52,7 +52,8 @@ using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Material* material;
     MaterialInstance* materialInstance;
     filamesh::MeshReader::Mesh mesh;
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
 
     handleCommandLineArguments(argc, argv, &config);
 
-    App app;
+    AppState app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
@@ -182,7 +183,7 @@ int main(int argc, char** argv) {
         app.materialInstance->setParameter("normal", app.normal, sampler);
         app.materialInstance->setParameter("roughness", app.roughness, sampler);
 
-        auto ibl = FilamentApp::get().getIBL()->getIndirectLight();
+        auto ibl = app.filamentApp.getIBL()->getIndirectLight();
         ibl->setIntensity(100000);
         ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
@@ -207,7 +208,7 @@ int main(int argc, char** argv) {
         engine->destroy(app.ao);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

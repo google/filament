@@ -62,7 +62,8 @@ enum MaterialSource {
     UBERSHADER,
 };
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Engine* engine;
     ViewerGui* viewer;
     Config config;
@@ -112,7 +113,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:i:un:m:";
     static const utils::getopt::option OPTIONS[] = {
         { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -158,7 +159,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
 
     app.config.title = "glTF Instancing";
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
@@ -241,7 +242,7 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        auto ibl = FilamentApp::get().getIBL();
+        auto ibl = app.filamentApp.getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
         }
@@ -344,10 +345,10 @@ int main(int argc, char** argv) {
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { };
 
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.animate(animate);
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    app.filamentApp.animate(animate);
+
+    app.filamentApp.run(app.config, setup, cleanup, gui, preRender);
 
     return 0;
 }

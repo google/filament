@@ -29,12 +29,13 @@
 using namespace filament;
 
 int main(int argc, char** argv) {
+    FilamentApp filamentApp;
     Config config;
     config.title = "strobecolor";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
     Skybox* skybox;
 
-    auto setup = [&skybox](Engine* engine, View* view, Scene* scene) {
+    auto setup = [&skybox, &filamentApp](Engine* engine, View* view, Scene* scene) {
         skybox = Skybox::Builder().color({ 0.0, 0.25, 0.5, 1.0 }).build(*engine);
         scene->setSkybox(skybox);
         view->setPostProcessingEnabled(false);
@@ -43,7 +44,7 @@ int main(int argc, char** argv) {
     auto cleanup = [](Engine*, View*, Scene*) {
     };
 
-    FilamentApp::get().animate([&skybox](Engine*, View* view, double now) {
+    filamentApp.animate([&skybox](Engine*, View* view, double now) {
         constexpr float SPEED = 4;
         float r = 0.5f + 0.5f * std::sin(SPEED * now);
         float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
@@ -51,7 +52,7 @@ int main(int argc, char** argv) {
         skybox->setColor({r, g, b, 1.0});
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

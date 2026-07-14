@@ -79,7 +79,7 @@ public:
     using ResizeCallback = std::function<void(filament::Engine*, filament::View*)>;
     using DropCallback = std::function<void(std::string_view)>;
 
-    static FilamentApp& get();
+    explicit FilamentApp(filament::app::DisplayManager* displayManager = nullptr);
 
     ~FilamentApp();
 
@@ -160,8 +160,6 @@ public:
     static const utils::Path& getRootAssetsPath();
 
 private:
-    FilamentApp();
-
     using CameraManipulator = filament::camutils::Manipulator<float>;
 
     static bool manipulatorKeyFromKeycode(filament::app::AppKey scancode,

@@ -51,7 +51,8 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -73,7 +74,7 @@ struct Vertex {
 #define MAX_POINT_SIZE 128.0f
 #define MIN_POINT_SIZE 12.0f
 
-void createSplatTexture(App& app, Engine* engine) {
+void createSplatTexture(AppState& app, Engine* engine) {
 
     // To generate a Gaussian splat, create a single-channel 3x3 texture with a bright pixel in
     // its center, then magnify it using a Gaussian filter kernel.
@@ -93,7 +94,7 @@ void createSplatTexture(App& app, Engine* engine) {
     app.tex->setImage(*engine, 0, std::move(buffer));
 }
 
-void setup(App& app, Engine* engine, View* view, Scene* scene) {
+void setup(AppState& app, Engine* engine, View* view, Scene* scene) {
 
     createSplatTexture(app, engine);
 
@@ -165,7 +166,7 @@ void setup(App& app, Engine* engine, View* view, Scene* scene) {
     scene->setSkybox(app.skybox);
 };
 
-void cleanup(App& app, Engine* engine) {
+void cleanup(AppState& app, Engine* engine) {
     engine->destroy(app.skybox);
     engine->destroy(app.renderable);
     engine->destroy(app.matInstance);
@@ -177,7 +178,7 @@ void cleanup(App& app, Engine* engine) {
     utils::EntityManager::get().destroy(app.camera);
 }
 
-void animate(App& app, Engine* engine, View* view, double now) {
+void animate(AppState& app, Engine* engine, View* view, double now) {
     constexpr float ZOOM = 1.5f;
     const uint32_t w = view->getViewport().width;
     const uint32_t h = view->getViewport().height;
@@ -193,9 +194,10 @@ int main(int argc, char** argv) {
     config.title = "point_sprites";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
-    App app;
-    FilamentApp::get().animate([&app](Engine* e, View* v, double now) { animate(app, e, v, now); });
-    FilamentApp::get().run(config,
+    AppState app;
+    app.filamentApp.animate([&app](Engine* e, View* v, double now) { animate(app, e, v, now); });
+    app.filamentApp.run(
+            config,
             [&app](Engine* engine, View* view, Scene* scene) { setup(app, engine, view, scene); },
             [&app](Engine* engine, View*, Scene*) { cleanup(app, engine); });
 

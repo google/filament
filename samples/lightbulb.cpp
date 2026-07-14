@@ -189,20 +189,18 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 }
 #pragma clang diagnostic pop
 
-static void preRender(filament::Engine* engine, filament::View* view, filament::Scene*,
-        filament::Renderer* renderer) {
+static void preRender(FilamentApp& filamentApp, filament::Engine* engine, filament::View* view,
+        filament::Scene* scene, filament::Renderer* renderer) {
 
     // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
-
+    renderer->setClearOptions(
+            { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !filamentApp.getIBL() });
 }
 
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
-static void setup(Engine* engine, View* view, Scene* scene) {
+static void setup(FilamentApp& filamentApp, Engine* engine, View* view, Scene* scene) {
     g_meshSet.reset(new MeshAssimp(*engine));
     for (auto& filename : g_filenames) {
         g_meshSet->addFromFile(filename, g_materialLibrary);
@@ -296,7 +294,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             scene->addEntity(light);
             const LightManager::Instance& instance = lcm.getInstance(light);
             if (!lcm.isDirectional(instance)) {
-                g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+                g_spheres.emplace_back(*engine, filamentApp.getDefaultMaterial());
                 g_spheres.back()
                          .setRadius(0.025f)
                          .setPosition(lcm.getPosition(instance));
@@ -340,7 +338,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         }
         g_discoBallEntity = discoBall;
 
-        g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+        g_spheres.emplace_back(*engine, filamentApp.getDefaultMaterial());
         g_spheres.back().setRadius(0.2f);
         auto mi = g_spheres.back().getMaterialInstance();
         mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ 1, 1, 1, 1 });
@@ -351,7 +349,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         tcm.setParent(tcm.getInstance(g_spheres.back().getSolidRenderable()), tcm.getInstance(discoBall));
     }
 
-    g_meshAabb.reset(new Cube(*engine, FilamentApp::get().getTransparentMaterial(), {0,0,1}));
+    g_meshAabb.reset(new Cube(*engine, filamentApp.getTransparentMaterial(), { 0, 0, 1 }));
 
     // First object in the scene
     Entity object = g_meshSet->getRenderables()[1];
@@ -439,6 +437,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 #pragma clang diagnostic pop
 
 int main(int argc, char* argv[]) {
+    FilamentApp filamentApp;
     int option_index = handleCommandLineArgments(argc, argv, &g_config);
     int num_args = argc - option_index;
     if (num_args < 1) {
@@ -456,7 +455,7 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "Lightbulb";
-    FilamentApp& filamentApp = FilamentApp::get();
+
 
     double lastTime = 0;
     if (g_discoBall) {
@@ -475,7 +474,14 @@ int main(int argc, char* argv[]) {
         });
     }
 
-    filamentApp.run(g_config, setup, cleanup, {}, preRender);
+    auto setupLambda = [&filamentApp](Engine* engine, View* view, Scene* scene) {
+        setup(filamentApp, engine, view, scene);
+    };
+    auto preRenderLambda = [&filamentApp](filament::Engine* engine, filament::View* view,
+                                   filament::Scene* scene, filament::Renderer* renderer) {
+        preRender(filamentApp, engine, view, scene, renderer);
+    };
+    filamentApp.run(g_config, setupLambda, cleanup, {}, preRenderLambda);
 
     return 0;
 }

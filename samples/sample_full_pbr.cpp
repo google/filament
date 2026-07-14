@@ -449,17 +449,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(g_light);
 }
 
-static void preRender(filament::Engine*, filament::View*, filament::Scene*,
-        filament::Renderer* renderer) {
-
-    // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
-
-}
 
 int main(int argc, char* argv[]) {
+    FilamentApp filamentApp;
     int const option_index = handleCommandLineArgments(argc, argv, &g_config);
     int const num_args = argc - option_index;
     if (num_args < 1) {
@@ -477,7 +469,14 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "PBR";
-    FilamentApp& filamentApp = FilamentApp::get();
+
+    auto preRender = [&filamentApp](filament::Engine*, filament::View*, filament::Scene*,
+                             filament::Renderer* renderer) {
+        // Without an IBL, we must clear the swapchain to black before each frame.
+        renderer->setClearOptions(
+                { .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f }, .clear = !filamentApp.getIBL() });
+    };
+
     filamentApp.run(g_config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
 
     return 0;

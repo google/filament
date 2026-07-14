@@ -56,7 +56,8 @@ struct Vertex {
     float2 uv;
 };
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Config config;
 
     Material* monkeyMaterial;
@@ -106,7 +107,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:y:m:";
     static const utils::getopt::option OPTIONS[] = {
         { "help",    utils::getopt::no_argument,       nullptr, 'h' },
@@ -166,7 +167,7 @@ int main(int argc, char** argv) {
     exit(1);
 #endif
 
-    App app{};
+    AppState app;
     app.config.title = "stereoscopic rendering";
     handleCommandLineArguments(argc, argv, &app);
 
@@ -248,7 +249,7 @@ int main(int argc, char** argv) {
         app.stereoCamera = engine->createCamera(em.create());
         app.stereoView->setCamera(app.stereoCamera);
         app.stereoView->setStereoscopicOptions({.enabled = true});
-        FilamentApp::get().addOffscreenView(app.stereoView);
+        app.filamentApp.addOffscreenView(app.stereoView);
 
         // Camera settings for the stereo render target
         constexpr double projNear  = 0.1;
@@ -369,7 +370,7 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         auto& tcm = engine->getTransformManager();
 
         // Animate the monkey by spinning and sliding back and forth along Z.
@@ -378,7 +379,7 @@ int main(int argc, char** argv) {
         tcm.setTransform(ti, xform);
     });
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+    app.filamentApp.run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
 
     return 0;
 }

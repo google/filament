@@ -33,7 +33,8 @@
 
 using namespace filament;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -47,7 +48,7 @@ static constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };
 static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
 static constexpr float ZOOM = 1.5f;
 
-static void setCameraProjection(App* app, View* view) {
+static void setCameraProjection(AppState* app, View* view) {
     const uint32_t w = view->getViewport().width;
     const uint32_t h = view->getViewport().height;
     const float aspect = (float) w / h;
@@ -66,7 +67,7 @@ int main(int argc, char** argv) {
     memcpy(vbo.data(), POSITIONS, sizeof(POSITIONS));
     memcpy(vbo.data() + sizeof(POSITIONS), COLORS, sizeof(COLORS));
 
-    App app;
+    AppState app;
     auto setup = [&app, &vbo](Engine* engine, View* view, Scene* scene) {
         // Populate vertex buffer.
         app.vb = VertexBuffer::Builder().vertexCount(3).bufferCount(1)
@@ -107,11 +108,9 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().resize([&app](Engine* engine, View* view) {
-        setCameraProjection(&app, view);
-    });
+    app.filamentApp.resize([&app](Engine* engine, View* view) { setCameraProjection(&app, view); });
 
-    FilamentApp::get().run(config, setup, cleanup, FilamentApp::ImGuiCallback(),
+    app.filamentApp.run(config, setup, cleanup, FilamentApp::ImGuiCallback(),
             [](Engine*, View*, Scene*, Renderer* renderer) {
                 Renderer::ClearOptions options;
                 options.clear = true;

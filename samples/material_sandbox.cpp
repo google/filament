@@ -214,7 +214,7 @@ static void cleanup(Engine* engine, View*, Scene*) {
     em.destroy(g_params.spotLight);
 }
 
-static void setup(Engine* engine, View*, Scene* scene) {
+static void setup(FilamentApp& filamentApp, Engine* engine, View* view, Scene* scene) {
     g_scene = scene;
 
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
@@ -326,7 +326,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 mat4f::translation(float3{ 0, -1, -4 }));
     }
 
-    if (auto* ibl = FilamentApp::get().getIBL()) {
+    if (auto* ibl = filamentApp.getIBL()) {
         auto& params = g_params;
         IndirectLight* const pIndirectLight = ibl->getIndirectLight();
         // If we loaded an equirectangular IBL, we don't have spherical harmonics. In that case,
@@ -341,7 +341,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         }
     }
 
-    g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
+    g_params.bloomOptions.dirt = filamentApp.getDirtTexture();
 }
 
 static MaterialInstance* updateInstances(SandboxParameters& params) {
@@ -513,7 +513,7 @@ static void pushSliderColors(const float hue) {
 
 static void popSliderColors() { ImGui::PopStyleColor(4); }
 
-static void gui(Engine* engine, View*) {
+static void gui(FilamentApp& filamentApp, Engine* engine, View* view) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
@@ -614,8 +614,8 @@ static void gui(Engine* engine, View*) {
             ImGui::SliderFloat("Far", &params.cameraFar, 1.0f, 10000.0f);
             ImGui::Unindent();
 
-            FilamentApp::get().setCameraFocalLength(params.cameraFocalLength);
-            FilamentApp::get().setCameraNearFar(params.cameraNear, params.cameraFar);
+            filamentApp.setCameraFocalLength(params.cameraFocalLength);
+            filamentApp.setCameraNearFar(params.cameraNear, params.cameraFar);
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {
@@ -942,7 +942,7 @@ static void gui(Engine* engine, View*) {
         params.hasDirectionalLight = false;
     }
 
-    if (auto* ibl = FilamentApp::get().getIBL()) {
+    if (auto* ibl = filamentApp.getIBL()) {
         ibl->getIndirectLight()->setIntensity(params.iblIntensity);
         ibl->getIndirectLight()->setRotation(
                 mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
@@ -988,7 +988,8 @@ static void gui(Engine* engine, View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
+static void preRender(FilamentApp& filamentApp, Engine* engine, View* view, Scene* scene,
+        Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
@@ -1039,15 +1040,15 @@ static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     }
 
     // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
+    renderer->setClearOptions(
+            { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !filamentApp.getIBL() });
 
     Camera& camera = view->getCamera();
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
 }
 
 int main(const int argc, char* argv[]) {
+    FilamentApp filamentApp;
     const int option_index = handleCommandLineArgments(argc, argv, &g_config);
     const int num_args = argc - option_index;
     if (num_args < 1) {
@@ -1067,7 +1068,15 @@ int main(const int argc, char* argv[]) {
     g_params.bloomOptions.enabled = true;
 
     g_config.title = "Material Sandbox";
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup, gui, preRender);
+
+    auto setupLambda = [&filamentApp](Engine* engine, View* view, Scene* scene) {
+        setup(filamentApp, engine, view, scene);
+    };
+    auto guiLambda = [&filamentApp](Engine* engine, View* view) { gui(filamentApp, engine, view); };
+    auto preRenderLambda = [&filamentApp](Engine* engine, View* view, Scene* scene,
+                                   Renderer* renderer) {
+        preRender(filamentApp, engine, view, scene, renderer);
+    };
+    filamentApp.run(g_config, setupLambda, cleanup, guiLambda, preRenderLambda);
     return 0;
 }

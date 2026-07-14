@@ -183,7 +183,8 @@ struct Emitter {
 };
 
 // Holds all the state for this application.
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
 
     struct UiState {
@@ -223,24 +224,24 @@ struct App {
 // ------------------------------------------------------------------------------------------------
 
 static void printUsage(char* name);
-static int handleCommandLineArguments(int argc, char* argv[], App* app);
-static void doUserInterface(App& app);
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app);
+static void doUserInterface(AppState& app);
 static void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition);
-static void setupSkybox(Engine& engine, Scene& scene, App& app);
-static void setupGroundPlane(Engine& engine, Scene& scene, App& app);
-static void setupMoonlight(Engine& engine, Scene& scene, App& app);
-static void createEmitterResources(Engine& engine, App& app);
-static void createEmitterInstances(Engine& engine, Scene& scene, App& app);
-static void setupFireworks(App& app);
+static void setupSkybox(Engine& engine, Scene& scene, AppState& app);
+static void setupGroundPlane(Engine& engine, Scene& scene, AppState& app);
+static void setupMoonlight(Engine& engine, Scene& scene, AppState& app);
+static void createEmitterResources(Engine& engine, AppState& app);
+static void createEmitterInstances(Engine& engine, Scene& scene, AppState& app);
+static void setupFireworks(AppState& app);
 static void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, double now,
-        double dt, std::mt19937& gen, const App& app);
+        double dt, std::mt19937& gen, const AppState& app);
 
 // ------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------
 
 int main(int const argc, char** argv) {
-    App app;
+    AppState app;
     app.config.title = "Hybrid Instancing";
     handleCommandLineArguments(argc, argv, &app);
 
@@ -296,17 +297,17 @@ int main(int const argc, char** argv) {
             app.emitters.clear();
             createEmitterInstances(*engine, *app.scene, app);
             app.currentEmitterCount = app.ui.emitterCount;
-            if (app.ui.emitterMode == App::EmitterMode::FIREWORKS) {
+            if (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS) {
                 setupFireworks(app);
             }
         }
 
         // If fireworks mode has just been enabled, set up the emitters for it.
-        if (app.ui.emitterMode == App::EmitterMode::FIREWORKS &&
-            app.previousFireworksMode == false) {
+        if (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS &&
+                app.previousFireworksMode == false) {
             setupFireworks(app);
         }
-        app.previousFireworksMode = (app.ui.emitterMode == App::EmitterMode::FIREWORKS);
+        app.previousFireworksMode = (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS);
 
         // Calculate the time delta since the last frame.
         double dt = now - app.lastTime;
@@ -328,8 +329,8 @@ int main(int const argc, char** argv) {
         doUserInterface(app);
     };
 
-    FilamentApp::get().animate(animate);
-    FilamentApp::get().run(app.config, setup, cleanup, imgui);
+    app.filamentApp.animate(animate);
+    app.filamentApp.run(app.config, setup, cleanup, imgui);
 
     return 0;
 }
@@ -339,7 +340,7 @@ int main(int const argc, char** argv) {
 // ------------------------------------------------------------------------------------------------
 
 // Renders the ImGui UI controls.
-void doUserInterface(App& app) {
+void doUserInterface(AppState& app) {
     ImGui::Begin("Controls");
     ImGui::SliderInt("Emitters", &app.ui.emitterCount, EMITTER_COUNT_MIN, EMITTER_COUNT_MAX);
     ImGui::Checkbox("Freeze Particles", &app.ui.particlesFrozen);
@@ -350,12 +351,13 @@ void doUserInterface(App& app) {
     ImGui::Checkbox("Enable Lights", &app.ui.lightsEnabled);
     ImGui::Checkbox("Moonlight", &app.ui.moonlightEnabled);
 
-    bool fireworks = (app.ui.emitterMode == App::EmitterMode::FIREWORKS);
+    bool fireworks = (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS);
     if (ImGui::Checkbox("Fireworks Mode", &fireworks)) {
-        app.ui.emitterMode = fireworks ? App::EmitterMode::FIREWORKS : App::EmitterMode::CONTINUOUS;
+        app.ui.emitterMode =
+                fireworks ? AppState::EmitterMode::FIREWORKS : AppState::EmitterMode::CONTINUOUS;
     }
 
-    if (app.ui.emitterMode == App::EmitterMode::FIREWORKS) {
+    if (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS) {
         ImGui::SliderFloat("Delay", &app.ui.fireworksDelay, FIREWORKS_DELAY_MIN,
                 FIREWORKS_DELAY_MAX);
     }
@@ -390,7 +392,7 @@ static void printUsage(char* name) {
 }
 
 // Parses command-line arguments.
-static int handleCommandLineArguments(int const argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int const argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "he:a:c:";
     static constexpr utils::getopt::option OPTIONS[] = {
         { "help", utils::getopt::no_argument, nullptr, 'h' },
@@ -446,13 +448,13 @@ static void resetParticle(Particle& particle, std::mt19937& gen, const float3& e
 }
 
 // Creates a simple skybox with a solid color.
-void setupSkybox(Engine& engine, Scene& scene, App& app) {
+void setupSkybox(Engine& engine, Scene& scene, AppState& app) {
     app.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(engine);
     scene.setSkybox(app.skybox);
 }
 
 // Creates a ground plane to receive shadows.
-void setupGroundPlane(Engine& engine, Scene& scene, App& app) {
+void setupGroundPlane(Engine& engine, Scene& scene, AppState& app) {
     app.groundMaterial = Material::Builder()
                          .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                          .build(engine);
@@ -514,7 +516,7 @@ void setupGroundPlane(Engine& engine, Scene& scene, App& app) {
 }
 
 // Creates a directional light to simulate moonlight.
-void setupMoonlight(Engine& engine, Scene& scene, App& app) {
+void setupMoonlight(Engine& engine, Scene& scene, AppState& app) {
     app.moonlight = EntityManager::get().create();
     LightManager::Builder(LightManager::Type::DIRECTIONAL)
             .color(Color::toLinear<ACCURATE>(sRGBColor(0.8f, 0.9f, 1.0f)))
@@ -526,7 +528,7 @@ void setupMoonlight(Engine& engine, Scene& scene, App& app) {
 }
 
 // Creates resources that are shared among all emitters.
-void createEmitterResources(Engine& engine, App& app) {
+void createEmitterResources(Engine& engine, AppState& app) {
     app.vb = VertexBuffer::Builder()
              .vertexCount(3)
              .bufferCount(1)
@@ -546,7 +548,7 @@ void createEmitterResources(Engine& engine, App& app) {
 }
 
 // Creates the particle emitters and their associated Filament resources.
-void createEmitterInstances(Engine& engine, Scene& scene, App& app) {
+void createEmitterInstances(Engine& engine, Scene& scene, AppState& app) {
     std::mt19937 gen(0); // Standard mersenne_twister_engine seeded with 0
     std::uniform_real_distribution fdist(EMITTER_FREQUENCY_MIN, EMITTER_FREQUENCY_MAX);
     std::uniform_real_distribution xdist(EMITTER_X_RADIUS_MIN, EMITTER_X_RADIUS_MAX);
@@ -600,7 +602,7 @@ void createEmitterInstances(Engine& engine, Scene& scene, App& app) {
 }
 
 // Sets up the initial state for fireworks mode.
-void setupFireworks(App& app) {
+void setupFireworks(AppState& app) {
     for (int i = 0; i < app.emitters.size(); ++i) {
         auto& emitter = app.emitters[i];
         emitter.timeToBurst = (float(i) / float(app.emitters.size())) * app.ui.fireworksDelay;
@@ -613,7 +615,7 @@ void setupFireworks(App& app) {
 
 // Animates a single emitter and its particles.
 void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, double now,
-        double dt, std::mt19937& gen, const App& app) {
+        double dt, std::mt19937& gen, const AppState& app) {
     // If particles are frozen, skip all updates for this emitter.
     // This also effectively freezes the emitter's movement.
     if (app.ui.particlesFrozen) {
@@ -638,7 +640,7 @@ void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, d
     if (!app.ui.lightsEnabled) {
         lm.setIntensity(lightInstance, 0.0f);
     } else {
-        if (app.ui.emitterMode == App::EmitterMode::FIREWORKS) {
+        if (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS) {
             // Fade the light's intensity with the age of the particles.
             const auto& p = emitter.particles[0];
             const float scale = std::max(0.0f, 1.0f - (p.age / p.lifetime));
@@ -650,7 +652,7 @@ void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, d
     }
 
     // In fireworks mode, check if it's time for a burst.
-    if (app.ui.emitterMode == App::EmitterMode::FIREWORKS) {
+    if (app.ui.emitterMode == AppState::EmitterMode::FIREWORKS) {
         emitter.timeToBurst -= float(dt);
         if (emitter.timeToBurst <= 0.0f) {
             // Time to burst! Reset all particles.
@@ -668,7 +670,7 @@ void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, d
         p.age += float(dt);
 
         // In continuous mode, reset particles when their lifetime expires.
-        if (app.ui.emitterMode == App::EmitterMode::CONTINUOUS) {
+        if (app.ui.emitterMode == AppState::EmitterMode::CONTINUOUS) {
             if (p.age > p.lifetime) {
                 resetParticle(p, gen, emitter_pos);
             }

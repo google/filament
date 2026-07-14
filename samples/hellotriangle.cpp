@@ -46,7 +46,8 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Config config;
     VertexBuffer* vb;
     IndexBuffer* ib;
@@ -92,7 +93,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help", utils::getopt::no_argument,       nullptr, 'h' },
@@ -117,7 +118,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
-    App app{};
+    AppState app;
     app.config.title = "hellotriangle";
     app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
     handleCommandLineArguments(argc, argv, &app);
@@ -170,7 +171,7 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
@@ -183,7 +184,7 @@ int main(int argc, char** argv) {
                 filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
     });
 
-    FilamentApp::get().run(app.config, setup, cleanup);
+    app.filamentApp.run(app.config, setup, cleanup);
 
     return 0;
 }

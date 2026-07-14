@@ -60,7 +60,8 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Skybox* skybox = nullptr;
     VertexBuffer* vb = nullptr;
     IndexBuffer* ib = nullptr;
@@ -265,7 +266,7 @@ int main(int argc, char** argv) {
 
     const size_t textureSize = 512;
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Create heightfield textures for each format.
@@ -390,7 +391,7 @@ int main(int argc, char** argv) {
         engine->destroy(app.ib);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         const size_t offset = g_params.updateSubRegion ? 64 : 0;
         const size_t dimension = g_params.updateSubRegion ? textureSize / 2 : textureSize;
         const size_t padding = g_params.addPadding ? 32 : 0;
@@ -427,7 +428,7 @@ int main(int argc, char** argv) {
         }
     });
 
-    FilamentApp::get().run(config, setup, cleanup, gui);
+    app.filamentApp.run(config, setup, cleanup, gui);
 
     return 0;
 }

@@ -42,8 +42,8 @@ set(SRCS
         src/Sphere.cpp
         src/PlatformHelper.cpp
         src/PlatformHelper.h
-        src/DisplayManager.h
-        src/AppEvent.h
+        include/filamentapp/DisplayManager.h
+        include/filamentapp/AppEvent.h
         src/FilamentAppGui.h
         src/FilamentAppGui.cpp
 )

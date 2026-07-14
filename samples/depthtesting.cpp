@@ -43,7 +43,8 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -73,7 +74,7 @@ int main(int argc, char** argv) {
     config.title = "depthtesting";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
         scene->setSkybox(app.skybox);
@@ -151,7 +152,7 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
@@ -164,7 +165,7 @@ int main(int argc, char** argv) {
                 filament::math::mat4f::rotation(now, filament::math::float3{ 0, 1, 0 }));
     });
 
-    FilamentApp::get().run(config, setup, cleanup, gui);
+    app.filamentApp.run(config, setup, cleanup, gui);
 
     return 0;
 }

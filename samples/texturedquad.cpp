@@ -52,7 +52,8 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -130,7 +131,7 @@ int main(int argc, char** argv) {
     config.title = "texturedquad";
     handleCommandLineArguments(argc, argv, config);
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Load texture
@@ -214,7 +215,7 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         const float zoom = 2.0 + 2.0 * sin(now);
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
@@ -224,7 +225,7 @@ int main(int argc, char** argv) {
                 -zoom, zoom, -1, 1);
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

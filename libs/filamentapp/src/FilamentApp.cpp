@@ -23,7 +23,7 @@
 #include "display_managers/HtmlDisplayManager.h"
 #endif // defined(FILAMENTAPP_HAS_WEB_UI)
 
-#include "DisplayManager.h"
+#include <filamentapp/DisplayManager.h>
 
 #ifdef FILAMENTAPP_HAS_SDL
 #include "display_managers/SDLDisplayManager.h"
@@ -91,12 +91,8 @@ namespace {
 using namespace filament::backend;
 }
 
-FilamentApp& FilamentApp::get() {
-    static FilamentApp filamentApp;
-    return filamentApp;
-}
-
-FilamentApp::FilamentApp() {}
+FilamentApp::FilamentApp(filament::app::DisplayManager* displayManager)
+        : mDisplayManager(displayManager) {}
 
 FilamentApp::~FilamentApp() {
     if (mDisplayManager) {
@@ -174,16 +170,19 @@ void FilamentApp::run(Config const& config, SetupCallback setupCallback,
     // By now we have resolved to a specific backend (instead of default).
     config.backend = backend;
 
-    if (config.displayManager == Config::DisplayManager::WEB) {
+    if (!mDisplayManager) {
+        if (config.displayManager == Config::DisplayManager::WEB) {
 #if defined(FILAMENTAPP_HAS_WEB_UI)
-        mDisplayManager = new HtmlDisplayManager();
+            mDisplayManager = new HtmlDisplayManager();
 #endif // defined(FILAMENTAPP_HAS_WEB_UI)
-    } else {
+        } else {
 #ifdef FILAMENTAPP_HAS_SDL
-        mDisplayManager = new SDLDisplayManager();
+            mDisplayManager = new SDLDisplayManager();
 #else // !defined(FILAMENTAPP_HAS_SDL)
-        FILAMENT_CHECK_POSTCONDITION(false) << "SDLDisplayManager is not available on this platform";
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "SDLDisplayManager is not available on this platform";
 #endif // defined(FILAMENTAPP_HAS_SDL)
+        }
     }
 
     if (!mDisplayManager->init(config)) {

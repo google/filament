@@ -49,7 +49,8 @@ using utils::Path;
 using utils::FixedCapacityVector;
 using namespace filament::math;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vbs[10];
     size_t vbCount = 0;
     IndexBuffer *ib, *ib2;
@@ -184,7 +185,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
 
     app.boneDataPerPrimitive = FixedCapacityVector<FixedCapacityVector<float2>>(3);
     app.boneDataPerPrimitiveMulti = FixedCapacityVector<FixedCapacityVector<float2>>(6);
@@ -657,7 +658,7 @@ int main(int argc, char** argv) {
         EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
@@ -706,7 +707,7 @@ int main(int argc, char** argv) {
         rm.setMorphWeights(rm.getInstance(app.renderables[3]), weights, 3, 0);
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

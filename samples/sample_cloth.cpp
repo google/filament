@@ -261,6 +261,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 }
 
 int main(int argc, char* argv[]) {
+    FilamentApp filamentApp;
     int option_index = handleCommandLineArgments(argc, argv, &g_config);
     int num_args = argc - option_index;
     if (num_args < 1) {
@@ -278,7 +279,7 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "Cloth shading";
-    FilamentApp& filamentApp = FilamentApp::get();
+
     filamentApp.run(g_config, setup, cleanup);
 
     return 0;

@@ -50,7 +50,8 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb = nullptr;
     Material* mat = nullptr;
     MaterialInstance* matInstance = nullptr;
@@ -113,7 +114,7 @@ int main(int argc, char** argv) {
     config.title = "procedural_texture_quad";
     handleCommandLineArguments(argc, argv, config);
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         Path path = FilamentApp::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
         if (!path.exists()) {
@@ -186,7 +187,7 @@ int main(int argc, char** argv) {
         EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine*, View* view, double) {
+    app.filamentApp.animate([&app](Engine*, View* view, double) {
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
         const float aspect = float(w) / float(h);
@@ -194,6 +195,6 @@ int main(int argc, char** argv) {
                 -aspect, aspect, -1.0f, 1.0f, 0.0f, 1.0f);
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
     return 0;
 }

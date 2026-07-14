@@ -50,7 +50,8 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb = nullptr;
     Material* mat = nullptr;
     MaterialInstance* matInstance = nullptr;
@@ -112,7 +113,7 @@ int main(int argc, char** argv) {
     config.title = "procedural_effect";
     handleCommandLineArguments(argc, argv, config);
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.mat = Material::Builder()
                 .package(RESOURCES_PROCEDURALEFFECT_DATA, RESOURCES_PROCEDURALEFFECT_SIZE)
@@ -157,7 +158,7 @@ int main(int argc, char** argv) {
         EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine*, View* view, double now) {
+    app.filamentApp.animate([&app](Engine*, View* view, double now) {
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
         const float aspect = float(w) / float(h);
@@ -173,6 +174,6 @@ int main(int argc, char** argv) {
         app.matInstance->setParameter("time", (float)elapsed);
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
     return 0;
 }

@@ -45,7 +45,8 @@ using namespace filament::math;
 
 using Backend = Engine::Backend;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Config config;
     utils::Entity light;
     Material* material;
@@ -78,7 +79,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help", utils::getopt::no_argument,       nullptr, 'h' },
@@ -103,7 +104,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
     app.config.title = "hellopbr";
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
     handleCommandLineArguments(argc, argv, &app);
@@ -148,13 +149,13 @@ int main(int argc, char** argv) {
         engine->destroy(app.material);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         auto& tcm = engine->getTransformManager();
         auto ti = tcm.getInstance(app.mesh.renderable);
         tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
     });
 
-    FilamentApp::get().run(app.config, setup, cleanup);
+    app.filamentApp.run(app.config, setup, cleanup);
 
     return 0;
 }

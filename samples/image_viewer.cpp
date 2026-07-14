@@ -63,7 +63,8 @@ using namespace filament::viewer;
 using namespace image;
 using namespace utils;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Engine* engine;
     ViewerGui* viewer;
     Config config;
@@ -117,7 +118,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:c:";
     static const utils::getopt::option OPTIONS[] = {
         { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -159,7 +160,7 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
+static void createImageRenderable(Engine* engine, Scene* scene, AppState& app) {
     auto& em = EntityManager::get();
     Material* material = Material::Builder()
             .package(RESOURCES_IMAGE_DATA, RESOURCES_IMAGE_SIZE)
@@ -211,7 +212,7 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.defaultTexture = texture;
 }
 
-static void loadImage(App& app, Engine* engine, const Path& filename) {
+static void loadImage(AppState& app, Engine* engine, const Path& filename) {
     if (app.scene.imageTexture) {
         engine->destroy(app.scene.imageTexture);
         app.scene.imageTexture = nullptr;
@@ -274,7 +275,7 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
 
     app.config.title = "Filament Image Viewer";
 
@@ -322,7 +323,7 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine* engine, View* view) {
         app.viewer->updateUserInterface();
 
-        FilamentApp::get().setSidebarWidth(app.viewer->getSidebarWidth());
+        app.filamentApp.setSidebarWidth(app.viewer->getSidebarWidth());
     };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
@@ -391,13 +392,11 @@ int main(int argc, char** argv) {
                 "backgroundColor", RgbType::sRGB, app.backgroundColor);
     };
 
-    FilamentApp& filamentApp = FilamentApp::get();
 
-    filamentApp.setDropHandler([&] (std::string_view path) {
-        loadImage(app, app.engine, Path(path));
-    });
+    app.filamentApp.setDropHandler(
+            [&](std::string_view path) { loadImage(app, app.engine, Path(path)); });
 
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    app.filamentApp.run(app.config, setup, cleanup, gui, preRender);
 
     return 0;
 }

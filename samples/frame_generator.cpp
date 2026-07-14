@@ -404,7 +404,7 @@ static void setParameter(MaterialInstance* mi, const std::string& name, const st
 }
 
 // Sets up the scene: loads mesh, material, lights, and camera.
-static void setup(Engine* engine, View*, Scene* scene) {
+static void setup(FilamentApp& filamentApp, Engine* engine, View*, Scene* scene) {
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
     readMaterial(engine);
@@ -459,7 +459,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         }
     }
 
-    auto const ibl = FilamentApp::get().getIBL();
+    auto const ibl = filamentApp.getIBL();
     if (!ibl || !g_skyboxOn) {
         g_skybox = Skybox::Builder().color({
                 float((g_clearColor >> 16) & 0xFF) / 255.0f,
@@ -487,7 +487,8 @@ static void render(Engine*, View*, Scene*, Renderer*) {
 }
 
 // Called after rendering to capture the frame and save it as a PNG file.
-static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
+static void postRender(FilamentApp& filamentApp, Engine* engine, View* view, Scene* scene,
+        Renderer* renderer) {
     int frame = g_currentFrame - FRAME_TO_SKIP - 1;
     // Account for the back buffer
     if (frame >= 1 && frame < g_materialVariantCount + 1) {
@@ -538,7 +539,7 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     }
 
     if (g_savedFrames.load() == g_materialVariantCount) {
-        FilamentApp::get().close();
+        filamentApp.close();
     }
 
     g_currentFrame++;
@@ -546,6 +547,7 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
 
 // Main entry point: parses args, validates inputs, and runs the Filament application.
 int main(int const argc, char* argv[]) {
+    FilamentApp filamentApp;
     int const option_index = handleCommandLineArguments(argc, argv, &g_config);
     int const num_args = argc - option_index;
     if (num_args < 1 || g_materialPath.isEmpty() || g_paramsPath.isEmpty()) {
@@ -564,9 +566,16 @@ int main(int const argc, char* argv[]) {
 
     g_config.title = "Frame Generator";
     g_config.headless = true;
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config,
-            setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, g_width, g_height);
+
+    auto setupLambda = [&filamentApp](Engine* engine, View* view, Scene* scene) {
+        setup(filamentApp, engine, view, scene);
+    };
+    auto postRenderLambda = [&filamentApp](Engine* engine, View* view, Scene* scene,
+                                    Renderer* renderer) {
+        postRender(filamentApp, engine, view, scene, renderer);
+    };
+    filamentApp.run(g_config, setupLambda, cleanup, FilamentApp::ImGuiCallback(), render,
+            postRenderLambda, g_width, g_height);
 
     return 0;
 }

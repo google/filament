@@ -47,7 +47,8 @@ struct GroundPlane {
     utils::Entity renderable;
 };
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Skybox* skybox;
     utils::Entity light;
     std::map<std::string, MaterialInstance*> materials;
@@ -71,7 +72,7 @@ static const Config config {
 };
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
@@ -124,13 +125,13 @@ int main(int argc, char** argv) {
         delete app.meshes;
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         auto& tcm = engine->getTransformManager();
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

@@ -35,7 +35,8 @@
 
 using namespace filament;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     Config config;
     VertexBuffer* vb;
     IndexBuffer* ib;
@@ -70,7 +71,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], AppState* app) {
     static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:ev";
     static const utils::getopt::option OPTIONS[] = {
             { "help", utils::getopt::no_argument,       nullptr, 'h' },
@@ -95,7 +96,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
-    App app;
+    AppState app;
 
     app.config.title = "viewtest";
 
@@ -140,7 +141,7 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({ .clear = true });
     };
 
-    FilamentApp::get().run(app.config, setup, cleanup, {}, preRender);
+    app.filamentApp.run(app.config, setup, cleanup, {}, preRender);
 
     return 0;
 }

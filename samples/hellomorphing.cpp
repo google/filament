@@ -47,7 +47,8 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
 
     handleCommandLineArgments(argc, argv, &config);
 
-    App app;
+    AppState app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
 
@@ -222,7 +223,7 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    app.filamentApp.animate([&app](Engine* engine, View* view, double now) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
         const uint32_t h = view->getViewport().height;
@@ -239,7 +240,7 @@ int main(int argc, char** argv) {
         rm.setMorphWeights(rm.getInstance(app.renderable), weights, 3, 0);
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp.run(config, setup, cleanup);
 
     return 0;
 }

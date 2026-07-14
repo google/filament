@@ -50,7 +50,8 @@ using namespace filament::math;
 using namespace utils;
 using namespace filamesh;
 
-struct App {
+struct AppState {
+    FilamentApp filamentApp;
     struct UiState {
         int objectCountSlider = 100;
         float updateRatio = 0.5f;
@@ -119,7 +120,7 @@ static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
     return utils::getopt::optind;
 }
 
-static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
+static void removeObjects(Engine* engine, Scene* scene, AppState& app, int count) {
     if (count <= 0) return;
 
     EntityManager& em = EntityManager::get();
@@ -140,11 +141,11 @@ static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = app.renderables.size();
 }
 
-static void clearScene(Engine* engine, Scene* scene, App& app) {
+static void clearScene(Engine* engine, Scene* scene, AppState& app) {
     removeObjects(engine, scene, app, app.currentObjectCount);
 }
 
-static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
+static void addObjects(Engine* engine, Scene* scene, AppState& app, int count) {
     if (count <= 0) return;
 
     TransformManager& tcm = engine->getTransformManager();
@@ -191,7 +192,7 @@ static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = newTotal;
 }
 
-static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
+static void createSceneObjects(Engine* engine, Scene* scene, AppState& app) {
     app.gridDim = static_cast<int>(ceil(sqrt(app.desiredObjectCount)));
     addObjects(engine, scene, app, std::max(0, app.desiredObjectCount - app.currentObjectCount));
 }
@@ -202,7 +203,7 @@ int main(int argc, char** argv) {
     config.iblDirectory = FilamentApp::getRootAssetsPath() + "assets/ibl/lightroom_14b";
     handleCommandLineArguments(argc, argv, &config);
 
-    App app;
+    AppState app;
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.desiredObjectCount = app.ui.objectCountSlider;
@@ -300,8 +301,8 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate(animate);
-    FilamentApp::get().run(config, setup, cleanup, gui);
+    app.filamentApp.animate(animate);
+    app.filamentApp.run(config, setup, cleanup, gui);
 
     return 0;
 }
