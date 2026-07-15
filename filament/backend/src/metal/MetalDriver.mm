@@ -35,6 +35,8 @@
 #include <backend/platforms/PlatformMetal.h>
 #include <backend/PresentCallable.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
@@ -112,18 +114,21 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(
-        PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
-    : DriverBase(driverConfig),
-      mPlatform(*platform),
-      mContext(new MetalContext),
-      mHandleAllocator(
-                "Handles",
-                driverConfig.handleArenaSize,
-                driverConfig.disableHandleUseAfterFreeCheck,
-                driverConfig.disableHeapHandleTags),
-      mStereoscopicType(driverConfig.stereoscopicType),
-      mAsynchronousMode(driverConfig.asynchronousMode) {
+MetalDriver::MetalDriver(PlatformMetal* platform,
+        const Platform::DriverConfig& driverConfig) noexcept
+        : DriverBase(driverConfig),
+          mPlatform(*platform),
+          mContext(new MetalContext),
+          mHandleAllocator("Handles", driverConfig.handleArenaSize,
+                  (driverConfig.featureFlagManager
+                                  ? driverConfig.featureFlagManager->features.backend
+                                            .disable_handle_use_after_free_check
+                                  : false),
+                  (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features
+                                                             .backend.disable_heap_handle_tags
+                                                   : false)),
+          mStereoscopicType(driverConfig.stereoscopicType),
+          mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
     mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
     mContext->driverLifetimeTracker->driver = this;
@@ -233,9 +238,12 @@ MetalDriver::MetalDriver(
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
-    const MetalShaderCompiler::Mode compilerMode = driverConfig.disableParallelShaderCompile
-            ? MetalShaderCompiler::Mode::SYNCHRONOUS
-            : MetalShaderCompiler::Mode::ASYNCHRONOUS;
+    const MetalShaderCompiler::Mode compilerMode =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .disable_parallel_shader_compile
+                                             : false)
+                    ? MetalShaderCompiler::Mode::SYNCHRONOUS
+                    : MetalShaderCompiler::Mode::ASYNCHRONOUS;
     mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this, compilerMode);
     mContext->shaderCompiler->init();
 

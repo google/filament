@@ -30,6 +30,8 @@
 #include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -273,7 +275,10 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
                         "eglDupNativeFenceFDANDROID"));
     }
 
-    mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
+    mAssertNativeWindowIsValid =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .opengl.assert_native_window_is_valid
+                                             : false);
 
     return driver;
 }
