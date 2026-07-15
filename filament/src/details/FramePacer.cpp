@@ -361,14 +361,16 @@ void FFramePacer::applyPresentationTime(FRenderer* renderer) const {
     }
 
     if constexpr (false) {
-        auto estimation = FramePipelineEstimator::estimate(
-                renderer->getFrameInfoHistory(renderer->getMaxFrameHistorySize()),
-                FramePipelineEstimator::TargetPercentile::P90,
-                mActiveTargetStep);
+        auto history = renderer->getFrameInfoHistory(renderer->getMaxFrameHistorySize());
+        auto workload = FramePipelineEstimator::estimateWorkload(history,
+                FramePipelineEstimator::TargetPercentile::P90);
+        auto sizing = FramePipelineEstimator::estimatePacing(history,
+                mActiveTargetStep,
+                FramePipelineEstimator::TargetPercentile::P90);
 
-        LOG(INFO) << "ideal fps = " << 1000000000.0 / estimation.idealFrameDuration.count()
-                << ", " << estimation.idealLatencyFrames << "-frame latency, safe delay = "
-                << estimation.safeDelayDuration.count() / 1000000.0 << " ms";
+        LOG(INFO) << "ideal fps = " << workload.idealFrameRate
+                << ", " << sizing.latencyFrames << "-frame latency, safe delay = "
+                << sizing.safeDelayDuration.count() / 1000000.0 << " ms";
     }
 }
 

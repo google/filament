@@ -1053,19 +1053,23 @@ TEST_F(FramePacerTest, FramePipelineEstimatorModel) {
     // TotalTransitTime = 13.29 + 9.645 + 16.935 = 39.87 ms (39,870,000 ns)
     // IdealLatencyFrames = ceil(39.87 / 16.935) = ceil(2.354) = 3 frames
 
-    auto estimation = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
+    auto workload = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
+    auto sizing = FramePipelineEstimator::estimatePacing({history.data(), history.size()},
+            workload.idealFrameDuration,
+            FramePipelineEstimator::TargetPercentile::P95);
 
-    EXPECT_NEAR(estimation.idealFrameDuration.count(), 16935000, 1000);
-    EXPECT_EQ(estimation.idealLatencyFrames, 3);
-    EXPECT_NEAR(estimation.safeDelayDuration.count(), 10130000, 1000);
+    EXPECT_NEAR(workload.idealFrameDuration.count(), 16935000, 1000);
+    EXPECT_EQ(sizing.latencyFrames, 3);
+    EXPECT_NEAR(sizing.safeDelayDuration.count(), 10935000, 1000);
 }
 
 TEST_F(FramePacerTest, FramePipelineEstimator_EmptyHistory) {
-    auto const estimation = FramePipelineEstimator::estimate({});
+    auto const workload = FramePipelineEstimator::estimateWorkload({});
+    auto const sizing = FramePipelineEstimator::estimatePacing({}, std::chrono::nanoseconds(16666666));
 
-    EXPECT_NEAR(estimation.idealFrameDuration.count(), 16666666, 1000);
-    EXPECT_NEAR(estimation.idealFrameRate, 60.0f, 0.1f);
-    EXPECT_EQ(estimation.idealLatencyFrames, 2);
+    EXPECT_NEAR(workload.idealFrameDuration.count(), 16666666, 1000);
+    EXPECT_NEAR(workload.idealFrameRate, 60.0f, 0.1f);
+    EXPECT_EQ(sizing.latencyFrames, 2);
 }
 
 TEST_F(FramePacerTest, FramePipelineEstimator_GapsInHistory) {
@@ -1098,12 +1102,15 @@ TEST_F(FramePacerTest, FramePipelineEstimator_GapsInHistory) {
     history[2].backendEndFrame   = 30000000; // Backend: 9 ms
     history[2].gpuFrameDuration  = 15000000; // GPU: 15 ms
 
-    auto estimation = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
+    auto workload = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
+    auto sizing = FramePipelineEstimator::estimatePacing({history.data(), history.size()},
+            workload.idealFrameDuration,
+            FramePipelineEstimator::TargetPercentile::P95);
 
     // Results must match the contiguous case in FramePipelineEstimatorModel exactly
-    EXPECT_NEAR(estimation.idealFrameDuration.count(), 16935000, 1000);
-    EXPECT_EQ(estimation.idealLatencyFrames, 3);
-    EXPECT_NEAR(estimation.safeDelayDuration.count(), 10130000, 1000);
+    EXPECT_NEAR(workload.idealFrameDuration.count(), 16935000, 1000);
+    EXPECT_EQ(sizing.latencyFrames, 3);
+    EXPECT_NEAR(sizing.safeDelayDuration.count(), 10935000, 1000);
 }
 
 TEST_F(FramePacerTest, FramePipelineEstimator_NoGpuTimings) {
@@ -1133,10 +1140,13 @@ TEST_F(FramePacerTest, FramePipelineEstimator_NoGpuTimings) {
     history[2].backendEndFrame   = 30000000; // Backend: 9 ms
     history[2].gpuFrameDuration  = 0;
 
-    auto const estimation = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P90);
+    auto const workload = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P90);
+    auto const sizing = FramePipelineEstimator::estimatePacing({history.data(), history.size()},
+            workload.idealFrameDuration,
+            FramePipelineEstimator::TargetPercentile::P90);
 
-    EXPECT_NEAR(estimation.idealFrameDuration.count(), 12564000, 1000);
-    EXPECT_EQ(estimation.idealLatencyFrames, 2);
+    EXPECT_NEAR(workload.idealFrameDuration.count(), 12564000, 1000);
+    EXPECT_EQ(sizing.latencyFrames, 2);
 }
 
 TEST_F(FramePacerTest, FramePipelineEstimator_Percentiles) {
@@ -1166,9 +1176,9 @@ TEST_F(FramePacerTest, FramePipelineEstimator_Percentiles) {
     history[2].backendEndFrame   = 30000000; // Backend: 9 ms
     history[2].gpuFrameDuration  = 15000000; // GPU: 15 ms
 
-    auto const est50 = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P50);
-    auto const est90 = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P90);
-    auto const est95 = FramePipelineEstimator::estimate({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
+    auto const est50 = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P50);
+    auto const est90 = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P90);
+    auto const est95 = FramePipelineEstimator::estimateWorkload({history.data(), history.size()}, FramePipelineEstimator::TargetPercentile::P95);
 
     EXPECT_NEAR(est50.idealFrameDuration.count(), 12000000, 1000);
 
@@ -1216,42 +1226,150 @@ TEST_F(FramePacerTest, FramePipelineEstimator_SafeDelay) {
     // IdealLatency = ceil(28.487 / 12.564) = 3 frames
 
     // Test 1: VSYNC = 16.666ms (60Hz)
-    // Budget = 3 * 16.666666ms = 50ms (50,000,000 ns)
-    // SafeDelay = 50,000,000 - 28,487,000 = 21,513,000 ns
+    // pacingPeriod = 12.564ms
+    // Budget = 3 * 12.564 = 37.692ms (37,692,000 ns)
+    // SafeDelay = 37,692,000 - 28,487,000 = 9,205,000 ns
     {
-        auto const est = FramePipelineEstimator::estimate(
+        auto const workload = FramePipelineEstimator::estimateWorkload(
                 {history.data(), history.size()},
-                FramePipelineEstimator::TargetPercentile::P90,
-                std::chrono::nanoseconds(16666666));
+                FramePipelineEstimator::TargetPercentile::P90);
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {history.data(), history.size()},
+                workload.idealFrameDuration,
+                FramePipelineEstimator::TargetPercentile::P90);
 
-        EXPECT_EQ(est.idealLatencyFrames, 3);
-        EXPECT_NEAR(est.safeDelayDuration.count(), 21513000, 5000);
+        EXPECT_EQ(sizing.latencyFrames, 3);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 9205000, 5000);
     }
 
     // Test 2: VSYNC = 11.111ms (90Hz)
-    // Budget = 3 * 11.111111ms = 33.333333ms (33,333,333 ns)
-    // SafeDelay = 33,333,333 - 28,487,000 = 4,846,333 ns
+    // pacingPeriod = 12.564ms
+    // Budget = 3 * 12.564 = 37.692ms (37,692,000 ns)
+    // SafeDelay = 37,692,000 - 28,487,000 = 9,205,000 ns
     {
-        auto const est = FramePipelineEstimator::estimate(
+        auto const workload = FramePipelineEstimator::estimateWorkload(
                 {history.data(), history.size()},
-                FramePipelineEstimator::TargetPercentile::P90,
-                std::chrono::nanoseconds(11111111));
+                FramePipelineEstimator::TargetPercentile::P90);
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {history.data(), history.size()},
+                workload.idealFrameDuration,
+                FramePipelineEstimator::TargetPercentile::P90);
 
-        EXPECT_EQ(est.idealLatencyFrames, 3);
-        EXPECT_NEAR(est.safeDelayDuration.count(), 4846333, 5000);
+        EXPECT_EQ(sizing.latencyFrames, 3);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 9205000, 5000);
     }
 
     // Test 3: VSYNC = 8.333ms (120Hz)
-    // Budget = 3 * 8.333333ms = 25ms (25,000,000 ns)
-    // SafeDelay = 25,000,000 - 28,487,000 = -3.487ms -> Clamped to 0
+    // pacingPeriod = 12.564ms
+    // Budget = 3 * 12.564 = 37.692ms (37,692,000 ns)
+    // SafeDelay = 37,692,000 - 28,487,000 = 9,205,000 ns
     {
-        auto const est = FramePipelineEstimator::estimate(
+        auto const workload = FramePipelineEstimator::estimateWorkload(
                 {history.data(), history.size()},
-                FramePipelineEstimator::TargetPercentile::P90,
-                std::chrono::nanoseconds(8333333));
+                FramePipelineEstimator::TargetPercentile::P90);
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {history.data(), history.size()},
+                workload.idealFrameDuration,
+                FramePipelineEstimator::TargetPercentile::P90);
 
-        EXPECT_EQ(est.idealLatencyFrames, 3);
-        EXPECT_EQ(est.safeDelayDuration.count(), 0);
+        EXPECT_EQ(sizing.latencyFrames, 3);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 9205000, 5000);
+    }
+
+    // Test 4: VSYNC-locked pacing estimation (60Hz Display, workload paced at 60 FPS = 16.667ms pacing Period)
+    // PacingPeriod = 16.666666ms (16,666,666 ns)
+    // TotalTransit = 28.487 ms (28,487,000 ns)
+    // idealLatency = ceil(28.487 / 16.666) = 2 frames (Instead of 3!)
+    // Budget = 2 * 16.666666ms = 33.333333ms (33,333,333 ns)
+    // SafeDelay = 33,333,333 - 28,487,000 = 4,846,333 ns
+    {
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {history.data(), history.size()},
+                std::chrono::nanoseconds(16666666),
+                FramePipelineEstimator::TargetPercentile::P90);
+
+        EXPECT_EQ(sizing.latencyFrames, 2);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 4846333, 5000);
+    }
+}
+
+TEST_F(FramePacerTest, FramePipelineEstimator_CompositionDeadline) {
+    std::vector<Renderer::FrameInfo> history(3);
+
+    // Populate history with 5ms compositor latch margin (displayPresent - presentDeadline = 5ms)
+    // CPU: 8ms, Backend: 4ms (using backendEndFrame - backendBeginFrame), GPU: 12ms
+    // TotalTransit = 29.5ms (with Z-score stddev adjustments)
+    for (int i = 0; i < 3; ++i) {
+        history[i].vsync             = i * 16666666;
+        history[i].beginFrame        = i * 16666666 + 1000000;
+        history[i].endFrame          = i * 16666666 + 9000000; // Main: 8 ms
+        history[i].backendBeginFrame = i * 16666666 + 1000000;
+        history[i].backendEndFrame   = i * 16666666 + 5000000; // Backend: 4 ms
+        history[i].gpuFrameDuration  = 12000000;               // GPU: 12 ms
+
+        history[i].displayPresent    = i * 16666666 + 50000000; // Expected Present (arbitrary offset)
+        history[i].presentDeadline   = i * 16666666 + 45000000; // Compositor Deadline is 5ms before presentation
+    }
+
+    // Workload averages (mean, Z-score calculations):
+    // Since jitter/variance is 0 in this simplified history:
+    // EffMain = 8.0ms, EffBackend = 4.0ms, EffGpu = 12.0ms -> TotalTransit = 24.0 ms
+    // CompositionMargin = 5.0ms (5,000,000 ns)
+
+    // Test 1: VSYNC-locked 60Hz pacing, no compositor margin support (margin not in history or effMargin = 0)
+    // TotalTransit = 25.0ms (Main=9ms, Backend=4ms, GPU=12ms), pacingPeriod = 16.67ms
+    // idealLatency = ceil(25.0 / 16.67) = 2 frames
+    // safeDelay = 2 * 16.67 - 25.0 = 8.33ms (8,333,333 ns)
+    {
+        // Let's create a temporary history without composition margin info
+        std::vector<Renderer::FrameInfo> historyNoMargin = history;
+        for (auto& f : historyNoMargin) {
+            f.displayPresent = 0;
+            f.presentDeadline = 0;
+        }
+
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {historyNoMargin.data(), historyNoMargin.size()},
+                std::chrono::nanoseconds(16666666),
+                FramePipelineEstimator::TargetPercentile::P90);
+
+        EXPECT_EQ(sizing.latencyFrames, 2);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 8333333, 5000);
+    }
+
+    // Test 2: VSYNC-locked 60Hz pacing, WITH compositor margin support (margin = 5ms)
+    // totalTransit + Margin = 25.0 + 5.0 = 30.0ms
+    // idealLatency = ceil(30.0 / 16.67) = 2 frames
+    // budget = 2 * 16.67 - 5.0 = 28.33ms
+    // safeDelay = 28.33 - 25.0 = 3.33ms (3,333,333 ns)
+    {
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {history.data(), history.size()},
+                std::chrono::nanoseconds(16666666),
+                FramePipelineEstimator::TargetPercentile::P90);
+
+        EXPECT_EQ(sizing.latencyFrames, 2);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 3333333, 5000);
+    }
+
+    // Test 3: Workload transit = 30.0ms (using 17ms GPU duration)
+    // totalTransit + Margin = 30.0 + 5.0 = 35.0ms (exceeds 2-frame budget 33.33ms)
+    // idealLatency = ceil(35.0 / 16.67) = 3 frames
+    // budget = 3 * 16.67 - 5.0 = 45.0ms
+    // safeDelay = 45.0 - 30.0 = 15.0ms (15,000,000 ns)
+    {
+        std::vector<Renderer::FrameInfo> historyHeavy = history;
+        for (auto& f : historyHeavy) {
+            f.gpuFrameDuration = 17000000; // GPU: 17 ms -> Transit = 9 + 4 + 17 = 30 ms
+        }
+
+        auto const sizing = FramePipelineEstimator::estimatePacing(
+                {historyHeavy.data(), historyHeavy.size()},
+                std::chrono::nanoseconds(16666666),
+                FramePipelineEstimator::TargetPercentile::P90);
+
+        EXPECT_EQ(sizing.latencyFrames, 3);
+        EXPECT_NEAR(sizing.safeDelayDuration.count(), 15000000, 5000);
     }
 }
 
