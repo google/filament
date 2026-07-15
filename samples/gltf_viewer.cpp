@@ -1162,11 +1162,13 @@ int main(int argc, char** argv) {
         engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
 
         if (auto* swapChain = FilamentApp::get().getPrimarySwapChain()) {
-            if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
-                swapChain->setFrameRate(viewerOptions.cameraFrameRate,
-                        SwapChain::FrameRateCompatibility::DEFAULT,
-                        SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
-                app.currentFrameRate = viewerOptions.cameraFrameRate;
+            if (swapChain->isFrameRateChangeSupported().is_true()) {
+                if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
+                    swapChain->setFrameRate(viewerOptions.cameraFrameRate,
+                            SwapChain::FrameRateCompatibility::DEFAULT,
+                            SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
+                    app.currentFrameRate = viewerOptions.cameraFrameRate;
+                }
             }
         }
 
