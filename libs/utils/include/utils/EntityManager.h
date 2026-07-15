@@ -17,27 +17,26 @@
 #ifndef TNT_UTILS_ENTITYMANAGER_H
 #define TNT_UTILS_ENTITYMANAGER_H
 
-#include <utils/Entity.h>
-#include <utils/compiler.h>
-#include <utils/Slice.h>
-#include <utils/PagedArenaBitset.h>
-#include <utils/ImmutableCString.h>
-
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #ifndef FILAMENT_UTILS_TRACK_ENTITIES
 #define FILAMENT_UTILS_TRACK_ENTITIES false
 #endif
 
+#include <utils/compiler.h>
+#include <utils/Entity.h>
+#include <utils/ImmutableCString.h>
+#include <utils/Mutex.h>
 #if FILAMENT_UTILS_TRACK_ENTITIES
 #include <utils/ostream.h>
-#include <vector>
 #endif
+#include <utils/PagedArenaBitset.h>
+#include <utils/Slice.h>
 
 #include <atomic>
 #include <vector>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 
@@ -203,7 +202,8 @@ public:
      *
      * @param watermark Pointer to the reader's atomic watermark.
      */
-    void registerWatermark(std::atomic<uint64_t>* watermark, utils::ImmutableCString name = "Unknown") noexcept;
+    void registerWatermark(std::atomic<uint64_t>* watermark, utils::ImmutableCString name = "Unknown",
+            const PagedArenaBitset* entityBitset = nullptr, Mutex* entityBitsetLock = nullptr) noexcept;
 
     /**
      * @brief Unregisters a reader's watermark from the EBR system.
@@ -245,7 +245,8 @@ public:
      * a Component Manager.
      */
     void rebindWatermark(std::atomic<uint64_t> const* oldW, std::atomic<uint64_t>* newW,
-            ImmutableCString newName) noexcept;
+            ImmutableCString newName, const PagedArenaBitset* newEntityBitset = nullptr,
+            Mutex* newEntityBitsetLock = nullptr) noexcept;
 
     /**
      * @brief Advances the timeline to the next epoch.

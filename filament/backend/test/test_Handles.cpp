@@ -28,10 +28,13 @@ using namespace filament::backend;
 static constexpr uint32_t HANDLE_HEAP_FLAG = 0x80000000u;
 static constexpr size_t POOL_SIZE_BYTES = 8 * 1024U * 1024U;
 // NOTE: actual count may be lower due to alignment requirements
+#if defined(FILAMENT_DEBUG_MUTEX) || defined(UTILS_DEBUG_MUTEX)
+constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 312);
+#define HandleAllocatorTest  HandleAllocator<32,  96, 312>
+#else
 constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / (32 + 96 + 184); // 31775
-
-// This must match HandleAllocatorGL, so its implementation is present on all platforms.
 #define HandleAllocatorTest  HandleAllocator<32,  96, 184>    // ~4520 / pool / MiB
+#endif
 
 struct MyHandle {
 };

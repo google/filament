@@ -15,6 +15,7 @@
  */
 
 #include <utils/Log.h>
+#include <utils/Mutex.h>
 
 #include "ostream_.h"
 
@@ -52,7 +53,7 @@ private:
 };
 
 ostream& LogStream::flush() noexcept {
-    std::lock_guard const lock(mImpl->mLock);
+    LockGuard const lock(mImpl->mLock);
     Buffer& buf = getBuffer();
     char const* const str = buf.get();
     if (UTILS_UNLIKELY(!str)) {

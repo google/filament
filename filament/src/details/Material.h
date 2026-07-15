@@ -110,6 +110,7 @@ public:
 
     void compile(CompilerPriorityQueue priority,
         utils::FixedCapacityVector<Variant> const& variants,
+        utils::FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
         backend::CallbackHandler* handler,
         utils::Invocable<void(Material*)>&& callback) noexcept;
 

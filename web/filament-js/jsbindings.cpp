@@ -365,7 +365,12 @@ value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("stepCount", &LightManager::ShadowOptions::stepCount)
     .field("maxShadowDistance", &LightManager::ShadowOptions::maxShadowDistance)
     .field("shadowBulbRadius", &LightManager::ShadowOptions::shadowBulbRadius)
-    .field("transform", &LightManager::ShadowOptions::transform);
+    .field("transform", &LightManager::ShadowOptions::transform)
+    .field("penumbraScale", &LightManager::ShadowOptions::penumbraScale)
+    .field("penumbraRatioScale", &LightManager::ShadowOptions::penumbraRatioScale)
+    .field("maxPenumbraRatio", &LightManager::ShadowOptions::maxPenumbraRatio)
+    .field("maxSearchRadius", &LightManager::ShadowOptions::maxSearchRadius)
+    ;
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -704,10 +709,13 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("getMaterialTime", &Renderer::getMaterialTime)
     .function("getUserTime", &Renderer::getUserTime)
     .function("resetUserTime", &Renderer::resetUserTime)
+    .function("setMaterialTimeEpoch", select_overload<void(int64_t)>(&Renderer::setMaterialTimeEpoch))
     .function("skipNextFrames", &Renderer::skipNextFrames)
     .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
+    .function("pauseRenderThread", select_overload<void(uint64_t)>(&Renderer::pauseRenderThread))
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", select_overload<void(int64_t)>(&Renderer::setPresentationTime))
@@ -2215,7 +2223,11 @@ class_<AssetLoader>("gltfio$AssetLoader")
     // Destroys the given asset and all of its associated Filament objects. This includes
     // components, material instances, vertex buffers, index buffers, and textures.
     // asset ::argument:: the Filament asset created using AssetLoader
-    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers());
+    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers())
+    
+    // gc ::method::
+    // Performs a Garbage Collection sweep over all internal component managers.
+    .function("gc", &AssetLoader::gc, allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights), {

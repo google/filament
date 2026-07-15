@@ -288,6 +288,9 @@ struct FAssetLoader : public AssetLoader {
     void gc() noexcept {
         mNodeManager.gc();
         mTrsTransformManager.gc();
+        if (mNameManager) {
+            mNameManager->gc();
+        }
     }
 
     size_t getMaterialsCount() const noexcept {

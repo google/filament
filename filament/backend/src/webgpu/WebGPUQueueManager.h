@@ -19,10 +19,12 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/Condition.h>
+#include <utils/Mutex.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <memory>
-#include <mutex>
 
 namespace filament::backend {
 
@@ -36,7 +38,7 @@ struct WebGPUSubmissionState {
             : mStatus(status) {}
 
     FenceStatus getStatus() {
-        std::lock_guard<std::mutex> const lock(mLock);
+        utils::LockGuard const lock(mLock);
         return mStatus;
     }
 
@@ -45,8 +47,8 @@ struct WebGPUSubmissionState {
     void setStatus(FenceStatus status);
 
 private:
-    std::mutex mLock;
-    std::condition_variable mCond;
+    utils::Mutex mLock;
+    utils::Condition mCond;
     FenceStatus mStatus;
 };
 

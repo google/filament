@@ -17,10 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H
 #define TNT_FILAMENT_BACKEND_WEBGPUSTAGEPOOL_H
 
+#include <utils/Mutex.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <map>
-#include <mutex>
 
 namespace filament::backend {
 
@@ -40,7 +41,7 @@ private:
     wgpu::Buffer createNewBuffer(size_t bufferSize);
     std::multimap<uint32_t, wgpu::Buffer> mBuffers;
     std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mInProgress;
-    std::mutex mMutex;
+    utils::Mutex mMutex;
 
     wgpu::Device mDevice;
 };

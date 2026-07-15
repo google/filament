@@ -56,17 +56,19 @@ struct GarbageEpoch {
 struct WatermarkInfo {
     std::atomic<uint64_t>* watermark;
     ImmutableCString name;
+    const PagedArenaBitset* entityBitset = nullptr;
+    Mutex* entityBitsetLock = nullptr;
 };
 
 class UTILS_PRIVATE EntityManagerImpl : public EntityManager {
 public:
     friend class EntityManager;
 
+    using EntityManager::create;
+    using EntityManager::destroy;
     using EntityManager::getGeneration;
     using EntityManager::getIndex;
     using EntityManager::makeIdentity;
-    using EntityManager::create;
-    using EntityManager::destroy;
 
     EntityManagerImpl() noexcept
             : mGens(new(std::nothrow) uint8_t[RAW_INDEX_COUNT]) {
@@ -269,9 +271,11 @@ public:
         mListeners.erase(l);
     }
 
-    void registerWatermark(std::atomic<uint64_t>* const watermark, ImmutableCString name) noexcept {
+    void registerWatermark(std::atomic<uint64_t>* const watermark, ImmutableCString name,
+            const PagedArenaBitset* entityBitset = nullptr, Mutex* entityBitsetLock = nullptr) noexcept {
+        assert((entityBitset == nullptr) == (entityBitsetLock == nullptr));
         LockGuard const lock(mTimelineLock);
-        mActiveWatermarks.push_back({watermark, std::move(name)});
+        mActiveWatermarks.push_back({watermark, std::move(name), entityBitset, entityBitsetLock});
     }
 
     void unregisterWatermark(std::atomic<uint64_t>* const watermark) noexcept {
@@ -292,12 +296,16 @@ public:
     }
 
     void rebindWatermark(std::atomic<uint64_t> const* oldW, std::atomic<uint64_t>* newW,
-            ImmutableCString newName) noexcept {
+            ImmutableCString newName, const PagedArenaBitset* newEntityBitset = nullptr,
+            Mutex* newEntityBitsetLock = nullptr) noexcept {
+        assert((newEntityBitset == nullptr) == (newEntityBitsetLock == nullptr));
         LockGuard const lock(mTimelineLock);
-        for (auto& [watermark, name] : mActiveWatermarks) {
+        for (auto& [watermark, name, entityBitset, entityBitsetLock] : mActiveWatermarks) {
             if (watermark == oldW) {
                 watermark = newW;
                 name = std::move(newName);
+                entityBitset = newEntityBitset;
+                entityBitsetLock = newEntityBitsetLock;
                 return;
             }
         }
@@ -476,8 +484,29 @@ private:
         // Relaxed is fine here. The mutex acts as our memory barrier.
         uint64_t const currentEpoch = mCurrentEpochID.load(std::memory_order_relaxed);
         if (UTILS_LIKELY(!mActiveWatermarks.empty())) {
-            for (auto const& [watermark, name] : mActiveWatermarks) {
-                safeThreshold = std::min(safeThreshold, watermark->load(std::memory_order_acquire));
+            for (auto const& info : mActiveWatermarks) {
+                uint64_t wm = info.watermark->load(std::memory_order_relaxed);
+                if (info.entityBitset && wm < currentEpoch - 1) {
+                    uint64_t newWm = wm;
+
+                    { // scope for *info.entityBitsetLock
+                        UniqueLock<Mutex> lock(*info.entityBitsetLock);
+                        for (auto const& epoch : mTimeline) {
+                            if (epoch.id > wm && epoch.id < currentEpoch) {
+                                if (PagedArenaBitset::intersectSize(*(epoch.garbageBits), *(info.entityBitset)) > 0) {
+                                    break;
+                                }
+                                newWm = epoch.id;
+                            }
+                        }
+                    }
+
+                    if (newWm > wm) {
+                        info.watermark->store(newWm, std::memory_order_release);
+                        wm = newWm;
+                    }
+                }
+                safeThreshold = std::min(safeThreshold, wm);
             }
         } else {
             safeThreshold = currentEpoch;
@@ -486,11 +515,11 @@ private:
         // EBR Stall Diagnostics
         // Only print the warning when it crosses a 64-epoch threshold to prevent I/O freezing
         if (UTILS_UNLIKELY(mTimeline.size() > 128 && (mTimeline.size() % 64 == 0))) {
-            for (auto const& [watermark, name] : mActiveWatermarks) {
-                uint64_t const wm = watermark->load(std::memory_order_relaxed);
-                if (wm < currentEpoch - 1) {
+            for (auto const& info : mActiveWatermarks) {
+                uint64_t const wm = info.watermark->load(std::memory_order_relaxed);
+                if (wm < currentEpoch - 64) {
                     LOG(WARNING)
-                            << "EBR Stall Warning: Component Manager '" << name.c_str()
+                            << "EBR Stall Warning: Component Manager '" << info.name.c_str()
                             << "' is stalling reclamation! Its watermark is stuck at epoch "
                             << wm << ", blocking the recycling of "
                             << mTimeline.front().garbageBits->size() << " dead entities.";
@@ -575,7 +604,7 @@ private:
     tsl::robin_map<Entity, CallStack, Entity::Hasher> mDebugActiveEntities UTILS_GUARDED_BY(mDestructionLock);
 #endif
 
-    mutable std::mutex mTimelineLock;
+    mutable utils::Mutex mTimelineLock;
     // EBR timeline state
     std::atomic<uint64_t> mCurrentEpochID UTILS_GUARDED_BY(mTimelineLock){1}; // doesn't publish data, the mutex does
     std::vector<GarbageEpoch> mTimeline UTILS_GUARDED_BY(mTimelineLock);

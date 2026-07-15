@@ -32,7 +32,7 @@ FenceStatus WebGPUSubmissionState::waitForCompletion(uint64_t timeout) {
         until = now + nanoseconds(timeout);
     }
 
-    std::unique_lock<std::mutex> lock(mLock);
+    utils::UniqueLock lock(mLock);
     mCond.wait_until(lock, until, [this] {
         return mStatus == FenceStatus::CONDITION_SATISFIED || mStatus == FenceStatus::ERROR;
     });
@@ -44,7 +44,7 @@ FenceStatus WebGPUSubmissionState::waitForCompletion(uint64_t timeout) {
 
 
 void WebGPUSubmissionState::setStatus(FenceStatus status) {
-    std::lock_guard<std::mutex> const lock(mLock);
+    utils::LockGuard const lock(mLock);
     mStatus = status;
     mCond.notify_all();
 }

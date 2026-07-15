@@ -15,6 +15,7 @@
  */
 
 #include "DictionaryTextChunk.h"
+
 #include "Chunk.h"
 #include "Flattener.h"
 #include "LineDictionary.h"

@@ -17,6 +17,7 @@
 #ifndef TNT_UTILS_OSTREAM__H
 #define TNT_UTILS_OSTREAM__H
 
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
 
 #include <mutex>
@@ -25,7 +26,7 @@
 namespace utils::io {
 
 struct ostream_ {
-    std::mutex mLock;
+    Mutex mLock;
     ostream::Buffer mData;
     std::pair<ostream::ConsumerCallback, void*> mConsumer{};
     bool mShowHex = false;

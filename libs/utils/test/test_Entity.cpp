@@ -25,14 +25,16 @@
 #include <thread>
 
 using namespace utils;
-template <typename T>
+template<typename T>
 class TestManagerBase : public SingleInstanceComponentManager<T> {
 public:
     explicit TestManagerBase(EntityManager& em) noexcept
             : SingleInstanceComponentManager<T>(em, "TestManager", false) {}
 
     PagedArenaBitset const& getEntities() const noexcept { return this->mEntities; }
-    PagedArenaBitset const& getPendingDestruction() const noexcept { return this->mPendingDestruction; }
+    PagedArenaBitset const& getPendingDestruction() const noexcept {
+        return this->mPendingDestruction;
+    }
 
     using SingleInstanceComponentManager<T>::gc;
 
@@ -51,7 +53,7 @@ TEST(EntityTest, Simple) {
 
     // check that uninitialized Entities behave properly.
     // they're all the "null" Entity and they're not alive.
-    for (auto const& e : entities) {
+    for (auto const& e: entities) {
         EXPECT_TRUE(e.isNull());
         EXPECT_FALSE(em.isAlive(e));
     }
@@ -60,28 +62,28 @@ TEST(EntityTest, Simple) {
 
     // after creation, check that all Entities are NOT the null entity
     // and are not alive.
-    for (auto const& e : entities) {
+    for (auto const& e: entities) {
         EXPECT_FALSE(e.isNull());
         EXPECT_TRUE(em.isAlive(e));
     }
 
-    for (size_t i=0 ; i<16 ; i++) {
+    for (size_t i = 0; i < 16; i++) {
         auto& e = entities[i];
-        EXPECT_EQ(EntityManagerImpl::makeIdentity(0, i+1), e.getId());
+        EXPECT_EQ(EntityManagerImpl::makeIdentity(0, i + 1), e.getId());
     }
 
 
     // after destruction, check that the destroyed entities are still NOT the null Entity
     // but are now dead (not alive).
     em.destroy(8, entities);
-    for (size_t i=0 ; i<8 ; i++) {
+    for (size_t i = 0; i < 8; i++) {
         auto& e = entities[i];
         EXPECT_FALSE(e.isNull());
         EXPECT_FALSE(em.isAlive(e));
     }
 
     // and make sure the ones that were not deleted, didn't change state
-    for (size_t i=8 ; i<16 ; i++) {
+    for (size_t i = 8; i < 16; i++) {
         auto& e = entities[i];
         EXPECT_FALSE(e.isNull());
         EXPECT_TRUE(em.isAlive(e));
@@ -90,7 +92,7 @@ TEST(EntityTest, Simple) {
     // make sure that allocating more entities doesn't reuse old indices
     Entity more[8];
     em.create(8, more);
-    for (size_t i=0 ; i<8 ; i++) {
+    for (size_t i = 0; i < 8; i++) {
         auto& e = entities[i];
         // make sure the new ones are valid/alive
         EXPECT_FALSE(more[i].isNull());
@@ -206,7 +208,7 @@ TEST(EntityTest, Callback) {
 
     std::vector<Entity> notifiedEntities;
     auto callback = [&](Slice<const Entity> slice) {
-        for (auto e : slice) {
+        for (auto e: slice) {
             notifiedEntities.push_back(e);
         }
     };
@@ -247,7 +249,8 @@ TEST(EntityTest, EpochBasedReclamation) {
     };
 
     struct TestComponentManager : public SingleInstanceComponentManager<DummyComponent> {
-        explicit TestComponentManager(EntityManager& em) noexcept : SingleInstanceComponentManager<DummyComponent>(em, "TestComponentManager") {}
+        explicit TestComponentManager(EntityManager& em) noexcept
+                : SingleInstanceComponentManager<DummyComponent>(em, "TestComponentManager") {}
         using SingleInstanceComponentManager::gc;
     };
 
@@ -257,13 +260,13 @@ TEST(EntityTest, EpochBasedReclamation) {
     std::vector<Entity> entities(NUM_ENTITIES);
     em.create(NUM_ENTITIES, entities.data());
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         cm.addComponent(e);
     }
 
     em.advanceEpoch();
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         em.destroy(e);
     }
 
@@ -271,7 +274,7 @@ TEST(EntityTest, EpochBasedReclamation) {
 
     cm.gc(&cm, &TestComponentManager::removeComponent);
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         EXPECT_FALSE(cm.hasComponent(e));
     }
 
@@ -312,7 +315,7 @@ TEST(EntityTest, EntityManager_DoubleDestroyIsSafelyIgnored) {
 
 TEST(EntityTest, EntityManager_EBR_DelaysRecyclingUntilSafe) {
     EntityManagerImpl em;
-    std::atomic<uint64_t> w1{1};
+    std::atomic<uint64_t> w1{ 1 };
     em.registerWatermark(&w1, "DummyWatermark");
 
     constexpr size_t NUM = 1024;
@@ -337,7 +340,7 @@ TEST(EntityTest, EntityManager_EBR_DelaysRecyclingUntilSafe) {
     }
 
     w1.store(2, std::memory_order_release); // Update watermark past epoch 1
-    em.reclaimSafeEpochs(); // Reclaim safe epochs. w1 is now 2, so epoch 1 is safe!
+    em.reclaimSafeEpochs();                 // Reclaim safe epochs. w1 is now 2, so epoch 1 is safe!
 
     std::vector<Entity> C(NUM);
     em.create(NUM, C.data());
@@ -356,13 +359,13 @@ TEST(EntityTest, EntityManager_ConcurrentCreateAndDestroy) {
     std::vector<Entity> preallocated(NUM_ENTITIES);
     em.create(NUM_ENTITIES, preallocated.data());
 
-    std::atomic<bool> active{true};
+    std::atomic<bool> active{ true };
 
     std::thread t1([&em, &active]() {
         std::vector<Entity> localCreated(NUM_ENTITIES);
         while (active.load(std::memory_order_relaxed)) {
             em.create(NUM_ENTITIES, localCreated.data());
-            for (auto e : localCreated) {
+            for (auto e: localCreated) {
                 if (e) {
                     em.destroy(e);
                 }
@@ -409,7 +412,7 @@ TEST(EntityTest, EntityManager_ConcurrentCreateAndDestroy) {
 
 TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
     EntityManagerImpl em;
-    std::atomic<bool> active{true};
+    std::atomic<bool> active{ true };
 
     // Thread 1: Generates garbage rapidly
     std::thread t1([&em, &active]() {
@@ -439,7 +442,7 @@ TEST(EntityTest, EntityManager_EBR_ConcurrentTimelineStress) {
 
     // Thread 4: Registers/Unregisters watermarks (Also returns to pool and moves safe threshold)
     std::thread t4([&em, &active]() {
-        std::atomic<uint64_t> watermark{0};
+        std::atomic<uint64_t> watermark{ 0 };
         while (active.load(std::memory_order_relaxed)) {
             em.registerWatermark(&watermark, "StressWatermark");
             watermark.store(em.getLatestEpochID(), std::memory_order_relaxed);
@@ -502,7 +505,9 @@ TEST(EntityTest, ComponentManager_ZombieSafelyMovedDuringDefragmentation) {
 
 TEST(EntityTest, ComponentManager_CatchupGarbageRemovesDeadEntities) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
         using TestManagerBase::TestManagerBase;
     };
@@ -529,7 +534,9 @@ TEST(EntityTest, ComponentManager_CatchupGarbageRemovesDeadEntities) {
 
 TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
         using TestManagerBase::TestManagerBase;
     };
@@ -538,7 +545,7 @@ TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
     constexpr size_t NUM = 1024;
     std::vector<Entity> A(NUM);
     em.create(NUM, A.data());
-    for (auto e : A) {
+    for (auto e: A) {
         M1.addComponent(e);
     }
 
@@ -549,7 +556,8 @@ TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
     // Move construct M2 from M1. This atomically rebinds the watermark!
     TestManager M2(std::move(M1));
 
-    em.reclaimSafeEpochs(); // Reclaim safe epochs. M2's watermark is still at 1, holding it hostage!
+    em.reclaimSafeEpochs(); // Reclaim safe epochs. M2's watermark is still at 1, holding it
+                            // hostage!
 
     std::vector<Entity> B(NUM);
     em.create(NUM, B.data());
@@ -557,7 +565,7 @@ TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
         EXPECT_NE(EntityManagerImpl::getIndex(B[i]), 1);
     }
 
-    M2.suspend(); // Suspend M2 (unregisters watermark)
+    M2.suspend();           // Suspend M2 (unregisters watermark)
     em.reclaimSafeEpochs(); // Reclaim safe epochs again.
 
     std::vector<Entity> C(NUM);
@@ -599,7 +607,7 @@ TEST(EntityTest, Legacy_AliveEntitiesReturns32BitIDs) {
 
 TEST(EntityTest, LegacyManager_LogicalDeathIsImmediateDespiteEBR) {
     EntityManagerImpl em;
-    std::atomic<uint64_t> w1{1};
+    std::atomic<uint64_t> w1{ 1 };
     em.registerWatermark(&w1, "DummyWatermark");
 
     Entity A = em.create();
@@ -646,7 +654,7 @@ TEST(EntityTest, LegacyManager_ImmuneToRecycledIndexCollisions) {
     EXPECT_EQ(EntityManagerImpl::getGeneration(B), 1);
 
     // The legacy manager wakes up and queries storedA
-    EXPECT_FALSE(em.isAlive(storedA)); // Immune! Stored pointer is dead!
+    EXPECT_FALSE(em.isAlive(storedA));     // Immune! Stored pointer is dead!
     EXPECT_NE(storedA.getId(), B.getId()); // Mathematically isolated!
 
     em.destroy(NUM, entities2.data());
@@ -656,7 +664,9 @@ TEST(EntityTest, ComponentManager_DestructorReleasesWatermark) {
     EntityManagerImpl em;
     constexpr size_t NUM = 1024;
     auto const firstIndex = [&em]() -> uint32_t {
-        struct DummyComponent { float x; };
+        struct DummyComponent {
+            float x;
+        };
         struct TestManager : public TestManagerBase<DummyComponent> {
             using TestManagerBase::TestManagerBase;
         };
@@ -678,7 +688,8 @@ TEST(EntityTest, ComponentManager_DestructorReleasesWatermark) {
     }();
 
     em.advanceEpoch();
-    em.reclaimSafeEpochs(); // Reclaim safe epochs. Since the manager is destroyed, nothing should block it!
+    em.reclaimSafeEpochs(); // Reclaim safe epochs. Since the manager is destroyed, nothing should
+                            // block it!
 
     std::vector<Entity> B(NUM);
     em.create(NUM, B.data());
@@ -691,7 +702,9 @@ TEST(EntityTest, ComponentManager_DestructorReleasesWatermark) {
 
 TEST(EntityTest, ComponentManager_TOCTOU_WatermarkRaceCondition) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
         using TestManagerBase::TestManagerBase;
 
@@ -700,7 +713,8 @@ TEST(EntityTest, ComponentManager_TOCTOU_WatermarkRaceCondition) {
             Entity entityB;
         };
 
-        void customDestroy(Entity const* entities, size_t const count, CustomDestroyContext& ctx) noexcept {
+        void customDestroy(Entity const* entities, size_t const count,
+                CustomDestroyContext& ctx) noexcept {
             for (size_t i = 0; i < count; ++i) {
                 ctx.pEm->destroy(ctx.entityB);
                 ctx.pEm->flushNotifications();
@@ -723,9 +737,9 @@ TEST(EntityTest, ComponentManager_TOCTOU_WatermarkRaceCondition) {
     em.advanceEpoch();
 
     // Call gc to clean up A.
-    // Inside the custom destructor callback, we simulate the TOCTOU race by advancing the epoch to 2
-    // and destroying B in epoch 1!
-    TestManager::CustomDestroyContext ctx { &em, B };
+    // Inside the custom destructor callback, we simulate the TOCTOU race by advancing the epoch to
+    // 2 and destroying B in epoch 1!
+    TestManager::CustomDestroyContext ctx{ &em, B };
     cm.gc(&cm, &TestManager::customDestroy, ctx);
 
     // Now B has been destroyed in epoch 1, and the global epoch is 2.
@@ -737,17 +751,19 @@ TEST(EntityTest, ComponentManager_TOCTOU_WatermarkRaceCondition) {
     em.reclaimSafeEpochs();
     cm.gc(&cm, &TestManager::removeComponent);
 
-    // If the TOCTOU race bug is present, B was skipped and is still active in mEntities (a ghost object!)
-    // This assertion will FAIL under the bug, proving the existence of the race!
+    // If the TOCTOU race bug is present, B was skipped and is still active in mEntities (a ghost
+    // object!) This assertion will FAIL under the bug, proving the existence of the race!
     EXPECT_FALSE(cm.hasComponent(B));
 }
 
 TEST(EntityTest, ComponentManager_CatchupGarbageExtractsDeadEntities) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
-        using TestManagerBase::TestManagerBase;
         using TestManagerBase::catchupGarbage;
+        using TestManagerBase::TestManagerBase;
     };
 
     TestManager cm(em);
@@ -775,10 +791,12 @@ TEST(EntityTest, ComponentManager_CatchupGarbageExtractsDeadEntities) {
 
 TEST(EntityTest, ComponentManager_CatchupGarbageLeapsOverCleanFrames) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
-        using TestManagerBase::TestManagerBase;
         using TestManagerBase::catchupGarbage;
+        using TestManagerBase::TestManagerBase;
     };
 
     TestManager cm(em);
@@ -800,10 +818,12 @@ TEST(EntityTest, ComponentManager_CatchupGarbageLeapsOverCleanFrames) {
 
 TEST(EntityTest, ComponentManager_CatchupGarbageNeverSkipsActiveEpoch) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
-        using TestManagerBase::TestManagerBase;
         using TestManagerBase::catchupGarbage;
+        using TestManagerBase::TestManagerBase;
     };
 
     TestManager cm(em);
@@ -824,7 +844,9 @@ TEST(EntityTest, ComponentManager_CatchupGarbageNeverSkipsActiveEpoch) {
 
 TEST(EntityTest, ComponentManager_GCLargeScaleEviction) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public TestManagerBase<DummyComponent> {
         using TestManagerBase::TestManagerBase;
     };
@@ -834,7 +856,7 @@ TEST(EntityTest, ComponentManager_GCLargeScaleEviction) {
     std::vector<Entity> entities(NUM);
     em.create(NUM, entities.data());
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         cm.addComponent(e);
     }
 
@@ -885,7 +907,9 @@ TEST(EntityTest, PagedArenaBitset_PopSetBits) {
 
 TEST(EntityTest, ComponentManager_AmortizedGC) {
     EntityManagerImpl em;
-    struct DummyComponent { float x; };
+    struct DummyComponent {
+        float x;
+    };
     struct TestManager : public SingleInstanceComponentManager<DummyComponent> {
         explicit TestManager(EntityManager& em) noexcept
                 : SingleInstanceComponentManager<DummyComponent>(em, "TestManager", true) {}
@@ -897,13 +921,13 @@ TEST(EntityTest, ComponentManager_AmortizedGC) {
     std::vector<Entity> entities(10);
     em.create(10, entities.data());
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         cm.addComponent(e);
     }
 
     em.advanceEpoch();
 
-    for (auto e : entities) {
+    for (auto e: entities) {
         em.destroy(e);
     }
 
@@ -913,7 +937,7 @@ TEST(EntityTest, ComponentManager_AmortizedGC) {
     cm.gc(&cm, 3, &TestManager::removeComponent);
 
     uint32_t aliveCount = 0;
-    for (auto e : entities) {
+    for (auto e: entities) {
         if (cm.hasComponent(e)) {
             aliveCount++;
         }
@@ -924,10 +948,61 @@ TEST(EntityTest, ComponentManager_AmortizedGC) {
     cm.gc(&cm, 10, &TestManager::removeComponent);
 
     aliveCount = 0;
-    for (auto e : entities) {
+    for (auto e: entities) {
         if (cm.hasComponent(e)) {
             aliveCount++;
         }
     }
     EXPECT_EQ(aliveCount, 0);
+}
+
+TEST(EntityTest, ComponentManager_AutomatedLeapForward_LeapsStaticManagers) {
+    EntityManagerImpl em;
+    struct DummyComponent {
+        float x;
+    };
+    struct TestManager : public TestManagerBase<DummyComponent> {
+        using TestManagerBase::TestManagerBase;
+    };
+
+    TestManager cm(em);
+    Entity A = em.create();
+    Entity B = em.create();
+    cm.addComponent(A);
+
+    em.destroy(B);
+    em.flushNotifications();
+    em.advanceEpoch(); // Seals Epoch 0 containing B (which doesn't intersect cm)
+
+    // Verify cm's watermark is automatically caught up to Epoch 1 without calling gc/catchup!
+    EXPECT_EQ(cm.getWatermark(), 1);
+
+    em.destroy(A);
+}
+
+TEST(EntityTest, ComponentManager_AutomatedLeapForward_BlocksOnIntersection) {
+    EntityManagerImpl em;
+    struct DummyComponent {
+        float x;
+    };
+    struct TestManager : public TestManagerBase<DummyComponent> {
+        using TestManagerBase::TestManagerBase;
+    };
+
+    TestManager cm(em);
+    Entity A = em.create();
+    cm.addComponent(A);
+
+    em.destroy(A);
+    em.flushNotifications();
+    em.advanceEpoch(); // Seals Epoch 0 containing A (which intersects cm)
+
+    // Verify cm's watermark is BLOCKED at 0 to prevent ID recycling before gc runs
+    EXPECT_EQ(cm.getWatermark(), 0);
+
+    // Call gc to purge A
+    cm.gc(&cm, &TestManager::removeComponent);
+
+    // Now it should be advanced to Epoch 1
+    EXPECT_EQ(cm.getWatermark(), 1);
 }

@@ -22,6 +22,7 @@
 #include <utils/EntityInstance.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
+#include <utils/Mutex.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
@@ -128,7 +129,7 @@ public:
         return pos != mInstanceMap.end() ? pos->second : 0;
     }
 
-    PagedArenaBitset const& getEntityBitset() const noexcept {
+    PagedArenaBitset const& getEntityBitset() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
         return mEntities;
     }
 
@@ -155,7 +156,10 @@ public:
      *    Typically, @p suspend() is called when the associated scene, world, or render context is inactive or shutdown.
      */
     void suspend() noexcept {
-        mEntityManager.unregisterWatermark(&mWatermark);
+        if (!mSuspended) {
+            mEntityManager.unregisterWatermark(&mWatermark);
+            mSuspended = true;
+        }
     }
 
     /**
@@ -166,7 +170,10 @@ public:
      * on all missed garbage epochs that are still present on the timeline.
      */
     void resume() noexcept {
-        mEntityManager.registerWatermark(&mWatermark);
+        if (mSuspended) {
+            mEntityManager.registerWatermark(&mWatermark, mName, &mEntities, &mEbrEntitiesLock);
+            mSuspended = false;
+        }
     }
 
     ImmutableCString const& getName() const noexcept { return mName; }
@@ -211,12 +218,12 @@ protected:
     SingleInstanceComponentManagerBase(const SingleInstanceComponentManagerBase&) = delete;
     SingleInstanceComponentManagerBase& operator=(const SingleInstanceComponentManagerBase&) = delete;
 
-    SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept;
-    SingleInstanceComponentManagerBase& operator=(SingleInstanceComponentManagerBase&& rhs) noexcept;
+    SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    SingleInstanceComponentManagerBase& operator=(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
     Instance addComponentImpl(Entity e, void* context, SoaAllocator allocator) noexcept;
 
-    void removeComponentsImpl(Entity const* entities, size_t count, void* context, SoaDeallocator deallocator) noexcept;
+    void removeComponentsImpl(Entity const* entities, size_t count, void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
 
     void gcImpl(uint32_t maxDestructions,
             void* context, void* extraArg, EvictionDispatcher dispatcher) noexcept;
@@ -228,13 +235,34 @@ protected:
     void catchupGarbage() noexcept;
 
     tsl::robin_map<Entity, Instance, Entity::Hasher> mInstanceMap;
-    PagedArenaBitset mEntities;
     PagedArenaBitset mPendingDestruction;
+
+    /*
+     * mEbrEntitiesLock protects mEntities during global EBR timeline GCs.
+     *
+     * CONCURRENCY RATIONALE:
+     * Component Managers are strictly single-threaded and are only mutated/accessed on the main
+     * engine thread. However, the global EntityManager timeline (advanceEpoch() -> getExpiredEpochsLocked())
+     * may be executed concurrently from background helper threads (e.g. background asset loaders).
+     *
+     * To prevent static/inactive assets from stalling global EBR timeline GCs, the EntityManager
+     * automatically leap-forwards watermarks by scanning the intersection of each manager's mEntities
+     * and the timeline's garbage. To perform this intersection test safely without data races or
+     * requiring expensive locks on the hot rendering paths, the EntityManager acquires this lock
+     * dynamically while scanning, while mutations (addComponent, removeComponent) lock it briefly.
+     *
+     * Read-only accesses from the main engine thread (e.g. mEntities.empty() or getEntityBitset())
+     * do not require acquiring this lock, as no concurrent writes can occur (mutations are strictly
+     * confined to the main thread).
+     */
+    mutable utils::Mutex mEbrEntitiesLock;
+    PagedArenaBitset mEntities UTILS_GUARDED_BY(mEbrEntitiesLock);
 
 private:
     EntityManager& mEntityManager;
     ImmutableCString mName;
     bool mAmortizationSupported = false;
+    bool mSuspended = true;
     PagedArenaBitset mCollapsedGarbage;
     std::atomic<uint64_t> mWatermark{0};
     std::vector<const PagedArenaBitset*> mMissedGarbage;
@@ -407,7 +435,7 @@ public:
         using SoA::template Field<E>::operator =;
     };
 
-    const PagedArenaBitset& getEntityBitset() const noexcept {
+    const PagedArenaBitset& getEntityBitset() const noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
         return mEntities;
     }
 
@@ -604,6 +632,6 @@ void SingleInstanceComponentManager<Elements ... >::removeComponents(Entity cons
     removeComponentsHelper(entities, count);
 }
 
-} // namespace filament
+} // namespace utils
 
 #endif // TNT_UTILS_SINGLEINSTANCECOMPONENTMANAGER_H

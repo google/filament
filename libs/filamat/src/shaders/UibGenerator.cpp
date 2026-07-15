@@ -15,11 +15,11 @@
  */
 
 #include "UibGenerator.h"
-#include "private/filament/UibStructs.h"
 
-#include "private/filament/BufferInterfaceBlock.h"
-
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
@@ -171,7 +171,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
             { "cascades",                  0, Type::INT                     },
-            { "shadowPenumbraRatioScale",  0, Type::FLOAT                   },
+            { "reservedLight0",            0, Type::FLOAT                   },
             { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------

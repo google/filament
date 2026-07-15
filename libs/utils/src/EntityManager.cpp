@@ -95,8 +95,9 @@ PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
     return impl->mAliveEntities.clone();
 }
 
-void EntityManager::registerWatermark(std::atomic<uint64_t>* watermark, ImmutableCString name) noexcept {
-    static_cast<EntityManagerImpl *>(this)->registerWatermark(watermark, std::move(name));
+void EntityManager::registerWatermark(std::atomic<uint64_t>* watermark, ImmutableCString name,
+        const PagedArenaBitset* entityBitset, Mutex* entityBitsetLock) noexcept {
+    static_cast<EntityManagerImpl *>(this)->registerWatermark(watermark, std::move(name), entityBitset, entityBitsetLock);
 }
 
 void EntityManager::unregisterWatermark(std::atomic<uint64_t>* watermark) noexcept {
@@ -104,8 +105,9 @@ void EntityManager::unregisterWatermark(std::atomic<uint64_t>* watermark) noexce
 }
 
 void EntityManager::rebindWatermark(std::atomic<uint64_t> const* oldW, std::atomic<uint64_t>* newW,
-        ImmutableCString newName) noexcept {
-    static_cast<EntityManagerImpl *>(this)->rebindWatermark(oldW, newW, std::move(newName));
+        ImmutableCString newName, const PagedArenaBitset* newEntityBitset,
+        Mutex* newEntityBitsetLock) noexcept {
+    static_cast<EntityManagerImpl *>(this)->rebindWatermark(oldW, newW, std::move(newName), newEntityBitset, newEntityBitsetLock);
 }
 
 void EntityManager::advanceEpoch() noexcept {

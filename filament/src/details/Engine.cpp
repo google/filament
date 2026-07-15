@@ -877,9 +877,16 @@ bool FEngine::flushAndWait(uint64_t const timeout) {
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-    FFence* fence = createFence();
-    FenceStatus const status = fence->wait(FFence::Mode::FLUSH, timeout);
-    destroy(fence);
+    FenceStatus status = FenceStatus::CONDITION_SATISFIED;
+    if constexpr (UTILS_HAS_THREADING) {
+        FFence* fence = createFence();
+        status = fence->wait(FFence::Mode::FLUSH, timeout);
+        destroy(fence);
+    } else {
+        // When executing in a single-threaded (e.g. wasm) environment, fence would
+        // fail. Instead, directly execute the outstanding commands.
+        execute();
+    }
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
@@ -1047,6 +1054,10 @@ FMaterial* FEngine::createMaterial(const Material::Builder& builder,
 
 FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {
     return create(mSkyboxes, builder);
+}
+
+FFramePacer* FEngine::createFramePacer(const FramePacer::Builder& builder) noexcept {
+    return create(mFramePacers, builder);
 }
 
 FColorGrading* FEngine::createColorGrading(const ColorGrading::Builder& builder) noexcept {
@@ -1317,6 +1328,11 @@ bool FEngine::destroy(const FScene* p) {
 UTILS_NOINLINE
 bool FEngine::destroy(const FSkybox* p) {
     return terminateAndDestroy(p, mSkyboxes);
+}
+
+UTILS_NOINLINE
+bool FEngine::destroy(const FFramePacer* p) {
+    return terminateAndDestroy(p, mFramePacers);
 }
 
 UTILS_NOINLINE
@@ -1644,13 +1660,13 @@ void FEngine::setPaused(bool const paused) {
 }
 
 void FEngine::setFenceUnrecoverableError() noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     mFenceHasUnrecoverableError = true;
     mFenceCondition.notify_all();
 }
 
 void FEngine::signalFence(FenceSignal& signal, FenceSignal::State s) noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     signal.mState = s;
     mFenceCondition.notify_all();
 }
@@ -1772,7 +1788,8 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
     baseVariant.setDirectionalLighting(isMaterialLit && view->hasDirectionalLighting());
-    baseVariant.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
+    // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
+    baseVariant.setDynamicLighting(false);
     baseVariant.setFog(view->hasFog());
     baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
@@ -1811,6 +1828,19 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     return variants;
 }
 
+FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
+        FView const* view, FMaterial const* material) noexcept {
+    // Will add more as we turn more variants into spec constants
+    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
+    DynamicSpecConstKey baseKey;
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
+    baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
+
+    keys.push_back(baseKey);
+
+    return keys;
+}
+
 void FEngine::compile(
         CompilerPriorityQueue const priority,
         FMaterial const* material,
@@ -1820,7 +1850,9 @@ void FEngine::compile(
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
     auto const variants = getMaterialCompileVariants(view, material, shadowReceiver, skinning);
-    const_cast<FMaterial*>(material)->compile(priority, variants, handler, std::move(callback));
+    auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(view, material);
+    const_cast<FMaterial*>(material)->compile(priority, variants, dynamicSpecConstKeys, handler,
+            std::move(callback));
 }
 
 // ------------------------------------------------------------------------------------------------
