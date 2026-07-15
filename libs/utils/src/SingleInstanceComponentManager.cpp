@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2026 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 
 #include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/PagedArenaBitset.h>
+#include <utils/Panic.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
 
 #include <algorithm>
-#include <cstddef>
 #include <utility>
 
 namespace utils {
@@ -33,8 +34,8 @@ void SingleInstanceComponentManagerBase::registerChangeCallback(
 void SingleInstanceComponentManagerBase::unregisterChangeCallback(
         void const* token) noexcept {
     mChangeCallbacks.erase(
-            std::remove_if(mChangeCallbacks.begin(), mChangeCallbacks.end(),
-                    [token](auto const& info) { return info.token == token; }),
+            std::ranges::remove_if(mChangeCallbacks,
+                    [token](auto const& info) { return info.token == token; }).begin(),
             mChangeCallbacks.end());
 }
 
@@ -82,6 +83,218 @@ void SingleInstanceComponentManagerBase::registerBitset(PagedArenaBitset* bitset
 }
 
 void SingleInstanceComponentManagerBase::unregisterBitset(PagedArenaBitset const* bitset) {
-    mBitsets.erase(std::remove(mBitsets.begin(), mBitsets.end(), bitset), mBitsets.end());
+    mBitsets.erase(std::ranges::remove(mBitsets, bitset).begin(), mBitsets.end());
 }
+
+void SingleInstanceComponentManagerBase::catchupGarbage() noexcept {
+    uint64_t const currentWatermark = mWatermark.load(std::memory_order_relaxed);
+
+    // Transact with the source of truth
+    uint64_t const syncedFence = mEntityManager.getMissedGarbage(mMissedGarbage, currentWatermark);
+
+    // O(1) Fast-Path Early Exit: Ceiling hasn't moved
+    if (syncedFence == currentWatermark) {
+        return;
+    }
+
+    // Process bitsets if any were returned (Clean frames will simply skip this loop)
+    if (UTILS_LIKELY(!mMissedGarbage.empty())) {
+        LockGuard<Mutex> lock(mEbrEntitiesLock);
+        mCollapsedGarbage.clear();
+        for (auto const* garbageBits : mMissedGarbage) {
+            PagedArenaBitset::intersect(&mCollapsedGarbage, mEntities, *garbageBits);
+            if (!mCollapsedGarbage.empty()) {
+                mPendingDestruction.merge(mCollapsedGarbage);
+                mEntities.difference(mCollapsedGarbage);
+            }
+        }
+    }
+
+    // Commit our watermark. It will match currentEpoch - 1,
+    mWatermark.store(syncedFence, std::memory_order_release);
+}
+
+bool SingleInstanceComponentManagerBase::popPendingZombie(Entity const newEntity, Entity& outZombie) noexcept {
+    uint32_t const index = EntityManager::getIndex(newEntity);
+    // TODO: this loop will disappear once we only store the indices
+    constexpr int32_t kGenerationCount = 1 << EntityManager::GENERATION_BITS;
+    for (int32_t g = 0; g < kGenerationCount; ++g) {
+        int32_t const potentialZombie = EntityManager::makeIdentity(g, index);
+        if (mPendingDestruction[potentialZombie]) {
+            mPendingDestruction.remove(potentialZombie);
+            outZombie = Entity::import(potentialZombie);
+            return true;
+        }
+    }
+    return false;
+}
+
+void SingleInstanceComponentManagerBase::checkZombieCollisionPanic(Entity const newEntity) noexcept {
+    Entity zombie;
+    if (UTILS_UNLIKELY(popPendingZombie(newEntity, zombie))) {
+        FILAMENT_CHECK_PRECONDITION(false)
+                << "In " << mName.c_str_safe() << ", new component with entity " << newEntity.getId()
+                << " collides with a logically-dead component with entity = " << zombie.getId()
+                << " (component manager implementation bug)";
+    }
+}
+
+void SingleInstanceComponentManagerBase::gcImpl(uint32_t const maxDestructions,
+        void* context, void* extraArg, EvictionDispatcher const dispatcher) noexcept {
+
+    catchupGarbage();
+
+    if (UTILS_UNLIKELY(mPendingDestruction.empty())) {
+        return;
+    }
+
+    uint32_t const actualLimit = isAmortizationSupported() ?
+            maxDestructions : std::numeric_limits<uint32_t>::max();
+
+    uint32_t destroyedCount = 0;
+
+    constexpr size_t BATCH_SIZE = 64;
+    Entity buffer[BATCH_SIZE];
+    size_t count = 0;
+
+    auto flush = [&]() noexcept {
+        if (count > 0) {
+            dispatcher(context, extraArg, buffer, count);
+            destroyedCount += count;
+            count = 0;
+        }
+    };
+
+    mPendingDestruction.popSetBits([&](uint32_t const bit) noexcept {
+        if (destroyedCount + count < actualLimit) {
+            buffer[count++] = Entity::import(bit);
+            if (count == BATCH_SIZE) {
+                flush();
+            }
+            return true;
+        }
+        return false;
+    });
+
+    flush();
+}
+
+SingleInstanceComponentManagerBase::Instance
+SingleInstanceComponentManagerBase::addComponentImpl(Entity const e, void* context,
+        SoaAllocator const allocator) noexcept {
+    Instance ci = 0;
+    if (!e.isNull()) {
+        resume();
+        if (isAmortizationSupported()) {
+            checkZombieCollisionPanic(e);
+        }
+
+        if (!hasComponent(e)) {
+            ci = allocator(context, e);
+            mInstanceMap[e] = ci;
+            {
+                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                mEntities.add(e.getId());
+            }
+            notifyChange(e);
+        } else {
+            ci = mInstanceMap[e];
+        }
+    }
+    assert(ci != 0);
+    return ci;
+}
+
+
+
+void SingleInstanceComponentManagerBase::removeComponentsImpl(Entity const* entities, size_t const count,
+        void* context, SoaDeallocator deallocator) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+    auto& map = mInstanceMap;
+    for (size_t k = 0; k < count; ++k) {
+        Entity const e = entities[k];
+        auto const pos = map.find(e);
+        if (UTILS_LIKELY(pos != map.end())) {
+            size_t const index = pos->second;
+            assert(index != 0);
+
+            auto const [lastIndex, swappedEntity] = deallocator(context, index);
+
+            if (!swappedEntity.isNull()) {
+                map[swappedEntity] = index;
+            }
+
+            map.erase(pos);
+
+            // We only need to lock mEbrEntitiesLock when writing (mutating) mEntities because the
+            // global timeline thread (EntityManager) can read it concurrently. Since component
+            // managers only run on the main thread, read-only accesses to mEntities from this
+            // class do not need synchronization.
+            {
+                LockGuard<Mutex> lock(mEbrEntitiesLock);
+                mEntities.remove(e.getId());
+            }
+
+            notifyChange(e);
+        }
+    }
+
+    // Lock-free read check: safe because no other thread mutates mEntities.
+    if (mEntities.empty()) {
+        suspend();
+    }
+}
+
+SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(EntityManager& em, ImmutableCString name,
+        bool const amortizationSupported) noexcept
+        : mEntityManager(em), mName(std::move(name)), mAmortizationSupported(amortizationSupported) {
+}
+
+SingleInstanceComponentManagerBase::~SingleInstanceComponentManagerBase() noexcept {
+    suspend();
+}
+
+SingleInstanceComponentManagerBase::SingleInstanceComponentManagerBase(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS
+        : mInstanceMap(std::move(rhs.mInstanceMap)),
+          mEntities(std::move(rhs.mEntities)),
+          mPendingDestruction(std::move(rhs.mPendingDestruction)),
+          mEntityManager(rhs.mEntityManager),
+          mName(std::move(rhs.mName)),
+          mAmortizationSupported(rhs.mAmortizationSupported),
+          mCollapsedGarbage(std::move(rhs.mCollapsedGarbage)),
+          mMissedGarbage(std::move(rhs.mMissedGarbage)),
+          mDirtyCount(rhs.mDirtyCount),
+          mChangeCallbacks(std::move(rhs.mChangeCallbacks)),
+          mBitsets(std::move(rhs.mBitsets)) {
+    std::copy_n(rhs.mDirtyEntities, rhs.mDirtyCount, mDirtyEntities);
+    mSuspended = rhs.mSuspended;
+    mWatermark.store(rhs.mWatermark.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    if (!mSuspended) {
+        mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName, &mEntities, &mEbrEntitiesLock);
+    }
+}
+
+SingleInstanceComponentManagerBase& SingleInstanceComponentManagerBase::operator=(SingleInstanceComponentManagerBase&& rhs) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+    if (UTILS_LIKELY(this != &rhs)) {
+        suspend();
+
+        mEntities = std::move(rhs.mEntities);
+        mPendingDestruction = std::move(rhs.mPendingDestruction);
+        mName = std::move(rhs.mName);
+        mAmortizationSupported = rhs.mAmortizationSupported;
+        mInstanceMap = std::move(rhs.mInstanceMap);
+        mCollapsedGarbage = std::move(rhs.mCollapsedGarbage);
+        mMissedGarbage = std::move(rhs.mMissedGarbage);
+        mDirtyCount = rhs.mDirtyCount;
+        mChangeCallbacks = std::move(rhs.mChangeCallbacks);
+        mBitsets = std::move(rhs.mBitsets);
+        std::copy_n(rhs.mDirtyEntities, rhs.mDirtyCount, mDirtyEntities);
+        mSuspended = rhs.mSuspended;
+        mWatermark.store(rhs.mWatermark.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        if (!mSuspended) {
+            mEntityManager.rebindWatermark(&rhs.mWatermark, &mWatermark, mName, &mEntities, &mEbrEntitiesLock);
+        }
+    }
+    return *this;
+}
+
 } // namespace utils

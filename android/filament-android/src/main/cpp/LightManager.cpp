@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <filament/LightManager.h>
-#include <common/JniUtils.h>
 
 #include <utils/Entity.h>
+
+#include <common/JniUtils.h>
+#include <jni.h>
 
 #include <algorithm>
 
@@ -82,7 +82,9 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
         jfloat polygonOffsetConstant, jfloat polygonOffsetSlope,
         jboolean screenSpaceContactShadows, jint stepCount,
         jfloat maxShadowDistance, jboolean elvsm, jfloat blurWidth, jfloat shadowBulbRadius,
-        jfloatArray transform) {
+        jfloatArray transform,
+        jfloat penumbraScale, jfloat penumbraRatioScale,
+        jfloat maxPenumbraRatio, jfloat maxSearchRadius) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     LightManager::ShadowOptions shadowOptions {
             .mapSize = (uint32_t)mapSize,
@@ -95,7 +97,7 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
             .stable = (bool)stable,
             .lispsm = (bool)lispsm,
             .polygonOffsetConstant = polygonOffsetConstant,
-            .polygonOffsetSlope = polygonOffsetConstant,
+            .polygonOffsetSlope = polygonOffsetSlope,
             .screenSpaceContactShadows = (bool)screenSpaceContactShadows,
             .stepCount = uint8_t(stepCount),
             .maxShadowDistance = maxShadowDistance,
@@ -103,7 +105,11 @@ Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv* env,
                     .elvsm = (bool)elvsm,
                     .blurWidth = blurWidth
             },
-            .shadowBulbRadius = shadowBulbRadius
+            .shadowBulbRadius = shadowBulbRadius,
+            .penumbraScale = penumbraScale,
+            .penumbraRatioScale = penumbraRatioScale,
+            .maxPenumbraRatio = maxPenumbraRatio,
+            .maxSearchRadius = maxSearchRadius
     };
 
     jfloat *nativeSplits = env->GetFloatArrayElements(splitPositions, NULL);

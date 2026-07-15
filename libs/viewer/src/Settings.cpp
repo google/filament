@@ -493,6 +493,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             i = parse(tokens, i + 1, jsonChunk, &out->shadowBulbRadius);
         } else if (compare(tok, jsonChunk, "transform") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->transform.xyzw);
+        } else if (compare(tok, jsonChunk, "penumbraScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraScale);
+        } else if (compare(tok, jsonChunk, "penumbraRatioScale") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->penumbraRatioScale);
+        } else if (compare(tok, jsonChunk, "maxPenumbraRatio") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxPenumbraRatio);
+        } else if (compare(tok, jsonChunk, "maxSearchRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxSearchRadius);
         } else {
             slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -1222,6 +1230,10 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
         << "\"maxShadowDistance\": " << in.maxShadowDistance << ",\n"
         << "\"shadowBulbRadius\": " << in.shadowBulbRadius << ",\n"
         << "\"transform\": " << in.transform.xyzw << ",\n"
+        << "\"penumbraScale\": " << in.penumbraScale << ",\n"
+        << "\"penumbraRatioScale\": " << in.penumbraRatioScale << ",\n"
+        << "\"maxPenumbraRatio\": " << in.maxPenumbraRatio << ",\n"
+        << "\"maxSearchRadius\": " << in.maxSearchRadius << "\n"
         << "}";
 }
 
