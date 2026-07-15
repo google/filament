@@ -252,8 +252,34 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.shadowFar = std::max(options.shadowFar, 0.0f);
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
+    params.options.polygonOffsetConstant = std::max(options.polygonOffsetConstant, 0.0f);
+    params.options.polygonOffsetSlope = std::max(options.polygonOffsetSlope, 0.0f);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
+    params.options.penumbraScale = std::max(0.0f, options.penumbraScale);
+    params.options.penumbraRatioScale = std::max(0.0f, options.penumbraRatioScale);
+    params.options.maxPenumbraRatio = std::max(0.0f, options.maxPenumbraRatio);
+    params.options.maxSearchRadius = std::max(0.0f, options.maxSearchRadius);
     mManager.notifyChange(getEntity(i));
+}
+
+float FLightManager::getEffectiveBulbRadius(Instance const li) const noexcept {
+    auto const& options = getShadowOptions(li);
+    if (options.shadowBulbRadius < 0.0f) {
+        switch (getType(li)) {
+            case Type::SUN: {
+                float const sunAngularRadius = getSunAngularRadiusRad(li);
+                float const sunHaloRatio = getSunHaloSize(li);
+                return clamp(sunAngularRadius * sunHaloRatio, 0.0f, f::PI_2);
+            }
+            case Type::DIRECTIONAL:
+                return 1.0f;
+            case Type::POINT:
+            case Type::FOCUSED_SPOT:
+            case Type::SPOT:
+                return 0.06f;
+        }
+    }
+    return options.shadowBulbRadius;
 }
 
 void FLightManager::setLightChannel(Instance const i, unsigned int const channel, bool const enable) noexcept {

@@ -26,7 +26,7 @@
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>
 
-#include <math/mat4.h>
+#include <cstddef>
 
 namespace filament {
 
@@ -253,6 +253,8 @@ public:
     }
 
     void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
+
+    float getEffectiveBulbRadius(Instance li) const noexcept;
 
 private:
     friend class FScene;
