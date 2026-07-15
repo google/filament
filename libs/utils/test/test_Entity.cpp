@@ -296,7 +296,7 @@ TEST(EntityTest, EntityManager_DoubleDestroyIsSafelyIgnored) {
     em.destroy(A);
     EXPECT_FALSE(em.isAlive(A));
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     // Under Debug, the second destroy triggers an assertion failure (death test)
     EXPECT_DEATH(em.destroy(A), ".*");
 #else
