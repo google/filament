@@ -139,8 +139,9 @@ utils::CString getPortString(std::string_view serviceType) {
 #endif // FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
 
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    Platform::DriverConfig const driverConfig {
+    Platform::DriverConfig const driverConfig{
         .featureFlagManager = instance,
+        .debugRegistry = &instance->getDebugRegistry().internalRegistry,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
@@ -161,8 +162,9 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
                 instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
-        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
-                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation
+                                    ? instance->getConfig().asynchronousMode
+                                    : AsynchronousMode::NONE,
     };
 
     return driverConfig;

@@ -82,6 +82,7 @@ set(SRCS
         src/CString.cpp
         src/CountDownLatch.cpp
         src/CyclicBarrier.cpp
+        src/InternalDebugRegistry.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
         src/FeatureFlagManager.cpp
