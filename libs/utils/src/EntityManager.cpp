@@ -91,8 +91,40 @@ bool EntityManager::isAlive(Entity const e) const noexcept {
 
 PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
     auto const* impl = static_cast<EntityManagerImpl const*>(this);
-    utils::LockGuard const lock(impl->mFreeListLock);
+    LockGuard const lock(impl->mDestructionLock);
     return impl->mAliveEntities.clone();
+}
+
+void EntityManager::registerWatermark(std::atomic<uint64_t>* watermark, ImmutableCString name,
+        const PagedArenaBitset* entityBitset, Mutex* entityBitsetLock) noexcept {
+    static_cast<EntityManagerImpl *>(this)->registerWatermark(watermark, std::move(name), entityBitset, entityBitsetLock);
+}
+
+void EntityManager::unregisterWatermark(std::atomic<uint64_t>* watermark) noexcept {
+    static_cast<EntityManagerImpl *>(this)->unregisterWatermark(watermark);
+}
+
+void EntityManager::rebindWatermark(std::atomic<uint64_t> const* oldW, std::atomic<uint64_t>* newW,
+        ImmutableCString newName, const PagedArenaBitset* newEntityBitset,
+        Mutex* newEntityBitsetLock) noexcept {
+    static_cast<EntityManagerImpl *>(this)->rebindWatermark(oldW, newW, std::move(newName), newEntityBitset, newEntityBitsetLock);
+}
+
+void EntityManager::advanceEpoch() noexcept {
+    static_cast<EntityManagerImpl *>(this)->advanceEpoch();
+}
+
+uint64_t EntityManager::getMissedGarbage(
+        std::vector<const PagedArenaBitset*>& out, uint64_t readerWatermark) noexcept {
+    return static_cast<EntityManagerImpl *>(this)->getMissedGarbage(out, readerWatermark);
+}
+
+void EntityManager::reclaimSafeEpochs() noexcept {
+    static_cast<EntityManagerImpl *>(this)->reclaimSafeEpochs();
+}
+
+uint64_t EntityManager::getLatestEpochID() const noexcept {
+    return static_cast<EntityManagerImpl const *>(this)->getLatestEpochID();
 }
 
 } // namespace utils

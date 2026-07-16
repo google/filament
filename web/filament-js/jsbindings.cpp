@@ -1744,10 +1744,11 @@ class_<utils::EntityManager>("EntityManager")
     }), allow_raw_pointers())
 #endif
 
-    /// create ::method::
-    /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
-    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy));
+    .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy))
+    .function("advanceEpoch", &utils::EntityManager::advanceEpoch)
+    .class_function("getMaxEntityCount", &utils::EntityManager::getMaxEntityCount)
+    .function("getEntityCount", &utils::EntityManager::getEntityCount);
 
 // DRIVER TYPES
 // ------------
@@ -2222,7 +2223,11 @@ class_<AssetLoader>("gltfio$AssetLoader")
     // Destroys the given asset and all of its associated Filament objects. This includes
     // components, material instances, vertex buffers, index buffers, and textures.
     // asset ::argument:: the Filament asset created using AssetLoader
-    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers());
+    .function("destroyAsset", &AssetLoader::destroyAsset, allow_raw_pointers())
+    
+    // gc ::method::
+    // Performs a Garbage Collection sweep over all internal component managers.
+    .function("gc", &AssetLoader::gc, allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights), {

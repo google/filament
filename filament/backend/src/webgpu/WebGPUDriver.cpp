@@ -1763,12 +1763,12 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
     // pending to be submitted.
     mQueueManager.flush();
     userData->buffer.MapAsync(
-            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
+            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowProcessEvents,
+            [](wgpu::MapAsyncStatus status, wgpu::StringView message, UserData* userdata) {
                 std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    const char *src {static_cast<const char *>(
-                            data->buffer.GetConstMappedRange(0, data->buffer.GetSize()))};
+                    const char* src{ static_cast<const char*>(
+                            data->buffer.GetConstMappedRange(0, data->buffer.GetSize())) };
                     char* dst{ static_cast<char*>(data->pixelBufferDescriptor.buffer) };
                     PixelBufferDescriptor& p = data->pixelBufferDescriptor;
                     size_t const stride = p.stride ? p.stride : data->width;
@@ -1789,7 +1789,7 @@ void WebGPUDriver::readTextureToBuffer(wgpu::Texture srcTexture, uint32_t level,
                     }
                     data->buffer.Unmap();
                 } else {
-                    FWGPU_LOGE << "Failed to map staging buffer: " << message;
+                    FWGPU_LOGE << "Failed to map staging buffer: " << std::string_view(message);
                 }
                 data->driver->scheduleDestroy(std::move(data->pixelBufferDescriptor));
                 data->driver->mReadPixelMapsCounter.finishTask();

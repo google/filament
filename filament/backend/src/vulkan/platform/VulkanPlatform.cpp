@@ -217,23 +217,29 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
         // We only support external image for Android for now, but nothing bars us from
         // supporting other platforms.
 #if defined(__ANDROID__)
+
+        // Required for external images
         VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-        VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
-        VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
-        VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
-        // This is needed for external images.  See VulkanPlatformAndroid
         VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME,
+        VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
+        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+        VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
+
+        // External samplers
+        VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
 #endif
         // MoltenVk is the only non-conformant implementation we're interested in.
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
-        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
+
+        // Required for dynamic rendering
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-        // Required for dynamic rendering, enable this too.
+        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
+        VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
+
         VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
