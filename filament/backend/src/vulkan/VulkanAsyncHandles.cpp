@@ -17,6 +17,7 @@
 #include "VulkanAsyncHandles.h"
 
 #include "VulkanConstants.h"
+#include "VulkanDriver.h"
 #include "VulkanFencePool.h"
 
 #include "vulkan/utils/Spirv.h"
