@@ -25,6 +25,8 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -1025,7 +1027,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
 
     // Pass along relevant driver config (feature flags)
     context.mAsyncPipelineCachePrewarmingEnabled = driverConfig.vulkanEnableAsyncPipelineCachePrewarming;
-    context.mParallelShaderCompileDisabled = driverConfig.disableParallelShaderCompile;
+    context.mParallelShaderCompileDisabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .disable_parallel_shader_compile
+                                             : false);
     context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
 
     // We know we need to allocate the protected version of the VK objects
