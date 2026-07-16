@@ -894,7 +894,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:Eu" opt; do
+while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
     case ${opt} in
         h)
             print_help
@@ -1040,6 +1040,9 @@ while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:Eu" opt; do
             ;;
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"
+            ;;
+        T)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_TSAN=ON"
+            echo "Enabled TSan"
             ;;
         V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
             echo "Enabled coverage"
