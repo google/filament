@@ -130,8 +130,6 @@ private:
 
     static void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob &spirv);
 
-    static void rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv);
-
     void fixupClipDistance(SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const;
 
     const MaterialBuilder::Optimization mOptimization;

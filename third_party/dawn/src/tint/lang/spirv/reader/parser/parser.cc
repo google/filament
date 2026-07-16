@@ -3144,8 +3144,8 @@ class Parser {
         auto* tex = Value(inst.GetSingleWordInOperand(0));
         auto* img_type = tex->Type()->As<type::Image>();
         TINT_ASSERT(img_type);
-        // TINT_ASSERT(img_type->GetMultisampled() != type::Multisampled::kMultisampled)
-        //     << "Creating an OpTypeSampledImage from a multisampled image is not supported";
+        TINT_ASSERT(img_type->GetMultisampled() != type::Multisampled::kMultisampled)
+                << "Creating an OpTypeSampledImage from a multisampled image is not supported";
         Emit(b_.CallExplicit<spirv::ir::BuiltinCall>(Type(inst.type_id()),
                                                      spirv::BuiltinFn::kOpSampledImage,
                                                      Vector{tex->Type()}, Args(inst, 2)),
