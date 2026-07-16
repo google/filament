@@ -17,8 +17,6 @@ cp -r ../dawn/tnt .
 cd ..
 rm -rf dawn
 mv dawn_copy dawn
-patch -p2 < dawn/tnt/dawn-generator-CMakeList.patch
-patch -p2 < dawn/tnt/remove-vk-macos-restriction.patch
 # remove redundant 3rd party dependencies with Filament itself
 rm -rf \
     dawn/third_party/abseil-cpp \
@@ -26,12 +24,12 @@ rm -rf \
     dawn/third_party/spirv-cross \
     dawn/third_party/spirv-headers \
     dawn/third_party/spirv-tools
+cd ..
+for i in `find third_party/dawn/tnt -name "*.patch"`; do patch -p1 < ${i}; done
 git add dawn
-<may need to add following separately>
-git add dawn/third_party/dxc/ dawn/third_party/vulkan-loader/src/ dawn/third_party/spirv-tools/src/ dawn/third_party/glslang/
 ```
 
-For each matched dependency (Known: absiel, spirv-tools, spirv-headers,
+For each matched dependency (Known: abseil, spirv-tools, spirv-headers,
 glslang) follow the relevant instructions in the dependency tnt folder and update it to the
 version in the new Dawn commit.
 
