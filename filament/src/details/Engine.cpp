@@ -139,21 +139,13 @@ utils::CString getPortString(std::string_view serviceType) {
 #endif // FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
 
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    Platform::DriverConfig const driverConfig {
+    Platform::DriverConfig const driverConfig{
         .featureFlagManager = instance,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
-        .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
-        .disableAmortizedShaderCompile =
-                instance->features.backend.disable_amortized_shader_compile,
-        .disableHandleUseAfterFreeCheck =
-                instance->features.backend.disable_handle_use_after_free_check,
-        .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
         .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
-        .assertNativeWindowIsValid =
-                instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
@@ -161,10 +153,10 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
                 instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
         .vulkanEnableStagingBufferBypass =
                 instance->features.backend.vulkan.enable_staging_buffer_bypass,
-        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
-                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation
+                                    ? instance->getConfig().asynchronousMode
+                                    : AsynchronousMode::NONE,
     };
-
     return driverConfig;
 }
 
@@ -300,6 +292,7 @@ FEngine::FEngine(Builder const& builder) :
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
         mRenderableManager(*this),
+        mTransformManager(mEntityManager),
         mLightManager(*this),
         mCameraManager(*this),
         mMaterialCache(builder->mConfig.materialCacheCapacity, builder->mConfig.programCacheCapacity),
@@ -796,28 +789,26 @@ void FEngine::prepare(DriverApi& driver) {
 
 void FEngine::gc() {
     JobSystem& js = getJobSystem();
-    auto *rootJob = js.createJob();
-
-    js.run(
-            jobs::createJob(js, rootJob, [this] {
-                // These are safe to GC *sequentially* from a worker thread.
-                // The JobSystem acts as a release/acquire operation.
-                mLightManager.gc(mEntityManager);
-                mTransformManager.gc(mEntityManager);
-                mCameraManager.gc(*this, mEntityManager);
-            }));
+    JobSystem::Job* asyncJob = nullptr;
 
     if (isAsynchronousModeEnabled()) {
-        // gcDeferredAsyncObjectDestruction() is thread-safe in this context because
-        // 1. JobSystem provides the release/acquire operation
-        // 2. it's only used from the main thread, which we are blocking during the gc
-        js.run(jobs::createJob(js, rootJob, &FEngine::gcDeferredAsyncObjectDestruction, this));
+        asyncJob = js.createJob();
+        js.run(jobs::createJob(js, asyncJob, &FEngine::gcDeferredAsyncObjectDestruction, this));
     }
 
-    // RenderableManager cannot be gc'ed from a different thread, because it needs the DriverAPI
-    mRenderableManager.gc(mEntityManager, getDriverApi());
+    mLightManager.gc();
+    mTransformManager.gc();
+    mCameraManager.gc(*this);
+    mRenderableManager.gc(getDriverApi());
 
-    js.runAndWait(rootJob);
+    // Because the managers just updated their watermarks to the current epoch,
+    // advanceEpoch() will see the highest possible safe threshold, allowing
+    // it to reclaim the maximum amount of global IDs this frame.
+    mEntityManager.advanceEpoch();
+
+    if (asyncJob) {
+        js.runAndWait(asyncJob);
+    }
 }
 
 void FEngine::gcDeferredAsyncObjectDestruction() {
@@ -1181,7 +1172,7 @@ FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
 }
 
 void FEngine::destroyCameraComponent(Entity const entity) noexcept {
-    mCameraManager.destroy(*this, entity);
+    mCameraManager.destroy(entity, *this);
 }
 
 
@@ -1444,7 +1435,7 @@ void FEngine::destroy(Entity const e) {
     mRenderableManager.destroy(e, getDriverApi());
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
-    mCameraManager.destroy(*this, e);
+    mCameraManager.destroy(e, *this);
 }
 
 bool FEngine::isValid(const FBufferObject* p) const {

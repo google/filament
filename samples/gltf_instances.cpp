@@ -312,6 +312,9 @@ int main(int argc, char** argv) {
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
 
+        app.names->gc();
+        app.loader->gc();
+
         if (app.instanceToAnimate == -1) {
             for (FilamentInstance* instance : app.instances) {
                 app.viewer->applyAnimation(now, instance);

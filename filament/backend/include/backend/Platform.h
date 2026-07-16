@@ -332,28 +332,6 @@ public:
 
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
-        /**
-         * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL and Metal backends, and the Vulkan backend
-         * when some experimental features are enabled.
-         */
-        bool disableParallelShaderCompile = false;
-
-        /**
-         * Set to `true` to forcibly disable amortized shader compilation in the backend.
-         * Currently only honored by the GL backend.
-         */
-        bool disableAmortizedShaderCompile = true;
-
-        /**
-         * Disable backend handles use-after-free checks.
-         */
-        bool disableHandleUseAfterFreeCheck = false;
-
-        /**
-         * Disable backend handles tags for heap allocated (fallback) handles
-         */
-        bool disableHeapHandleTags = false;
 
         /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
@@ -372,12 +350,6 @@ public:
          */
         uint8_t stereoscopicEyeCount = 2;
 
-        /**
-         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
-         * This is only supported for:
-         *      - PlatformEGLAndroid
-         */
-        bool assertNativeWindowIsValid = false;
 
         /**
          * The action to take if a Drawable cannot be acquired. If true, the

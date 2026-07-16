@@ -22,6 +22,8 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <map>
+#include <mutex>
+#include <vector>
 
 namespace filament::backend {
 

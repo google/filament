@@ -478,8 +478,8 @@ struct AdapterDetailsHash final {
         wgpu::RequestAdapterOptions const& options = requests[i];
         futures[i] = instance.RequestAdapter(&options, wgpu::CallbackMode::WaitAnyOnly,
                 [&options, &compatibleAdapters,
-                        &adaptersMutex](wgpu::RequestAdapterStatus const status,
-                        wgpu::Adapter const& readyAdapter, wgpu::StringView const message) {
+                        &adaptersMutex](wgpu::RequestAdapterStatus status,
+                        wgpu::Adapter readyAdapter, wgpu::StringView message) {
                     FILAMENT_CHECK_POSTCONDITION(
                             status != wgpu::RequestAdapterStatus::CallbackCancelled)
                             << "Failed to request a WebGPU adapter due to the request callback "
@@ -649,7 +649,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
+            [](wgpu::Device const&, wgpu::DeviceLostReason reason,
                     wgpu::StringView message) {
                 if (reason == wgpu::DeviceLostReason::Destroyed) {
 #if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
@@ -670,8 +670,8 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     wgpu::Device device = nullptr;
     wgpu::WaitStatus status = mInstance.WaitAny(
             adapter.RequestDevice(&deviceDescriptor, wgpu::CallbackMode::WaitAnyOnly,
-                    [&device](wgpu::RequestDeviceStatus const status,
-                            wgpu::Device const& readyDevice, wgpu::StringView const message) {
+                    [&device](wgpu::RequestDeviceStatus status, wgpu::Device readyDevice,
+                            wgpu::StringView message) {
                         FILAMENT_CHECK_POSTCONDITION(
                                 status != wgpu::RequestDeviceStatus::CallbackCancelled)
                                 << "Failed to request a WebGPU device due to the callback being "

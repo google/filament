@@ -2576,7 +2576,7 @@ type aliases:</p>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserWorldFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from world space to API-level (user) world space. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time as a remainder of 1 second. Yields a value between 0 and 1 </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code> </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>(float)time</code>, <code>time - (float)time</code>, <code>0</code>, <code>0</code> (where <code>time</code> is double-precision) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTimeMod(float m)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time modulo m in seconds </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getExposure()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Photometric exposure of the camera </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getEV100()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> <a href="https://en.wikipedia.org/wiki/Exposure_value">Exposure value at ISO 100</a> of the camera </td></tr>
@@ -2587,6 +2587,13 @@ type aliases:</p>
     To achieve good precision, the &ldquo;world space&rdquo; in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can use <code>getUserWorldFromWorldMatrix()</code> to transform <code>getWorldCameraPosition()</code>.</div>
+</p><p>
+<div class="admonition tip"><div class="admonition-title"> High-precision time</div>
+</p><p>
+    <code>getUserTime()</code> is encoded using a &ldquo;float-float&rdquo; representation to emulate double-precision time
+    with two single-precision floats: <code>getUserTime().x</code> holds the float time value, while <code>getUserTime().y</code>
+    contains the residual (the difference between double and single precision). This enables shaders
+    to implement high-precision calculations (e.g. for animations) using Dekker's algorithms.</div>
 </p>
 <a class="target" name="materialglobals">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/materialglobals">&nbsp;</a><a class="target" name="toc4.5.5">&nbsp;</a><h3 id="material-globals"><a class="header" href="#material-globals">Material globals</a></h3>
 <p>

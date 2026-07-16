@@ -21,6 +21,7 @@
 #include <utils/CString.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
+#include <utils/PagedArenaBitsetPool.h>
 #include <utils/SingleInstanceComponentManager.h>
 
 #include <stddef.h>
@@ -70,7 +71,7 @@ public:
      *
      * @return Non-zero handle if the entity has a name component, 0 otherwise.
      */
-    Instance getInstance(Entity e) const noexcept {
+    Instance getInstance(Entity const e) const noexcept {
         return { SingleInstanceComponentManager::getInstance(e) };
     }
 
@@ -85,6 +86,15 @@ public:
     void removeComponent(Entity e);
 
     /**
+     * Destroys the name component of the given entity.
+     */
+    void destroyComponents(Entity const* entities, size_t count) noexcept;
+
+    void destroy(Entity e) noexcept {
+        destroyComponents(&e, 1);
+    }
+
+    /**
      * Stores a copy of the given string and associates it with the given instance.
      */
     void setName(Instance instance, const char* name) noexcept;
@@ -96,10 +106,8 @@ public:
      */
     const char* getName(Instance instance) const noexcept;
 
-    void gc(EntityManager& em) noexcept {
-        SingleInstanceComponentManager<CString>::gc(em, [this](Entity e) {
-            removeComponent(e);
-        });
+    void gc() noexcept {
+        SingleInstanceComponentManager<CString>::gc(this, &NameComponentManager::destroyComponents);
     }
 };
 
