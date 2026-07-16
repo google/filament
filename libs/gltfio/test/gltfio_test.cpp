@@ -211,6 +211,7 @@ public:
         delete mKtxDecoder;
         delete mWebpDecoder;
 
+        mAssetLoader->gc();
         AssetLoader::destroy(&mAssetLoader);
     }
 
@@ -253,6 +254,8 @@ protected:
         Engine::destroy(&mEngine);
 
         delete mMaterialProvider;
+
+        mNameManager->gc();
         delete mNameManager;
     }
 };
@@ -378,7 +381,7 @@ TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
 #else
     EXPECT_FALSE(isWebpSupported());
     EXPECT_TRUE(mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder == nullptr);
-    EXPECT_EQ(mEngine->getTextureCount(), 3);    
+    EXPECT_EQ(mEngine->getTextureCount(), 3);
 #endif
 }
 

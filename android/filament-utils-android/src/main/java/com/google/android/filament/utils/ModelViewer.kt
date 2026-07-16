@@ -451,6 +451,8 @@ class ModelViewer(
         // Allow the resource loader to finalize textures that have become ready.
         resourceLoader.asyncUpdateLoad()
 
+        assetLoader.gc()
+
         // Add renderable entities to the scene as they become ready.
         asset?.let { populateScene(it) }
 

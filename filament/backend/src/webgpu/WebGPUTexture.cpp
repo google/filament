@@ -49,6 +49,14 @@ bool supportsTransientAttachment(wgpu::Device const& device) {
 #endif
 }
 
+bool isTransientUsage(wgpu::TextureUsage usage) {
+#if !defined(__EMSCRIPTEN__)
+    return (usage & wgpu::TextureUsage::TransientAttachment) != wgpu::TextureUsage::None;
+#else
+    return false;
+#endif
+}
+
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
     // TODO will be helpful to get more useful info than this
     switch (target) {
@@ -234,6 +242,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
+    bool const isTransient = isTransientUsage(mWebGPUUsage);
     const wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(samplerType),
         .usage = mWebGPUUsage,
@@ -242,8 +251,8 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         .format = mWebGPUFormat,
         .mipLevelCount = levels,
         .sampleCount = samples,
-        .viewFormatCount = 1,
-        .viewFormats = &mViewFormat,
+        .viewFormatCount = isTransient ? 0u : 1u,
+        .viewFormats = isTransient ? nullptr : &mViewFormat,
     };
     mArrayLayerCount = toArrayLayerCount(samplerType, textureDescriptor.size.depthOrArrayLayers);
     assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
@@ -383,6 +392,8 @@ void WebGPUTexture::createMsaaSidecarTextureIfNotAlreadyCreated(const uint8_t sa
                    "updated (e.g. map of sidecar textures by sampleCount or something).";
         return; // we already have the sidecar created
     }
+    wgpu::TextureUsage const usage = mTexture.GetUsage();
+    bool const isTransient = isTransientUsage(usage);
     const wgpu::TextureDescriptor descriptor{
         .label = "msaa_sidecar_texture",
         .usage = mTexture.GetUsage(),
@@ -395,8 +406,8 @@ void WebGPUTexture::createMsaaSidecarTextureIfNotAlreadyCreated(const uint8_t sa
         .format = mTexture.GetFormat(),
         .mipLevelCount = mTexture.GetMipLevelCount(),
         .sampleCount = samples,
-        .viewFormatCount = 1,
-        .viewFormats = &mViewFormat,
+        .viewFormatCount = isTransient ? 0u : 1u,
+        .viewFormats = isTransient ? nullptr : &mViewFormat,
     };
     mMsaaSidecarTexture = device.CreateTexture(&descriptor);
     FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture) << "Failed to create MSAA sidecar texture";

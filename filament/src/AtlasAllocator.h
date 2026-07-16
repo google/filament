@@ -81,6 +81,11 @@ class AtlasAllocator {
     using NodeId = QuadTree::NodeId;
 
 public:
+
+    static constexpr size_t depth() noexcept {
+        return QUAD_TREE_DEPTH;
+    }
+
     /**
      * Create allocator and specify the maximum texture size.
      *

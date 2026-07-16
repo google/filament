@@ -815,13 +815,20 @@ int main(int argc, char** argv) {
             app.viewer->getSettings().animation.enabled = true;
         }
 
-        if (!app.settingsFile.empty()) {
+        bool const hasSettingsFile = !app.settingsFile.empty();
+        if (hasSettingsFile) {
             bool const success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
             if (success) {
                 std::cout << "Loaded settings from " << app.settingsFile << std::endl;
             } else {
                 std::cerr << "Failed to load settings from " << app.settingsFile << std::endl;
             }
+        }
+
+        if (hasSettingsFile || batchMode) {
+            // Instantiate point lights loaded from settings file
+            app.automationEngine->updateCustomLights(engine,
+                    app.viewer->getSettings().lighting.lights, scene);
         }
 
         app.materials = (app.materialSource == JITSHADER)
@@ -846,7 +853,7 @@ int main(int argc, char** argv) {
         createGroundPlane(engine, scene, app);
         createOverdrawVisualizerEntities(engine, scene, app);
 
-        app.viewer->setUiCallback([&app, scene, view, engine] () {
+        app.viewer->setUiCallback([&app, scene, view, engine]() {
             auto& automation = *app.automationEngine;
 
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -1109,6 +1116,9 @@ int main(int argc, char** argv) {
     auto animate = [&app](Engine*, View*, double now) {
         app.resourceLoader->asyncUpdateLoad();
 
+        app.names->gc();
+        app.assetLoader->gc();
+
         // Optionally fit the model into a unit cube at the origin.
         app.viewer->updateRootTransform();
 
@@ -1155,11 +1165,13 @@ int main(int argc, char** argv) {
         engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
 
         if (auto* swapChain = FilamentApp::get().getPrimarySwapChain()) {
-            if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
-                swapChain->setFrameRate(viewerOptions.cameraFrameRate,
-                        SwapChain::FrameRateCompatibility::DEFAULT,
-                        SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
-                app.currentFrameRate = viewerOptions.cameraFrameRate;
+            if (swapChain->isFrameRateChangeSupported().is_true()) {
+                if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
+                    swapChain->setFrameRate(viewerOptions.cameraFrameRate,
+                            SwapChain::FrameRateCompatibility::DEFAULT,
+                            SwapChain::ChangeFrameRateStrategy::ONLY_IF_SEAMLESS);
+                    app.currentFrameRate = viewerOptions.cameraFrameRate;
+                }
             }
         }
 
