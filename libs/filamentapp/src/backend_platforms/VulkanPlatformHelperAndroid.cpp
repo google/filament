@@ -16,27 +16,13 @@
 
 #include "VulkanPlatformHelperCommon.h"
 
-#include <backend/platforms/VulkanPlatformAndroid.h>
-
 namespace filament::app {
 
-using namespace filament::backend;
-
-class FilamentAppVulkanPlatform : public VulkanPlatformAndroid {
-public:
-    FilamentAppVulkanPlatform(char const* gpuHintCstr)
-            : mCustomization(parseGpuHint(gpuHintCstr)) {}
-
-    VulkanPlatform::Customization getCustomization() const noexcept override {
-        return mCustomization;
-    }
-
-private:
-    VulkanPlatform::Customization mCustomization;
-};
-
-Platform* createVulkanPlatform(char const* gpuHintCstr) {
-    return new FilamentAppVulkanPlatform(gpuHintCstr);
+filament::backend::Platform* createVulkanPlatform(char const* gpuHintCstr) {
+    // We do not instantiate VulkanPlatformAndroid from FilamentApp on Android
+    // to avoid statically linking the backend into JNI libraries.
+    // The Android JNI bindings create the platform natively.
+    return nullptr;
 }
 
 } // namespace filament::app

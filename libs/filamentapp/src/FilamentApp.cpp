@@ -18,9 +18,16 @@
 
 #include "PlatformHelper.h"
 
-#include "KeyInputConversion.h"
+
+#if defined(FILAMENTAPP_HAS_WEB_UI)
 #include "display_managers/HtmlDisplayManager.h"
+#endif // defined(FILAMENTAPP_HAS_WEB_UI)
+
+#include "DisplayManager.h"
+
+#ifdef FILAMENTAPP_HAS_SDL
 #include "display_managers/SDLDisplayManager.h"
+#endif // defined(FILAMENTAPP_HAS_SDL)
 
 #if defined(WIN32)
 #    include <utils/unwindows.h>
@@ -28,7 +35,7 @@
 
 #include <iostream>
 
-#include <imgui.h>
+#include "FilamentAppGui.h"
 
 #include <utils/EntityManager.h>
 #include <utils/Logger.h>
@@ -55,7 +62,7 @@
 #include <backend/platforms/VulkanPlatform.h>
 #endif
 
-#include <filagui/ImGuiHelper.h>
+
 
 #include <stb_image.h>
 
@@ -74,7 +81,7 @@
 #include "generated/resources/filamentapp.h"
 
 using namespace filament;
-using namespace filagui;
+
 using namespace filament::math;
 using namespace utils;
 using namespace filament::app;
@@ -98,7 +105,23 @@ FilamentApp::~FilamentApp() {
     }
 }
 
-View* FilamentApp::getGuiView() const noexcept { return mImGuiHelper->getView(); }
+void FilamentApp::onSurfaceCreated(void* nativeWindow) {
+    // To be implemented in later PRs
+}
+
+void FilamentApp::onSurfaceChanged(int width, int height) {
+    // To be implemented in later PRs
+}
+
+void FilamentApp::onSurfaceDestroyed() {
+    // To be implemented in later PRs
+}
+
+void FilamentApp::onTouchEvent(int action, float x, float y) {
+    // To be implemented in later PRs
+}
+
+View* FilamentApp::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
 
 void FilamentApp::run(Config const& config, SetupCallback setupCallback,
         CleanupCallback cleanupCallback, ImGuiCallback imguiCallback, PreRenderCallback preRender,
@@ -152,9 +175,15 @@ void FilamentApp::run(Config const& config, SetupCallback setupCallback,
     config.backend = backend;
 
     if (config.displayManager == Config::DisplayManager::WEB) {
+#if defined(FILAMENTAPP_HAS_WEB_UI)
         mDisplayManager = new HtmlDisplayManager();
+#endif // defined(FILAMENTAPP_HAS_WEB_UI)
     } else {
+#ifdef FILAMENTAPP_HAS_SDL
         mDisplayManager = new SDLDisplayManager();
+#else // !defined(FILAMENTAPP_HAS_SDL)
+        FILAMENT_CHECK_POSTCONDITION(false) << "SDLDisplayManager is not available on this platform";
+#endif // defined(FILAMENTAPP_HAS_SDL)
     }
 
     if (!mDisplayManager->init(config)) {
@@ -230,7 +259,7 @@ void FilamentApp::run(Config const& config, SetupCallback setupCallback,
     setupCallback(mEngine, window->mMainView->getView(), mScene);
 
     if (imguiCallback) {
-        mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
+        mAppGui = std::make_unique<FilamentAppGui>(mEngine, window->mUiView->getView(),
                 getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
     }
 
@@ -262,42 +291,8 @@ try {
     std::vector<filament::app::AppEvent> events;
     mDisplayManager->pollEvents(events);
 
-    for (const auto& event: events) {
-        if (mImGuiHelper) {
-            ImGuiIO& io = ImGui::GetIO();
-            switch (event.type) {
-                case AppEvent::Type::MOUSE_WHEEL: {
-                    io.MouseWheel += event.mouseWheel.delta;
-                    break;
-                }
-                case AppEvent::Type::MOUSE_BUTTON_DOWN: {
-                    if (event.mouseButton.button == 1) mMousePressed[0] = true;
-                    if (event.mouseButton.button == 3) mMousePressed[1] = true;
-                    if (event.mouseButton.button == 2) mMousePressed[2] = true;
-                    break;
-                }
-                case AppEvent::Type::KEYDOWN:
-                case AppEvent::Type::KEYUP: {
-                    io.AddKeyEvent(ImGuiMod_Ctrl,
-                            (event.key.modifiers & AppKeyModifier::CTRL) != 0);
-                    io.AddKeyEvent(ImGuiMod_Shift,
-                            (event.key.modifiers & AppKeyModifier::SHIFT) != 0);
-                    io.AddKeyEvent(ImGuiMod_Alt,
-                            (event.key.modifiers & AppKeyModifier::ALT) != 0);
-                    io.AddKeyEvent(ImGuiMod_Super,
-                            (event.key.modifiers & AppKeyModifier::SUPER) != 0);
-                    io.AddKeyEvent(filamentapp_utils::AppKeyToImGuiKey(event.key.code),
-                            event.type == AppEvent::Type::KEYDOWN);
-                    break;
-                }
-                case AppEvent::Type::TEXTINPUT: {
-                    io.AddInputCharactersUTF8(event.text.text);
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
+    if (mAppGui) {
+        mAppGui->processAppEvents(events);
     }
 
     // Now, loop over the events a second time for app-side processing.
@@ -305,7 +300,7 @@ try {
         if (mClosed) {
             break;
         }
-        ImGuiIO* io = mImGuiHelper ? &ImGui::GetIO() : nullptr;
+        bool wantCaptureMouse = mAppGui ? mAppGui->wantCaptureMouse() : false;
         switch (event.type) {
             case AppEvent::Type::QUIT:
                 mClosed = true;
@@ -314,7 +309,7 @@ try {
                 if (event.key.code == AppKey::ESCAPE) {
                     mClosed = true;
                 }
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(__ANDROID__)
                 if (event.key.code == AppKey::PRINT_SCREEN) {
                     DebugRegistry& debug = mEngine->getDebugRegistry();
                     if (bool* captureFrame = debug.getPropertyAddress<bool>("d.renderer.doFrameCapture")) {
@@ -328,19 +323,19 @@ try {
                 window->keyUp(event.key.code);
                 break;
             case AppEvent::Type::MOUSE_WHEEL:
-                if (!io || !io->WantCaptureMouse) window->mouseWheel(event.mouseWheel.delta);
+                if (!wantCaptureMouse) window->mouseWheel(event.mouseWheel.delta);
                 break;
             case AppEvent::Type::MOUSE_BUTTON_DOWN:
-                if (!io || !io->WantCaptureMouse)
+                if (!wantCaptureMouse)
                     window->mouseDown(event.mouseButton.button, event.mouseButton.x,
                             event.mouseButton.y);
                 break;
             case AppEvent::Type::MOUSE_BUTTON_UP:
-                if (!io || !io->WantCaptureMouse)
+                if (!wantCaptureMouse)
                     window->mouseUp(event.mouseButton.x, event.mouseButton.y);
                 break;
             case AppEvent::Type::MOUSE_MOVE:
-                if (!io || !io->WantCaptureMouse)
+                if (!wantCaptureMouse)
                     window->mouseMoved(event.mouseMove.x, event.mouseMove.y);
                 break;
             case AppEvent::Type::DROP_FILE:
@@ -376,33 +371,8 @@ try {
 
     // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
     // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
-    if (mImGuiHelper) {
-        // Inform ImGui of the current window size in case it was resized.
-        uint32_t windowWidth, windowHeight;
-        uint32_t displayWidth, displayHeight;
-        mDisplayManager->getWindowSize(window->mWindow, &windowWidth, &windowHeight);
-        mDisplayManager->getDrawableSize(window->mWindow, &displayWidth, &displayHeight);
-        mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
-                windowWidth > 0 ? ((float) displayWidth / windowWidth) : 0,
-                displayHeight > 0 ? ((float) displayHeight / windowHeight) : 0);
-
-        // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
-        // from our event handler)
-        ImGuiIO& io = ImGui::GetIO();
-        int mx, my;
-        uint32_t buttons = mDisplayManager->getMouseState(&mx, &my);
-        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-        io.MouseDown[0] = mMousePressed[0] || (buttons & (1 << 0)) != 0;
-        io.MouseDown[1] = mMousePressed[1] || (buttons & (1 << 2)) != 0;
-        io.MouseDown[2] = mMousePressed[2] || (buttons & (1 << 1)) != 0;
-        mMousePressed[0] = mMousePressed[1] = mMousePressed[2] = false;
-
-        if (mDisplayManager->isWindowFocused(window->mWindow)) {
-            io.MousePos = ImVec2((float) mx, (float) my);
-        }
-
-        // Populate the UI Scene.
-        mImGuiHelper->render(timeStep, mImguiCallback);
+    if (mAppGui) {
+        mAppGui->render(timeStep, mDisplayManager, window->mWindow, mImguiCallback, mMousePressed);
     }
 
     // Update the camera manipulators for each view.
@@ -549,8 +519,8 @@ try {
 }
 
 void FilamentApp::shutdown() {
-    if (mImGuiHelper) {
-        mImGuiHelper.reset();
+    if (mAppGui) {
+        mAppGui.reset();
     }
 
     mCleanupCallback(mEngine, mWindow->mMainView->getView(), mScene);

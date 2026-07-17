@@ -43,9 +43,7 @@ class SwapChain;
 class View;
 } // namespace filament
 
-namespace filagui {
-class ImGuiHelper;
-} // namespace filagui
+class FilamentAppGui;
 
 class IBL;
 class MeshAssimp;
@@ -109,6 +107,11 @@ public:
     filament::SwapChain* getPrimarySwapChain() const noexcept { return mPrimarySwapChain; }
 
     void close() { mClosed = true; }
+
+    void onSurfaceCreated(void* nativeWindow);
+    void onSurfaceChanged(int width, int height);
+    void onSurfaceDestroyed();
+    void onTouchEvent(int action, float x, float y);
 
     void setSidebarWidth(int width) {
         mCameraParams.sidebarWidth = width;
@@ -302,7 +305,7 @@ private:
     filament::Material const* mTransparentMaterial = nullptr;
     filament::Material const* mDepthMaterial = nullptr;
     filament::MaterialInstance* mDepthMI = nullptr;
-    std::unique_ptr<filagui::ImGuiHelper> mImGuiHelper;
+    std::unique_ptr<FilamentAppGui> mAppGui;
     AnimCallback mAnimation;
     ResizeCallback mResize;
     DropCallback mDropHandler;
