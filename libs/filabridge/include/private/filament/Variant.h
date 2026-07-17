@@ -68,7 +68,6 @@ struct Variant {
     //                      +-----+-----+-----+-----+-----+-----+-----+
     //      Vertex shader      0     0     0     X     X     X     X
     //    Fragment shader      X     X     0     0     X     0     X
-    //       Fragment SSR      1     0     0     0     1     0     0
     //           Reserved      1     1     0     X     1     X     0      [ -4]
     //           Reserved      0     X     0     X     1     X     0      [ -8]
     //           Reserved      1     X     0     X     0     X     X      [-16]
@@ -81,6 +80,9 @@ struct Variant {
     //     Fragment depth      0     X     1     0     0     0     0
     //     Fragment depth      1     0     1     0     0     0     0
     //           Reserved      1     1     1     X     0     X     0     [  -4]
+    //
+    // Special variants (reserved depth space, DEP set with SRE, never requestable):
+    //       Fragment SSR      0     0     1     X     1     0     0
     //
     // 48 variants used, 80 reserved (128 - 48)
     //
@@ -105,8 +107,8 @@ struct Variant {
     static constexpr type_t NO_VARIANT         = 0u;
 
     // special variants (variants that use the reserved space)
-    static constexpr type_t SPECIAL_SSR_VARIANT=       S2D |       SRE      ;
-    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DIR;
+    static constexpr type_t SPECIAL_SSR_VARIANT=             DEP | SRE            ;
+    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DIR | FOG;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -207,10 +209,11 @@ struct Variant {
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
         // Filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
+        if (isSSRVariant(variant)) {
+            variant.key &= ~SPECIAL_SSR_VARIANT;
+            return variant & (STE | SKN | SRE | DIR);
+        }
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
-            if (isSSRVariant(variant)) {
-                variant.key &= ~SPECIAL_SSR_VARIANT;
-            }
             return variant & (STE | SKN | SRE | DIR);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
@@ -223,6 +226,9 @@ struct Variant {
     static constexpr Variant filterVariantFragment(Variant variant) noexcept {
         // filter out fragment variants that are not needed. For e.g. skinning doesn't
         // affect the fragment shader.
+        if (isSSRVariant(variant)) {
+            return variant & ~(STE | SKN);
+        }
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             return variant & (S2D | FOG | SRE | DIR);
         }

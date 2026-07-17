@@ -32,7 +32,7 @@ std::vector<Variant> determineSurfaceVariants(
     std::vector<Variant> variants;
     for (size_t k = 0; k < filament::VARIANT_COUNT; k++) {
         filament::Variant const variant(k);
-        if (filament::Variant::isReserved(variant)) {
+        if (filament::Variant::isReserved(variant) && !filament::Variant::isSSRVariant(variant)) {
             continue;
         }
 

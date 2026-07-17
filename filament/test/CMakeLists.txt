@@ -88,6 +88,11 @@ if (FILAMENT_BUILD_TESTING)
         target_link_libraries(test_depth PRIVATE utils)
     endif()
 
+    add_executable(test_variant test_Variant.cpp)
+    target_link_libraries(test_variant PRIVATE filabridge gtest)
+    target_compile_options(test_variant PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(test_variant PROPERTIES FOLDER Tests)
+
     add_executable(test_material_parser
             filament_test_material_parser.cpp
             ${RESGEN_SOURCE}
