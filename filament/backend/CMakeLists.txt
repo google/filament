@@ -637,10 +637,16 @@ if (FILAMENT_BUILD_TESTING)
             absl::str_format
             backend
             gtest
-            imageio
             filamat
             SPIRV
             spirv-cross-glsl)
+        # imageio drives the golden-image comparison and is only built for host
+        # platforms (see the IS_HOST_PLATFORM block in the root CMakeLists).
+        # NOTE: this must not be `if (TARGET imageio)` — imageio is added after
+        # filament/backend, so the target does not exist yet at this point.
+        if (IS_HOST_PLATFORM)
+            list(APPEND BACKEND_TEST_LIBS imageio)
+        endif()
         # Create input/output directories for test result images.
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
@@ -648,13 +654,24 @@ if (FILAMENT_BUILD_TESTING)
     endif()
 
     # TODO: Disabling IOS test due to breakage wrt glslang update
-    if (APPLE AND NOT IOS)
-        # TODO: we should expand this test to Linux and other platforms.
-        list(APPEND BACKEND_TEST_SRC
-            test/test_RenderExternalImage.cpp)
+    # (tvOS builds go through the same IOS toolchain but are re-enabled: filamat,
+    # glslang and spirv-cross all compile for appletv* targets.)
+    if (APPLE)
+        if (NOT IOS)
+            # Uses CVPixelBuffer-backed external images; host-only.
+            # TODO: we should expand this test to Linux and other platforms.
+            list(APPEND BACKEND_TEST_SRC
+                test/test_RenderExternalImage.cpp)
+        endif()
         add_library(backend_test STATIC ${BACKEND_TEST_SRC})
         target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
         target_compile_options(backend_test PRIVATE "-fobjc-arc")
+        if (IOS)
+            # Match the backend target: without this, ObjC++ files define __EXCEPTIONS
+            # (via ObjC exceptions) while C++ exceptions are disabled, which breaks
+            # headers like robin-map that key their throw usage off __EXCEPTIONS.
+            target_compile_options(backend_test PRIVATE "-fno-objc-exceptions")
+        endif()
 
         set(BACKEND_TEST_DEPS
                 OSDependent
