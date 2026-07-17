@@ -649,10 +649,11 @@ if (FILAMENT_BUILD_TESTING)
         file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
     endif()
 
-    # TODO: Disabling IOS test due to breakage wrt glslang update
-    # (tvOS builds go through the same IOS toolchain but are re-enabled: filamat,
-    # glslang and spirv-cross all compile for appletv* targets.)
-    if (APPLE)
+    # On iOS-family platforms the test library is opt-in (INSTALL_BACKEND_TEST): it is only
+    # useful embedded in a runner app, and ImageExpectations needs
+    # std::filesystem, which requires a 13.0+ deployment target (the default
+    # iOS device floor is 11.0).
+    if (APPLE AND (NOT IOS OR INSTALL_BACKEND_TEST))
         if (NOT IOS)
             # Uses CVPixelBuffer-backed external images; host-only.
             # TODO: we should expand this test to Linux and other platforms.
