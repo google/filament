@@ -32,6 +32,9 @@ endif()
 if(PLATFORM_NAME STREQUAL "appletvos" OR PLATFORM_NAME STREQUAL "appletvsimulator")
     set(APPLETV TRUE)
     add_definitions(-DFILAMENT_APPLETV)
+    # tvOS is Metal-only: OpenGL ES is deprecated on Apple platforms and the
+    # CocoaTouchGL platform layer is not ported.
+    set(FILAMENT_SUPPORTS_OPENGL OFF CACHE BOOL "tvOS builds are Metal-only" FORCE)
     set(IOS_MIN_TARGET "17.0")
     if(PLATFORM_NAME STREQUAL "appletvsimulator")
         add_definitions(-DFILAMENT_IOS_SIMULATOR)
