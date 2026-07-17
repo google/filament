@@ -25,6 +25,11 @@ set(SRCS
 
 add_definitions(-DUSE_WEBSOCKET)
 
+if (APPLETV)
+    # fork()/exec*() are __TVOS_PROHIBITED, so CGI support cannot compile on tvOS.
+    add_definitions(-DNO_CGI)
+endif()
+
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

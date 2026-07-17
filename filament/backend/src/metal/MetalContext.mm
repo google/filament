@@ -64,9 +64,14 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
 
         if ([device supportsFamily:MTLGPUFamilyMac2]) {
             highestSupportedFamily.mac = 2;
-        } else if ([device supportsFamily:MTLGPUFamilyMac1]) {
+        }
+#if !defined(FILAMENT_APPLETV)
+        // MTLGPUFamilyMac1 is deprecated as of the tvOS 16 SDK, and no tvOS device is a
+        // Mac1-but-not-Mac2 GPU; skip the fallback probe there.
+        else if ([device supportsFamily:MTLGPUFamilyMac1]) {
             highestSupportedFamily.mac = 1;
         }
+#endif
     } else {
 #if TARGET_OS_IOS
         using FeatureSet = std::pair<MTLFeatureSet, uint8_t>;
