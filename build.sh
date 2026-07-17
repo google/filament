@@ -36,9 +36,9 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|wasm|all]."
+    echo "        Where platformN is [desktop|android|ios|tvos|wasm|all]."
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building for iOS will automatically perform a partial desktop build."
+    echo "        Building for iOS or tvOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
@@ -176,6 +176,7 @@ ISSUE_RELEASE_BUILD=false
 # Default: build desktop only
 ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
+ISSUE_TVOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WASM_BUILD=false
 
@@ -700,18 +701,21 @@ function build_ios_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
     local platform=$3
+    # Output name: "ios" (default) or "tvos"; selects out/cmake-<name>-* and
+    # the out/<name>-<type>/filament install prefix.
+    local out_name=${4:-ios}
 
-    echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}-${platform}"
+    echo "Building ${out_name} ${lc_target} (${arch}) for ${platform}..."
+    mkdir -p "out/cmake-${out_name}-${lc_target}-${arch}-${platform}"
 
-    pushd "out/cmake-ios-${lc_target}-${arch}-${platform}" > /dev/null
+    pushd "out/cmake-${out_name}-${lc_target}-${arch}-${platform}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
             -G "${BUILD_GENERATOR}" \
             ${IMPORT_EXECUTABLES_DIR_OPTION} \
             -DCMAKE_BUILD_TYPE="$1" \
-            -DCMAKE_INSTALL_PREFIX="../ios-${lc_target}/filament" \
+            -DCMAKE_INSTALL_PREFIX="../${out_name}-${lc_target}/filament" \
             -DIOS_ARCH="${arch}" \
             -DPLATFORM_NAME="${platform}" \
             -DIOS=1 \
@@ -724,7 +728,7 @@ function build_ios_target {
             ${EXCEPTIONS_OPTION} \
             ${MUTEX_DEBUG_OPTION} \
             ../..
-        ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
+        ln -sf "out/cmake-${out_name}-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
     fi
 
@@ -748,6 +752,71 @@ function archive_ios {
             tar -czvf "../filament-${lc_target}-ios.tgz" filament
             popd > /dev/null
         fi
+    fi
+}
+
+function archive_tvos {
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+    if [[ -d "out/tvos-${lc_target}/filament" ]]; then
+        if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
+            echo "Generating out/filament-${lc_target}-tvos.tgz..."
+            pushd "out/tvos-${lc_target}" > /dev/null
+            tar -czvf "../filament-${lc_target}-tvos.tgz" filament
+            popd > /dev/null
+        fi
+    fi
+}
+
+function build_tvos_type {
+    # Builds one configuration (Debug/Release) for tvOS: device + (optionally)
+    # simulator, then bundles XCFrameworks. Mirrors the iOS flow; tvOS
+    # simulators are arm64-only in practice (Apple silicon hosts).
+    local target=$1
+    local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    local out_dir="out/tvos-${lc_target}/filament"
+    local lib_dir="${out_dir}/lib"
+
+    build_ios_target "${target}" "arm64" "appletvos" "tvos"
+
+    if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+        build_ios_target "${target}" "arm64" "appletvsimulator" "tvos"
+    fi
+
+    if [[ ! "${INSTALL_COMMAND}" ]]; then
+        echo "Skipping tvOS XCFramework bundling: pass -i to install the libraries first."
+        return
+    fi
+
+    local xcframework_paths=("${lib_dir}/arm64-appletvos")
+    if [[ -d "${lib_dir}/arm64-appletvsimulator" ]]; then
+        xcframework_paths+=("${lib_dir}/arm64-appletvsimulator")
+    fi
+
+    build/ios/create-xc-frameworks.sh -o "${lib_dir}" "${xcframework_paths[@]}"
+
+    rm -rf \
+        "${lib_dir}/arm64-appletvos" \
+        "${lib_dir}/arm64-appletvsimulator"
+
+    archive_tvos "${target}"
+}
+
+function build_tvos {
+    # Suppress intermediate desktop tools install
+    local old_install_command=${INSTALL_COMMAND}
+    INSTALL_COMMAND=
+
+    build_desktop "${MOBILE_HOST_TOOLS}"
+
+    INSTALL_COMMAND=${old_install_command}
+
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        build_tvos_type "Debug"
+    fi
+
+    if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        build_tvos_type "Release"
     fi
 }
 
@@ -959,6 +1028,9 @@ while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
                     ios)
                         ISSUE_IOS_BUILD=true
                     ;;
+                    tvos)
+                        ISSUE_TVOS_BUILD=true
+                    ;;
                     wasm)
                         ISSUE_WASM_BUILD=true
                     ;;
@@ -970,7 +1042,7 @@ while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
                     ;;
                     *)
                         echo "Unknown platform ${platform}"
-                        echo "Platform must be one of [desktop|android|ios|wasm|all]"
+                        echo "Platform must be one of [desktop|android|ios|tvos|wasm|all]"
                         echo ""
                         exit 1
                     ;;
@@ -1163,6 +1235,10 @@ fi
 
 if [[ "${ISSUE_IOS_BUILD}" == "true" ]]; then
     check_debug_release_build build_ios
+fi
+
+if [[ "${ISSUE_TVOS_BUILD}" == "true" ]]; then
+    check_debug_release_build build_tvos
 fi
 
 if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
