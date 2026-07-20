@@ -22,7 +22,9 @@
 #include <utils/compiler.h>
 #include <utils/StaticString.h>
 
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
 #include <iosfwd>
+#endif
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -350,8 +352,13 @@ private:
 
     CString& replace(size_type pos, size_type len, char const* str, size_t l) & noexcept;
 
+#if !defined(NDEBUG)
     friend io::ostream& operator<<(io::ostream& out, const CString& rhs);
+#endif
+
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
     friend std::ostream& operator<<(std::ostream& out, const CString& rhs);
+#endif
 
     struct Data {
         size_type length;

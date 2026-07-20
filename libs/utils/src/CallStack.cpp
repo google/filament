@@ -169,17 +169,18 @@ Stream& printCallStack(Stream& stream, CallStack const& UTILS_UNUSED callstack) 
             free((void*)symbols);
         }
     }
-    stream << '\n';
 #endif
     return stream;
 }
 
 io::ostream& operator<<(io::ostream& stream, CallStack const& callstack) {
-    return printCallStack(stream, callstack);
+    return printCallStack(stream, callstack) << io::endl;
 }
 
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
 std::ostream& operator<<(std::ostream& stream, CallStack const& callstack) {
-    return printCallStack(stream, callstack);
+    return printCallStack(stream, callstack) << '\n' << std::flush;
 }
+#endif
 
 } // namespace utils

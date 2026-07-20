@@ -20,7 +20,9 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
 #include <iosfwd>
+#endif
 #include <typeinfo>
 
 #include <stddef.h>
@@ -89,7 +91,9 @@ public:
      * program-counter recorded.
      */
     friend io::ostream& operator <<(io::ostream& stream, const CallStack& callstack);
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
     friend std::ostream& operator <<(std::ostream& stream, const CallStack& callstack);
+#endif
     template <typename Stream>
     friend Stream& printCallStack(Stream& stream, CallStack const& callstack);
 
