@@ -23,7 +23,7 @@
 #include "display_managers/HtmlDisplayManager.h"
 #endif // defined(FILAMENTAPP_HAS_WEB_UI)
 
-#include "DisplayManager.h"
+#include <filamentapp/DisplayManager.h>
 
 #ifdef FILAMENTAPP_HAS_SDL
 #include "display_managers/SDLDisplayManager.h"

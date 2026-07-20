@@ -15,6 +15,16 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp2.h>
+
+#include <private/filament/EngineEnums.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -30,22 +40,11 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <private/filament/EngineEnums.h>
-
 #include <utils/EntityManager.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/getopt.h>
 
 #include <iostream>
 #include <vector>
-
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace filamesh;
@@ -57,7 +56,8 @@ struct Vertex {
 };
 
 struct App {
-    Config config;
+    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
 
     Material* monkeyMaterial;
     MaterialInstance* monkeyMatInstance;
@@ -216,26 +216,28 @@ int main(int argc, char** argv) {
         app.stereoView = engine->createView();
         app.stereoView->setScene(app.stereoScene);
         app.stereoView->setPostProcessingEnabled(false);
-        app.stereoColorTexture = Texture::Builder()
-                .width(vp.width)
-                .height(vp.height)
-                .depth(eyeCount)
-                .levels(1)
-                .samples(sampleCount)
-                .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
-                .format(Texture::InternalFormat::RGBA8)
-                .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-                .build(*engine);
-        app.stereoDepthTexture = Texture::Builder()
-                .width(vp.width)
-                .height(vp.height)
-                .depth(eyeCount)
-                .levels(1)
-                .samples(sampleCount)
-                .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
-                .format(Texture::InternalFormat::DEPTH32F)
-                .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-                .build(*engine);
+        app.stereoColorTexture =
+                Texture::Builder()
+                        .width(vp.width)
+                        .height(vp.height)
+                        .depth(eyeCount)
+                        .levels(1)
+                        .samples(sampleCount)
+                        .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
+                        .format(Texture::InternalFormat::RGBA8)
+                        .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
+                        .build(*engine);
+        app.stereoDepthTexture =
+                Texture::Builder()
+                        .width(vp.width)
+                        .height(vp.height)
+                        .depth(eyeCount)
+                        .levels(1)
+                        .samples(sampleCount)
+                        .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
+                        .format(Texture::InternalFormat::DEPTH32F)
+                        .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
+                        .build(*engine);
         app.stereoRenderTarget = RenderTarget::Builder()
                 .texture(RenderTarget::AttachmentPoint::COLOR, app.stereoColorTexture)
                 .texture(RenderTarget::AttachmentPoint::DEPTH, app.stereoDepthTexture)
@@ -248,7 +250,7 @@ int main(int argc, char** argv) {
         app.stereoCamera = engine->createCamera(em.create());
         app.stereoView->setCamera(app.stereoCamera);
         app.stereoView->setStereoscopicOptions({.enabled = true});
-        FilamentApp::get().addOffscreenView(app.stereoView);
+        app.filamentApp->addOffscreenView(app.stereoView);
 
         // Camera settings for the stereo render target
         constexpr double projNear  = 0.1;
@@ -369,16 +371,29 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        auto& tcm = engine->getTransformManager();
 
-        // Animate the monkey by spinning and sliding back and forth along Z.
-        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-        mat4f xform =  app.monkeyTransform *  mat4f::rotation(now, float3{0, 1, 0 });
-        tcm.setTransform(ti, xform);
-    });
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(app.config.title)
+                    .backend(app.config.backend)
+                    .stereoscopicEyeCount(app.config.stereoscopicEyeCount)
+                    .samples(app.config.samples)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(app.config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui({})
+                    .preRender(preRender)
+                    .animation([&app](Engine* engine, View* view, double now) {
+                        auto& tcm = engine->getTransformManager();
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+                        // Animate the monkey by spinning and sliding back and forth along Z.
+                        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
+                        mat4f xform = app.monkeyTransform * mat4f::rotation(now, float3{ 0, 1, 0 });
+                        tcm.setTransform(ti, xform);
+                    })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

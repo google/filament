@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_FILAMENTAPP_WEB_DISPLAY_MANAGER_H
 #define TNT_FILAMENT_FILAMENTAPP_WEB_DISPLAY_MANAGER_H
 
-#include "../DisplayManager.h"
-
 #include <filamentapp/Config.h>
+#include <filamentapp/DisplayManager.h>
 
 #include <utils/CString.h>
 #include <utils/Mutex.h>

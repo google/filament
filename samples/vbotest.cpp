@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/IndexBuffer.h>
@@ -25,15 +30,12 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/EntityManager.h>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -57,7 +59,7 @@ static void setCameraProjection(App* app, View* view) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "vbotest";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
@@ -107,16 +109,24 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().resize([&app](Engine* engine, View* view) {
-        setCameraProjection(&app, view);
-    });
 
-    FilamentApp::get().run(config, setup, cleanup, FilamentApp::ImGuiCallback(),
-            [](Engine*, View*, Scene*, Renderer* renderer) {
-                Renderer::ClearOptions options;
-                options.clear = true;
-                renderer->setClearOptions(options);
-            });
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(config.title)
+                    .backend(config.backend)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui({})
+                    .preRender([](Engine*, View*, Scene*, Renderer* renderer) {
+                        Renderer::ClearOptions options;
+                        options.clear = true;
+                        renderer->setClearOptions(options);
+                    })
+                    .resize([&app](Engine* engine, View* view) { setCameraProjection(&app, view); })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

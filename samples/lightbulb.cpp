@@ -15,39 +15,38 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <iostream>
-#include <string>
-#include <map>
-#include <vector>
+#include "generated/resources/resources.h"
 
-#include <utils/getopt.h>
-
-#include <utils/EntityManager.h>
-#include <utils/Path.h>
+#include <filamentapp/Cube.h>
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/IcoSphere.h>
+#include <filamentapp/MeshAssimp.h>
+#include <filamentapp/Sphere.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
-#include <filament/Material.h>
-#include <filament/Scene.h>
 #include <filament/LightManager.h>
-#include <filament/Renderer.h>
+#include <filament/Material.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
-
-#include <math/norm.h>
-#include <utils/Log.h>
 #include <filament/View.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/MeshAssimp.h>
-#include <filamentapp/Cube.h>
-#include <filamentapp/IcoSphere.h>
-#include <filamentapp/Sphere.h>
+#include <utils/EntityManager.h>
+#include <utils/getopt.h>
+#include <utils/Log.h>
+#include <utils/Path.h>
 
-#include "generated/resources/resources.h"
+#include <math/norm.h>
+
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
 
 using namespace filament::math;
 using namespace filament;
@@ -67,7 +66,8 @@ static Entity g_discoBallEntity;
 static float g_discoAngle = 0;
 static float g_discoAngularSpeed = 0.25f * float(M_PI);  // rad/s
 
-static Config g_config;
+static SampleConfig g_config;
+std::unique_ptr<FilamentApp2> g_filamentApp;
 static bool g_moreLights = false;
 static bool g_shadowPlane = false;
 static bool g_discoBall = false;
@@ -109,7 +109,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "hi:vs:mdcpa:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -193,10 +193,8 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
         filament::Renderer* renderer) {
 
     // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
-
+    renderer->setClearOptions(
+            { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !g_filamentApp->getIBL() });
 }
 
 
@@ -296,7 +294,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             scene->addEntity(light);
             const LightManager::Instance& instance = lcm.getInstance(light);
             if (!lcm.isDirectional(instance)) {
-                g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+                g_spheres.emplace_back(*engine, g_filamentApp->getDefaultMaterial());
                 g_spheres.back()
                          .setRadius(0.025f)
                          .setPosition(lcm.getPosition(instance));
@@ -340,7 +338,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         }
         g_discoBallEntity = discoBall;
 
-        g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+        g_spheres.emplace_back(*engine, g_filamentApp->getDefaultMaterial());
         g_spheres.back().setRadius(0.2f);
         auto mi = g_spheres.back().getMaterialInstance();
         mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ 1, 1, 1, 1 });
@@ -351,7 +349,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         tcm.setParent(tcm.getInstance(g_spheres.back().getSolidRenderable()), tcm.getInstance(discoBall));
     }
 
-    g_meshAabb.reset(new Cube(*engine, FilamentApp::get().getTransparentMaterial(), {0,0,1}));
+    g_meshAabb.reset(new Cube(*engine, g_filamentApp->getTransparentMaterial(), { 0, 0, 1 }));
 
     // First object in the scene
     Entity object = g_meshSet->getRenderables()[1];
@@ -438,6 +436,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 }
 #pragma clang diagnostic pop
 
+
 int main(int argc, char* argv[]) {
     int option_index = handleCommandLineArgments(argc, argv, &g_config);
     int num_args = argc - option_index;
@@ -456,26 +455,37 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "Lightbulb";
-    FilamentApp& filamentApp = FilamentApp::get();
 
+    FilamentApp2::AnimCallback animate = nullptr;
     double lastTime = 0;
     if (g_discoBall) {
-        filamentApp.animate([lastTime](filament::Engine* engine, filament::View*, double now) mutable {
+        animate = [lastTime](filament::Engine* engine, filament::View*, double now) mutable {
             auto& tcm = engine->getTransformManager();
             tcm.setTransform(tcm.getInstance(g_discoBallEntity),
-                    mat4f::translation(float3{ 0, 2, -4, }) *
-                                                            mat4f::rotation(g_discoAngle,
-                                                                    float3{ 0, 1, 0 })
-            );
+                    filament::math::mat4f::translation(filament::math::float3{
+                        0,
+                        2,
+                        -4,
+                    }) * filament::math::mat4f::rotation(g_discoAngle,
+                                 filament::math::float3{ 0, 1, 0 }));
             if (lastTime != 0) {
                 double dT = now - lastTime;
                 g_discoAngle += g_discoAngularSpeed * dT;
             }
             lastTime = now;
-        });
+        };
     }
 
-    filamentApp.run(g_config, setup, cleanup, {}, preRender);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(g_config.title)
+                            .scale(g_config.scale)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .preRender(preRender)
+                            .animation(animate)
+                            .build();
+    g_filamentApp->run();
+
 
     return 0;
 }

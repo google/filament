@@ -15,6 +15,14 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -31,18 +39,9 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/getopt.h>
 
 #include <iostream>
-
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace filamesh;
@@ -54,6 +53,7 @@ struct Vertex {
 };
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     utils::Entity lightEntity;
     Material* meshMaterial;
     MaterialInstance* meshMatInstance;
@@ -74,7 +74,7 @@ struct App {
     };
 
     ReflectionMode mode = ReflectionMode::CAMERA;
-    Config config;
+    SampleConfig config;
 
     utils::Entity quadEntity;
     VertexBuffer* quadVb = nullptr;
@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
         app.offscreenView->setViewport({0, 0, vp.width, vp.height});
         app.offscreenCamera = engine->createCamera(em.create());
         app.offscreenView->setCamera(app.offscreenCamera);
-        FilamentApp::get().addOffscreenView(app.offscreenView);
+        app.filamentApp->addOffscreenView(app.offscreenView);
 
         // Position and orient the mirror in an interesting way.
         float3 c = app.quadCenter = {-2, 0, -5};
@@ -337,39 +337,54 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        auto& tcm = engine->getTransformManager();
 
-        // Animate the monkey by spinning and sliding back and forth along Z.
-        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-        mat4f xlate = mat4f::translation(float3(0, 0, 0.5 + sin(now)));
-        mat4f xform =  app.transform * xlate * mat4f::rotation(now, float3{ 0, 1, 0 });
-        tcm.setTransform(ti, xform);
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(app.config.title)
+                    .backend(app.config.backend)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(app.config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui({})
+                    .preRender(preRender)
+                    .animation([&app](Engine* engine, View* view, double now) {
+                        auto& tcm = engine->getTransformManager();
 
-        // Generate a reflection matrix from the plane equation Ax + By + Cz + D = 0.
-        const float3 planeNormal = app.quadNormal;
-        const float4 planeEquation(planeNormal, -dot(planeNormal, app.quadCenter));
-        const mat4f reflection = reflectionMatrix(planeEquation);
+                        // Animate the monkey by spinning and sliding back and forth along Z.
+                        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
+                        mat4f xlate = mat4f::translation(float3(0, 0, 0.5 + sin(now)));
+                        mat4f xform =
+                                app.transform * xlate * mat4f::rotation(now, float3{ 0, 1, 0 });
+                        tcm.setTransform(ti, xform);
 
-        // Apply the reflection matrix to either the renderable or the camera, depending on mode.
-        Camera const& camera = view->getCamera();
-        const auto model = camera.getModelMatrix();
-        const auto renderingProjection = camera.getProjectionMatrix();
-        const auto cullingProjection = camera.getCullingProjectionMatrix();
-        app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection,
-                camera.getNear(), camera.getCullingFar());
-        switch (app.mode) {
-            case App::ReflectionMode::RENDERABLES:
-                tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
-                app.offscreenCamera->setModelMatrix(model);
-                break;
-            case App::ReflectionMode::CAMERA:
-                app.offscreenCamera->setModelMatrix(reflection * model);
-                break;
-        }
-    });
+                        // Generate a reflection matrix from the plane equation Ax + By + Cz + D =
+                        // 0.
+                        const float3 planeNormal = app.quadNormal;
+                        const float4 planeEquation(planeNormal, -dot(planeNormal, app.quadCenter));
+                        const mat4f reflection = reflectionMatrix(planeEquation);
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+                        // Apply the reflection matrix to either the renderable or the camera,
+                        // depending on mode.
+                        Camera const& camera = view->getCamera();
+                        const auto model = camera.getModelMatrix();
+                        const auto renderingProjection = camera.getProjectionMatrix();
+                        const auto cullingProjection = camera.getCullingProjectionMatrix();
+                        app.offscreenCamera->setCustomProjection(renderingProjection,
+                                cullingProjection, camera.getNear(), camera.getCullingFar());
+                        switch (app.mode) {
+                            case App::ReflectionMode::RENDERABLES:
+                                tcm.setTransform(tcm.getInstance(app.reflectedMonkey),
+                                        reflection * xform);
+                                app.offscreenCamera->setModelMatrix(model);
+                                break;
+                            case App::ReflectionMode::CAMERA:
+                                app.offscreenCamera->setModelMatrix(reflection * model);
+                                break;
+                        }
+                    })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

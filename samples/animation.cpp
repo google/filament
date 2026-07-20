@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -30,18 +35,14 @@
 
 #include <utils/EntityManager.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <cmath>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -65,7 +66,7 @@ static Vertex TRIANGLE_VERTICES[3] = {
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "animation";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
@@ -105,9 +106,15 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
 
-        #if 0
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .backend(config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine* engine, View* view, double now) {
+
+#if 0
         engine->destroy(app.vb);
         auto vb = app.vb = VertexBuffer::Builder()
                 .vertexCount(3)
@@ -116,40 +123,42 @@ int main(int argc, char** argv) {
                 .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
-        #else
-        auto vb = app.vb;
-        #endif
+#else
+                                  auto vb = app.vb;
+#endif
 
-        void* verts = malloc(36);
-        TRIANGLE_VERTICES[0].position.y = sin(now * 4);
-        memcpy(verts, TRIANGLE_VERTICES, 36);
-        vb->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(verts, 36,
-                (VertexBuffer::BufferDescriptor::Callback) free));
+                                  void* verts = malloc(36);
+                                  TRIANGLE_VERTICES[0].position.y = sin(now * 4);
+                                  memcpy(verts, TRIANGLE_VERTICES, 36);
+                                  vb->setBufferAt(*engine, 0,
+                                          VertexBuffer::BufferDescriptor(verts, 36,
+                                                  (VertexBuffer::BufferDescriptor::Callback) free));
 
-        auto& rcm = engine->getRenderableManager();
-        rcm.destroy(app.renderable);
-        RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
-                .culling(false)
-                .receiveShadows(false)
-                .castShadows(false)
-                .build(*engine, app.renderable);
+                                  auto& rcm = engine->getRenderableManager();
+                                  rcm.destroy(app.renderable);
+                                  RenderableManager::Builder(1)
+                                          .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                                          .material(0, app.mat->getDefaultInstance())
+                                          .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                                                  app.vb, app.ib, 0, 3)
+                                          .culling(false)
+                                          .receiveShadows(false)
+                                          .castShadows(false)
+                                          .build(*engine, app.renderable);
 
-        constexpr float ZOOM = 1.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO,
-            -aspect * ZOOM, aspect * ZOOM,
-            -ZOOM, ZOOM, 0, 1);
-        auto& tcm = engine->getTransformManager();
-        tcm.setTransform(tcm.getInstance(app.renderable),
-                filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
-    });
-
-    FilamentApp::get().run(config, setup, cleanup);
+                                  constexpr float ZOOM = 1.5f;
+                                  const uint32_t w = view->getViewport().width;
+                                  const uint32_t h = view->getViewport().height;
+                                  const float aspect = (float) w / h;
+                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                          aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                                  auto& tcm = engine->getTransformManager();
+                                  tcm.setTransform(tcm.getInstance(app.renderable),
+                                          filament::math::mat4f::rotation(now,
+                                                  filament::math::float3{ 0, 0, 1 }));
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

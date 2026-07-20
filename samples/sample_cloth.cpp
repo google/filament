@@ -15,15 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <iostream>
-#include <string>
-#include <map>
-#include <vector>
+#include <filameshio/MeshReader.h>
 
-#include <utils/getopt.h>
-
-#include <utils/Path.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -35,19 +31,22 @@
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
 
+#include <filamat/MaterialBuilder.h>
+
+#include <utils/EntityManager.h>
+#include <utils/getopt.h>
+#include <utils/Path.h>
+
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec4.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <stb_image.h>
 
-#include <utils/EntityManager.h>
-
-#include <filamat/MaterialBuilder.h>
-#include <filameshio/MeshReader.h>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
 
 using namespace filament::math;
 using namespace filament;
@@ -63,7 +62,8 @@ static const Material* g_material;
 static Entity g_light;
 static std::map<std::string, Texture*> g_maps;
 
-static Config g_config;
+static SampleConfig g_config;
+std::unique_ptr<FilamentApp2> g_filamentApp;
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -93,7 +93,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:i:vs:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",           utils::getopt::no_argument,       0, 'h' },
@@ -260,6 +260,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(g_light);
 }
 
+
 int main(int argc, char* argv[]) {
     int option_index = handleCommandLineArgments(argc, argv, &g_config);
     int num_args = argc - option_index;
@@ -278,8 +279,14 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "Cloth shading";
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(g_config.title)
+                            .scale(g_config.scale)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .imgui(nullptr)
+                            .build();
+    g_filamentApp->run();
 
     return 0;
 }

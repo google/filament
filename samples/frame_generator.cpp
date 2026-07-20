@@ -35,15 +35,15 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include <imageio/ImageEncoder.h>
 
 #include <image/ColorTransform.h>
 #include <image/LinearImage.h>
 
-#include <imageio/ImageEncoder.h>
-
-#include <filamentapp/Config.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
-#include <filamentapp/FilamentApp.h>
 #include <filamentapp/MeshAssimp.h>
 
 #include <filament/Color.h>
@@ -51,8 +51,8 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/TransformManager.h>
@@ -60,6 +60,7 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/getopt.h>
 #include <utils/Path.h>
 
 #include <math/mat3.h>
@@ -67,8 +68,6 @@
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-
-#include <utils/getopt.h>
 
 #include <algorithm>
 #include <atomic>
@@ -81,9 +80,9 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -124,7 +123,8 @@ static const Material* g_material = nullptr;
 static MaterialInstance* g_materialInstance = nullptr;
 static Entity g_light;
 
-static Config g_config;
+static SampleConfig g_config;
+std::unique_ptr<FilamentApp2> g_filamentApp;
 
 // Prints the usage message to the console.
 static void printUsage(char* name) {
@@ -183,8 +183,8 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-// Parses command line arguments and populates the Config object.
-static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
+// Parses command line arguments and populates the SampleConfig object.
+static int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:s:li:m:c:p:x:yb:S:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",        utils::getopt::no_argument,       nullptr, 'h' },
@@ -459,7 +459,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         }
     }
 
-    auto const ibl = FilamentApp::get().getIBL();
+    auto const ibl = g_filamentApp->getIBL();
     if (!ibl || !g_skyboxOn) {
         g_skybox = Skybox::Builder().color({
                 float((g_clearColor >> 16) & 0xFF) / 255.0f,
@@ -538,13 +538,14 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     }
 
     if (g_savedFrames.load() == g_materialVariantCount) {
-        FilamentApp::get().close();
+        g_filamentApp->close();
     }
 
     g_currentFrame++;
 }
 
 // Main entry point: parses args, validates inputs, and runs the Filament application.
+
 int main(int const argc, char* argv[]) {
     int const option_index = handleCommandLineArguments(argc, argv, &g_config);
     int const num_args = argc - option_index;
@@ -564,9 +565,17 @@ int main(int const argc, char* argv[]) {
 
     g_config.title = "Frame Generator";
     g_config.headless = true;
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config,
-            setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, g_width, g_height);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(g_config.title)
+                            .size(g_width, g_height)
+                            .scale(g_config.scale)
+                            .headless(g_config.headless)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .preRender(render)
+                            .postRender(postRender)
+                            .build();
+    g_filamentApp->run();
 
     return 0;
 }
