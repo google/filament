@@ -141,6 +141,7 @@ utils::CString getPortString(std::string_view serviceType) {
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
     Platform::DriverConfig const driverConfig{
         .featureFlagManager = instance,
+        .debugRegistry = &instance->getDebugRegistry().internalRegistry,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
