@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FILAMENTAPP_APPEVENT_H
 #define TNT_FILAMENT_FILAMENTAPP_APPEVENT_H
 
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <cstdint>
 #include <string>
@@ -167,7 +167,7 @@ struct AppEvent {
         TEXTINPUT
     } type;
 
-    FilamentApp::Window::Handle windowId = nullptr;
+    FilamentApp2::Window::Handle windowId = nullptr;
 
     union {
         struct {

@@ -24,6 +24,7 @@ set(PUBLIC_HDRS
         include/filamentapp/Cube.h
         include/filamentapp/Grid.h
         include/filamentapp/FilamentApp.h
+        include/filamentapp/FilamentApp2.h
         include/filamentapp/IBL.h
         include/filamentapp/IcoSphere.h
         include/filamentapp/MeshAssimp.h
@@ -36,14 +37,15 @@ set(SRCS
         src/DesktopAssetLoader.cpp
         src/Grid.cpp
         src/FilamentApp.cpp
+        src/FilamentApp2.cpp
         src/IBL.cpp
         src/IcoSphere.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
         src/PlatformHelper.cpp
         src/PlatformHelper.h
-        src/DisplayManager.h
-        src/AppEvent.h
+        include/filamentapp/DisplayManager.h
+        include/filamentapp/AppEvent.h
         src/FilamentAppGui.h
         src/FilamentAppGui.cpp
 )

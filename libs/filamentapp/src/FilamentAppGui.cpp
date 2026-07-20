@@ -15,7 +15,7 @@
  */
 
 #include "FilamentAppGui.h"
-#include "DisplayManager.h"
+#include <filamentapp/DisplayManager.h>
 #if defined(FILAMENTAPP_HAS_IMGUI)
 #include <filagui/ImGuiHelper.h>
 #include <imgui.h>
@@ -336,7 +336,7 @@ bool FilamentAppGui::wantCaptureMouse() const {
 }
 
 void FilamentAppGui::render(float timeStep, filament::app::DisplayManager* displayManager,
-        void* window, FilamentApp::ImGuiCallback imguiCallback, bool mousePressed[3]) {
+        void* window, FilamentApp2::ImGuiCallback imguiCallback, bool mousePressed[3]) {
 #if defined(FILAMENTAPP_HAS_IMGUI)
     if (pImpl->helper) {
         uint32_t windowWidth, windowHeight;
