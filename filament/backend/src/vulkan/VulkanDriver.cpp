@@ -193,7 +193,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) && FVK_ENABLED(FVK_DEBUG_VALIDATION)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
@@ -2385,12 +2385,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
 
 // Assign a label to the framebuffer for debugging purposes.
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS_RENDERPASS_NAME)
     auto const topMarker = mCommands.getTopGroupMarker();
     if (!topMarker.empty()) {
-        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(vkfb),
-                topMarker.c_str());
+        uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
+        uint64_t renderPassVk = (uint64_t) renderPass->getVkRenderPass();
+        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
+        DebugUtils::setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk,topMarker.c_str());
     }
+
 #endif
 
     // The current command buffer now has references to the render target and its attachments.
