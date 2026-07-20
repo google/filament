@@ -154,8 +154,9 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     VkAttachmentReference resolveAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference depthStencilAttachmentRef = {};
 
-    const bool hasDepthOrStencil = fvkutils::isVkDepthFormat(config.depthStencilFormat) ||
-                                   fvkutils::isVkStencilFormat(config.depthStencilFormat);
+    const bool hasDepth = fvkutils::isVkDepthFormat(config.depthStencilFormat);
+    const bool hasStencil = fvkutils::isVkStencilFormat(config.depthStencilFormat);
+    const bool hasDepthOrStencil = hasDepth || hasStencil;
 
     VkSubpassDescription subpasses[2] = {{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -327,10 +328,10 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         attachments[attachmentIndex++] = {
             .format = config.depthStencilFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clearDepth ? kClear : (discardStartDepth ? kDontCare : kKeep),
-            .storeOp = discardEndDepth ? kDisableStore : kEnableStore,
-            .stencilLoadOp = clearStencil ? kClear : (discardStartStencil ? kDontCare : kKeep),
-            .stencilStoreOp = discardEndStencil ? kDisableStore : kEnableStore,
+            .loadOp = hasDepth ? (clearDepth ? kClear : (discardStartDepth ? kDontCare : kKeep)) : kDontCare,
+            .storeOp = hasDepth ? (discardEndDepth ? kDisableStore : kEnableStore) : kDisableStore,
+            .stencilLoadOp = hasStencil ? (clearStencil ? kClear : (discardStartStencil ? kDontCare : kKeep)) : kDontCare,
+            .stencilStoreOp = hasStencil ? (discardEndStencil ? kDisableStore : kEnableStore) : kDisableStore,
             .initialLayout = fvkutils::getVkLayout(config.initialDepthStencilLayout),
             .finalLayout = fvkutils::getVkLayout(FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT),
         };
