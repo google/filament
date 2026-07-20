@@ -157,11 +157,13 @@ CString& CString::replace(size_type const pos, size_type len, char const* str, s
     return *this;
 }
 
-#if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const CString& rhs) {
     return out << rhs.c_str_safe();
 }
-#endif
+
+std::ostream& operator<<(std::ostream& out, const CString& rhs) {
+    return out << rhs.c_str_safe();
+}
 
 namespace {
 

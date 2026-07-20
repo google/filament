@@ -20,6 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <iosfwd>
 #include <typeinfo>
 
 #include <stddef.h>
@@ -88,6 +89,9 @@ public:
      * program-counter recorded.
      */
     friend io::ostream& operator <<(io::ostream& stream, const CallStack& callstack);
+    friend std::ostream& operator <<(std::ostream& stream, const CallStack& callstack);
+    template <typename Stream>
+    friend Stream& printCallStack(Stream& stream, CallStack const& callstack);
 
     bool operator <(const CallStack& rhs) const;
 

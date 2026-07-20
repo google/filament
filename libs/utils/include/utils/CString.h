@@ -22,6 +22,7 @@
 #include <utils/compiler.h>
 #include <utils/StaticString.h>
 
+#include <iosfwd>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -349,9 +350,8 @@ private:
 
     CString& replace(size_type pos, size_type len, char const* str, size_t l) & noexcept;
 
-#if !defined(NDEBUG)
     friend io::ostream& operator<<(io::ostream& out, const CString& rhs);
-#endif
+    friend std::ostream& operator<<(std::ostream& out, const CString& rhs);
 
     struct Data {
         size_type length;
