@@ -72,6 +72,11 @@ function smoke_engine() {
     const instancing: boolean = engine.isAutomaticInstancingEnabled();
     engine.enableAccurateTranslations();
     engine.unprotected();
+    const fence: Filament.Fence = engine.createFence();
+    const validFence: boolean = engine.isValidFence(fence);
+    const status: Filament.FenceStatus = fence.wait(Filament.Fence$Mode.FLUSH, 0);
+    engine.destroyFence(fence);
+    console.log(validFence, status);
     const failed: boolean = engine.hasUnrecoverableFailure();
     const maxEyes: number = Filament.Engine.getMaxStereoscopicEyes();
     const now: number = Filament.Engine.getSteadyClockTimeNano();
@@ -111,7 +116,8 @@ function smoke_camera_exposure_shift() {
     camera.setShift([0.1, 0.2]);
     const shift: Filament.double2 = camera.getShift();
     const effFov: number = Filament.Camera.computeEffectiveFov(45, 5);
-    console.log(aperture, focal, focus, shift, effFov);
+    const fov: number = camera.getFieldOfViewInDegrees(Filament.Camera$Fov.VERTICAL);
+    console.log(aperture, focal, focus, shift, effFov, fov);
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +127,8 @@ function smoke_camera_exposure_shift() {
 function smoke_view() {
     const view = engine.createView();
     const validView: boolean = engine.isValidView(view);
+    const colorGrading: Filament.ColorGrading = view.getColorGrading();
+    console.log(colorGrading);
     const viewport: Filament.float4 = view.getViewport();
     const hasCamera: boolean = view.hasCamera();
     const sampleCount: number = view.getSampleCount();
@@ -132,6 +140,16 @@ function smoke_view() {
     const gridSize: number = view.getGridSize();
     view.setGridSize(gridSize);
     view.setShadowingEnabled(true);
+    const shadowingEnabled: boolean = view.isShadowingEnabled();
+    view.setShadowType(Filament.View$ShadowType.VSM);
+    const shadowType: Filament.View$ShadowType = view.getShadowType();
+    view.setVsmShadowOptions({ anisotropy: 0, mipmapping: false });
+    const vsmOptions: Filament.View$VsmShadowOptions = view.getVsmShadowOptions();
+    view.setSoftShadowOptions({ penumbraScale: 1.0 });
+    const softOptions: Filament.View$SoftShadowOptions = view.getSoftShadowOptions();
+    view.setFrustumCullingEnabled(false);
+    const frustumCulling: boolean = view.isFrustumCullingEnabled();
+    console.log(shadowingEnabled, shadowType, vsmOptions, softOptions, frustumCulling);
     view.setFrontFaceWindingInverted(false);
     const inverted: boolean = view.isFrontFaceWindingInverted();
     const materialGlobal: Filament.float4 = view.getMaterialGlobal(0);
@@ -168,6 +186,17 @@ function smoke_renderer() {
     renderer.setClearOptions({ clearColor: [0, 0, 0, 1], clear: true });
     const clearOptions: Filament.Renderer$ClearOptions = renderer.getClearOptions();
     const validRenderer: boolean = engine.isValidRenderer(renderer);
+    const dstSwapChain = engine.createSwapChain();
+    renderer.copyFrame(dstSwapChain, [0, 0, 16, 16], [0, 0, 16, 16], 0);
+    renderer.readPixels(0, 0, 16, 16, Filament.PixelDataFormat.RGBA,
+            Filament.PixelDataType.UBYTE, (pixels: Uint8Array) => {
+        console.log(pixels.length);
+    });
+    const rt = Filament.RenderTarget.Builder().build(engine);
+    renderer.readPixels(rt, 0, 0, 16, 16, Filament.PixelDataFormat.RGBA,
+            Filament.PixelDataType.UBYTE, (pixels: Uint8Array) => {
+        console.log(pixels.length);
+    });
     console.log(userTime, skipCount, shouldRender, clearOptions, validRenderer);
 }
 
@@ -204,6 +233,71 @@ function smoke_renderables() {
     inst.delete();
 }
 
+function smoke_renderable_geometry() {
+    const rm = engine.getRenderableManager();
+    const entity = newEntity();
+    const vb = Filament.VertexBuffer.Builder()
+        .vertexCount(3)
+        .bufferCount(1)
+        .attribute(Filament.VertexAttribute.POSITION, 0,
+                Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
+        .build(engine);
+    Filament.RenderableManager.Builder(2)
+        .geometryType(Filament.RenderableManager$Builder$GeometryType.DYNAMIC)
+        .geometryNoIndices(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, vb)
+        .geometryNoIndicesOffset(1, Filament.RenderableManager$PrimitiveType.TRIANGLES, vb, 0, 3)
+        .build(engine, entity);
+    const inst = rm.getInstance(entity);
+    rm.setGeometryNoIndicesAt(inst, 0, Filament.RenderableManager$PrimitiveType.TRIANGLES,
+            vb, 0, 3);
+    inst.delete();
+}
+
+function smoke_skinning_morphing_buffers() {
+    const bone: Filament.RenderableManager$Bone = {
+        unitQuaternion: qt,
+        translation: v3
+    };
+    const sb: Filament.SkinningBuffer = Filament.SkinningBuffer.Builder()
+        .boneCount(4)
+        .initialize(true)
+        .build(engine);
+    const boneCount: number = sb.getBoneCount();
+    sb.setBones(engine, [bone], 0);
+    sb.setBonesFromMatrices(engine, [m4], 0);
+    const validSb: boolean = engine.isValidSkinningBuffer(sb);
+
+    const mtb: Filament.MorphTargetBuffer = Filament.MorphTargetBuffer.Builder()
+        .vertexCount(3)
+        .count(2)
+        .withPositions(true)
+        .withTangents(true)
+        .enableCustomMorphing(true)
+        .build(engine);
+    const vertexCount: number = mtb.getVertexCount();
+    const targetCount: number = mtb.getCount();
+    const hasPositions: boolean = mtb.hasPositions();
+    const hasTangents: boolean = mtb.hasTangents();
+    const customMorphing: boolean = mtb.isCustomMorphingEnabled();
+    mtb.setPositionsAt(engine, 0, new Float32Array(9), 3, 0);
+    mtb.setTangentsAt(engine, 0, new Int16Array(12), 3, 0);
+    const validMtb: boolean = engine.isValidMorphTargetBuffer(mtb);
+
+    const entity = newEntity();
+    Filament.RenderableManager.Builder(1)
+        .enableSkinningBuffers(true)
+        .skinningBuffer(sb, 4, 0)
+        .morphingTargetCount(2)
+        .morphingBuffer(mtb)
+        .morphingBufferOffset(0, 0, 0)
+        .build(engine, entity);
+
+    engine.destroySkinningBuffer(sb);
+    engine.destroyMorphTargetBuffer(mtb);
+    console.log(boneCount, validSb, vertexCount, targetCount, hasPositions, hasTangents,
+            customMorphing, validMtb);
+}
+
 function smoke_renderable_instance() {
     const rm = engine.getRenderableManager();
     const rinst = rm.getInstance(newEntity());
@@ -226,9 +320,17 @@ function smoke_lights() {
         .intensity(110000)
         .direction([0, -1, 0])
         .castShadows(true)
+        .shadowOptions({
+            mapSize: 1024,
+            shadowCascades: 4,
+            cascadeSplitPositions: [0.25, 0.50, 0.75],
+            vsm: { elvsm: true, blurWidth: 2.0 },
+        })
         .build(engine, entity);
     const lm = engine.getLightManager();
     const has: boolean = lm.hasComponent(entity);
+    const componentCount: number = lm.getComponentCount();
+    console.log(componentCount);
     const inst: Filament.LightManager$Instance = lm.getInstance(entity);
     const type: Filament.LightManager$Type = lm.getType(inst);
     lm.setIntensity(inst, 100);
@@ -285,6 +387,8 @@ function smoke_texture() {
     texture.generateMipmaps(engine);
     const mipmappable: boolean = Filament.Texture.isTextureFormatMipmappable(engine,
             Filament.Texture$InternalFormat.RGBA8);
+    const swizzleSupported: boolean = Filament.Texture.isTextureSwizzleSupported(engine);
+    console.log(swizzleSupported);
     const validTexture: boolean = engine.isValidTexture(texture);
 
     const sampler = new Filament.TextureSampler(Filament.MinFilter.LINEAR,
@@ -307,6 +411,13 @@ function smoke_material() {
     const validMaterial: boolean = engine.isValidMaterial(material);
     const validInstance: boolean = engine.isValidMaterialInstance(material, matinst);
 
+    const source: Filament.Material = matinst.getMaterial();
+    const dup: Filament.MaterialInstance = matinst.duplicate();
+    const dupNamed: Filament.MaterialInstance = matinst.duplicateNamed("copy");
+    matinst.setScissor(0, 0, 16, 16);
+    matinst.unsetScissor();
+    console.log(source, dup, dupNamed);
+
     matinst.setFloatParameter("alpha", 1.0);
     matinst.setColor3Parameter("baseColor", Filament.RgbType.sRGB, v3);
     matinst.setCullingMode(Filament.CullingMode.BACK);
@@ -314,6 +425,14 @@ function smoke_material() {
     const transparency: Filament.TransparencyMode = matinst.getTransparencyMode();
     const threshold: number = matinst.getMaskThreshold();
     console.log(named, def, name, validMaterial, validInstance, transparency, threshold);
+
+    try {
+        matinst.getConstantBool("test_bool");
+        matinst.getConstantFloat("test_float");
+        matinst.getConstantInt("test_int");
+    } catch (e) {
+        // constants might not exist in nonexistent.filamat, which is fine for smoke test
+    }
 }
 
 function smoke_color_grading() {
@@ -321,6 +440,16 @@ function smoke_color_grading() {
         .quality(Filament.ColorGrading$QualityLevel.HIGH)
         .toneMapping(Filament.ColorGrading$ToneMapping.ACES)
         .exposure(0.0)
+        .customLut(new Float32Array([
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 1.0,
+            1.0, 1.0, 1.0,
+            0.0, 0.0, 0.0,
+            1.0, 1.0, 0.0,
+            0.0, 1.0, 1.0,
+            1.0, 0.0, 1.0
+        ]), 2)
         .build(engine);
     const valid: boolean = engine.isValidColorGrading(cg);
     console.log(valid);
@@ -383,6 +512,7 @@ function smoke_surface_orientation() {
     const so = new Filament.SurfaceOrientation$Builder()
         .vertexCount(3)
         .normals(new Float32Array(9), 0)
+        .tangents(new Float32Array(12), 0)
         .build();
     const quats: Int16Array = so.getQuats(3);
     so.delete();
@@ -452,7 +582,12 @@ function smoke_gltfio() {
     const root: Filament.Entity = asset.getRoot();
     const box: Filament.Aabb = asset.getBoundingBox();
     const instance = asset.getInstance();
+    const morphTargetNames: string[] = asset.getMorphTargetNames(root);
     const skinNames: Filament.Vector<string> = instance.getSkinNames();
+    const skinCount: number = instance.getSkinCount();
+    const jointCount: number = instance.getJointCountAt(0);
+    const joints: Filament.Entity[] = instance.getJointsAt(0);
+    console.log(morphTargetNames, skinCount, jointCount, joints);
     const variants: string[] = instance.getMaterialVariantNames();
     const animator = instance.getAnimator();
     const animCount: number = animator.getAnimationCount();
@@ -513,6 +648,8 @@ const SMOKE_TESTS: Array<() => void> = [
     smoke_renderer,
     smoke_transforms,
     smoke_renderables,
+    smoke_renderable_geometry,
+    smoke_skinning_morphing_buffers,
     smoke_renderable_instance,
     smoke_lights,
     smoke_buffers,
