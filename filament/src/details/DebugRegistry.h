@@ -21,112 +21,119 @@
 
 #include <filament/DebugRegistry.h>
 
-#include <utils/compiler.h>
-#include <utils/Invocable.h>
+#include <private/utils/InternalDebugRegistry.h>
 
-#include <math/mathfwd.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
-#include <functional>
-#include <string_view>
-#include <unordered_map>
-#include <utility>
-
-#include <stddef.h>
+#include <array>
 
 namespace filament {
 
-class FEngine;
-
-class FDebugRegistry : public DebugRegistry {
+class FDebugRegistry : public filament::DebugRegistry {
 public:
-    enum Type {
-        BOOL, INT, FLOAT, FLOAT2, FLOAT3, FLOAT4
-    };
+    FDebugRegistry() noexcept = default;
 
-    FDebugRegistry() noexcept;
+    utils::InternalDebugRegistry internalRegistry;
 
-    void registerProperty(std::string_view const name, bool* p) noexcept {
-        registerProperty(name, p, BOOL);
+    template<typename... Args>
+    void registerProperty(Args&&... args) noexcept {
+        internalRegistry.registerProperty(std::forward<Args>(args)...);
     }
 
-    void registerProperty(std::string_view const name, int* p) noexcept {
-        registerProperty(name, p, INT);
-    }
-
-    void registerProperty(std::string_view const name, float* p) noexcept {
-        registerProperty(name, p, FLOAT);
-    }
-
+    // InternalDebugRegistry uses std::array to represent vector properties to avoid depending on
+    // libs/math. Since math::floatN (TVecN) and std::array<float, N> share the exact same binary
+    // layout (contiguous floats) and are standard-layout, we can safely reinterpret_cast the
+    // pointers for registration.
     void registerProperty(std::string_view const name, math::float2* p) noexcept {
-        registerProperty(name, p, FLOAT2);
+        internalRegistry.registerProperty(name, reinterpret_cast<std::array<float, 2>*>(p));
     }
 
     void registerProperty(std::string_view const name, math::float3* p) noexcept {
-        registerProperty(name, p, FLOAT3);
+        internalRegistry.registerProperty(name, reinterpret_cast<std::array<float, 3>*>(p));
     }
 
     void registerProperty(std::string_view const name, math::float4* p) noexcept {
-        registerProperty(name, p, FLOAT4);
+        internalRegistry.registerProperty(name, reinterpret_cast<std::array<float, 4>*>(p));
     }
 
-
-    void registerProperty(std::string_view const name, bool* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, BOOL, std::move(fn));
+    template<typename... Args>
+    bool registerDataSource(Args&&... args) noexcept {
+        return internalRegistry.registerDataSource(std::forward<Args>(args)...);
     }
 
-    void registerProperty(std::string_view const name, int* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, INT, std::move(fn));
+    template<typename... Args>
+    void unregisterDataSource(Args&&... args) noexcept {
+        internalRegistry.unregisterDataSource(std::forward<Args>(args)...);
     }
 
-    void registerProperty(std::string_view const name, float* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, FLOAT, std::move(fn));
+    bool hasProperty(const char* name) const noexcept { return internalRegistry.hasProperty(name); }
+
+    template<typename T>
+    bool setProperty(const char* name, T v) noexcept {
+        return internalRegistry.setProperty(name, v);
     }
 
-    void registerProperty(std::string_view const name, math::float2* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, FLOAT2, std::move(fn));
+    // FDebugRegistry handles ferrying data to the backend InternalDebugRegistry.
+    // It converts public math::floatN API calls into std::array structures to cross the API
+    // boundary.
+    bool setProperty(const char* name, math::float2 v) noexcept {
+        return internalRegistry.setProperty(name, std::array<float, 2>{ v.x, v.y });
     }
 
-    void registerProperty(std::string_view const name, math::float3* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, FLOAT3, std::move(fn));
+    bool setProperty(const char* name, math::float3 v) noexcept {
+        return internalRegistry.setProperty(name, std::array<float, 3>{ v.x, v.y, v.z });
     }
 
-    void registerProperty(std::string_view const name, math::float4* p,
-            std::function<void()> fn) noexcept {
-        registerProperty(name, p, FLOAT4, std::move(fn));
+    bool setProperty(const char* name, math::float4 v) noexcept {
+        return internalRegistry.setProperty(name, std::array<float, 4>{ v.x, v.y, v.z, v.w });
     }
 
-    // registers a DataSource directly
-    bool registerDataSource(std::string_view name, void const* data, size_t count) noexcept;
+    template<typename T>
+    bool getProperty(const char* name, T* v) const noexcept {
+        return internalRegistry.getProperty(name, v);
+    }
 
-    // registers a DataSource lazily
-    bool registerDataSource(std::string_view name,
-            utils::Invocable<DataSource()>&& creator) noexcept;
+    bool getProperty(const char* name, math::float2* v) const noexcept {
+        std::array<float, 2> a;
+        if (internalRegistry.getProperty(name, &a)) {
+            *v = math::float2{ a[0], a[1] };
+            return true;
+        }
+        return false;
+    }
 
-    void unregisterDataSource(std::string_view name) noexcept;
+    bool getProperty(const char* name, math::float3* v) const noexcept {
+        std::array<float, 3> a;
+        if (internalRegistry.getProperty(name, &a)) {
+            *v = math::float3{ a[0], a[1], a[2] };
+            return true;
+        }
+        return false;
+    }
 
-#if !defined(_MSC_VER)
-private:
-#endif
-    template<typename T> bool getProperty(const char* name, T* p) const noexcept;
-    template<typename T> bool setProperty(const char* name, T v) noexcept;
+    bool getProperty(const char* name, math::float4* v) const noexcept {
+        std::array<float, 4> a;
+        if (internalRegistry.getProperty(name, &a)) {
+            *v = math::float4{ a[0], a[1], a[2], a[3] };
+            return true;
+        }
+        return false;
+    }
 
-private:
-    using PropertyInfo = std::pair<void*, std::function<void()>>;
-    friend class DebugRegistry;
-    void registerProperty(std::string_view name, void* p, Type type, std::function<void()> fn = {}) noexcept;
-    bool hasProperty(const char* name) const noexcept;
-    PropertyInfo getPropertyInfo(const char* name) noexcept;
-    void* getPropertyAddress(const char* name);
-    void const* getPropertyAddress(const char* name) const noexcept;
-    DataSource getDataSource(const char* name) const noexcept;
-    std::unordered_map<std::string_view, PropertyInfo> mPropertyMap;
-    mutable std::unordered_map<std::string_view, DataSource> mDataSourceMap;
-    mutable std::unordered_map<std::string_view, utils::Invocable<DataSource()>> mDataSourceCreatorMap;
+    void* getPropertyAddress(const char* name) noexcept {
+        return internalRegistry.getPropertyAddress(name);
+    }
+
+    void const* getPropertyAddress(const char* name) const noexcept {
+        return internalRegistry.getPropertyAddress(name);
+    }
+
+    filament::DebugRegistry::DataSource getDataSource(const char* name) const noexcept {
+        auto ds = internalRegistry.getDataSource(name);
+        return { ds.data, ds.count };
+    }
 };
 
 FILAMENT_DOWNCAST(DebugRegistry)

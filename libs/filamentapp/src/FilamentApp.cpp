@@ -311,7 +311,7 @@ try {
                 }
 #if !defined(NDEBUG) && !defined(__ANDROID__)
                 if (event.key.code == AppKey::PRINT_SCREEN) {
-                    DebugRegistry& debug = mEngine->getDebugRegistry();
+                    filament::DebugRegistry& debug = mEngine->getDebugRegistry();
                     if (bool* captureFrame = debug.getPropertyAddress<bool>("d.renderer.doFrameCapture")) {
                         *captureFrame = true;
                     }
