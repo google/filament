@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018-2026 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,9 @@
 // THE SOFTWARE.
 //
 
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
+#ifdef VMA_VOLK_HEADER_PATH
 
-layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+#define VOLK_IMPLEMENTATION
+#include "VmaUsage.h"
 
-layout(binding=0) uniform sampler2D img;
-layout(binding=1) buffer buf
-{
-	uint bufValues[];
-};
-
-void main()
-{
-	ivec2 xy = ivec2(bufValues[gl_GlobalInvocationID.x * 3],
-		bufValues[gl_GlobalInvocationID.x * 3 + 1]);
-	vec4 color = texture(img, xy);
-	bufValues[gl_GlobalInvocationID.x * 3 + 2] =
-		uint(color.r * 255.0) << 24 |
-		uint(color.g * 255.0) << 16 |
-		uint(color.b * 255.0) <<  8 |
-		uint(color.a * 255.0);
-}
+#endif // #ifdef VMA_VOLK_HEADER_PATH

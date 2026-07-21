@@ -158,7 +158,9 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .vkDestroyImage = vkDestroyImage,
         .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
-        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
+        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR,
+        .vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR,
+        .vkGetPhysicalDeviceProperties2KHR = vkGetPhysicalDeviceProperties2KHR,
 #endif
     };
     VmaAllocatorCreateInfo const allocatorInfo{
