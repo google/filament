@@ -108,10 +108,11 @@ void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout lay
             &binaryValue);
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
-    : HwProgram(builder.getName()),
-      mInfo(new(std::nothrow) PipelineInfo(builder)),
-      mDevice(device) {
+VulkanProgram::VulkanProgram(VulkanContext const& context, VkDevice device,
+        Program const& builder) noexcept
+        : HwProgram(builder.getName()),
+          mInfo(new(std::nothrow) PipelineInfo(builder)),
+          mDevice(device) {
 
     utils::io::sstream ss;
     ss << builder;
@@ -149,22 +150,22 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
                 << "Unable to create shader module."
                 << " error=" << static_cast<int32_t>(result);
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-        utils::CString name{ builder.getName().c_str(), builder.getName().size() };
-        switch (static_cast<ShaderStage>(i)) {
-            case ShaderStage::VERTEX:
-                name += "_vs";
-                break;
-            case ShaderStage::FRAGMENT:
-                name += "_fs";
-                break;
-            default:
-                PANIC_POSTCONDITION("Unexpected stage");
-                break;
+        if (context.isDebugUtilsNamesEnabled()) {
+            utils::CString name{ builder.getName().c_str(), builder.getName().size() };
+            switch (static_cast<ShaderStage>(i)) {
+                case ShaderStage::VERTEX:
+                    name += "_vs";
+                    break;
+                case ShaderStage::FRAGMENT:
+                    name += "_fs";
+                    break;
+                default:
+                    PANIC_POSTCONDITION("Unexpected stage");
+                    break;
+            }
+            VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
+                    reinterpret_cast<uint64_t>(module), name.c_str());
         }
-        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
-                reinterpret_cast<uint64_t>(module), name.c_str());
-#endif
     }
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
