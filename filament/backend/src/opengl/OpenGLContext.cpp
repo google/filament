@@ -679,6 +679,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_sRGB = exts.has("GL_EXT_sRGB"sv) || (major >= 3);
     ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext->KHR_debug = exts.has("GL_KHR_debug"sv);
     ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);

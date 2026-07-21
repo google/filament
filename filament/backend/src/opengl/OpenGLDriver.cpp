@@ -1005,6 +1005,11 @@ void OpenGLDriver::textureStorage(OpenGLState& gl, GLTexture* t,
             else {
                 // FIXME: handle compressed texture format
                 auto [format, type] = textureFormatToFormatAndType(t->format);
+                if (t->gl.internalFormat == GL_SRGB_ALPHA_EXT) {
+                    format = GL_SRGB_ALPHA_EXT;
+                } else if (t->gl.internalFormat == GL_SRGB_EXT) {
+                    format = GL_SRGB_EXT;
+                }
                 assert_invariant(format != GL_NONE && type != GL_NONE);
                 for (GLint level = 0 ; level < t->levels ; level++ ) {
                     if (t->gl.target == GL_TEXTURE_CUBE_MAP) {
@@ -1105,9 +1110,19 @@ void OpenGLDriver::createTextureCommon(OpenGLState& gl, Handle<HwTexture> th, Sa
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
 
         if (UTILS_UNLIKELY(gl.isES2())) {
-            // on ES2, format and internal format must match
             // FIXME: handle compressed texture format
-            internalFormat = textureFormatToFormatAndType(format).first;
+            if (mContext.ext.EXT_texture_sRGB) {
+                if (format == TextureFormat::SRGB8_A8) {
+                    internalFormat = GL_SRGB_ALPHA_EXT;
+                } else if (format == TextureFormat::SRGB8) {
+                    internalFormat = GL_SRGB_EXT;
+                } else {
+                    internalFormat = textureFormatToFormatAndType(format).first;
+                }
+            } else {
+                // on ES2, format and internal format must match
+                internalFormat = textureFormatToFormatAndType(format).first;
+            }
         }
 
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
@@ -3521,6 +3536,11 @@ void OpenGLDriver::setTextureData(OpenGLState& gl, GLTexture const* t, uint32_t 
         auto const formatAndType = textureFormatToFormatAndType(t->format);
         glFormat = formatAndType.first;
         glType = formatAndType.second;
+        if (t->gl.internalFormat == GL_SRGB_ALPHA_EXT) {
+            glFormat = GL_SRGB_ALPHA_EXT;
+        } else if (t->gl.internalFormat == GL_SRGB_EXT) {
+            glFormat = GL_SRGB_EXT;
+        }
     } else {
         glFormat = getFormat(p.format);
         glType = getType(p.type);
