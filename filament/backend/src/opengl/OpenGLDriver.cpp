@@ -1105,9 +1105,19 @@ void OpenGLDriver::createTextureCommon(OpenGLState& gl, Handle<HwTexture> th, Sa
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
 
         if (UTILS_UNLIKELY(gl.isES2())) {
-            // on ES2, format and internal format must match
             // FIXME: handle compressed texture format
-            internalFormat = textureFormatToFormatAndType(format).first;
+            if (mContext.ext.EXT_texture_sRGB) {
+                if (format == TextureFormat::SRGB8_A8) {
+                    internalFormat = GL_SRGB_ALPHA_EXT;
+                } else if (format == TextureFormat::SRGB8) {
+                    internalFormat = GL_SRGB_EXT;
+                } else {
+                    internalFormat = textureFormatToFormatAndType(format).first;
+                }
+            } else {
+                // on ES2, format and internal format must match
+                internalFormat = textureFormatToFormatAndType(format).first;
+            }
         }
 
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
