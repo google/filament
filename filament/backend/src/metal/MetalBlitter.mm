@@ -123,6 +123,20 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args, co
         return;
     }
 
+    FILAMENT_CHECK_PRECONDITION(!isMetalFormatDepth(args.source.texture.pixelFormat) &&
+                                !isMetalFormatDepth(args.destination.texture.pixelFormat))
+            << "MetalBlitter slow path does not support depth formats. Fast path failed due to "
+               "mismatch: "
+            << "sampleCount (src=" << args.source.texture.sampleCount
+            << ", dst=" << args.destination.texture.sampleCount << "), "
+            << "pixelFormat (src=" << (uint32_t) args.source.texture.pixelFormat
+            << ", dst=" << (uint32_t) args.destination.texture.pixelFormat << "), "
+            << "region size (src=" << args.source.region.size.width << "x"
+            << args.source.region.size.height << "x" << args.source.region.size.depth
+            << ", dst=" << args.destination.region.size.width << "x"
+            << args.destination.region.size.height << "x" << args.destination.region.size.depth
+            << ").";
+
     // If we end-up here, it means that either:
     // - we're resolving a color texture
     // - src/dest formats didn't match, or we're scaling -- this can only happen with the legacy
