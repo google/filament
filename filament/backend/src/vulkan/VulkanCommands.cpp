@@ -36,9 +36,15 @@ namespace filament::backend {
 
 namespace {
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 using Timestamp = VulkanGroupMarkers::Timestamp;
+
+inline bool isGroupMarkerEnabled(VulkanContext const& context) {
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
+    return true;
+#else
+    return context.isDebugUtilsNamesEnabled();
 #endif
+}
 
 VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
     VkCommandBuffer cmdbuffer;
@@ -57,7 +63,6 @@ VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
 
 } // anonymous namespace
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 void VulkanGroupMarkers::push(CString const& marker, Timestamp start) noexcept {
     mMarkers.push_back({marker,
         start.time_since_epoch().count() > 0.0
@@ -82,10 +87,7 @@ std::pair<CString, Timestamp> const& VulkanGroupMarkers::top() const {
     return mMarkers.back();
 }
 
-bool VulkanGroupMarkers::empty() const noexcept {
-    return mMarkers.empty();
-}
-#endif // FVK_DEBUG_GROUP_MARKERS
+bool VulkanGroupMarkers::empty() const noexcept { return mMarkers.empty(); }
 
 uint32_t VulkanCommandBuffer::sAgeCounter = 0;
 
@@ -122,7 +124,8 @@ void VulkanCommandBuffer::reset() noexcept {
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
-    if (mContext.isDebugUtilsSupported()) {
+
+    if (mContext.isDebugUtilsEnabled()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
                 .pLabelName = marker,
@@ -142,7 +145,7 @@ void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
 
 void VulkanCommandBuffer::popMarker() noexcept{
     assert_invariant(mMarkerCount > 0);
-    if (mContext.isDebugUtilsSupported()) {
+    if (mContext.isDebugUtilsEnabled()) {
         vkCmdEndDebugUtilsLabelEXT(mBuffer);
     } else if (mContext.isDebugMarkersSupported()) {
         vkCmdDebugMarkerEndEXT(mBuffer);
@@ -151,7 +154,8 @@ void VulkanCommandBuffer::popMarker() noexcept{
 }
 
 void VulkanCommandBuffer::insertEvent(char const* marker) noexcept {
-    if (mContext.isDebugUtilsSupported()) {
+
+    if (mContext.isDebugUtilsEnabled()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
                 .pLabelName = marker,
@@ -281,7 +285,6 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
     auto& recording = *mBuffers[mRecording];
     recording.begin();
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     if (mGroupMarkers) {
         std::unique_ptr<VulkanGroupMarkers> markers = std::make_unique<VulkanGroupMarkers>();
         while (!mGroupMarkers->empty()) {
@@ -291,7 +294,6 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
         }
         std::swap(mGroupMarkers, markers);
     }
-#endif
 
     return recording;
 }
@@ -352,7 +354,6 @@ void CommandBufferPool::waitFor(VkSemaphore previousAction, VkPipelineStageFlags
     recording->insertWait(previousAction, waitStage);
 }
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 CString CommandBufferPool::topMarker() const {
     if (!mGroupMarkers || mGroupMarkers->empty()) {
         return "";
@@ -380,10 +381,7 @@ std::pair<CString, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker()
     return ret;
 }
 
-void CommandBufferPool::insertEvent(char const* marker) {
-    getRecording().insertEvent(marker);
-}
-#endif // FVK_DEBUG_GROUP_MARKERS
+void CommandBufferPool::insertEvent(char const* marker) { getRecording().insertEvent(marker); }
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
         VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext const& context,
@@ -500,9 +498,8 @@ void VulkanCommands::updateFences() {
     }
 }
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-
 void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp) {
+    if (!isGroupMarkerEnabled(mContext)) return;
     mPool->pushMarker(str, timestamp);
     if (mProtectedPool) {
         mProtectedPool->pushMarker(str, timestamp);
@@ -513,6 +510,7 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
 }
 
 void VulkanCommands::popGroupMarker() {
+    if (!isGroupMarkerEnabled(mContext)) return;
 
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     auto ret = mPool->popMarker();
@@ -531,6 +529,7 @@ void VulkanCommands::popGroupMarker() {
 }
 
 void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
+    if (!isGroupMarkerEnabled(mContext)) return;
     mPool->insertEvent(str);
     if (mProtectedPool) {
         mProtectedPool->insertEvent(str);
@@ -543,7 +542,6 @@ CString VulkanCommands::getTopGroupMarker() const {
     }
     return mPool->topMarker();
 }
-#endif // FVK_DEBUG_GROUP_MARKERS
 
 } // namespace filament::backend
 
