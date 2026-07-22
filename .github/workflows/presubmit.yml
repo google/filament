@@ -371,7 +371,12 @@ jobs:
         run: bash test/code-correctness/clang-tidy-proxy.sh
       - name: Check - public header inclusion
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
+      - name: Get commit message
+        id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
       - name: Check - header organization
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             FILES=()
