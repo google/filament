@@ -140,7 +140,8 @@ CString CallStack::demangleTypeName(const char* mangled) {
 
 // ------------------------------------------------------------------------------------------------
 
-io::ostream& operator<<(io::ostream& stream, CallStack const& UTILS_UNUSED callstack) {
+template <typename Stream>
+Stream& printCallStack(Stream& stream, CallStack const& UTILS_UNUSED callstack) {
 #if HAS_EXECINFO
     size_t const size = callstack.getFrameCount();
     char buf[1024];
@@ -168,9 +169,18 @@ io::ostream& operator<<(io::ostream& stream, CallStack const& UTILS_UNUSED calls
             free((void*)symbols);
         }
     }
-    stream << io::endl;
 #endif
     return stream;
 }
+
+io::ostream& operator<<(io::ostream& stream, CallStack const& callstack) {
+    return printCallStack(stream, callstack) << io::endl;
+}
+
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
+std::ostream& operator<<(std::ostream& stream, CallStack const& callstack) {
+    return printCallStack(stream, callstack) << '\n' << std::flush;
+}
+#endif
 
 } // namespace utils

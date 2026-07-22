@@ -1,0 +1,22 @@
+//[filament-android](../../../../index.md)/[com.google.android.filament](../../index.md)/[MaterialInstance](../index.md)/[IntElement](index.md)
+
+# IntElement
+
+[main]\
+enum [IntElement](index.md)
+
+## Entries
+
+| | |
+|---|---|
+| [INT](-i-n-t/index.md) | [main]<br>[INT](-i-n-t/index.md) |
+| [INT2](-i-n-t2/index.md) | [main]<br>[INT2](-i-n-t2/index.md) |
+| [INT3](-i-n-t3/index.md) | [main]<br>[INT3](-i-n-t3/index.md) |
+| [INT4](-i-n-t4/index.md) | [main]<br>[INT4](-i-n-t4/index.md) |
+
+## Functions
+
+| Name | Summary |
+|---|---|
+| [valueOf](value-of.md) | [main]<br>open fun [valueOf](value-of.md)(name: [String](https://developer.android.com/reference/kotlin/java/lang/String.html)): [MaterialInstance.IntElement](index.md)<br>Returns the enum constant of this type with the specified name. The string must match exactly an identifier used to declare an enum constant in this type. (Extraneous whitespace characters are not permitted.) |
+| [values](values.md) | [main]<br>open fun [values](values.md)(): [Array](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-array/index.html)&lt;[MaterialInstance.IntElement](index.md)&gt;<br>Returns an array containing the constants of this enum type, in the order they're declared. This method may be used to iterate over the constants. |
