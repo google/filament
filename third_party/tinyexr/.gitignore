@@ -1,2 +1,23 @@
 output.exr
 test_tinyexr
+*.o
+test/unit/tester
+test/unit/tester-v2
+test/unit/tester-v3
+test/unit/*.exr
+test/unit/*.o
+
+# pure-C11 v3 build outputs
+/build/
+*.obj
+*.exe
+test_tinyexr_v3
+test/unit/bench-v3
+test/unit/test_exr_v3
+test/v3/parse_harness
+test/v3/compare_exr
+test/v3/encode_harness
+test/v3/prof_driver
+test/v3/bench_decode
+test/v3/bench_decode_mt
+test/v3/__pycache__/
