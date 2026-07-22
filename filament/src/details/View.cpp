@@ -24,9 +24,9 @@
 #include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
-#include "TextureCache.h"
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
+#include "TextureCache.h"
 
 #include "components/TransformManager.h"
 
@@ -34,24 +34,27 @@
 #include "details/IndirectLight.h"
 #include "details/InstanceBuffer.h"
 #include "details/MorphTargetBuffer.h"
-#include "details/RenderTarget.h"
 #include "details/Renderer.h"
+#include "details/RenderTarget.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
 
-#include <backend/DriverEnums.h>
-#include <backend/Handle.h>
+#if FILAMENT_ENABLE_FGVIEWER
+#include "fg/FgviewerManager.h"
+#endif
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphTexture.h"
 
-#include <fg/FrameGraphTexture.h>
-#include <fg/FrameGraphId.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 
+#include <filament/DebugRegistry.h>
 #include <filament/Exposure.h>
 #include <filament/Frustum.h>
-#include <filament/DebugRegistry.h>
 #include <filament/View.h>
 
-#include <private/filament/UibStructs.h>
-#include <private/filament/EngineEnums.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <private/utils/Tracing.h>
 
@@ -65,16 +68,14 @@
 
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/scalar.h>
 
-#include <assert.h>
-
-#include <array>
 #include <algorithm>
-#include <cmath>
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -82,11 +83,9 @@
 #include <ratio>
 #include <utility>
 
-using namespace utils;
+#include <assert.h>
 
-#if FILAMENT_ENABLE_FGVIEWER
-#include "fg/FgviewerManager.h"
-#endif
+using namespace utils;
 
 namespace filament {
 
@@ -152,7 +151,8 @@ FView::FView(FEngine& engine)
 #ifndef NDEBUG
     // This can fail if another view has already registered this data source
     mDebugState->owner = debugRegistry.registerDataSource("d.view.frame_info",
-            [weak = std::weak_ptr<DebugState>(mDebugState)]() -> DebugRegistry::DataSource {
+            [weak = std::weak_ptr<DebugState>(
+                     mDebugState)]() -> utils::InternalDebugRegistry::DataSource {
                 // the View could have been destroyed by the time we do this
                 auto const state = weak.lock();
                 if (!state) {
@@ -202,29 +202,31 @@ FView::FView(FEngine& engine)
 
 FView::~FView() noexcept = default;
 
+void FView::invalidateSceneCache() noexcept {
+    if (!mScene) {
+        mSceneCache.reset();
+    }
+    mVisibleRenderableCount = -1;
+}
+
 void FView::setScene(FScene* scene) {
     if (mScene != scene) {
         if (mScene) {
             mScene->unregisterView(this);
         }
         mScene = scene;
+        invalidateSceneCache();
         if (scene) {
             scene->registerView(this);
             if (!mSceneCache) {
                 mSceneCache = std::make_unique<FScene::SceneCacheData>();
             }
-        } else {
-            mSceneCache.reset();
         }
     }
 }
 
 void FView::terminate(FEngine& engine) {
-    if (mScene) {
-        mScene->unregisterView(this);
-        mScene = nullptr;
-    }
-    mSceneCache.reset();
+    setScene(nullptr);
 
     // Here we would cleanly free resources we've allocated, or we own (currently none).
 
@@ -444,14 +446,14 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     ShadowMapManager::Builder builder;
 
     // dominant directional light is always as index 0
-    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
     FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
         assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-        builder.directionalShadowMap(0, &shadowOptions);
+        builder.directionalShadowMap(entity, 0, &shadowOptions);
     }
 
     // Find all shadow-casting spotlights.
@@ -465,7 +467,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
+        Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(l);
         FLightManager::Instance const li = lcm.getInstance(entity);
 
         if (UTILS_LIKELY(!li)) {
@@ -488,7 +490,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         if (shadowMapCount + shadowMapCountNeeded <= maxShadowMapCount) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
-            builder.shadowMap(l, spotLight, &shadowOptions);
+            builder.shadowMap(entity, l, spotLight, &shadowOptions);
         }
 
         if (shadowMapCount >= maxShadowMapCount) {
@@ -553,7 +555,7 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      * Directional light (always at index 0)
      */
 
-    utils::Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
+    Entity const entity = lightData.elementAt<FScene::LIGHT_ENTITY>(0);
     FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
@@ -737,7 +739,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      */
     scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
-            hasVSM(), *mSceneCache);
+            hasVSM() || hasPCSS(), *mSceneCache);
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -880,6 +882,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         // convert to indices
         mVisibleRenderables = { 0, uint32_t(beginDirCastersOnly - beginRenderables) };
+        mVisibleRenderableCount = int32_t(mVisibleRenderables.size());
 
         mVisibleDirectionalShadowCasters = {
                 uint32_t(beginDirCasters - beginRenderables),
@@ -1253,8 +1256,7 @@ void FView::prepareShadowMapping(FEngine const& engine, Handle<HwTexture> textur
             getColorPassDescriptorSet().prepareShadowVSM(texture, mVsmShadowOptions);
             break;
         case ShadowType::DPCF:
-            getColorPassDescriptorSet().prepareShadowDPCF(texture);
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
             getColorPassDescriptorSet().prepareShadowPCSS(texture);
             break;
@@ -1271,10 +1273,9 @@ void FView::prepareShadowMapping() const noexcept {
         uniforms = mShadowMapManager->getShadowMappingUniforms();
     }
 
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
-    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF   = 0u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM  = 1u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSSM = 2u;
     auto& s = mUniforms.edit();
     s.cascadeSplits = uniforms.cascadeSplits;
     s.shadowAtlasResolution = uniforms.atlasResolution;
@@ -1292,12 +1293,12 @@ void FView::prepareShadowMapping() const noexcept {
             s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::DPCF:
-            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
-            break;
+            UTILS_FALLTHROUGH;
         case ShadowType::PCSS:
-            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
-            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSSM;
+            s.vsmExponent = 0; // this is only used when rendering the shadowmap, not when using it
+            s.vsmMaxMoment = ShadowMapManager::getMaxMomentEVSM(mVsmShadowOptions);
+            s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
             break;
         case ShadowType::PCFd:
             s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
@@ -1628,7 +1629,9 @@ void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
 
 void FView::setSoftShadowOptions(SoftShadowOptions options) noexcept {
     options.penumbraScale = std::max(0.0f, options.penumbraScale);
-    options.penumbraRatioScale = std::max(1.0f, options.penumbraRatioScale);
+    options.penumbraScale = std::max(0.0f, options.penumbraScale);
+    options.maxPenumbraRatio = std::max(0.0f, options.maxPenumbraRatio);
+    options.maxSearchRadius = std::max(0.0f, options.maxSearchRadius);
     mSoftShadowOptions = options;
 }
 
@@ -1702,7 +1705,7 @@ bool FView::hasContactShadows() const noexcept {
 void FView::detachScene(FScene const* scene) noexcept {
     if (mScene == scene) {
         mScene = nullptr;
-        mSceneCache.reset();
+        invalidateSceneCache();
     }
 }
 

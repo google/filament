@@ -666,7 +666,7 @@ public:
      *
      * Additional light-specific soft shadow parameters can be set with LightManager::setShadowOptions.
      *
-     * Only applicable when shadow type is set to ShadowType::DPCF or ShadowType::PCSS.
+     * Only applicable when shadow type is set to ShadowType::PCSS.
      *
      * @param options Options for shadowing.
      *
@@ -991,6 +991,17 @@ public:
      * @return an Entity representing the large scale fog object.
      */
     utils::Entity getFogEntity() const noexcept;
+
+    /**
+     * Returns the most recent number of visible renderables for the current Scene as calculated
+     * the last time Renderer::render() was called with this View and Scene.
+     *
+     * Returns -1 if the cache is invalid (e.g. before the first render call, or if the scene
+     * was detached).
+     *
+     * @return the number of visible renderables, or -1 if no value is available.
+     */
+    int32_t getVisibleRenderableCount() const noexcept;
 
 
     /**

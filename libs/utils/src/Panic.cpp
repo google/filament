@@ -21,6 +21,7 @@
 #include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 
@@ -59,11 +60,11 @@ class UserPanicHandler {
         }
     };
 
-    mutable std::mutex mLock{};
+    mutable Mutex mLock{};
     CallBack mCallBack{};
 
     CallBack getCallback() const noexcept {
-        std::lock_guard const lock(mLock);
+        LockGuard const lock(mLock);
         return mCallBack;
     }
 
@@ -78,7 +79,7 @@ public:
     }
 
     void set(Panic::PanicHandlerCallback const handler, void* user) noexcept {
-        std::lock_guard const lock(mLock);
+        LockGuard const lock(mLock);
         mCallBack = { handler, user };
     }
 };
@@ -114,7 +115,7 @@ static CString sprintfToString(const char* format, ...) noexcept {
 }
 
 static CString buildPanicString(
-        std::string_view const& msg, const char* function, int line,
+        std::string_view const& msg, const char* function, int const line,
         const char* file, const char* reason) {
 #ifndef NDEBUG
     return sprintfToString("%.*s\nin %s:%d\nin file %s\nreason: %s",
@@ -192,8 +193,8 @@ const CallStack& TPanic<T>::getCallStack() const noexcept {
 
 template<typename T>
 void TPanic<T>::log() const noexcept {
-    slog.e << what() << io::endl;
-    slog.e << mCallstack << io::endl;
+    LOG(ERROR) << what();
+    LOG(ERROR) << mCallstack;
 }
 
 UTILS_ALWAYS_INLINE
@@ -263,19 +264,17 @@ void panicLog(char const* function, char const* file, int const line, const char
     CString const reason{ sprintfToString(format, args) };
     va_end(args);
 
-    CString const msg = buildPanicString("PanicLog",
-            function, line, file, reason.c_str());
-
-    slog.e << msg << io::endl;
-    slog.e << CallStack::unwind(1) << io::endl;
+    CString const msg = buildPanicString("PanicLog", function, line, file, reason.c_str());
+    LOG(ERROR) << msg;
+    LOG(ERROR) << CallStack::unwind(1);
 }
 
 PanicStream::PanicStream(
         char const* function,
         char const* file,
         int const line,
-        char const* condition) noexcept
-        : mFunction(function), mFile(file), mLine(line), mLiteral(condition) {
+        char const* message) noexcept
+    : mFunction(function), mFile(file), mLine(line), mLiteral(message) {
 }
 
 PanicStream::~PanicStream() = default;

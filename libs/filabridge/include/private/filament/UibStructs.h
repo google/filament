@@ -163,7 +163,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 8-11: cascade has visible shadows
     int32_t cascades;
-    float shadowPenumbraRatioScale;             // For DPCF or PCSS, scale penumbra ratio for artistic use
+    float reservedLight0;
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
@@ -300,16 +300,16 @@ static_assert(sizeof(LightsUib) == 64,
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
-        math::mat4f lightFromWorldMatrix;       // 64
-        math::float4 lightFromWorldZ;           // 16
-        math::float4 scissorNormalized;         // 16
-        float bulbRadiusLs;                     //  4
-        float nearOverFarMinusNear;             //  4
-        math::float2 normalBias;                //  4
-        bool elvsm;                             //  4   // could be 1 bit
-        uint32_t layer;                         //  4   // could be 8 bits
-        float vsmExponent;                      //  4   // could be fp16
-        uint32_t reserved2;                     //  4
+        math::mat4f lightFromWorldMatrix;               // 64
+        math::float4 lightFromWorldZ;                   // 16
+        math::float4 scissorNormalized;                 // 16
+        math::float2 normalBias;                        //  8   // for EVSM/PCSS must be zero
+        float projectionParam;                          //  4   // ortho (far-near), perspective near/(far-near)
+        float wsOneOverTexelSizeAtOneMeter;             //  4   // for spot/point lights
+        uint32_t maxMipLevel_maxSearchRadius;           //  4   // packed half2
+        uint32_t bulbRadius_vsmExponent;                //  4   // packed half2
+        uint32_t maxPenumbraRatio_penumbraRatioScale;   //  4   // packed half2
+        uint32_t evsm4_layer;                           //  4   // 0x00.00.01.FF
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };

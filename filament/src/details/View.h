@@ -215,8 +215,7 @@ public:
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
-    bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
-    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
+    bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS || mShadowType == ShadowType::DPCF; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
     bool hasStereo() const noexcept {
         return mIsStereoSupported && mStereoscopicOptions.enabled;
@@ -445,6 +444,10 @@ public:
         return mVisibleRenderables;
     }
 
+    int32_t getVisibleRenderableCount() const noexcept {
+        return mVisibleRenderableCount;
+    }
+
     Range const& getVisibleDirectionalShadowCasters() const noexcept {
         return mVisibleDirectionalShadowCasters;
     }
@@ -554,6 +557,8 @@ private:
         PickingQueryResult result{};
     };
 
+    void invalidateSceneCache() noexcept;
+
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
@@ -662,6 +667,7 @@ private:
     Range mVisibleRenderables;
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
+    int32_t mVisibleRenderableCount = -1;
     uint32_t mRenderableUBOElementCount = 0;
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;

@@ -60,9 +60,8 @@ using namespace backend;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept
         : mPerShadowMapUniforms(engine),
-          mShadowType(ShadowType::DIRECTIONAL),
+          mShadowLightType(ShadowLightType::DIRECTIONAL),
           mHasVisibleShadows(false),
-          mVsm(false),
           mReservedBit(false),
           mFace(0) {
     Entity entities[2];
@@ -87,19 +86,22 @@ void ShadowMap::terminate(FEngine& engine) {
 
 ShadowMap::~ShadowMap() = default;
 
-void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType, bool const vsm,
-        uint16_t const shadowIndex, uint8_t const face,
+void ShadowMap::initialize(
+        size_t const lightSoAIndex,
+        ShadowLightType const shadowType,
+        uint8_t const shadowIndex,
+        uint8_t const face,
+        Entity const lightEntity,
         LightManager::ShadowOptions const* options) {
-    mLightIndex = lightIndex;
-    mShadowIndex = shadowIndex;
     mOptions = options;
-    mShadowType = shadowType;
+    mLightEntity = lightEntity;
+    mLightSoAIndex = lightSoAIndex;
+    mShadowIndex = shadowIndex;
+    mShadowLightType = shadowType;
     mFace = face;
-    mVsm = vsm;
 }
 
-mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 up,
-        float3 position) noexcept {
+mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 up, float3 position) noexcept {
     // 1. we use the x-axis as the "up" reference so that the math is stable when the light
     //    is pointing down, which is a common case for lights.
     // 2. we do the math in double to avoid some precision issues when the light is almost
@@ -141,8 +143,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(index);
 
     auto const [Mv, znear, zfar, lsClippedShadowVolume, vertexCount, visibleShadows] =
-            computeDirectionalShadowBounds(engine, direction, params, camera, sceneInfo,
-                    useDepthClamp);
+            computeDirectionalShadowBounds(engine, direction, params, camera, sceneInfo, useDepthClamp);
 
     if (UTILS_UNLIKELY(!visibleShadows)) {
         return {};
@@ -172,8 +173,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     // We can't use LISPSM in stable mode
     const bool useLispsm = params.options.lispsm && !params.options.stable;
 
-    if (useLispsm ||
-            (!params.options.stable && !engine.debug.shadowmap.disable_light_frustum_align)) {
+    if (useLispsm || (!params.options.stable && !engine.debug.shadowmap.disable_light_frustum_align)) {
         // Orient the shadow map in the direction of the view vector by constructing a
         const float3 lsCameraFwd = Mv.upperLeft() * camera.getForwardVector();
         L = computeLightRotation(lsCameraFwd);
@@ -182,8 +182,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     }
 
     if (useLispsm) {
-        W = applyLISPSM(Wp, camera, params,
-                LMp, Mv, LMpMv, lsClippedShadowVolume, vertexCount, direction);
+        W = applyLISPSM(Wp, camera, params, LMp, Mv, LMpMv, lsClippedShadowVolume, vertexCount, direction);
     }
 
     /*
@@ -197,8 +196,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     //    This is the most important step to increase the quality of the shadow map.
     //
     //   In LiPSM mode, we're using the warped space here.
-    float4 f = computeFocusParams(LMpMv, WLMp,
-            lsClippedShadowVolume, vertexCount,
+    float4 f = computeFocusParams(LMpMv, WLMp, lsClippedShadowVolume, vertexCount,
             camera, params.options.shadowFar, params.options.stable);
 
     if (params.options.stable) {
@@ -227,18 +225,15 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     // world space to texture atlas space
     const mat4f St = highPrecisionMultiply(Mt, S);
 
+    // texelSizeWorldSpaceAt() below works for both LiSPSM and orthogonal projections.
+    // For ortho projections, we always get a constant. For LiSPSM, we compute the Jacobian in the middle
+    // of the shadowmap and use it as a constant in the shader (for now).
+
     ShaderParameters shaderParameters;
     shaderParameters.scissorNormalized = getClampToEdgeCoords(shadowMapInfo);
+    shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpaceAt(S, {0, 0, 0}, shadowMapInfo.shadowDimension);
+    shaderParameters.lightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
-    // note: in texelSizeWorldSpace() below, we can use Mb * Mt * F * W because
-    // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
-    // if Wp[3][1] is 0, then LiSPSM was canceled.
-    if (useLispsm && Wp[3][1] != 0.0f) {
-        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(S, shadowMapInfo.shadowDimension);
-    } else {
-        // We know we're using an ortho projection
-        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(S.upperLeft(), shadowMapInfo.shadowDimension);
-    }
     if (!shadowMapInfo.vsm) {
         shaderParameters.lightSpace = St;
     } else {
@@ -290,15 +285,8 @@ ShadowMap::ShaderParameters ShadowMap::updatePunctual(
     //      Project receivers, casters and view onto near plane,
     //      compute intersection of that which gives the l,r,t,b planes
 
-    // For calculating the spotlight normal bias, we need the texel size in world space at the
-    // sample location. Using Thales's theorem, we find:
-    //      texelSize(zInLightSpace) = zInLightSpace * texelSizeOnTheNearPlane / near
-    //                               = zInLightSpace * texelSizeAtOneMeter
-    //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
-    // Note: this would not work with LISPSM, which warps the texture space.
     ShaderParameters shaderParameters;
-    shaderParameters.texelSizeAtOneMeterWs =
-            (2.0f * std::tan(outerConeAngle) / float(shadowMapInfo.shadowDimension));
+    shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpaceAtOneMeter(Mp, shadowMapInfo.shadowDimension);
     shaderParameters.lightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
     if (!shadowMapInfo.vsm) {
@@ -444,10 +432,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
 
     // We compute the directional light's model matrix using the origin's as the light position.
     // The choice of the light's origin initially doesn't matter for a directional light.
-    // This will be adjusted later because of how we compute the depth metric for VSM.
-    mat4f const MvAtOrigin = getDirectionalLightViewMatrix(direction,
-            normalize(camera.worldTransform[0].xyz));
-
+    mat4f const MvAtOrigin = getDirectionalLightViewMatrix(direction, normalize(camera.worldTransform[0].xyz));
 
     Aabb lsLightFrustumBounds = computeLightFrustumBounds(
             MvAtOrigin, wsShadowReceiversVolume, wsShadowCastersVolume,
@@ -464,11 +449,8 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
 
     // Compute the intersection of the view volume with the intersection of receivers and casters
     // in light space. This returns a set of points on the convex-hull of the intersection.
-    mat4f const projection = camera.cullingProjection *
-            (camera.view * FCamera::rigidTransformInverse(MvAtOrigin));
-    size_t const vertexCount = intersectFrustumWithBox(lsClippedShadowVolume,
-            projection, lsLightFrustumBounds);
-
+    mat4f const projection = camera.cullingProjection * (camera.view * FCamera::rigidTransformInverse(MvAtOrigin));
+    size_t const vertexCount = intersectFrustumWithBox(lsClippedShadowVolume, projection, lsLightFrustumBounds);
     if (UTILS_UNLIKELY(vertexCount < 4)) {
         return {};
     }
@@ -499,38 +481,26 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
         lsClippedShadowVolumeNearest = std::max(lsClippedShadowVolumeNearest, v.z);
     }
 
-    lsLightFrustumBounds.min.z =
-            std::max(lsLightFrustumBounds.min.z, lsClippedShadowVolumeFarthest);
-
+    lsLightFrustumBounds.min.z = std::max(lsLightFrustumBounds.min.z, lsClippedShadowVolumeFarthest);
     if (useDepthClamp) {
-        lsLightFrustumBounds.max.z =
-                std::min(lsLightFrustumBounds.max.z, lsClippedShadowVolumeNearest);
+        lsLightFrustumBounds.max.z = std::min(lsLightFrustumBounds.max.z, lsClippedShadowVolumeNearest);
     }
 
     if (engine.debug.shadowmap.far_uses_shadowcasters) {
         // far: closest of the farthest shadow casters and receivers
-        lsLightFrustumBounds.min.z =
-                std::max(lsLightFrustumBounds.min.z, sceneInfo.lsCastersNearFar[1]);
+        lsLightFrustumBounds.min.z = std::max(lsLightFrustumBounds.min.z, sceneInfo.lsCastersNearFar[1]);
     }
 
     // near / far planes are specified relative to the direction the eye is looking at
     // i.e. the -z axis (see: ortho)
-    const float znear = 0.0f;
-    const float zfar = lsLightFrustumBounds.max.z - lsLightFrustumBounds.min.z;
+    const float znear = -lsLightFrustumBounds.max.z;
+    const float zfar = -lsLightFrustumBounds.min.z;
     // if znear >= zfar, it means we don't have any shadow caster in front of a shadow receiver
     if (UTILS_UNLIKELY(!(znear < zfar))) { // handles NaNs
         return {};
     }
 
-    // update lsLightFrustum from MvAtOrigin to Mv
-    for (auto& v : lsClippedShadowVolume) {
-        v.z -= lsLightFrustumBounds.max.z;
-    }
-
-    // Now that we know the znear (-lsLightFrustumBounds.max.z), adjust the light's position such
-    // that znear = 0, this is only needed for VSM, but doesn't hurt PCF.
-    const mat4f Mv = getDirectionalLightViewMatrix(direction, normalize(camera.worldTransform[0].xyz),
-            direction * -lsLightFrustumBounds.max.z);
+    const mat4f Mv = getDirectionalLightViewMatrix(direction, normalize(camera.worldTransform[0].xyz));
 
     return { Mv, znear, zfar, lsClippedShadowVolume, vertexCount, true };
 }
@@ -1122,19 +1092,6 @@ bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
     return hit;
 }
 
-float2 ShadowMap::texelSizeWorldSpace(const mat3f& clipFromWorld, uint16_t shadowDimension) noexcept {
-    // The Jacobian of the transformation from texture-to-world is the matrix itself for
-    // orthographic projections. We just need to inverse shadowMapFromWorld,
-    // which is guaranteed to be orthographic.
-    // The two first columns give us how a texel maps in world-space.
-    float const oneTexel = 2.0f / float(shadowDimension);
-    mat3f const worldFromClip(inverse(clipFromWorld));
-    float3 const Jx = worldFromClip[0];
-    float3 const Jy = worldFromClip[1];
-    float2 const s = float2{ length(Jx), length(Jy) } * oneTexel;
-    return s;
-}
-
 /**
  * Calculates the Jacobian matrix J = ∂(u,v,d)/∂(x,y,z) for a 4x4 perspective projection.
  *
@@ -1176,13 +1133,22 @@ static mat3f jacobian(mat4f const& M, float3 const& p) noexcept {
     return (M_sub - t_cross_w / T.w) / T.w;
 }
 
-float2 ShadowMap::texelSizeWorldSpace(mat4f const& S, uint16_t const shadowDimension) noexcept {
-    // The Jacobian is not constant, so we evaluate it in the center of the shadow-map texture.
-    // It might be better to do this computation in the vertex shader.
-    float3 const p = { 0.0f, 0.0f, 0.0f }; // clip-space
+float2 ShadowMap::texelSizeWorldSpaceAtOneMeter(
+        mat4f const& Mp,
+        uint16_t const shadowDimension) noexcept {
+    constexpr float3 oneMeterLs{0, 0, -1};
+    return texelSizeWorldSpaceAt(Mp, oneMeterLs, shadowDimension);
+}
+
+UTILS_NOINLINE
+float2 ShadowMap::texelSizeWorldSpaceAt(
+        mat4f const& S,
+        float3 const& p,
+        uint16_t const shadowDimension) noexcept {
+    float3 const pNdc = mat4f::project(S, p);
     float const oneTexel = 2.0f / float(shadowDimension);
-    mat3f const J = jacobian(inverse(S), p);
-    float2 const s = float2{ length(J[0]), length(J[1]) } * oneTexel;
+    mat3f const J = jacobian(inverse(S), pNdc);
+    float2 const s = float2{length(J[0]), length(J[1])} * oneTexel;
     return s;
 }
 
@@ -1312,13 +1278,13 @@ backend::Viewport ShadowMap::getScissor() const noexcept {
 
     const uint32_t dim = mOptions->mapSize;
     const uint16_t border = 1u;
-    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
-        case ShadowType::DIRECTIONAL: {
+    switch (mShadowLightType) { // NOLINT(*-multiway-paths-covered)
+        case ShadowLightType::DIRECTIONAL: {
             // Don't render anything into the border; it's already filled with "fully lit".
             return {mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border};
         }
-        case ShadowType::SPOT:
-        case ShadowType::POINT: {
+        case ShadowLightType::SPOT:
+        case ShadowLightType::POINT: {
             // Render into the border (which will get the adjacent faces texels)
             return {mOffset.x, mOffset.y, dim, dim};
         }
@@ -1330,15 +1296,15 @@ float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const
     // This is used to clamp the texture coordinates when sampling the shadowmap
 
     float border = 0; // shadowmap border in texels
-    switch (mShadowType) { // NOLINT(*-multiway-paths-covered)
-        case ShadowType::DIRECTIONAL:
+    switch (mShadowLightType) { // NOLINT(*-multiway-paths-covered)
+        case ShadowLightType::DIRECTIONAL:
             // For directional lights, we need to allow the sampling to reach the center of border texels,
             // but no further, so we don't read into the adjacent texture in the 2D atlas (taking bilinear filtering
             // into account).
             border = 0.5f;
             break;
-        case ShadowType::SPOT:
-        case ShadowType::POINT:
+        case ShadowLightType::SPOT:
+        case ShadowLightType::POINT:
             // For point-light, the border is only needed for bilinear filtering (of the other faces)
             border = 1.0f;
             break;

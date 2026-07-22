@@ -17,20 +17,19 @@
 #ifndef TNT_GLSLPOSTPROCESSOR_H
 #define TNT_GLSLPOSTPROCESSOR_H
 
-#include <filamat/MaterialBuilder.h>    // for MaterialBuilder:: enums
-
-#include <private/filament/Variant.h>
-#include <private/filament/SamplerInterfaceBlock.h>
-
 #include "ShaderMinifier.h"
 
-#include <spirv-tools/optimizer.hpp>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/Variant.h>
 
-#include <ShaderLang.h>
+#include <filamat/MaterialBuilder.h>    // for MaterialBuilder:: enums
 
 #include <backend/DriverEnums.h>
 
 #include <utils/FixedCapacityVector.h>
+
+#include <ShaderLang.h>
+#include <spirv-tools/optimizer.hpp>
 
 #include <memory>
 #include <optional>
@@ -130,8 +129,6 @@ private:
     static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
 
     static void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob &spirv);
-
-    static void rebindImageSamplerForWGSL(std::vector<uint32_t>& spirv);
 
     void fixupClipDistance(SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const;
 

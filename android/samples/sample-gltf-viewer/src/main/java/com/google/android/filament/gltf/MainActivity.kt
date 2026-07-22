@@ -19,9 +19,11 @@ package com.google.android.filament.gltf
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import com.google.android.filament.android.ChoreographerHelper
 import android.view.GestureDetector
 import android.widget.TextView
 import android.widget.Toast
@@ -29,6 +31,7 @@ import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Material
 import com.google.android.filament.Skybox
+import com.google.android.filament.SwapChain
 import com.google.android.filament.View
 import com.google.android.filament.View.OnPickCallback
 import com.google.android.filament.utils.*
@@ -55,8 +58,9 @@ class MainActivity : Activity() {
     }
 
     private lateinit var surfaceView: SurfaceView
-    private lateinit var choreographer: Choreographer
     private val frameScheduler = FrameCallback()
+    private var vsyncScheduler: Any? = null
+    private val animationStartTime = System.nanoTime()
     private lateinit var modelViewer: ModelViewer
     private lateinit var titlebarHint: TextView
     private val doubleTapListener = DoubleTapListener()
@@ -72,6 +76,7 @@ class MainActivity : Activity() {
     private var loadStartFence: Fence? = null
     private val viewerContent = AutomationEngine.ViewerContent()
     private var useStaticModel = false
+    private var currentFrameRate = -1.0f
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +86,6 @@ class MainActivity : Activity() {
 
         titlebarHint = findViewById(R.id.user_hint)
         surfaceView = findViewById(R.id.main_sv)
-        choreographer = Choreographer.getInstance()
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
         singleTapDetector = GestureDetector(applicationContext, singleTapListener)
@@ -352,17 +356,17 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        choreographer.postFrameCallback(frameScheduler)
+        frameScheduler.post()
     }
 
     override fun onPause() {
         super.onPause()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         remoteServer?.close()
     }
 
@@ -393,6 +397,21 @@ class MainActivity : Activity() {
         modelViewer.cameraNear = automation.cameraSettings.near
         modelViewer.cameraFar = automation.cameraSettings.far
         updateRootTransform()
+
+        val targetFps = automation.viewerOptions.cameraFrameRate
+        if (targetFps != currentFrameRate) {
+            modelViewer.framePacer.configure(targetFps, 42_000_000L)
+            modelViewer.swapChain?.let { sc ->
+                if (sc.isFrameRateChangeSupported) {
+                    sc.setFrameRate(
+                        targetFps,
+                        SwapChain.FrameRateCompatibility.DEFAULT,
+                        SwapChain.ChangeFrameRateStrategy.ONLY_IF_SEAMLESS
+                    )
+                }
+            }
+            currentFrameRate = targetFps
+        }
     }
 
     private fun updateRootTransform() {
@@ -403,11 +422,8 @@ class MainActivity : Activity() {
         }
     }
 
-    inner class FrameCallback : Choreographer.FrameCallback {
-        private val startTime = System.nanoTime()
-        override fun doFrame(frameTimeNanos: Long) {
-            choreographer.postFrameCallback(this)
-
+    inner class FrameCallback : ChoreographerHelper() {
+        override fun onFrame(frameTimeNanos: Long, frameData: Any?) {
             loadStartFence?.let {
                 if (it.wait(Fence.Mode.FLUSH, 0) == Fence.FenceStatus.CONDITION_SATISFIED) {
                     val end = System.nanoTime()
@@ -448,38 +464,35 @@ class MainActivity : Activity() {
                 }
             }
 
-            modelViewer.animator?.apply {
-                if (animationCount > 0) {
-                    val elapsedTimeSeconds = (frameTimeNanos - startTime).toDouble() / 1_000_000_000
-                    applyAnimation(0, elapsedTimeSeconds.toFloat())
-                }
-                updateBoneMatrices()
+
+            if (Build.VERSION.SDK_INT >= 33 && frameData is Choreographer.FrameData) {
+                modelViewer.render(frameData)
+            } else {
+                modelViewer.render(frameTimeNanos)
             }
 
-            modelViewer.render(frameTimeNanos)
+        // Check if a new download is in progress. If so, let the user know with toast.
+        val currentDownload = remoteServer?.peekIncomingLabel()
+        if (RemoteServer.isBinary(currentDownload) && currentDownload != latestDownload) {
+            latestDownload = currentDownload
+            Log.i(TAG, "Downloading $currentDownload")
+            setStatusText("Downloading $currentDownload")
+        }
 
-            // Check if a new download is in progress. If so, let the user know with toast.
-            val currentDownload = remoteServer?.peekIncomingLabel()
-            if (RemoteServer.isBinary(currentDownload) && currentDownload != latestDownload) {
-                latestDownload = currentDownload
-                Log.i(TAG, "Downloading $currentDownload")
-                setStatusText("Downloading $currentDownload")
+        // Check if a new message has been fully received from the client.
+        val message = remoteServer?.acquireReceivedMessage()
+        if (message != null) {
+            if (message.label == latestDownload) {
+                latestDownload = null
             }
-
-            // Check if a new message has been fully received from the client.
-            val message = remoteServer?.acquireReceivedMessage()
-            if (message != null) {
-                if (message.label == latestDownload) {
-                    latestDownload = null
-                }
-                if (RemoteServer.isJson(message.label)) {
-                    loadSettings(message)
-                } else {
-                    loadModelData(message)
-                }
+            if (RemoteServer.isJson(message.label)) {
+                loadSettings(message)
+            } else {
+                loadModelData(message)
             }
         }
     }
+}
 
     // Just for testing purposes, this releases the current model and reloads the default model.
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {

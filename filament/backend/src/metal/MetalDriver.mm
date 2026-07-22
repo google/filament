@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-#include <TargetConditionals.h>
-#include "backend/PresentCallable.h"
-#include "private/backend/CommandStream.h"
-#include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
-#include <filament/SwapChain.h>
-
+#include "CommandStreamDispatcher.h"
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalContext.h"
@@ -32,13 +27,15 @@
 #include "MetalTimerQuery.h"
 #include "MetalUtils.h"
 
-#include <backend/platforms/PlatformMetal.h>
-#include <backend/platforms/PlatformMetal-ObjC.h>
+#include <filament/SwapChain.h>
 
-#include <CoreVideo/CVMetalTexture.h>
-#include <CoreVideo/CVPixelBuffer.h>
-#include <Metal/Metal.h>
-#include <QuartzCore/QuartzCore.h>
+#include <private/backend/CommandStream.h>
+
+#include <backend/platforms/PlatformMetal-ObjC.h>
+#include <backend/platforms/PlatformMetal.h>
+#include <backend/PresentCallable.h>
+
+#include <private/utils/FeatureFlagManager.h>
 
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
@@ -46,6 +43,12 @@
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
+
+#include <CoreVideo/CVMetalTexture.h>
+#include <CoreVideo/CVPixelBuffer.h>
+#include <Metal/Metal.h>
+#include <QuartzCore/QuartzCore.h>
+#include <TargetConditionals.h>
 
 #include <algorithm>
 
@@ -111,18 +114,21 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(
-        PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
-    : DriverBase(driverConfig),
-      mPlatform(*platform),
-      mContext(new MetalContext),
-      mHandleAllocator(
-                "Handles",
-                driverConfig.handleArenaSize,
-                driverConfig.disableHandleUseAfterFreeCheck,
-                driverConfig.disableHeapHandleTags),
-      mStereoscopicType(driverConfig.stereoscopicType),
-      mAsynchronousMode(driverConfig.asynchronousMode) {
+MetalDriver::MetalDriver(PlatformMetal* platform,
+        const Platform::DriverConfig& driverConfig) noexcept
+        : DriverBase(driverConfig),
+          mPlatform(*platform),
+          mContext(new MetalContext),
+          mHandleAllocator("Handles", driverConfig.handleArenaSize,
+                  (driverConfig.featureFlagManager
+                                  ? driverConfig.featureFlagManager->features.backend
+                                            .disable_handle_use_after_free_check
+                                  : false),
+                  (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features
+                                                             .backend.disable_heap_handle_tags
+                                                   : false)),
+          mStereoscopicType(driverConfig.stereoscopicType),
+          mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
     mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
     mContext->driverLifetimeTracker->driver = this;
@@ -232,9 +238,12 @@ MetalDriver::MetalDriver(
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
-    const MetalShaderCompiler::Mode compilerMode = driverConfig.disableParallelShaderCompile
-            ? MetalShaderCompiler::Mode::SYNCHRONOUS
-            : MetalShaderCompiler::Mode::ASYNCHRONOUS;
+    const MetalShaderCompiler::Mode compilerMode =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .disable_parallel_shader_compile
+                                             : false)
+                    ? MetalShaderCompiler::Mode::SYNCHRONOUS
+                    : MetalShaderCompiler::Mode::ASYNCHRONOUS;
     mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this, compilerMode);
     mContext->shaderCompiler->init();
 
@@ -267,7 +276,7 @@ MetalDriver::~MetalDriver() noexcept {
     // Notify any pending asynchronous MTLSharedEvent listener blocks that the MetalDriver
     // is being destroyed. This avoids executing blocks accessing a dangling driver pointer.
     {
-        std::lock_guard<std::mutex> lock(mContext->driverLifetimeTracker->mutex);
+        utils::LockGuard const lock(mContext->driverLifetimeTracker->mutex);
         mContext->driverLifetimeTracker->driver = nullptr;
     }
     TrackedMetalBuffer::setPlatform(nullptr);
@@ -1192,6 +1201,11 @@ void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     }
 }
 
+void MetalDriver::setFrameRate(Handle<HwSwapChain>, float const,
+        Platform::FrameRateCompatibility const,
+        Platform::ChangeFrameRateStrategy const) {
+}
+
 void MetalDriver::destroyStream(Handle<HwStream> sh) {
     // no-op
 }
@@ -1429,6 +1443,7 @@ bool MetalDriver::isProtectedContentSupported() {
     // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
     return false;
 }
+
 
 bool MetalDriver::isStereoSupported() {
     switch (mStereoscopicType) {

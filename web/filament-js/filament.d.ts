@@ -42,6 +42,23 @@ export enum Backend {
     NOOP,
 }
 
+export enum Fence$Mode {
+    FLUSH,
+    DONT_FLUSH,
+}
+
+export enum FenceStatus {
+    ERROR,
+    CONDITION_SATISFIED,
+    TIMEOUT_EXPIRED,
+}
+
+export enum RenderableManager$Builder$GeometryType {
+    DYNAMIC,
+    STATIC_BOUNDS,
+    STATIC,
+}
+
 export function init(assets: string[], onready?: (() => void) | null): void;
 export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?: ((name: string) => void) | null): void;
 export function clearAssetCache(): void;
@@ -74,10 +91,18 @@ export interface Vector<T> {
     get(i: number): T;
 }
 
-export class SwapChain {}
+export class SwapChain {
+    public static isSRGBSwapChainSupported(engine: Engine): boolean;
+}
+
+export class Fence {
+    // WebGL cannot block the main thread, so the default timeout of 0 simply queries the
+    // current status of the fence.
+    public wait(mode?: Fence$Mode, timeout?: number): FenceStatus;
+}
 
 export interface PickingQueryResult {
-    renderable: number;
+    renderable: Entity;
     depth: number;
     fragCoords: number[];
 }
@@ -104,9 +129,16 @@ export interface Renderer$ClearOptions {
     discard?: boolean;
 }
 
+export interface LightManager$ShadowOptions$Vsm {
+    elvsm?: boolean;
+    blurWidth?: number;
+}
+
 export interface LightManager$ShadowOptions {
     mapSize?: number;
     shadowCascades?: number;
+    cascadeSplitPositions?: float3;
+    vsm?: LightManager$ShadowOptions$Vsm;
     constantBias?: number;
     normalBias?: number;
     shadowFar?: number;
@@ -118,6 +150,19 @@ export interface LightManager$ShadowOptions {
     screenSpaceContactShadows?: boolean;
     stepCount?: number;
     maxShadowDistance?: number;
+    lispsm?: boolean;
+    shadowBulbRadius?: number;
+    penumbraScale?: number;
+    penumbraRatioScale?: number;
+    maxPenumbraRatio?: number;
+    maxSearchRadius?: number;
+    transform?: quat;
+}
+
+// Clients should use the [Buffer] helper function to wrap a typed array as a BufferDescriptor.
+export class driver$BufferDescriptor {
+    constructor(byteLength: number);
+    getBytes(): ArrayBuffer;
 }
 
 // Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
@@ -141,13 +186,54 @@ export class Texture$Builder {
 
 export class Texture {
     public static Builder(): Texture$Builder;
-    public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
-    public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public setImage(
+        engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
     public getWidth(engine: Engine, level?: number) : number;
     public getHeight(engine: Engine, level?: number) : number;
     public getDepth(engine: Engine, level?: number) : number;
     public getLevels(engine: Engine) : number;
     public generateMipmaps(engine: Engine) : void;
+    public static isTextureFormatMipmappable(engine: Engine, format: Texture$InternalFormat): boolean;
+    public static validatePixelFormatAndType(internalFormat: Texture$InternalFormat,
+            format: PixelDataFormat, type: PixelDataType): boolean;
+    public static isTextureSwizzleSupported(engine: Engine): boolean;
+}
+
+export class SkinningBuffer$Builder {
+    public boneCount(count: number): SkinningBuffer$Builder;
+    public initialize(initialize: boolean): SkinningBuffer$Builder;
+    public build(engine: Engine): SkinningBuffer;
+}
+
+export class SkinningBuffer {
+    public static Builder(): SkinningBuffer$Builder;
+    public getBoneCount(): number;
+    public setBones(engine: Engine, transforms: RenderableManager$Bone[], offset: number): void;
+    public setBonesFromMatrices(engine: Engine, transforms: mat4[], offset: number): void;
+}
+
+export class MorphTargetBuffer$Builder {
+    public vertexCount(vertexCount: number): MorphTargetBuffer$Builder;
+    public count(count: number): MorphTargetBuffer$Builder;
+    public withPositions(enable: boolean): MorphTargetBuffer$Builder;
+    public withTangents(enable: boolean): MorphTargetBuffer$Builder;
+    public enableCustomMorphing(enable: boolean): MorphTargetBuffer$Builder;
+    public build(engine: Engine): MorphTargetBuffer;
+}
+
+export class MorphTargetBuffer {
+    public static Builder(): MorphTargetBuffer$Builder;
+    public getVertexCount(): number;
+    public getCount(): number;
+    public hasPositions(): boolean;
+    public hasTangents(): boolean;
+    public isCustomMorphingEnabled(): boolean;
+    // positions is a flat array of floats with 3 components per position.
+    public setPositionsAt(engine: Engine, targetIndex: number, positions: number[]|Float32Array,
+            count: number, offset: number): void;
+    // tangents is a flat array of signed shorts with 4 components per quaternion.
+    public setTangentsAt(engine: Engine, targetIndex: number, tangents: number[]|Int16Array,
+            count: number, offset: number): void;
 }
 
 // TODO: Remove the entity type and just use integers for parity with Filament's Java bindings.
@@ -159,6 +245,9 @@ export class Entity {
 export class Skybox {
     public setColor(color: float4): void;
     public getTexture(): Texture;
+    public getLayerMask(): number;
+    public setLayerMask(select: number, value: number): void;
+    public static Builder(): Skybox$Builder;
 }
 
 export class LightManager$Instance {
@@ -181,6 +270,9 @@ export class TextureSampler {
 
 export class MaterialInstance {
     public getName(): string;
+    public getMaterial(): Material;
+    public duplicate(): MaterialInstance;
+    public duplicateNamed(name: string): MaterialInstance;
     public setBoolParameter(name: string, value: boolean): void;
     public setFloatParameter(name: string, value: number): void;
     public setFloat2Parameter(name: string, value: float2): void;
@@ -193,6 +285,11 @@ export class MaterialInstance {
     public setColor4Parameter(name: string, ctype: RgbaType, value: float4): void;
     public setPolygonOffset(scale: number, constant: number): void;
     public setMaskThreshold(threshold: number): void;
+    public setScissor(left: number, bottom: number, width: number, height: number): void;
+    public unsetScissor(): void;
+    public getConstantBool(name: string): boolean;
+    public getConstantFloat(name: string): number;
+    public getConstantInt(name: string): number;
     public setDoubleSided(doubleSided: boolean): void;
     public setCullingMode(mode: CullingMode): void;
     public setColorWrite(enable: boolean): void;
@@ -207,11 +304,27 @@ export class MaterialInstance {
     public setStencilReferenceValue(value: Number, face?: StencilFace): void;
     public setStencilReadMask(readMask: Number, face?: StencilFace): void;
     public setStencilWriteMask(writeMask: Number, face?: StencilFace): void;
+    public getMaskThreshold(): number;
+    public setSpecularAntiAliasingVariance(variance: number): void;
+    public getSpecularAntiAliasingVariance(): number;
+    public setSpecularAntiAliasingThreshold(threshold: number): void;
+    public getSpecularAntiAliasingThreshold(): number;
+    public isDoubleSided(): boolean;
+    public setTransparencyMode(mode: TransparencyMode): void;
+    public getTransparencyMode(): TransparencyMode;
+    public getCullingMode(): CullingMode;
+    public getShadowCullingMode(): CullingMode;
+    public setCullingModeSeparate(color: CullingMode, shadows: CullingMode): void;
+    public isColorWriteEnabled(): boolean;
+    public isDepthWriteEnabled(): boolean;
+    public getDepthFunc(): CompareFunc;
+    public isDepthCullingEnabled(): boolean;
 }
 
 export class EntityManager {
     public static get(): EntityManager;
     public create(): Entity;
+    public getActiveEntityCount(): number;
 }
 
 export class VertexBuffer$Builder {
@@ -244,6 +357,11 @@ export class RenderableManager$Builder {
             ib: IndexBuffer, offset: number, count: number): RenderableManager$Builder;
     public geometryMinMax(slot: number, ptype: RenderableManager$PrimitiveType, vb: VertexBuffer,
             ib: IndexBuffer, offset: number, minIndex: number, maxIndex: number, count: number): RenderableManager$Builder;
+    public geometryNoIndices(slot: number, ptype: RenderableManager$PrimitiveType,
+            vb: VertexBuffer): RenderableManager$Builder;
+    public geometryNoIndicesOffset(slot: number, ptype: RenderableManager$PrimitiveType,
+            vb: VertexBuffer, offset: number, count: number): RenderableManager$Builder;
+    public geometryType(type: RenderableManager$Builder$GeometryType): RenderableManager$Builder;
     public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public boundingBox(box: Box): RenderableManager$Builder;
     public layerMask(select: number, values: number): RenderableManager$Builder;
@@ -254,8 +372,21 @@ export class RenderableManager$Builder {
     public skinning(boneCount: number): RenderableManager$Builder;
     public skinningBones(transforms: RenderableManager$Bone[]): RenderableManager$Builder;
     public skinningMatrices(transforms: mat4[]): RenderableManager$Builder;
+    public skinningBuffer(skinningBuffer: SkinningBuffer, boneCount: number,
+            offset: number): RenderableManager$Builder;
+    public enableSkinningBuffers(enabled: boolean): RenderableManager$Builder;
     public morphing(enable: boolean): RenderableManager$Builder;
+    public morphingTargetCount(targetCount: number): RenderableManager$Builder;
+    public morphingBuffer(morphTargetBuffer: MorphTargetBuffer): RenderableManager$Builder;
+    public morphingBufferOffset(level: number, primitiveIndex: number,
+            offset: number): RenderableManager$Builder;
     public blendOrder(index: number, order: number): RenderableManager$Builder;
+    public globalBlendOrderEnabled(index: number, enabled: boolean): RenderableManager$Builder;
+    public lightChannel(channel: number, enable: boolean): RenderableManager$Builder;
+    public channel(value: number): RenderableManager$Builder;
+    public fog(enable: boolean): RenderableManager$Builder;
+    public instances(instanceCount: number): RenderableManager$Builder;
+    public screenSpaceContactShadows(enable: boolean): RenderableManager$Builder;
     public build(engine: Engine, entity: Entity): void;
 }
 
@@ -281,6 +412,7 @@ export class LightManager$Builder {
     public sunAngularRadius(angularRadius: number): LightManager$Builder;
     public sunHaloFalloff(haloFalloff: number): LightManager$Builder;
     public sunHaloSize(haloSize: number): LightManager$Builder;
+    public lightChannel(channel: number, enable: boolean): LightManager$Builder;
 }
 
 export class Skybox$Builder {
@@ -288,10 +420,12 @@ export class Skybox$Builder {
     public color(rgba: float4): Skybox$Builder;
     public environment(envmap: Texture): Skybox$Builder;
     public showSun(show: boolean): Skybox$Builder;
+    public priority(priority: number): Skybox$Builder;
 }
 
 export class LightManager {
     public hasComponent(entity: Entity): boolean;
+    public getComponentCount(): number;
     public getInstance(entity: Entity): LightManager$Instance;
     public static Builder(ltype: LightManager$Type): LightManager$Builder;
     public getType(instance: LightManager$Instance): LightManager$Type;
@@ -319,6 +453,8 @@ export class LightManager {
     public getSunHaloFalloff(instance: LightManager$Instance): number;
     public setShadowCaster(instance: LightManager$Instance, shadowCaster: boolean): number;
     public isShadowCaster(instance: LightManager$Instance): boolean;
+    public setLightChannel(instance: LightManager$Instance, channel: number, enable: boolean): void;
+    public getLightChannel(instance: LightManager$Instance, channel: number): boolean;
 }
 
 export interface RenderableManager$Bone {
@@ -353,10 +489,32 @@ export class RenderableManager {
     public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
             type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
             offset: number, count: number): void;
+    public setGeometryNoIndicesAt(instance: RenderableManager$Instance, primitiveIndex: number,
+            type: RenderableManager$PrimitiveType, vertices: VertexBuffer,
+            offset: number, count: number): void;
     public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
             order: number): void;
     public getEnabledAttributesAt(instance: RenderableManager$Instance,
             primitiveIndex: number): number;
+    public getPriority(instance: RenderableManager$Instance): number;
+    public setChannel(instance: RenderableManager$Instance, channel: number): void;
+    public getChannel(instance: RenderableManager$Instance): number;
+    public setCulling(instance: RenderableManager$Instance, enable: boolean): void;
+    public isCullingEnabled(instance: RenderableManager$Instance): boolean;
+    public setFogEnabled(instance: RenderableManager$Instance, enable: boolean): void;
+    public getFogEnabled(instance: RenderableManager$Instance): boolean;
+    public setLightChannel(instance: RenderableManager$Instance, channel: number,
+            enable: boolean): void;
+    public getLightChannel(instance: RenderableManager$Instance, channel: number): boolean;
+    public setScreenSpaceContactShadows(instance: RenderableManager$Instance, enable: boolean): void;
+    public isScreenSpaceContactShadowsEnabled(instance: RenderableManager$Instance): boolean;
+    public getInstanceCount(instance: RenderableManager$Instance): number;
+    public clearMaterialInstanceAt(instance: RenderableManager$Instance, primitiveIndex: number): void;
+    public getBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number): number;
+    public setGlobalBlendOrderEnabledAt(instance: RenderableManager$Instance,
+            primitiveIndex: number, enabled: boolean): void;
+    public isGlobalBlendOrderEnabledAt(instance: RenderableManager$Instance,
+            primitiveIndex: number): boolean;
 }
 
 export class VertexBuffer {
@@ -369,6 +527,7 @@ export class VertexBuffer {
 export class BufferObject {
     public static Builder(): BufferObject$Builder;
     public setBuffer(engine: Engine, data: BufferReference, byteOffset?: number): void;
+    public getByteCount(): number;
 }
 
 export class IndexBuffer {
@@ -382,6 +541,28 @@ export class Renderer {
     public renderView(view: View): void;
     public beginFrame(swapChain: SwapChain): boolean;
     public endFrame(): void;
+    public renderStandaloneView(view: View): void;
+    public getClearOptions(): Renderer$ClearOptions;
+    public getUserTime(): number;
+    public resetUserTime(): void;
+    public skipNextFrames(frameCount: number): void;
+    public getFrameToSkipCount(): number;
+    public setPresentationTime(monotonicClockNs: number): void;
+    public setDesiredPresentationTime(monotonicClockNs: number): void;
+    public setRenderingDeadline(monotonicClockNs: number): void;
+    public setVsyncTime(steadyClockTimeNano: number): void;
+    public skipFrame(vsyncSteadyClockTimeNano: number): void;
+    public shouldRenderFrame(): boolean;
+    public copyFrame(dstSwapChain: SwapChain, dstViewport: float4, srcViewport: float4,
+            flags: number): void;
+    // The Uint8Array passed to the callback is only valid for the duration of the callback,
+    // copy it to retain the pixel data.
+    public readPixels(x: number, y: number, width: number, height: number,
+            format: PixelDataFormat, type: PixelDataType,
+            callback: (pixels: Uint8Array) => void): void;
+    public readPixels(renderTarget: RenderTarget, x: number, y: number, width: number,
+            height: number, format: PixelDataFormat, type: PixelDataType,
+            callback: (pixels: Uint8Array) => void): void;
 }
 
 export class Material {
@@ -389,6 +570,7 @@ export class Material {
     public createNamedInstance(name: string): MaterialInstance;
     public getDefaultInstance(): MaterialInstance;
     public getName(): string;
+    public getParameterTransformName(samplerName: string): string;
 }
 
 export enum Material$UboBatchingMode {
@@ -432,8 +614,11 @@ export class Camera {
     public getShutterSpeed(): number;
     public getSensitivity(): number;
     public getFocalLength(): number;
+    public getFieldOfViewInDegrees(direction: Camera$Fov): number;
     public getFocusDistance(): number;
     public setFocusDistance(distance: number): void;
+    public setShift(shift: double2): void;
+    public getShift(): double2;
     public static inverseProjection(p: mat4): mat4;
     public static computeEffectiveFocalLength(focalLength: number, focusDistance: number) : number;
     public static computeEffectiveFov(fovInDegrees: number, focusDistance: number) : number;
@@ -458,6 +643,8 @@ export class ColorGrading$Builder {
     public saturation(saturation: number): ColorGrading$Builder;
     public curves(shadowGamma: float3, midPoint: float3,
             highlightScale: float3): ColorGrading$Builder;
+    public customLut(lut: any, dimension: number): ColorGrading$Builder;
+    public fastMath(fastMath: boolean): ColorGrading$Builder;
     public build(engine: Engine): ColorGrading;
 }
 
@@ -500,12 +687,18 @@ export class Scene {
     public removeEntities(entities: Entity[]): void;
     public setIndirectLight(ibl: IndirectLight|null): void;
     public setSkybox(sky: Skybox|null): void;
+    public getEntityCount(): number;
+    public hasEntity(entity: Entity): boolean;
+    public getSkybox(): Skybox;
+    public getIndirectLight(): IndirectLight;
 }
 
 export class RenderTarget {
-    public getMipLevel(): number;
-    public getFace(): Texture$CubemapFace;
-    public getLayer(): number;
+    public getMipLevel(attachment: RenderTarget$AttachmentPoint): number;
+    public getFace(attachment: RenderTarget$AttachmentPoint): Texture$CubemapFace;
+    public getLayer(attachment: RenderTarget$AttachmentPoint): number;
+    public getTexture(attachment: RenderTarget$AttachmentPoint): Texture;
+    public getSupportedColorAttachmentsCount(): number;
     public static Builder() : RenderTarget$Builder;
 }
 
@@ -513,6 +706,7 @@ export class View {
     public pick(x: number, y: number, cb: PickCallback): void;
     public setCamera(camera: Camera): void;
     public setColorGrading(colorGrading: ColorGrading): void;
+    public getColorGrading(): ColorGrading;
     public setScene(scene: Scene): void;
     public setViewport(viewport: float4): void;
     public setVisibleLayers(select: number, values: number): void;
@@ -537,6 +731,36 @@ export class View {
     public isStencilBufferEnabled(): boolean;
     public setTransparentPickingEnabled(enabled: boolean): void;
     public isTransparentPickingEnabled(): boolean;
+    public getViewport(): float4;
+    public hasCamera(): boolean;
+    public setShadowingEnabled(enabled: boolean): void;
+    public isShadowingEnabled(): boolean;
+    public setShadowType(type: View$ShadowType): void;
+    public getShadowType(): View$ShadowType;
+    public setVsmShadowOptions(options: View$VsmShadowOptions): void;
+    public getVsmShadowOptions(): View$VsmShadowOptions;
+    public setSoftShadowOptions(options: View$SoftShadowOptions): void;
+    public getSoftShadowOptions(): View$SoftShadowOptions;
+    public setFrustumCullingEnabled(enabled: boolean): void;
+    public isFrustumCullingEnabled(): boolean;
+    public setChannelDepthClearEnabled(channel: number, enabled: boolean): void;
+    public isChannelDepthClearEnabled(channel: number): boolean;
+    public getSampleCount(): number;
+    public getVisibleRenderableCount(): number;
+    public setDithering(dithering: View$Dithering): void;
+    public setDynamicResolutionOptions(options: View$DynamicResolutionOptions): void;
+    public getDynamicResolutionOptions(): View$DynamicResolutionOptions;
+    public getLastDynamicResolutionScale(): float2;
+    public setDynamicLightingOptions(zLightNear: number, zLightFar: number): void;
+    public setGridSize(size: number): void;
+    public getGridSize(): number;
+    public getEffectiveGridSize(): number;
+    public setFrontFaceWindingInverted(inverted: boolean): void;
+    public isFrontFaceWindingInverted(): boolean;
+    public setMaterialGlobal(index: number, value: float4): void;
+    public getMaterialGlobal(index: number): float4;
+    public getFogEntity(): Entity;
+    public clearFrameHistory(engine: Engine): void;
 }
 
 export class TransformManager {
@@ -550,12 +774,44 @@ export class TransformManager {
     public getWorldTransform(instance: TransformManager$Instance): mat4;
     public openLocalTransformTransaction(): void;
     public commitLocalTransformTransaction(): void;
+    public getParent(instance: TransformManager$Instance): Entity;
+    public getChildren(instance: TransformManager$Instance): Vector<Entity>;
 }
 
 interface Filamesh {
     renderable: Entity;
     vertexBuffer: VertexBuffer;
     indexBuffer: IndexBuffer;
+}
+
+// Maps material names to MaterialInstance objects when parsing filamesh files. Clients are
+// encouraged to use the [loadFilamesh] helper instead of MeshReader directly.
+export class MeshReader$MaterialRegistry {
+    constructor();
+    public size(): number;
+    public get(name: string): MaterialInstance;
+    public set(name: string, instance: MaterialInstance): void;
+    public keys(): Vector<string>;
+}
+
+// Property accessor for the object returned by MeshReader.loadMeshFromBuffer.
+export class MeshReader$Mesh {
+    public renderable(): Entity;
+    public vertexBuffer(): VertexBuffer;
+    public indexBuffer(): IndexBuffer;
+}
+
+// Simple parser for filamesh files. Clients are encouraged to use the [loadFilamesh] helper.
+export class MeshReader {
+    public static loadMeshFromBuffer(engine: Engine, buffer: driver$BufferDescriptor,
+            materials: MeshReader$MaterialRegistry): MeshReader$Mesh;
+}
+
+// Decoded image returned by decodeImage. Clients should use createTextureFromPng (et al) instead.
+export class DecodedImage {
+    public width: number;
+    public height: number;
+    public data: any;
 }
 
 export class Engine {
@@ -604,6 +860,38 @@ export class Engine {
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
     public loadFilamesh(urlOrBuffer: BufferReference, definstance?: MaterialInstance, matinstances?: object): Filamesh;
+    public getBackend(): Backend;
+    public getEntityManager(): EntityManager;
+    public enableAccurateTranslations(): void;
+    public unprotected(): void;
+    public hasUnrecoverableFailure(): boolean;
+    public setAutomaticInstancingEnabled(enable: boolean): void;
+    public isAutomaticInstancingEnabled(): boolean;
+    public createFence(): Fence;
+    public destroyFence(fence: Fence): void;
+    public destroySkinningBuffer(skinningBuffer: SkinningBuffer): void;
+    public destroyMorphTargetBuffer(morphTargetBuffer: MorphTargetBuffer): void;
+    public isValidFence(fence: Fence): boolean;
+    public isValidSkinningBuffer(skinningBuffer: SkinningBuffer): boolean;
+    public isValidMorphTargetBuffer(morphTargetBuffer: MorphTargetBuffer): boolean;
+    public getSupportedFeatureLevel(): FeatureLevel;
+    public setActiveFeatureLevel(featureLevel: FeatureLevel): FeatureLevel;
+    public getActiveFeatureLevel(): FeatureLevel;
+    public static getSteadyClockTimeNano(): number;
+    public isValidColorGrading(colorGrading: ColorGrading): boolean;
+    public isValidExpensiveMaterialInstance(materialInstance: MaterialInstance): boolean;
+    public isValidIndexBuffer(indexBuffer: IndexBuffer): boolean;
+    public isValidIndirectLight(indirectLight: IndirectLight): boolean;
+    public isValidMaterial(material: Material): boolean;
+    public isValidMaterialInstance(material: Material, materialInstance: MaterialInstance): boolean;
+    public isValidRenderTarget(renderTarget: RenderTarget): boolean;
+    public isValidRenderer(renderer: Renderer): boolean;
+    public isValidScene(scene: Scene): boolean;
+    public isValidSkybox(skybox: Skybox): boolean;
+    public isValidSwapChain(swapChain: SwapChain): boolean;
+    public isValidTexture(texture: Texture): boolean;
+    public isValidVertexBuffer(vertexBuffer: VertexBuffer): boolean;
+    public isValidView(view: View): boolean;
 }
 
 export class Ktx2Reader {
@@ -611,6 +899,38 @@ export class Ktx2Reader {
     public requestFormat(format: Texture$InternalFormat): void;
     public unrequestFormat(format: Texture$InternalFormat): void;
     public load(urlOrBuffer: BufferReference, transfer: TransferFunction): Texture|null;
+}
+
+// [mipLevel, arrayIndex, cubeFace] index into a KTX1 bundle's blobs.
+export type KtxBlobIndex = [number, number, number];
+
+export class Ktx1Bundle {
+    constructor(kbd: driver$BufferDescriptor);
+    public getNumMipLevels(): number;
+    public getArrayLength(): number;
+    public getInternalFormat(srgb: boolean): Texture$InternalFormat;
+    public getPixelDataFormat(): PixelDataFormat;
+    public getPixelDataType(): PixelDataType;
+    public getCompressedPixelDataType(): CompressedPixelDataType;
+    public isCompressed(): boolean;
+    public isCubemap(): boolean;
+    public getBlob(index: KtxBlobIndex): ArrayBuffer;
+    public getCubeBlob(miplevel: number): ArrayBuffer;
+    public info(): KtxInfo;
+    public getMetadata(key: string): string;
+}
+
+// Property accessor for a KTX1 header. See the KTX spec for the meaning of each field.
+export class KtxInfo {
+    public endianness: number;
+    public glType: number;
+    public glTypeSize: number;
+    public glFormat: number;
+    public glInternalFormat: number;
+    public glBaseInternalFormat: number;
+    public pixelWidth: number;
+    public pixelHeight: number;
+    public pixelDepth: number;
 }
 
 export class gltfio$AssetLoader {
@@ -635,14 +955,16 @@ export class gltfio$FilamentAsset {
     public getRoot(): Entity;
     public popRenderable(): Entity;
     public getInstance(): gltfio$FilamentInstance;
-    public geAssetInstances(): gltfio$FilamentInstance[];
+    public getAssetInstances(): gltfio$FilamentInstance[];
     public getResourceUris(): string[];
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
     public getWireframe(): Entity;
     public getEngine(): Engine;
+    public getMorphTargetNames(entity: Entity): string[];
     public releaseSourceData(): void;
+    public getFirstEntityByName(name: string): Entity;
 }
 
 export class gltfio$FilamentInstance {
@@ -651,6 +973,9 @@ export class gltfio$FilamentInstance {
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
     public getSkinNames(): Vector<string>;
+    public getSkinCount(): number;
+    public getJointCountAt(skinIndex: number): number;
+    public getJointsAt(skinIndex: number): Entity[];
     public attachSkin(skinIndex: number, entity: Entity): void;
     public detachSkin(skinIndex: number, entity: Entity): void;
     public getMaterialInstances(): Vector<MaterialInstance>;
@@ -660,7 +985,7 @@ export class gltfio$FilamentInstance {
 }
 
 export class gltfio$Animator {
-    public applyAnimation(index: number): void;
+    public applyAnimation(index: number, time: number): void;
     public applyCrossFade(previousAnimIndex: number, previousAnimTime: number, alpha: number): void;
     public updateBoneMatrices(): void;
     public resetBoneMatrices(): void;
@@ -669,10 +994,42 @@ export class gltfio$Animator {
     public getAnimationName(index: number): string;
 }
 
+export class gltfio$UbershaderProvider {
+    constructor(engine: Engine);
+    public destroyMaterials(): void;
+}
+
+export class gltfio$StbProvider {
+    constructor(engine: Engine);
+}
+
+export class gltfio$Ktx2Provider {
+    constructor(engine: Engine);
+}
+
+export class gltfio$WebpProvider {
+    constructor(engine: Engine);
+    public static isWebpSupported(): boolean;
+}
+
+export class gltfio$ResourceLoader {
+    constructor(engine: Engine, normalizeSkinningWeights: boolean);
+    public addResourceData(url: string, buffer: driver$BufferDescriptor): void;
+    public addStbProvider(mimeType: string, provider: gltfio$StbProvider): void;
+    public addKtx2Provider(mimeType: string, provider: gltfio$Ktx2Provider): void;
+    public addWebpProvider(mimeType: string, provider: gltfio$WebpProvider): void;
+    public hasResourceData(url: string): boolean;
+    public loadResources(asset: gltfio$FilamentAsset): boolean;
+    public asyncBeginLoad(asset: gltfio$FilamentAsset): boolean;
+    public asyncGetLoadProgress(): number;
+    public asyncUpdateLoad(): void;
+}
+
 export class SurfaceOrientation$Builder {
     public constructor();
     public vertexCount(count: number): SurfaceOrientation$Builder;
     public normals(vec3array: Float32Array, stride: number): SurfaceOrientation$Builder;
+    public tangents(vec4array: Float32Array, stride: number): SurfaceOrientation$Builder;
     public uvs(vec2array: Float32Array, stride: number): SurfaceOrientation$Builder;
     public positions(vec3array: Float32Array, stride: number): SurfaceOrientation$Builder;
     public triangleCount(count: number): SurfaceOrientation$Builder;
@@ -830,6 +1187,18 @@ export enum CullingMode {
     FRONT,
     BACK,
     FRONT_AND_BACK,
+}
+
+export enum TransparencyMode {
+    DEFAULT,
+    TWO_PASSES_ONE_SIDE,
+    TWO_PASSES_TWO_SIDES,
+}
+
+export enum FeatureLevel {
+    FEATURE_LEVEL_1 = 1,
+    FEATURE_LEVEL_2,
+    FEATURE_LEVEL_3,
 }
 
 export enum StencilOperation {
@@ -1723,11 +2092,11 @@ export enum View$Dithering {
 export enum View$ShadowType {
     PCF, // /** percentage-closer filtered shadows (default) */
 
-    VSM, // /** variance shadows */
+    VSM, // /** exponential variance shadows (EVSM) */
 
-    DPCF, // /** PCF with contact hardening simulation */
+    DPCF, // /** @deprecated falls back to PCSS */
 
-    PCSS, // /** PCF with soft shadows and contact hardening */
+    PCSS, // /** EVSM with soft shadows and contact hardening */
 
     PCFd,
 }
@@ -1775,23 +2144,100 @@ export interface View$VsmShadowOptions {
 }
 
 /**
- * View-level options for DPCF and PCSS Shadowing.
+ * View-level options for PCSS Shadowing.
  * @see #setSoftShadowOptions
  * <b>Warning:</b> This API is still experimental and subject to change.
  */
 export interface View$SoftShadowOptions {
     /**
-     * Globally scales the penumbra of all DPCF and PCSS shadows
-     * Acceptable values are greater than 0
+     * Sets a global scale factor applied to the final penumbra size of all PCSS shadows.
+     *
+     * This parameter acts as an artistic modifier, uniformly scaling the overall softness
+     * of shadows across the entire scene without altering the physical angular size of
+     * the light sources.
+     *
+     * The final scale applied to a shadow is calculated by modulating this global
+     * value with the light's individual penumbraScale (global * local). This allows
+     * art directors to shift the global mood (e.g., making all shadows 20% softer)
+     * while preserving the relative contrast between different lights.
+     *
+     * The global penumbra scale multiplier. Default is 1.0 (physically based).
+     *
+     * @see LightManager::ShadowOptions::penumbraScale
      */
     penumbraScale?: number;
     /**
-     * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
-     * This effectively controls the strength of contact hardening effect and is useful for
-     * artistic purposes. Higher values make the shadows become softer faster.
-     * Acceptable values are equal to or greater than 1.
+     * Sets a global scale factor applied to the PCSS geometric ratio before failsafe clamping.
+     *
+     * This parameter controls the "contact shadow contrast" or the rate at which shadows
+     * transition from sharp to soft. By scaling the geometric ratio, you can create
+     * highly dramatic, cinematic shadows that blur rapidly as they move away from the
+     * contact point, completely independently of the light's overall physical size.
+     *
+     * - Values > 1.0 cause the shadow to accelerate toward its maximum softness faster.
+     * - Values < 1.0 cause the shadow to stay sharper for a longer distance.
+     *
+     * The final ratio scale applied is calculated by modulating this global value with
+     * the light's individual penumbraRatioScale (global * local).
+     *
+     * The global penumbra ratio scale multiplier. Default is 1.0.
+     *
+     * @see LightManager::ShadowOptions::penumbraRatioScale
      */
     penumbraRatioScale?: number;
+    /**
+     * Sets the global default maximum geometric ratio applied to Percentage-Closer Soft Shadows (PCSS).
+     *
+     * In PCSS, the physical width of a shadow's penumbra is determined by the ratio:
+     * (distance_to_receiver - distance_to_blocker) / distance_to_blocker
+     *
+     * Standard shadow maps store a single depth layer (2.5D). When evaluating complex,
+     * overlapping occluders (e.g., foliage, layered floating geometry), the shadow map
+     * cannot resolve volumetric depth. This limitation can trick the blocker search into
+     * returning an artificially close depth value, driving the denominator toward zero.
+     * The resulting explosion in penumbra size causes unnatural, massive "ghost" shadows.
+     *
+     * maxPenumbraRatio applies a smooth, asymptotic squash to the geometric ratio, acting
+     * as both a mathematical failsafe and an artistic control. It guarantees the penumbra
+     * will gracefully stop expanding before it destroys the visual coherence of the scene.
+     *
+     * This global value acts as the baseline for all lights. Individual lights can explicitly
+     * override this default via the LightManager API to handle specific geometric artifacts
+     * without affecting the rest of the scene.
+     *
+     * - A lower value (e.g., 2.0) creates generally sharper, highly stable
+     * shadows that aggressively suppress 2.5D layered occlusion artifacts.
+     * - A higher value (e.g., 5.0+) allows for physically accurate, widely
+     * expanding soft shadows, but increases susceptibility to ghosting.
+     *
+     * @see LightManager::ShadowOptions::maxPenumbraRatio
+     */
+    maxPenumbraRatio?: number;
+    /**
+     * Sets the global default maximum world-space radius used during the PCSS blocker search.
+     *
+     * In PCSS, the shadow algorithm searches a region of the shadow map to find the
+     * average depth of occluders. For lights with a large angular size (or objects
+     * very far from the light), this search region can become massive.
+     * * If the search region expands too much, it may inadvertently overlap distinct
+     * foreground geometry (like a streetlight fixture) or climb vertical surfaces
+     * (like a pole), causing the shadow to detach from the contact point and appear
+     * to float.
+     *
+     * maxSearchRadius limits the physical footprint of this search. This global value acts
+     * as the baseline for all lights. Individual lights can explicitly override this default
+     * via the LightManager API to clamp the search footprint for specific geometric setups
+     * without affecting the rest of the scene.
+     *
+     * The maximum search radius in world-space meters:
+     * - A smaller value (e.g., 0.05 to 0.1) tightly anchors shadows to their
+     * contact points and prevents artifacts near complex light fixtures.
+     * - A larger value provides more physically accurate blocker averaging for
+     * massive area lights but increases the risk of floating geometry.
+     *
+     * @see LightManager::ShadowOptions::maxSearchRadius
+     */
+    maxSearchRadius?: number;
 }
 
 /**
@@ -1974,7 +2420,7 @@ export interface ViewSettings {
     colorGrading: ColorGradingSettings;
     dynamicLighting: DynamicLightingSettings;
     fogSettings: FogSettings;
-    blendMode: BlendMode;
+    blendMode: View$BlendMode;
     stencilBufferEnabled: boolean;
     visibleLayers: number;
 }

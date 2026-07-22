@@ -17,13 +17,13 @@
 #ifndef GLTFIO_MATH_H
 #define GLTFIO_MATH_H
 
-#include <math/quat.h>
-#include <math/vec3.h>
+#include <utils/compiler.h>
+
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/quat.h>
 #include <math/TVecHelpers.h>
-
-#include <utils/compiler.h>
+#include <math/vec3.h>
 
 namespace filament::gltfio {
 

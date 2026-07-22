@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#include "AndroidNativeWindow.h"
+
+#include "webgpu/WebGPUSwapChain.h"
+
 #include <backend/platforms/WebGPUPlatformAndroid.h>
 
 #include <utils/Panic.h>
@@ -25,11 +29,20 @@
 #include <cstdint>
 #include <vector>
 
+#include <errno.h>
+
+
 /**
  * Android OS specific implementation aspects of the WebGPU backend
  */
 
 namespace filament::backend {
+
+WebGPUPlatformAndroid::WebGPUPlatformAndroid() noexcept {
+}
+
+WebGPUPlatformAndroid::~WebGPUPlatformAndroid() noexcept {
+}
 
 std::vector<wgpu::RequestAdapterOptions> WebGPUPlatformAndroid::getAdapterOptions() {
     constexpr std::array powerPreferences = {
@@ -74,5 +87,19 @@ wgpu::Surface WebGPUPlatformAndroid::createSurface(void* nativeWindow, uint64_t 
     FILAMENT_CHECK_POSTCONDITION(surface != nullptr) << "Unable to create Android-backed surface.";
     return surface;
 }
+utils::tribool WebGPUPlatformAndroid::isFrameRateChangeSupported(void* const nativeWindow) const noexcept {
+    return NativeWindow::isFrameRateChangeSupported(static_cast<ANativeWindow*>(nativeWindow));
+}
+
+int WebGPUPlatformAndroid::setFrameRate(SwapChain const* swapchain, float frameRate,
+        FrameRateCompatibility compatibility, ChangeFrameRateStrategy strategy) noexcept {
+    auto const* const wgpuSc = static_cast<WebGPUSwapChain const*>(swapchain);
+    if (wgpuSc && wgpuSc->getNativeWindow()) {
+        return NativeWindow::setFrameRate(
+                static_cast<ANativeWindow*>(wgpuSc->getNativeWindow()), frameRate, compatibility, strategy);
+    }
+    return -ENOSYS;
+}
+
 
 }// namespace filament::backend

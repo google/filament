@@ -126,6 +126,10 @@ void NoopDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 void NoopDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
+void NoopDriver::setFrameRate(Handle<HwSwapChain>, float,
+        Platform::FrameRateCompatibility, Platform::ChangeFrameRateStrategy) {
+}
+
 void NoopDriver::destroyStream(Handle<HwStream> sh) {
 }
 
@@ -230,6 +234,7 @@ bool NoopDriver::isMSAASwapChainSupported(uint32_t) {
 bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
+
 
 bool NoopDriver::isStereoSupported() {
     return false;

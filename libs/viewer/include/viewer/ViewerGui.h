@@ -17,6 +17,12 @@
 #ifndef VIEWER_VIEWERGUI_H
 #define VIEWER_VIEWERGUI_H
 
+#include <viewer/Settings.h>
+
+#include <gltfio/Animator.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/NodeManager.h>
+
 #include <filament/Box.h>
 #include <filament/DebugRegistry.h>
 #include <filament/Engine.h>
@@ -24,14 +30,8 @@
 #include <filament/Scene.h>
 #include <filament/View.h>
 
-#include <gltfio/Animator.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/NodeManager.h>
-
-#include <viewer/Settings.h>
-
-#include <utils/Entity.h>
 #include <utils/compiler.h>
+#include <utils/Entity.h>
 
 #include <math/mat4.h>
 #include <math/vec3.h>
@@ -260,7 +260,7 @@ private:
     int mCurrentAnimation = 0; // -1 means not playing animation and count means plays all of them (0-based index)
     int mCurrentVariant = 0;
     bool mEnableWireframe = false;
-    int mVsmMsaaSamplesLog2 = 1;
+    int mVsmMsaaSamplesLog2 = 2;
     Settings mSettings;
     int mSidebarWidth;
     uint32_t mFlags;

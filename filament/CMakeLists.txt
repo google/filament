@@ -23,6 +23,7 @@ set(PUBLIC_HDRS
         include/filament/Exposure.h
         include/filament/Fence.h
         include/filament/FilamentAPI.h
+        include/filament/FramePacer.h
         include/filament/Frustum.h
         include/filament/IndexBuffer.h
         include/filament/IndirectLight.h
@@ -76,6 +77,8 @@ set(SRCS
         src/Fence.cpp
         src/FilamentBuilder.cpp
         src/FrameInfo.cpp
+        src/FramePacer.cpp
+        src/FramePipelineEstimator.cpp
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
@@ -126,9 +129,9 @@ set(SRCS
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
-        src/details/DebugRegistry.cpp
         src/details/Engine.cpp
         src/details/Fence.cpp
+        src/details/FramePacer.cpp
         src/details/IndexBuffer.cpp
         src/details/IndirectLight.cpp
         src/details/InstanceBuffer.cpp
@@ -167,6 +170,7 @@ set(SRCS
         src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
+        src/DynamicSpecConstKey.cpp
 )
 
 set(PRIVATE_HDRS
@@ -178,6 +182,7 @@ set(PRIVATE_HDRS
         src/compact.h
         src/Culler.h
         src/DFG.h
+        src/DynamicSpecConstKey.h
         src/FilamentAPI-impl.h
         src/FrameHistory.h
         src/FrameInfo.h
@@ -216,6 +221,7 @@ set(PRIVATE_HDRS
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
+        src/details/FramePacer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/InstanceBuffer.h
@@ -289,6 +295,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
         src/materials/evsm/gaussian.mat
+        src/materials/evsm/gaussianMipmap.mat
         src/materials/evsm/vsmMipmap.mat
         src/materials/flare/flare.mat
         src/materials/fog/fog.mat
@@ -652,6 +659,12 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/gaussian.filamat"
         DEPENDS src/materials/evsm/gaussian.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/gaussianMipmap.filamat"
+        DEPENDS src/materials/evsm/gaussianMipmap.fs
         APPEND
 )
 

@@ -16,6 +16,7 @@
 
 #include "details/Material.h"
 
+#include "DynamicSpecConstKey.h"
 #include "FilamentAPI-impl.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
@@ -43,6 +44,8 @@
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
@@ -239,6 +242,10 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "name", getName().c_str(),
+            "variantKey", static_cast<uint32_t>(variantSpec),
+            "priority", static_cast<uint32_t>(priority));
     FMaterialInstance* mi = getDefaultInstance();
     if (callback) {
         mi->compile(priority, variantSpec, handler,
@@ -252,21 +259,63 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
 void FMaterial::compile(CompilerPriorityQueue const priority,
         FixedCapacityVector<Variant> const& variants,
+        FixedCapacityVector<DynamicSpecConstKey> const& specKeys,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT,
+            "name", getName().c_str(), "variant count", variants.size(),
+            "parallel comp supported",
+            mEngine.getDriverApi().isParallelShaderCompileSupported());
     DriverApi& driver = mEngine.getDriverApi();
     FMaterialInstance* mi = getDefaultInstance();
 
     ShaderModel const shaderModel = mEngine.getShaderModel();
     bool const isStereoSupported = driver.isStereoSupported();
     bool const isParallelShaderCompileSupported = driver.isParallelShaderCompileSupported();
+    bool const isMaterialLit = mDefinition.isVariantLit;
+    MaterialDomain const materialDomain = mDefinition.materialDomain;
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
-            if (mDefinition.hasVariant(variant, shaderModel, isStereoSupported)) {
-                mi->prepareProgram(driver, variant, priority);
+            for (auto specKey : specKeys) {
+                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
+                        materialDomain, isMaterialLit);
+                if (mDefinition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
+#ifndef NDEBUG
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "prepareProgram(variant found)",
+                            "name", getName().c_str(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "specKey", static_cast<uint32_t>(specKey.key),
+                            "priority", static_cast<uint32_t>(priority));
+#endif
+                    mi->prepareProgram(driver, variant, specKey, priority);
+                } else {
+#ifndef NDEBUG
+                    FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                            "requested variant missing",
+                            "name", getName().c_str(),
+                            "variantKey", static_cast<uint32_t>(variant.key),
+                            "specKey", static_cast<uint32_t>(specKey.key),
+                            "priority", static_cast<uint32_t>(priority));
+#endif
+                }
             }
         }
+#ifndef NDEBUG
+    } else {
+        for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
+            for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
+                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
+                        materialDomain, isMaterialLit);
+                FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
+                        "parallel compilation disabled", "name", getName().c_str(), "variantKey",
+                        static_cast<uint32_t>(variant.key), "specKey",
+                        static_cast<uint32_t>(specKey.key), "priority",
+                        static_cast<uint32_t>(priority));
+            }
+        }
+#endif
     }
 
     compileAllPrograms(priority, handler, std::move(callback));
@@ -313,10 +362,8 @@ FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     return mDefaultMaterialInstance;
 }
 
-bool FMaterial::hasParameter(const char* name) const noexcept {
-    return mDefinition.uniformInterfaceBlock.hasField(name) ||
-           mDefinition.samplerInterfaceBlock.hasSampler(name) ||
-            mDefinition.subpassInfo.name == CString(name);
+bool FMaterial::hasParameter(std::string_view name) const noexcept {
+    return mDefinition.parameterNames.find(name) != mDefinition.parameterNames.end();
 }
 
 bool FMaterial::isSampler(const char* name) const noexcept {
@@ -483,7 +530,7 @@ FixedCapacityVector<Program::SpecializationConstant> FMaterial::processSpecializ
                         << types[value.index()] << " was provided.";
                 break;
         }
-        uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+        uint32_t const index = pos->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
         specializationConstants[index] = value;
     }
     return specializationConstants;

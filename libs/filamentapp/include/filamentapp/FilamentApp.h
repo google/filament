@@ -18,6 +18,8 @@
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
 
 #include "Config.h"
+#include "Cube.h"
+#include "Grid.h"
 #include "IBL.h"
 
 #include <filament/Engine.h>
@@ -37,12 +39,11 @@
 namespace filament {
 class Renderer;
 class Scene;
+class SwapChain;
 class View;
 } // namespace filament
 
-namespace filagui {
-class ImGuiHelper;
-} // namespace filagui
+class FilamentAppGui;
 
 class IBL;
 class MeshAssimp;
@@ -89,28 +90,45 @@ public:
     void setDropHandler(DropCallback handler) { mDropHandler = handler; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
-            PostRenderCallback postRender = PostRenderCallback(),
-            size_t width = 1024, size_t height = 640);
+            ImGuiCallback imgui = ImGuiCallback(),
+            PreRenderCallback preRender = PreRenderCallback(),
+            PostRenderCallback postRender = PostRenderCallback(), size_t width = 1024,
+            size_t height = 640);
 
     void reconfigureCameras() { mReconfigureCameras = true; }
 
     filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
-    filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
+    filament::Material const* getTransparentMaterial() const noexcept {
+        return mTransparentMaterial;
+    }
     IBL* getIBL() const noexcept { return mIBL.get(); }
     filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
+    filament::SwapChain* getPrimarySwapChain() const noexcept { return mPrimarySwapChain; }
 
     void close() { mClosed = true; }
 
-    void setSidebarWidth(int width) { mCameraParams.sidebarWidth = width; }
+    void onSurfaceCreated(void* nativeWindow);
+    void onSurfaceChanged(int width, int height);
+    void onSurfaceDestroyed();
+    void onTouchEvent(int action, float x, float y);
+
+    void setSidebarWidth(int width) {
+        mCameraParams.sidebarWidth = width;
+        mReconfigureCameras = true;
+    }
+
     void setWindowTitle(const char* title) { mWindowTitle = title; }
 
-    void setCameraFocalLength(float focalLength) { mCameraParams.focalLength = focalLength; }
+    void setCameraFocalLength(float focalLength) {
+        mCameraParams.focalLength = focalLength;
+        mReconfigureCameras = true;
+    }
 
     void setCameraNearFar(float near, float far) {
         mCameraParams.near = near;
         mCameraParams.far = far;
+        mReconfigureCameras = true;
     }
 
     void addOffscreenView(filament::View* view) { mOffscreenViews.push_back(view); }
@@ -118,7 +136,6 @@ public:
     size_t getSkippedFrameCount() const { return mSkippedFrames; }
 
     void loadIBL(std::string_view path);
-
 
     // debugging: enable/disable the froxel grid
     void setCameraFrustumEnabled(bool enabled) noexcept;
@@ -273,9 +290,13 @@ private:
     void loadIBL(const Config& config);
     void loadDirt(const Config& config);
 
+    bool doFrame();
+    void shutdown();
+
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
+    filament::SwapChain* mPrimarySwapChain = nullptr;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     double mTime = 0;
@@ -284,7 +305,7 @@ private:
     filament::Material const* mTransparentMaterial = nullptr;
     filament::Material const* mDepthMaterial = nullptr;
     filament::MaterialInstance* mDepthMI = nullptr;
-    std::unique_ptr<filagui::ImGuiHelper> mImGuiHelper;
+    std::unique_ptr<FilamentAppGui> mAppGui;
     AnimCallback mAnimation;
     ResizeCallback mResize;
     DropCallback mDropHandler;
@@ -302,6 +323,21 @@ private:
 
     filament::backend::Platform* mVulkanPlatform = nullptr;
     filament::backend::Platform* mWebGPUPlatform = nullptr;
+
+    std::unique_ptr<Window> mWindow;
+    CleanupCallback mCleanupCallback;
+    ImGuiCallback mImguiCallback {};
+    PreRenderCallback mPreRender {};
+    PostRenderCallback mPostRender {};
+    bool mMousePressed[3] = { false };
+    bool mIsSplitView = false;
+
+    std::unique_ptr<Cube> mCameraCube;
+    std::unique_ptr<Grid> mCameraGrid;
+
+    // we can't cull the light-frustum because it's not applied a rigid transform
+    // and currently, filament assumes that for culling
+    std::vector<Cube> mLightmapCubes;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

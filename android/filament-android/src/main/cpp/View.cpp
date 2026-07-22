@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <jni.h>
+#include "common/CallbackUtils.h"
 
 #include <filament/Color.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
-#include "common/CallbackUtils.h"
-#include <common/JniUtils.h>
+#include <private/backend/VirtualMachineEnv.h>
 
-#include "private/backend/VirtualMachineEnv.h"
+#include <common/JniUtils.h>
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::android;
@@ -206,11 +206,14 @@ Java_com_google_android_filament_View_nSetVsmShadowOptions(JNIEnv*, jclass, jlon
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSoftShadowOptions(JNIEnv*, jclass, jlong nativeView,
-        jfloat penumbraScale, jfloat penumbraRatioScale) {
+        jfloat penumbraScale, jfloat penumbraRatioScale,
+        jfloat maxPenumbraRatio, jfloat maxSearchRadius) {
     View* view = (View*) nativeView;
     View::SoftShadowOptions options;
     options.penumbraScale = penumbraScale;
     options.penumbraRatioScale = penumbraRatioScale;
+    options.maxPenumbraRatio = maxPenumbraRatio;
+    options.maxSearchRadius = maxSearchRadius;
     view->setSoftShadowOptions(options);
 }
 
@@ -600,6 +603,14 @@ Java_com_google_android_filament_View_nGetFogEntity(JNIEnv *env, jclass clazz,
         jlong nativeView) {
     View *view = (View *) nativeView;
     return (jint)view->getFogEntity().getId();
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetVisibleRenderableCount(JNIEnv *env, jclass clazz,
+        jlong nativeView) {
+    View *view = (View *) nativeView;
+    return (jint)view->getVisibleRenderableCount();
 }
 
 extern "C"

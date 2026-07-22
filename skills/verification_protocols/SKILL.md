@@ -15,3 +15,4 @@ Before completing any task that modifies C++ source or header files, AI agents *
     ```bash
     ./out/cmake-debug/libs/utils/test_utils
     ```
+4.  **Language Bindings Check:** If any public APIs under `filament/include/filament/` were modified, verify that matching Java and JavaScript/TypeScript bindings are implemented and up-to-date according to [bindings-synchronization](../bindings_synchronization/SKILL.md).

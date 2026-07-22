@@ -21,43 +21,57 @@
 
 namespace utils {
 
+/**
+ * A 3-state boolean type representing true, false, or indeterminate.
+ *
+ * This class provides standard logical operators (!, &&, ||) and observer methods
+ * that correctly implement Kleene three-valued logic.
+ */
 class tribool {
 public:
-    enum value_t : uint8_t {
-        False = 0,
-        True = 1,
-        Indeterminate = 2
+    enum class Value : uint8_t {
+        kFalse = 0,
+        kTrue = 1,
+        kIndeterminate = 2
     };
 
-    constexpr tribool() noexcept : mValue(Indeterminate) {}
-    constexpr tribool(bool v) noexcept : mValue(v ? True : False) {}
-    constexpr tribool(value_t v) noexcept : mValue(v) {}
+    using value_t = Value;
 
-    constexpr bool is_true() const noexcept { return mValue == True; }
-    constexpr bool is_false() const noexcept { return mValue == False; }
-    constexpr bool is_indeterminate() const noexcept { return mValue == Indeterminate; }
+    static constexpr Value kFalse = Value::kFalse;
+    static constexpr Value kTrue = Value::kTrue;
+    static constexpr Value kIndeterminate = Value::kIndeterminate;
+
+    constexpr tribool() noexcept : mValue(Value::kIndeterminate) {}
+    constexpr tribool(bool const v) noexcept : mValue(v ? Value::kTrue : Value::kFalse) {}
+    constexpr tribool(Value const v) noexcept : mValue(v) {}
+
+    constexpr bool is_true() const noexcept { return mValue == Value::kTrue; }
+    constexpr bool is_false() const noexcept { return mValue == Value::kFalse; }
+    constexpr bool is_indeterminate() const noexcept { return mValue == Value::kIndeterminate; }
 
     constexpr tribool operator!() const noexcept {
-        return mValue == Indeterminate ? Indeterminate : (mValue == True ? False : True);
+        return mValue == Value::kIndeterminate
+                       ? Value::kIndeterminate
+                       : (mValue == Value::kTrue ? Value::kFalse : Value::kTrue);
     }
 
-    constexpr tribool operator&&(tribool rhs) const noexcept {
-        if (mValue == False || rhs.mValue == False) return False;
-        if (mValue == True) return rhs;
-        return Indeterminate;
+    constexpr tribool operator&&(tribool const rhs) const noexcept {
+        if (mValue == Value::kFalse || rhs.mValue == Value::kFalse) return Value::kFalse;
+        if (mValue == Value::kTrue) return rhs;
+        return Value::kIndeterminate;
     }
 
-    constexpr tribool operator||(tribool rhs) const noexcept {
-        if (mValue == True || rhs.mValue == True) return True;
-        if (mValue == False) return rhs;
-        return Indeterminate;
+    constexpr tribool operator||(tribool const rhs) const noexcept {
+        if (mValue == Value::kTrue || rhs.mValue == Value::kTrue) return Value::kTrue;
+        if (mValue == Value::kFalse) return rhs;
+        return Value::kIndeterminate;
     }
 
-    constexpr bool operator==(tribool rhs) const noexcept { return mValue == rhs.mValue; }
-    constexpr bool operator!=(tribool rhs) const noexcept { return mValue != rhs.mValue; }
+    constexpr bool operator==(tribool const rhs) const noexcept { return mValue == rhs.mValue; }
+    constexpr bool operator!=(tribool const rhs) const noexcept { return mValue != rhs.mValue; }
 
 private:
-    value_t mValue;
+    Value mValue;
 };
 
 } // namespace utils

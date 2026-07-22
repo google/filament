@@ -30,6 +30,7 @@ import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute
+import com.google.android.filament.android.ChoreographerHelper
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
@@ -55,8 +56,6 @@ class MainActivity : Activity() {
     private lateinit var uiHelper: UiHelper
     // DisplayHelper is provided by Filament to manage the display
     private lateinit var displayHelper: DisplayHelper
-    // Choreographer is used to schedule new frames
-    private lateinit var choreographer: Choreographer
 
     // Engine creates and destroys Filament resources
     // Each engine must be accessed from a single thread of your choosing
@@ -92,7 +91,6 @@ class MainActivity : Activity() {
         surfaceView = SurfaceView(this)
         setContentView(surfaceView)
 
-        choreographer = Choreographer.getInstance()
 
         displayHelper = DisplayHelper(this)
 
@@ -120,6 +118,7 @@ class MainActivity : Activity() {
             .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
             .build()
         renderer = engine.createRenderer()
+        frameScheduler.setRenderer(renderer)
         scene = engine.createScene()
         view = engine.createView()
         camera = engine.createCamera(engine.entityManager.create())
@@ -262,13 +261,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        choreographer.postFrameCallback(frameScheduler)
+        frameScheduler.post()
         animator.start()
     }
 
     override fun onPause() {
         super.onPause()
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel()
     }
 
@@ -276,7 +275,7 @@ class MainActivity : Activity() {
         super.onDestroy()
 
         // Stop the animation and any pending frame
-        choreographer.removeFrameCallback(frameScheduler)
+        frameScheduler.remove()
         animator.cancel();
 
         // Always detach the surface before destroying the engine
@@ -303,11 +302,8 @@ class MainActivity : Activity() {
         engine.destroy()
     }
 
-    inner class FrameCallback : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            // Schedule the next frame
-            choreographer.postFrameCallback(this)
-
+    inner class FrameCallback : ChoreographerHelper() {
+        override fun onFrame(frameTimeNanos: Long) {
             // This check guarantees that we have a swap chain
             if (uiHelper.isReadyToRender) {
                 // If beginFrame() returns false you should skip the frame

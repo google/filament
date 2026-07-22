@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <gltfio/Animator.h>
-#include <gltfio/math.h>
-
+#include "downcast.h"
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "FTrsTransformManager.h"
-#include "downcast.h"
 
-#include <filament/VertexBuffer.h>
+#include <gltfio/Animator.h>
+#include <gltfio/math.h>
+
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/Log.h>
 
@@ -53,6 +53,7 @@ struct Sampler {
     TimeValues times;
     SourceValues values;
     enum { LINEAR, STEP, CUBIC } interpolation;
+    size_t inputCount = 0;
 };
 
 struct Channel {
@@ -102,6 +103,12 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     }
     for (size_t i = 0, len = timelineAccessor->count; i < len; ++i) {
         dst.times[timelineFloats[i]] = i;
+    }   
+    dst.inputCount = timelineAccessor->count;
+    if (UTILS_UNLIKELY(dst.times.size() != dst.inputCount)) {
+        GLTFIO_WARN("Animation sampler has duplicate timestamps; animation disabled.");
+        dst.times.clear();
+        return;
     }
 
     // Convert source data to float.
@@ -160,7 +167,40 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
     }
 }
 
+static bool accessorFitsView(const cgltf_accessor* accessor) {
+    const cgltf_buffer_view* view = accessor->buffer_view;
+    if (!view || accessor->is_sparse || accessor->count == 0) {
+        return false;
+    }
+    const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+    const cgltf_size stride = accessor->stride ? accessor->stride : elementSize;
+    if (elementSize == 0 || stride == 0 || accessor->offset > view->size) {
+        return false;
+    }
+    const cgltf_size available = view->size - accessor->offset;
+    if (elementSize > available) {
+        return false;
+    }
+    return accessor->count <= (available - elementSize) / stride + 1;
+}
+
+static bool validateSampler(const cgltf_animation_sampler& sampler) {
+    if (!sampler.input || !sampler.output) {
+        return false;
+    }
+    if (sampler.input->type != cgltf_type_scalar ||
+            sampler.input->component_type != cgltf_component_type_r_32f) {
+        return false;
+    }
+    return accessorFitsView(sampler.input) && accessorFitsView(sampler.output);
+}
+
 static bool validateAnimation(const cgltf_animation& anim) {
+    for (cgltf_size j = 0; j < anim.samplers_count; ++j) {
+        if (!validateSampler(anim.samplers[j])) {
+            return false;
+        }
+    }
     for (cgltf_size j = 0; j < anim.channels_count; ++j) {
         const cgltf_animation_channel& channel = anim.channels[j];
         const cgltf_animation_sampler* sampler = channel.sampler;
@@ -177,8 +217,32 @@ static bool validateAnimation(const cgltf_animation& anim) {
             }
             components = channel.target_node->mesh->primitives[0].targets_count;
         }
+        cgltf_type expectedType;
+        switch (channel.target_path) {
+            case cgltf_animation_path_type_translation:
+            case cgltf_animation_path_type_scale:
+                expectedType = cgltf_type_vec3;
+                break;
+            case cgltf_animation_path_type_rotation:
+                expectedType = cgltf_type_vec4;
+                break;
+            case cgltf_animation_path_type_weights:
+                expectedType = cgltf_type_scalar;
+                break;
+            case cgltf_animation_path_type_invalid:
+            case cgltf_animation_path_type_max_enum:
+                return false;
+        }
+        if (sampler->output->type != expectedType) {
+            return false;
+        }
+
         cgltf_size values = sampler->interpolation == cgltf_interpolation_type_cubic_spline ? 3 : 1;
-        if (sampler->input->count * components * values != sampler->output->count) {
+        if (components == 0 || sampler->output->count % values != 0) {
+            return false;
+        }
+        cgltf_size outputCount = sampler->output->count / values;
+        if (outputCount % components != 0 || outputCount / components != sampler->input->count) {
             return false;
         }
     }
@@ -263,6 +327,9 @@ size_t Animator::getAnimationCount() const {
 }
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
+    if (animationIndex >= mImpl->animations.size()) {
+        return;
+    }
     const Animation& anim = mImpl->animations[animationIndex];
     time = time == anim.duration ? time : fmod(time, anim.duration);
     TransformManager& transformManager = *mImpl->transformManager;
@@ -437,7 +504,6 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
 void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
         size_t nextIndex) {
     const Sampler* sampler = channel.sourceData;
-    const TimeValues& times = sampler->times;
     TrsTransformManager::Instance trsNode = trsTransformManager->getInstance(channel.targetEntity);
     TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
 
@@ -493,8 +559,8 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
 
         case Channel::WEIGHTS: {
             const float* const samplerValues = sampler->values.data();
-            assert(sampler->values.size() % times.size() == 0);
-            const int valuesPerKeyframe = sampler->values.size() / times.size();
+            assert(sampler->values.size() % sampler->inputCount == 0);
+            const int valuesPerKeyframe = (int)(sampler->values.size() / sampler->inputCount);
 
             if (sampler->interpolation == Sampler::CUBIC) {
                 assert(valuesPerKeyframe % 3 == 0);

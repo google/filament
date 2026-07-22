@@ -97,6 +97,8 @@ option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
 
 option(FILAMENT_BUILD_TESTING "Build tests" ON)
 
+option(FILAMENT_DEBUG_MUTEX "Enable utils::Mutex lock order and deadlock debugging" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -139,6 +141,10 @@ endif()
 
 if (NOT FILAMENT_ENABLE_RTTI)
     add_compile_options(-fno-rtti)
+endif()
+
+if (FILAMENT_DEBUG_MUTEX)
+    add_compile_definitions(FILAMENT_DEBUG_MUTEX)
 endif()
 
 # ==================================================================================================
@@ -988,12 +994,13 @@ if (WASM)
     add_subdirectory(web/examples)
 endif()
 
+if (IS_HOST_PLATFORM OR ANDROID)
+   add_subdirectory(${LIBRARIES}/filamentapp)
+endif()
+
 if (IS_HOST_PLATFORM)
     if (FILAMENT_SUPPORTS_OPENGL)
         add_subdirectory(${LIBRARIES}/bluegl)
-    endif()
-    if (NOT FILAMENT_SKIP_SDL2)
-      add_subdirectory(${LIBRARIES}/filamentapp)
     endif()
     add_subdirectory(${LIBRARIES}/imageio)
     add_subdirectory(${LIBRARIES}/filament-matp)

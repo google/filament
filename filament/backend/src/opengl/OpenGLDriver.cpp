@@ -44,6 +44,7 @@
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <private/utils/FeatureFlagManager.h>
 #include <private/utils/Tracing.h>
 
 #include <utils/BitmaskEnum.h>
@@ -287,15 +288,20 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
+        const Platform::DriverConfig& driverConfig) noexcept
         : OpenGLDriverBase(driverConfig),
           mPlatform(*platform),
           mContext(mPlatform, driverConfig),
           mShaderCompilerService(*this),
-          mHandleAllocator("Handles",
-                  driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck,
-                  driverConfig.disableHeapHandleTags),
+          mHandleAllocator("Handles", driverConfig.handleArenaSize,
+                  (driverConfig.featureFlagManager
+                                  ? driverConfig.featureFlagManager->features.backend
+                                            .disable_handle_use_after_free_check
+                                  : false),
+                  (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features
+                                                             .backend.disable_heap_handle_tags
+                                                   : false)),
           mCurrentPushConstants(new(std::nothrow) PushConstantBundle{}) {
     // set a reasonable default value for our stream array
     mTexturesWithStreamsAttached.reserve(8);
@@ -404,12 +410,13 @@ void OpenGLDriver::terminate() {
     if (getJobWorker()) {
         getJobWorker()->terminate();
     }
-    // wait for the GPU again because JobWorker might have queued more work.
-    glFinish();
-
     if constexpr (UTILS_HAS_THREADING) {
+        // Flush any callbacks the drained jobs posted via scheduleCallback().
         stopServiceThread();
     }
+
+    // wait for the GPU again because JobWorker might have queued more work.
+    glFinish();
 
     mContext.destroyState(mBackendState);
     mBackendState = nullptr;
@@ -2469,6 +2476,22 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     }
 }
 
+void OpenGLDriver::setFrameRate(Handle<HwSwapChain> sch, float const frameRate,
+        Platform::FrameRateCompatibility const compatibility,
+        Platform::ChangeFrameRateStrategy const strategy) {
+    DEBUG_MARKER()
+
+    if (sch) {
+        GLSwapChain const* const sc = handle_cast<GLSwapChain*>(sch);
+        if (sc && sc->swapChain) {
+            int const err = mPlatform.setFrameRate(sc->swapChain, frameRate, compatibility, strategy);
+            if (err < 0) {
+                LOG(WARNING) << "Platform::setFrameRate returned an error: " << err;
+            }
+        }
+    }
+}
+
 void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
     DEBUG_MARKER()
 
@@ -2991,6 +3014,7 @@ bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
 
+
 bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
@@ -3016,7 +3040,9 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
     // GL-specific. It would also be nice to inform the engine that they're working with this fake
     // amortized system, but this fact will become implicit when we generalize this feature for all
     // backends.
-    if (getDriverConfig().disableAmortizedShaderCompile) {
+    auto featureFlagManager = getDriverConfig().featureFlagManager;
+    if (featureFlagManager &&
+            featureFlagManager->features.backend.disable_amortized_shader_compile) {
         return mShaderCompilerService.isParallelShaderCompileSupported();
     }
     return true;

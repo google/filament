@@ -173,7 +173,7 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
             fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
             VkDeviceMemory memory, VkFormat format, VkSamplerYcbcrConversion conversion,
             VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
-            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            uint8_t levels, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage tusage, VulkanStagePool& stagePool);
 
     // Constructor for creating a texture view for wrt specific mip range
@@ -307,7 +307,7 @@ private:
             VkComponentMapping swizzle);
 
     void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width, uint32_t height,
-            uint32_t depth, uint32_t miplevel);
+            uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
 
     fvkmemory::resource_ptr<VulkanTextureState> mState;
 

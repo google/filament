@@ -42,7 +42,7 @@ TaskHandler::TaskHandler()
 void TaskHandler::post(WorkloadFunc&& workload, OnCompleteFunc&& oncomplete) {
     assert_invariant(!mShouldStop);
     {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        utils::UniqueLock lock(mTaskQueueMutex);
         mTaskQueue.push(std::make_pair(std::move(workload), std::move(oncomplete)));
     }
     mHasTaskCondition.notify_one();
@@ -51,25 +51,25 @@ void TaskHandler::post(WorkloadFunc&& workload, OnCompleteFunc&& oncomplete) {
 void TaskHandler::drain() {
     assert_invariant(!mShouldStop);
 
-    std::mutex syncPointMutex;
-    std::condition_variable syncCondition;
+    utils::Mutex syncPointMutex;
+    utils::Condition syncCondition;
     bool done = false;
     post([] {},
             [&syncPointMutex, &syncCondition, &done] {
                 {
-                    std::unique_lock<std::mutex> lock(syncPointMutex);
+                    utils::UniqueLock lock(syncPointMutex);
                     done = true;
                     syncCondition.notify_one();
                 }
             });
 
-    std::unique_lock<std::mutex> lock(syncPointMutex);
+    utils::UniqueLock lock(syncPointMutex);
     syncCondition.wait(lock, [&done] { return done; });
 }
 
 void TaskHandler::shutdown() {
     {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        utils::UniqueLock lock(mTaskQueueMutex);
         mShouldStop = true;
     }
     mHasTaskCondition.notify_one();
@@ -80,7 +80,7 @@ void TaskHandler::shutdown() {
 
 void TaskHandler::loop() {
     while (true) {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        utils::UniqueLock lock(mTaskQueueMutex);
         mHasTaskCondition.wait(lock, [this] { return !mTaskQueue.empty() || mShouldStop; });
         if (mShouldStop) {
             break;
@@ -94,7 +94,7 @@ void TaskHandler::loop() {
 
     // Clean-up: we still need to call oncomplete for clients to do clean-up.
     while (true) {
-        std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+        utils::UniqueLock lock(mTaskQueueMutex);
         if (mTaskQueue.empty()) {
             break;
         }

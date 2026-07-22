@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "sca/ASTHelpers.h"
 #include "sca/GLSLTools.h"
+
 #include "shaders/ShaderGenerator.h"
 
 #include <filamat/Enums.h>
@@ -25,6 +24,8 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 
@@ -51,7 +52,8 @@ std::string shaderWithAllProperties(const ShaderStage type,
         const std::string& vertexCode = "",
         const MaterialBuilder::Shading shadingModel = MaterialBuilder::Shading::LIT,
         const MaterialBuilder::RefractionMode refractionMode = MaterialBuilder::RefractionMode::NONE,
-        const MaterialBuilder::VertexDomain vertexDomain = MaterialBuilder::VertexDomain::OBJECT) {
+        const MaterialBuilder::VertexDomain vertexDomain = MaterialBuilder::VertexDomain::OBJECT,
+        const uint32_t targetApiLevel = filament::UNSTABLE_MATERIAL_API_LEVEL) {
 
     MaterialBuilder builder;
     builder.material(fragmentCode.c_str());
@@ -61,6 +63,7 @@ std::string shaderWithAllProperties(const ShaderStage type,
     builder.shading(shadingModel);
     builder.refractionMode(refractionMode);
     builder.vertexDomain(vertexDomain);
+    builder.setApiLevel(targetApiLevel);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -202,6 +205,30 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+    )");
+    std::string vertexCode(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpacePosition = vec4(2.0);
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode,
+            vertexCode, MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
+            MaterialBuilder::VertexDomain::DEVICE, filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[size_t(MaterialBuilder::Property::CLIP_SPACE_POSITION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 

@@ -496,15 +496,20 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         }
 
         if (strstr(vendor, "Mesa")) {
+            // Seen on
+            //  [Mesa],
+            //  [Intel(R) HD Graphics 505 (APL 3)],
+            //  [GLES 3.2 Mesa 23.1.9],
+            //  [3.20]
+            // and
+            //  [Mesa]
+            //  [llvmpipe (LLVM 17.0.6, 256 bits)],
+            //  [4.5 (Core Profile) Mesa 24.0.6-1],
+            //  [4.50]
+            // not known which version are affected
+            bugs->rebind_buffer_after_deletion = true;
+            
             if (strstr(renderer, "llvmpipe")) {
-                // Seen on
-                //  [Mesa],
-                //  [llvmpipe (LLVM 17.0.6, 256 bits)],
-                //  [4.5 (Core Profile) Mesa 24.0.6-1],
-                //  [4.50]
-                // not known which version are affected
-                bugs->rebind_buffer_after_deletion = true;
-
                 // Seen on
                 // [Mesa]
                 // [llvmpipe (LLVM 17.0.6, 256 bits)]

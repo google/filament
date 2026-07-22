@@ -19,12 +19,15 @@ package com.google.android.filament.utils
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
+import androidx.annotation.RequiresApi
 import com.google.android.filament.*
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FramePacer
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
@@ -72,6 +75,19 @@ class ModelViewer(
     var animator: Animator? = null
         private set
 
+    /**
+     * If true, ModelViewer automatically calculates the elapsed time using the
+     * FramePacer and updates the animation.
+     */
+    var autoPlayAnimations = true
+
+    /**
+     * The index of the active animation to auto-play.
+     */
+    var activeAnimationIndex = 0
+
+    private var animationStartTimeNanos: Long = 0L
+
     @Suppress("unused")
     val progress
         get() = resourceLoader.asyncGetLoadProgress()
@@ -100,7 +116,15 @@ class ModelViewer(
     val view: View
     val camera: Camera
     val renderer: Renderer
+    val framePacer: FramePacer
     @Entity val light: Int
+
+    val vsyncPeriodNanos: Long
+        get() = if (this::displayHelper.isInitialized) {
+            displayHelper.display?.let { DisplayHelper.getRefreshPeriodNanos(it) } ?: 16666666L
+        } else {
+            16666666L
+        }
 
     var indirectLightCubemap: Texture? = null
     var skyboxCubemap: Texture? = null
@@ -113,7 +137,8 @@ class ModelViewer(
 
     private var fetchResourcesJob: Job? = null
 
-    private var swapChain: SwapChain? = null
+    var swapChain: SwapChain? = null
+        private set
     private var assetLoader: AssetLoader
     private var materialProvider: MaterialProvider
     private var resourceLoader: ResourceLoader
@@ -132,6 +157,10 @@ class ModelViewer(
         view = engine.createView()
         view.scene = scene
         view.camera = camera
+        framePacer = FramePacer.Builder()
+                .targetFrameRate(60.0f)
+                .latencyNanos(42_000_000L)
+                .build(engine)
 
         materialProvider = UbershaderProvider(engine)
         assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
@@ -289,6 +318,7 @@ class ModelViewer(
             }
             it.updateBoneMatrices()
         }
+        animationStartTimeNanos = 0L
 
         // 4. Re-apply the unit cube transform to clear custom scaling/translation
         clearRootTransform()
@@ -307,6 +337,7 @@ class ModelViewer(
             assetLoader.destroyAsset(asset)
             this.asset = null
             this.animator = null
+            this.animationStartTimeNanos = 0L
         }
     }
 
@@ -320,9 +351,107 @@ class ModelViewer(
         if (!uiHelper.isReadyToRender) {
             return false
         }
+        if (framePacer.setupFrame(frameTimeNanos, vsyncPeriodNanos) != FramePacer.FrameStatus.ACCEPTED) {
+            return false
+        }
+        if (framePacer.hasGpuFallenBehind(renderer)) {
+            renderer.skipFrame(frameTimeNanos)
+            return false
+        }
+        if (framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STUFFED) {
+            /*
+             * DISPLAY_STUFFED indicates that our presentation timeline is currently bloated 1 frame
+             * further into the future than our ideal latency target due to an earlier slipped frame.
+             *
+             * For a simple viewer like ModelViewer where animations directly track expected presentation time,
+             * we intentionally skip this CPU render tick so SurfaceFlinger can drain the extra pre-buffered
+             * frame and instantly drop our queue depth back down to minimum latency (STEADY).
+             *
+             * Note for production engines: If an application has its own decoupled simulation/animation pacer,
+             * instead of jumping or hitching on a skip, it can time-dilate its animation clock across
+             * subsequent frames to absorb the catch-up smoothly over several intervals. Alternatively, if
+             * preserving 100% frame cadence is more important than minimum latency, an application may
+             * ignore DISPLAY_STUFFED and continue rendering to let Relative Presentation Pacing absorb the slip.
+             */
+            framePacer.resetPacing()
+            return false
+        }
+        var rendered = updateAnimationAndRender(frameTimeNanos)
+        if (rendered && framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STARVING) {
+            if (framePacer.setupExtraFrame()) {
+                updateAnimationAndRender(frameTimeNanos)
+            }
+        }
+        return rendered
+    }
+
+    /**
+     * Renders the model and updates the Filament camera using Android 13+ FrameData.
+     *
+     * @param frameData VSYNC telemetry object received in a {@link android.view.Choreographer.VsyncCallback}
+     */
+    @RequiresApi(33)
+    fun render(frameData: Choreographer.FrameData): Boolean {
+        if (!uiHelper.isReadyToRender) {
+            return false
+        }
+        if (framePacer.setupFrame(frameData, vsyncPeriodNanos) != FramePacer.FrameStatus.ACCEPTED) {
+            return false
+        }
+        if (framePacer.hasGpuFallenBehind(renderer)) {
+            renderer.skipFrame(frameData.frameTimeNanos)
+            return false
+        }
+        if (framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STUFFED) {
+            /*
+             * DISPLAY_STUFFED indicates that our presentation timeline is currently bloated 1 frame
+             * further into the future than our ideal latency target due to an earlier slipped frame.
+             *
+             * For a simple viewer like ModelViewer where animations directly track expected presentation time,
+             * we intentionally skip this CPU render tick so SurfaceFlinger can drain the extra pre-buffered
+             * frame and instantly drop our queue depth back down to minimum latency (STEADY).
+             *
+             * Note for production engines: If an application has its own decoupled simulation/animation pacer,
+             * instead of jumping or hitching on a skip, it can time-dilate its animation clock across
+             * subsequent frames to absorb the catch-up smoothly over several intervals. Alternatively, if
+             * preserving 100% frame cadence is more important than minimum latency, an application may
+             * ignore DISPLAY_STUFFED and continue rendering to let Relative Presentation Pacing absorb the slip.
+             */
+            framePacer.resetPacing()
+            return false
+        }
+        var rendered = updateAnimationAndRender(frameData.frameTimeNanos)
+        if (rendered && framePacer.pacingStatus == FramePacer.PacingStatus.DISPLAY_STARVING) {
+            if (framePacer.setupExtraFrame()) {
+                updateAnimationAndRender(frameData.frameTimeNanos)
+            }
+        }
+        return rendered
+    }
+
+    private fun updateAnimationAndRender(frameTimeNanos: Long): Boolean {
+        if (autoPlayAnimations) {
+            animator?.let {
+                if (it.animationCount > 0) {
+                    val presentationTime = framePacer.expectedPresentationTimeNanos
+                    if (animationStartTimeNanos == 0L) {
+                        animationStartTimeNanos = presentationTime
+                    }
+                    val elapsedTimeSeconds = (presentationTime - animationStartTimeNanos).toDouble() / 1_000_000_000
+                    it.applyAnimation(activeAnimationIndex, elapsedTimeSeconds.toFloat())
+                    it.updateBoneMatrices()
+                }
+            }
+        }
+        return doRender(frameTimeNanos)
+    }
+
+    private fun doRender(frameTimeNanos: Long): Boolean {
 
         // Allow the resource loader to finalize textures that have become ready.
         resourceLoader.asyncUpdateLoad()
+
+        assetLoader.gc()
 
         // Add renderable entities to the scene as they become ready.
         asset?.let { populateScene(it) }
@@ -336,7 +465,10 @@ class ModelViewer(
                 upward[0], upward[1], upward[2])
         }
 
-        // Render the scene, unless the renderer wants to skip the frame.
+        // Apply presentation time before beginning frame.
+        framePacer.applyPresentationTime(renderer)
+
+        // Render the scene.
         var rendered = false
         if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
             rendered = true
@@ -409,6 +541,7 @@ class ModelViewer(
         materialProvider.destroyMaterials()
         materialProvider.destroy()
         resourceLoader.destroy()
+        framePacer.destroy(engine)
 
         if (indirectLightCubemap != null) {
             engine.destroyTexture(indirectLightCubemap!!)

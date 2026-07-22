@@ -84,6 +84,11 @@ public:
     bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
             FrameTimestamps* outFrameTimestamps) const noexcept override;
 
+    utils::tribool isFrameRateChangeSupported(void* nativeWindow) const noexcept override;
+    int setFrameRate(SwapChain const* swapchain, float frameRate,
+            FrameRateCompatibility compatibility,
+            ChangeFrameRateStrategy strategy) noexcept override;
+
 protected:
     ExtensionSet getSwapchainInstanceExtensions() const override;
 
@@ -94,8 +99,6 @@ protected:
     VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
 
 private:
-    struct AndroidDetails;
-
     struct ExternalImageVulkanAndroid : public ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
         bool sRGB = false;
@@ -104,7 +107,6 @@ private:
         ~ExternalImageVulkanAndroid() override;
     };
 
-    AndroidDetails& mAndroidDetails;
     int mOSVersion{};
 };
 

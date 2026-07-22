@@ -1,0 +1,12 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) buffer O { float outb[]; };
+layout(std430,binding=1) readonly buffer S { uint src[]; };
+layout(push_constant) uniform PC { uint n,outCh,cdst,stype; } p;
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; float v;
+  if(p.stype==2u) v=uintBitsToFloat(src[i]);
+  else if(p.stype==1u){ uint w=src[i>>1]; vec2 h=unpackHalf2x16(w); v=((i&1u)==1u)?h.y:h.x; }
+  else v=float(src[i]);
+  outb[i*p.outCh+p.cdst]=v;
+}

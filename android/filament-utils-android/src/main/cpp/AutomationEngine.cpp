@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <viewer/AutomationEngine.h>
+
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::viewer;
@@ -190,12 +190,14 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     const jfieldID skyboxEnabled = env->GetFieldID(klass, "skyboxEnabled", "Z");
     const jfieldID autoScaleEnabled = env->GetFieldID(klass, "autoScaleEnabled", "Z");
     const jfieldID autoInstancingEnabled = env->GetFieldID(klass, "autoInstancingEnabled", "Z");
+    const jfieldID cameraFrameRate = env->GetFieldID(klass, "cameraFrameRate", "F");
 
     env->SetFloatField(result, groundShadowStrength, options.groundShadowStrength);
     env->SetBooleanField(result, groundPlaneEnabled, options.groundPlaneEnabled);
     env->SetBooleanField(result, skyboxEnabled, options.skyboxEnabled);
     env->SetBooleanField(result, autoScaleEnabled, options.autoScaleEnabled);
     env->SetBooleanField(result, autoInstancingEnabled, options.autoInstancingEnabled);
+    env->SetFloatField(result, cameraFrameRate, options.cameraFrameRate);
 }
 
 extern "C" JNIEXPORT void JNICALL

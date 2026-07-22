@@ -23,6 +23,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
+#include <backend/Platform.h>
 #include <backend/TargetBufferInfo.h>
 #include <backend/AcquiredImage.h>
 

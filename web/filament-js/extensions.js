@@ -60,12 +60,25 @@ Filament.shadowOptions = function(overrides) {
         shadowNearHint: 1.0,
         shadowFarHint: 100.0,
         stable: false,
+        lispsm: true,
         polygonOffsetConstant: 0.5,
         polygonOffsetSlope: 2.0,
         screenSpaceContactShadows: false,
         stepCount: 8,
-        maxShadowDistance: 0.3
+        maxShadowDistance: 0.3,
+        shadowBulbRadius: 0.02,
+        penumbraScale: 1.0,
+        penumbraRatioScale: 1.0,
+        maxPenumbraRatio: 0.0,
+        maxSearchRadius: 0.0,
+        cascadeSplitPositions: [0.125, 0.25, 0.50],
+        vsm: { elvsm: false, blurWidth: 0.0 },
+        transform: [0, 0, 0, 1]
     };
+    if (overrides && overrides.vsm) {
+        overrides = Object.assign({}, overrides,
+                { vsm: Object.assign({}, options.vsm, overrides.vsm) });
+    }
     return Object.assign(options, overrides);
 };
 
@@ -369,6 +382,45 @@ Filament.loadClassExtensions = function() {
         this._setStereoscopicOptions(options);
     }
 
+    /// setVsmShadowOptions ::method::
+    Filament.View.prototype.setVsmShadowOptions = function(overrides) {
+        const options = this.setVsmShadowOptionsDefaults(overrides);
+        this._setVsmShadowOptions(options);
+    };
+
+    /// setSoftShadowOptions ::method::
+    Filament.View.prototype.setSoftShadowOptions = function(overrides) {
+        const options = this.setSoftShadowOptionsDefaults(overrides);
+        this._setSoftShadowOptions(options);
+    };
+
+    /// Fence ::core class::
+
+    /// wait ::method:: Queries or waits on the fence. WebGL cannot block the main thread, so
+    /// the default timeout of 0 simply queries the current status of the fence.
+    /// mode ::argument:: optional [Fence$Mode]
+    /// timeout ::argument:: optional timeout in nanoseconds
+    /// ::retval:: [FenceStatus]
+    Filament.Fence.prototype.wait = function(mode, timeout = 0) {
+        if (mode === undefined) {
+            mode = Filament.Fence$Mode.FLUSH;
+        }
+        return this._wait(mode, timeout);
+    };
+
+    /// Renderer ::core class::
+
+    /// readPixels ::method:: Asynchronously reads back the content of the swap chain (or of a
+    /// [RenderTarget], when one is passed as the leading argument).
+    /// x, y, width, height ::argument:: the region to read back, in viewport coordinates
+    /// format ::argument:: [PixelDataFormat]
+    /// type ::argument:: [PixelDataType]
+    /// callback ::argument:: called with a Uint8Array view over the pixel data; the view is
+    /// only valid for the duration of the callback, copy it to retain the data.
+    Filament.Renderer.prototype.readPixels = function(...args) {
+        this._readPixels(...args);
+    };
+
     /// BufferObject ::core class::
 
     /// setBuffer ::method::
@@ -425,6 +477,8 @@ Filament.loadClassExtensions = function() {
     Filament.Texture$Builder.prototype.build =
     Filament.IndirectLight$Builder.prototype.build =
     Filament.Skybox$Builder.prototype.build =
+    Filament.SkinningBuffer$Builder.prototype.build =
+    Filament.MorphTargetBuffer$Builder.prototype.build =
         function(engine) {
             const result = this._build(engine);
             this.delete();
@@ -450,11 +504,6 @@ Filament.loadClassExtensions = function() {
         pbd.delete();
     }
 
-    Filament.Texture.prototype.setImageCube = function(engine, level, pbd) {
-        this._setImageCube(engine, level, pbd);
-        pbd.delete();
-    }
-
     Filament.Texture.prototype.getWidth = function(engine, level = 0) {
         return this._getWidth(engine, level);
     }
@@ -476,6 +525,13 @@ Filament.loadClassExtensions = function() {
         this.norPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.norPointer);
         this._normals(this.norPointer, stride);
+    };
+
+    Filament.SurfaceOrientation$Builder.prototype.tangents = function(buffer, stride = 0) {
+        buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.tanPointer = Filament._malloc(buffer.byteLength);
+        Filament.HEAPU8.set(buffer, this.tanPointer);
+        this._tangents(this.tanPointer, stride);
     };
 
     Filament.SurfaceOrientation$Builder.prototype.uvs = function(buffer, stride = 0) {
@@ -510,6 +566,7 @@ Filament.loadClassExtensions = function() {
         const result = this._build();
         this.delete();
         if ('norPointer' in this) Filament._free(this.norPointer);
+        if ('tanPointer' in this) Filament._free(this.tanPointer);
         if ('uvsPointer' in this) Filament._free(this.uvsPointer);
         if ('posPointer' in this) Filament._free(this.posPointer);
         if ('t16Pointer' in this) Filament._free(this.t16Pointer);
@@ -697,8 +754,16 @@ Filament.loadClassExtensions = function() {
         return Filament.vectorToArray(this._getAssetInstances());
     }
 
+    Filament.gltfio$FilamentAsset.prototype.getMorphTargetNames = function(entity) {
+        return Filament.vectorToArray(this._getMorphTargetNames(entity));
+    }
+
     Filament.gltfio$FilamentInstance.prototype.getMaterialVariantNames = function() {
         return Filament.vectorToArray(this._getMaterialVariantNames());
+    }
+
+    Filament.gltfio$FilamentInstance.prototype.getJointsAt = function(skinIndex) {
+        return Filament.vectorToArray(this._getJointsAt(skinIndex));
     }
 
     /// Camutils$Manipulator ::class::

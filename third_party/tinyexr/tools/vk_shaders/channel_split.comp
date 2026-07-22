@@ -1,0 +1,13 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) readonly buffer B { uint block[]; };
+layout(std430,binding=1) writeonly buffer D { uint dst[]; };
+layout(push_constant) uniform PC { uint srcOff,sStride,rowLen,rows; } p;
+uint gb(uint i){ return (block[i>>2] >> ((i&3u)*8u)) & 0xffu; }
+void main(){
+  uint w=gl_GlobalInvocationID.x; uint total=p.rowLen*p.rows; uint nwords=(total+3u)>>2; if(w>=nwords) return;
+  uint outw=0u;
+  for(uint t=0u;t<4u;t++){ uint j=w*4u+t; if(j>=total) break;
+    uint r=j/p.rowLen, k=j%p.rowLen; uint b=gb(p.srcOff + r*p.sStride + k); outw|=(b<<(t*8u)); }
+  dst[w]=outw;
+}

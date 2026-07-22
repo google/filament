@@ -70,14 +70,16 @@ public:
         smallTriangle.updateVertices(vertices);
         TrianglePrimitive triangle(api);
 
-        // Step 1: Clear the stencil buffer to all zeroes and the color buffer to blue.
+        // Step 1: Clear the stencil buffer to all zeroes, depth to 1, and the color buffer to blue.
         // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
         RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
+        params.flags.clear =
+                TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH | TargetBufferFlags::STENCIL;
         params.viewport = { 0, 0, static_cast<uint32_t>(screenWidth()),
             static_cast<uint32_t>(screenHeight()) };
         params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
         params.clearStencil = 0u;
+        params.clearDepth = 1.0;
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 

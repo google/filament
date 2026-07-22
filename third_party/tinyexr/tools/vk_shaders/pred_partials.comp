@@ -1,0 +1,12 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) readonly buffer S { uint inb[]; };
+layout(std430,binding=1) buffer P { uint partials[]; };
+layout(push_constant) uniform PC { uint n,tile,nblk; } p;
+uint gb(uint i){ return (inb[i>>2] >> ((i&3u)*8u)) & 0xffu; }
+void main(){
+  uint blk=gl_GlobalInvocationID.x; if(blk>=p.nblk) return;
+  uint s=blk*p.tile; uint e=min(s+p.tile,p.n); int acc=0;
+  for(uint i=s;i<e;i++){ int q=(i==0u)?int(gb(0u)):(int(gb(i))-128); acc=(acc+q)&0xff; }
+  partials[blk]=uint(acc);
+}

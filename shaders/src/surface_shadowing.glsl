@@ -14,7 +14,10 @@
 highp vec4 computeLightSpacePosition(highp vec3 p, const highp vec3 n,
         const highp vec3 dir, const highp vec2 b, highp_mat4 lightFromWorldMatrix) {
 
-#if !defined(VARIANT_HAS_VSM)
+    // FIXME: it's unfortunatelly illegal to use defined(HAS_VSM_VARIANT) here because it only means
+    //   "sampler2DArray" in the STANDARD variants, it doesn't actually mean "moments".
+    //   Beause of that the normal bias calculation is performed with a bias of 0.
+
     // --------------------------------------------------------------------------------------
     // Anisotropic Normal Bias for Shadow Mapping
     // --------------------------------------------------------------------------------------
@@ -45,19 +48,11 @@ highp vec4 computeLightSpacePosition(highp vec3 p, const highp vec3 n,
     //      - It is superior to `length()` which assumes an ellipse and under-biases the corners.
     // --------------------------------------------------------------------------------------
 
-    // Extract the first row (Light's Right vector in World Space)
-    highp vec3 L_right = vec3(lightFromWorldMatrix[0][0], lightFromWorldMatrix[1][0], lightFromWorldMatrix[2][0]);
-
-    // Extract the second row (Light's Up vector in World Space)
-    highp vec3 L_up    = vec3(lightFromWorldMatrix[0][1], lightFromWorldMatrix[1][1], lightFromWorldMatrix[2][1]);
-
     // Project the world normal onto the shadow map's 2D grid
-    highp float n_Lx = dot(n, L_right);
-    highp float n_Ly = dot(n, L_up);
+    highp vec2 n_L = mat3x2(lightFromWorldMatrix) * n;
 
     // Apply the anisotropic normal bias
-    p += n * (abs(n_Lx * b.x) + abs(n_Ly * b.y));
-#endif
+    p += n * (abs(n_L.x * b.x) + abs(n_L.y * b.y));
 
     return mulMat4x4Float3(lightFromWorldMatrix, p);
 }

@@ -73,15 +73,17 @@ struct FrameInfoImpl : public details::FrameInfo {
     // vsync time
     time_point vsync{};
     // Actual presentation time of this frame
-    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
+    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::INVALID };
     // deadline for queuing a frame [ns]
-    CompositorTiming::time_point_ns presentDeadlineLatency{ FrameTimestamps::INVALID };
+    CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
     // display refresh rate [ns]
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
     CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
     // system's expected present latency from vsync [ns]
     CompositorTiming::duration_ns expectedPresentLatency{ FrameTimestamps::INVALID };
+    // main thread callback schedule time
+    time_point frameScheduleTime{};
 
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
@@ -285,7 +287,11 @@ public:
 
     // call this immediately after "make current"
     void beginFrame(FSwapChain* swapChain, backend::DriverApi& driver,
-            Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
+            Config const& config, uint32_t frameId,
+            std::chrono::steady_clock::time_point vsync,
+            std::chrono::steady_clock::time_point presentDeadline,
+            std::chrono::steady_clock::time_point expectedPresent,
+            std::chrono::steady_clock::time_point frameScheduleTime = {}) noexcept;
 
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;
@@ -299,6 +305,20 @@ public:
 
     utils::FixedCapacityVector<Renderer::FrameInfo>
             getFrameInfoHistory(size_t historySize = MAX_FRAMETIME_HISTORY) const;
+
+    /*
+     * Exposes the user frame history directly as a Slice without copying.
+     * The returned Slice remains valid until the next call to updateUserHistory()
+     * or until this FrameInfoManager is destroyed.
+     */
+    utils::Slice<const Renderer::FrameInfo> getFrameInfoHistorySlice() const noexcept {
+        return mUserFrameHistory;
+    }
+
+    // This is for testing only. Wait until all pending GPU fence metrics are fully processed
+    // by the background job queue. This ensures that the frame history is fully populated
+    // before the test assertions are evaluated.
+    void waitForGpu();
 
 private:
     using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;

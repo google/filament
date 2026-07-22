@@ -23,6 +23,7 @@
 #include <utils/CString.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
+#include <utils/tribool.h>
 
 #include <atomic>
 #include <memory>
@@ -33,6 +34,7 @@
 
 namespace utils {
 class FeatureFlagManager;
+class InternalDebugRegistry;
 }
 
 namespace filament::backend {
@@ -66,6 +68,40 @@ public:
     struct Sync {
     protected:
         ~Sync() = default;
+    };
+
+    /**
+     * Frame rate compatibility mode for setFrameRate().
+     */
+    enum class FrameRateCompatibility : uint8_t {
+        /**
+         * The OS matches the frame rate when the surface is active, but may pick a different
+         * rate to better harmonize with concurrent windows or display power policies.
+         */
+        DEFAULT = 0,
+
+        /**
+         * The surface represents a fixed-rate source (like video). The OS strongly prioritizes
+         * running the display at this exact frame rate regardless of concurrent compositing.
+         */
+        FIXED_SOURCE = 1
+    };
+
+    /**
+     * Frame rate change strategy for setFrameRate().
+     */
+    enum class ChangeFrameRateStrategy : uint8_t {
+        /**
+         * The frame rate transition is applied only if the display controller can perform it
+         * seamlessly without visual glitches or disruptive display mode switch blackouts.
+         */
+        ONLY_IF_SEAMLESS = 0,
+
+        /**
+         * The transition is applied immediately, even if it requires a non-seamless display
+         * mode switch that introduces brief screen interruptions or visual artifacts.
+         */
+        ALWAYS = 1
     };
 
     using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
@@ -129,21 +165,10 @@ public:
         duration_ns compositeInterval;
 
         /**
-         * The time delta [ns] between the start of composition and the next time the compositor will begin composition.
-         * This is effectively the deadline for when the compositor must receive a newly queued frame.
-         */
-        duration_ns compositeDeadlineLatency;
-
-        /**
          * The time delta [ns] between the start of composition and the expected present time of
          * that composition. This can be used to estimate the latency of the actual present time.
          */
         duration_ns compositeToPresentLatency;
-
-        /**
-         * Expected latency [ns] of frame presentation relative to vsync.
-         */
-        duration_ns expectedPresentLatency;
     };
 
     struct FrameTimestamps {
@@ -301,6 +326,11 @@ public:
         utils::FeatureFlagManager const * UTILS_NULLABLE featureFlagManager = nullptr;
 
         /**
+         * Reference to the system's DebugRegistry. Can be nullptr.
+         */
+        utils::InternalDebugRegistry const* UTILS_NULLABLE debugRegistry = nullptr;
+
+        /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.
          */
@@ -308,28 +338,6 @@ public:
 
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
-        /**
-         * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL and Metal backends, and the Vulkan backend
-         * when some experimental features are enabled.
-         */
-        bool disableParallelShaderCompile = false;
-
-        /**
-         * Set to `true` to forcibly disable amortized shader compilation in the backend.
-         * Currently only honored by the GL backend.
-         */
-        bool disableAmortizedShaderCompile = true;
-
-        /**
-         * Disable backend handles use-after-free checks.
-         */
-        bool disableHandleUseAfterFreeCheck = false;
-
-        /**
-         * Disable backend handles tags for heap allocated (fallback) handles
-         */
-        bool disableHeapHandleTags = false;
 
         /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
@@ -348,12 +356,6 @@ public:
          */
         uint8_t stereoscopicEyeCount = 2;
 
-        /**
-         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
-         * This is only supported for:
-         *      - PlatformEGLAndroid
-         */
-        bool assertNativeWindowIsValid = false;
 
         /**
          * The action to take if a Drawable cannot be acquired. If true, the
@@ -447,17 +449,19 @@ public:
      * @return true if this Platform supports compositor timings, false otherwise [default]
      * @see queryCompositorTiming()
      * @see setPresentFrameId()
-     * @see queryFrameTimestamps()
+     * @see queryFrameTimestamps
      */
     virtual bool isCompositorTimingSupported() const noexcept;
 
     /**
      * If compositor timing is supported, fills the provided CompositorTiming structure
      * with timing information form the compositor the swapchain's native window is using.
-     * The swapchain'snative window must be valid (i.e. not a headless swapchain).
+     * The swapchain's native window must be valid (i.e. not a headless swapchain).
+     *
      * @param swapchain to query the compositor timing from
+     * @param outCompositorTiming
      * @return true on success, false otherwise (e.g. if not supported)
-     * @see isCompositorTimingSupported()
+     * @see isCompositorTimingSupported
      */
     virtual bool queryCompositorTiming(SwapChain const* UTILS_NONNULL swapchain,
             CompositorTiming* UTILS_NONNULL outCompositorTiming) const noexcept;
@@ -471,8 +475,8 @@ public:
      * @param swapchain
      * @param frameId
      * @return true on success, false otherwise
-     * @see isCompositorTimingSupported()
-     * @see queryFrameTimestamps()
+     * @see isCompositorTimingSupported
+     * @see queryFrameTimestamps
      */
     virtual bool setPresentFrameId(SwapChain const* UTILS_NONNULL swapchain,
             uint64_t frameId) noexcept;
@@ -488,11 +492,31 @@ public:
      * @param frameId frame we're interested it
      * @param outFrameTimestamps output structure receiving the timestamps
      * @return true if successful, false otherwise
-     * @see isCompositorTimingSupported()
-     * @see setPresentFrameId()
+     * @see isCompositorTimingSupported
+     * @see setPresentFrameId
      */
     virtual bool queryFrameTimestamps(SwapChain const* UTILS_NONNULL swapchain,
             uint64_t frameId, FrameTimestamps* UTILS_NONNULL outFrameTimestamps) const noexcept;
+
+    /**
+     * Whether the specified native window supports frame rate changes.
+     *
+     * @param nativeWindow OS-specific native window (e.g. ANativeWindow* on Android).
+     * @return utils::tribool indicating True, False, or Indeterminate
+     */
+    virtual utils::tribool isFrameRateChangeSupported(void* UTILS_NULLABLE nativeWindow) const noexcept;
+
+    /**
+     * Set the intended frame rate on the specified swapchain.
+     *
+     * @param swapchain     Target backend SwapChain.
+     * @param frameRate     The intended frame rate in frames per second. 0.0f clears/resets the rate.
+     * @param compatibility Frame rate compatibility mode.
+     * @param strategy      Change strategy for non-seamless transitions.
+     * @return 0 on success or negative error code on failure
+     */
+    virtual int setFrameRate(SwapChain const* UTILS_NONNULL swapchain, float frameRate,
+            FrameRateCompatibility compatibility, ChangeFrameRateStrategy strategy) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Caching APIs

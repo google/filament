@@ -120,6 +120,7 @@ add_library(filament-jni SHARED
     src/main/cpp/VertexBuffer.cpp
     src/main/cpp/View.cpp
     # Android specific
+    src/main/cpp/FramePacerAndroidJni.cpp
     src/main/cpp/nativewindow/Android.cpp
     # Private utils
     src/main/cpp/Filament.cpp

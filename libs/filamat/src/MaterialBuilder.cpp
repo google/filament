@@ -14,20 +14,9 @@
  * limitations under the License.
  */
 
-#include "filamat/MaterialBuilder.h"
-
-#include <filamat/Enums.h>
-#include <filamat/Package.h>
-
 #include "GLSLPostProcessor.h"
 #include "MaterialVariants.h"
 #include "PushConstantDefinitions.h"
-
-#include "sca/GLSLTools.h"
-
-#include "shaders/MaterialInfo.h"
-#include "shaders/ShaderGenerator.h"
-#include "shaders/UibGenerator.h"
 
 #include "eiff/BlobDictionary.h"
 #include "eiff/ChunkContainer.h"
@@ -40,6 +29,12 @@
 #include "eiff/MaterialTextChunk.h"
 #include "eiff/ShaderEntry.h"
 
+#include "sca/GLSLTools.h"
+
+#include "shaders/MaterialInfo.h"
+#include "shaders/ShaderGenerator.h"
+#include "shaders/UibGenerator.h"
+
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/ConstantInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -49,19 +44,23 @@
 #include <filament/MaterialChunkType.h>
 #include <filament/MaterialEnums.h>
 
+#include <filamat/Enums.h>
+#include <filamat/MaterialBuilder.h>
+#include <filamat/Package.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Mutex.h>
-#include <utils/Panic.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <math/vec3.h>
 
@@ -76,8 +75,8 @@
 #include <utility>
 #include <vector>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 namespace filamat {
@@ -1381,6 +1380,13 @@ error:
 
     if (!findAllProperties(semanticCodeGenParams)) {
         goto error;
+    }
+
+    if (mProperties[size_t(Property::CLIP_SPACE_TRANSFORM)] &&
+        mProperties[size_t(Property::CLIP_SPACE_POSITION)]) {
+        LOG(WARNING) << "Warning: material \"" << mMaterialName.c_str()
+                     << "\" writes to both clipSpaceTransform and clipSpacePosition. "
+                     << "clipSpacePosition will take precedence and clipSpaceTransform will be ignored.";
     }
 
     if (!runSemanticAnalysis(&info, semanticCodeGenParams)) {

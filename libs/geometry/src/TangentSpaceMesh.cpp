@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <geometry/TangentSpaceMesh.h>
-
 #include "MikktspaceImpl.h"
 #include "TangentSpaceMeshInternal.h"
 
-#include <math/mat3.h>
-#include <math/norm.h>
+#include <geometry/TangentSpaceMesh.h>
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
+
+#include <math/mat3.h>
+#include <math/norm.h>
 
 #include <vector>
 
@@ -239,6 +239,7 @@ void flatShadingMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutpu
         noexcept {
     bool const isTriangle16 = input->triangles16 != nullptr;
     size_t const triangleCount = input->triangleCount;
+    size_t const vertexCount = input->vertexCount;
     size_t const tstride = isTriangle16 ? sizeof(ushort3) : sizeof(uint3);
     size_t const outVertexCount = triangleCount * 3;
 
@@ -314,6 +315,11 @@ void flatShadingMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutpu
         uint3 tri = isTriangle16 ?
                 uint3(*(ushort3*)(pointerAdd(triangles, tindex, tstride))) :
                 *(uint3*)(pointerAdd(triangles, tindex, tstride));
+
+        FILAMENT_CHECK_PRECONDITION(
+                tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount)
+                << "Triangle index out of bounds:"
+                << " vertexCount=" << vertexCount;
 
         float3 const pa = *pointerAdd(positions, tri.x, pstride);
         float3 const pb = *pointerAdd(positions, tri.y, pstride);
@@ -439,7 +445,10 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
     std::vector<float3> tan2(vertexCount, float3{0.0f});
     for (size_t a = 0; a < triangleCount; ++a) {
         uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
-        assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
+        FILAMENT_CHECK_PRECONDITION(tri.x < vertexCount && tri.y < vertexCount &&
+                tri.z < vertexCount)
+                << "Triangle index out of bounds:"
+                << " vertexCount=" << vertexCount;
         float3 const& v1 = *pointerAdd(positions, tri.x, positionStride);
         float3 const& v2 = *pointerAdd(positions, tri.y, positionStride);
         float3 const& v3 = *pointerAdd(positions, tri.z, positionStride);

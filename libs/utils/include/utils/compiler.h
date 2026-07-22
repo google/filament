@@ -187,12 +187,15 @@
 #if __has_attribute(maybe_unused) || (defined(_MSC_VER) && _MSC_VER >= 1911)
 #define UTILS_UNUSED [[maybe_unused]]
 #define UTILS_UNUSED_IN_RELEASE [[maybe_unused]]
+#define UTILS_UNUSED_WITHOUT_TRACING [[maybe_unused]]
 #elif __has_attribute(unused)
 #define UTILS_UNUSED __attribute__((unused))
 #define UTILS_UNUSED_IN_RELEASE __attribute__((unused))
+#define UTILS_UNUSED_WITHOUT_TRACING __attribute__((unused))
 #else
 #define UTILS_UNUSED
 #define UTILS_UNUSED_IN_RELEASE
+#define UTILS_UNUSED_WITHOUT_TRACING
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900
@@ -263,6 +266,12 @@
 
 #define UTILS_ACQUIRE_SHARED(...) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquire_shared_capability(__VA_ARGS__))
+
+#define UTILS_TRY_ACQUIRE(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_capability(__VA_ARGS__))
+
+#define UTILS_TRY_ACQUIRE_SHARED(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_shared_capability(__VA_ARGS__))
 
 #define UTILS_RELEASE(...) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(release_capability(__VA_ARGS__))

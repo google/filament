@@ -563,81 +563,11 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
-// deprecated
-void FTexture::setImage(FEngine& engine, size_t const level,
-        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
-
-    auto validateTarget = [](SamplerType const sampler) -> bool {
-        switch (sampler) {
-            case SamplerType::SAMPLER_CUBEMAP:
-                return true;
-            case SamplerType::SAMPLER_2D:
-            case SamplerType::SAMPLER_3D:
-            case SamplerType::SAMPLER_2D_ARRAY:
-            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            case SamplerType::SAMPLER_EXTERNAL:
-                return false;
-        }
-        return false;
-    };
-
-    // this should have been validated already
-    assert_invariant(isTextureFormatSupported(engine, mFormat));
-
-    FILAMENT_CHECK_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
-            validatePixelFormatAndType(mFormat, buffer.format, buffer.type))
-            << "The combination of internal format=" << unsigned(mFormat)
-            << " and {format=" << unsigned(buffer.format) << ", type=" << unsigned(buffer.type)
-            << "} is not supported.";
-
-    FILAMENT_CHECK_PRECONDITION(!mStream) << "setImage() called on a Stream texture.";
-
-    FILAMENT_CHECK_PRECONDITION(level < mLevelCount)
-            << "level=" << unsigned(level) << " is >= to levelCount=" << unsigned(mLevelCount)
-            << ".";
-
-    FILAMENT_CHECK_PRECONDITION(validateTarget(mTarget))
-            << "Texture Sampler type (" << unsigned(mTarget)
-            << ") not supported for this operation.";
-
-    FILAMENT_CHECK_PRECONDITION(buffer.buffer) << "Data buffer is nullptr.";
-
-    auto w = std::max(1u, mWidth >> level);
-    auto h = std::max(1u, mHeight >> level);
-    assert_invariant(w == h);
-    const size_t faceSize = PixelBufferDescriptor::computeDataSize(buffer.format, buffer.type,
-            buffer.stride ? buffer.stride : w, h, buffer.alignment);
-
-    if (faceOffsets[0] == 0 &&
-        faceOffsets[1] == 1 * faceSize &&
-        faceOffsets[2] == 2 * faceSize &&
-        faceOffsets[3] == 3 * faceSize &&
-        faceOffsets[4] == 4 * faceSize &&
-        faceOffsets[5] == 5 * faceSize) {
-        // in this special case, we can upload all 6 faces in one call
-        engine.getDriverApi().update3DImage(mHandle, uint8_t(level),
-                0, 0, 0, w, h, 6, std::move(buffer));
-    } else {
-        UTILS_NOUNROLL
-        for (size_t face = 0; face < 6; face++) {
-            engine.getDriverApi().update3DImage(mHandle, uint8_t(level), 0, 0, face, w, h, 1, {
-                    (char*)buffer.buffer + faceOffsets[face],
-                    faceSize, buffer.format, buffer.type, buffer.alignment,
-                    buffer.left, buffer.top, buffer.stride });
-        }
-        engine.getDriverApi().queueCommand(
-                make_copyable_function([buffer = std::move(buffer)]() {}));
-    }
-
-    // this method shouldn't been const
-    const_cast<FTexture*>(this)->updateLodRange(level);
-}
-
 AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
         uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
-        PixelBufferDescriptor&& p, CallbackHandler* handler, AsyncCompletionCallback callback,
-        void* user) const {
+        PixelBufferDescriptor&& p, backend::CallbackHandler* handler,
+        AsyncCompletionCallback callback, void* user) const {
 
     // We skip the isCreationComplete() check for asynchronous APIs because they are designed to
     // function correctly regardless of whether the object's creation process is fully complete.
@@ -646,7 +576,7 @@ AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
 
     using TextureCallbackAdapter = CallbackAdapter<Texture>;
     auto* const cbWrapper = TextureCallbackAdapter::make(std::move(callback), this, user);
-    AsyncCallId id = engine.getDriverApi().update3DImageAsync(mHandle, uint8_t(level),
+    AsyncCallId const id = engine.getDriverApi().update3DImageAsync(mHandle, uint8_t(level),
             xoffset, yoffset, zoffset, width, height, depth, std::move(p), handler,
             &TextureCallbackAdapter::func, cbWrapper);
 
@@ -951,8 +881,6 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
 
         case TextureFormat::RGB565:
         case TextureFormat::RGB9_E5:
-        case TextureFormat::RGB5_A1:
-        case TextureFormat::RGBA4:
         case TextureFormat::RGB8:
         case TextureFormat::SRGB8:
         case TextureFormat::RGB8_SNORM:
@@ -975,6 +903,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::RGB5_A1:
+        case TextureFormat::RGBA4:
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGBA8_SNORM:

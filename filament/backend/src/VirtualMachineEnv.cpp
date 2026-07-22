@@ -46,6 +46,12 @@ JavaVM* VirtualMachineEnv::getVirtualMachine() {
     return sVirtualMachine;
 }
 
+UTILS_NOINLINE
+bool VirtualMachineEnv::hasVirtualMachine() noexcept {
+    LockGuard const lock(sLock);
+    return sVirtualMachine != nullptr;
+}
+
 /*
  * This is typically called by filament_jni.so when it is loaded. If filament_jni.so is not used,
  * then this must be called manually -- however, this is a problem because VirtualMachineEnv.h

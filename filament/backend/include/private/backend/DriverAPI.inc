@@ -594,6 +594,12 @@ DECL_DRIVER_API_N(makeCurrent,
 DECL_DRIVER_API_N(commit,
         backend::SwapChainHandle, sch)
 
+DECL_DRIVER_API_N(setFrameRate,
+        backend::SwapChainHandle, sch,
+        float, frameRate,
+        backend::Platform::FrameRateCompatibility, compatibility,
+        backend::Platform::ChangeFrameRateStrategy, changeFrameRateStrategy)
+
 /*
  * Setting rendering state
  * -----------------------

@@ -30,6 +30,7 @@ import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import androidx.annotation.RequiresApi
 import com.google.android.filament.*
+import com.google.android.filament.android.ChoreographerHelper
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
@@ -53,8 +54,6 @@ class FilamentLiveWallpaper : WallpaperService() {
         private lateinit var uiHelper: UiHelper
         // DisplayHelper is provided by Filament to manage the display
         private lateinit var displayHelper: DisplayHelper
-        // Choreographer is used to schedule new frames
-        private lateinit var choreographer: Choreographer
 
         // Engine creates and destroys Filament resources
         // Each engine must be accessed from a single thread of your choosing
@@ -83,7 +82,6 @@ class FilamentLiveWallpaper : WallpaperService() {
             surfaceHolder.setSizeFromLayout()
             surfaceHolder.setFormat(PixelFormat.RGBA_8888)
 
-            choreographer = Choreographer.getInstance()
 
             displayHelper = DisplayHelper(this@FilamentLiveWallpaper)
 
@@ -102,6 +100,7 @@ class FilamentLiveWallpaper : WallpaperService() {
         private fun setupFilament() {
             engine = com.google.android.filament.Engine.create()
             renderer = engine.createRenderer()
+            frameScheduler.setRenderer(renderer)
             scene = engine.createScene()
             view = engine.createView()
             camera = engine.createCamera(engine.entityManager.create())
@@ -148,10 +147,10 @@ class FilamentLiveWallpaper : WallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
-                choreographer.postFrameCallback(frameScheduler)
+                frameScheduler.post()
                 animator.start()
             } else {
-                choreographer.removeFrameCallback(frameScheduler)
+                frameScheduler.remove()
                 animator.cancel()
             }
         }
@@ -160,7 +159,7 @@ class FilamentLiveWallpaper : WallpaperService() {
             super.onDestroy()
 
             // Stop the animation and any pending frame
-            choreographer.removeFrameCallback(frameScheduler)
+            frameScheduler.remove()
             animator.cancel()
 
             // Always detach the surface before destroying the engine
@@ -178,11 +177,8 @@ class FilamentLiveWallpaper : WallpaperService() {
             engine.destroy()
         }
 
-        inner class FrameCallback : Choreographer.FrameCallback {
-            override fun doFrame(frameTimeNanos: Long) {
-                // Schedule the next frame
-                choreographer.postFrameCallback(this)
-
+        inner class FrameCallback : ChoreographerHelper() {
+            override fun onFrame(frameTimeNanos: Long) {
                 // This check guarantees that we have a swap chain
                 if (uiHelper.isReadyToRender) {
                     // If beginFrame() returns false you should skip the frame
