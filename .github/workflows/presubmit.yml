@@ -3,10 +3,10 @@ name: 'Presubmit CI'
 on:
   push:
     branches:
-      - main
+      - abc
   pull_request:
     branches:
-      - main
+      - abc
 
 # This will cancel in-flight runs when there is an update to a PR
 concurrency:
