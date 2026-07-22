@@ -386,25 +386,34 @@ void CommandBufferPool::insertEvent(char const* marker) {
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext const& context,
-        VulkanSemaphoreManager* semaphoreManager)
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
+        VulkanContext const& context, VulkanSemaphoreManager* semaphoreManager, bool asyncAvailable)
     : mDevice(device),
       mProtectedQueue(protectedQueue),
       mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
       mContext(context),
       mSemaphoreManager(semaphoreManager),
       mPool(std::make_unique<CommandBufferPool>(
-              context, device, queue, queueFamilyIndex, semaphoreManager, false)) {}
+              context, device, queue, queueFamilyIndex, semaphoreManager, false)),
+      mAsyncPool(asyncAvailable ? std::make_unique<CommandBufferPool>(
+        context, device, queue, queueFamilyIndex, semaphoreManager, false) : nullptr)
+{}
 
 void VulkanCommands::terminate() {
     mPool.reset();
     mProtectedPool.reset();
+    mAsyncPool.reset();
     mLastSubmit = {};
     mLastFenceStatus = {};
 }
 
 VulkanCommandBuffer& VulkanCommands::get() {
     auto& ret = mPool->getRecording();
+    return ret;
+}
+
+VulkanCommandBuffer& VulkanCommands::getAsync() {
+    auto& ret = mAsyncPool->getRecording();
     return ret;
 }
 
@@ -479,6 +488,9 @@ void VulkanCommands::wait() {
     if (mProtectedPool) {
         mProtectedPool->wait();
     }
+    if (mAsyncPool) {
+        mAsyncPool->wait();
+    }
     FVK_SYSTRACE_END();
 }
 
@@ -490,6 +502,9 @@ void VulkanCommands::gc() {
     if (mProtectedPool) {
         mProtectedPool->gc();
     }
+    if (mAsyncPool) {
+        mAsyncPool->gc();
+    }
     FVK_SYSTRACE_END();
 }
 
@@ -497,6 +512,9 @@ void VulkanCommands::updateFences() {
     mPool->update();
     if (mProtectedPool) {
         mProtectedPool->update();
+    }
+    if (mAsyncPool) {
+        mAsyncPool->update();
     }
 }
 
@@ -506,6 +524,9 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
     mPool->pushMarker(str, timestamp);
     if (mProtectedPool) {
         mProtectedPool->pushMarker(str, timestamp);
+    }
+    if (mAsyncPool) {
+        mAsyncPool->pushMarker(str, timestamp);
     }
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     FVK_LOGD << "----> " << str;
@@ -528,12 +549,18 @@ void VulkanCommands::popGroupMarker() {
     if (mProtectedPool) {
         mProtectedPool->popMarker();
     }
+    if (mAsyncPool) {
+        mAsyncPool->popMarker();
+    }
 }
 
 void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
     mPool->insertEvent(str);
     if (mProtectedPool) {
         mProtectedPool->insertEvent(str);
+    }
+    if (mAsyncPool) {
+        mAsyncPool->insertEvent(str);
     }
 }
 
