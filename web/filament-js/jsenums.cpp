@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
+#include <viewer/AutomationEngine.h>
+#include <viewer/Settings.h>
+
+#include <ktxreader/Ktx2Reader.h>
+
 #include <filament/BufferObject.h>
 #include <filament/Camera.h>
-#include <filament/ColorGrading.h>
 #include <filament/Color.h>
+#include <filament/ColorGrading.h>
+#include <filament/Fence.h>
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -28,15 +34,10 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <ktxreader/Ktx2Reader.h>
-
 #include <backend/DriverEnums.h>
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
-
-#include <viewer/AutomationEngine.h>
-#include <viewer/Settings.h>
 
 using namespace emscripten;
 using namespace filament;
@@ -119,6 +120,20 @@ enum_<LightManager::Type>("LightManager$Type")
     .value("POINT", LightManager::Type::POINT)
     .value("FOCUSED_SPOT", LightManager::Type::FOCUSED_SPOT)
     .value("SPOT", LightManager::Type::SPOT);
+
+enum_<Fence::Mode>("Fence$Mode")
+    .value("FLUSH", Fence::Mode::FLUSH)
+    .value("DONT_FLUSH", Fence::Mode::DONT_FLUSH);
+
+enum_<backend::FenceStatus>("FenceStatus")
+    .value("ERROR", backend::FenceStatus::ERROR)
+    .value("CONDITION_SATISFIED", backend::FenceStatus::CONDITION_SATISFIED)
+    .value("TIMEOUT_EXPIRED", backend::FenceStatus::TIMEOUT_EXPIRED);
+
+enum_<RenderableManager::Builder::GeometryType>("RenderableManager$Builder$GeometryType")
+    .value("DYNAMIC", RenderableManager::Builder::GeometryType::DYNAMIC)
+    .value("STATIC_BOUNDS", RenderableManager::Builder::GeometryType::STATIC_BOUNDS)
+    .value("STATIC", RenderableManager::Builder::GeometryType::STATIC);
 
 enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("POINTS", RenderableManager::PrimitiveType::POINTS)

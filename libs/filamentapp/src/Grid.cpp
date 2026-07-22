@@ -61,6 +61,8 @@ Grid::Grid(Engine& engine, Material const* material, float3 linearColor)
     RenderableManager::Builder(1)
             .boundingBox({ { -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f, 1.0f } })
             .material(0, mMaterialInstanceWireFrame)
+            .castShadows(false)
+            .receiveShadows(false)
             .priority(6)
             .culling(false)
             .build(engine, mWireFrameRenderable);

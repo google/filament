@@ -1,0 +1,17 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) writeonly buffer B { uint block[]; };
+layout(std430,binding=1) readonly buffer S { uint srcall[]; };
+layout(std430,binding=2) readonly buffer L { uint layout_[]; }; /* per ch: base,chOff,rowBytes */
+layout(push_constant) uniform PC { uint scanStride,nch,blockBytes; } p;
+uint gb(uint i){ return (srcall[i>>2] >> ((i&3u)*8u)) & 0xffu; }
+void main(){
+  uint w=gl_GlobalInvocationID.x; uint nwords=(p.blockBytes+3u)>>2; if(w>=nwords) return;
+  uint outw=0u;
+  for(uint t=0u;t<4u;t++){ uint j=w*4u+t; if(j>=p.blockBytes) break;
+    uint r=j/p.scanStride, off=j%p.scanStride; uint b=0u;
+    for(uint c=0u;c<p.nch;c++){ uint chOff=layout_[c*3u+1u], rb=layout_[c*3u+2u];
+      if(off>=chOff && off<chOff+rb){ uint k=off-chOff; b=gb(layout_[c*3u]+r*rb+k); break; } }
+    outw|=(b<<(t*8u)); }
+  block[w]=outw;
+}

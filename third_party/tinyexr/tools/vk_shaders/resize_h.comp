@@ -1,0 +1,14 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) readonly buffer S { float src[]; };
+layout(std430,binding=1) writeonly buffer D { float dst[]; };
+layout(std430,binding=2) readonly buffer W { float wts[]; };
+layout(std430,binding=3) readonly buffer I { uint idx[]; };
+layout(push_constant) uniform PC { uint sw,sh,sstride,dw,dstride,ch,support; } p;
+void main(){
+  uint t=gl_GlobalInvocationID.x; if(t>=p.dw*p.sh) return;
+  uint ox=t%p.dw, y=t/p.dw;
+  for(uint c=0u;c<p.ch;c++){ float acc=0.0;
+    for(uint k=0u;k<p.support;k++){ uint sx=idx[ox*p.support+k]; acc+=wts[ox*p.support+k]*src[y*p.sstride+sx*p.ch+c]; }
+    dst[y*p.dstride+ox*p.ch+c]=acc; }
+}

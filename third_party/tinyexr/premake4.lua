@@ -12,6 +12,10 @@ zfp_sources = {
    "./deps/ZFP/src/*.c"
 }
 
+miniz_sources = {
+    "./deps/miniz/miniz.c"
+}
+
 -- premake4.lua
 solution "TinyEXRSolution"
    configurations { "Release", "Debug" }
@@ -26,6 +30,12 @@ solution "TinyEXRSolution"
       includedirs { "./deps/ZFP/inc" }
       defines { "TINYEXR_USE_ZFP=1" }
       files { zfp_sources }
+   end
+
+   if _OPTIONS["with-miniz"] then
+      includedirs { "./deps/miniz" }
+      defines { "TINYEXR_USE_MINIZ=1" }
+      files { miniz_sources }
    end
 
    -- A project defines one build target
