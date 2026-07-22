@@ -42,7 +42,6 @@ struct DynamicSpecConstKey {
 
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
 
-    static utils::Slice<const DynamicSpecConstKey> getAllPossibleKeys() noexcept;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -98,7 +97,37 @@ struct DynamicSpecConstKey {
         }
         return specKey;
     }
+
+    struct ValidKeys;
+
+    [[nodiscard]] static constexpr ValidKeys getValidKeys(Variant const variant,
+            MaterialDomain const materialDomain, bool const isLit) noexcept;
 };
+
+struct DynamicSpecConstKey::ValidKeys {
+    std::array<DynamicSpecConstKey, DYNAMIC_SPEC_CONST_KEY_COUNT> keys;
+    uint8_t size = 0;
+
+    const DynamicSpecConstKey* begin() const noexcept { return keys.data(); }
+    const DynamicSpecConstKey* end() const noexcept { return keys.data() + size; }
+};
+
+inline constexpr DynamicSpecConstKey::ValidKeys DynamicSpecConstKey::getValidKeys(
+        Variant const variant, MaterialDomain const materialDomain, bool const isLit) noexcept {
+    ValidKeys result;
+    DynamicSpecConstKey key0;
+    key0.setDynamicLighting(false);
+    result.keys[0] = key0;
+    result.size = 1;
+
+    if (canSupportDynamicLighting(variant, materialDomain, isLit)) {
+        DynamicSpecConstKey key1;
+        key1.setDynamicLighting(true);
+        result.keys[1] = key1;
+        result.size = 2;
+    }
+    return result;
+}
 
 } // namespace filament
 
