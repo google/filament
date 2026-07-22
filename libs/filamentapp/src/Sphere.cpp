@@ -111,8 +111,8 @@ Sphere::Sphere(Engine& engine, Material const* material, bool culling)
 }
 
 Sphere::~Sphere() {
-    mEngine.destroy(mMaterialInstance);
     mEngine.destroy(mRenderable);
+    mEngine.destroy(mMaterialInstance);
     utils::EntityManager& em = utils::EntityManager::get();
     em.destroy(mRenderable);
 }
