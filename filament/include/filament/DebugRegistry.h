@@ -25,6 +25,8 @@
 
 #include <math/mathfwd.h>
 
+#include <atomic>
+
 #include <stddef.h>
 
 namespace filament {
@@ -34,6 +36,9 @@ namespace filament {
  *
  * Filament exposes a few properties that can be queried and set, which control certain debugging
  * features of the engine. These properties can be set at runtime at anytime.
+ *
+ * Internally, boolean flags used by both the main thread (client side) and backend threads
+ * are implemented using std::atomic<bool> to ensure safe cross-thread flipping without data races.
  *
  */
 class UTILS_PUBLIC DebugRegistry : public FilamentAPI {

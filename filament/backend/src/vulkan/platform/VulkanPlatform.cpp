@@ -44,7 +44,7 @@ using ExtensionSet = VulkanPlatform::ExtensionSet;
 
 inline bool setContains(ExtensionSet const& set, utils::CString const& extension) {
     return set.find(extension) != set.end();
-};
+}
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 // These strings need to be allocated outside a function stack

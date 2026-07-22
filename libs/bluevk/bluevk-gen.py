@@ -239,6 +239,18 @@ def consumeXML(spec):
             cmdrefs = req.findall('command')
             command_groups.setdefault(key, []).extend([cmdref.get('name') for cmdref in cmdrefs])
 
+    allowed_types = set()
+    for feature in spec.findall('feature'):
+        if 'vulkan' in feature.get('api', '').split(','):
+            for req in feature.findall('require'):
+                for t in req.findall('type'):
+                    allowed_types.add(t.get('name'))
+    for ext in spec.findall('extensions/extension'):
+        if 'vulkan' in ext.get('supported', '').split(','):
+            for req in ext.findall('require'):
+                for t in req.findall('type'):
+                    allowed_types.add(t.get('name'))
+
     # Build a list of unnecessary types that should be skipped to avoid codegen problems. Many of
     # these types seem to be only partially defined in the XML spec, or defined in a manner that
     # is inconsistent with other types.
@@ -295,6 +307,7 @@ def consumeXML(spec):
         if not enums.get('type'): continue
         name = enums.get('name')
         if name not in enum_types: continue
+        if name not in allowed_types: continue
         if name in provisional_types: continue
 
         # Special handling for single-bit flags
@@ -353,7 +366,7 @@ def produceHeader(function_groups, enum_vals, flag_vals, output_dir):
     for (group, functions) in function_groups.items():
         if not len(functions):
             continue
-        preproc_expr = re.sub(r'(VK_[A-Za-z_0-9]+)', r'defined(\1)', group)
+        preproc_expr = re.sub(r'(VK(?:SC)?_[A-Za-z_0-9]+)', r'defined(\1)', group)
         decls.append('#if ' + preproc_expr)
         for (name, fn) in functions.items():
             decls.append("extern PFN_%(name)s %(name)s;" % {'name': fn.name})
@@ -385,7 +398,7 @@ def produceCpp(function_groups, enum_vals, flag_vals, output_dir):
     for (group, functions) in function_groups.items():
         if not len(functions):
             continue
-        preproc_expr = re.sub(r'(VK_[A-Za-z_0-9]+)', r'defined(\1)', group)
+        preproc_expr = re.sub(r'(VK(?:SC)?_[A-Za-z_0-9]+)', r'defined(\1)', group)
 
         has_instance = False
         has_device = False

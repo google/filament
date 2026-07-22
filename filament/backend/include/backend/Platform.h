@@ -34,6 +34,7 @@
 
 namespace utils {
 class FeatureFlagManager;
+class InternalDebugRegistry;
 }
 
 namespace filament::backend {
@@ -323,6 +324,11 @@ public:
          * Reference to the system's FeatureFlagManager. Can be nullptr.
          */
         utils::FeatureFlagManager const * UTILS_NULLABLE featureFlagManager = nullptr;
+
+        /**
+         * Reference to the system's DebugRegistry. Can be nullptr.
+         */
+        utils::InternalDebugRegistry const* UTILS_NULLABLE debugRegistry = nullptr;
 
         /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
