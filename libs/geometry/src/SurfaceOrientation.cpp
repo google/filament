@@ -245,7 +245,16 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithUvs() {
     memset(tan2.data(), 0, sizeof(float3) * vertexCount);
     for (size_t a = 0; a < triangleCount; ++a) {
         uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
-        assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
+        // assert_invariant compiles to a no-op in release (NDEBUG) builds,
+        // so this check must use a release-mode precondition to prevent a
+        // heap out-of-bounds read on positions[]/uvs[] when triangle indices
+        // come from untrusted input (e.g. a malformed glTF file's index
+        // accessor via gltfio). Mirrors the fix already applied to the same
+        // pattern in TangentSpaceMesh.cpp.
+        FILAMENT_CHECK_PRECONDITION(tri.x < vertexCount && tri.y < vertexCount &&
+                tri.z < vertexCount)
+                << "Triangle index out of bounds:"
+                << " vertexCount=" << vertexCount;
         const float3& v1 = positions[tri.x];
         const float3& v2 = positions[tri.y];
         const float3& v3 = positions[tri.z];
@@ -354,7 +363,16 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithFlatNormals() {
     float3* normals = new float3[vertexCount];
     for (size_t a = 0; a < triangleCount; ++a) {
         const uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
-        assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
+        // assert_invariant compiles to a no-op in release (NDEBUG) builds,
+        // so this check must use a release-mode precondition to prevent a
+        // heap out-of-bounds write to normals[] when triangle indices come
+        // from untrusted input (e.g. a malformed glTF file's index accessor
+        // via gltfio). Mirrors the fix already applied to the same pattern
+        // in TangentSpaceMesh.cpp.
+        FILAMENT_CHECK_PRECONDITION(tri.x < vertexCount && tri.y < vertexCount &&
+                tri.z < vertexCount)
+                << "Triangle index out of bounds:"
+                << " vertexCount=" << vertexCount;
         const float3 v1 = positions[tri.x];
         const float3 v2 = positions[tri.y];
         const float3 v3 = positions[tri.z];
