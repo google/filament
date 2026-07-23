@@ -15,6 +15,7 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
 #include "generated/resources/gltf_demo.h"
 
@@ -28,9 +29,8 @@
 #include <gltfio/TextureProvider.h>
 
 #include <filamentapp/AssetLoader.h>
-#include <filamentapp/Config.h>
 #include <filamentapp/DesktopAssetLoader.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 
 #include <filament/Engine.h>
@@ -63,9 +63,10 @@ enum MaterialSource {
 };
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Engine* engine;
     ViewerGui* viewer;
-    Config config;
+    SampleConfig config;
     filament::app::AssetLoader* rawAssetLoader = nullptr;
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
     App app;
 
     app.config.title = "glTF Instancing";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + DEFAULT_IBL;
 
     int optionIndex = handleCommandLineArguments(argc, argv, &app);
     utils::Path filename;
@@ -241,7 +242,7 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        auto ibl = FilamentApp::get().getIBL();
+        auto ibl = app.filamentApp->getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
         }
@@ -343,11 +344,17 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine* engine, View* view) { };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { };
-
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.animate(animate);
-
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .iblDirectory(app.config.iblDirectory)
+                              .backend(app.config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(gui)
+                              .preRender(preRender)
+                              .animation(animate)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

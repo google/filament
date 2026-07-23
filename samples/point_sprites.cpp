@@ -15,6 +15,14 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <image/ImageSampler.h>
+#include <image/LinearImage.h>
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -24,22 +32,14 @@
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
-#include <filament/TransformManager.h>
 #include <filament/TextureSampler.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
 
-#include <image/ImageSampler.h>
-#include <image/LinearImage.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <cmath>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -52,6 +52,7 @@ using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -189,15 +190,25 @@ void animate(App& app, Engine* engine, View* view, double now) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "point_sprites";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
     App app;
-    FilamentApp::get().animate([&app](Engine* e, View* v, double now) { animate(app, e, v, now); });
-    FilamentApp::get().run(config,
-            [&app](Engine* engine, View* view, Scene* scene) { setup(app, engine, view, scene); },
-            [&app](Engine* engine, View*, Scene*) { cleanup(app, engine); });
+
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(config.title)
+                    .backend(config.backend)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+                    .setup([&app](Engine* engine, View* view, Scene* scene) {
+                        setup(app, engine, view, scene);
+                    })
+                    .cleanup([&app](Engine* engine, View*, Scene*) { cleanup(app, engine); })
+                    .animation([&app](Engine* e, View* v, double now) { animate(app, e, v, now); })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

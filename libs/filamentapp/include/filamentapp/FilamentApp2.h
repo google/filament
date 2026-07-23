@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
-#define TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
+#ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
+#define TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 
 #include "Config.h"
 #include "Cube.h"
@@ -58,14 +58,17 @@ class VulkanPlatform;
 class WebGPUPlatform;
 #endif
 
-}
+} // namespace filament::backend
 
 namespace filament::app {
 class DisplayManager;
 enum class AppKey : uint32_t;
 } // namespace filament::app
 
-class [[deprecated("Use FilamentApp2 instead. Deadline: 2027/07/20")]] FilamentApp {
+class FilamentApp2 {
+public:
+    using WebGPUBackend = filament::Engine::Backend;
+    enum class DisplayManager { SDL, WEB };
 public:
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
     using CleanupCallback =
@@ -79,21 +82,217 @@ public:
     using ResizeCallback = std::function<void(filament::Engine*, filament::View*)>;
     using DropCallback = std::function<void(std::string_view)>;
 
-    static FilamentApp& get();
+    class Builder {
+    public:
+        Builder() = default;
 
-    ~FilamentApp();
+        Builder& title(const std::string& title) {
+            mTitle = title;
+            return *this;
+        }
+        Builder& size(uint32_t width, uint32_t height) {
+            mWidth = width;
+            mHeight = height;
+            return *this;
+        }
+        Builder& iblDirectory(const std::string& iblDirectory) {
+            mIblDirectory = iblDirectory;
+            return *this;
+        }
+        Builder& dirt(const std::string& dirt) {
+            mDirt = dirt;
+            return *this;
+        }
+        Builder& scale(float scale) {
+            mScale = scale;
+            return *this;
+        }
+        Builder& splitView(bool splitView) {
+            mSplitView = splitView;
+            return *this;
+        }
+        Builder& backend(filament::Engine::Backend backend) {
+            mBackend = backend;
+            return *this;
+        }
+        Builder& featureLevel(filament::backend::FeatureLevel featureLevel) {
+            mFeatureLevel = featureLevel;
+            return *this;
+        }
+        Builder& cameraMode(filament::camutils::Mode cameraMode) {
+            mCameraMode = cameraMode;
+            return *this;
+        }
+        Builder& resizeable(bool resizeable) {
+            mResizeable = resizeable;
+            return *this;
+        }
+        Builder& headless(bool headless) {
+            mHeadless = headless;
+            return *this;
+        }
+        Builder& stereoscopicEyeCount(int stereoscopicEyeCount) {
+            mStereoscopicEyeCount = stereoscopicEyeCount;
+            return *this;
+        }
+        Builder& samples(uint8_t samples) {
+            mSamples = samples;
+            return *this;
+        }
+        Builder& vulkanGPUHint(const std::string& vulkanGPUHint) {
+            mVulkanGPUHint = vulkanGPUHint;
+            return *this;
+        }
+        Builder& forcedWebGPUBackend(WebGPUBackend forcedWebGPUBackend) {
+            mForcedWebGPUBackend = forcedWebGPUBackend;
+            return *this;
+        }
+        Builder& configDisplayManager(DisplayManager displayManager) {
+            mDisplayManagerConfig = displayManager;
+            return *this;
+        }
+        Builder& asynchronousMode(filament::backend::AsynchronousMode asynchronousMode) {
+            mAsynchronousMode = asynchronousMode;
+            return *this;
+        }
+        /**
+         * Sets a custom DisplayManager for the application.
+         *
+         * @param displayManager Pointer to a DisplayManager implementation.
+         *                       If nullptr or not set, the app will create a default one based on
+         *                       the config's backend.
+         */
+        Builder& displayManager(filament::app::DisplayManager* displayManager) {
+            mDisplayManager = displayManager;
+            return *this;
+        }
 
-    void animate(AnimCallback animation) { mAnimation = animation; }
+        /**
+         * Sets the callback invoked once the Engine, View, and Scene have been initialized.
+         * This is where you should create your Filament entities, materials, and geometry.
+         *
+         * @param setup A callback function to initialize application state.
+         */
+        Builder& setup(SetupCallback setup) {
+            mSetup = setup;
+            return *this;
+        }
 
-    void resize(ResizeCallback resize) { mResize = resize; }
+        /**
+         * Sets the callback invoked just before the Engine is destroyed.
+         * This is where you should destroy all entities, materials, and geometry created in the
+         * setup phase.
+         *
+         * @param cleanup A callback function to cleanup application state.
+         */
+        Builder& cleanup(CleanupCallback cleanup) {
+            mCleanup = cleanup;
+            return *this;
+        }
 
-    void setDropHandler(DropCallback handler) { mDropHandler = handler; }
+        /**
+         * Sets the callback invoked every frame right before the scene is rendered.
+         * Useful for updating camera parameters or performing rendering operations.
+         *
+         * @param preRender A callback function invoked before rendering.
+         */
+        Builder& preRender(PreRenderCallback preRender) {
+            mPreRender = preRender;
+            return *this;
+        }
 
-    void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback(),
-            PreRenderCallback preRender = PreRenderCallback(),
-            PostRenderCallback postRender = PostRenderCallback(), size_t width = 1024,
-            size_t height = 640);
+        /**
+         * Sets the callback invoked every frame right after the scene is rendered.
+         *
+         * @param postRender A callback function invoked after rendering.
+         */
+        Builder& postRender(PostRenderCallback postRender) {
+            mPostRender = postRender;
+            return *this;
+        }
+
+        /**
+         * Sets the callback invoked every frame for rendering ImGui UI overlays.
+         *
+         * @param imgui A callback function for ImGui drawing commands.
+         */
+        Builder& imgui(ImGuiCallback imgui) {
+            mImgui = imgui;
+            return *this;
+        }
+
+        /**
+         * Sets the callback invoked every frame to update object animations.
+         *
+         * @param animation A callback function containing animation logic.
+         *                  The 'now' parameter provides the elapsed time in seconds.
+         */
+        Builder& animation(AnimCallback animation) {
+            mAnimation = animation;
+            return *this;
+        }
+
+        /**
+         * Sets the callback invoked whenever the application window is resized.
+         *
+         * @param resize A callback function for handling resize events.
+         */
+        Builder& resize(ResizeCallback resize) {
+            mResize = resize;
+            return *this;
+        }
+
+        /**
+         * Sets the callback invoked when a file is dropped onto the application window.
+         *
+         * @param handler A callback function receiving the dropped file path.
+         */
+        Builder& dropHandler(DropCallback handler) {
+            mDropHandler = handler;
+            return *this;
+        }
+
+        /**
+         * Creates a FilamentApp2 instance configured with the parameters provided to the Builder.
+         *
+         * @return A unique_ptr owning the constructed FilamentApp2.
+         */
+        std::unique_ptr<FilamentApp2> build();
+
+    private:
+        friend class FilamentApp2;
+        std::string mTitle;
+        uint32_t mWidth = 1024;
+        uint32_t mHeight = 640;
+        std::string mIblDirectory;
+        std::string mDirt;
+        float mScale = 1.0f;
+        bool mSplitView = false;
+        filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
+        filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+        filament::camutils::Mode mCameraMode = filament::camutils::Mode::ORBIT;
+        bool mResizeable = true;
+        bool mHeadless = false;
+        int mStereoscopicEyeCount = 2;
+        uint8_t mSamples = 1;
+        std::string mVulkanGPUHint;
+        WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
+        DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
+        filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
+        filament::app::DisplayManager* mDisplayManager = nullptr;
+        SetupCallback mSetup;
+        CleanupCallback mCleanup;
+        PreRenderCallback mPreRender;
+        PostRenderCallback mPostRender;
+        ImGuiCallback mImgui;
+        AnimCallback mAnimation;
+        ResizeCallback mResize;
+        DropCallback mDropHandler;
+    };
+
+    ~FilamentApp2();
+
+    void run();
 
     void reconfigureCameras() { mReconfigureCameras = true; }
 
@@ -117,8 +316,6 @@ public:
         mCameraParams.sidebarWidth = width;
         mReconfigureCameras = true;
     }
-
-    void setWindowTitle(const char* title) { mWindowTitle = title; }
 
     void setCameraFocalLength(float focalLength) {
         mCameraParams.focalLength = focalLength;
@@ -145,10 +342,10 @@ public:
     bool isDirectionalShadowFrustumEnabled() const noexcept;
     bool isFroxelGridEnabled() const noexcept;
 
-    FilamentApp(const FilamentApp& rhs) = delete;
-    FilamentApp(FilamentApp&& rhs) = delete;
-    FilamentApp& operator=(const FilamentApp& rhs) = delete;
-    FilamentApp& operator=(FilamentApp&& rhs) = delete;
+    FilamentApp2(const FilamentApp2& rhs) = delete;
+    FilamentApp2(FilamentApp2&& rhs) = delete;
+    FilamentApp2& operator=(const FilamentApp2& rhs) = delete;
+    FilamentApp2& operator=(FilamentApp2&& rhs) = delete;
 
     /**
      * Returns the path to the Filament root for loading assets. This is determined from the
@@ -160,8 +357,6 @@ public:
     static const utils::Path& getRootAssetsPath();
 
 private:
-    FilamentApp();
-
     using CameraManipulator = filament::camutils::Manipulator<float>;
 
     static bool manipulatorKeyFromKeycode(filament::app::AppKey scancode,
@@ -189,9 +384,7 @@ private:
         CameraManipulator* getCameraManipulator() { return mCameraManipulator; }
 
     private:
-        enum class Mode : uint8_t {
-            NONE, ROTATE, TRACK
-        };
+        enum class Mode : uint8_t { NONE, ROTATE, TRACK };
 
         filament::Engine& engine;
         filament::Viewport mViewport;
@@ -224,13 +417,14 @@ private:
 
 public:
     class Window {
-        friend class FilamentApp;
+        friend class FilamentApp2;
+
     public:
         using Handle = void*;
         virtual ~Window();
 
     private:
-        Window(FilamentApp* filamentApp, const Config& config, std::string title,
+        Window(FilamentApp2* filamentApp, std::string title,
                 WindowCameraParams const& cameraParams, size_t w, size_t h);
 
         void mouseDown(int button, ssize_t x, ssize_t y);
@@ -249,8 +443,7 @@ public:
 
         filament::app::DisplayManager* const mDisplayManager = nullptr;
         filament::Engine* const mEngine = nullptr;
-        Config mConfig;
-        const bool mIsHeadless;
+        FilamentApp2* const mApp = nullptr;
 
         Handle mWindow = nullptr;
         filament::Renderer* mRenderer = nullptr;
@@ -267,11 +460,11 @@ public:
         filament::Camera* mOrthoCamera;
 
         std::vector<std::unique_ptr<CView>> mViews;
-        CView* mMainView;   // well, the main view
-        CView* mUiView;     // the imgui ui
+        CView* mMainView; // well, the main view
+        CView* mUiView;   // the imgui ui
         CView* mDepthView;
-        GodView* mGodView;  // the debug view with "god" camera
-        CView* mOrthoView;  // directional shadow map view
+        GodView* mGodView; // the debug view with "god" camera
+        CView* mOrthoView; // directional shadow map view
 
         size_t mWidth = 0;
         size_t mHeight = 0;
@@ -286,9 +479,12 @@ public:
 
 private:
     friend class Window;
+    friend class Builder;
 
-    void loadIBL(const Config& config);
-    void loadDirt(const Config& config);
+    explicit FilamentApp2(const Builder& builder);
+
+    void loadIBL();
+    void loadDirt();
 
     bool doFrame();
     void shutdown();
@@ -325,10 +521,27 @@ private:
     filament::backend::Platform* mWebGPUPlatform = nullptr;
 
     std::unique_ptr<Window> mWindow;
+    uint32_t mWindowWidth = 1024;
+    uint32_t mWindowHeight = 640;
+    std::string mIblDirectory;
+    std::string mDirtPath;
+    float mScale = 1.0f;
+    filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
+    filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+    filament::camutils::Mode mCameraMode = filament::camutils::Mode::ORBIT;
+    bool mResizeable = true;
+    bool mHeadless = false;
+    int mStereoscopicEyeCount = 2;
+    uint8_t mSamples = 1;
+    std::string mVulkanGPUHint;
+    WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
+    DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
+    filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
+    SetupCallback mSetupCallback;
     CleanupCallback mCleanupCallback;
-    ImGuiCallback mImguiCallback {};
-    PreRenderCallback mPreRender {};
-    PostRenderCallback mPostRender {};
+    ImGuiCallback mImguiCallback{};
+    PreRenderCallback mPreRender{};
+    PostRenderCallback mPostRender{};
     bool mMousePressed[3] = { false };
     bool mIsSplitView = false;
 
@@ -340,4 +553,4 @@ private:
     std::vector<Cube> mLightmapCubes;
 };
 
-#endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
+#endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H

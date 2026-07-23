@@ -15,7 +15,7 @@
  */
 
 #include "FilamentAppGui.h"
-#include "DisplayManager.h"
+#include <filamentapp/DisplayManager.h>
 #if defined(FILAMENTAPP_HAS_IMGUI)
 #include <filagui/ImGuiHelper.h>
 #include <imgui.h>

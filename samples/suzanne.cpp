@@ -15,6 +15,17 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <ktxreader/Ktx2Reader.h>
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/IBL.h>
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
@@ -27,32 +38,20 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Log.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <ktxreader/Ktx2Reader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/IBL.h>
-
 #include <utils/getopt.h>
-
+#include <utils/Log.h>
 #include <utils/Path.h>
 
 #include <stb_image.h>
 
 #include <iostream>
 
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
-
 using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Material* material;
     MaterialInstance* materialInstance;
     filamesh::MeshReader::Mesh mesh;
@@ -88,7 +87,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -131,9 +130,9 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "suzanne";
-    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+    config.iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER;
 
     handleCommandLineArguments(argc, argv, &config);
 
@@ -182,7 +181,7 @@ int main(int argc, char** argv) {
         app.materialInstance->setParameter("normal", app.normal, sampler);
         app.materialInstance->setParameter("roughness", app.roughness, sampler);
 
-        auto ibl = FilamentApp::get().getIBL()->getIndirectLight();
+        auto ibl = app.filamentApp->getIBL()->getIndirectLight();
         ibl->setIntensity(100000);
         ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
@@ -207,7 +206,13 @@ int main(int argc, char** argv) {
         engine->destroy(app.ao);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .iblDirectory(config.iblDirectory)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

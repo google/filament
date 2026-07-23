@@ -17,9 +17,9 @@
 #include "material_sandbox.h"
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
 
@@ -71,7 +71,8 @@ static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
 static SandboxParameters g_params;
 static ColorGradingOptions g_lastColorGradingOptions;
 static ColorGrading* g_colorGrading = nullptr;
-static Config g_config;
+static SampleConfig g_config;
+std::unique_ptr<FilamentApp2> g_filamentApp;
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;
 static float g_rangePlot[1024 * 3];
@@ -125,7 +126,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(const int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(const int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:vps:i:d:c:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -326,7 +327,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 mat4f::translation(float3{ 0, -1, -4 }));
     }
 
-    if (auto* ibl = FilamentApp::get().getIBL()) {
+    if (auto* ibl = g_filamentApp->getIBL()) {
         auto& params = g_params;
         IndirectLight* const pIndirectLight = ibl->getIndirectLight();
         // If we loaded an equirectangular IBL, we don't have spherical harmonics. In that case,
@@ -341,7 +342,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         }
     }
 
-    g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();
+    g_params.bloomOptions.dirt = g_filamentApp->getDirtTexture();
 }
 
 static MaterialInstance* updateInstances(SandboxParameters& params) {
@@ -614,8 +615,8 @@ static void gui(Engine* engine, View*) {
             ImGui::SliderFloat("Far", &params.cameraFar, 1.0f, 10000.0f);
             ImGui::Unindent();
 
-            FilamentApp::get().setCameraFocalLength(params.cameraFocalLength);
-            FilamentApp::get().setCameraNearFar(params.cameraNear, params.cameraFar);
+            g_filamentApp->setCameraFocalLength(params.cameraFocalLength);
+            g_filamentApp->setCameraNearFar(params.cameraNear, params.cameraFar);
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {
@@ -942,7 +943,7 @@ static void gui(Engine* engine, View*) {
         params.hasDirectionalLight = false;
     }
 
-    if (auto* ibl = FilamentApp::get().getIBL()) {
+    if (auto* ibl = g_filamentApp->getIBL()) {
         ibl->getIndirectLight()->setIntensity(params.iblIntensity);
         ibl->getIndirectLight()->setRotation(
                 mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
@@ -1039,13 +1040,13 @@ static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     }
 
     // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
+    renderer->setClearOptions(
+            { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !g_filamentApp->getIBL() });
 
     Camera& camera = view->getCamera();
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
 }
+
 
 int main(const int argc, char* argv[]) {
     const int option_index = handleCommandLineArgments(argc, argv, &g_config);
@@ -1067,7 +1068,14 @@ int main(const int argc, char* argv[]) {
     g_params.bloomOptions.enabled = true;
 
     g_config.title = "Material Sandbox";
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup, gui, preRender);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(g_config.title)
+                            .scale(g_config.scale)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .imgui(gui)
+                            .preRender(preRender)
+                            .build();
+    g_filamentApp->run();
     return 0;
 }

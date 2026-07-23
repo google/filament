@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -29,19 +34,13 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <stb_image.h>
 
 #include <iostream>
 #include <string>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
@@ -51,6 +50,7 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb = nullptr;
     Material* mat = nullptr;
     MaterialInstance* matInstance = nullptr;
@@ -83,7 +83,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
+static int handleCommandLineArguments(int argc, char* argv[], SampleConfig& config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
         { "help", utils::getopt::no_argument,       nullptr, 'h' },
@@ -108,7 +108,7 @@ static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "procedural_effect";
     handleCommandLineArguments(argc, argv, config);
 
@@ -157,22 +157,28 @@ int main(int argc, char** argv) {
         EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine*, View* view, double now) {
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = float(w) / float(h);
-        app.cam->setProjection(Camera::Projection::ORTHO,
-                -aspect, aspect, -1.0f, 1.0f, 0.0f, 1.0f);
 
-        static double startTime = 0.0;
-        if (startTime == 0.0) {
-            startTime = now;
-        }
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .backend(config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine*, View* view, double now) {
+                                  const uint32_t w = view->getViewport().width;
+                                  const uint32_t h = view->getViewport().height;
+                                  const float aspect = float(w) / float(h);
+                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect, aspect,
+                                          -1.0f, 1.0f, 0.0f, 1.0f);
 
-        double elapsed = now - startTime;
-        app.matInstance->setParameter("time", (float)elapsed);
-    });
+                                  static double startTime = 0.0;
+                                  if (startTime == 0.0) {
+                                      startTime = now;
+                                  }
 
-    FilamentApp::get().run(config, setup, cleanup);
+                                  double elapsed = now - startTime;
+                                  app.matInstance->setParameter("time", (float) elapsed);
+                              })
+                              .build();
+    app.filamentApp->run();
     return 0;
 }

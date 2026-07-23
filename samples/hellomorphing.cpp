@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -22,24 +27,18 @@
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/SkinningBuffer.h>
 #include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
-#include <filament/SkinningBuffer.h>
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
 #include <utils/getopt.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <utils/Path.h>
 
 #include <cmath>
 #include <iostream>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
@@ -48,6 +47,7 @@ using utils::Path;
 using namespace filament::math;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -111,7 +111,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -137,7 +137,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "helloMorphing";
 
     handleCommandLineArgments(argc, argv, &config);
@@ -222,24 +222,28 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        constexpr float ZOOM = 1.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO,
-            -aspect * ZOOM, aspect * ZOOM,
-            -ZOOM, ZOOM, 0, 1);
 
-        auto& rm = engine->getRenderableManager();
-        // morphTarget/blendshapes animation defined for all primitives
-        float z = (float)(sin(now)/2.f + 0.5f);
-        float weights[] = {1 - z, z/2, z/2};
-        // set global weights of all morph targets
-        rm.setMorphWeights(rm.getInstance(app.renderable), weights, 3, 0);
-    });
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine* engine, View* view, double now) {
+                                  constexpr float ZOOM = 1.5f;
+                                  const uint32_t w = view->getViewport().width;
+                                  const uint32_t h = view->getViewport().height;
+                                  const float aspect = (float) w / h;
+                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                          aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
 
-    FilamentApp::get().run(config, setup, cleanup);
+                                  auto& rm = engine->getRenderableManager();
+                                  // morphTarget/blendshapes animation defined for all primitives
+                                  float z = (float) (sin(now) / 2.f + 0.5f);
+                                  float weights[] = { 1 - z, z / 2, z / 2 };
+                                  // set global weights of all morph targets
+                                  rm.setMorphWeights(rm.getInstance(app.renderable), weights, 3, 0);
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

@@ -15,6 +15,12 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -30,12 +36,6 @@
 
 #include <math/norm.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/MeshAssimp.h>
-
-#include "generated/resources/resources.h"
-
 using namespace filament;
 using namespace filament::math;
 using Backend = Engine::Backend;
@@ -48,6 +48,7 @@ struct GroundPlane {
 };
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Skybox* skybox;
     utils::Entity light;
     std::map<std::string, MaterialInstance*> materials;
@@ -63,12 +64,10 @@ static constexpr bool ENABLE_SHADOWS = true;
 
 static GroundPlane createGroundPlane(Engine* engine);
 
-static const Config config {
-    .title = "shadowtest",
-    .iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER,
+static const SampleConfig config{ .title = "shadowtest",
+    .iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER,
     .scale = 1,
-    .splitView = false
-};
+    .splitView = false };
 
 int main(int argc, char** argv) {
     App app;
@@ -81,7 +80,7 @@ int main(int argc, char** argv) {
 
         // Add geometry into the scene.
         app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(FilamentApp::getRootAssetsPath() + MODEL_FILE, app.materials);
+        app.meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         for (auto renderable : app.meshes->getRenderables()) {
@@ -124,13 +123,19 @@ int main(int argc, char** argv) {
         delete app.meshes;
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        auto& tcm = engine->getTransformManager();
-        auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
-        tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
-    });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app.filamentApp = FilamentApp2::Builder()
+                              .backend(config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine* engine, View* view, double now) {
+                                  auto& tcm = engine->getTransformManager();
+                                  auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
+                                  tcm.setTransform(ti,
+                                          app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

@@ -15,6 +15,14 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -25,19 +33,10 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/getopt.h>
 
 #include <iostream>
 #include <string>// for printing usage/help
-
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
 
 using namespace filament;
 using namespace filamesh;
@@ -46,7 +45,8 @@ using namespace filament::math;
 using Backend = Engine::Backend;
 
 struct App {
-    Config config;
+    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
     utils::Entity light;
     Material* material;
     MaterialInstance* materialInstance;
@@ -105,7 +105,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 int main(int argc, char** argv) {
     App app;
     app.config.title = "hellopbr";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER;
     handleCommandLineArguments(argc, argv, &app);
 
     auto setup = [config=app.config, &app](Engine* engine, View* view, Scene* scene) {
@@ -148,13 +148,21 @@ int main(int argc, char** argv) {
         engine->destroy(app.material);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        auto& tcm = engine->getTransformManager();
-        auto ti = tcm.getInstance(app.mesh.renderable);
-        tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
-    });
 
-    FilamentApp::get().run(app.config, setup, cleanup);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .iblDirectory(app.config.iblDirectory)
+                              .backend(app.config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine* engine, View* view, double now) {
+                                  auto& tcm = engine->getTransformManager();
+                                  auto ti = tcm.getInstance(app.mesh.renderable);
+                                  tcm.setTransform(ti,
+                                          app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

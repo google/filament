@@ -15,21 +15,23 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
-#include <filament/View.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filament/View.h>
 
 #include <cmath>
 
 using namespace filament;
 
+std::unique_ptr<FilamentApp2> g_filamentApp;
+
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "strobecolor";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
     Skybox* skybox;
@@ -43,15 +45,21 @@ int main(int argc, char** argv) {
     auto cleanup = [](Engine*, View*, Scene*) {
     };
 
-    FilamentApp::get().animate([&skybox](Engine*, View* view, double now) {
-        constexpr float SPEED = 4;
-        float r = 0.5f + 0.5f * std::sin(SPEED * now);
-        float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
-        float b = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 4 / 3);
-        skybox->setColor({r, g, b, 1.0});
-    });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(config.title)
+                            .backend(config.backend)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .animation([&skybox](Engine*, View* view, double now) {
+                                constexpr float SPEED = 4;
+                                float r = 0.5f + 0.5f * std::sin(SPEED * now);
+                                float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
+                                float b = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 4 / 3);
+                                skybox->setColor({ r, g, b, 1.0 });
+                            })
+                            .build();
+    g_filamentApp->run();
 
     return 0;
 }

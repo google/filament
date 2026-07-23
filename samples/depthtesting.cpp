@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -28,22 +33,18 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <imgui.h>
-
 #include <utils/EntityManager.h>
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <imgui.h>
 
 #include <cmath>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -69,7 +70,7 @@ static const Vertex TRIANGLE_VERTICES[3] = {
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "depthtesting";
     config.backend = samples::parseArgumentsForBackend(argc, argv);
 
@@ -151,20 +152,27 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        constexpr float ZOOM = 1.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO,
-                -aspect * ZOOM, aspect * ZOOM,
-                -ZOOM, ZOOM, -5, 5);
-        auto& tcm = engine->getTransformManager();
-        tcm.setTransform(tcm.getInstance(app.colorTriangle),
-                filament::math::mat4f::rotation(now, filament::math::float3{ 0, 1, 0 }));
-    });
 
-    FilamentApp::get().run(config, setup, cleanup, gui);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .backend(config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(gui)
+                              .animation([&app](Engine* engine, View* view, double now) {
+                                  constexpr float ZOOM = 1.5f;
+                                  const uint32_t w = view->getViewport().width;
+                                  const uint32_t h = view->getViewport().height;
+                                  const float aspect = (float) w / h;
+                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                          aspect * ZOOM, -ZOOM, ZOOM, -5, 5);
+                                  auto& tcm = engine->getTransformManager();
+                                  tcm.setTransform(tcm.getInstance(app.colorTriangle),
+                                          filament::math::mat4f::rotation(now,
+                                                  filament::math::float3{ 0, 1, 0 }));
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }
