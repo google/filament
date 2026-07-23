@@ -97,7 +97,19 @@ public:
     static_assert(sizeof(Job) == 64);
 #endif
 
-    explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
+    /**
+     * Special value for userThreadCount to configure the JobSystem in single-threaded mode.
+     */
+    static constexpr uint32_t SINGLE_THREADED = std::numeric_limits<uint32_t>::max();
+
+    /**
+     * Create a JobSystem and initializes its thread pool. The pool can have zero threads if SINGLE_THREADED is used
+     * as the userThreadCount, in that case adoptableThreadsCount is forced to 1.
+     *
+     * @param userThreadCount number of threads in the JobSystem thread pool.
+     * @param adoptableThreadsCount number of calling threads outside the thread pool.
+     */
+    explicit JobSystem(uint32_t userThreadCount = 0, uint32_t adoptableThreadsCount = 1) noexcept;
 
     ~JobSystem();
 

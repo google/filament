@@ -372,6 +372,11 @@ public class Engine {
                 FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3;
 
         /**
+         * Special value for jobSystemThreadCount, forcing the JobSystem to be single-threaded.
+         */
+        public static final long SINGLE_THREADED = 0xFFFFFFFFL;
+
+        /**
          * Size in MiB of the low-level command buffer arena.
          *
          * Each new command buffer is allocated from here. If this buffer is too small the program
