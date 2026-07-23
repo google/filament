@@ -195,7 +195,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) && FVK_ENABLED(FVK_DEBUG_VALIDATION)
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
@@ -212,7 +212,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     FVK_LOGE << "";
     return VK_FALSE;
 }
-#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+#endif
 
 static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     std::unique_ptr<VulkanSync::CallbackData> cbData(
@@ -246,14 +246,13 @@ inline VulkanYcbcrConversionCache::Params getYcbcrConversionParams(const VulkanP
 
 }// anonymous namespace
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 using DebugUtils = VulkanDriver::DebugUtils;
 DebugUtils* DebugUtils::mSingleton = nullptr;
 
 DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const& context)
-    : mInstance(instance),
-      mDevice(device),
-      mEnabled(context.isDebugUtilsSupported()) {
+        : mInstance(instance),
+          mDevice(device),
+          mEnabled(context.isDebugUtilsEnabled()) {
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // Also initialize debug utils messenger here
@@ -302,7 +301,6 @@ void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
     };
     vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
 }
-#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
@@ -370,15 +368,13 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         mJobWorker = AmortizationWorker::create(mJobQueue);
     }
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
             new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), mContext);
-#endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
             = vkCreateDebugReportCallbackEXT;
-    if (!mContext.isDebugUtilsSupported() && createDebugReportCallback) {
+    if (!mContext.isDebugUtilsEnabled() && createDebugReportCallback) {
         VkDebugReportCallbackCreateInfoEXT const cbinfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
                 .flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -519,10 +515,8 @@ void VulkanDriver::terminate() {
         vkDestroyDebugReportCallbackEXT(mPlatform->getInstance(), mDebugCallback, VKALLOC);
     }
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     assert_invariant(DebugUtils::mSingleton);
     delete DebugUtils::mSingleton;
-#endif
 
     mPlatform->terminate();
 }
@@ -1090,8 +1084,8 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
 
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils::ImmutableCString&& tag) {
     FVK_SYSTRACE_SCOPE();
-    auto vprogram = resource_ptr<VulkanProgram>::make(&mResourceManager, ph, mPlatform->getDevice(),
-            program);
+    auto vprogram = resource_ptr<VulkanProgram>::make(&mResourceManager, ph, mContext,
+            mPlatform->getDevice(), program);
     vprogram.inc();
     mResourceManager.associateHandle(ph.getId(), std::move(tag));
 
@@ -2386,17 +2380,17 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
             mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
 
-// Assign a label to the framebuffer for debugging purposes.
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS_RENDERPASS_NAME)
-    auto const topMarker = mCommands.getTopGroupMarker();
-    if (!topMarker.empty()) {
-        uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
-        uint64_t renderPassVk = (uint64_t) renderPass->getVkRenderPass();
-        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
-        DebugUtils::setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk,topMarker.c_str());
-    }
+    // Assign a label to the framebuffer for debugging purposes.
 
-#endif
+    if (mContext.isDebugUtilsNamesEnabled()) {
+        auto const topMarker = mCommands.getTopGroupMarker();
+        if (!topMarker.empty()) {
+            uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
+            uint64_t renderPassVk = (uint64_t) renderPass->getVkRenderPass();
+            DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
+            DebugUtils::setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk, topMarker.c_str());
+        }
+    }
 
     // The current command buffer now has references to the render target and its attachments.
     commandBuffer->acquire(rt);
@@ -2613,24 +2607,18 @@ void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
 }
 
 void VulkanDriver::insertEventMarker(char const* string) {
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.insertEventMarker(string, strlen(string));
-#endif
 }
 
 void VulkanDriver::pushGroupMarker(char const* string) {
     // Turns out all the markers are 0-terminated, so we can just pass it without len.
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
-#endif
     FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
     FVK_ALWAYS_ON_SYSTRACE_START(string);
 }
 
 void VulkanDriver::popGroupMarker(int) {
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.popGroupMarker();
-#endif
     FVK_ALWAYS_ON_SYSTRACE_CONTEXT();
     FVK_ALWAYS_ON_SYSTRACE_END();
 }
