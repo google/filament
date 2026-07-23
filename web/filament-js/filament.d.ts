@@ -815,6 +815,7 @@ export class DecodedImage {
 }
 
 export class Engine {
+    public static readonly SINGLE_THREADED: number;
     public static create(canvas: HTMLCanvasElement, options?: { backend?: Backend }): Engine;
     public static destroy(engine: Engine): void;
     public execute(): void;
