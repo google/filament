@@ -360,9 +360,12 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     // put the job into the queue
     workQueue.push(uint16_t(index + 1));
 
-    // increase our active job count (the order in which we're doing this must not matter
-    // because we're not using std::memory_order_seq_cst (here or in WorkQueue::push()).
-    mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+    // Increase our active job count. We MUST use std::memory_order_release here.
+    // If we used relaxed, the compiler or CPU could reorder this increment to happen 
+    // BEFORE workQueue.push(). If a preemption happened right there, other threads 
+    // would see mActiveJobs > 0, enter the steal() loop, fail to find the job, and 
+    // spin infinitely, recreating the exact same priority inversion lockup on the push side!
+    mActiveJobs.fetch_add(1, std::memory_order_release);
 
     // Note: it's absolutely possible for mActiveJobs to be 0 here, because the job could have
     // been handled by a zealous worker already. In that case we could avoid calling wakeOne(),
@@ -372,21 +375,30 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
 }
 
 JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
+    // We speculatively decrement mActiveJobs before taking the job.
+    // If a thread is preempted here, mActiveJobs is temporarily undercounted.
+    // This is safe and desirable: it allows other idle threads to see 0 and go to sleep
+    // (yielding the CPU) instead of spinning infinitely on hasActiveJobs(),
+    // completely preventing priority inversion lockups.
+    mActiveJobs.fetch_sub(1, std::memory_order_acquire);
     size_t const index = workQueue.pop();
     assert(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
-    if (UTILS_LIKELY(job)) {
-        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
+    if (UTILS_UNLIKELY(!job)) {
+        // If we didn't actually get a job, restore the count.
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
     }
     return job;
 }
 
 JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
+    // See JobSystem::pop() for why we pre-decrement mActiveJobs.
+    mActiveJobs.fetch_sub(1, std::memory_order_acquire);
     size_t const index = workQueue.steal();
     assert_invariant(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
-    if (UTILS_LIKELY(job)) {
-        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
+    if (UTILS_UNLIKELY(!job)) {
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
     }
     return job;
 }
