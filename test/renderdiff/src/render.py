@@ -15,112 +15,44 @@
 import sys
 import os
 import json
-import glob
 import shutil
-import concurrent.futures
-import fnmatch
 
-
-from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
+from utils import ArgParseImpl, important_print
 
 import test_config
-from results import RESULT_OK, RESULT_FAILED
+from results import RESULT_OK
 
-from renderers import (
-    RenderTestCase,
-    NativeRenderer,
-    OpenGLRenderer,
-    VulkanRenderer,
-    WebGPUDesktopRenderer,
-)
-
-def _render_test_config(gltf_viewer,
-            test_config,
-            output_dir,
-            local_only=False,
-            opengl_lib=None,
-            vk_icd=None,
-            test_filter=None,
-            num_threads=None):
-  assert os.path.isdir(output_dir), f"output directory {output_dir} does not exist"
-  assert os.access(gltf_viewer, os.X_OK)
-
-  named_output_dir = os.path.join(output_dir, test_config.name)
-  mkdir_p(named_output_dir)
-
-  gltf_viewer_abs = os.path.abspath(gltf_viewer)
-
-  results = []
-  with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-    futures = []
-    for test in test_config.tests:
-      test_json_path = os.path.abspath(
-          f'{named_output_dir}/{test.name}.simplified.json')
-
-      with open(test_json_path, 'w') as f:
-        f.write(f'[{test.to_filament_format()}]')
-
-      for backend in test.backends:
-        if backend == 'vulkan':
-          assert vk_icd, "VK ICD must be specified when testing vulkan backend"
-          renderer = VulkanRenderer(gltf_viewer_abs, vk_icd)
-        elif backend == 'opengl':
-          renderer = OpenGLRenderer(gltf_viewer_abs, opengl_lib)
-        elif backend == 'webgpu':
-          renderer = WebGPUDesktopRenderer(gltf_viewer_abs)
-        else:
-          renderer = NativeRenderer(gltf_viewer_abs)
-
-        for model in test.models:
-          test_name = f'{test.name}.{backend}.{model}'
-          if test_filter and not fnmatch.fnmatch(test_name, test_filter):
-            print(f'Skipping {test_name} because it does not match filter')
-            continue
-          model_path = os.path.abspath(test_config.models[model])
-
-          test_case = RenderTestCase(
-              test_name=test.name,
-              backend=backend,
-              model=model,
-              model_path=model_path,
-              test_json_path=test_json_path,
-              output_dir=named_output_dir
-          )
-
-          futures.append(
-            executor.submit(renderer.render, test_case))
-
-    for future in concurrent.futures.as_completed(futures):
-      results.append(future.result())
-
-  return named_output_dir, results
+from renderers import RendererFactory
 
 if __name__ == "__main__":
   parser = ArgParseImpl()
   parser.add_argument('--test', help='Configuration of the test', required=True)
-  parser.add_argument('--gltf_viewer', help='Path to the gltf_viewer', required=True)
+  parser.add_argument('--platform', help='Platform to render on (e.g. desktop)', default='desktop')
+  parser.add_argument('--backend', help='Backend to render with (e.g. vulkan)', required=True)
+  parser.add_argument('--executable', help='Path to the executable (e.g. gltf_viewer)', required=True)
   parser.add_argument('--output_dir', help='Output Directory', required=True)
-  parser.add_argument('--opengl_lib', help='Path to the folder containing OpenGL driver lib (for LD_LIBRARY_PATH)')
-  parser.add_argument('--vk_icd', help='Path to VK ICD file')
   parser.add_argument('--test_filter', help='Filter for the tests to run')
   parser.add_argument('--num_threads', help='Number of threads to use for rendering', type=int)
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   test = test_config.parse_from_path(args.test)
 
-  output_dir, results = \
-    _render_test_config(args.gltf_viewer,
-                        test,
-                        args.output_dir,
-                        opengl_lib=args.opengl_lib,
-                        vk_icd=args.vk_icd,
-                        test_filter=args.test_filter,
-                        num_threads=args.num_threads)
+  renderer = RendererFactory.create(
+      platform=args.platform,
+      backend=args.backend,
+      executable=args.executable,
+      test_filter=args.test_filter,
+      num_threads=args.num_threads
+  )
 
-  with open(f'{output_dir}/render_results.json', 'w') as f:
+  results = renderer.run_tests(test, args.output_dir)
+
+  named_output_dir = os.path.join(args.output_dir, test.name)
+
+  with open(os.path.join(named_output_dir, f'render_results_{args.backend}.json'), 'w') as f:
     f.write(json.dumps(results, indent=2))
 
-  shutil.copy2(args.test, f'{output_dir}/test.json')
+  shutil.copy2(args.test, os.path.join(named_output_dir, 'test.json'))
 
   failed = [f"   {k['name']}" for k in results if k['result'] != RESULT_OK]
   success_count = len(results) - len(failed)

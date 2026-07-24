@@ -14,6 +14,8 @@
 
 import abc
 import os
+import concurrent.futures
+import fnmatch
 from dataclasses import dataclass
 from utils import execute, mkdir_p, mv_f, important_print
 from results import RESULT_OK, RESULT_FAILED
@@ -28,30 +30,55 @@ class RenderTestCase:
     output_dir: str
 
 class BaseRenderer(abc.ABC):
+    def __init__(self, platform: str, backend: str, executable: str):
+        self.platform = platform
+        self.backend = backend
+        self.executable = executable
+
     @abc.abstractmethod
-    def render(self, test_case: RenderTestCase) -> dict:
+    def run_tests(self, test_config: 'RenderTestConfig', output_dir: str) -> list[dict]:
+        """Executes a suite of tests and returns a list of results."""
         pass
 
-class NativeRenderer(BaseRenderer):
-    def __init__(self, gltf_viewer: str):
-        self.gltf_viewer = gltf_viewer
+class DesktopRenderer(BaseRenderer):
+    def __init__(self, platform: str, backend: str, executable: str, num_threads: int = None, test_filter: str = None):
+        super().__init__(platform, backend, executable)
+        self.num_threads = num_threads
+        self.test_filter = test_filter
 
-    def _get_env(self, test_case: RenderTestCase) -> dict:
-        # We need to pass along the old environment because it might include vars from vulkansdk.
-        return os.environ.copy()
+    def _get_env(self) -> dict:
+        env = os.environ.copy()
+        if self.backend == 'vulkan':
+            vk_icd = os.environ.get('FILAMENT_VK_ICD')
+            if vk_icd and os.path.exists(vk_icd):
+                env.update({
+                    'VK_ICD_FILENAMES': vk_icd,
+                    'VK_DRIVER_FILES': vk_icd,
+                })
+        elif self.backend == 'opengl':
+            opengl_lib = os.environ.get('FILAMENT_OPENGL_LIB')
+            if opengl_lib and os.path.isdir(opengl_lib):
+                env.update({
+                    'LD_LIBRARY_PATH': opengl_lib,
+                    'DYLD_LIBRARY_PATH': opengl_lib,
+                })
+        return env
 
-    def render(self, test_case: RenderTestCase) -> dict:
-        env = self._get_env(test_case)
-        out_name = f'{test_case.test_name}.{test_case.backend}.{test_case.model}'
+    def render_single_test(self, test_case: RenderTestCase) -> dict:
+        env = self._get_env()
+        ext = '.tif'
+        renderer_spec = f"{self.platform}-{self.backend}"
+        out_name = f'{test_case.test_name}.{renderer_spec}.{test_case.model}'
         test_desc = out_name
 
-        working_dir = f'/tmp/renderdiff/{test_case.backend}/{test_case.model}'
+        working_dir = f'/tmp/renderdiff/{renderer_spec}/{test_case.model}'
         mkdir_p(working_dir)
 
         important_print(f'Rendering {test_desc}')
 
+        executable_abs = os.path.abspath(self.executable)
         out_code, output = execute(
-            f'{self.gltf_viewer} -a {test_case.backend} --batch={test_case.test_json_path} -e {test_case.model_path} --headless',
+            f'{executable_abs} -a {self.backend} --batch={test_case.test_json_path} -e {test_case.model_path} --headless',
             cwd=working_dir,
             env=env, capture_output=True
         )
@@ -59,7 +86,7 @@ class NativeRenderer(BaseRenderer):
         result = ''
         if out_code == 0:
             result = RESULT_OK
-            out_tif_basename = f'{out_name}.tif'
+            out_tif_basename = f'{out_name}{ext}'
             out_tif_name = f'{test_case.output_dir}/{out_tif_basename}'
             mv_f(f'{working_dir}/{test_case.test_name}0.tif', out_tif_name)
             mv_f(f'{working_dir}/{test_case.test_name}0.json', f'{test_case.output_dir}/{test_case.test_name}.json')
@@ -74,34 +101,52 @@ class NativeRenderer(BaseRenderer):
             'result_code': out_code,
         }
 
-class OpenGLRenderer(NativeRenderer):
-    def __init__(self, gltf_viewer: str, opengl_lib: str = None):
-        super().__init__(gltf_viewer)
-        self.opengl_lib = opengl_lib
+    def run_tests(self, test_config, output_dir: str) -> list[dict]:
+        named_output_dir = os.path.join(output_dir, test_config.name)
+        mkdir_p(named_output_dir)
 
-    def _get_env(self, test_case: RenderTestCase) -> dict:
-        env = super()._get_env(test_case)
-        if self.opengl_lib and os.path.isdir(self.opengl_lib):
-            env.update({
-                'LD_LIBRARY_PATH': self.opengl_lib,
-                # for macOS
-                'DYLD_LIBRARY_PATH': self.opengl_lib,
-            })
-        return env
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+            futures = []
+            for test in test_config.tests:
+                renderer_spec = f"{self.platform}-{self.backend}"
+                if renderer_spec not in test.renderers:
+                    continue
 
-class VulkanRenderer(NativeRenderer):
-    def __init__(self, gltf_viewer: str, vk_icd: str = None):
-        super().__init__(gltf_viewer)
-        self.vk_icd = vk_icd
+                test_json_path = os.path.abspath(f'{named_output_dir}/{test.name}.simplified.json')
 
-    def _get_env(self, test_case: RenderTestCase) -> dict:
-        env = super()._get_env(test_case)
-        if self.vk_icd and os.path.exists(self.vk_icd):
-            env.update({
-                'VK_ICD_FILENAMES': self.vk_icd,
-                'VK_DRIVER_FILES': self.vk_icd,
-            })
-        return env
+                with open(test_json_path, 'w') as f:
+                    f.write(f'[{test.to_filament_format()}]')
 
-class WebGPUDesktopRenderer(NativeRenderer):
-    pass
+                for model in test.models:
+                    renderer_spec = f"{self.platform}-{self.backend}"
+                    test_name = f'{test.name}.{renderer_spec}.{model}'
+                    if self.test_filter and not fnmatch.fnmatch(test_name, self.test_filter):
+                        print(f'Skipping {test_name} because it does not match filter')
+                        continue
+                    model_path = os.path.abspath(test_config.models[model])
+
+                    test_case = RenderTestCase(
+                        test_name=test.name,
+                        backend=self.backend,
+                        model=model,
+                        model_path=model_path,
+                        test_json_path=test_json_path,
+                        output_dir=named_output_dir
+                    )
+
+                    futures.append(executor.submit(self.render_single_test, test_case))
+
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
+
+        return results
+
+class RendererFactory:
+    @staticmethod
+    def create(platform: str, backend: str, executable: str, **kwargs) -> BaseRenderer:
+        if platform == 'desktop':
+            return DesktopRenderer(platform, backend, executable, **kwargs)
+        else:
+            # AndroidRenderer and others would be instantiated here.
+            raise NotImplementedError(f"Platform '{platform}' is not fully implemented yet.")
