@@ -139,7 +139,8 @@ struct Variant {
     void setStereo(bool v) noexcept              { set(v, STE); }
 
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
-        // (MNT | PCK | DEP) is reserved.
+        // (MNT | PCK | DEP) is SSR variant.
+        // (MNT | PCK | DEP) + (STE | SKN)/(STE)/(SKN) are reserved.
         constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE | DYN | DIR;
         constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
         return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
@@ -223,7 +224,7 @@ struct Variant {
         // filter out fragment variants that are not needed. For e.g. skinning doesn't
         // affect the fragment shader.
         if (isSSRVariant(variant)) {
-            return Variant(SPECIAL_SSR_VARIANT);
+            return variant;
         }
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             return variant & (S2D | FOG | SRE | DYN | DIR);
