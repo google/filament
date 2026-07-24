@@ -7,3 +7,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - web: expand JS bindings coverage for Fence, SkinningBuffer, MorphTargetBuffer, and other previously unbound APIs
+- variant: compile MNT variant for unlit materials by default. [⚠️ **Recompile Materials**]
