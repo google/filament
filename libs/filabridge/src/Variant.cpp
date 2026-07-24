@@ -52,20 +52,20 @@ Variant Variant::filterUserVariant(
         if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
             variant.key &= ~MNT;
         }
-    } else {
-        // we can't remove FOG from depth variants, this would, in fact, remove picking
-        if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
-            variant.key &= ~FOG;
-        }
+    }
+
+    if (filterMask & uint32_t(UserVariantFilterBit::SHADOW_RECEIVER)) {
+        variant.key &= ~SRE;
     }
 
     if (!isSSRVariant(variant)) {
-        // SSR variant needs to be handled separately
-        if (filterMask & uint32_t(UserVariantFilterBit::SHADOW_RECEIVER)) {
-            variant.key &= ~SRE;
-        }
+        // SSR still needs to be handled separately because MNT aliases S2D.
         if (filterMask & uint32_t(UserVariantFilterBit::VSM)) {
             variant.key &= ~S2D;
+        }
+
+        if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
+            variant = filterVariantFog(variant, false);
         }
     } else {
         // see if we need to filter out the SSR variants
@@ -85,7 +85,7 @@ constexpr inline size_t variant_count(bool lit) noexcept {
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
-        if (!Variant::isValidStandardVariant(variant)) {
+        if (!Variant::isValidSurfaceVariant(variant)) {
             continue;
         }
         variant = Variant::filterVariant(variant, lit);
@@ -114,7 +114,7 @@ constexpr auto get_variants() noexcept {
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
-        if (!Variant::isValidStandardVariant(variant)) {
+        if (!Variant::isValidSurfaceVariant(variant)) {
             continue;
         }
         variant = Variant::filterVariant(variant, LIT);
@@ -216,10 +216,10 @@ static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 148);
-static_assert(valid_variant_count() == 108);
+static_assert(reserved_variant_count() == 147);
+static_assert(valid_variant_count() == 109);
 static_assert(vertex_variant_count() == 32 - 0 + 8 - 0);   // 40
-static_assert(fragment_variant_count() == 32 - 8 + 4 - 1); // 27
+static_assert(fragment_variant_count() == 32 - 8 + 4);     // 28
 
 } // namespace details
 

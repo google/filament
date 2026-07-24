@@ -62,14 +62,17 @@ struct Variant {
     //
     // Standard variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      | STE | S2D | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 44 = 84
+    //                      | STE | S2D | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 32 = 96
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //      Vertex shader      X     0     0     0     X     X     X     X
     //    Fragment shader      0     X     X     0     0     X     X     X
-    //       Fragment SSR      0     1     0     0     0     1     0     0
-    //           Reserved      X     1     1     0     X     1     0     0      [ -4]
-    //           Reserved      X     0     X     0     X     1     0     0      [ -8]
     //           Reserved      X     1     X     0     X     0     X     X      [-32]
+    //
+    // SSR variant:
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //                      | STE | MNT | PCK | DEP |  0  |  0  |  0  |  0  |   1
+    //                      +-----+-----+-----+-----+-----+-----+-----+-----+
+    //       Fragment SSR      0     1     1     1     0     0     0     0
     //
     // Depth variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
@@ -78,9 +81,10 @@ struct Variant {
     //       Vertex depth      X     X     0     1     X     0     0     0
     //     Fragment depth      0     0     X     1     0     0     0     0
     //     Fragment depth      0     1     0     1     0     0     0     0
-    //           Reserved      X     1     1     1     X     0     0     0     [  -4]
+    //       Fragment SSR      0     1     1     1     0     0     0     0     [  -1]
+    //           Reserved      X     1     1     1     X     0     0     0     [  -3] (exclude SSR)
     //
-    // 96 variants used, 160 reserved (256 - 96)
+    // 109 variants used (96 standard + 1 SSR + 12 depth), 147 reserved
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
@@ -104,8 +108,8 @@ struct Variant {
     static constexpr type_t NO_VARIANT         = 0u;
 
     // special variants (variants that use the reserved space)
-    static constexpr type_t SPECIAL_SSR_VARIANT=       S2D |       SRE            ;
-    static constexpr type_t SPECIAL_SSR_MASK   = STE | S2D | DEP | SRE | DYN | DIR | FOG;
+    static constexpr type_t SPECIAL_SSR_VARIANT= MNT | PCK | DEP;
+    static constexpr type_t SPECIAL_SSR_MASK   = ~NO_VARIANT;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -135,7 +139,8 @@ struct Variant {
     void setStereo(bool v) noexcept              { set(v, STE); }
 
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
-        // Can't have VSM and PICKING together with DEPTH variants
+        // (MNT | PCK | DEP) is SSR variant.
+        // (MNT | PCK | DEP) + (STE | SKN)/(STE)/(SKN) are reserved.
         constexpr type_t RESERVED_MASK  = MNT | PCK | DEP | SRE | DYN | DIR;
         constexpr type_t RESERVED_VALUE = MNT | PCK | DEP;
         return ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) &&
@@ -151,6 +156,14 @@ struct Variant {
                ((variant.key & RESERVED_MASK) != RESERVED_VALUE);
     }
 
+    static constexpr bool isSSRVariant(Variant variant) noexcept {
+        return (variant.key & SPECIAL_SSR_MASK) == SPECIAL_SSR_VARIANT;
+    }
+
+    static constexpr bool isValidSurfaceVariant(Variant variant) noexcept {
+        return isValidStandardVariant(variant) || isSSRVariant(variant);
+    }
+
     static constexpr bool isVertexVariant(Variant variant) noexcept {
         return filterVariantVertex(variant) == variant;
     }
@@ -164,15 +177,11 @@ struct Variant {
     }
 
     static constexpr bool isValid(Variant variant) noexcept {
-        return isValidStandardVariant(variant) || isValidDepthVariant(variant);
-    }
-
-    static constexpr bool isSSRVariant(Variant variant) noexcept {
-        return (variant.key & SPECIAL_SSR_MASK) == SPECIAL_SSR_VARIANT;
+        return isValidSurfaceVariant(variant) || isValidDepthVariant(variant);
     }
 
     static constexpr bool isShadowSampler2DVariant(Variant variant) noexcept {
-        return !isSSRVariant(variant) && ((variant.key & (S2D | DEP)) == S2D);
+        return (variant.key & (S2D | DEP)) == S2D;
     }
 
     static constexpr bool isDepthMomentsVariant(Variant variant) noexcept {
@@ -180,7 +189,7 @@ struct Variant {
     }
 
     static constexpr bool isShadowReceiverVariant(Variant variant) noexcept {
-        return !isSSRVariant(variant) && ((variant.key & SRE) == SRE);
+        return (variant.key & SRE) == SRE;
     }
 
     static constexpr bool isFogVariant(Variant variant) noexcept {
@@ -188,7 +197,7 @@ struct Variant {
     }
 
     static constexpr bool isPickingVariant(Variant variant) noexcept {
-        return (variant.key & (PCK | DEP)) == (PCK | DEP);
+        return !isSSRVariant(variant) && ((variant.key & (PCK | DEP)) == (PCK | DEP));
     }
 
     static constexpr bool isStereoVariant(Variant variant) noexcept {
@@ -198,7 +207,7 @@ struct Variant {
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
         // Filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
-        if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
+        if (isValidSurfaceVariant(variant)) {
             if (isSSRVariant(variant)) {
                 variant.key &= ~SPECIAL_SSR_VARIANT;
             }
@@ -214,6 +223,9 @@ struct Variant {
     static constexpr Variant filterVariantFragment(Variant variant) noexcept {
         // filter out fragment variants that are not needed. For e.g. skinning doesn't
         // affect the fragment shader.
+        if (isSSRVariant(variant)) {
+            return variant;
+        }
         if ((variant.key & STANDARD_MASK) == STANDARD_VARIANT) {
             return variant & (S2D | FOG | SRE | DYN | DIR);
         }
@@ -222,6 +234,14 @@ struct Variant {
             return variant & (MNT | PCK | DEP);
         }
         return {};
+    }
+
+    static constexpr Variant filterVariantFog(Variant variant, bool hasFog) noexcept {
+        // FOG aliases PCK, so only clear it from a semantic fog variant.
+        if (!hasFog && isFogVariant(variant)) {
+            variant.key &= ~FOG;
+        }
+        return variant;
     }
 
     static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
@@ -270,6 +290,9 @@ struct Variant {
     UTILS_NOINLINE friend T& operator<<(T& out, Variant variant) noexcept {
         if (variant.key == 0) {
             return out << "(none)";
+        }
+        if (isSSRVariant(variant)) {
+            return out << "(SSR)";
         }
         out << "(";
         bool first = true;

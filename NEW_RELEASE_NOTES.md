@@ -7,3 +7,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - web: expand JS bindings coverage for Fence, SkinningBuffer, MorphTargetBuffer, and other previously unbound APIs
+- materials: fix punctual-only shadow receivers selecting the SSR shader. [⚠️ **Recompile Materials**]

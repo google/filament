@@ -194,7 +194,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
-    // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
+    // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
     // --------------------------------------------------------------------------------------------
     math::mat4f ssrReprojection;
     math::mat4f ssrUvFromViewMatrix;

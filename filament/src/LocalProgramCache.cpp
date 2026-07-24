@@ -173,7 +173,7 @@ Variant LocalProgramCache::filterVariantForGetProgram(Variant variant) const noe
             bool const isBlendingCommand = !hasScreenSpaceRefraction &&
                     (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
             if (!isBlendingCommand) {
-                variant.setFog(false);
+                variant = Variant::filterVariantFog(variant, false);
             }
         }
     }
