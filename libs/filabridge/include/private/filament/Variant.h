@@ -225,15 +225,7 @@ struct Variant {
     }
 
     static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
-        // special case for depth variant
-        if (isValidDepthVariant(variant)) {
-            if (!isLit) {
-                // if we're unlit, we never need the MNT variant
-                return variant & ~MNT;
-            }
-            return variant;
-        }
-        if (isSSRVariant(variant)) {
+        if (isSSRVariant(variant) || isValidDepthVariant(variant)) {
             return variant;
         }
         if (!isLit) {

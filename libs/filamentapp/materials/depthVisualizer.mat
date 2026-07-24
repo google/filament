@@ -1,6 +1,7 @@
 material {
     name : depthVisualizer,
     shadingModel : unlit,
+    variantFilter : [ vsm ],
 }
 
 fragment {
