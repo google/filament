@@ -1,0 +1,20 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) writeonly buffer D { float dst[]; };
+layout(std430,binding=1) readonly buffer S { float src[]; };
+layout(std430,binding=2) readonly buffer L { float lut[]; };
+layout(push_constant) uniform PC { uint n,ch,sz; float dmn0,dmn1,dmn2,dmx0,dmx1,dmx2; } p;
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; uint b=i*p.ch;
+  float dmn[3]=float[3](p.dmn0,p.dmn1,p.dmn2); float dmx[3]=float[3](p.dmx0,p.dmx1,p.dmx2);
+  float fr[3]; int i0[3];
+  for(int c=0;c<3;c++){ float v=(p.ch>uint(c))?src[b+uint(c)]:0.0; float t=(v-dmn[c])/(dmx[c]-dmn[c]);
+    t=clamp(t,0.0,1.0); float fc=t*float(p.sz-1u); int ii=int(fc); if(ii>int(p.sz)-2)ii=int(p.sz)-2; if(ii<0)ii=0; i0[c]=ii; fr[c]=fc-float(ii); }
+  vec3 o=vec3(0.0);
+  for(int crn=0;crn<8;crn++){ int dx=crn&1,dy=(crn>>1)&1,dz=(crn>>2)&1;
+    float w=((dx==1?fr[0]:1.0-fr[0])*(dy==1?fr[1]:1.0-fr[1])*(dz==1?fr[2]:1.0-fr[2]));
+    uint ir=uint(i0[0]+dx), ig=uint(i0[1]+dy), ib=uint(i0[2]+dz);
+    uint idx=((ib*p.sz+ig)*p.sz+ir)*3u; o+=w*vec3(lut[idx],lut[idx+1u],lut[idx+2u]); }
+  for(uint c=0u;c<3u&&c<p.ch;c++) dst[b+c]=o[c];
+  for(uint c=3u;c<p.ch;c++) dst[b+c]=src[b+c];
+}

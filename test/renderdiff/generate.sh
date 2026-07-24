@@ -83,13 +83,18 @@ esac
 done
 
 
-start_render_ && \
+start_render_ || exit 1
+
+for backend in opengl vulkan webgpu; do
+    FILAMENT_VK_ICD="${MESA_VK_ICD_PATH}" FILAMENT_OPENGL_LIB="${MESA_LIB_DIR}" \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
-            --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
+            --executable="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
+            --platform=desktop \
+            --backend=$backend \
             --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" \
             --output_dir="${RENDER_OUTPUT_DIR}" \
-            --opengl_lib="${MESA_LIB_DIR}" \
-            --vk_icd="${MESA_VK_ICD_PATH}" \
             ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
-            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} && \
-    end_render_
+            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || exit 1
+done
+
+end_render_
