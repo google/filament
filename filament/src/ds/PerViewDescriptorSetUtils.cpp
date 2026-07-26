@@ -52,6 +52,18 @@ void PerViewDescriptorSetUtils::prepareCamera(PerViewUib& s,
     s.clipFromViewMatrix  = clipFromView;     // projection
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
+
+    // Collapsed 3x3 clip-to-world ray matrix (strips 3D translation).
+    // This perfectly generalizes to any projection matrix shape (including asymmetric,
+    // off-axis, or orthographic) by extracting the transformation of the (x, y, 1, 1) 
+    // clip-space coordinate into a purely rotational world-space ray.
+    mat3f const worldFromView_3x3 = worldFromView.upperLeft();
+    mat3f rayFromClip;
+    rayFromClip[0] = worldFromView_3x3 * viewFromClip[0].xyz;
+    rayFromClip[1] = worldFromView_3x3 * viewFromClip[1].xyz;
+    rayFromClip[2] = worldFromView_3x3 * (viewFromClip[2].xyz + viewFromClip[3].xyz);
+
+    s.worldRayFromClipMatrix = rayFromClip;
     s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
     s.clipTransform = camera.clipTransform;
     s.cameraFar = camera.zf;

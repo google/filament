@@ -73,6 +73,20 @@ highp mat4 getWorldFromClipMatrix() {
     return frameUniforms.worldFromClipMatrix;
 }
 
+#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+/**
+ * Transforms a 2D clip-space position (x, y) directly into an un-normalized, un-translated world-space ray direction.
+ * This implicitly uses a z-coordinate of 1.0 (meaning x, y on the near plane in inverted-z convention)
+ * to correctly reconstruct the un-translated world-space ray direction.
+ * Invariant to camera translation and origin-shifting modes.
+ * @api-level 2
+ * @public-api
+ */
+highp vec3 getWorldRayFromClip(highp vec2 clipXY) {
+    return frameUniforms.worldRayFromClipMatrix * vec3(clipXY, 1.0);
+}
+#endif
+
 /** @public-api */
 highp mat4 getUserWorldFromWorldMatrix() {
     return frameUniforms.userWorldFromWorldMatrix;
