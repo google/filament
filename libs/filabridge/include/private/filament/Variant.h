@@ -109,7 +109,8 @@ struct Variant {
 
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR_VARIANT= MNT | PCK | DEP;
-    static constexpr type_t SPECIAL_SSR_MASK   = ~NO_VARIANT;
+    static constexpr type_t SPECIAL_SSR_MASK =
+        STE | MNT | PCK | DEP | SKN | SRE | DYN | DIR;
 
     static constexpr type_t STANDARD_MASK      = DEP;
     static constexpr type_t STANDARD_VARIANT   = 0u;
@@ -132,11 +133,17 @@ struct Variant {
     void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
     void setShadowReceiver(bool v) noexcept      { set(v, SRE); }
     void setSkinning(bool v) noexcept            { set(v, SKN); }
-    void setFog(bool v) noexcept                 { set(v, FOG); }
     void setPicking(bool v) noexcept             { set(v, PCK); }
     void setShadowSampler2D(bool v) noexcept     { set(v, S2D); }
     void setDepthMoments(bool v) noexcept        { set(v, MNT); }
     void setStereo(bool v) noexcept              { set(v, STE); }
+    constexpr void setFog(bool v) noexcept {
+        // When the DEP bit is set, the FOG bit aliases with PCK. We must check the DEP bit before
+        // modifying FOG to avoid accidentally unsetting PCK and breaking the SSR variant.
+        if (!(key & DEP)) {
+            set(v, FOG);
+        }
+    }
 
     static constexpr bool isValidDepthVariant(Variant variant) noexcept {
         // (MNT | PCK | DEP) is SSR variant.
@@ -234,14 +241,6 @@ struct Variant {
             return variant & (MNT | PCK | DEP);
         }
         return {};
-    }
-
-    static constexpr Variant filterVariantFog(Variant variant, bool hasFog) noexcept {
-        // FOG aliases PCK, so only clear it from a semantic fog variant.
-        if (!hasFog && isFogVariant(variant)) {
-            variant.key &= ~FOG;
-        }
-        return variant;
     }
 
     static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {

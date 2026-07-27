@@ -65,7 +65,7 @@ Variant Variant::filterUserVariant(
         }
 
         if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
-            variant = filterVariantFog(variant, false);
+            variant.setFog(false);
         }
     } else {
         // see if we need to filter out the SSR variants

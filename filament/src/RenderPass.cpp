@@ -631,7 +631,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         FRenderableManager::MorphingBindingInfo const& morphing = soaMorphing[i];
 
         if constexpr (isColorPass) {
-            renderableVariant = Variant::filterVariantFog(renderableVariant, soaVisibility[i].fog);
+            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
             cmd.key = uint64_t(Pass::COLOR);
         } else if constexpr (isDepthPass) {
             cmd.key = uint64_t(Pass::DEPTH);

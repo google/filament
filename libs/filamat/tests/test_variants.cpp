@@ -130,20 +130,26 @@ TEST(Variant, FogFilteringPreservesPickingAndFiltersSurfaceFog) {
     using V = filament::Variant;
     constexpr UserVariantFilterMask FOG_FILTER = uint32_t(UserVariantFilterBit::FOG);
 
-    V const surface(V::SRE | V::FOG);
-    EXPECT_EQ(V::filterVariantFog(surface, true), surface);
-    EXPECT_EQ(V::filterVariantFog(surface, false), V(V::SRE));
-    EXPECT_EQ(V::filterUserVariant(surface, FOG_FILTER), V(V::SRE));
+    V surface(V::SRE | V::FOG);
+    surface.setFog(true);
+    EXPECT_EQ(surface, V(V::SRE | V::FOG));
+    surface.setFog(false);
+    EXPECT_EQ(surface, V(V::SRE));
+    EXPECT_EQ(V::filterUserVariant(V(V::SRE | V::FOG), FOG_FILTER), V(V::SRE));
 
-    V const ssr(V::SPECIAL_SSR_VARIANT);
-    EXPECT_EQ(V::filterVariantFog(ssr, true), ssr);
-    EXPECT_EQ(V::filterVariantFog(ssr, false), ssr);
-    EXPECT_EQ(V::filterUserVariant(ssr, FOG_FILTER), ssr);
+    V ssr(V::SPECIAL_SSR_VARIANT);
+    ssr.setFog(true);
+    EXPECT_EQ(ssr, V(V::SPECIAL_SSR_VARIANT));
+    ssr.setFog(false);
+    EXPECT_EQ(ssr, V(V::SPECIAL_SSR_VARIANT));
+    EXPECT_EQ(V::filterUserVariant(V(V::SPECIAL_SSR_VARIANT), FOG_FILTER), V(V::SPECIAL_SSR_VARIANT));
 
-    V const picking(V::PCK | V::DEP);
-    EXPECT_EQ(V::filterVariantFog(picking, true), picking);
-    EXPECT_EQ(V::filterVariantFog(picking, false), picking);
-    EXPECT_EQ(V::filterUserVariant(picking, FOG_FILTER), picking);
+    V picking(V::PCK | V::DEP);
+    picking.setFog(true);
+    EXPECT_EQ(picking, V(V::PCK | V::DEP));
+    picking.setFog(false);
+    EXPECT_EQ(picking, V(V::PCK | V::DEP));
+    EXPECT_EQ(V::filterUserVariant(V(V::PCK | V::DEP), FOG_FILTER), V(V::PCK | V::DEP));
 }
 
 TEST(Variant, SurfaceShaderEnumerationKeepsShadowVariantsWhenSsrIsFiltered) {
