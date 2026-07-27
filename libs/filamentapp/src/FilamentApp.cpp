@@ -120,7 +120,7 @@ void FilamentApp::setSidebarWidth(int width) {
 }
 
 void FilamentApp::setWindowTitle(const char* title) {
-    mWindowTitle = title ? title : "";
+    mWindowTitle = utils::CString(title ? title : "");
     // mImpl doesn't have setWindowTitle; we handle it via Builder if called before run.
 }
 

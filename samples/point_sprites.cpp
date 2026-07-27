@@ -22,6 +22,7 @@
 #include <image/ImageSampler.h>
 #include <image/LinearImage.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -52,7 +53,8 @@ using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -74,7 +76,7 @@ struct Vertex {
 #define MAX_POINT_SIZE 128.0f
 #define MIN_POINT_SIZE 12.0f
 
-void createSplatTexture(App& app, Engine* engine) {
+void createSplatTexture(std::shared_ptr<App> app, Engine* engine) {
 
     // To generate a Gaussian splat, create a single-channel 3x3 texture with a bright pixel in
     // its center, then magnify it using a Gaussian filter kernel.
@@ -86,15 +88,18 @@ void createSplatTexture(App& app, Engine* engine) {
             size_t(TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float)),
             Texture::Format::R, Texture::Type::FLOAT);
 
-    app.tex = Texture::Builder()
-            .width(TEXTURE_SIZE).height(TEXTURE_SIZE).levels(1)
-            .sampler(Texture::Sampler::SAMPLER_2D).format(Texture::InternalFormat::R32F)
-            .build(*engine);
+    app->tex = Texture::Builder()
+                       .width(TEXTURE_SIZE)
+                       .height(TEXTURE_SIZE)
+                       .levels(1)
+                       .sampler(Texture::Sampler::SAMPLER_2D)
+                       .format(Texture::InternalFormat::R32F)
+                       .build(*engine);
 
-    app.tex->setImage(*engine, 0, std::move(buffer));
+    app->tex->setImage(*engine, 0, std::move(buffer));
 }
 
-void setup(App& app, Engine* engine, View* view, Scene* scene) {
+void setup(std::shared_ptr<App> app, Engine* engine, View* view, Scene* scene) {
 
     createSplatTexture(app, engine);
 
@@ -116,99 +121,113 @@ void setup(App& app, Engine* engine, View* view, Scene* scene) {
         kIndices[i] = i;
     }
 
-    app.vb = VertexBuffer::Builder()
-            .vertexCount(NUM_POINTS)
-            .bufferCount(2)
-            .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT2, 0, sizeof(Vertex))
-            .attribute(VertexAttribute::COLOR, 0, AttributeType::UBYTE4, sizeof(float2), sizeof(Vertex))
-            .normalized(VertexAttribute::COLOR)
-            .attribute(VertexAttribute::CUSTOM0, 1, AttributeType::FLOAT, 0, sizeof(float))
-            .build(*engine);
+    app->vb =
+            VertexBuffer::Builder()
+                    .vertexCount(NUM_POINTS)
+                    .bufferCount(2)
+                    .attribute(VertexAttribute::POSITION, 0, AttributeType::FLOAT2, 0,
+                            sizeof(Vertex))
+                    .attribute(VertexAttribute::COLOR, 0, AttributeType::UBYTE4, sizeof(float2),
+                            sizeof(Vertex))
+                    .normalized(VertexAttribute::COLOR)
+                    .attribute(VertexAttribute::CUSTOM0, 1, AttributeType::FLOAT, 0, sizeof(float))
+                    .build(*engine);
 
-    app.vb->setBufferAt(*engine, 0,
+    app->vb->setBufferAt(*engine, 0,
             VertexBuffer::BufferDescriptor(kVertices, NUM_POINTS * sizeof(Vertex), nullptr));
 
-    app.vb->setBufferAt(*engine, 1,
+    app->vb->setBufferAt(*engine, 1,
             VertexBuffer::BufferDescriptor(kPointSizes, NUM_POINTS * sizeof(float), nullptr));
 
-    app.ib = IndexBuffer::Builder()
-            .indexCount(NUM_POINTS)
-            .bufferType(IndexBuffer::IndexType::USHORT)
-            .build(*engine);
+    app->ib = IndexBuffer::Builder()
+                      .indexCount(NUM_POINTS)
+                      .bufferType(IndexBuffer::IndexType::USHORT)
+                      .build(*engine);
 
-    app.ib->setBuffer(*engine,
+    app->ib->setBuffer(*engine,
             IndexBuffer::BufferDescriptor(kIndices, NUM_POINTS * sizeof(uint16_t), nullptr));
 
-    app.mat = Material::Builder()
-            .package(RESOURCES_POINTSPRITES_DATA, RESOURCES_POINTSPRITES_SIZE)
-            .build(*engine);
+    app->mat = Material::Builder()
+                       .package(RESOURCES_POINTSPRITES_DATA, RESOURCES_POINTSPRITES_SIZE)
+                       .build(*engine);
 
-    app.renderable = EntityManager::get().create();
+    app->renderable = EntityManager::get().create();
 
-    app.matInstance = app.mat->createInstance();
-    app.matInstance->setParameter("fade", app.tex, TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR));
+    app->matInstance = app->mat->createInstance();
+    app->matInstance->setParameter("fade", app->tex,
+            TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR));
 
     RenderableManager::Builder(1)
-            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-            .material(0, app.matInstance)
-            .geometry(0, RenderableManager::PrimitiveType::POINTS, app.vb, app.ib, 0, NUM_POINTS)
+            .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+            .material(0, app->matInstance)
+            .geometry(0, RenderableManager::PrimitiveType::POINTS, app->vb, app->ib, 0, NUM_POINTS)
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
-            .build(*engine, app.renderable);
+            .build(*engine, app->renderable);
 
-    scene->addEntity(app.renderable);
-    app.camera = utils::EntityManager::get().create();
-    app.cam = engine->createCamera(app.camera);
-    view->setCamera(app.cam);
+    scene->addEntity(app->renderable);
+    app->camera = utils::EntityManager::get().create();
+    app->cam = engine->createCamera(app->camera);
+    view->setCamera(app->cam);
 
-    app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-    scene->setSkybox(app.skybox);
+    app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+    scene->setSkybox(app->skybox);
 };
 
-void cleanup(App& app, Engine* engine) {
-    engine->destroy(app.skybox);
-    engine->destroy(app.renderable);
-    engine->destroy(app.matInstance);
-    engine->destroy(app.mat);
-    engine->destroy(app.vb);
-    engine->destroy(app.ib);
+void cleanup(std::shared_ptr<App> app, Engine* engine) {
+    engine->destroy(app->skybox);
+    engine->destroy(app->renderable);
+    engine->destroy(app->matInstance);
+    engine->destroy(app->mat);
+    engine->destroy(app->vb);
+    engine->destroy(app->ib);
 
-    engine->destroyCameraComponent(app.camera);
-    utils::EntityManager::get().destroy(app.camera);
+    engine->destroyCameraComponent(app->camera);
+    utils::EntityManager::get().destroy(app->camera);
 }
 
-void animate(App& app, Engine* engine, View* view, double now) {
+void animate(std::shared_ptr<App> app, Engine* engine, View* view, double now) {
     constexpr float ZOOM = 1.5f;
     const uint32_t w = view->getViewport().width;
     const uint32_t h = view->getViewport().height;
     const float aspect = (float) w / h;
-    app.cam->setProjection(Camera::Projection::ORTHO,
-            -aspect * ZOOM, aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+    app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM, aspect * ZOOM, -ZOOM, ZOOM,
+            0, 1);
     auto& tcm = engine->getTransformManager();
-    tcm.setTransform(tcm.getInstance(app.renderable), mat4f::rotation(now, float3{ 0, 0, 1 }));
+    tcm.setTransform(tcm.getInstance(app->renderable), mat4f::rotation(now, float3{ 0, 0, 1 }));
 }
 
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "point_sprites";
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    App app;
-
-    app.filamentApp =
+    auto fApp =
             FilamentApp2::Builder()
                     .title(config.title)
                     .backend(config.backend)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
-                    .setup([&app](Engine* engine, View* view, Scene* scene) {
+                    .displayManager(dm)
+                    .setup([app](Engine* engine, View* view, Scene* scene) {
                         setup(app, engine, view, scene);
                     })
-                    .cleanup([&app](Engine* engine, View*, Scene*) { cleanup(app, engine); })
-                    .animation([&app](Engine* e, View* v, double now) { animate(app, e, v, now); })
+                    .cleanup([app](Engine* engine, View*, Scene*) { cleanup(app, engine); })
+                    .animation([app](Engine* e, View* v, double now) { animate(app, e, v, now); })
                     .build();
-    app.filamentApp->run();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "point_sprites";
+    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
 
     return 0;
 }
+#endif

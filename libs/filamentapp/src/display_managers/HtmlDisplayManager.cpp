@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "HtmlDisplayManager.h"
+#include <filamentapp/HtmlDisplayManager.h>
 
 #include <backend/PixelBufferDescriptor.h>
 #include <filament/Engine.h>
