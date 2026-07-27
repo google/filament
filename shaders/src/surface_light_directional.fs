@@ -95,3 +95,51 @@ void evaluateDirectionalLight(const MaterialInputs material,
     color.rgb += surfaceShading(pixel, light, visibility);
 #endif
 }
+
+//------------------------------------------------------------------------------
+// Extra directional lights evaluation
+//
+// Directional lights in addition to the dominant one. These are evaluated
+// without shadows and without the sun disc.
+//------------------------------------------------------------------------------
+
+void evaluateExtraDirectionalLights(const MaterialInputs material,
+        const PixelParams pixel, inout vec3 color) {
+    int channels = object_uniforms_flagsChannels & 0xFF;
+    // RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS is a dynamic specialization constant,
+    // set automatically when the scene contains more than one directional light. It is
+    // false by default, in which case this function compiles away entirely.
+    if (!RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS) {
+        return;
+    }
+    for (int i = 0; i < CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS; i++) {
+        if (i < frameUniforms.extraLightCount) {
+            Light light;
+            // note: colorIntensity.w is always premultiplied by the exposure
+            light.colorIntensity = frameUniforms.extraLightColorIntensity[i];
+            light.l = frameUniforms.extraLightDirection[i].xyz;
+            light.attenuation = 1.0;
+            light.NoL = saturate(dot(shading_normal, light.l));
+            // the channel mask fits in 8 bits, so the float conversion is exact
+            light.channels = int(frameUniforms.extraLightDirection[i].w);
+
+            if ((light.channels & channels) != 0) {
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+                if (light.NoL > 0.0) {
+#endif
+                    float visibility = 1.0;
+#if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+                    visibility = computeMicroShadowing(light.NoL, material.ambientOcclusion);
+#endif
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+                    color.rgb += customSurfaceShading(material, pixel, light, visibility);
+#else
+                    color.rgb += surfaceShading(pixel, light, visibility);
+#endif
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+                }
+#endif
+            }
+        }
+    }
+}

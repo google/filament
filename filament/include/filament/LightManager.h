@@ -86,8 +86,11 @@ class FLightManager;
  * To create a directional light use Type.DIRECTIONAL or Type.SUN, both are similar, but the later
  * also draws a sun's disk in the sky and its reflection on glossy objects.
  *
- * @warning Currently, only a single directional light is supported. If several directional lights
- * are added to the scene, the dominant one will be used.
+ * Several directional lights can be added to the scene. The dominant directional light (the one
+ * with the highest intensity) is the only one that can cast shadows and draw a sun's disk; up to
+ * CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS (4) additional directional lights are evaluated without
+ * shadows, and any further directional lights are ignored. Scenes with a single directional
+ * light don't pay any cost for this feature.
  *
  * @see Builder.direction(), Builder.sunAngularRadius()
  *

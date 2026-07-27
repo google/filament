@@ -559,6 +559,15 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
+
+    /*
+     * Extra directional lights (evaluated without shadows)
+     */
+
+    getColorPassDescriptorSet().prepareExtraDirectionalLights(engine, exposure,
+            mSceneCache->extraDirectionalLightCount,
+            mSceneCache->extraDirectionalLightDirections.data(),
+            mSceneCache->extraDirectionalLightInstances.data());
 }
 
 /*
@@ -801,6 +810,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
+
+        // we also know if we have extra directional lights
+        mHasExtraDirectionalLights = mSceneCache->extraDirectionalLightCount > 0;
 
         // we also know if we have a directional light
         FLightManager::Instance const directionalLight =
