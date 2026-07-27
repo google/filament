@@ -50,9 +50,21 @@ std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
     // libnativewindow.so is not available before API level 26, this means we can't call
     // any method above 25 (even protected by __builtin_available()).
     if (__builtin_available(android 28, *)) {
-        // this a proxy for is_valid()
-        auto const result = ANativeWindow_getBuffersDataSpace(anw);
-        return { result, result >= 0 };
+        // We use dlsym to avoid a strong load-time dependency on Android 8 devices.
+        typedef int32_t (*getBuffersDataSpaceFn)(ANativeWindow*);
+        static getBuffersDataSpaceFn pANativeWindow_getBuffersDataSpace =
+            []() -> getBuffersDataSpaceFn {
+            void* handle = dlopen("libnativewindow.so", RTLD_NOW | RTLD_LOCAL);
+            if (handle) {
+                return (getBuffersDataSpaceFn)dlsym(handle, "ANativeWindow_getBuffersDataSpace");
+            }
+            return nullptr;
+        }();
+
+        if (pANativeWindow_getBuffersDataSpace) {
+            auto const result = pANativeWindow_getBuffersDataSpace(anw);
+            return {result, result >= 0};
+        }
     }
 #endif
 
