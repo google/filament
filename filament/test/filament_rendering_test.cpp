@@ -14,18 +14,30 @@
  * limitations under the License.
  */
 
+#include <filament/Camera.h>
 #include <filament/Engine.h>
+#include <filament/IndexBuffer.h>
+#include <filament/LightManager.h>
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/VertexBuffer.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
+
+#include <filamat/MaterialBuilder.h>
 
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/EntityManager.h>
 
 #include <gtest/gtest.h>
+
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 using namespace filament;
 using namespace backend;
@@ -117,6 +129,149 @@ TEST_F(RenderingTest, ClearRed) {
         callbackCalled = true;
     });
     EXPECT_TRUE(callbackCalled);
+}
+
+// Holds a scene with a full-viewport lit quad, a dominant green directional light and a
+// weaker red one. Shared by the extra-directional-lights tests below.
+class LitQuadScene {
+public:
+    void create(Engine& engine, Scene& scene, View& view, Camera& camera) {
+        using namespace filament::math;
+        using utils::Entity;
+        using utils::EntityManager;
+
+        mEngine = &engine;
+        mScene = &scene;
+
+        view.setDithering(View::Dithering::NONE);
+        camera.setProjection(Camera::Projection::ORTHO, -1, 1, -1, 1, 0.1, 10);
+
+        // full-viewport quad at z = -1, facing the camera (normal +z, identity tangent frame)
+        static float3 const positions[4] = {
+                { -2, -2, -1 }, { 2, -2, -1 }, { 2, 2, -1 }, { -2, 2, -1 } };
+        static float4 const tangents[4] = {
+                { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 } };
+        static uint16_t const indices[6] = { 0, 1, 2, 0, 2, 3 };
+
+        mVertexBuffer = VertexBuffer::Builder()
+                .vertexCount(4)
+                .bufferCount(2)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::FLOAT4)
+                .build(engine);
+        mVertexBuffer->setBufferAt(engine, 0, { positions, sizeof(positions) });
+        mVertexBuffer->setBufferAt(engine, 1, { tangents, sizeof(tangents) });
+
+        mIndexBuffer = IndexBuffer::Builder()
+                .indexCount(6)
+                .bufferType(IndexBuffer::IndexType::USHORT)
+                .build(engine);
+        mIndexBuffer->setBuffer(engine, { indices, sizeof(indices) });
+
+        // a fully diffuse lit material
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.shading(Shading::LIT)
+               .material("void material(inout MaterialInputs material) {"
+                         "  prepareMaterial(material);"
+                         "  material.baseColor.rgb = float3(0.8);"
+                         "  material.roughness = 1.0;"
+                         "}")
+               .targetApi(filamat::MaterialBuilder::TargetApi::ALL);
+        filamat::Package const pkg = builder.build(engine.getJobSystem());
+        ASSERT_TRUE(pkg.isValid());
+        mMaterial = Material::Builder()
+                .package(pkg.getData(), pkg.getSize())
+                .build(engine);
+        ASSERT_NE(mMaterial, nullptr);
+
+        mRenderable = EntityManager::get().create();
+        RenderableManager::Builder(1)
+                .boundingBox({{ 0, 0, -1 }, { 2, 2, 1 }})
+                .material(0, mMaterial->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                        mVertexBuffer, mIndexBuffer)
+                .culling(false)
+                .receiveShadows(false)
+                .castShadows(false)
+                .build(engine, mRenderable);
+        scene.addEntity(mRenderable);
+
+        // a dominant green directional light, added to the scene right away, and a weaker
+        // red one that tests add when needed
+        mGreenLight = EntityManager::get().create();
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .color({ 0.0f, 1.0f, 0.0f })
+                .intensity(100000.0f)
+                .direction({ 0.0f, 0.0f, -1.0f })
+                .build(engine, mGreenLight);
+        scene.addEntity(mGreenLight);
+
+        mRedLight = EntityManager::get().create();
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .color({ 1.0f, 0.0f, 0.0f })
+                .intensity(50000.0f)
+                .direction({ 0.0f, 0.0f, -1.0f })
+                .build(engine, mRedLight);
+    }
+
+    void addRedLight() { mScene->addEntity(mRedLight); }
+
+    void destroy() {
+        using utils::EntityManager;
+        mScene->remove(mRenderable);
+        mScene->remove(mGreenLight);
+        mScene->remove(mRedLight);
+        for (auto e : { mRenderable, mGreenLight, mRedLight }) {
+            mEngine->destroy(e);
+            EntityManager::get().destroy(e);
+        }
+        mEngine->destroy(mMaterial);
+        mEngine->destroy(mVertexBuffer);
+        mEngine->destroy(mIndexBuffer);
+    }
+
+    static uint8_t const* centerPixel(uint8_t const* rgba, uint32_t width, uint32_t height) {
+        return rgba + ((height / 2) * width + width / 2) * 4;
+    }
+
+private:
+    Engine* mEngine = nullptr;
+    Scene* mScene = nullptr;
+    VertexBuffer* mVertexBuffer = nullptr;
+    IndexBuffer* mIndexBuffer = nullptr;
+    Material* mMaterial = nullptr;
+    utils::Entity mRenderable;
+    utils::Entity mGreenLight;
+    utils::Entity mRedLight;
+};
+
+TEST_F(RenderingTest, MultipleDirectionalLights) {
+    LitQuadScene quad;
+    quad.create(*mEngine, *mScene, *mView, *mCamera);
+
+    // with only the dominant light in the scene, the quad is green
+    bool callbackCalled = false;
+    runTest([&callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
+        uint8_t const* p = LitQuadScene::centerPixel(rgba, width, height);
+        EXPECT_LT(p[0], 16);
+        EXPECT_GT(p[1], 64);
+        callbackCalled = true;
+    });
+    EXPECT_TRUE(callbackCalled);
+
+    // the second (extra) directional light adds red
+    quad.addRedLight();
+    callbackCalled = false;
+    runTest([&callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
+        uint8_t const* p = LitQuadScene::centerPixel(rgba, width, height);
+        EXPECT_GT(p[0], 32);
+        EXPECT_GT(p[1], 64);
+        callbackCalled = true;
+    });
+    EXPECT_TRUE(callbackCalled);
+
+    quad.destroy();
 }
 
 TEST_F(RenderingTest, ClearGreen) {

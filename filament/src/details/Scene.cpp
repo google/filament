@@ -118,13 +118,13 @@ void FScene::prepare(JobSystem& js,
 
     FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "InstanceLoop");
 
-    // find the max intensity directional light index in our local array
-    float maxIntensity = 0.0f;
-    std::pair<LightManager::Instance, TransformManager::Instance> directionalLightInstances{};
+    // directional lights are handled separately from the punctual lights
+    LightInstanceContainer directionalInstances{
+            LightInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
 
     /*
      * First compute the exact number of renderables and lights in the scene.
-     * Also find the main directional light.
+     * Also collect the directional lights.
      */
     entities.forEachSetBit([&](uint32_t id) {
         Entity const e = Entity::import(int32_t(id));
@@ -133,13 +133,9 @@ void FScene::prepare(JobSystem& js,
             auto li = lcm.getInstance(e);
             auto ri = rcm.getInstance(e);
             if (li) {
-                // we handle the directional light here because it'd prevent multithreading below
+                // we handle the directional lights here because it'd prevent multithreading below
                 if (UTILS_UNLIKELY(lcm.isDirectionalLight(li))) {
-                    // we don't store the directional lights, because we only have a single one
-                    if (lcm.getIntensity(li) >= maxIntensity) {
-                        maxIntensity = lcm.getIntensity(li);
-                        directionalLightInstances = { li, ti };
-                    }
+                    directionalInstances.emplace_back(li, ti);
                 } else {
                     lightInstances.emplace_back(li, ti);
                 }
@@ -149,6 +145,24 @@ void FScene::prepare(JobSystem& js,
             }
         }
     });
+
+    // Sort the directional lights by decreasing intensity. The most intense one is the
+    // dominant directional light (stored at index 0 of the LightSoa); it is the only one
+    // that casts shadows and can be a sun. Up to CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS
+    // additional directional lights are evaluated without shadows; the rest are ignored.
+    if (UTILS_UNLIKELY(directionalInstances.size() > 1)) {
+        size_t const keep = std::min<size_t>(directionalInstances.size(),
+                DIRECTIONAL_LIGHTS_COUNT + CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
+        std::partial_sort(directionalInstances.begin(),
+                directionalInstances.begin() + keep, directionalInstances.end(),
+                [&lcm](auto const& lhs, auto const& rhs) {
+                    return lcm.getIntensity(lhs.first) > lcm.getIntensity(rhs.first);
+                });
+    }
+    std::pair<LightManager::Instance, TransformManager::Instance> const directionalLightInstances =
+            directionalInstances.empty() ?
+                    std::pair<LightManager::Instance, TransformManager::Instance>{} :
+                    directionalInstances[0];
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -331,6 +345,28 @@ void FScene::prepare(JobSystem& js,
         lightData.elementAt<LIGHT_ENTITY>(0) = li ? lcm.getEntity(li) : utils::Entity{};
     } else {
         lightData.elementAt<LIGHT_ENTITY>(0) = utils::Entity{};
+    }
+
+    /*
+     * Handle the extra directional lights (evaluated without shadows)
+     */
+
+    cache.extraDirectionalLightCount = 0;
+    if (UTILS_UNLIKELY(directionalInstances.size() > DIRECTIONAL_LIGHTS_COUNT)) {
+        mat3 const worldTransformNormals = mat3::getTransformForNormals(worldTransform.upperLeft());
+        size_t const extraCount = std::min(directionalInstances.size() - DIRECTIONAL_LIGHTS_COUNT,
+                CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
+        for (size_t i = 0; i < extraCount; i++) {
+            auto const [li, ti] = directionalInstances[DIRECTIONAL_LIGHTS_COUNT + i];
+            // using mat3::getTransformForNormals handles non-uniform scaling
+            mat3 const worldDirectionTransform =
+                    mat3::getTransformForNormals(tcm.getWorldTransformAccurate(ti).upperLeft());
+            double3 const d = worldTransformNormals *
+                    (worldDirectionTransform * lcm.getLocalDirection(li));
+            cache.extraDirectionalLightDirections[i] = float3(normalize(d));
+            cache.extraDirectionalLightInstances[i] = li;
+        }
+        cache.extraDirectionalLightCount = extraCount;
     }
 
     // some elements past the end of the array will be accessed by SIMD code, we need to make

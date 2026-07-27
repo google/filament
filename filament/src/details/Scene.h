@@ -28,6 +28,8 @@
 
 #include <filament/Scene.h>
 
+#include <private/filament/EngineEnums.h>
+
 #include <utils/Entity.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Range.h>
@@ -36,6 +38,8 @@
 
 #include <unordered_map>
 #include <vector>
+
+#include <array>
 
 #include <stddef.h>
 
@@ -185,6 +189,14 @@ public:
     struct SceneCacheData {
         RenderableSoa renderableData;
         LightSoa lightData;
+        // Directional lights in addition to the dominant one (which is stored at index 0 of
+        // lightData). These are evaluated without shadows, so we only need their direction
+        // and LightManager instance.
+        std::array<math::float3, CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS>
+                extraDirectionalLightDirections{};
+        std::array<FLightManager::Instance, CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS>
+                extraDirectionalLightInstances{};
+        size_t extraDirectionalLightCount = 0;
         bool hasContactShadows = false;
     };
 
