@@ -47,24 +47,20 @@ bool NativeWindow::queuesToWindowComposer(ANativeWindow* const anw) noexcept {
 
 std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
 #if __ANDROID_API__ >= 26
-    // libnativewindow.so is not available before API level 26, this means we can't call
-    // any method above 25 (even protected by __builtin_available()).
-    if (__builtin_available(android 28, *)) {
-        // We use dlsym to avoid a strong load-time dependency on Android 8 devices.
-        typedef int32_t (*getBuffersDataSpaceFn)(ANativeWindow*);
-        static getBuffersDataSpaceFn pANativeWindow_getBuffersDataSpace =
-            []() -> getBuffersDataSpaceFn {
-            void* handle = dlopen("libnativewindow.so", RTLD_NOW | RTLD_LOCAL);
-            if (handle) {
-                return (getBuffersDataSpaceFn)dlsym(handle, "ANativeWindow_getBuffersDataSpace");
-            }
-            return nullptr;
-        }();
-
-        if (pANativeWindow_getBuffersDataSpace) {
-            auto const result = pANativeWindow_getBuffersDataSpace(anw);
-            return {result, result >= 0};
+    // Try using `ANativeWindow_getBuffersDataSpace`, introduced in API 28 (Android 9), first.
+    // For Android 8.x devices, it falls back to using private APIs.
+    typedef int32_t (*getBuffersDataSpaceFn)(ANativeWindow*);
+    static getBuffersDataSpaceFn pANativeWindow_getBuffersDataSpace =
+        []() -> getBuffersDataSpaceFn {
+        void* handle = dlopen("libnativewindow.so", RTLD_NOW | RTLD_LOCAL);
+        if (handle) {
+            return (getBuffersDataSpaceFn)dlsym(handle, "ANativeWindow_getBuffersDataSpace");
         }
+        return nullptr;
+    }();
+    if (pANativeWindow_getBuffersDataSpace) {
+        auto const result = pANativeWindow_getBuffersDataSpace(anw);
+        return {result, result >= 0};
     }
 #endif
 
