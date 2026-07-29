@@ -158,7 +158,7 @@ protected:
         AHardwareBuffer* aHardwareBuffer = nullptr;
         uint32_t width;         // Texture width
         uint32_t height;        // Texture height
-        uint32_t mipLevels = 1; // Number of mip levels in the AHB (1 if not mipmap-complete)
+        uint8_t mipLevels = 1;  // Number of mip levels in the AHB (1 if not mipmap-complete)
         TextureFormat format;   // Texture format
         TextureUsage usage;     // Texture usage flags
         bool sRGB = false;

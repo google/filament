@@ -481,11 +481,13 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
         p->width = hardwareBufferDescription.width;
 
         // A complete chain runs down to 1x1: floor(log2(max(w,h))) + 1 levels.
-        // Use ilogbf (exact, exponent-based) rather than floor(log2(...)) to avoid an
-        // off-by-one for power-of-two dimensions. Mirrors FTexture::maxLevelCount().
+        // ilogbf() reads the float exponent directly, so it is exact; floor(log2(...)) would
+        // depend on log2() being correctly rounded, which is not guaranteed (e.g. log2(1024.0f)
+        // may compute as 9.9999999f, yielding one level too few). Mirrors
+        // FTexture::maxLevelCount().
         if (hardwareBufferDescription.usage & AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE) {
             uint32_t const maxDimension = std::max(p->width, p->height);
-            p->mipLevels = std::max(1, std::ilogbf(float(maxDimension)) + 1);
+            p->mipLevels = uint8_t(std::max(1, std::ilogbf(float(maxDimension)) + 1));
         } else {
             p->mipLevels = 1;
         }
@@ -518,9 +520,15 @@ PlatformEGLAndroid::ExternalImageDescAndroid PlatformEGLAndroid::getExternalImag
 
 uint8_t PlatformEGLAndroid::getExternalImageMipLevels(
         ExternalImageHandleRef externalImage) const noexcept {
+    // Importing a full mip chain requires glEGLImageTargetTexStorageEXT. Check the extension
+    // string as well as the entry point, because eglGetProcAddress() may return a non-null
+    // pointer for a function the driver doesn't actually support.
+    if (!ext.gl.EXT_EGL_image_storage || glEGLImageTargetTexStorageEXT == nullptr) {
+        return 1;
+    }
     auto const* const img =
             static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
-    return img ? static_cast<uint8_t>(img->mipLevels) : 1;
+    return img ? img->mipLevels : 1;
 }
 
 bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
@@ -597,12 +605,14 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         glBindTexture(GL_TEXTURE_2D, prevTexture);
         return false;
     }
-    // Gate on the loaded entry point, not the driver-side OpenGLContext extension flag:
-    // setImage() runs in the platform layer and does not hold the GL context's `ext` struct.
-    // getProcAddress leaves the pointer null when the extension is absent.
-    if (eglExternalImage->mipLevels > 1 && glEGLImageTargetTexStorageEXT != nullptr) {
-        // texture->target must be GL_TEXTURE_2D here (mipmapped external textures cannot use
-        // GL_TEXTURE_EXTERNAL_OES); the driver guarantees that whenever it reports levels > 1.
+    // Use the level count the driver sized the texture for -- it is the only decision maker,
+    // so the imported levels and the texture's GL_TEXTURE_MAX_LEVEL can never disagree. It is
+    // > 1 only if getExternalImageMipLevels() reported a chain, which requires the extension.
+    bool const mipmapped = texture->levels > 1;
+    if (mipmapped) {
+        // mipmapped external textures cannot use GL_TEXTURE_EXTERNAL_OES, the driver only
+        // reports levels > 1 for a GL_TEXTURE_2D import.
+        assert_invariant(texture->target == GL_TEXTURE_2D);
         // glEGLImageTargetTexStorageEXT establishes immutable storage covering the entire mip
         // chain present in the EGLImage in a single call.
         glEGLImageTargetTexStorageEXT(texture->target, static_cast<GLeglImageOES>(eglImage),
@@ -612,7 +622,10 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     }
     error = glGetError();
     if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
-        LOG(ERROR) << "Error after binding EGLImage to texture: " << error;
+        LOG(ERROR) << "Error after "
+                   << (mipmapped ? "glEGLImageTargetTexStorageEXT"
+                                 : "glEGLImageTargetTexture2DOES")
+                   << ": " << error;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
         glActiveTexture(prevActiveTexture);

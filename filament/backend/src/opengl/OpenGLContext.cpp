@@ -663,7 +663,6 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
 #endif
     ext->EXT_depth_clamp = exts.has("GL_EXT_depth_clamp"sv);
     ext->EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
-    ext->EXT_EGL_image_storage = exts.has("GL_EXT_EGL_image_storage"sv);
 #ifndef __EMSCRIPTEN__
     ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
     ext->EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);

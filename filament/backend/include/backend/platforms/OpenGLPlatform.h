@@ -60,6 +60,9 @@ public:
     struct ExternalTexture {
         unsigned int target; // GLenum target
         unsigned int id; // GLuint id
+        // Number of mip levels the driver sized this texture for. Set by the driver before
+        // setExternalImage() so the platform imports exactly the levels the driver expects.
+        uint8_t levels = 1;
     };
 
     /**

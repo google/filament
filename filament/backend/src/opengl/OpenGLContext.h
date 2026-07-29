@@ -184,7 +184,6 @@ public:
         bool EXT_depth_clamp;
         bool EXT_discard_framebuffer;
         bool EXT_disjoint_timer_query;
-        bool EXT_EGL_image_storage;
         bool EXT_multisampled_render_to_texture2;
         bool EXT_multisampled_render_to_texture;
         bool EXT_protected_textures;

@@ -1368,27 +1368,34 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
     }
     assert_invariant(internalFormat);
 
-    // Only treat the import as mipmapped when the storage extension is actually usable, so the
-    // driver's level count matches the platform's import path (the platform gates on the loaded
-    // glEGLImageTargetTexStorageEXT entry point, which is derived from the same extension).
-    uint8_t const levels = gl.ext.EXT_EGL_image_storage
-            ? mPlatform.getExternalImageMipLevels(image) : 1; // 1 unless mipmap-complete
+    uint8_t levels = mPlatform.getExternalImageMipLevels(image); // 1 unless mipmap-complete
+    assert_invariant(levels >= 1);
+    if (UTILS_UNLIKELY(levels > 1 && target != SamplerType::SAMPLER_2D)) {
+        // Only a GL_TEXTURE_2D import can be mipmapped: GL_TEXTURE_EXTERNAL_OES doesn't support
+        // mipmaps and its material sampler is authored as samplerExternalOES, which cannot be
+        // bound to a GL_TEXTURE_2D. Keep those imports single-level.
+        LOG(WARNING) << "External image has mipmaps, but the texture is not SAMPLER_2D; only "
+                        "the base level will be sampled.";
+        levels = 1;
+    }
     GLTexture* const t = construct<GLTexture>(th, target, levels, 1, width, height, 1, format, usage, false);
     assert_invariant(t);
 
     t->externalTexture = mPlatform.createExternalImageTexture();
     if (t->externalTexture) {
         if (target == SamplerType::SAMPLER_EXTERNAL) {
-            if (levels == 1 && UTILS_LIKELY(gl.ext.OES_EGL_image_external_essl3)) {
+            if (UTILS_LIKELY(gl.ext.OES_EGL_image_external_essl3)) {
                 t->externalTexture->target = GL_TEXTURE_EXTERNAL_OES;
             } else {
-                // Mipmapped imports (or no external support) must use GL_TEXTURE_2D, because
-                // GL_TEXTURE_EXTERNAL_OES cannot be mipmapped.
+                // revert to texture 2D if external is not supported; what else can we do?
                 t->externalTexture->target = GL_TEXTURE_2D;
             }
         } else {
             t->externalTexture->target = getTextureTargetNotExternal(target);
         }
+        // tell the platform how many levels we sized this texture for, so that it imports the
+        // image with a matching number of levels.
+        t->externalTexture->levels = levels;
 
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
