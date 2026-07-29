@@ -570,7 +570,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
 }
 
 bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
-#if FILAMENT_SUPPORTS_WEBGPU
+#ifdef FILAMENT_SUPPORTS_WEBGPU
     // We need to run some opt-passes at all times to transpile to WGSL
     auto optimizer = createEmptyOptimizer();
     optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
@@ -581,15 +581,25 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
 
     // Allow non-uniform derivatives due to our nested shaders. See
     // https://github.com/gpuweb/gpuweb/issues/3479
-    const tint::spirv::reader::Options readerOpts{};
+    ::tint::wgsl::writer::Options writerOptions;
+    // Allow non-uniform derivatives and disable unreachable code warnings.
+    // Dawn/Tint strictly validates uniform control flow (e.g. calling `textureSampleCompare`
+    // or derivatives). Filament materials often use uniform variables (e.g. from UBOs) in
+    // conditionals that Tint's static analyzer currently perceives as potentially divergent.
+    // We bypass these specific generation-time WGSL strictness errors because Filament guarantees
+    // the underlying UBO conditionals are uniform across the draw call.
+    writerOptions.allow_non_uniform_derivatives = true;
+    writerOptions.disable_unreachable_code_warning = true;
+    // clipdistance is used with instancing-based stereo
+    writerOptions.allowed_features.extensions.insert(::tint::wgsl::Extension::kClipDistances);
+    // webgpu immediates are push constants
+    writerOptions.allowed_features.features.insert(
+            ::tint::wgsl::LanguageFeature::kImmediateAddressSpace);
 
-    auto tintReadResult = tint::spirv::reader::ReadIR(*spirv, readerOpts);
-    tint::SuccessType tintSuccess;
+    ::tint::Result<std::string> wgslOut = ::tint::SpirvToWgsl(*spirv, writerOptions);
 
-    if (tintReadResult != tintSuccess) {
-        // We know errors can potentially crop up, and want the ability to ignore them if needed for
-        // sample bringup
-        slog.e << "Tint Reader Error ---- : " << tintReadResult.Failure().reason << io::endl;
+    if (wgslOut != ::tint::Success) {
+        slog.e << "Tint error ---- : " << wgslOut.Failure().reason << io::endl;
         spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
         spv_text text = nullptr;
         spv_diagnostic diagnostic = nullptr;
@@ -600,31 +610,10 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
                << text->str << "\n\nEndSPIRV\n"
                << io::endl;
         spvTextDestroy(text);
-
         spvContextDestroy(context);
         return false;
     }
-
-    tint::wgsl::writer::Options writerOptions;
-    // Allow non-uniform derivatives and disable unreachable code warnings.
-    // Dawn/Tint strictly validates uniform control flow (e.g. calling `textureSampleCompare`
-    // or derivatives). Filament materials often use uniform variables (e.g. from UBOs) in
-    // conditionals that Tint's static analyzer currently perceives as potentially divergent.
-    // We bypass these specific generation-time WGSL strictness errors because Filament guarantees
-    // the underlying UBO conditionals are uniform across the draw call.
-    writerOptions.allow_non_uniform_derivatives = true;
-    writerOptions.disable_unreachable_code_warning = true;
-    writerOptions.allowed_features.extensions.insert(tint::wgsl::Extension::kClipDistances);
-    writerOptions.allowed_features.features.insert(
-            tint::wgsl::LanguageFeature::kImmediateAddressSpace);
-    tint::Result<tint::wgsl::writer::Output> wgslOut =
-            tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
-
-    if (wgslOut != tintSuccess) {
-        slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
-        return false;
-    }
-    *outWsl = wgslOut->wgsl;
+    *outWsl = wgslOut.Get();
     return true;
 #else
     slog.i << "Trying to emit WGSL without including WebGPU dependencies,"
