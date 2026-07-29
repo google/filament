@@ -1026,12 +1026,18 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     }
 
     // Pass along relevant driver config (feature flags)
-    context.mAsyncPipelineCachePrewarmingEnabled = driverConfig.vulkanEnableAsyncPipelineCachePrewarming;
+    context.mAsyncPipelineCachePrewarmingEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_pipeline_cache_prewarming
+                                             : false);
     context.mParallelShaderCompileDisabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .disable_parallel_shader_compile
                                              : false);
-    context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
+    context.mStagingBufferBypassEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_staging_buffer_bypass
+                                             : false);
 
     // We know we need to allocate the protected version of the VK objects
     context.mProtectedMemorySupported =
