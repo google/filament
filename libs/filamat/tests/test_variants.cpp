@@ -50,6 +50,38 @@ bool containsVariant(utils::Slice<const filament::Variant> const variants,
     return std::find(variants.begin(), variants.end(), variant) != variants.end();
 }
 
+TEST(Variant, DepthVariantsAreIndependentOfLighting) {
+    using V = filament::Variant;
+
+    for (std::size_t key = 0; key < filament::VARIANT_COUNT; key++) {
+        V const variant(static_cast<V::type_t>(key));
+        if (V::isValidDepthVariant(variant)) {
+            EXPECT_EQ(V::filterVariant(variant, false), variant);
+            EXPECT_EQ(V::filterVariant(variant, true), variant);
+        }
+    }
+}
+
+TEST(Variant, UnlitDepthMomentsCanBeExplicitlyFiltered) {
+    using V = filament::Variant;
+    using filament::backend::ShaderStage;
+
+    V const depthMoments(V::DEP | V::MNT);
+    std::vector<filamat::Variant> const unlit =
+            filamat::determineSurfaceVariants(0, false, false);
+
+    EXPECT_TRUE(containsVariant(unlit, depthMoments, ShaderStage::VERTEX));
+    EXPECT_TRUE(containsVariant(unlit, depthMoments, ShaderStage::FRAGMENT));
+
+    constexpr UserVariantFilterMask VSM_FILTER =
+            UserVariantFilterMask(UserVariantFilterBit::VSM);
+    std::vector<filamat::Variant> const withoutVsm =
+            filamat::determineSurfaceVariants(VSM_FILTER, false, false);
+
+    EXPECT_FALSE(containsVariant(withoutVsm, depthMoments, ShaderStage::VERTEX));
+    EXPECT_FALSE(containsVariant(withoutVsm, depthMoments, ShaderStage::FRAGMENT));
+}
+
 TEST(Variant, PunctualShadowReceiversDoNotAliasSsr) {
     using V = filament::Variant;
     constexpr std::array<V::type_t, 2> SAMPLERS = { 0, V::S2D };
