@@ -15,40 +15,39 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/MeshAssimp.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
-#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
-#include <filament/TransformManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Texture.h>
+#include <filament/TransformManager.h>
+#include <filament/View.h>
 
 #include <filamat/MaterialBuilder.h>
 
-#include <utils/Path.h>
 #include <utils/EntityManager.h>
+#include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec3.h>
 
-#include <utils/getopt.h>
-
 #include <stb_image.h>
 
 #include <iostream>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include <filament/View.h>
 
 using namespace filament::math;
 using namespace filament;
@@ -88,7 +87,8 @@ static std::array<PbrMap, MAP_COUNT> g_maps = {
     PbrMap { "height",     "heightMap",     false, nullptr },
 };
 
-static Config g_config;
+static SampleConfig g_config;
+std::unique_ptr<FilamentApp2> g_filamentApp;
 static struct PbrConfig {
     std::string materialDir;
     bool clearCoat = false;
@@ -138,7 +138,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:i:vs:m:cA";
     static const utils::getopt::option OPTIONS[] = {
             { "help",           utils::getopt::no_argument,       nullptr, 'h' },
@@ -453,11 +453,10 @@ static void preRender(filament::Engine*, filament::View*, filament::Scene*,
         filament::Renderer* renderer) {
 
     // Without an IBL, we must clear the swapchain to black before each frame.
-    renderer->setClearOptions({
-            .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f },
-            .clear = !FilamentApp::get().getIBL()  });
-
+    renderer->setClearOptions(
+            { .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f }, .clear = !g_filamentApp->getIBL() });
 }
+
 
 int main(int argc, char* argv[]) {
     int const option_index = handleCommandLineArgments(argc, argv, &g_config);
@@ -477,8 +476,15 @@ int main(int argc, char* argv[]) {
     }
 
     g_config.title = "PBR";
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+    g_filamentApp = FilamentApp2::Builder()
+                            .title(g_config.title)
+                            .scale(g_config.scale)
+                            .setup(setup)
+                            .cleanup(cleanup)
+                            .imgui({})
+                            .preRender(preRender)
+                            .build();
+    g_filamentApp->run();
 
     return 0;
 }

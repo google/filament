@@ -277,6 +277,7 @@ $dokka.location:com.google.android.filament/Engine.Config.ShaderLanguage/valueOf
 $dokka.location:com.google.android.filament/Engine.Config.ShaderLanguage/values/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/-shader-language/values.md
 $dokka.location:com.google.android.filament/Engine.Config///PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/index.md
 $dokka.location:com.google.android.filament/Engine.Config/Config/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/-config.md
+$dokka.location:com.google.android.filament/Engine.Config/SINGLE_THREADED/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/-s-i-n-g-l-e_-t-h-r-e-a-d-e-d.md
 $dokka.location:com.google.android.filament/Engine.Config/assertNativeWindowIsValid/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/assert-native-window-is-valid.md
 $dokka.location:com.google.android.filament/Engine.Config/commandBufferSizeMB/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/command-buffer-size-m-b.md
 $dokka.location:com.google.android.filament/Engine.Config/disableHandleUseAfterFreeCheck/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/disable-handle-use-after-free-check.md

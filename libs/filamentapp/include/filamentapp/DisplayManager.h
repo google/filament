@@ -20,7 +20,7 @@
 #include "AppEvent.h"
 
 #include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
@@ -59,14 +59,14 @@ public:
      * @param headless Whether the window should be created in headless mode.
      * @return A handle to the created window.
      */
-    virtual FilamentApp::Window::Handle createWindow(const char* title, uint32_t w, uint32_t h,
+    virtual FilamentApp2::Window::Handle createWindow(const char* title, uint32_t w, uint32_t h,
             bool resizable, bool headless) = 0;
 
     /**
      * Destroys a window.
      * @param window The handle of the window to destroy.
      */
-    virtual void destroyWindow(FilamentApp::Window::Handle window) = 0;
+    virtual void destroyWindow(FilamentApp2::Window::Handle window) = 0;
 
     /**
      * Returns the underlying native window handle for the specified platform window.
@@ -74,14 +74,14 @@ public:
      * @return The native window handle (e.g., HWND, NSWindow*). Returns nullptr for headless/web
      * platforms.
      */
-    virtual void* getNativeWindow(FilamentApp::Window::Handle window) const = 0;
+    virtual void* getNativeWindow(FilamentApp2::Window::Handle window) const = 0;
 
     /**
      * Sets the title of a window.
      * @param window The window handle.
      * @param title The new title.
      */
-    virtual void setWindowTitle(FilamentApp::Window::Handle window, const char* title) = 0;
+    virtual void setWindowTitle(FilamentApp2::Window::Handle window, const char* title) = 0;
 
     /**
      * Returns the size of a window.
@@ -89,7 +89,7 @@ public:
      * @param w Pointer to store the width.
      * @param h Pointer to store the height.
      */
-    virtual void getWindowSize(FilamentApp::Window::Handle window, uint32_t* w,
+    virtual void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
             uint32_t* h) const = 0;
 
     /**
@@ -98,7 +98,7 @@ public:
      * @param w Pointer to store the width.
      * @param h Pointer to store the height.
      */
-    virtual void getDrawableSize(FilamentApp::Window::Handle window, uint32_t* w,
+    virtual void getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
             uint32_t* h) const = 0;
 
     /**
@@ -111,7 +111,7 @@ public:
      * Called when a window has been resized.
      * @param window The window handle.
      */
-    virtual void onWindowResized(FilamentApp::Window::Handle window) {}
+    virtual void onWindowResized(FilamentApp2::Window::Handle window) {}
 
     /**
      * Returns the current mouse state.
@@ -126,7 +126,7 @@ public:
      * @param window The window handle.
      * @return true if the window has focus.
      */
-    virtual bool isWindowFocused(FilamentApp::Window::Handle window) const { return true; }
+    virtual bool isWindowFocused(FilamentApp2::Window::Handle window) const { return true; }
 
     /**
      * Returns the current time in seconds.
@@ -139,7 +139,7 @@ public:
      * @param engine The Filament engine.
      * @param renderer The Filament renderer.
      */
-    virtual void onFrameFinished(FilamentApp::Window::Handle window, filament::Engine* engine,
+    virtual void onFrameFinished(FilamentApp2::Window::Handle window, filament::Engine* engine,
             filament::Renderer* renderer) {}
 
     /**
