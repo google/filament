@@ -124,7 +124,6 @@ void VulkanCommandBuffer::reset() noexcept {
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
-
     if (mContext.isDebugUtilsEnabled()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
@@ -154,7 +153,6 @@ void VulkanCommandBuffer::popMarker() noexcept{
 }
 
 void VulkanCommandBuffer::insertEvent(char const* marker) noexcept {
-
     if (mContext.isDebugUtilsEnabled()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
@@ -499,7 +497,9 @@ void VulkanCommands::updateFences() {
 }
 
 void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp) {
-    if (!isGroupMarkerEnabled(mContext)) return;
+    if (UTILS_LIKELY(!isGroupMarkerEnabled(mContext))) {
+        return;
+    }
     mPool->pushMarker(str, timestamp);
     if (mProtectedPool) {
         mProtectedPool->pushMarker(str, timestamp);
@@ -510,7 +510,9 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
 }
 
 void VulkanCommands::popGroupMarker() {
-    if (!isGroupMarkerEnabled(mContext)) return;
+    if (UTILS_LIKELY(!isGroupMarkerEnabled(mContext))) {
+        return;
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     auto ret = mPool->popMarker();
@@ -529,7 +531,9 @@ void VulkanCommands::popGroupMarker() {
 }
 
 void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
-    if (!isGroupMarkerEnabled(mContext)) return;
+    if (UTILS_LIKELY(!isGroupMarkerEnabled(mContext))) {
+        return;
+    }
     mPool->insertEvent(str);
     if (mProtectedPool) {
         mProtectedPool->insertEvent(str);

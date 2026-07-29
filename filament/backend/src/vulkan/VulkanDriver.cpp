@@ -2382,7 +2382,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // Assign a label to the framebuffer for debugging purposes.
 
-    if (mContext.isDebugUtilsNamesEnabled()) {
+    if (UTILS_UNLIKELY(mContext.isDebugUtilsNamesEnabled())) {
         auto const topMarker = mCommands.getTopGroupMarker();
         if (!topMarker.empty()) {
             uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
