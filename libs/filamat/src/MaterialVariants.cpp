@@ -19,9 +19,9 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
-#include <backend/DriverEnums.h>
-
 #include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <vector>
 

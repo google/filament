@@ -73,6 +73,7 @@ private:
     inline const uint3 getTriangle(int const triangleIndex) const noexcept;
 
     int const mFaceCount;
+    size_t const mVertexCount;
     float3 const* mPositions;
     size_t const mPositionStride;
     float3 const* mNormals;

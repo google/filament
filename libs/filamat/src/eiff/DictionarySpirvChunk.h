@@ -17,12 +17,13 @@
 #ifndef TNT_FILAMAT_DIC_SPIRV_CHUNK_H
 #define TNT_FILAMAT_DIC_SPIRV_CHUNK_H
 
-#include <stdint.h>
-#include <vector>
-
+#include "BlobDictionary.h"
 #include "Chunk.h"
 #include "Flattener.h"
-#include "BlobDictionary.h"
+
+#include <vector>
+
+#include <stdint.h>
 
 namespace filamat {
 

@@ -4,6 +4,7 @@ project(utils)
 set(TARGET utils)
 set(TARGET_LINUX ${TARGET}/linux)
 set(TARGET_GENERIC ${TARGET}/generic)
+set(TARGET_DEBUG ${TARGET}/debug)
 set(PUBLIC_HDR_DIR include)
 
 # ==================================================================================================
@@ -65,11 +66,16 @@ set(DIST_GENERIC_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET_GENERIC}/Mutex.h
 )
 
+set(DIST_DEBUG_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET_DEBUG}/Mutex.h
+)
+
 set(SRCS
         src/api_level.cpp
         src/architecture.cpp
         src/ashmem.cpp
         src/debug.cpp
+        src/debug/Mutex.cpp
         src/Allocator.cpp
         src/AsyncJobQueue.cpp
         src/CallStack.cpp
@@ -179,6 +185,7 @@ if (ANDROID)
 else()
     install(FILES ${DIST_GENERIC_HDRS} DESTINATION include/${TARGET_GENERIC})
 endif()
+install(FILES ${DIST_DEBUG_HDRS} DESTINATION include/${TARGET_DEBUG})
 
 # ==================================================================================================
 # Test executables
@@ -216,6 +223,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_Zip2Iterator.cpp
             test/test_BinaryTreeArray.cpp
             test/test_Status.cpp
+            test/test_Mutex.cpp
     )
 
     if (WASM_PTHREADS)

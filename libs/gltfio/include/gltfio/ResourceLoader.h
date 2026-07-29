@@ -44,6 +44,8 @@ struct ResourceConfiguration {
 
     //! Optional path or URI that points to the base glTF file. This is used solely
     //! to resolve relative paths. The string pointer is not retained.
+    // TODO: Deprecated 26/07/1. Remove by 27/07/1
+    UTILS_DEPRECATED
     const char* gltfPath;
 
     //! If true, adjusts skinning weights to sum to 1. Well formed glTF files do not need this,

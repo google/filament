@@ -17,11 +17,11 @@
 #ifndef TNT_FILAMAT_MATERIAL_TEXT_CHUNK_H
 #define TNT_FILAMAT_MATERIAL_TEXT_CHUNK_H
 
-#include <vector>
-
 #include "Chunk.h"
 #include "LineDictionary.h"
 #include "ShaderEntry.h"
+
+#include <vector>
 
 namespace filamat {
 

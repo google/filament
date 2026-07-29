@@ -17,21 +17,21 @@
 #include "MetalHandles.h"
 
 #include "MetalBlitter.h"
-#include "MetalEnums.h"
-#include "MetalUtils.h"
 #include "MetalBufferPool.h"
 #include "MetalDriver.h"
+#include "MetalEnums.h"
+#include "MetalUtils.h"
 
 #include <filament/SwapChain.h>
 
+#include <private/backend/BackendUtils.h>
+
 #include <backend/DriverEnums.h>
 
-#include "private/backend/BackendUtils.h"
-
-#include <utils/Logger.h>
-#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/trap.h>
 
 #include <math/scalar.h>
@@ -116,7 +116,7 @@ MetalSwapChain::MetalSwapChain(
       platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       layer(nativeWindow),
-      layerDrawableMutex(std::make_shared<std::mutex>()),
+      layerDrawableMutex(std::make_shared<utils::Mutex>()),
       type(SwapChainType::CAMETALLAYER),
       flags(flags) {
 
@@ -227,7 +227,7 @@ bool MetalSwapChain::isAbandoned() const {
 
 void MetalSwapChain::releaseDrawable() {
     if (drawable) {
-        std::lock_guard<std::mutex> lock(*layerDrawableMutex);
+        utils::LockGuard const lock(*layerDrawableMutex);
         drawable = nil;
     }
 }
@@ -352,7 +352,7 @@ public:
     PresentDrawableData& operator=(const PresentDrawableData&) = delete;
 
     static PresentDrawableData* create(id<CAMetalDrawable> drawable,
-            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+            std::shared_ptr<utils::Mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
             int64_t presentationTimeNs) {
         assert_invariant(drawableMutex);
         assert_invariant(driver);
@@ -384,7 +384,7 @@ public:
     }
 
 private:
-    PresentDrawableData(id<CAMetalDrawable> drawable, std::shared_ptr<std::mutex> drawableMutex,
+    PresentDrawableData(id<CAMetalDrawable> drawable, std::shared_ptr<utils::Mutex> drawableMutex,
             MetalDriver* driver, uint64_t flags, int64_t presentationTimeNs)
             : mDrawable(drawable),
               mDrawableMutex(drawableMutex),
@@ -394,7 +394,7 @@ private:
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
         if (that->mDrawable) {
-            std::lock_guard<std::mutex> lock(*(that->mDrawableMutex));
+            utils::LockGuard const lock(*(that->mDrawableMutex));
             that->mDrawable = nil;
         }
         that->mDrawableMutex.reset();
@@ -403,7 +403,7 @@ private:
     }
 
     id<CAMetalDrawable> mDrawable;
-    std::shared_ptr<std::mutex> mDrawableMutex;
+    std::shared_ptr<utils::Mutex> mDrawableMutex;
     MetalDriver* mDriver = nullptr;
     uint64_t mFlags = 0;
     int64_t mPresentationTimeNs = 0;
@@ -423,7 +423,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) 
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
+                std::shared_ptr<utils::Mutex> drawableMutex, MetalDriver* driver, uint64_t flags,
                 int64_t presentationTimeNs)
                 : f(callback),
                   data(PresentDrawableData::create(drawable, drawableMutex, driver, flags,
@@ -525,7 +525,7 @@ MetalAttachment MetalSwapChain::acquireBaseDrawable() {
     // calling -nextDrawable, or when releasing the last known reference
     // to any CAMetalDrawable returned from a previous -nextDrawable.
     {
-        std::lock_guard<std::mutex> lock(*layerDrawableMutex);
+        utils::LockGuard const lock(*layerDrawableMutex);
         drawable = [layer nextDrawable];
     }
 
@@ -1424,7 +1424,7 @@ void MetalFence::encode() {
                           // accessing it.
                           auto lifetime = weakDriverLifetime.lock();
                           if (s && lifetime) {
-                              std::lock_guard<std::mutex> lock(lifetime->mutex);
+                              utils::LockGuard const lock(lifetime->mutex);
                               if (lifetime->driver) {
                                   lifetime->driver->signalFence(
                                           [&] { s->status = FenceStatus::CONDITION_SATISFIED; });

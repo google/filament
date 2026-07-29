@@ -14,9 +14,9 @@
 * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include "SpirvFixup.h"
+
+#include <gtest/gtest.h>
 
 TEST(ClipDistanceFixup, NoReplacement) {
     std::string disassembly =

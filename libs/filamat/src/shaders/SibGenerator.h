@@ -17,11 +17,11 @@
 #ifndef TNT_FILABRIDGE_SIBGENERATOR_H
 #define TNT_FILABRIDGE_SIBGENERATOR_H
 
-#include "private/filament/Variant.h"
+#include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
 
-#include <stdint.h>
 #include <stddef.h>
-#include "private/filament/EngineEnums.h"
+#include <stdint.h>
 
 namespace filament {
 

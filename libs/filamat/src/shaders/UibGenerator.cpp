@@ -15,11 +15,11 @@
  */
 
 #include "UibGenerator.h"
-#include "private/filament/UibStructs.h"
 
-#include "private/filament/BufferInterfaceBlock.h"
-
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>

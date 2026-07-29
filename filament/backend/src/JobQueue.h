@@ -24,10 +24,8 @@
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
 
-#include <condition_variable>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <queue>
 #include <thread>
 #include <unordered_map>
@@ -156,8 +154,8 @@ private:
 
     JobId genNextJobId() noexcept UTILS_REQUIRES(mQueueMutex);
 
-    std::mutex mQueueMutex;
-    std::condition_variable mQueueCondition;
+    utils::Mutex mQueueMutex;
+    utils::Condition mQueueCondition;
     std::unordered_map<JobId, Job> mJobsMap UTILS_GUARDED_BY(mQueueMutex);
     std::queue<JobId> mJobOrder UTILS_GUARDED_BY(mQueueMutex);
     JobId mNextJobId UTILS_GUARDED_BY(mQueueMutex) = 0;

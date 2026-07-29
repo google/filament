@@ -17,11 +17,11 @@
 #ifndef TNT_ENUMMANAGER_H
 #define TNT_ENUMMANAGER_H
 
+#include <filamat/MaterialBuilder.h>
+
 #include <algorithm>
 #include <string_view>
 #include <unordered_map>
-
-#include <filamat/MaterialBuilder.h>
 
 namespace filamat {
 

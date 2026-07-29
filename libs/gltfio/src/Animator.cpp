@@ -504,7 +504,6 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
 void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
         size_t nextIndex) {
     const Sampler* sampler = channel.sourceData;
-    const TimeValues& times = sampler->times;
     TrsTransformManager::Instance trsNode = trsTransformManager->getInstance(channel.targetEntity);
     TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
 

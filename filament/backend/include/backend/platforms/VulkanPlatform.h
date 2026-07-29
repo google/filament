@@ -366,6 +366,11 @@ public:
         uint32_t height;
 
         /**
+         * The number of mipmap levels of the external image
+         */
+        uint32_t mipLevels;
+
+        /**
          * The layer count of the external image
          */
         uint32_t layers;

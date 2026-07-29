@@ -18,10 +18,10 @@
 
 #include "GLSLTools.h"
 
+#include <utils/Log.h>
+
 #include <intermediate.h>
 #include <localintermediate.h>
-
-#include <utils/Log.h>
 
 using namespace glslang;
 

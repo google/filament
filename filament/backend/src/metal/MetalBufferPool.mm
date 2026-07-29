@@ -22,14 +22,14 @@
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
-#include <thread>
 #include <chrono>
+#include <thread>
 
 namespace filament {
 namespace backend {
 
 MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     // First check if a stage exists whose capacity is greater than or equal to the requested size.
     auto iter = mFreeStages.lower_bound(numBytes);
@@ -62,13 +62,13 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
 }
 
 void MetalBufferPool::retainBuffer(MetalBufferPoolEntry const *stage) noexcept {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     (stage->referenceCount)++;
 }
 
 void MetalBufferPool::releaseBuffer(MetalBufferPoolEntry const *stage) noexcept {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     // Decrement the ref count. If it is at 0, move the buffer entry to the free list.
     if (--(stage->referenceCount) > 0) {
@@ -92,7 +92,7 @@ void MetalBufferPool::gc() noexcept {
     }
     const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
 
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     decltype(mFreeStages) stages;
     stages.swap(mFreeStages);
@@ -106,7 +106,7 @@ void MetalBufferPool::gc() noexcept {
 }
 
 void MetalBufferPool::reset() noexcept {
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     assert_invariant(mUsedStages.empty());
     for (auto pair : mFreeStages) {
@@ -136,7 +136,7 @@ std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t 
 
     // Try to allocate from the current buffer first
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         assert_invariant(mCurrentUploadBuffer);
 
         // Align the head to a 4-byte boundary.
@@ -152,7 +152,7 @@ std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t 
     // Create a new buffer outside the lock.
     id<MTLBuffer> newBuffer = [mDevice newBufferWithLength:mCapacity options:MTLStorageModeShared];
 
-    std::lock_guard<std::mutex> lock(mMutex);
+    utils::LockGuard const lock(mMutex);
 
     // We need to re-check if another thread already reset the buffer while we were allocating.
     size_t alignedHead = (mHead + 3) & ~3;

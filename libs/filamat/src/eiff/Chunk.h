@@ -17,11 +17,11 @@
 #ifndef TNT_FILAMAT_CHUNK_H
 #define TNT_FILAMAT_CHUNK_H
 
-#include <vector>
-
 #include "Flattener.h"
 
 #include <filament/MaterialChunkType.h>
+
+#include <vector>
 
 namespace filamat {
 

@@ -29,7 +29,7 @@ wgpu::Buffer WebGPUStagePool::acquireBuffer(size_t requiredSize,
         std::shared_ptr<WebGPUSubmissionState> submissionState) {
     wgpu::Buffer buffer;
     {
-        std::lock_guard<std::mutex> lock(mMutex);
+        utils::LockGuard const lock(mMutex);
         auto iter = mBuffers.lower_bound(requiredSize);
         if (iter != mBuffers.end()) {
             buffer = iter->second;
@@ -50,17 +50,19 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
     };
     auto userData =
             std::make_unique<UserData>(UserData{ .buffer = buffer, .webGPUStagePool = this });
-    buffer.MapAsync(wgpu::MapMode::Write, 0, buffer.GetSize(), wgpu::CallbackMode::AllowSpontaneous,
-            [data = std::move(userData)](wgpu::MapAsyncStatus status, const char* message) {
+    buffer.MapAsync(wgpu::MapMode::Write, 0, buffer.GetSize(),
+            wgpu::CallbackMode::AllowProcessEvents,
+            [data = std::move(userData)](wgpu::MapAsyncStatus status, wgpu::StringView message) {
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
                     if (!data->webGPUStagePool) {
                         return;
                     }
-                    std::lock_guard<std::mutex> lock(data->webGPUStagePool->mMutex);
+                    utils::LockGuard const lock(data->webGPUStagePool->mMutex);
                     data->webGPUStagePool->mBuffers.insert(
                             { data->buffer.GetSize(), data->buffer });
                 } else {
-                    FWGPU_LOGE << "Failed to MapAsync when recycling staging buffer: " << message;
+                    FWGPU_LOGE << "Failed to MapAsync when recycling staging buffer: "
+                               << std::string_view(message);
                 }
             });
 }

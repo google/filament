@@ -67,6 +67,10 @@ void Renderer::setRenderingDeadline(std::chrono::steady_clock::time_point const 
     downcast(this)->setRenderingDeadline(monotonic_clock);
 }
 
+void Renderer::setFrameScheduleTime(std::chrono::steady_clock::time_point const time) noexcept {
+    downcast(this)->setFrameScheduleTime(time);
+}
+
 void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }
@@ -100,12 +104,16 @@ void Renderer::endFrame() {
     downcast(this)->endFrame();
 }
 
-double Renderer::getUserTime() const {
-    return downcast(this)->getUserTime();
+double Renderer::getMaterialTime() const {
+    return downcast(this)->getMaterialTime();
 }
 
-void Renderer::resetUserTime() {
-    downcast(this)->resetUserTime();
+void Renderer::setMaterialTimeEpoch(int64_t const monotonic_clock_ns) {
+    downcast(this)->setMaterialTimeEpoch(monotonic_clock_ns);
+}
+
+void Renderer::setMaterialTimeEpoch(std::chrono::steady_clock::time_point const monotonic_clock) {
+    downcast(this)->setMaterialTimeEpoch(monotonic_clock);
 }
 
 void Renderer::skipNextFrames(size_t frameCount) noexcept {
@@ -114,6 +122,14 @@ void Renderer::skipNextFrames(size_t frameCount) noexcept {
 
 size_t Renderer::getFrameToSkipCount() const noexcept {
     return downcast(this)->getFrameToSkipCount();
+}
+
+bool Renderer::hasGpuFallenBehind() const noexcept {
+    return downcast(this)->hasGpuFallenBehind();
+}
+
+void Renderer::pauseRenderThread(uint64_t const duration_ns) {
+    downcast(this)->pauseRenderThread(duration_ns);
 }
 
 void Renderer::setDisplayInfo(const DisplayInfo& info) noexcept {

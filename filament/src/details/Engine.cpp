@@ -1057,6 +1057,10 @@ FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {
     return create(mSkyboxes, builder);
 }
 
+FFramePacer* FEngine::createFramePacer(const FramePacer::Builder& builder) noexcept {
+    return create(mFramePacers, builder);
+}
+
 FColorGrading* FEngine::createColorGrading(const ColorGrading::Builder& builder) noexcept {
     return create(mColorGradings, builder);
 }
@@ -1325,6 +1329,11 @@ bool FEngine::destroy(const FScene* p) {
 UTILS_NOINLINE
 bool FEngine::destroy(const FSkybox* p) {
     return terminateAndDestroy(p, mSkyboxes);
+}
+
+UTILS_NOINLINE
+bool FEngine::destroy(const FFramePacer* p) {
+    return terminateAndDestroy(p, mFramePacers);
 }
 
 UTILS_NOINLINE
@@ -1652,13 +1661,13 @@ void FEngine::setPaused(bool const paused) {
 }
 
 void FEngine::setFenceUnrecoverableError() noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     mFenceHasUnrecoverableError = true;
     mFenceCondition.notify_all();
 }
 
 void FEngine::signalFence(FenceSignal& signal, FenceSignal::State s) noexcept {
-    std::lock_guard const lock(mFenceLock);
+    LockGuard const lock(mFenceLock);
     signal.mState = s;
     mFenceCondition.notify_all();
 }
