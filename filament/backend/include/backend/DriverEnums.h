@@ -155,6 +155,20 @@ enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
+constexpr std::string_view to_string(FeatureLevel level) noexcept {
+    switch (level) {
+        case FeatureLevel::FEATURE_LEVEL_0:
+            return "FEATURE_LEVEL_0";
+        case FeatureLevel::FEATURE_LEVEL_1:
+            return "FEATURE_LEVEL_1";
+        case FeatureLevel::FEATURE_LEVEL_2:
+            return "FEATURE_LEVEL_2";
+        case FeatureLevel::FEATURE_LEVEL_3:
+            return "FEATURE_LEVEL_3";
+    }
+    return "UNKNOWN";
+}
+
 /**
  * Selects which driver a particular Engine should use.
  */
@@ -205,6 +219,26 @@ enum class ShaderLanguage {
     METAL_LIBRARY = 4,
     WGSL = 5,
 };
+
+constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
+    switch (shaderLanguage) {
+        case ShaderLanguage::ESSL1:
+            return "ESSL 1.0";
+        case ShaderLanguage::ESSL3:
+            return "ESSL 3.0";
+        case ShaderLanguage::SPIRV:
+            return "SPIR-V";
+        case ShaderLanguage::MSL:
+            return "MSL";
+        case ShaderLanguage::METAL_LIBRARY:
+            return "Metal precompiled library";
+        case ShaderLanguage::WGSL:
+            return "WGSL";
+        case ShaderLanguage::UNSPECIFIED:
+            return "Unspecified";
+    }
+    return "UNKNOWN";
+}
 
 constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noexcept {
     switch (shaderLanguage) {
