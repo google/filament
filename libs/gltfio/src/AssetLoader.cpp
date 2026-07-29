@@ -68,6 +68,8 @@ using namespace utils;
 
 namespace filament::gltfio {
 
+namespace {
+
 using SceneMask = NodeManager::SceneMask;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
@@ -90,7 +92,7 @@ static constexpr cgltf_material kDefaultMat = {
     },
 };
 
-static std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
     auto const getNameImpl = [node, defaultNodeName]() -> char const* {
         if (node->name) return node->name;
         if (node->mesh && node->mesh->name) return node->mesh->name;
@@ -144,7 +146,7 @@ static std::string getNodeName(cgltf_node const* node, char const* defaultNodeNa
     return strEscaped;
 }
 
-static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
+bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
     for (int slot = 0; slot < inPrim.attributes_count; slot++) {
         const cgltf_attribute& inputAttribute = inPrim.attributes[slot];
         if (inputAttribute.type == cgltf_attribute_type_color) {
@@ -154,7 +156,7 @@ static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
     return false;
 }
 
-static LightManager::Type getLightType(const cgltf_light_type light) {
+LightManager::Type getLightType(const cgltf_light_type light) {
     switch (light) {
         case cgltf_light_type_max_enum:
         case cgltf_light_type_invalid:
@@ -342,6 +344,8 @@ private:
             cgltf_texture_view* baseColorTexture,
             cgltf_texture_view* metallicRoughnessTexture) const;
 
+    FFilamentAsset* preresolveTextures(FFilamentAsset* fAsset, const cgltf_data* srcAsset);
+
 public:
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
@@ -364,6 +368,8 @@ public:
 public:
     std::unique_ptr<AssetLoaderExtended> mLoaderExtended;
 };
+
+} // anonymous
 
 FILAMENT_DOWNCAST(AssetLoader)
 
@@ -558,7 +564,7 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
         fAsset->mResourceUris.push_back(uri.data());
     }
 
-    return fAsset;
+    return preresolveTextures(fAsset, srcAsset);
 }
 
 void FAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
@@ -1807,6 +1813,101 @@ void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gl
             dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
         }
     }
+}
+
+FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
+        const cgltf_data* srcAsset) {
+    // This part fills out FFilamentAsset::mTextures so that even if we started with num instance=0
+    // for createInstancedAsset, later calls to createInstance will still succeed. (mTextures needs
+    // to have the proper flags set before ResourceLoader creates the actual Filament textures).
+
+    // Pre-resolve textures for all materials so that they can be loaded even if no instances are
+    // created.
+    auto resolveTexture = [&](const cgltf_texture* texture, TextureProvider::TextureFlags flags) {
+        if (texture) {
+            const size_t gltfTextureIndex = (size_t) (texture - srcAsset->textures);
+            fAsset->obtainAssetTextureIndex(gltfTextureIndex, flags);
+        }
+    };
+    for (size_t i = 0; i < srcAsset->materials_count; ++i) {
+        const cgltf_material* inputMat = &srcAsset->materials[i];
+        UvMap dummyUvmap{};
+        cgltf_texture_view baseColorTexture;
+        cgltf_texture_view metallicRoughnessTexture;
+        MaterialKey matkey = getMaterialKey(srcAsset, inputMat, &dummyUvmap, false,
+                &baseColorTexture, &metallicRoughnessTexture);
+
+        const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
+        const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
+
+        // This section has the exact same checks and flags as createMaterialInstance().
+        if (matkey.hasBaseColorTexture) {
+            resolveTexture(baseColorTexture.texture, sRGB);
+        }
+        if (matkey.hasMetallicRoughnessTexture) {
+            TextureProvider::TextureFlags srgb =
+                    inputMat->has_pbr_specular_glossiness ? sRGB : LINEAR;
+            resolveTexture(metallicRoughnessTexture.texture, srgb);
+        }
+        if (matkey.hasNormalTexture) {
+            resolveTexture(inputMat->normal_texture.texture, LINEAR);
+        }
+        if (matkey.hasOcclusionTexture) {
+            resolveTexture(inputMat->occlusion_texture.texture, LINEAR);
+        }
+        if (matkey.hasEmissiveTexture) {
+            resolveTexture(inputMat->emissive_texture.texture, sRGB);
+        }
+
+        if (matkey.hasClearCoat) {
+            auto ccConfig = inputMat->clearcoat;
+            if (matkey.hasClearCoatTexture) {
+                resolveTexture(ccConfig.clearcoat_texture.texture, LINEAR);
+            }
+            if (matkey.hasClearCoatRoughnessTexture) {
+                resolveTexture(ccConfig.clearcoat_roughness_texture.texture, LINEAR);
+            }
+            if (matkey.hasClearCoatNormalTexture) {
+                resolveTexture(ccConfig.clearcoat_normal_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasSheen) {
+            auto shConfig = inputMat->sheen;
+            if (matkey.hasSheenColorTexture) {
+                resolveTexture(shConfig.sheen_color_texture.texture, sRGB);
+            }
+            if (matkey.hasSheenRoughnessTexture) {
+                bool sameTexture = shConfig.sheen_color_texture.texture ==
+                                   shConfig.sheen_roughness_texture.texture;
+                resolveTexture(shConfig.sheen_roughness_texture.texture,
+                        sameTexture ? sRGB : LINEAR);
+            }
+        }
+        if (matkey.hasVolume) {
+            auto vlConfig = inputMat->volume;
+            if (matkey.hasVolumeThicknessTexture) {
+                resolveTexture(vlConfig.thickness_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasTransmission) {
+            auto trConfig = inputMat->transmission;
+            if (matkey.hasTransmissionTexture) {
+                resolveTexture(trConfig.transmission_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasSpecular) {
+            auto spConfig = inputMat->specular;
+            if (matkey.hasSpecularColorTexture) {
+                resolveTexture(spConfig.specular_color_texture.texture, sRGB);
+            }
+            if (matkey.hasSpecularTexture) {
+                bool sameTexture = spConfig.specular_color_texture.texture ==
+                                   spConfig.specular_texture.texture;
+                resolveTexture(spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+            }
+        }
+    }
+    return fAsset;
 }
 
 bool AssetConfigurationExtended::isSupported() {
