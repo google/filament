@@ -15,6 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -22,24 +27,18 @@
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/SkinningBuffer.h>
 #include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
-#include <filament/SkinningBuffer.h>
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
 #include <utils/getopt.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <utils/Path.h>
 
 #include <cmath>
 #include <iostream>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
@@ -48,6 +47,7 @@ using utils::Path;
 using namespace filament::math;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     VertexBuffer *vb, *vb2;
     IndexBuffer* ib;
     Material* mat;
@@ -114,7 +114,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -140,7 +140,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "skinning buffer common for two renderables";
 
     handleCommandLineArgments(argc, argv, &config);
@@ -240,57 +240,65 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        constexpr float ZOOM = 1.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO,
-            -aspect * ZOOM, aspect * ZOOM,
-            -ZOOM, ZOOM, 0, 1);
-        auto& tcm = engine->getTransformManager();
 
-        // Transformation of both renderables
-        tcm.setTransform(tcm.getInstance(app.renderable1),
-                filament::math::mat4f::translation(filament::math::float3{ 0.5, 0, 0 }));
-        tcm.setTransform(tcm.getInstance(app.renderable2),
-                filament::math::mat4f::translation(filament::math::float3{ 0, 0.5, 0 }));
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(config.title)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .animation([&app](Engine* engine, View* view, double now) {
+                        constexpr float ZOOM = 1.5f;
+                        const uint32_t w = view->getViewport().width;
+                        const uint32_t h = view->getViewport().height;
+                        const float aspect = (float) w / h;
+                        app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        auto& tcm = engine->getTransformManager();
 
-        auto& rm = engine->getRenderableManager();
+                        // Transformation of both renderables
+                        tcm.setTransform(tcm.getInstance(app.renderable1),
+                                filament::math::mat4f::translation(
+                                        filament::math::float3{ 0.5, 0, 0 }));
+                        tcm.setTransform(tcm.getInstance(app.renderable2),
+                                filament::math::mat4f::translation(
+                                        filament::math::float3{ 0, 0.5, 0 }));
 
-        // Bone skinning animation
-        float t = (float)(now - (int)now);
-        float s = sin(t * f::PI * 2.f);
-        float c = cos(t * f::PI * 2.f);
+                        auto& rm = engine->getRenderableManager();
 
-        mat4f translate[] = {mat4f::translation(float3(s, c, 0))};
+                        // Bone skinning animation
+                        float t = (float) (now - (int) now);
+                        float s = sin(t * f::PI * 2.f);
+                        float c = cos(t * f::PI * 2.f);
 
-        mat4f trans1of8[9] = {};
-        for (size_t i = 0; i < 9; i++) {
-            trans1of8[i] = filament::math::mat4f(1);
-        }
-        s *= 5;
-        mat4f transA[] = {
-            mat4f::translation(float3(s, 0, 0)),
-            mat4f::translation(float3(s, s, 0)),
-            mat4f::translation(float3(0, s, 0)),
-            mat4f::translation(float3(-s, s, 0)),
-            mat4f::translation(float3(-s, 0, 0)),
-            mat4f::translation(float3(-s, -s, 0)),
-            mat4f::translation(float3(0, -s, 0)),
-            mat4f::translation(float3(s, -s, 0)),
-            filament::math::mat4f(1)};
-        size_t offset = ((size_t)now) % 8;
-        trans1of8[offset] = transA[offset];
+                        mat4f translate[] = { mat4f::translation(float3(s, c, 0)) };
 
-        // Set transformation of the first bone
-        app.sb->setBones(*engine, translate, 1, 0);
+                        mat4f trans1of8[9] = {};
+                        for (size_t i = 0; i < 9; i++) {
+                            trans1of8[i] = filament::math::mat4f(1);
+                        }
+                        s *= 5;
+                        mat4f transA[] = { mat4f::translation(float3(s, 0, 0)),
+                            mat4f::translation(float3(s, s, 0)),
+                            mat4f::translation(float3(0, s, 0)),
+                            mat4f::translation(float3(-s, s, 0)),
+                            mat4f::translation(float3(-s, 0, 0)),
+                            mat4f::translation(float3(-s, -s, 0)),
+                            mat4f::translation(float3(0, -s, 0)),
+                            mat4f::translation(float3(s, -s, 0)), filament::math::mat4f(1) };
+                        size_t offset = ((size_t) now) % 8;
+                        trans1of8[offset] = transA[offset];
 
-        // Set transformation of the other bones, only 3 of them can be used, do to limitation
-        app.sb->setBones(*engine,trans1of8, 8, 1);
-    });
+                        // Set transformation of the first bone
+                        app.sb->setBones(*engine, translate, 1, 0);
 
-    FilamentApp::get().run(config, setup, cleanup);
+                        // Set transformation of the other bones, only 3 of them can be used, do to
+                        // limitation
+                        app.sb->setBones(*engine, trans1of8, 8, 1);
+                    })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

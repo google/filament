@@ -41,6 +41,13 @@ namespace utils {
 
 namespace {
 
+// short-hand for std::array<float, n>. We cannot define a dependency against <math> (since <math>
+// depends on <utils>, and so therefore the API works on std::array floats, which client can cast
+// math::floatn to.
+using float2 = std::array<float, 2>;
+using float3 = std::array<float, 3>;
+using float4 = std::array<float, 4>;
+
 constexpr size_t MAX_PROPERTY_NAME_LENGTH = 128;
 constexpr size_t MAX_PROPERTY_VALUE_LENGTH = 128;
 
@@ -64,13 +71,16 @@ bool parse(const char* val, bool& out) {
 }
 
 template<>
-bool parse(const char* val, int& out) {
-    return sscanf(val, "%d", &out) == 1;
-}
+bool parse(const char* val, int& out) { return sscanf(val, "%d", &out) == 1; }
 template<>
-bool parse(const char* val, float& out) {
-    return sscanf(val, "%f", &out) == 1;
-}
+bool parse(const char* val, float& out) { return sscanf(val, "%f", &out) == 1; }
+template<>
+bool parse(const char* val, float2& out) { return sscanf(val, "%f %f", &out[0], &out[1]) == 2; }
+template<>
+bool parse(const char* val, float3& out) { return sscanf(val, "%f %f %f", &out[0], &out[1], &out[2]) == 3; }
+template<>
+bool parse(const char* val, float4& out) { return sscanf(val, "%f %f %f %f", &out[0], &out[1], &out[2], &out[3]) == 4; }
+
 
 template<typename T>
 bool update(void* p, const char* val) {
@@ -174,6 +184,15 @@ void InternalDebugRegistry::registerProperty(std::string_view const name, void* 
                 case FLOAT:
                     changed = update<float>(p, val);
                     break;
+                case FLOAT2:
+                    changed = update<float2>(p, val);
+                    break;
+                case FLOAT3:
+                    changed = update<float3>(p, val);
+                    break;
+                case FLOAT4:
+                    changed = update<float4>(p, val);
+                    break;
                 case ATOMIC_BOOL:
                     changed = update<std::atomic<bool>>(p, val);
                     break;
@@ -234,13 +253,9 @@ bool InternalDebugRegistry::setProperty<bool>(const char* name, bool v) noexcept
 
 template bool InternalDebugRegistry::setProperty<int>(const char* name, int v) noexcept;
 template bool InternalDebugRegistry::setProperty<float>(const char* name, float v) noexcept;
-template bool InternalDebugRegistry::setProperty<std::array<float, 2>>(const char* name,
-        std::array<float, 2> v) noexcept;
-template bool InternalDebugRegistry::setProperty<std::array<float, 3>>(const char* name,
-        std::array<float, 3> v) noexcept;
-template bool InternalDebugRegistry::setProperty<std::array<float, 4>>(const char* name,
-        std::array<float, 4> v) noexcept;
-
+template bool InternalDebugRegistry::setProperty<float2>(const char* name, float2 v) noexcept;
+template bool InternalDebugRegistry::setProperty<float3>(const char* name, float3 v) noexcept;
+template bool InternalDebugRegistry::setProperty<float4>(const char* name, float4 v) noexcept;
 
 template<typename T>
 bool InternalDebugRegistry::getProperty(const char* name, T* p) const noexcept {
@@ -270,12 +285,12 @@ bool InternalDebugRegistry::getProperty<bool>(const char* name, bool* p) const n
 
 template bool InternalDebugRegistry::getProperty<int>(const char* name, int* v) const noexcept;
 template bool InternalDebugRegistry::getProperty<float>(const char* name, float* v) const noexcept;
-template bool InternalDebugRegistry::getProperty<std::array<float, 2>>(const char* name,
-        std::array<float, 2>* v) const noexcept;
-template bool InternalDebugRegistry::getProperty<std::array<float, 3>>(const char* name,
-        std::array<float, 3>* v) const noexcept;
-template bool InternalDebugRegistry::getProperty<std::array<float, 4>>(const char* name,
-        std::array<float, 4>* v) const noexcept;
+template bool InternalDebugRegistry::getProperty<float2>(const char* name,
+        float2* v) const noexcept;
+template bool InternalDebugRegistry::getProperty<float3>(const char* name,
+        float3* v) const noexcept;
+template bool InternalDebugRegistry::getProperty<float4>(const char* name,
+        float4* v) const noexcept;
 
 bool InternalDebugRegistry::registerDataSource(std::string_view const name, void const* data,
         size_t const count) noexcept {

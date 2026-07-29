@@ -619,17 +619,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         bool const hasSkinning = soaSkinningData[i].skinning;
         bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
-        // if we are already an SSR variant, the SRE bit is already set
-        static_assert(Variant::SPECIAL_SSR_VARIANT & Variant::SRE);
         Variant renderableVariant{ variant };
 
-        // we can't have SSR and shadowing together by construction
-        bool const isSsrVariant = Variant::isSSRVariant(variant);
-        assert_invariant((isSsrVariant && !hasShadowing) || !isSsrVariant);
-        if (!isSsrVariant) {
-            // set the SRE variant, unless we're in SSR mode
-            renderableVariant.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
-        }
+        // We can't have SSR and shadowing together by construction.
+        assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
+        renderableVariant.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
 
         renderableVariant.setSkinning(hasSkinningOrMorphing);
 

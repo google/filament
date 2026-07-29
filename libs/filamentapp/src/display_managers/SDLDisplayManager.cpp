@@ -17,7 +17,7 @@
 #include "SDLDisplayManager.h"
 
 #include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/NativeWindowHelper.h>
 
 #include <utils/Panic.h>
@@ -44,7 +44,7 @@ bool SDLDisplayManager::init(const Config& config) {
 void SDLDisplayManager::terminate() { SDL_Quit(); }
 
 
-FilamentApp::Window::Handle SDLDisplayManager::createWindow(const char* title, uint32_t w,
+FilamentApp2::Window::Handle SDLDisplayManager::createWindow(const char* title, uint32_t w,
         uint32_t h, bool resizable, bool headless) {
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (resizable) {
@@ -75,23 +75,23 @@ FilamentApp::Window::Handle SDLDisplayManager::createWindow(const char* title, u
 #endif
 
     mNativeWindowMap[window] = nativeWindow;
-    return (FilamentApp::Window::Handle) window;
+    return (FilamentApp2::Window::Handle) window;
 }
 
-void SDLDisplayManager::destroyWindow(FilamentApp::Window::Handle window) {
+void SDLDisplayManager::destroyWindow(FilamentApp2::Window::Handle window) {
     SDL_DestroyWindow((SDL_Window*) window);
 }
 
-void* SDLDisplayManager::getNativeWindow(FilamentApp::Window::Handle window) const {
+void* SDLDisplayManager::getNativeWindow(FilamentApp2::Window::Handle window) const {
     assert_invariant(mNativeWindowMap.count(window) > 0);
     return mNativeWindowMap[window];
 }
 
-void SDLDisplayManager::setWindowTitle(FilamentApp::Window::Handle window, const char* title) {
+void SDLDisplayManager::setWindowTitle(FilamentApp2::Window::Handle window, const char* title) {
     SDL_SetWindowTitle((SDL_Window*) window, title);
 }
 
-void SDLDisplayManager::getWindowSize(FilamentApp::Window::Handle window, uint32_t* w,
+void SDLDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
         uint32_t* h) const {
     int iw, ih;
     SDL_GetWindowSize((SDL_Window*) window, &iw, &ih);
@@ -99,7 +99,7 @@ void SDLDisplayManager::getWindowSize(FilamentApp::Window::Handle window, uint32
     *h = (uint32_t) ih;
 }
 
-void SDLDisplayManager::getDrawableSize(FilamentApp::Window::Handle window, uint32_t* w,
+void SDLDisplayManager::getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
         uint32_t* h) const {
     int iw, ih;
     SDL_GL_GetDrawableSize((SDL_Window*) window, &iw, &ih);
@@ -109,7 +109,7 @@ void SDLDisplayManager::getDrawableSize(FilamentApp::Window::Handle window, uint
 
 uint32_t SDLDisplayManager::getMouseState(int* x, int* y) const { return SDL_GetMouseState(x, y); }
 
-bool SDLDisplayManager::isWindowFocused(FilamentApp::Window::Handle window) const {
+bool SDLDisplayManager::isWindowFocused(FilamentApp2::Window::Handle window) const {
     return (SDL_GetWindowFlags((SDL_Window*) window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
@@ -186,7 +186,7 @@ void SDLDisplayManager::pollEvents(std::vector<AppEvent>& events) {
     }
 }
 
-void SDLDisplayManager::onWindowResized(FilamentApp::Window::Handle window) {
+void SDLDisplayManager::onWindowResized(FilamentApp2::Window::Handle window) {
 #if defined(__APPLE__)
     void* nativeWindow = getNativeWindow(window);
     if (mConfig.backend == filament::Engine::Backend::METAL ||

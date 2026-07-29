@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENTAPP_FILAMENTAPPGUI_H
 #define TNT_FILAMENTAPP_FILAMENTAPPGUI_H
 
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/View.h>
@@ -52,7 +52,7 @@ public:
     bool wantCaptureMouse() const;
 
     void render(float timeStep, filament::app::DisplayManager* displayManager, void* window,
-            FilamentApp::ImGuiCallback imguiCallback, bool mousePressed[3]);
+            FilamentApp2::ImGuiCallback imguiCallback, bool mousePressed[3]);
 
     filament::View* getView() const noexcept;
 

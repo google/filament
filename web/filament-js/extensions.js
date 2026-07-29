@@ -88,6 +88,8 @@ Filament.loadClassExtensions = function() {
 
     /// Engine ::core class::
 
+    Filament.Engine.SINGLE_THREADED = 0xFFFFFFFF;
+
     /// create ::static method:: Creates an Engine instance for the given canvas.
     /// canvas ::argument:: the canvas DOM element
     /// options ::argument:: optional WebGL 2.0 context configuration
