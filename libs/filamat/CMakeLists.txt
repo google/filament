@@ -164,7 +164,8 @@ if (FILAMENT_BUILD_TESTING AND IS_HOST_PLATFORM)
             tests/test_filamat.cpp
             tests/test_argBufferFixup.cpp
             tests/test_clipDistanceFixup.cpp
-            tests/test_line_dictionary.cpp)
+            tests/test_line_dictionary.cpp
+            tests/test_variants.cpp)
 
     add_executable(${TARGET} ${SRCS})
     target_include_directories(${TARGET} PRIVATE src)
