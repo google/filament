@@ -41,6 +41,10 @@ std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept
     // Variant header file and allows the information to fit in a reasonable amount of space on
     // the page. The HTML file has a legend.
     if (variant.key) {
+        if (Variant::isSSRVariant(variant)) {
+            return "SSR";
+        }
+
         if (variant.key & Variant::DIR) variantString += "DIR|";
         if (variant.key & Variant::DYN) variantString += "DYN|";
         if (variant.key & Variant::SRE) variantString += "SRE|";

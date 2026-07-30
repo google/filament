@@ -1,6 +1,7 @@
 material {
     name : "Filament Default Material",
     shadingModel : unlit,
+    variantFilter : [ vsm ],
     featureLevel: 0
 }
 

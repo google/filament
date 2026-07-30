@@ -2359,6 +2359,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             discardEndVal &= ~TargetBufferFlags::STENCIL;
             clearVal &= ~TargetBufferFlags::STENCIL;
         }
+
+        VulkanAttachment& depthStencil = rt->getDepthStencil();
+        if (depthStencil.texture->isTransientAttachment()) {
+            discardEndVal |= TargetBufferFlags::DEPTH_AND_STENCIL;
+        }
+        
         currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
