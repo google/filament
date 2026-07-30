@@ -34,10 +34,10 @@
 
 #include <utils/EntityManager.h>
 
-#include <gtest/gtest.h>
-
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#include <gtest/gtest.h>
 
 using namespace filament;
 using namespace backend;
