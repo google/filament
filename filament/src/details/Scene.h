@@ -26,9 +26,9 @@
 
 #include "ds/DescriptorSet.h"
 
-#include <filament/Scene.h>
-
 #include <private/filament/EngineEnums.h>
+
+#include <filament/Scene.h>
 
 #include <utils/Entity.h>
 #include <utils/PagedArenaBitset.h>
@@ -36,10 +36,9 @@
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
+#include <array>
 #include <unordered_map>
 #include <vector>
-
-#include <array>
 
 #include <stddef.h>
 
