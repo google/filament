@@ -41,6 +41,8 @@
 
 namespace filament::backend {
 
+struct VulkanContext;
+
 class VulkanFencePool;
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
@@ -76,7 +78,7 @@ private:
 struct VulkanProgram : public HwProgram, fvkmemory::ThreadSafeResource {
     using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
 
-    VulkanProgram(VkDevice device, Program const& builder) noexcept;
+    VulkanProgram(VulkanContext const& context, VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
 
     utils::CString programString;
