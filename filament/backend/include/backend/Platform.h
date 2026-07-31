@@ -372,24 +372,6 @@ public:
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
 
         /**
-         * Enables asynchronous pipeline cache preloading, if supported on this device.
-         * This is only supported for:
-         *      - VulkanPlatform
-         * When the following device extensions are available:
-         *      - VK_KHR_dynamic_rendering
-         *      - VK_EXT_vertex_input_dynamic_state
-         * Should be enabled only for devices where it has been shown this is effective.
-         */
-        bool vulkanEnableAsyncPipelineCachePrewarming = false;
-
-        /**
-         * Bypass the staging buffer because the device is of Unified Memory Architecture.
-         * This is only supported for:
-         *      - VulkanPlatform
-         */
-        bool vulkanEnableStagingBufferBypass = false;
-
-        /**
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.
          */
         AsynchronousMode asynchronousMode = AsynchronousMode::NONE;
