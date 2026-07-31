@@ -305,6 +305,31 @@ jobs:
             const globber = await glob.create('out/*.tgz');
             await upload({ github, context }, await globber.glob(), TAG);
 
+  cocoapods-deploy:
+    name: cocoapods-deploy
+    runs-on: macos-14
+    needs: [build-ios]
+    if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
+
+    steps:
+      - name: Decide Git ref
+        id: git_ref
+        run: |
+          REF=${RELEASE_TAG:-${GITHUB_REF}}
+          TAG=${REF##*/}
+          echo "ref=${REF}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4.1.6
+        with:
+          ref: ${{ steps.git_ref.outputs.ref }}
+      - name: Move podspec to root
+        run: mv ios/CocoaPods/*.podspec .
+      - name: Install CocoaPods
+        run: gem install cocoapods
+      - uses: michaelhenry/deploy-to-cocoapods-github-action@745686ab065f90596e0d5cfcf97bb2416d94262e
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+
   build-windows:
     name: build-windows
     runs-on: windows-2022-32core
