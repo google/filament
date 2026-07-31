@@ -804,6 +804,13 @@ public:
         struct {
             bool combine_multiview_images = false;
         } stereo;
+        struct {
+            // When enabled (d.vulkan.debug_utils_names), the Vulkan backend explicitly requests the
+            // VK_EXT_debug_utils extension at startup and tracks group markers in the command
+            // buffer. It will also name the render passes with the top group marker so they show up
+            // in RenderDoc and other GPU debugging tools.
+            std::atomic<bool> enable_debug_utils_names{ false };
+        } vulkan;
         matdbg::DebugServer* server = nullptr;
         FgviewerManager* fgviewer = nullptr;
     } debug;
