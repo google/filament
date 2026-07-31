@@ -523,7 +523,10 @@ uint8_t PlatformEGLAndroid::getExternalImageMipLevels(
     // Importing a full mip chain requires glEGLImageTargetTexStorageEXT. Check the extension
     // string as well as the entry point, because eglGetProcAddress() may return a non-null
     // pointer for a function the driver doesn't actually support.
-    if (!ext.gl.EXT_EGL_image_storage || glEGLImageTargetTexStorageEXT == nullptr) {
+    // Note: PlatformEGLAndroid declares its own `ext`, which hides PlatformEGL's, so the base
+    // class member has to be named explicitly here.
+    if (!PlatformEGL::ext.gl.EXT_EGL_image_storage ||
+            glEGLImageTargetTexStorageEXT == nullptr) {
         return 1;
     }
     auto const* const img =
