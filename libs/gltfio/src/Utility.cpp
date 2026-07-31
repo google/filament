@@ -167,6 +167,26 @@ bool decodeMeshoptCompression(cgltf_data* data) {
     return true;
 }
 
+bool validatePrimitiveIndices(cgltf_primitive const* prim) {
+    if (!prim->indices || prim->attributes_count == 0) {
+        return true;
+    }
+
+    // cgltf_validate() guarantees that all the attributes of a primitive have the same count.
+    cgltf_accessor const* indices = prim->indices;
+    cgltf_size const vertexCount = prim->attributes[0].data->count;
+
+    for (cgltf_size i = 0; i < indices->count; ++i) {
+        cgltf_size const index = cgltf_accessor_read_index(indices, i);
+        if (UTILS_UNLIKELY(index >= vertexCount)) {
+            slog.e << "gltfio: index " << index << " at position " << i
+                   << " is out of range (vertex count is " << vertexCount << ")." << io::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
 bool primitiveHasVertexColor(cgltf_primitive* inPrim) {
     for (int slot = 0; slot < inPrim->attributes_count; slot++) {
         const cgltf_attribute& inputAttribute = inPrim->attributes[slot];

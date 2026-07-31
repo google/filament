@@ -45,6 +45,7 @@ namespace filament::gltfio::utility {
 // Functions that are shared between the original implementation and the extended implementation.
 void decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim, DracoCache* dracoCache);
 bool decodeMeshoptCompression(cgltf_data* data);
+bool validatePrimitiveIndices(cgltf_primitive const* prim);
 bool primitiveHasVertexColor(cgltf_primitive* inPrim);
 uint32_t computeBindingSize(cgltf_accessor const* accessor);
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count);

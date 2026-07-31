@@ -782,6 +782,15 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             return false;
         }
 
+        // cgltf_validate() checked the index values before the decoders ran, and it always reads
+        // the pre-decode buffer. Decompressed indices are therefore untrusted and must be checked
+        // against the vertex count before anything (e.g. tangent generation) consumes them.
+        for (auto& [prim, vertexBuffer]: primitives) {
+            if (!utility::validatePrimitiveIndices(prim)) {
+                return false;
+            }
+        }
+
         if (!uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache)) {
             return false;
         }
