@@ -1,3 +1,7 @@
+plugins {
+    id "org.jetbrains.dokka" version "1.9.20"
+}
+
 android {
     namespace 'com.google.android.filament'
 
@@ -22,6 +26,16 @@ afterEvaluate { project ->
                 artifactId = POM_ARTIFACT_ID
                 from components.release
             }
+        }
+    }
+}
+
+dokkaGfm {
+    dokkaSourceSets {
+        // Use 'register' instead of 'configureEach' to force Dokka
+        // to create a new source set from scratch.
+        register("main") {
+            sourceRoots.from(file("src/main/java"))
         }
     }
 }

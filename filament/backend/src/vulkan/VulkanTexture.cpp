@@ -377,17 +377,17 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
         VkDeviceMemory memory, VkFormat format, VkSamplerYcbcrConversion conversion,
         VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
-        uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage tusage,
-        VulkanStagePool& stagePool)
-    : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth,
+        uint8_t levels, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+        TextureUsage tusage, VulkanStagePool& stagePool)
+    : HwTexture(getSamplerTypeFromDepth(depth), levels, samples, width, height, depth,
               TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
               commands, allocator, device, image, memory,
               stagingMemory, stagingBuffer, ahBuffer,
               format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
-              /*mipLevels=*/1, getLayerCountFromDepth(depth), conversion,
+              /*mipLevels=*/levels, getLayerCountFromDepth(depth), conversion,
               getUsage(context, samples, VK_NULL_HANDLE, format, tusage),
-              any(usage & TextureUsage::PROTECTED))) {
+              any(tusage & TextureUsage::PROTECTED))) {
     mPrimaryViewRange = mState->mFullViewRange;
 }
 

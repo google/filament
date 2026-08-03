@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
-#include <filament/Engine.h>
-
-#include <utils/EntityManager.h>
-#include <utils/NameComponentManager.h>
-
-#include <gltfio/AssetLoader.h>
-#include <gltfio/MaterialProvider.h>
-#include <utils/debug.h>
+#include "MaterialKey.h"
 
 #include "common/NioUtils.h"
 
-#include "MaterialKey.h"
+#include <gltfio/AssetLoader.h>
+#include <gltfio/MaterialProvider.h>
+
+#include <filament/Engine.h>
+
+#include <utils/debug.h>
+#include <utils/EntityManager.h>
+#include <utils/NameComponentManager.h>
+
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::gltfio;
@@ -305,4 +305,10 @@ Java_com_google_android_filament_gltfio_AssetLoader_nDestroyAsset(JNIEnv*, jclas
     AssetLoader* loader = (AssetLoader*) nativeLoader;
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     loader->destroyAsset(asset);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nGc(JNIEnv*, jclass, jlong nativeLoader) {
+    AssetLoader* loader = (AssetLoader*) nativeLoader;
+    loader->gc();
 }

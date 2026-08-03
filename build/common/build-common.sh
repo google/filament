@@ -28,18 +28,11 @@ echo "Building $TARGET target"
 BUILD_DEBUG=
 BUILD_RELEASE=
 GENERATE_ARCHIVES=
-RUN_TESTS=
 
 if [[ "$TARGET" == "presubmit" ]]; then
     BUILD_RELEASE=release
 fi
 
-if [[ "$TARGET" == "presubmit-with-test" ]]; then
-    BUILD_RELEASE=release
-    # -b enables asan, -y release will try to build the tools in release without asan
-    # while while test itself will be compiled with asan+ubsan
-    RUN_TESTS="-u -b -y release"
-fi
 
 if [[ "$TARGET" == "presubmit-with-archive" ]]; then
     BUILD_RELEASE=release
@@ -60,5 +53,4 @@ if [[ "$TARGET" == "continuous" ]]; then
     BUILD_DEBUG=debug
     BUILD_RELEASE=release
     GENERATE_ARCHIVES=-a
-    RUN_TESTS=-u
 fi

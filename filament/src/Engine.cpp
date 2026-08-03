@@ -21,6 +21,7 @@
 #include "details/BufferObject.h"
 #include "details/Camera.h"
 #include "details/Fence.h"
+#include "details/FramePacer.h"
 #include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
@@ -176,6 +177,10 @@ bool Engine::destroy(const MaterialInstance* p) {
 }
 
 bool Engine::destroy(const Renderer* p) {
+    return downcast(this)->destroy(downcast(p));
+}
+
+bool Engine::destroy(const FramePacer* p) {
     return downcast(this)->destroy(downcast(p));
 }
 

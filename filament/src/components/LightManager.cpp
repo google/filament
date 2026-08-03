@@ -25,6 +25,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
+#include <utils/PagedArenaBitsetPool.h>
 
 #include <math/fast.h>
 #include <math/scalar.h>
@@ -164,7 +165,8 @@ LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entit
 
 // ------------------------------------------------------------------------------------------------
 
-FLightManager::FLightManager(FEngine& engine) noexcept : mEngine(engine) {
+FLightManager::FLightManager(FEngine& engine) noexcept
+        : mManager(engine.getEntityManager()), mEngine(engine) {
     // DON'T use engine here in the ctor, because it's not fully constructed yet.
 }
 
@@ -179,6 +181,11 @@ void FLightManager::init(FEngine&) noexcept {
 
 void FLightManager::create(const Builder& builder, Entity const entity) {
     auto& manager = mManager;
+
+    Entity zombie;
+    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
+        destroy(zombie);
+    }
 
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
         destroy(entity);
@@ -216,11 +223,14 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
 void FLightManager::prepare(backend::DriverApi&) const noexcept {
 }
 
-void FLightManager::destroy(Entity const e) noexcept {
-    Instance const i = getInstance(e);
-    if (i) {
-        auto& manager = mManager;
-        manager.removeComponent(e);
+void FLightManager::destroyComponents(Entity const* entities, size_t const count) noexcept {
+    auto& manager = mManager;
+    for (size_t k = 0; k < count; ++k) {
+        Entity const e = entities[k];
+        Instance const i = getInstance(e);
+        if (i) {
+            manager.removeComponent(e);
+        }
     }
 }
 
@@ -236,12 +246,9 @@ void FLightManager::terminate() noexcept {
         }
     }
 }
-void FLightManager::gc(EntityManager& em) noexcept {
-    mManager.gc(em, [this](Entity const e) {
-        destroy(e);
-    });
+void FLightManager::gc() noexcept {
+    mManager.gc(this, &FLightManager::destroyComponents);
 }
-
 void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
     params.options = options;
@@ -252,8 +259,34 @@ void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& opti
     params.options.shadowFar = std::max(options.shadowFar, 0.0f);
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
+    params.options.polygonOffsetConstant = std::max(options.polygonOffsetConstant, 0.0f);
+    params.options.polygonOffsetSlope = std::max(options.polygonOffsetSlope, 0.0f);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
+    params.options.penumbraScale = std::max(0.0f, options.penumbraScale);
+    params.options.penumbraRatioScale = std::max(0.0f, options.penumbraRatioScale);
+    params.options.maxPenumbraRatio = std::max(0.0f, options.maxPenumbraRatio);
+    params.options.maxSearchRadius = std::max(0.0f, options.maxSearchRadius);
     mManager.notifyChange(getEntity(i));
+}
+
+float FLightManager::getEffectiveBulbRadius(Instance const li) const noexcept {
+    auto const& options = getShadowOptions(li);
+    if (options.shadowBulbRadius < 0.0f) {
+        switch (getType(li)) {
+            case Type::SUN: {
+                float const sunAngularRadius = getSunAngularRadiusRad(li);
+                float const sunHaloRatio = getSunHaloSize(li);
+                return clamp(sunAngularRadius * sunHaloRatio, 0.0f, f::PI_2);
+            }
+            case Type::DIRECTIONAL:
+                return 1.0f;
+            case Type::POINT:
+            case Type::FOCUSED_SPOT:
+            case Type::SPOT:
+                return 0.06f;
+        }
+    }
+    return options.shadowBulbRadius;
 }
 
 void FLightManager::setLightChannel(Instance const i, unsigned int const channel, bool const enable) noexcept {
@@ -362,7 +395,7 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
                 }
                 break;
         }
-        
+
         bool changed = false;
         if (manager[i].intensity != luminousIntensity) {
             manager[i].intensity = luminousIntensity;
@@ -387,7 +420,7 @@ void FLightManager::setFalloff(Instance const i, float const falloff) noexcept {
         float const sqFalloff = falloff * falloff;
         float const squaredFallOffInv = sqFalloff > 0.0f ? (1 / sqFalloff) : 0;
         SpotParams& spotParams = manager[i].spotParams;
-        
+
         if (manager[i].squaredFallOffInv != squaredFallOffInv || spotParams.radius != falloff) {
             manager[i].squaredFallOffInv = squaredFallOffInv;
             spotParams.radius = falloff;
@@ -417,7 +450,7 @@ void FLightManager::setSpotLightCone(Instance const i, float const inner, float 
         if (spotParams.outerClamped != outerClamped ||
             spotParams.cosOuterSquared != cosOuterSquared ||
             spotParams.scaleOffset != scaleOffset) {
-            
+
             spotParams.outerClamped = outerClamped;
             spotParams.cosOuterSquared = cosOuterSquared;
             spotParams.sinInverse = 1.0f / std::sin(outerClamped);

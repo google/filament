@@ -49,45 +49,46 @@ public:
         pulse(1);
     }
 
-    void notify_n(size_t n) noexcept {
+    void notify_n(size_t const n) noexcept {
         if (n > 0) pulse(n);
     }
 
-    void wait(std::unique_lock<Mutex>& lock) noexcept {
-        wait_until(lock.mutex(), false, nullptr);
+    template <typename M>
+    void wait(std::unique_lock<M>& lock) noexcept {
+        wait_until_impl(lock.mutex(), false, nullptr);
     }
 
-    template <class P>
-    void wait(std::unique_lock<Mutex>& lock, P predicate) {
+    template <typename M, class P>
+    void wait(std::unique_lock<M>& lock, P predicate) {
         while (!predicate()) {
             wait(lock);
         }
     }
 
-    template<typename D>
-    std::cv_status wait_until(std::unique_lock<Mutex>& lock,
+    template<typename M, typename D>
+    std::cv_status wait_until(std::unique_lock<M>& lock,
             const std::chrono::time_point<std::chrono::steady_clock, D>& timeout_time) noexcept {
         // convert to nanoseconds
-        uint64_t ns = std::chrono::duration<uint64_t, std::nano>(timeout_time.time_since_epoch()).count();
+        uint64_t const ns = std::chrono::duration<uint64_t, std::nano>(timeout_time.time_since_epoch()).count();
         using sec_t = decltype(timespec::tv_sec);
         using nsec_t = decltype(timespec::tv_nsec);
         timespec ts{ sec_t(ns / 1000000000), nsec_t(ns % 1000000000) };
-        return wait_until(lock.mutex(), false, &ts);
+        return wait_until_impl(lock.mutex(), false, &ts);
     }
 
-    template<typename D>
-    std::cv_status wait_until(std::unique_lock<Mutex>& lock,
+    template<typename M, typename D>
+    std::cv_status wait_until(std::unique_lock<M>& lock,
             const std::chrono::time_point<std::chrono::system_clock, D>& timeout_time) noexcept {
         // convert to nanoseconds
-        uint64_t ns = std::chrono::duration<uint64_t, std::nano>(timeout_time.time_since_epoch()).count();
+        uint64_t const ns = std::chrono::duration<uint64_t, std::nano>(timeout_time.time_since_epoch()).count();
         using sec_t = decltype(timespec::tv_sec);
         using nsec_t = decltype(timespec::tv_nsec);
         timespec ts{ sec_t(ns / 1000000000), nsec_t(ns % 1000000000) };
-        return wait_until(lock.mutex(), true, &ts);
+        return wait_until_impl(lock.mutex(), true, &ts);
     }
 
-    template<typename C, typename D, typename P>
-    bool wait_until(std::unique_lock<Mutex>& lock,
+    template<typename M, typename C, typename D, typename P>
+    bool wait_until(std::unique_lock<M>& lock,
             const std::chrono::time_point<C, D>& timeout_time, P predicate) noexcept {
         while (!predicate()) {
             if (wait_until(lock, timeout_time) == std::cv_status::timeout) {
@@ -97,14 +98,14 @@ public:
         return true;
     }
 
-    template<typename R, typename Period>
-    std::cv_status wait_for(std::unique_lock<Mutex>& lock,
+    template<typename M, typename R, typename Period>
+    std::cv_status wait_for(std::unique_lock<M>& lock,
             const std::chrono::duration<R, Period>& rel_time) noexcept {
         return wait_until(lock, std::chrono::steady_clock::now() + rel_time);
     }
 
-    template<typename R, typename Period, typename P>
-    bool wait_for(std::unique_lock<Mutex>& lock,
+    template<typename M, typename R, typename Period, typename P>
+    bool wait_for(std::unique_lock<M>& lock,
             const std::chrono::duration<R, Period>& rel_time, P pred) noexcept {
         return wait_until(lock, std::chrono::steady_clock::now() + rel_time, std::move(pred));
     }
@@ -114,8 +115,23 @@ private:
 
     void pulse(int threadCount) noexcept;
 
-    std::cv_status wait_until(Mutex* lock,
+    std::cv_status wait_until(linuxutil::Mutex* lock,
             bool realtimeClock, timespec* ts) noexcept;
+
+    int futex_wait(uint32_t old_state, bool realtimeClock, timespec* ts) noexcept;
+
+    template <typename M>
+    std::cv_status wait_until_impl(M* lock,
+            bool const realtimeClock, timespec* ts) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+        if (ts && ts->tv_sec < 0) {
+            return std::cv_status::timeout;
+        }
+        uint32_t const old_state = mState.load(std::memory_order_relaxed);
+        lock->unlock();
+        int const status = futex_wait(old_state, realtimeClock, ts);
+        lock->lock();
+        return (status == -ETIMEDOUT) ? std::cv_status::timeout : std::cv_status::no_timeout;
+    }
 };
 
 } // namespace utils

@@ -16,8 +16,9 @@
 
 #include "CompressedStringChunk.h"
 
-#include <stdint.h>
 #include <zstd.h>
+
+#include <stdint.h>
 
 namespace filamat {
 

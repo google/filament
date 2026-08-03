@@ -274,6 +274,21 @@ constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
     return isMetalFormatUnsignedInteger(format) || isMetalFormatSignedInteger(format);
 }
 
+constexpr inline bool isMetalFormatDepth(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatDepth16Unorm:
+        case MTLPixelFormatDepth32Float:
+        case MTLPixelFormatDepth32Float_Stencil8:
+#if !defined(FILAMENT_IOS)
+        case MTLPixelFormatDepth24Unorm_Stencil8:
+#endif
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 constexpr inline bool isMetalFormatStencil(MTLPixelFormat format) {
     switch (format) {
         case MTLPixelFormatStencil8:

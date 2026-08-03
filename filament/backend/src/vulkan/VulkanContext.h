@@ -156,9 +156,9 @@ public:
         return mDebugMarkersSupported;
     }
 
-    inline bool isDebugUtilsSupported() const noexcept {
-        return mDebugUtilsSupported;
-    }
+    inline bool isDebugUtilsEnabled() const noexcept { return mDebugUtilsEnabled; }
+
+    inline bool isDebugUtilsNamesEnabled() const noexcept { return mDebugUtilsNamesEnabled; }
 
     inline bool isDynamicRenderingSupported() const noexcept {
         return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
@@ -251,7 +251,8 @@ private:
     // These are options that are either supported or not supported in the current
     // device and instance.
     bool mDebugMarkersSupported = false;
-    bool mDebugUtilsSupported = false;
+    bool mDebugUtilsEnabled = false;
+    bool mDebugUtilsNamesEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;

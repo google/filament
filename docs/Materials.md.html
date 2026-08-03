@@ -2259,6 +2259,110 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### Morphing
+
+Morphing, also known as blend shapes, uses weighted targets to deform vertex data. Filament provides
+two complementary paths: standard morphing automatically handles positions and tangents, while
+custom morphing lets a material apply the same targets and weights to other vertex data, such as
+texture coordinates or colors.
+
+#### Standard morphing
+
+Standard morph targets are stored in a `MorphTargetBuffer` and are blended with the base mesh using
+per-renderable weights. Position targets contain offsets from the base position, while tangent
+targets contain tangent frames encoded as signed normalized `short4` quaternions.
+
+Standard morphing is applied automatically before `materialVertex()` is invoked. A material does
+not need to declare any additional parameters or call any shader functions: `material.worldPosition`
+and, when available, `material.worldNormal` already include the morphing result.
+
+On the client side, create a `MorphTargetBuffer` with the vertex and target counts, enable the
+attributes that will be morphed, and upload the data for each target with `setPositionsAt()` and
+`setTangentsAt()`. Attach the buffer to the renderable with
+`RenderableManager::Builder::morphing()`. If a renderable has multiple primitives whose morph data
+occupies different regions of the buffer, specify the vertex offset of each primitive with the
+three-argument `morphing()` overload. Morph weights are initially zero and can be updated with
+`RenderableManager::setMorphWeights()`.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+MorphTargetBuffer* morphTargets = MorphTargetBuffer::Builder()
+        .vertexCount(vertexCount)
+        .count(morphTargetCount)
+        .withPositions()
+        .withTangents()
+        .build(engine);
+
+morphTargets->setPositionsAt(engine, 0, positionDeltas, vertexCount);
+morphTargets->setTangentsAt(engine, 0, tangentFrames, vertexCount);
+
+RenderableManager::Builder(1)
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                vertexBuffer, indexBuffer)
+        .material(0, materialInstance)
+        .morphing(morphTargets)
+        .morphing(0, 0, 0)
+        .build(engine, entity);
+
+float weights[] = { 1.0f };
+RenderableManager& rm = engine.getRenderableManager();
+rm.setMorphWeights(rm.getInstance(entity), weights, 1);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The number of weights passed to `setMorphWeights()` does not need to cover every target. The
+optional `offset` argument selects the first target to update, which makes it possible to update a
+subset of the weights.
+
+#### Custom morphing
+
+For vertex data not handled by standard morphing, the vertex block can use the `morphData2()`,
+`morphData3()`, and `morphData4()` shader APIs. These functions add the weighted morph deltas from a
+`sampler2DArray` to an `inout` value with two, three, or four components respectively.
+
+Custom morphing materials must use `apiLevel : 2` and declare a `sampler2dArray` parameter for the
+vertex shader. The texture stores one morph target per array layer and one delta per vertex. Vertex
+deltas are laid out in rows up to 2048 texels wide; textures containing more than 2048 vertices
+must use additional rows. The texture dimensions should therefore be:
+
+- `width = min(vertexCount, 2048)`
+- `height = ceil(vertexCount / 2048)`
+- `depth = morphTargetCount`
+
+The shader APIs use the current vertex index, the primitive's morphing buffer offset, and the
+weights set by `RenderableManager::setMorphWeights()` to select and combine the deltas. The client
+must also create the renderable's `MorphTargetBuffer` with `enableCustomMorphing(true)` and attach
+it to the renderable with `RenderableManager::Builder::morphing()`. The custom texture is managed
+separately from the `MorphTargetBuffer` and must be bound to the corresponding material instance.
+
+The following material morphs its first set of texture coordinates:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : CustomUvMorphing,
+    apiLevel : 2,
+    requires : [uv0],
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : uvMorph,
+            shader : vertex
+        }
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
+            if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_CUSTOM_BIT) != 0) {
+                morphData2(material.uv0, materialParams_uvMorph);
+            }
+        #endif
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Custom morphing can be combined with standard morphing. Both paths use the same morph target count,
+primitive offset, and weights.
+
 ### Procedural and attribute-less rendering
 
 Filament supports procedural or "attribute-less" rendering. This allows you to render objects whose geometry is generated entirely inside the vertex shader (for example, a procedural quad, a sphere, or particle effects), avoiding the memory and processing overhead of transferring traditional vertex and index attribute buffers.
@@ -2685,7 +2789,7 @@ type aliases:
 **getWorldOffset()**                | float3   |  [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead
 **getUserWorldFromWorldMatrix()**   | float4x4 |  Matrix that converts from world space to API-level (user) world space.
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
-**getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
+**getUserTime()**                   | float4   |  Current time in seconds: `(float)time`, `time - (float)time`, `0`, `0` (where `time` is double-precision)
 **getUserTimeMod(float m)**         | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera
 **getEV100()**                      | float    |  [Exposure value at ISO 100](https://en.wikipedia.org/wiki/Exposure_value) of the camera
@@ -2694,6 +2798,12 @@ type aliases:
     To achieve good precision, the "world space" in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can use `getUserWorldFromWorldMatrix()` to transform `getWorldCameraPosition()`.
+
+!!! TIP: High-precision time
+    `getUserTime()` is encoded using a "float-float" representation to emulate double-precision time
+    with two single-precision floats: `getUserTime().x` holds the float time value, while `getUserTime().y`
+    contains the residual (the difference between double and single precision). This enables shaders
+    to implement high-precision calculations (e.g. for animations) using Dekker's algorithms.
 
 ### Material globals
 
@@ -2708,14 +2818,17 @@ type aliases:
 
 The following APIs are only available from the vertex block:
 
-                 Name                |   Type   |            Description
-:------------------------------------|:--------:|:------------------------------------
-**getPosition()**                    | float4   |  Vertex position in the domain defined by the material (default: object/model space)
-**getCustom0()** to **getCustom7()** | float4   |  Custom vertex attribute
-**getWorldFromModelMatrix()**        | float4x4 |  Matrix that converts from model (object) space to world space
-**getWorldFromModelNormalMatrix()**  | float3x3 |  Matrix that converts normals from model (object) space to world space
-**getVertexIndex()**                 | int      |  Index of the current vertex
-**getEyeIndex()**                    | int      |  Index of the eye being rendered, starting at 0
+                          Name                          |   Type   |            Description
+:------------------------------------------------------|:--------:|:------------------------------------
+**getPosition()**                                      | float4   |  Vertex position in the domain defined by the material (default: object/model space)
+**getCustom0()** to **getCustom7()**                   | float4   |  Custom vertex attribute
+**getWorldFromModelMatrix()**                          | float4x4 |  Matrix that converts from model (object) space to world space
+**getWorldFromModelNormalMatrix()**                    | float3x3 |  Matrix that converts normals from model (object) space to world space
+**getVertexIndex()**                                   | int      |  Index of the current vertex
+**getEyeIndex()**                                      | int      |  Index of the eye being rendered, starting at 0
+**morphData2(inout float2 value, sampler2DArray data)** | void     |  Adds weighted two-component morph deltas to `value`; see section [Custom morphing]
+**morphData3(inout float3 value, sampler2DArray data)** | void     |  Adds weighted three-component morph deltas to `value`; see section [Custom morphing]
+**morphData4(inout float4 value, sampler2DArray data)** | void     |  Adds weighted four-component morph deltas to `value`; see section [Custom morphing]
 
 ### Fragment only
 

@@ -19,10 +19,11 @@
 
 #include "MetalBuffer.h"
 
+#include <utils/Mutex.h>
+
 #include <Metal/Metal.h>
 
 #include <map>
-#include <mutex>
 #include <unordered_set>
 
 namespace filament {
@@ -56,7 +57,7 @@ public:
 private:
     id<MTLDevice> mDevice;
 
-    std::mutex mMutex;
+    utils::Mutex mMutex;
     // The following are protected by mMutex
     TrackedMetalBuffer mCurrentUploadBuffer = nil;
     size_t mHead = 0;
@@ -91,7 +92,7 @@ private:
     // Synchronizes access to mFreeStages, mUsedStages, and mutable data inside MetalBufferPoolEntrys.
     // acquireBuffer and releaseBuffer may be called on separate threads (the engine thread and a
     // Metal callback thread, for example).
-    std::mutex mMutex;
+    utils::Mutex mMutex;
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
     std::multimap<size_t, MetalBufferPoolEntry const*> mFreeStages;

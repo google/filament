@@ -46,7 +46,7 @@ public:
     // free-up all resources
     void terminate(FEngine& engine) noexcept;
 
-    void gc(FEngine& engine, utils::EntityManager& em) noexcept;
+    void gc(FEngine& engine) noexcept;
 
     /*
     * Component Manager APIs
@@ -82,7 +82,11 @@ public:
 
     FCamera* create(FEngine& engine, utils::Entity entity);
 
-    void destroy(FEngine& engine, utils::Entity e) noexcept;
+    void destroyComponents(utils::Entity const* entities, size_t count, FEngine& engine) noexcept;
+
+    void destroy(utils::Entity e, FEngine& engine) noexcept {
+        destroyComponents(&e, 1, engine);
+    }
 
 private:
 
@@ -94,6 +98,7 @@ private:
     using Base = utils::SingleInstanceComponentManager<FCamera*, bool>;
 
     struct CameraManagerImpl : public Base {
+        explicit CameraManagerImpl(utils::EntityManager& em) noexcept : Base(em, "CameraManager") {}
         using Base::gc;
         using Base::swap;
         using Base::hasComponent;

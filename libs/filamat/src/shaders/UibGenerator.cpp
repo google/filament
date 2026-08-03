@@ -171,7 +171,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
             { "cascades",                  0, Type::INT                     },
-            { "shadowPenumbraRatioScale",  0, Type::FLOAT                   },
+            { "reservedLight0",            0, Type::FLOAT                   },
             { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
+            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
             // ------------------------------------------------------------------------------------
             { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH },
             { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH },

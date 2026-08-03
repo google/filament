@@ -8,4 +8,4 @@ set -x
 source `dirname $0`/../common/build-common.sh
 pushd `dirname $0`/../.. > /dev/null
 
-./build.sh $RUN_TESTS $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+./build.sh $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE

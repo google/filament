@@ -35,6 +35,8 @@
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
+#include <algorithm>
+#include <cmath>
 #include <new>
 #include <utility>
 
@@ -291,6 +293,15 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatformAndroid::extractExternalImag
         metadata.samples = VK_SAMPLE_COUNT_1_BIT;
         metadata.isStagingRequired = isSoftwareDecodedYUV(bufferDesc.format, bufferDesc.usage);
 
+        // Calculate mip levels. Use ilogbf (exact, exponent-based) instead of floor(log2(...)) to
+        // avoid an off-by-one for power-of-two dimensions. Mirrors FTexture::maxLevelCount().
+        if (bufferDesc.usage & AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE) {
+            uint32_t const maxDimension = std::max(bufferDesc.width, bufferDesc.height);
+            metadata.mipLevels = std::max(1, std::ilogbf(float(maxDimension)) + 1);
+        } else {
+            metadata.mipLevels = 1;
+        }
+
         // Get the VkFormat directly from the driver.
         VkAndroidHardwareBufferFormatPropertiesANDROID formatInfo = {
             .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
@@ -440,7 +451,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
                 metadata.height,
                 1u,
             },
-            .mipLevels = 1,
+            .mipLevels = metadata.mipLevels,
             .arrayLayers = metadata.layers,
             .samples = metadata.samples,
             .usage = metadata.usage,

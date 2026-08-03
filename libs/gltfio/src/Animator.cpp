@@ -53,6 +53,7 @@ struct Sampler {
     TimeValues times;
     SourceValues values;
     enum { LINEAR, STEP, CUBIC } interpolation;
+    size_t inputCount = 0;
 };
 
 struct Channel {
@@ -102,6 +103,12 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     }
     for (size_t i = 0, len = timelineAccessor->count; i < len; ++i) {
         dst.times[timelineFloats[i]] = i;
+    }   
+    dst.inputCount = timelineAccessor->count;
+    if (UTILS_UNLIKELY(dst.times.size() != dst.inputCount)) {
+        GLTFIO_WARN("Animation sampler has duplicate timestamps; animation disabled.");
+        dst.times.clear();
+        return;
     }
 
     // Convert source data to float.
@@ -497,7 +504,6 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
 void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIndex,
         size_t nextIndex) {
     const Sampler* sampler = channel.sourceData;
-    const TimeValues& times = sampler->times;
     TrsTransformManager::Instance trsNode = trsTransformManager->getInstance(channel.targetEntity);
     TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
 
@@ -553,8 +559,8 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
 
         case Channel::WEIGHTS: {
             const float* const samplerValues = sampler->values.data();
-            assert(sampler->values.size() % times.size() == 0);
-            const int valuesPerKeyframe = sampler->values.size() / times.size();
+            assert(sampler->values.size() % sampler->inputCount == 0);
+            const int valuesPerKeyframe = (int)(sampler->values.size() / sampler->inputCount);
 
             if (sampler->interpolation == Sampler::CUBIC) {
                 assert(valuesPerKeyframe % 3 == 0);

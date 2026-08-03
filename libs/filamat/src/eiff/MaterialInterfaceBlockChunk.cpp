@@ -15,8 +15,6 @@
  */
 #include "MaterialInterfaceBlockChunk.h"
 
-#include "filament/MaterialChunkType.h"
-
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/ConstantInfo.h>
 #include <private/filament/DescriptorSets.h>
@@ -24,6 +22,8 @@
 #include <private/filament/PushConstantInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+
+#include <filament/MaterialChunkType.h>
 
 #include <backend/DriverEnums.h>
 

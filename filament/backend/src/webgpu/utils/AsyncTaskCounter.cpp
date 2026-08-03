@@ -17,18 +17,17 @@
 #include "AsyncTaskCounter.h"
 
 #include <utils/debug.h>
-
-#include <mutex>
+#include <utils/Mutex.h>
 
 namespace filament::backend::webgpuutils {
 
 void AsyncTaskCounter::startTask() {
-    std::lock_guard<std::mutex> lock{ mMutex };
+    utils::LockGuard const lock{ mMutex };
     ++mTasksInProgress;
 }
 
 void AsyncTaskCounter::finishTask() {
-    std::lock_guard<std::mutex> lock{ mMutex };
+    utils::LockGuard const lock{ mMutex };
     --mTasksInProgress;
     assert_invariant(mTasksInProgress >= 0);
     if (mTasksInProgress == 0) {
@@ -37,12 +36,12 @@ void AsyncTaskCounter::finishTask() {
 }
 
 void AsyncTaskCounter::waitForAllToFinish() {
-    std::unique_lock<std::mutex> lock{ mMutex };
+    utils::UniqueLock lock{ mMutex };
     mFinishedCondition.wait(lock, [this] { return mTasksInProgress == 0; });
 }
 
 bool AsyncTaskCounter::isIdle() {
-    std::lock_guard<std::mutex> lock{ mMutex };
+    utils::LockGuard const lock{ mMutex };
     return mTasksInProgress == 0;
 }
 

@@ -98,7 +98,7 @@ public:
         // where the gpu only has one graphics queue. Then the client needs to ensure that no
         // concurrent access can occur.
         uint32_t graphicsQueueIndex = 0xFFFFFFFF;
-        bool debugUtilsSupported = false;
+        bool debugUtilsEnabled = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
     };
@@ -364,6 +364,11 @@ public:
          * The height of the external image
          */
         uint32_t height;
+
+        /**
+         * The number of mipmap levels of the external image
+         */
+        uint32_t mipLevels;
 
         /**
          * The layer count of the external image

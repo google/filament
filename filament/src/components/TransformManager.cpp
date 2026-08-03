@@ -19,6 +19,7 @@
 #include <filament/TransformManager.h>
 
 #include <utils/debug.h>
+#include <utils/PagedArenaBitsetPool.h>
 
 #include <math/mat4.h>
 
@@ -28,7 +29,9 @@ using namespace filament::math;
 
 namespace filament {
 
-FTransformManager::FTransformManager() noexcept = default;
+FTransformManager::FTransformManager(EntityManager& em) noexcept
+        : mManager(em) {
+}
 
 FTransformManager::~FTransformManager() noexcept = default;
 
@@ -45,52 +48,46 @@ void FTransformManager::setAccurateTranslationsEnabled(bool const enable) noexce
     }
 }
 
+inline void FTransformManager::createImpl(Entity const entity, Instance const parent,
+        std::variant<mat4, mat4f> localTransform) {
+    // this always adds at the end, so all existing instances stay valid
+    auto& manager = mManager;
+
+    Entity zombie;
+    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
+        destroy(zombie);
+    }
+
+    // TODO: try to keep entries sorted with their siblings/parents to improve cache access
+    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+        destroy(entity);
+    }
+    Instance const i = manager.addComponent(entity);
+    assert_invariant(i);
+    assert_invariant(i != parent);
+
+    if (i && i != parent) {
+        manager[i].parent = 0;
+        manager[i].next = 0;
+        manager[i].prev = 0;
+        manager[i].firstChild = 0;
+        insertNode(i, parent);
+        std::visit([this, i](auto&& arg) {
+            setTransform(i, arg);
+        }, localTransform);
+    }
+}
+
 void FTransformManager::create(Entity const entity) {
-    create(entity, 0, mat4f{});
+    createImpl(entity, 0, mat4f{});
 }
 
 void FTransformManager::create(Entity const entity, Instance const parent, const mat4f& localTransform) {
-    // this always adds at the end, so all existing instances stay valid
-    auto& manager = mManager;
-
-    // TODO: try to keep entries sorted with their siblings/parents to improve cache access
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
-        destroy(entity);
-    }
-    Instance const i = manager.addComponent(entity);
-    assert_invariant(i);
-    assert_invariant(i != parent);
-
-    if (i && i != parent) {
-        manager[i].parent = 0;
-        manager[i].next = 0;
-        manager[i].prev = 0;
-        manager[i].firstChild = 0;
-        insertNode(i, parent);
-        setTransform(i, localTransform);
-    }
+    createImpl(entity, parent, localTransform);
 }
 
 void FTransformManager::create(Entity const entity, Instance const parent, const mat4& localTransform) {
-    // this always adds at the end, so all existing instances stay valid
-    auto& manager = mManager;
-
-    // TODO: try to keep entries sorted with their siblings/parents to improve cache access
-    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
-        destroy(entity);
-    }
-    Instance const i = manager.addComponent(entity);
-    assert_invariant(i);
-    assert_invariant(i != parent);
-
-    if (i && i != parent) {
-        manager[i].parent = 0;
-        manager[i].next = 0;
-        manager[i].prev = 0;
-        manager[i].firstChild = 0;
-        insertNode(i, parent);
-        setTransform(i, localTransform);
-    }
+    createImpl(entity, parent, localTransform);
 }
 
 void FTransformManager::setParent(Instance const i, Instance const parent) noexcept {
@@ -147,28 +144,23 @@ TransformManager::children_range FTransformManager::getChildrenRange(
     return { { *this, mManager[parent].firstChild } };
 }
 
-void FTransformManager::destroy(Entity const e) noexcept {
-    // update the reference of the element we're removing
+void FTransformManager::destroyComponents(Entity const* entities, size_t const count) noexcept {
     auto& manager = mManager;
-    Instance const i = manager.getInstance(e);
-    validateNode(i);
-    if (i) {
-        // 1) remove the entry from the linked lists
-        removeNode(i);
-
-        // our children don't have parents anymore
-        Instance child = manager[i].firstChild;
-        while (child) {
-            manager[child].parent = 0;
-            child = manager[child].next;
-        }
-
-        // 2) remove the component
-        Instance const moved = manager.removeComponent(e);
-
-        // 3) update the references to the entry now with Instance i
-        if (moved != i) {
-            updateNode(i);
+    for (size_t k = 0; k < count; ++k) {
+        Entity const e = entities[k];
+        Instance const i = manager.getInstance(e);
+        validateNode(i);
+        if (i) {
+            removeNode(i);
+            Instance child = manager[i].firstChild;
+            while (child) {
+                manager[child].parent = 0;
+                child = manager[child].next;
+            }
+            Instance const moved = manager.removeComponent(e);
+            if (moved != i) {
+                updateNode(i);
+            }
         }
     }
 }
@@ -439,7 +431,6 @@ void FTransformManager::computeWorldTransform(
     }
 }
 
-
 void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance const i) noexcept {
 #ifndef NDEBUG
     auto& manager = mManager;
@@ -482,12 +473,9 @@ void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance const i) n
 #endif
 }
 
-void FTransformManager::gc(EntityManager& em) noexcept {
-    mManager.gc(em, [this](Entity const e) {
-                destroy(e);
-            });
+void FTransformManager::gc() noexcept {
+    mManager.gc(this, &FTransformManager::destroyComponents);
 }
-
 TransformManager::children_iterator& TransformManager::children_iterator::operator++() noexcept {
     FTransformManager const& that = downcast(*mManager);
     mInstance = that.mManager[mInstance].next;

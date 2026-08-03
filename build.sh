@@ -25,6 +25,8 @@ function print_help {
     echo "        Enable matdbg."
     echo "    -t"
     echo "        Enable fgviewer."
+    echo "    -u"
+    echo "        Enable utils::Mutex debugging (lock-order inversion and self-deadlock detection)."
     echo "    -f"
     echo "        Always invoke CMake before incremental builds."
     echo "    -g"
@@ -40,8 +42,6 @@ function print_help {
     echo "    -q abi1,abi2,..."
     echo "        Where platformN is [armeabi-v7a|arm64-v8a|x86|x86_64|all]."
     echo "        ABIs to build when the platform is Android. Defaults to all."
-    echo "    -u"
-    echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Exclude Vulkan support from the Android build."
     echo "    -E"
@@ -85,6 +85,8 @@ function print_help {
     echo "        (debug|release|none) is meant to indicate the type of build of the resulting prebuilts,"
     echo "        or 'none' to disable the split build."
     echo "        Defaults to 'release' (tools are always prebuilt as release unless overridden)."
+    echo "    -D"
+    echo "        Build Android Markdown documentation using Dokka."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -186,13 +188,13 @@ ABI_GRADLE_OPTION="all"
 
 ISSUE_ARCHIVES=false
 BUILD_JS_DOCS=false
+BUILD_DOKKA_DOCS=false
+PLATFORM_SPECIFIED=false
 
 ISSUE_CMAKE_ALWAYS=false
 
 ANDROID_SAMPLES=()
 BUILD_ANDROID_SAMPLES=false
-
-RUN_TESTS=false
 
 INSTALL_COMMAND=
 
@@ -208,6 +210,8 @@ MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
 FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=OFF"
 FGVIEWER_GRADLE_OPTION=""
+MUTEX_DEBUG_OPTION="-DFILAMENT_DEBUG_MUTEX=OFF"
+MUTEX_DEBUG_GRADLE_OPTION=""
 
 MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
@@ -280,6 +284,7 @@ function build_tools_for_split_build {
         ${WEBGPU_OPTION} \
         ${architectures} \
         ${EXCEPTIONS_OPTION} \
+        ${MUTEX_DEBUG_OPTION} \
         ../..
 
     ${BUILD_COMMAND} ${WEB_HOST_TOOLS}
@@ -324,6 +329,7 @@ function build_desktop_target {
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -390,6 +396,7 @@ function build_wasm_with_target {
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-wasm-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
@@ -470,6 +477,7 @@ function build_android_target {
             ${STEREOSCOPIC_OPTION} \
             ${ENABLE_PERFETTO} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -583,6 +591,7 @@ function build_android {
             ${MATDBG_GRADLE_OPTION} \
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
+            ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -638,6 +647,7 @@ function build_android {
             ${MATDBG_GRADLE_OPTION} \
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
+            ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -712,6 +722,7 @@ function build_ios_target {
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${EXCEPTIONS_OPTION} \
+            ${MUTEX_DEBUG_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -871,32 +882,6 @@ function validate_build_command {
     set -e
 }
 
-function run_test {
-    local test=$1
-    # The input string might contain arguments, so we use "set -- $test" to replace $1 with the
-    # first whitespace-separated token in the string.
-    # shellcheck disable=SC2086
-    set -- ${test}
-    local test_name=$(basename "$1")
-    # shellcheck disable=SC2086
-    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/${test_name}/sponge_log.xml"
-}
-
-function run_tests {
-    if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
-        if ! echo "TypeScript $(tsc --version)" ; then
-            tsc --noEmit \
-                third_party/gl-matrix/gl-matrix.d.ts \
-                web/filament-js/filament.d.ts \
-                web/filament-js/test.ts
-        fi
-    else
-        while read -r test; do
-            run_test "${test}"
-        done < build/common/test_list.txt
-    fi
-}
-
 function check_debug_release_build {
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" || \
           "${ISSUE_RELEASE_BUILD}" == "true" || \
@@ -913,7 +898,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
+while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
     case ${opt} in
         h)
             print_help
@@ -939,6 +924,11 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
             FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=ON"
             FGVIEWER_GRADLE_OPTION="-Pcom.google.android.filament.fgviewer"
             ;;
+        u)
+            MUTEX_DEBUG_OPTION="-DFILAMENT_DEBUG_MUTEX=ON"
+            MUTEX_DEBUG_GRADLE_OPTION="-Pcom.google.android.filament.mutexdebug"
+            echo "Enabled utils::Mutex debugging"
+            ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
             ;;
@@ -954,6 +944,7 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
             BUILD_COMMAND="make"
             ;;
         p)
+            PLATFORM_SPECIFIED=true
             ISSUE_DESKTOP_BUILD=false
             platforms=$(echo "${OPTARG}" | tr ',' '\n')
             for platform in ${platforms}
@@ -1023,10 +1014,6 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
                 esac
             done
             ;;
-        u)
-            ISSUE_DEBUG_BUILD=true
-            RUN_TESTS=true
-            ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
             VULKAN_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.exclude-vulkan"
@@ -1059,6 +1046,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"
             ;;
+        T)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_TSAN=ON"
+            echo "Enabled TSan"
+            ;;
         V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
             echo "Enabled coverage"
             ;;
@@ -1085,6 +1075,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
             esac
             ;;
         X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
+            ;;
+        D)
+            BUILD_DOKKA_DOCS=true
             ;;
         y)
             SPLIT_BUILD_TYPE=${OPTARG}
@@ -1118,7 +1111,7 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:Py:E" opt; do
     esac
 done
 
-if [[ "$#" == "0" ]]; then
+if [[ "$#" == "0" ]] && [[ "${BUILD_DOKKA_DOCS}" != "true" ]]; then
     print_help
     exit 1
 fi
@@ -1134,6 +1127,11 @@ for arg; do
         BUILD_CUSTOM_TARGETS="${BUILD_CUSTOM_TARGETS} ${arg}"
     fi
 done
+
+# Prevent building desktop if only docs are requested.
+if [[ "${BUILD_DOKKA_DOCS}" == "true" ]] && [[ "${PLATFORM_SPECIFIED}" != "true" ]]; then
+    ISSUE_DESKTOP_BUILD=false
+fi
 
 validate_build_command
 
@@ -1171,8 +1169,11 @@ if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
     check_debug_release_build build_wasm
 fi
 
-if [[ "${RUN_TESTS}" == "true" ]]; then
-    run_tests
+if [[ "${BUILD_DOKKA_DOCS}" == "true" ]]; then
+    echo "Generating Android Markdown documentation using Dokka..."
+    pushd android > /dev/null
+    ./gradlew filament-android:dokkaGfm
+    popd > /dev/null
 fi
 
 if [[ "${PRINT_MATDBG_HELP}" == "true" ]]; then

@@ -15,9 +15,9 @@
  */
 
 
-#include <jni.h>
-
 #include <utils/EntityManager.h>
+
+#include <jni.h>
 
 using namespace utils;
 
@@ -75,4 +75,23 @@ Java_com_google_android_filament_EntityManager_nIsAlive(JNIEnv*, jclass,
     EntityManager *em = (EntityManager *) nativeEntityManager;
     Entity& entity = *reinterpret_cast<Entity*>(&entity_);
     return (jboolean) em->isAlive(entity);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_EntityManager_nAdvanceEpoch(JNIEnv*, jclass,
+        jlong nativeEntityManager) {
+    EntityManager *em = (EntityManager *) nativeEntityManager;
+    em->advanceEpoch();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_EntityManager_nGetMaxEntityCount(JNIEnv*, jclass) {
+    return (jint) EntityManager::getMaxEntityCount();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_EntityManager_nGetEntityCount(JNIEnv*, jclass,
+        jlong nativeEntityManager) {
+    EntityManager *em = (EntityManager *) nativeEntityManager;
+    return (jint) em->getEntityCount();
 }

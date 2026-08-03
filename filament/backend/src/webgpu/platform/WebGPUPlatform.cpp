@@ -28,11 +28,12 @@
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
+#include <utils/Mutex.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <functional>
-#include <mutex>
 #include <sstream>// for one-time-ish setup string concatenation, namely error messaging
 #include <unordered_set>
 #include <utility>
@@ -471,14 +472,14 @@ struct AdapterDetailsHash final {
     // make the series of requests asynchronously, collecting compatible adapter results...
     std::unordered_set<AdapterDetails, AdapterDetailsHash> compatibleAdapters;
     compatibleAdapters.reserve(requests.size());
-    std::mutex adaptersMutex;
+    utils::Mutex adaptersMutex;
     std::vector<wgpu::Future> futures(requests.size());
     for (size_t i = 0; i < requests.size(); i++) {
         wgpu::RequestAdapterOptions const& options = requests[i];
         futures[i] = instance.RequestAdapter(&options, wgpu::CallbackMode::WaitAnyOnly,
                 [&options, &compatibleAdapters,
-                        &adaptersMutex](wgpu::RequestAdapterStatus const status,
-                        wgpu::Adapter const& readyAdapter, wgpu::StringView const message) {
+                        &adaptersMutex](wgpu::RequestAdapterStatus status,
+                        wgpu::Adapter readyAdapter, wgpu::StringView message) {
                     FILAMENT_CHECK_POSTCONDITION(
                             status != wgpu::RequestAdapterStatus::CallbackCancelled)
                             << "Failed to request a WebGPU adapter due to the request callback "
@@ -492,7 +493,7 @@ struct AdapterDetailsHash final {
                         FILAMENT_CHECK_POSTCONDITION(readyAdapter.GetInfo(&details.info))
                                 << "Failed to get info for adapter (options: "
                                 << adapterOptionsToString(options) << ")";
-                        const std::lock_guard<std::mutex> lock(adaptersMutex);
+                        utils::LockGuard const lock(adaptersMutex);
                         compatibleAdapters.emplace(std::move(details.info), details.powerPreference,
                                 std::move(details.adapter));
                         return;
@@ -648,7 +649,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.requiredLimits = &limitsToRequest;
 
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
-            [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
+            [](wgpu::Device const&, wgpu::DeviceLostReason reason,
                     wgpu::StringView message) {
                 if (reason == wgpu::DeviceLostReason::Destroyed) {
 #if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
@@ -669,8 +670,8 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     wgpu::Device device = nullptr;
     wgpu::WaitStatus status = mInstance.WaitAny(
             adapter.RequestDevice(&deviceDescriptor, wgpu::CallbackMode::WaitAnyOnly,
-                    [&device](wgpu::RequestDeviceStatus const status,
-                            wgpu::Device const& readyDevice, wgpu::StringView const message) {
+                    [&device](wgpu::RequestDeviceStatus status, wgpu::Device readyDevice,
+                            wgpu::StringView message) {
                         FILAMENT_CHECK_POSTCONDITION(
                                 status != wgpu::RequestDeviceStatus::CallbackCancelled)
                                 << "Failed to request a WebGPU device due to the callback being "

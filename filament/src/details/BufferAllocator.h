@@ -32,7 +32,7 @@ namespace filament {
 // BufferAllocator instance will result in data races and undefined behavior.
 //
 // If an instance of this class is to be shared between threads, all calls to its member
-// functions MUST be protected by external synchronization (e.g., a std::mutex).
+// functions MUST be protected by external synchronization (e.g., a utils::Mutex).
 class BufferAllocator {
 public:
     using allocation_size_t = uint32_t;

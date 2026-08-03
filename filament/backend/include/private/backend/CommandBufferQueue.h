@@ -24,9 +24,7 @@
 #include <utils/Mutex.h>
 
 #include <atomic>
-#include <condition_variable>
 #include <exception>
-#include <mutex>
 #include <vector>
 
 #include <stddef.h>
@@ -109,8 +107,8 @@ private:
 
     // space available in the circular buffer
 
-    mutable std::mutex mLock;
-    mutable std::condition_variable mCondition;
+    mutable utils::Mutex mLock;
+    mutable utils::Condition mCondition;
     mutable std::vector<Range> mCommandBuffersToExecute UTILS_GUARDED_BY(mLock);
     size_t mFreeSpace UTILS_GUARDED_BY(mLock) = 0;
     size_t mHighWatermark UTILS_GUARDED_BY(mLock) = 0;

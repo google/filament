@@ -267,6 +267,12 @@
 #define UTILS_ACQUIRE_SHARED(...) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(acquire_shared_capability(__VA_ARGS__))
 
+#define UTILS_TRY_ACQUIRE(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_capability(__VA_ARGS__))
+
+#define UTILS_TRY_ACQUIRE_SHARED(...) \
+    UTILS_THREAD_ANNOTATION_ATTRIBUTE(try_acquire_shared_capability(__VA_ARGS__))
+
 #define UTILS_RELEASE(...) \
     UTILS_THREAD_ANNOTATION_ATTRIBUTE(release_capability(__VA_ARGS__))
 

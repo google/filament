@@ -89,6 +89,10 @@ buildscript {
             .gradleProperty("com.google.android.filament.matnopt")
             .isPresent()
 
+    def mutexdebug = providers
+            .gradleProperty("com.google.android.filament.mutexdebug")
+            .isPresent()
+
     def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
     def newAbis = providers
             .gradleProperty("com.google.android.filament.abis")
@@ -139,7 +143,8 @@ buildscript {
         "-DFILAMENT_SUPPORTS_WEBGPU=${includeWebGPU ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()
+        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_DEBUG_MUTEX=${mutexdebug ? 'ON' : 'OFF'}".toString()
     ]
 
     ext.cppFlags = [

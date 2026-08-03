@@ -15,7 +15,7 @@ Android binaries should almost always be built in release mode for testing and b
 To build the release version targeting the `arm64-v8a` architecture, and optionally enable **Perfetto** tracing (the `-P` flag, which is highly recommended during performance development):
 
 ```bash
-./build.sh -q arm64-v8a -Pip desktop release
+./build.sh -q arm64-v8a -Pip android release
 ```
 
 ---

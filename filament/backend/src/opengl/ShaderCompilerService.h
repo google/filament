@@ -131,6 +131,9 @@ private:
     utils::JobSystem::Priority mCompilerThreadPriority = utils::JobSystem::Priority::DISPLAY;
     bool mPriorityOverrideEnabled = true;
 
+    bool const mParallelShaderCompileDisabled;
+    bool const mAmortizedShaderCompileDisabled;
+
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 

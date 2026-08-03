@@ -35,12 +35,13 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
 
 namespace filament::backend {
+
+struct VulkanContext;
 
 class VulkanFencePool;
 
@@ -77,7 +78,7 @@ private:
 struct VulkanProgram : public HwProgram, fvkmemory::ThreadSafeResource {
     using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
 
-    VulkanProgram(VkDevice device, Program const& builder) noexcept;
+    VulkanProgram(VulkanContext const& context, VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();
 
     utils::CString programString;
@@ -280,12 +281,12 @@ struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
           mStoppingQueryIndex(stoppingIndex) {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        std::lock_guard const lock(mFenceMutex);
+        utils::LockGuard const lock(mFenceMutex);
         mFence = std::move(fence);
     }
 
     bool isCompleted() noexcept {
-        std::lock_guard const lock(mFenceMutex);
+        utils::LockGuard const lock(mFenceMutex);
         // QueryValue is a synchronous call and might occur before beginTimerQuery has written
         // anything into the command buffer, which is an error according to the validation layer
         // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to

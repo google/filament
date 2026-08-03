@@ -15,9 +15,22 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include "generated/resources/gltf_demo.h"
+
+#include "materials/uberarchive.h"
+
+#include <viewer/ViewerGui.h>
+
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 
 #include <filament/Engine.h>
@@ -26,27 +39,16 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
-#include <gltfio/AssetLoader.h>
-#include <gltfio/FilamentAsset.h>
-#include <gltfio/ResourceLoader.h>
-#include <gltfio/TextureProvider.h>
-
-#include <viewer/ViewerGui.h>
-
 #include <camutils/Manipulator.h>
 
 #include <utils/getopt.h>
-
 #include <utils/NameComponentManager.h>
-
-#include <iostream>
-#include <fstream>
-#include <string>
 
 #include <math/mat4.h>
 
-#include "generated/resources/gltf_demo.h"
-#include "materials/uberarchive.h"
+#include <fstream>
+#include <iostream>
+#include <string>
 
 using namespace filament;
 using namespace filament::math;
@@ -61,9 +63,11 @@ enum MaterialSource {
 };
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Engine* engine;
     ViewerGui* viewer;
-    Config config;
+    SampleConfig config;
+    filament::app::AssetLoader* rawAssetLoader = nullptr;
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
@@ -158,7 +162,7 @@ int main(int argc, char** argv) {
     App app;
 
     app.config.title = "glTF Instancing";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + DEFAULT_IBL;
 
     int optionIndex = handleCommandLineArguments(argc, argv, &app);
     utils::Path filename;
@@ -172,18 +176,9 @@ int main(int argc, char** argv) {
     }
 
     auto loadAsset = [&app](utils::Path filename) {
-        // Peek at the file size to allow pre-allocation.
-        long contentSize = static_cast<long>(getFileSize(filename.c_str()));
-        if (contentSize <= 0) {
+        std::vector<uint8_t> buffer = app.rawAssetLoader->load(filename);
+        if (buffer.empty()) {
             std::cerr << "Unable to open " << filename << std::endl;
-            exit(1);
-        }
-
-        // Consume the glTF file.
-        std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
-        std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
-        if (!in.read((char*) buffer.data(), contentSize)) {
-            std::cerr << "Unable to read " << filename << std::endl;
             exit(1);
         }
 
@@ -222,12 +217,32 @@ int main(int argc, char** argv) {
             }
         }
 
+        // We explicitly fetch the raw bytes and push them into ResourceLoader via addResourceData.
+        // This pre-populates the cache and completely bypasses ResourceLoader's internal disk I/O,
+        // which is required for Android compatibility (where assets are packed in the APK).
+        for (size_t i = 0, c = app.asset->getResourceUriCount(); i < c; i++) {
+            const char* uri = app.asset->getResourceUris()[i];
+            utils::Path uriPath = filename.getParent() + uri;
+            std::vector<uint8_t> buffer = app.rawAssetLoader->load(uriPath);
+            if (!buffer.empty()) {
+                auto* b = new std::vector<uint8_t>(std::move(buffer));
+                gltfio::ResourceLoader::BufferDescriptor desc(
+                    b->data(), b->size(),
+                    [](void*, size_t, void* user) {
+                        delete static_cast<std::vector<uint8_t>*>(user);
+                    },
+                    b
+                );
+                app.resourceLoader->addResourceData(uri, std::move(desc));
+            }
+        }
+
         if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
             std::cerr << "Unable to start loading resources for " << filename << std::endl;
             exit(1);
         }
 
-        auto ibl = FilamentApp::get().getIBL();
+        auto ibl = app.filamentApp->getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
         }
@@ -248,6 +263,7 @@ int main(int argc, char** argv) {
     };
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
+        app.rawAssetLoader = new filament::app::DesktopAssetLoader();
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view);
@@ -287,6 +303,7 @@ int main(int argc, char** argv) {
         delete app.stbDecoder;
         delete app.ktxDecoder;
         delete app.webpDecoder;
+        delete app.rawAssetLoader;
 
         AssetLoader::destroy(&app.loader);
     };
@@ -295,6 +312,9 @@ int main(int argc, char** argv) {
         app.resourceLoader->asyncUpdateLoad();
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
+
+        app.names->gc();
+        app.loader->gc();
 
         if (app.instanceToAnimate == -1) {
             for (FilamentInstance* instance : app.instances) {
@@ -324,11 +344,17 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine* engine, View* view) { };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { };
-
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.animate(animate);
-
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .iblDirectory(app.config.iblDirectory)
+                              .backend(app.config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(gui)
+                              .preRender(preRender)
+                              .animation(animate)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

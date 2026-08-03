@@ -65,7 +65,8 @@
 #define FVK_DEBUG_PIPELINE_CACHE          0x00002000
 #define FVK_DEBUG_STAGING_ALLOCATION      0x00004000
 
-// Enable the debug utils extension if it is available.
+// Enable the debug utils extension if it is available. This will also try to set the name on
+// renderpasses, framebuffers, and more.
 #define FVK_DEBUG_DEBUG_UTILS             0x00008000
 
 // Use this to debug potential Handle/Resource leakage. It will print out reference counts for all
@@ -85,8 +86,7 @@
 
 // Useful default combinations
 #define FVK_DEBUG_EVERYTHING              (0xFFFFFFFF & ~FVK_DEBUG_PROFILING)
-#define FVK_DEBUG_PERFORMANCE     \
-    FVK_DEBUG_SYSTRACE
+#define FVK_DEBUG_PERFORMANCE             FVK_DEBUG_SYSTRACE
 
 #if defined(FILAMENT_BACKEND_DEBUG_FLAG)
 #define FVK_DEBUG_FORWARDED_FLAG (FILAMENT_BACKEND_DEBUG_FLAG & FVK_DEBUG_EVERYTHING)
@@ -117,11 +117,6 @@ static_assert(FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) || FVK_ENABLED(FVK_DEBUG_VALIDA
 // Ensure dependencies are met between debug options
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
 static_assert(FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS));
-#endif
-
-// Only enable debug utils if validation is enabled.
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #endif
 
 #if FVK_ENABLED(FVK_DEBUG_PROFILING) && FVK_DEBUG_FLAGS != FVK_DEBUG_PROFILING

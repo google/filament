@@ -275,7 +275,8 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/customvertexattributes" class="level3"><span class="tocNumber">4.3.2&nbsp; </span>Custom vertex attributes</a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/proceduralandattribute-lessrendering" class="level3"><span class="tocNumber">4.3.3&nbsp; </span>Procedural and attribute-less rendering</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/morphing" class="level3"><span class="tocNumber">4.3.3&nbsp; </span>Morphing</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/proceduralandattribute-lessrendering" class="level3"><span class="tocNumber">4.3.4&nbsp; </span>Procedural and attribute-less rendering</a><br/>
 &nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&nbsp; </span>Fragment block</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/preparematerialfunction" class="level3"><span class="tocNumber">4.4.1&nbsp; </span>prepareMaterial function</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/fragmentblock/materialfragmentinputs" class="level3"><span class="tocNumber">4.4.2&nbsp; </span>Material fragment inputs</a><br/>
@@ -2181,7 +2182,106 @@ the material:</p>
 <span class="line">        custom2</span>
 <span class="line">    <span class="hljs-punctuation">]</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
-<a class="target" name="proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="toc4.3.3">&nbsp;</a><h3 id="procedural-and-attribute-less-rendering"><a class="header" href="#procedural-and-attribute-less-rendering">Procedural and attribute-less rendering</a></h3>
+<a class="target" name="morphing">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/morphing">&nbsp;</a><a class="target" name="toc4.3.3">&nbsp;</a><h3 id="morphing"><a class="header" href="#morphing">Morphing</a></h3>
+<p>
+<p>Morphing, also known as blend shapes, uses weighted targets to deform vertex data. Filament provides
+two complementary paths: standard morphing automatically handles positions and tangents, while
+custom morphing lets a material apply the same targets and weights to other vertex data, such as
+texture coordinates or colors.</p>
+</p>
+<a class="target" name="standardmorphing">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/morphing/standardmorphing">&nbsp;</a><a class="target" name="toc4.3.3.1">&nbsp;</a><h4 id="standard-morphing"><a class="header" href="#standard-morphing">Standard morphing</a></h4>
+<p>
+<p>Standard morph targets are stored in a <code>MorphTargetBuffer</code> and are blended with the base mesh using
+per-renderable weights. Position targets contain offsets from the base position, while tangent
+targets contain tangent frames encoded as signed normalized <code>short4</code> quaternions.</p>
+</p><p>
+Standard morphing is applied automatically before <code>materialVertex()</code> is invoked. A material does
+not need to declare any additional parameters or call any shader functions: <code>material.worldPosition</code>
+and, when available, <code>material.worldNormal</code> already include the morphing result.
+</p><p>
+On the client side, create a <code>MorphTargetBuffer</code> with the vertex and target counts, enable the
+attributes that will be morphed, and upload the data for each target with <code>setPositionsAt()</code> and
+<code>setTangentsAt()</code>. Attach the buffer to the renderable with
+<code>RenderableManager::Builder::morphing()</code>. If a renderable has multiple primitives whose morph data
+occupies different regions of the buffer, specify the vertex offset of each primitive with the
+three-argument <code>morphing()</code> overload. Morph weights are initially zero and can be updated with
+<code>RenderableManager::setMorphWeights()</code>.
+</p><pre class="listing tilde"><code><span class="line">MorphTargetBuffer* morphTargets = MorphTargetBuffer::<span class="hljs-built_in">Builder</span>()</span>
+<span class="line">        .<span class="hljs-built_in">vertexCount</span>(vertexCount)</span>
+<span class="line">        .<span class="hljs-built_in">count</span>(morphTargetCount)</span>
+<span class="line">        .<span class="hljs-built_in">withPositions</span>()</span>
+<span class="line">        .<span class="hljs-built_in">withTangents</span>()</span>
+<span class="line">        .<span class="hljs-built_in">build</span>(engine);</span>
+<span class="line"></span>
+<span class="line">morphTargets-&gt;<span class="hljs-built_in">setPositionsAt</span>(engine, <span class="hljs-number">0</span>, positionDeltas, vertexCount);</span>
+<span class="line">morphTargets-&gt;<span class="hljs-built_in">setTangentsAt</span>(engine, <span class="hljs-number">0</span>, tangentFrames, vertexCount);</span>
+<span class="line"></span>
+<span class="line">RenderableManager::<span class="hljs-built_in">Builder</span>(<span class="hljs-number">1</span>)</span>
+<span class="line">        .<span class="hljs-built_in">geometry</span>(<span class="hljs-number">0</span>, RenderableManager::PrimitiveType::TRIANGLES,</span>
+<span class="line">                vertexBuffer, indexBuffer)</span>
+<span class="line">        .<span class="hljs-built_in">material</span>(<span class="hljs-number">0</span>, materialInstance)</span>
+<span class="line">        .<span class="hljs-built_in">morphing</span>(morphTargets)</span>
+<span class="line">        .<span class="hljs-built_in">morphing</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>)</span>
+<span class="line">        .<span class="hljs-built_in">build</span>(engine, entity);</span>
+<span class="line"></span>
+<span class="line"><span class="hljs-type">float</span> weights[] = { <span class="hljs-number">1.0f</span> };</span>
+<span class="line">RenderableManager&amp; rm = engine.<span class="hljs-built_in">getRenderableManager</span>();</span>
+<span class="line">rm.<span class="hljs-built_in">setMorphWeights</span>(rm.<span class="hljs-built_in">getInstance</span>(entity), weights, <span class="hljs-number">1</span>);</span></code></pre><p>
+The number of weights passed to <code>setMorphWeights()</code> does not need to cover every target. The
+optional <code>offset</code> argument selects the first target to update, which makes it possible to update a
+subset of the weights.
+</p>
+<a class="target" name="custommorphing">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/morphing/custommorphing">&nbsp;</a><a class="target" name="toc4.3.3.2">&nbsp;</a><h4 id="custom-morphing"><a class="header" href="#custom-morphing">Custom morphing</a></h4>
+<p>
+<p>For vertex data not handled by standard morphing, the vertex block can use the <code>morphData2()</code>,
+<code>morphData3()</code>, and <code>morphData4()</code> shader APIs. These functions add the weighted morph deltas from a
+<code>sampler2DArray</code> to an <code>inout</code> value with two, three, or four components respectively.</p>
+</p><p>
+Custom morphing materials must use <code>apiLevel : 2</code> and declare a <code>sampler2dArray</code> parameter for the
+vertex shader. The texture stores one morph target per array layer and one delta per vertex. Vertex
+deltas are laid out in rows up to 2048 texels wide; textures containing more than 2048 vertices
+must use additional rows. The texture dimensions should therefore be:
+</p><p>
+<ul>
+<li class="minus"><code>width = min(vertexCount, 2048)</code>
+</li>
+<li class="minus"><code>height = ceil(vertexCount / 2048)</code>
+</li>
+<li class="minus"><code>depth = morphTargetCount</code></li></ul>
+</p><p>
+The shader APIs use the current vertex index, the primitive's morphing buffer offset, and the
+weights set by <code>RenderableManager::setMorphWeights()</code> to select and combine the deltas. The client
+must also create the renderable's <code>MorphTargetBuffer</code> with <code>enableCustomMorphing(true)</code> and attach
+it to the renderable with <code>RenderableManager::Builder::morphing()</code>. The custom texture is managed
+separately from the <code>MorphTargetBuffer</code> and must be bound to the corresponding material instance.
+</p><p>
+The following material morphs its first set of texture coordinates:
+</p><pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
+<span class="line">    name <span class="hljs-punctuation">:</span> CustomUvMorphing<span class="hljs-punctuation">,</span></span>
+<span class="line">    apiLevel <span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span></span>
+<span class="line">    requires <span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>uv0<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span></span>
+<span class="line">    parameters <span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span></span>
+<span class="line">        <span class="hljs-punctuation">{</span></span>
+<span class="line">            type <span class="hljs-punctuation">:</span> sampler2dArray<span class="hljs-punctuation">,</span></span>
+<span class="line">            name <span class="hljs-punctuation">:</span> uvMorph<span class="hljs-punctuation">,</span></span>
+<span class="line">            shader <span class="hljs-punctuation">:</span> vertex</span>
+<span class="line">        <span class="hljs-punctuation">}</span></span>
+<span class="line">    <span class="hljs-punctuation">]</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">vertex <span class="hljs-punctuation">{</span></span>
+<span class="line">    void materialVertex(inout MaterialVertexInputs material) <span class="hljs-punctuation">{</span></span>
+<span class="line">        #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)</span>
+<span class="line">            if ((object_uniforms_flagsChannels &amp; FILAMENT_OBJECT_MORPHING_CUSTOM_BIT) != <span class="hljs-number">0</span>) <span class="hljs-punctuation">{</span></span>
+<span class="line">                morphData2(material.uv0<span class="hljs-punctuation">,</span> materialParams_uvMorph);</span>
+<span class="line">            <span class="hljs-punctuation">}</span></span>
+<span class="line">        #endif</span>
+<span class="line">    <span class="hljs-punctuation">}</span></span>
+<span class="line"><span class="hljs-punctuation">}</span></span></code></pre><p>
+Custom morphing can be combined with standard morphing. Both paths use the same morph target count,
+primitive offset, and weights.
+</p>
+<a class="target" name="proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering">&nbsp;</a><a class="target" name="toc4.3.4">&nbsp;</a><h3 id="procedural-and-attribute-less-rendering"><a class="header" href="#procedural-and-attribute-less-rendering">Procedural and attribute-less rendering</a></h3>
 <p>
 <p>Filament supports procedural or “attribute-less” rendering. This allows you to render objects whose geometry is generated entirely inside the vertex shader (for example, a procedural quad, a sphere, or particle effects), avoiding the memory and processing overhead of transferring traditional vertex and index attribute buffers.</p>
 </p><p>
@@ -2203,11 +2303,11 @@ To implement procedural rendering:
 </li>
     <li class="asterisk"><strong class="asterisk">Skinning and Morphing</strong>: It is incompatible with features that rely on pre-shader vertex processing (such as skinning and morphing).</div></li></ul>
 </p>
-<a class="target" name="example:proceduralcenteredquad">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad">&nbsp;</a><a class="target" name="toc4.3.3.1">&nbsp;</a><h4 id="example-procedural-centered-quad"><a class="header" href="#example-procedural-centered-quad">Example: Procedural Centered Quad</a></h4>
+<a class="target" name="example:proceduralcenteredquad">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad">&nbsp;</a><a class="target" name="toc4.3.4.1">&nbsp;</a><h4 id="example-procedural-centered-quad"><a class="header" href="#example-procedural-centered-quad">Example: Procedural Centered Quad</a></h4>
 <p>
 <p>Below is a complete, working example demonstrating how to render a textured quad using 6 vertices forming 2 triangles without supplying any vertex buffer objects.</p>
 </p>
-<a class="target" name="materialdefinition(.mat)">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/materialdefinition(.mat)">&nbsp;</a><a class="target" name="toc4.3.3.1.1">&nbsp;</a><h5 id="material-definition-mat"><a class="header" href="#material-definition-mat">Material definition (<code>.mat</code>)</a></h5>
+<a class="target" name="materialdefinition(.mat)">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/materialdefinition(.mat)">&nbsp;</a><a class="target" name="toc4.3.4.1.1">&nbsp;</a><h5 id="material-definition-mat"><a class="header" href="#material-definition-mat">Material definition (<code>.mat</code>)</a></h5>
 <pre class="listing tilde"><code><span class="line">material <span class="hljs-punctuation">{</span></span>
 <span class="line">    name <span class="hljs-punctuation">:</span> ProceduralQuad<span class="hljs-punctuation">,</span></span>
 <span class="line">    shadingModel <span class="hljs-punctuation">:</span> unlit<span class="hljs-punctuation">,</span></span>
@@ -2254,7 +2354,7 @@ To implement procedural rendering:
 <span class="line">        material.baseColor = texture(materialParams_albedo<span class="hljs-punctuation">,</span> variable_quadUV.xy);</span>
 <span class="line">    <span class="hljs-punctuation">}</span></span>
 <span class="line"><span class="hljs-punctuation">}</span></span></code></pre>
-<a class="target" name="c++clientcode">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/c++clientcode">&nbsp;</a><a class="target" name="toc4.3.3.1.2">&nbsp;</a><h5 id="c-client-code"><a class="header" href="#c-client-code">C++ client code</a></h5>
+<a class="target" name="c++clientcode">&nbsp;</a><a class="target" name="materialdefinitions/vertexblock/proceduralandattribute-lessrendering/example:proceduralcenteredquad/c++clientcode">&nbsp;</a><a class="target" name="toc4.3.4.1.2">&nbsp;</a><h5 id="c-client-code"><a class="header" href="#c-client-code">C++ client code</a></h5>
 <pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// 1. Create an attribute-less vertex buffer with 6 vertices and 0 buffer slots</span></span>
 <span class="line">VertexBuffer* vb = VertexBuffer::<span class="hljs-built_in">Builder</span>()</span>
 <span class="line">        .<span class="hljs-built_in">vertexCount</span>(<span class="hljs-number">6</span>)</span>
@@ -2576,7 +2676,7 @@ type aliases:</p>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserWorldFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from world space to API-level (user) world space. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time as a remainder of 1 second. Yields a value between 0 and 1 </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code> </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>(float)time</code>, <code>time - (float)time</code>, <code>0</code>, <code>0</code> (where <code>time</code> is double-precision) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTimeMod(float m)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time modulo m in seconds </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getExposure()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Photometric exposure of the camera </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getEV100()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> <a href="https://en.wikipedia.org/wiki/Exposure_value">Exposure value at ISO 100</a> of the camera </td></tr>
@@ -2587,6 +2687,13 @@ type aliases:</p>
     To achieve good precision, the &ldquo;world space&rdquo; in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can use <code>getUserWorldFromWorldMatrix()</code> to transform <code>getWorldCameraPosition()</code>.</div>
+</p><p>
+<div class="admonition tip"><div class="admonition-title"> High-precision time</div>
+</p><p>
+    <code>getUserTime()</code> is encoded using a &ldquo;float-float&rdquo; representation to emulate double-precision time
+    with two single-precision floats: <code>getUserTime().x</code> holds the float time value, while <code>getUserTime().y</code>
+    contains the residual (the difference between double and single precision). This enables shaders
+    to implement high-precision calculations (e.g. for animations) using Dekker's algorithms.</div>
 </p>
 <a class="target" name="materialglobals">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/materialglobals">&nbsp;</a><a class="target" name="toc4.5.5">&nbsp;</a><h3 id="material-globals"><a class="header" href="#material-globals">Material globals</a></h3>
 <p>
@@ -2607,6 +2714,9 @@ type aliases:</p>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldFromModelNormalMatrix()</strong> </td><td style="text-align:center"> float3&times;3 </td><td style="text-align:left"> Matrix that converts normals from model (object) space to world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getVertexIndex()</strong> </td><td style="text-align:center"> int </td><td style="text-align:left"> Index of the current vertex </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getEyeIndex()</strong> </td><td style="text-align:center"> int </td><td style="text-align:left"> Index of the eye being rendered, starting at 0 </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">morphData2(inout float2 value, sampler2DArray data)</strong> </td><td style="text-align:center"> void </td><td style="text-align:left"> Adds weighted two-component morph deltas to <code>value</code>; see section  <a href="#toc4.3.3.2">4.3.3.2</a> </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">morphData3(inout float3 value, sampler2DArray data)</strong> </td><td style="text-align:center"> void </td><td style="text-align:left"> Adds weighted three-component morph deltas to <code>value</code>; see section  <a href="#toc4.3.3.2">4.3.3.2</a> </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">morphData4(inout float4 value, sampler2DArray data)</strong> </td><td style="text-align:center"> void </td><td style="text-align:left"> Adds weighted four-component morph deltas to <code>value</code>; see section  <a href="#toc4.3.3.2">4.3.3.2</a> </td></tr>
 </table></div>
 </p>
 <a class="target" name="fragmentonly">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/fragmentonly">&nbsp;</a><a class="target" name="toc4.5.7">&nbsp;</a><h3 id="fragment-only"><a class="header" href="#fragment-only">Fragment only</a></h3>

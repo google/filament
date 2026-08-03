@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Pipeline Estimator & Pacer Visualizer</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Frame Pipeline Estimator & Pacer</h1>
+            <p class="subtitle">Interactive visualization of probabilistic timing models and structural latency sizing</p>
+        </div>
+    </header>
+
+    <main class="main-layout">
+        <!-- Control Panel (Sidebar) -->
+        <section class="controls-card">
+            <!-- Percentiles & Z-Score -->
+            <div class="control-section">
+                <h2 class="section-title">Statistical Confidence</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Confidence Percentile</span>
+                    </div>
+                    <div class="select-button-group">
+                        <button class="btn-select" id="btn-p50" data-z="0.0">P50 (Mean)</button>
+                        <button class="btn-select active" id="btn-p90" data-z="1.282">P90 (90%)</button>
+                        <button class="btn-select" id="btn-p95" data-z="1.645">P95 (95%)</button>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Custom Z-Score</span>
+                        <span class="label-value" id="val-z-score">1.28</span>
+                    </div>
+                    <input type="range" class="input-slider" id="z-score" min="0" max="3" step="0.01" value="1.282">
+                </div>
+            </div>
+
+            <!-- VSYNC Display Capabilities -->
+            <div class="control-section">
+                <h2 class="section-title">Display VSYNC</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Physical VSYNC rate</span>
+                        <span class="label-value" id="val-vsync-rate">60 Hz</span>
+                    </div>
+                    <input type="range" class="input-slider" id="vsync-rate" min="30" max="144" step="1" value="60">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Compositor Latch Margin</span>
+                        <span class="label-value" id="val-latch-margin">3.0 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="latch-margin" min="0" max="10" step="0.1" value="3.0">
+                </div>
+            </div>
+
+            <!-- Pacing Cadence -->
+            <div class="control-section">
+                <h2 class="section-title">Pacing Target</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Pacing Mode</span>
+                    </div>
+                    <div class="select-button-group">
+                        <button class="btn-select active" id="pacing-auto">Auto</button>
+                        <button class="btn-select" id="pacing-vsync">1:1 VSYNC</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPU (Main) Stage -->
+            <div class="control-section">
+                <h2 class="section-title" style="color: var(--color-cpu);">1. Main CPU Stage</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Average Time (μ)</span>
+                        <span class="label-value" id="val-cpu-mean">8.0 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="cpu-mean" min="1" max="40" step="0.1" value="8.0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Jitter (σ)</span>
+                        <span class="label-value" id="val-cpu-std">1.5 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="cpu-std" min="0" max="10" step="0.1" value="1.5">
+                </div>
+            </div>
+
+            <!-- Backend Driver Stage -->
+            <div class="control-section">
+                <h2 class="section-title" style="color: var(--color-backend);">2. Backend Driver</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Average Time (μ)</span>
+                        <span class="label-value" id="val-backend-mean">4.0 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="backend-mean" min="1" max="40" step="0.1" value="4.0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Jitter (σ)</span>
+                        <span class="label-value" id="val-backend-std">0.8 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="backend-std" min="0" max="10" step="0.1" value="0.8">
+                </div>
+            </div>
+
+            <!-- GPU Stage -->
+            <div class="control-section">
+                <h2 class="section-title" style="color: var(--color-gpu);">3. GPU Execution</h2>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Average Time (μ)</span>
+                        <span class="label-value" id="val-gpu-mean">12.0 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="gpu-mean" min="1" max="40" step="0.1" value="12.0">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="label-title">Jitter (σ)</span>
+                        <span class="label-value" id="val-gpu-std">2.0 ms</span>
+                    </div>
+                    <input type="range" class="input-slider" id="gpu-std" min="0" max="10" step="0.1" value="2.0">
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard -->
+        <section class="dashboard">
+            <!-- Output KPIs -->
+            <div class="kpi-grid">
+                <div class="kpi-card kpi-latency">
+                    <div class="kpi-title">Structural Latency</div>
+                    <div class="kpi-value" id="kpi-val-latency">2 Frames</div>
+                    <div class="kpi-desc" id="kpi-val-latency-ms">33.3 ms target latency</div>
+                </div>
+                <div class="kpi-card kpi-fps">
+                    <div class="kpi-title">Ideal Frame Rate</div>
+                    <div class="kpi-value" id="kpi-val-fps">60.0 Hz</div>
+                    <div class="kpi-desc" id="kpi-val-frame-duration">16.67 ms bottleneck</div>
+                </div>
+                <div class="kpi-card kpi-delay">
+                    <div class="kpi-title">Safe CPU Delay</div>
+                    <div class="kpi-value" id="kpi-val-delay">4.2 ms</div>
+                    <div class="kpi-desc">Max input latency delay (slack)</div>
+                </div>
+                <div class="kpi-card kpi-bottleneck">
+                    <div class="kpi-title">Pipeline Bottleneck</div>
+                    <div class="kpi-value" id="kpi-val-bottleneck">GPU Stage</div>
+                    <div class="kpi-desc" id="kpi-val-bottleneck-detail">Effective duration: 14.56ms</div>
+                </div>
+            </div>
+
+            <!-- Visualization: Gaussian Curves -->
+            <div class="vis-card">
+                <div class="vis-header">
+                    <h3 class="vis-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                        Probabilistic Timing Distributions
+                    </h3>
+                    <div class="chart-legend">
+                        <div class="legend-item"><span class="legend-color legend-cpu"></span> CPU</div>
+                        <div class="legend-item"><span class="legend-color legend-backend"></span> Backend</div>
+                        <div class="legend-item"><span class="legend-color legend-gpu"></span> GPU</div>
+                        <div class="legend-item"><span class="legend-color legend-vsync"></span> VSYNC</div>
+                    </div>
+                </div>
+                <div class="vis-body">
+                    <canvas id="gaussian-canvas" height="240"></canvas>
+                </div>
+            </div>
+
+            <!-- Visualization: Pipeline Overlap Timeline -->
+            <div class="vis-card">
+                <div class="vis-header">
+                    <h3 class="vis-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Parallel Frame Pipeline Overlap (Timeline Flow)
+                    </h3>
+                </div>
+                <div class="vis-body">
+                    <canvas id="pipeline-timeline-canvas" height="300"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

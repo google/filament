@@ -5,13 +5,13 @@ struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec4 lightFromWorldZ;
     highp vec4 scissorNormalized;
-    mediump float bulbRadiusLs;
-    mediump float nearOverFarMinusNear;
     highp vec2 normalBias;
-    bool elvsm;
-    mediump uint layer;
-    mediump float vsmExponent;
-    mediump uint reserved2;
+    highp float projectionParam;
+    highp float wsOneOverTexelSizeAtOneMeter;
+    highp uint maxMipLevel_maxSearchRadius;
+    highp uint bulbRadius_vsmExponent;
+    highp uint maxPenumbraRatio_penumbraRatioScale;
+    highp uint evsm4_layer;
 };
 #endif
 
@@ -38,7 +38,7 @@ struct PerRenderableData {
 // Bits for flagsChannels
 #define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x100
 #define FILAMENT_OBJECT_MORPHING_POSITION_BIT  0x200
-#define FILAMENT_OBJECT_MORPHING_TANGENT_BIT  0x400
+#define FILAMENT_OBJECT_MORPHING_TANGENT_BIT   0x400
 #define FILAMENT_OBJECT_MORPHING_CUSTOM_BIT    0x800
 #define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x1000
 #define FILAMENT_OBJECT_INSTANCE_BUFFER_BIT    0x2000

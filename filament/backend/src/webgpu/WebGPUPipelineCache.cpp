@@ -36,6 +36,16 @@ namespace filament::backend {
 
 namespace {
 
+// Because webgpu only allow for integer depth bias, we "round" to the next immediate integer
+// in the direction of going *away* from 0. Note that we will not get fractional precision with
+// webgpu's depthBias offset, but in practice, this is ok.
+int32_t depthBiasRound(float depthBias) {
+    if (depthBias == 0.f) {
+        return 0;
+    }
+    return int32_t(depthBias < 0 ? -std::ceil(-depthBias) : std::ceil(depthBias));
+}
+
 [[nodiscard]] constexpr uint8_t toUint8(const bool value) { return value ? 1 : 0; }
 
 [[nodiscard]] constexpr wgpu::PrimitiveTopology toWebGPU(const PrimitiveType primitiveType) {
@@ -147,7 +157,8 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
     outKey.fragmentShaderModuleHandle =
             request.fragmentShaderModule ? request.fragmentShaderModule.Get() : nullptr;
     outKey.pipelineLayoutHandle = request.pipelineLayout ? request.pipelineLayout.Get() : nullptr;
-    outKey.depthBias = static_cast<int32_t>(request.polygonOffset.constant);
+
+    outKey.depthBias = depthBiasRound(request.polygonOffset.constant);
     outKey.depthBiasSlopeScale = request.polygonOffset.slope;
     outKey.primitiveType = request.primitiveType;
     outKey.stencilFrontCompare = request.stencilState.front.stencilFunc;
@@ -230,7 +241,7 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
             assert_invariant(hasDepth(depthStencilState.format));
             depthStencilState.depthWriteEnabled = request.rasterState.depthWrite;
             depthStencilState.depthCompare = toWebGPU(request.rasterState.depthFunc);
-            depthStencilState.depthBias = static_cast<int32_t>(request.polygonOffset.constant);
+            depthStencilState.depthBias = depthBiasRound(request.polygonOffset.constant);
             depthStencilState.depthBiasSlopeScale = request.polygonOffset.slope;
             depthStencilState.depthBiasClamp = 0.0f;
         } else {

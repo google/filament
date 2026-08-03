@@ -15,19 +15,19 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/IndexBuffer.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
-#include <filament/Renderer.h>
-
-#include <filamentapp/FilamentApp.h>
 
 #include <utils/EntityManager.h>
-
 #include <utils/getopt.h>
 
 #include <iostream>
@@ -36,7 +36,8 @@
 using namespace filament;
 
 struct App {
-    Config config;
+    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
     VertexBuffer* vb;
     IndexBuffer* ib;
     utils::Entity camera;
@@ -140,7 +141,15 @@ int main(int argc, char** argv) {
         renderer->setClearOptions({ .clear = true });
     };
 
-    FilamentApp::get().run(app.config, setup, cleanup, {}, preRender);
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .backend(app.config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui({})
+                              .preRender(preRender)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

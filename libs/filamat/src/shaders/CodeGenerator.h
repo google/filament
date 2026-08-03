@@ -21,15 +21,15 @@
 #include "MaterialInfo.h"
 #include "UibGenerator.h"
 
-#include <filamat/MaterialBuilder.h>
+#include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
+#include <private/filament/Variant.h>
 
 #include <filament/MaterialEnums.h>
 
-#include <private/filament/EngineEnums.h>
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/BufferInterfaceBlock.h>
-#include <private/filament/SubpassInfo.h>
-#include <private/filament/Variant.h>
+#include <filamat/MaterialBuilder.h>
 
 #include <backend/DriverEnums.h>
 
@@ -162,9 +162,11 @@ public:
 
     utils::io::sstream& generateQualityDefine(utils::io::sstream& out, ShaderQuality quality) const;
 
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value);
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value);
-    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string);
+    static utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name);
+    static utils::io::sstream& generateValueDefine(utils::io::sstream& out, const char* name,
+            uint32_t value);
+    static utils::io::sstream& generateValueDefine(utils::io::sstream& out, const char* name,
+            const char* string);
     static utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
             uint32_t index, uint32_t value);
 

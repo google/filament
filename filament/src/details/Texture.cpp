@@ -881,8 +881,6 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
 
         case TextureFormat::RGB565:
         case TextureFormat::RGB9_E5:
-        case TextureFormat::RGB5_A1:
-        case TextureFormat::RGBA4:
         case TextureFormat::RGB8:
         case TextureFormat::SRGB8:
         case TextureFormat::RGB8_SNORM:
@@ -905,6 +903,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::RGB5_A1:
+        case TextureFormat::RGBA4:
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGBA8_SNORM:

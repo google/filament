@@ -17,15 +17,15 @@
 #ifndef TNT_FILAMAT_PACKAGE_H
 #define TNT_FILAMAT_PACKAGE_H
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>  // memcpy
+#include <utils/compiler.h>
 
 #include <cstddef>
 #include <functional>
 
-#include <utils/compiler.h>
+#include <assert.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>  // memcpy
 
 namespace filamat {
 
