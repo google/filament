@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "DynamicSpecConstKey.h"
 #include "filament_test_resources.h"
 
 #include "details/Engine.h"
@@ -302,7 +303,140 @@ TEST(Material, CompileLitMaterialWithShadowReceiverEnabled) {
     }
     EXPECT_TRUE(hasShadowReceiver);
 
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+
+    EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::S2D | Variant::SRE), DynamicSpecConstKey{},
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+    EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::S2D | Variant::SRE), dynamicLighting,
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+    EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+
     engine->destroy(view);
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+
+    constexpr Variant::type_t SHADOW_VARIANTS[] = {
+            Variant::SRE,
+            Variant::SRE | Variant::FOG,
+            Variant::SRE | Variant::SKN,
+            Variant::SRE | Variant::DIR,
+            Variant::S2D | Variant::SRE,
+            Variant::S2D | Variant::SRE | Variant::FOG,
+            Variant::S2D | Variant::SRE | Variant::SKN,
+            Variant::S2D | Variant::SRE | Variant::DIR,
+            Variant::S2D | Variant::SRE | Variant::STE,
+    };
+
+    for (Variant::type_t const key : SHADOW_VARIANTS) {
+        Variant const variant(key);
+        EXPECT_FALSE(Variant::isSSRVariant(variant));
+        EXPECT_TRUE(Variant::isShadowReceiverVariant(variant));
+        EXPECT_TRUE(DynamicSpecConstKey::filterProgramSpecKey(
+                variant, dynamicLighting, MaterialDomain::SURFACE, true).hasDynamicLighting());
+    }
+
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::SPECIAL_SSR_VARIANT), dynamicLighting,
+            MaterialDomain::SURFACE, true).hasDynamicLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::DEPTH_VARIANT), dynamicLighting,
+            MaterialDomain::SURFACE, true).hasDynamicLighting());
+    EXPECT_FALSE(DynamicSpecConstKey::filterProgramSpecKey(
+            Variant(Variant::S2D | Variant::SRE), dynamicLighting,
+            MaterialDomain::SURFACE, false).hasDynamicLighting());
+}
+
+TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("LitMaterialWithoutSsr");
+    builder.shading(Shading::LIT);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::SSR));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+    constexpr Variant::type_t SHADOW_VARIANTS[] = {
+            Variant::SRE,
+            Variant::SRE | Variant::FOG,
+            Variant::SRE | Variant::SKN,
+            Variant::S2D | Variant::SRE,
+            Variant::S2D | Variant::SRE | Variant::FOG,
+            Variant::S2D | Variant::SRE | Variant::SKN,
+    };
+
+    for (Variant::type_t const key : SHADOW_VARIANTS) {
+        EXPECT_TRUE(definition.isValidProgram(
+                Variant(key), DynamicSpecConstKey{}, fengine.getShaderModel(),
+                fengine.isStereoSupported()));
+        EXPECT_TRUE(definition.isValidProgram(
+                Variant(key), dynamicLighting, fengine.getShaderModel(),
+                fengine.isStereoSupported()));
+    }
+    EXPECT_FALSE(definition.isValidProgram(
+            Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
+
+TEST(Material, SsrFilteredShadowMultiplierContainsPunctualShadowPrograms) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("ShadowMultiplierWithoutSsr");
+    builder.shading(Shading::UNLIT);
+    builder.shadowMultiplier(true);
+    builder.variantFilter(uint32_t(UserVariantFilterBit::SSR));
+
+    filamat::Package result = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(result.isValid());
+
+    Material* material = Material::Builder()
+                                 .package(result.getData(), result.getSize())
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    FEngine const& fengine = downcast(*engine);
+    MaterialDefinition const& definition = downcast(material)->getDefinition();
+    DynamicSpecConstKey dynamicLighting;
+    dynamicLighting.setDynamicLighting(true);
+
+    EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::SRE), dynamicLighting,
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+    EXPECT_TRUE(definition.isValidProgram(
+            Variant(Variant::S2D | Variant::SRE), dynamicLighting,
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+    EXPECT_FALSE(definition.isValidProgram(
+            Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
+            fengine.getShaderModel(), fengine.isStereoSupported()));
+
     engine->destroy(material);
     Engine::destroy(engine);
 }

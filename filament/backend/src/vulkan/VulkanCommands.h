@@ -45,7 +45,6 @@ namespace filament::backend {
 
 using namespace fvkmemory;
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
 public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -59,8 +58,6 @@ public:
 private:
     std::list<std::pair<utils::CString, Timestamp>> mMarkers;
 };
-
-#endif // FVK_DEBUG_GROUP_MARKERS
 
 // The submission fence has shared ownership semantics because it is potentially wrapped by a
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
@@ -155,12 +152,10 @@ struct CommandBufferPool {
     void wait();
     void waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage);
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     utils::CString topMarker() const;
     void pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp);
     std::pair<utils::CString, VulkanGroupMarkers::Timestamp> popMarker();
     void insertEvent(char const* marker);
-#endif
 
     inline bool isRecording() const { return mRecording != INVALID; }
 
@@ -181,9 +176,7 @@ private:
     int8_t mRecording;
     VulkanFencePool mFencePool;
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
-#endif
 };
 
 // Manages a set of command buffers and semaphores, exposing an API that is significantly simpler
@@ -258,12 +251,10 @@ public:
     // Updates the atomic "status" variable in every extant fence.
     void updateFences();
 
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
     void popGroupMarker();
     void insertEventMarker(char const* string, uint32_t len);
     utils::CString getTopGroupMarker() const;
-#endif
 
 private:
     VkDevice const mDevice;
