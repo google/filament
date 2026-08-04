@@ -175,6 +175,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${TARGET} PRIVATE -Wthread-safety)
 endif()
 
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    target_link_libraries(${TARGET} PUBLIC absl::log)
+endif()
+
 # ==================================================================================================
 # Installation
 # ==================================================================================================
