@@ -22,9 +22,6 @@
 #include <utils/compiler.h>
 #include <utils/StaticString.h>
 
-#if defined(FILAMENT_USE_ABSEIL_LOGGING)
-#include <iosfwd>
-#endif
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -342,6 +339,12 @@ public:
         return std::string_view{data(), size()};
     }
 
+    // make CString compatible with Abseil's stringification utilities
+    template<typename Sink>
+    friend void AbslStringify(Sink& sink, CString const& str) {
+        sink.Append(str.c_str_safe());
+    }
+
 private:
     static void do_tracking(bool ctor);
     static void track(bool ctor) {
@@ -354,10 +357,6 @@ private:
 
 #if !defined(NDEBUG)
     friend io::ostream& operator<<(io::ostream& out, const CString& rhs);
-#endif
-
-#if defined(FILAMENT_USE_ABSEIL_LOGGING)
-    friend std::ostream& operator<<(std::ostream& out, const CString& rhs);
 #endif
 
     struct Data {
