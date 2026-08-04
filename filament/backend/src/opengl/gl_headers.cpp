@@ -31,6 +31,7 @@ namespace glext {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
+PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC glEGLImageTargetTexStorageEXT;
 #endif
 #if GL_EXT_debug_marker
 PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
@@ -87,6 +88,7 @@ void importGLESExtensionsEntryPoints() {
     std::call_once(sGlExtInitialized, +[]() {
 #ifdef GL_OES_EGL_image
     getProcAddress(glEGLImageTargetTexture2DOES, "glEGLImageTargetTexture2DOES");
+    getProcAddress(glEGLImageTargetTexStorageEXT, "glEGLImageTargetTexStorageEXT");
 #endif
 #if GL_EXT_debug_marker
     getProcAddress(glInsertEventMarkerEXT, "glInsertEventMarkerEXT");
