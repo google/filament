@@ -29,7 +29,6 @@ void postProcess(inout PostProcessInputs postProcess) {
     highp vec4 result = texelFetch(materialParams_input, ivec3(clampedCenter, layer), 0) * materialParams.kernel[0];
 
     // 3. Accumulate the positive and negative offsets
-    // Using a constant loop bound allows the shader compiler to perfectly unroll this.
     for (int i = 1; i <= radius; ++i) {
         ivec2 offset = dir * i;
 

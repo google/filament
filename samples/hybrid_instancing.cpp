@@ -35,9 +35,11 @@
 // -------------------------------------------------------------------------------------------------
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Color.h>
@@ -56,34 +58,30 @@
 
 #include <camutils/Bookmark.h>
 
+#include <utils/EntityManager.h>
+#include <utils/getopt.h>
+#include <utils/Path.h>
+
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/norm.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <math/norm.h>
 
-#include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <utils/getopt.h>
+#include <imgui.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <random>
 #include <string>
 #include <vector>
 
-#include <cmath>
-#include <cstddef>
-#include <cstdlib>
-#include <cstdint>
-
 #include <math.h>
-
-#include <imgui.h>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -184,6 +182,7 @@ struct Emitter {
 
 // Holds all the state for this application.
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
 
     struct UiState {
@@ -197,7 +196,7 @@ struct App {
         bool moonlightEnabled = true;
     };
 
-    Config config;
+    SampleConfig config;
     UiState ui;
     int currentEmitterCount = 0;
     bool previousFireworksMode = false;
@@ -328,8 +327,17 @@ int main(int const argc, char** argv) {
         doUserInterface(app);
     };
 
-    FilamentApp::get().animate(animate);
-    FilamentApp::get().run(app.config, setup, cleanup, imgui);
+
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .backend(app.config.backend)
+                              .cameraMode(app.config.cameraMode)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(imgui)
+                              .animation(animate)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

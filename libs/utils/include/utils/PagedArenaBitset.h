@@ -365,6 +365,9 @@ public:
 
     static PagedArenaBitset merge(const PagedArenaBitset& a, const PagedArenaBitset& b);
 
+    static PagedArenaBitset& mergeSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
+            Slice<const PagedArenaBitset* const> inputs);
+
     // ----------------------------------------------------------------------------------------------------------------
     // difference
     // ----------------------------------------------------------------------------------------------------------------
@@ -401,6 +404,24 @@ public:
      */
     template <typename Func>
     void forEachSetBit(Func&& callback) const {
+        const_cast<PagedArenaBitset*>(this)->traverseSetBits<false>(std::forward<Func>(callback));
+    }
+
+    /**
+     * @brief Traverses set bits in ascending order, popping (clearing) each bit upon successful processing.
+     * @tparam Func A callable taking `uint32_t` and returning `bool` (or convertible to `bool`).
+     * @param callback Invoked for each set bit. Return `true` to consume/pop the bit; `false` to STOP and leave the bit set.
+     * @return The number of bits successfully popped.
+     */
+    template <typename Func>
+    uint32_t popSetBits(Func&& callback) {
+        return traverseSetBits<true>(std::forward<Func>(callback));
+    }
+
+private:
+    template <bool Destructive, typename Func>
+    uint32_t traverseSetBits(Func&& callback) {
+        uint32_t count = 0;
         for (uint32_t m = 0; m < MASTER_WORDS; ++m) {
             uint64_t masterMask = mMasterMask[m];
             while (masterMask) {
@@ -418,7 +439,7 @@ public:
                     uint16_t const physicalIdx = mDirectory[dirIdx];
 
                     assert(physicalIdx != INVALID_PAGE && "Summary mask desynchronized");
-                    auto const& [activeWordsMask, words] = mArena[physicalIdx];
+                    auto& [activeWordsMask, words] = mArena[physicalIdx];
                     uint64_t activeMask = activeWordsMask;
 
                     while (activeMask != 0) {
@@ -431,10 +452,29 @@ public:
                             // Calculate the unique Entity ID from the hierarchy indices
                             uint32_t const id = (dirIdx << FILAMENT_PAGE_SHIFT) | (w << WORD_SHIFT) | wBit;
 
+                            bool proceed = true;
                             if constexpr (std::is_convertible_v<std::invoke_result_t<Func, uint32_t>, bool>) {
-                                if (!callback(id)) return;
+                                proceed = callback(id);
                             } else {
                                 callback(id);
+                            }
+
+                            if constexpr (Destructive) {
+                                if (UTILS_LIKELY(proceed)) {
+                                    words[w] &= ~(1ULL << wBit);
+                                    if (words[w] == 0) {
+                                        activeWordsMask &= ~(1ULL << w);
+                                    }
+                                    mSize--;
+                                    count++;
+                                } else {
+                                    return count;
+                                }
+                            } else {
+                                if (UTILS_UNLIKELY(!proceed)) {
+                                    return count;
+                                }
+                                count++;
                             }
                         }
                         activeMask &= (activeMask - 1);
@@ -442,8 +482,10 @@ public:
                 }
             }
         }
+        return count;
     }
 
+public:
     // ----------------------------------------------------------------------------------------------------------------
     // subset / superset queries
     // ----------------------------------------------------------------------------------------------------------------
@@ -507,9 +549,9 @@ private:
     static_assert(WORDS_PER_PAGE == 64, "WORDS_PER_PAGE must be 64 to match the 64-bit activeWordsMask!");
 
     // Do NOT pad or align this struct to 64 bytes (576) or 512 bytes.
-    // Maintaining a non-cache-line-multiple size (520) creates a natural 
-    // memory stagger. In Multi-Way operations (Merge6, Intersect6), this stagger 
-    // prevents 4K Cache Set Aliasing and L1 Cache Thrashing, resulting in 
+    // Maintaining a non-cache-line-multiple size (520) creates a natural
+    // memory stagger. In Multi-Way operations (Merge6, Intersect6), this stagger
+    // prevents 4K Cache Set Aliasing and L1 Cache Thrashing, resulting in
     // up to an 8x performance increase.
     struct Page {
         uint64_t activeWordsMask = 0;
@@ -543,9 +585,6 @@ private:
     template<typename Collection>
     static PagedArenaBitset& mergeInternal(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL out,
             const Collection& inputs);
-
-    static PagedArenaBitset& mergeSpan(PagedArenaBitset* UTILS_RESTRICT UTILS_NONNULL
-            out, Slice<const PagedArenaBitset* const> inputs);
 
     template<typename Collection>
     static uint32_t mergeSizeInternal(const Collection& inputs);

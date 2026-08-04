@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) writeonly buffer D { float dst[]; };
+layout(std430,binding=1) readonly buffer S { float src[]; };
+layout(push_constant) uniform PC { uint n,ch,op; float exposure,white; } p;
+float aces(float x){ return (x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14); }
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; uint b=i*p.ch;
+  uint rgb=(p.ch<3u)?p.ch:3u;
+  for(uint c=0u;c<rgb;c++){ float x=src[b+c]*p.exposure; float y;
+    if(p.op==0u) y=x/(1.0+x);
+    else if(p.op==1u){ float w=(p.white<=0.0)?1.0:p.white; y=x*(1.0+x/(w*w))/(1.0+x); }
+    else y=aces(x);
+    if(y<0.0)y=0.0; dst[b+c]=y; }
+  for(uint c=rgb;c<p.ch;c++) dst[b+c]=src[b+c];
+}

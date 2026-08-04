@@ -151,32 +151,32 @@ void HtmlDisplayManager::terminate() {
     }
 }
 
-FilamentApp::Window::Handle HtmlDisplayManager::createWindow(const char* title, uint32_t w,
+FilamentApp2::Window::Handle HtmlDisplayManager::createWindow(const char* title, uint32_t w,
         uint32_t h, bool resizable, bool headless) {
     LockGuard<Mutex> lock(mMutex);
-    FilamentApp::Window::Handle handle =
-            (FilamentApp::Window::Handle)(uintptr_t) (mWindows.size() + 1);
+    FilamentApp2::Window::Handle handle =
+            (FilamentApp2::Window::Handle)(uintptr_t) (mWindows.size() + 1);
     mWindows[handle] = { utils::CString(title), w, h };
     return handle;
 }
 
-void HtmlDisplayManager::destroyWindow(FilamentApp::Window::Handle window) {
+void HtmlDisplayManager::destroyWindow(FilamentApp2::Window::Handle window) {
     LockGuard<Mutex> lock(mMutex);
     mWindows.erase(window);
 }
 
-void* HtmlDisplayManager::getNativeWindow(FilamentApp::Window::Handle window) const {
+void* HtmlDisplayManager::getNativeWindow(FilamentApp2::Window::Handle window) const {
     return nullptr; // Headless
 }
 
-void HtmlDisplayManager::setWindowTitle(FilamentApp::Window::Handle window, const char* title) {
+void HtmlDisplayManager::setWindowTitle(FilamentApp2::Window::Handle window, const char* title) {
     LockGuard<Mutex> lock(mMutex);
     if (mWindows.count(window)) {
         mWindows[window].title = utils::CString(title);
     }
 }
 
-void HtmlDisplayManager::getWindowSize(FilamentApp::Window::Handle window, uint32_t* w,
+void HtmlDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
         uint32_t* h) const {
     LockGuard<Mutex> lock(mMutex);
     if (mWindows.count(window)) {
@@ -186,7 +186,7 @@ void HtmlDisplayManager::getWindowSize(FilamentApp::Window::Handle window, uint3
     }
 }
 
-void HtmlDisplayManager::getDrawableSize(FilamentApp::Window::Handle window, uint32_t* w,
+void HtmlDisplayManager::getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
         uint32_t* h) const {
     getWindowSize(window, w, h);
 }
@@ -225,7 +225,7 @@ struct ReadPixelsUser {
     uint32_t height;
 };
 
-void HtmlDisplayManager::onFrameFinished(FilamentApp::Window::Handle window,
+void HtmlDisplayManager::onFrameFinished(FilamentApp2::Window::Handle window,
         filament::Engine* engine, filament::Renderer* renderer) {
     uint32_t width, height;
     getWindowSize(window, &width, &height);

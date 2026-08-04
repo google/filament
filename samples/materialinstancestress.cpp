@@ -15,6 +15,14 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -26,14 +34,8 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
-#include <filameshio/MeshReader.h>
-
 #include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <imgui.h>
 
@@ -42,15 +44,13 @@
 #include <string>
 #include <vector>
 
-#include "generated/resources/monkey.h"
-#include "generated/resources/resources.h"
-
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
 using namespace filamesh;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     struct UiState {
         int objectCountSlider = 100;
         float updateRatio = 0.5f;
@@ -95,7 +95,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help", utils::getopt::no_argument, nullptr, 'h' },
@@ -197,9 +197,9 @@ static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "Material Instances Stress Test";
-    config.iblDirectory = FilamentApp::getRootAssetsPath() + "assets/ibl/lightroom_14b";
+    config.iblDirectory = FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b";
     handleCommandLineArguments(argc, argv, &config);
 
     App app;
@@ -300,8 +300,16 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate(animate);
-    FilamentApp::get().run(config, setup, cleanup, gui);
+
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(config.title)
+                              .iblDirectory(config.iblDirectory)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(gui)
+                              .animation(animate)
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

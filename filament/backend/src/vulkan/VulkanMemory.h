@@ -28,10 +28,18 @@
 #endif
 
 #if defined(__clang__)
-#pragma clang diagnostic ignored "-Wc++98-compat-extra-semi"
+#pragma clang diagnostic push
+// vk_mem_alloc.h checks macros like VK_KHR_external_memory_win32 using #if,
+// which triggers -Wundef if they are not defined (e.g., when not building for Windows).
+#pragma clang diagnostic ignored "-Wundef"
 #endif
 
 #include "vk_mem_alloc.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaAllocation)

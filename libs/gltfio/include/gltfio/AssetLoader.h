@@ -236,6 +236,11 @@ public:
     void destroyAsset(const FilamentAsset* asset);
 
     /**
+     * @brief Performs a Garbage Collection sweep over all internal component managers.
+     */
+    void gc() noexcept;
+
+    /**
      * Gets a weak reference to an array of cached materials, used internally to create material
      * instances for assets.
      */

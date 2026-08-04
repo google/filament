@@ -15,9 +15,15 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include "generated/resources/resources.h"
+
+#include <viewer/ViewerGui.h>
+
+#include <imageio/ImageDecoder.h>
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
@@ -32,29 +38,22 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <utils/EntityManager.h>
-
-#include <viewer/ViewerGui.h>
-
 #include <camutils/Manipulator.h>
 
+#include <utils/EntityManager.h>
 #include <utils/getopt.h>
 
 #include <math/half.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
 #include <math/mat3.h>
 #include <math/norm.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <imgui.h>
-
-#include <imageio/ImageDecoder.h>
 
 #include <fstream>
 #include <iostream>
 #include <string>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -64,9 +63,10 @@ using namespace image;
 using namespace utils;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Engine* engine;
     ViewerGui* viewer;
-    Config config;
+    SampleConfig config;
     Camera* mainCamera;
 
     struct Scene {
@@ -198,12 +198,12 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.imageMaterial = material;
 
     Texture* texture = Texture::Builder()
-            .width(1)
-            .height(1)
-            .levels(1)
-            .format(Texture::InternalFormat::RGBA8)
-            .sampler(Texture::Sampler::SAMPLER_2D)
-            .build(*engine);
+                               .width(1)
+                               .height(1)
+                               .levels(1)
+                               .format(Texture::InternalFormat::RGBA8)
+                               .sampler(Texture::Sampler::SAMPLER_2D)
+                               .build(*engine);
     static uint32_t pixel = 0;
     Texture::PixelBufferDescriptor buffer(&pixel, 4, Texture::Format::RGBA, Texture::Type::UBYTE);
     texture->setImage(*engine, 0, std::move(buffer));
@@ -239,14 +239,14 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
     uint32_t w = image->getWidth();
     uint32_t h = image->getHeight();
     Texture* texture = Texture::Builder()
-            .width(w)
-            .height(h)
-            .levels(0xff)
-            .format(channels == 3 ?
-                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
-            .sampler(Texture::Sampler::SAMPLER_2D)
-            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
-            .build(*engine);
+                               .width(w)
+                               .height(h)
+                               .levels(0xff)
+                               .format(channels == 3 ? Texture::InternalFormat::RGB16F
+                                                     : Texture::InternalFormat::RGBA16F)
+                               .sampler(Texture::Sampler::SAMPLER_2D)
+                               .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
+                               .build(*engine);
 
     Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
         delete reinterpret_cast<LinearImage*>(data);
@@ -322,7 +322,7 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine* engine, View* view) {
         app.viewer->updateUserInterface();
 
-        FilamentApp::get().setSidebarWidth(app.viewer->getSidebarWidth());
+        app.filamentApp->setSidebarWidth(app.viewer->getSidebarWidth());
     };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
@@ -390,14 +390,21 @@ int main(int argc, char** argv) {
         app.scene.imageMaterial->setDefaultParameter(
                 "backgroundColor", RgbType::sRGB, app.backgroundColor);
     };
-
-    FilamentApp& filamentApp = FilamentApp::get();
-
-    filamentApp.setDropHandler([&] (std::string_view path) {
-        loadImage(app, app.engine, Path(path));
-    });
-
-    filamentApp.run(app.config, setup, cleanup, gui, preRender);
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(app.config.title)
+                    .backend(app.config.backend)
+                    .cameraMode(app.config.cameraMode)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(app.config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui(gui)
+                    .preRender(preRender)
+                    .dropHandler(
+                            [&](std::string_view path) { loadImage(app, app.engine, Path(path)); })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

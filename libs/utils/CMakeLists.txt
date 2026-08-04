@@ -82,6 +82,7 @@ set(SRCS
         src/CString.cpp
         src/CountDownLatch.cpp
         src/CyclicBarrier.cpp
+        src/InternalDebugRegistry.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
         src/FeatureFlagManager.cpp
@@ -261,7 +262,8 @@ if (FILAMENT_BUILD_TESTING AND NOT WASM)
             benchmark/benchmark_JobSystem.cpp
             benchmark/benchmark_mutex.cpp
             benchmark/benchmark_memcpy.cpp
-            benchmark/benchmark_EntitySet.cpp)
+            benchmark/benchmark_EntitySet.cpp
+            benchmark/benchmark_EntityManager.cpp)
 
 
     add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})

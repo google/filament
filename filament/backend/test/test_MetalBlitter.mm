@@ -22,6 +22,7 @@
 
 #include "Lifetimes.h"
 #include "Skip.h"
+#include <Metal/Metal.h>
 
 namespace test {
 
@@ -36,6 +37,11 @@ struct MetalBlitterTest
     MetalBlitterTest() {}
 };
 
+struct MetalBlitterDepthTest : public BackendTest,
+                               public testing::WithParamInterface<MTLPixelFormat> {
+    MetalBlitterDepthTest() {}
+};
+
 constexpr int kTextureSize = 32;
 
 template<typename T>
@@ -47,8 +53,8 @@ constexpr T redValue() {
 }
 
 template<typename T>
-void fillTextureWithRed(id<MTLTexture> texture) {
-    std::vector<T> textureData(kTextureSize * kTextureSize, redValue<T>());
+void fillTexture(id<MTLTexture> texture, T value) {
+    std::vector<T> textureData(kTextureSize * kTextureSize, value);
     [texture replaceRegion:MTLRegionMake2D(0, 0, kTextureSize, kTextureSize)
                mipmapLevel:0
                  withBytes:textureData.data()
@@ -56,15 +62,25 @@ void fillTextureWithRed(id<MTLTexture> texture) {
 }
 
 template<typename T>
-void verifyTextureIsRed(id<MTLTexture> texture) {
+void verifyTexture(id<MTLTexture> texture, T expectedValue) {
     std::vector<T> resultData(kTextureSize * kTextureSize);
     [texture getBytes:resultData.data()
           bytesPerRow:kTextureSize * sizeof(T)
            fromRegion:MTLRegionMake2D(0, 0, kTextureSize, kTextureSize)
           mipmapLevel:0];
 
-    std::vector<T> expectedData(kTextureSize * kTextureSize, redValue<T>());
+    std::vector<T> expectedData(kTextureSize * kTextureSize, expectedValue);
     EXPECT_EQ(resultData, expectedData);
+}
+
+template<typename T>
+void fillTextureWithRed(id<MTLTexture> texture) {
+    fillTexture<T>(texture, redValue<T>());
+}
+
+template<typename T>
+void verifyTextureIsRed(id<MTLTexture> texture) {
+    verifyTexture<T>(texture, redValue<T>());
 }
 
 TEST_P(MetalBlitterTest, Blit) {
@@ -82,7 +98,7 @@ TEST_P(MetalBlitterTest, Blit) {
     desc.width = kTextureSize;
     desc.height = kTextureSize;
     desc.pixelFormat = srcFormat;
-    desc.usage = MTLTextureUsageRenderTarget;
+    desc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
     id<MTLTexture> srcTexture = [metalContext.device newTextureWithDescriptor:desc];
 
     // Create a destination texture with the parameterized format.
@@ -150,6 +166,102 @@ TEST_P(MetalBlitterTest, Blit) {
     }
 }
 
+TEST_P(MetalBlitterDepthTest, DepthBlit) {
+    SKIP_IF_NOT(Backend::METAL, "MetalBlitter only works with the Metal backend");
+
+    const MTLPixelFormat depthFormat = GetParam();
+
+    MetalDriver& metalDriver = static_cast<MetalDriver&>(getDriver());
+    MetalContext& metalContext = *metalDriver.getContext();
+
+    MetalBlitter blitter(metalContext);
+
+    // Create a source depth texture.
+    MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
+    desc.width = kTextureSize;
+    desc.height = kTextureSize;
+    desc.pixelFormat = depthFormat;
+    desc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+    id<MTLTexture> srcTexture = [metalContext.device newTextureWithDescriptor:desc];
+
+    // Create a destination depth texture with the matching depth format.
+    id<MTLTexture> dstTexture = [metalContext.device newTextureWithDescriptor:desc];
+
+    // Fill the source depth texture with test depth values.
+    switch (depthFormat) {
+        case MTLPixelFormatDepth32Float:
+            fillTexture<float>(srcTexture, 0.75f);
+            break;
+        case MTLPixelFormatDepth16Unorm:
+            fillTexture<uint16_t>(srcTexture, 0xC000);
+            break;
+        default:
+            FAIL() << "Depth format not implemented in test";
+    }
+
+    id<MTLCommandBuffer> cmdBuffer = [metalContext.commandQueue commandBuffer];
+    MetalBlitter::BlitArgs args{};
+    args.source.texture = srcTexture;
+    args.source.region = MTLRegionMake2D(0, 0, kTextureSize, kTextureSize);
+    args.destination.texture = dstTexture;
+    args.destination.region = MTLRegionMake2D(0, 0, kTextureSize, kTextureSize);
+    args.filter = SamplerMagFilter::NEAREST;
+    blitter.blit(cmdBuffer, args, "MetalBlitterDepthTest");
+
+    [cmdBuffer commit];
+    [cmdBuffer waitUntilCompleted];
+
+    // Verify the destination depth texture matches the source depth values.
+    switch (depthFormat) {
+        case MTLPixelFormatDepth32Float:
+            verifyTexture<float>(dstTexture, 0.75f);
+            break;
+        case MTLPixelFormatDepth16Unorm:
+            verifyTexture<uint16_t>(dstTexture, 0xC000);
+            break;
+        default:
+            FAIL() << "Destination depth format not implemented in test";
+    }
+}
+
+TEST_F(BackendTest, MetalBlitterDepthMismatchSize) {
+    SKIP_IF_NOT(Backend::METAL, "MetalBlitter only works with the Metal backend");
+
+    MetalDriver& metalDriver = static_cast<MetalDriver&>(getDriver());
+    MetalContext& metalContext = *metalDriver.getContext();
+
+    MetalBlitter blitter(metalContext);
+
+    // Create a 32x32 source depth texture.
+    MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
+    desc.width = kTextureSize;
+    desc.height = kTextureSize;
+    desc.pixelFormat = MTLPixelFormatDepth32Float;
+    desc.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+    id<MTLTexture> srcTexture = [metalContext.device newTextureWithDescriptor:desc];
+
+    // Create a 16x16 destination depth texture (size mismatch).
+    desc.width = kTextureSize / 2;
+    desc.height = kTextureSize / 2;
+    id<MTLTexture> dstTexture = [metalContext.device newTextureWithDescriptor:desc];
+
+    id<MTLCommandBuffer> cmdBuffer = [metalContext.commandQueue commandBuffer];
+    MetalBlitter::BlitArgs args{};
+    args.source.texture = srcTexture;
+    args.source.region = MTLRegionMake2D(0, 0, kTextureSize, kTextureSize);
+    args.destination.texture = dstTexture;
+    args.destination.region = MTLRegionMake2D(0, 0, kTextureSize / 2, kTextureSize / 2);
+    args.filter = SamplerMagFilter::NEAREST;
+
+#ifdef __EXCEPTIONS
+    EXPECT_THROW(blitter.blit(cmdBuffer, args, "MetalBlitterDepthMismatchSize"),
+            utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(blitter.blit(cmdBuffer, args, "MetalBlitterDepthMismatchSize"),
+            "MetalBlitter slow path does not support depth formats");
+#endif
+}
+
 // Helper to give names to the tests.
 static std::string testNameGenerator(
         const testing::TestParamInfo<MetalBlitterTest::ParamType>& info) {
@@ -168,6 +280,19 @@ static std::string testNameGenerator(
     };
 
     return std::string(formatToString(srcFormat)) + "_to_" + std::string(formatToString(dstFormat));
+}
+
+static std::string depthTestNameGenerator(
+        const testing::TestParamInfo<MetalBlitterDepthTest::ParamType>& info) {
+    const MTLPixelFormat format = info.param;
+    switch (format) {
+        case MTLPixelFormatDepth32Float:
+            return "Depth32Float";
+        case MTLPixelFormatDepth16Unorm:
+            return "Depth16Unorm";
+        default:
+            return "Unknown";
+    }
 }
 
 // This instantiates all the test cases. Each call to std::make_tuple defines a single test case
@@ -192,5 +317,9 @@ INSTANTIATE_TEST_SUITE_P(MetalBlitterTests, MetalBlitterTest,
         ),
         testNameGenerator
 );
+
+INSTANTIATE_TEST_SUITE_P(MetalBlitterDepthTests, MetalBlitterDepthTest,
+        testing::Values(MTLPixelFormatDepth32Float, MTLPixelFormatDepth16Unorm),
+        depthTestNameGenerator);
 
 } // namespace test

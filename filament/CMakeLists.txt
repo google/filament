@@ -129,7 +129,6 @@ set(SRCS
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
-        src/details/DebugRegistry.cpp
         src/details/Engine.cpp
         src/details/Fence.cpp
         src/details/FramePacer.cpp
@@ -296,6 +295,7 @@ set(MATERIAL_SRCS
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
         src/materials/evsm/gaussian.mat
+        src/materials/evsm/gaussianMipmap.mat
         src/materials/evsm/vsmMipmap.mat
         src/materials/flare/flare.mat
         src/materials/fog/fog.mat
@@ -659,6 +659,12 @@ add_custom_command(
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/gaussian.filamat"
         DEPENDS src/materials/evsm/gaussian.fs
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/gaussianMipmap.filamat"
+        DEPENDS src/materials/evsm/gaussianMipmap.fs
         APPEND
 )
 

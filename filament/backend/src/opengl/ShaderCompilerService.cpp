@@ -201,8 +201,17 @@ ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
 ShaderCompilerService::ShaderCompilerService(OpenGLDriver& driver)
         : mDriver(driver),
           mBlobCache(driver.getContext()),
-          mCallbackManager(driver) {
-}
+          mCallbackManager(driver),
+          mParallelShaderCompileDisabled(driver.getDriverConfig().featureFlagManager
+                                                 ? driver.getDriverConfig()
+                                                           .featureFlagManager->features.backend
+                                                           .disable_parallel_shader_compile
+                                                 : false),
+          mAmortizedShaderCompileDisabled(driver.getDriverConfig().featureFlagManager
+                                                  ? driver.getDriverConfig()
+                                                            .featureFlagManager->features.backend
+                                                            .disable_amortized_shader_compile
+                                                 : false) {}
 
 ShaderCompilerService::~ShaderCompilerService() noexcept = default;
 
@@ -218,7 +227,7 @@ void ShaderCompilerService::init() noexcept {
                 "backend.enable_priority_override_mitigation").value_or(true);
     }
 
-    if (UTILS_UNLIKELY(mDriver.getDriverConfig().disableParallelShaderCompile)) {
+    if (UTILS_UNLIKELY(mParallelShaderCompileDisabled)) {
         // user disabled parallel shader compile
         mMode = Mode::SYNCHRONOUS;
         return;
@@ -702,13 +711,13 @@ void ShaderCompilerService::executeTickOps() {
 }
 
 bool ShaderCompilerService::shouldCompileSynchronousProgramThisTick() const noexcept {
-    return mDriver.getDriverConfig().disableAmortizedShaderCompile ||
-            (mNumProgramsCreatedSynchronouslyThisTick < MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME &&
-                    mNumTicksUntilNextSynchronousProgram == 0);
+    return mAmortizedShaderCompileDisabled ||
+           (mNumProgramsCreatedSynchronouslyThisTick < MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME &&
+                   mNumTicksUntilNextSynchronousProgram == 0);
 }
 
 void ShaderCompilerService::compilePendingSynchronousPrograms() {
-    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+    if (mAmortizedShaderCompileDisabled) {
         return;
     }
 
@@ -727,7 +736,7 @@ void ShaderCompilerService::compilePendingSynchronousPrograms() {
 
 void ShaderCompilerService::compilePendingSynchronousProgramNow(
         program_token_t const& token) {
-    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+    if (mAmortizedShaderCompileDisabled) {
         return;
     }
 
@@ -742,7 +751,7 @@ void ShaderCompilerService::compilePendingSynchronousProgramNow(
 }
 
 void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t const& token) noexcept {
-    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+    if (mAmortizedShaderCompileDisabled) {
         return;
     }
 

@@ -13,7 +13,8 @@ The script `render.py` contains the core logic for taking input parameters (such
 description file) and then running `gltf_viewer` to produce the renderings.
 
 In the `test` directory is a list of test descriptions that are specified in json. Please see
-`sample.json` to glean the structure.
+`sample.json` to glean the structure. These tests declare which **renderers** they run on
+using the `platform-backend` specification format (e.g., `"desktop-opengl"`, `"desktop-vulkan"`).
 
 ## Setting up python
 
@@ -56,14 +57,15 @@ renderings, do the following step
 
 You can control the behavior of the test scripts with the following flags passed to `local_test.sh`:
 
-- `--test_filter=<filter>`: Run a subset of tests. The filter supports wildcards (`*`) to match test names.
+- `--test_filter=<filter>`: Run a subset of tests using fnmatch wildcards (`*`). It filters against
+  the pattern `{test.name}.{platform}-{backend}.{model}`.
 - `--no_rebuild`: Skip rebuilding the `gltf_viewer` executable.
 - `--num_threads=<number>`: Set the number of threads for rendering. If not set, the system's default is used.
 
-For example, to run all `MSAA` tests without rebuilding and using 8 threads:
+For example, to run all `MSAA` tests on Vulkan without rebuilding and using 8 threads:
 
 ```
-bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
+bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=8
 ```
 
 ## Update the golden images

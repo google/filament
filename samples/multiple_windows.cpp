@@ -21,7 +21,7 @@
 
 #include <filameshio/MeshReader.h>
 
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/NativeWindowHelper.h>
 
@@ -278,7 +278,7 @@ void resize_window(Window& w, Engine* engine) {
 }
 
 void setup_static_scene(Window& w, Engine* engine) {
-    auto iblDir = FilamentApp::getRootAssetsPath() + kIBLFolder;
+    auto iblDir = FilamentApp2::getRootAssetsPath() + kIBLFolder;
     w.ibl = load_IBL(iblDir, engine);
     if (w.ibl) {
         w.ibl->getIndirectLight()->setIntensity(10000);
@@ -311,7 +311,7 @@ void setup_static_scene(Window& w, Engine* engine) {
 }
 
 void setup_animating_scene(Window& w, Engine* engine) {
-    auto iblDir = FilamentApp::getRootAssetsPath() + kIBLFolder;
+    auto iblDir = FilamentApp2::getRootAssetsPath() + kIBLFolder;
     w.ibl = load_IBL(iblDir, engine);
     if (w.ibl) {
         w.ibl->getIndirectLight()->setIntensity(10000);

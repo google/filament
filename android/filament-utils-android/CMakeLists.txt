@@ -54,6 +54,18 @@ add_library(perfetto STATIC IMPORTED)
 set_target_properties(perfetto PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libperfetto.a)
 
+add_library(filamentapp STATIC IMPORTED)
+set_target_properties(filamentapp PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamentapp.a)
+
+add_library(filamentapp-resources STATIC IMPORTED)
+set_target_properties(filamentapp-resources PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamentapp-resources.a)
+
+add_library(stb STATIC IMPORTED)
+set_target_properties(stb PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libstb.a)
+
 set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
@@ -62,6 +74,7 @@ add_library(filament-utils-jni SHARED
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
         src/main/cpp/DeviceUtils.cpp
+        src/main/cpp/NativeViewer.cpp
         src/main/cpp/HDRLoader.cpp
         src/main/cpp/IBLPrefilterContext.cpp
         src/main/cpp/Utils.cpp
@@ -85,6 +98,7 @@ target_include_directories(filament-utils-jni PRIVATE
         ../../filament/backend/include
         ${IMAGEIO_DIR}/include
         ../../libs/imagediff/include
+        ../../libs/filamentapp/include
         ../../libs/utils/include)
 
 set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
@@ -97,10 +111,14 @@ target_link_libraries(filament-utils-jni
         PRIVATE iblprefilter
         PRIVATE image
         PRIVATE imageio-lite
+        PRIVATE filamentapp
+        PRIVATE filamentapp-resources
+        PRIVATE stb
         PRIVATE filament-jni
         PRIVATE ktxreader
         PRIVATE viewer
         PRIVATE imagediff
+        PRIVATE android
         PRIVATE log
         PRIVATE utils
         PRIVATE perfetto        # needed only when FILAMENT_ENABLE_PERFETTO is defined

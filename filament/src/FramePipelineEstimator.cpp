@@ -18,7 +18,8 @@
 
 #include <utils/Log.h>
 
-#include <time.h>
+#include <algorithm>
+#include <cmath>
 
 #ifndef FILAMENT_LOG_PIPELINE_ESTIMATOR
 #define FILAMENT_LOG_PIPELINE_ESTIMATOR 0
@@ -27,54 +28,60 @@
 namespace filament {
 
 namespace {
+struct TelemetryStats {
+    uint32_t count = 0;
+    uint32_t countGpu = 0;
+    uint32_t countMargin = 0;
+
+    double meanMain = 0.0;
+    double meanBackend = 0.0;
+    double meanGpu = 0.0;
+    double meanMargin = 0.0;
+
+    double stdDevMain = 0.0;
+    double stdDevBackend = 0.0;
+    double stdDevGpu = 0.0;
+    double stdDevMargin = 0.0;
+
+    double effectiveMain = 0.0;
+    double effectiveBackend = 0.0;
+    double effectiveGpu = 0.0;
+    double totalTransitTimeNs = 0.0;
+    double effectiveCompositionMarginNs = 0.0;
+};
+
 struct PipelineLogger {
-    static inline void log(
-            uint32_t count, uint32_t countGpu, double zScore,
-            double meanMain, double meanApp, double meanRender, double meanBackend, double meanGpu,
-            double standardDeviationMain, double standardDeviationRender, double standardDeviationBackend, double standardDeviationGpu,
-            double effectiveMain, double effectiveBackend, double effectiveGpu,
-            float idealFrameRate, uint32_t idealLatency, double safeDelayNs) noexcept {
+    static void log(
+            TelemetryStats const& stats, double zScore,
+            double pacingIntervalNs, uint32_t idealLatency, double safeDelayNs) noexcept {
 #if FILAMENT_LOG_PIPELINE_ESTIMATOR
         LOG(INFO) << "FramePipelineEstimator: "
-                << "history=" << count << " (gpu=" << countGpu << "), "
+                << "history=" << stats.count
+                << " (gpu=" << stats.countGpu
+                << ", margin=" << stats.countMargin << "), "
                 << "Z=" << zScore << "\n"
-                << "  mean   CPU=" << meanMain / 1e6 << "ms (App=" << meanApp / 1e6 << "ms, Render=" << meanRender / 1e6 << "ms), BE=" << meanBackend / 1e6 << "ms, GPU=" << meanGpu / 1e6 << "ms\n"
-                << "  stddev CPU=" << standardDeviationMain / 1e6 << "ms (Render=" << standardDeviationRender / 1e6 << "ms), BE=" << standardDeviationBackend / 1e6 << "ms, GPU=" << standardDeviationGpu / 1e6 << "ms\n"
-                << "  effect CPU=" << effectiveMain / 1e6 << "ms, BE=" << effectiveBackend / 1e6 << "ms, GPU=" << effectiveGpu / 1e6 << "ms\n"
-                << "  ideal  fps=" << idealFrameRate << ", latency=" << idealLatency << ", safeDelay=" << safeDelayNs / 1e6 << "ms";
+                << "  mean   CPU=" << stats.meanMain / 1e6 << "ms, BE=" << stats.meanBackend / 1e6 << "ms, GPU=" << stats.meanGpu / 1e6 << "ms, Margin=" << stats.meanMargin / 1e6 << "ms\n"
+                << "  stddev CPU=" << stats.stdDevMain / 1e6 << "ms, BE=" << stats.stdDevBackend / 1e6 << "ms, GPU=" << stats.stdDevGpu / 1e6 << "ms, Margin=" << stats.stdDevMargin / 1e6 << "ms\n"
+                << "  effect CPU=" << stats.effectiveMain / 1e6 << "ms, BE=" << stats.effectiveBackend / 1e6 << "ms, GPU=" << stats.effectiveGpu / 1e6 << "ms, Margin=" << stats.effectiveCompositionMarginNs / 1e6 << "ms\n"
+                << "  pacing interval=" << pacingIntervalNs / 1e6 << "ms, latency=" << idealLatency << " frames, safeDelay=" << safeDelayNs / 1e6 << "ms";
 #endif
     }
 };
-} // namespace
 
-double FramePipelineEstimator::getZScore(TargetPercentile const targetPercentile) noexcept {
-    switch (targetPercentile) {
-        case TargetPercentile::P50: return 0.0;
-        case TargetPercentile::P90: return 1.282;
-        case TargetPercentile::P95: return 1.645;
-    }
-    return 0.0;
-}
-
-FramePipelineEstimator::Estimation FramePipelineEstimator::estimate(FrameInfoHistory history,
-        TargetPercentile const targetPercentile,
-        std::chrono::nanoseconds targetVsyncInterval) noexcept {
-    return estimate(history, getZScore(targetPercentile), targetVsyncInterval);
-}
-
-FramePipelineEstimator::Estimation FramePipelineEstimator::estimate(FrameInfoHistory history,
-        double const zScore, std::chrono::nanoseconds targetVsyncInterval) noexcept {
+TelemetryStats computeStats(FramePipelineEstimator::FrameInfoHistory history, double const zScore) noexcept {
     if (history.empty()) {
-        return Estimation{};
+        return {};
     }
 
     uint32_t const count = static_cast<uint32_t>(history.size());
     uint32_t countGpu = 0;
+    uint32_t countMargin = 0;
 
     double sumApp = 0.0;
     double sumRender = 0.0;
     double sumBackend = 0.0;
     double sumGpu = 0.0;
+    double sumMargin = 0.0;
 
     auto const getCpuStart = [](Renderer::FrameInfo const& f) {
         return (f.frameScheduleTime != Renderer::FrameInfo::INVALID && f.frameScheduleTime != 0) ?
@@ -91,36 +98,37 @@ FramePipelineEstimator::Estimation FramePipelineEstimator::estimate(FrameInfoHis
             sumGpu += static_cast<double>(frameInfo.gpuFrameDuration);
             countGpu++;
         }
+        if (frameInfo.displayPresent > 0 && frameInfo.presentDeadline > 0 &&
+                frameInfo.displayPresent != Renderer::FrameInfo::INVALID &&
+                frameInfo.presentDeadline != Renderer::FrameInfo::INVALID &&
+                frameInfo.displayPresent > frameInfo.presentDeadline) {
+            sumMargin += static_cast<double>(frameInfo.displayPresent - frameInfo.presentDeadline);
+            countMargin++;
+        }
     }
 
-    double const meanApp = sumApp / count;
-    double const meanRender = sumRender / count;
-    double const meanMain = (sumApp + sumRender) / count; // total CPU (endFrame - frameScheduleTime)
+    double const meanMain = (sumApp + sumRender) / count;
     double const meanBackend = sumBackend / count;
     double const meanGpu = countGpu > 0 ? sumGpu / countGpu : 0.0;
+    double const meanMargin = countMargin > 0 ? sumMargin / countMargin : 0.0;
 
     double varianceMain = 0.0;
-    double varianceRender = 0.0;
     double varianceBackend = 0.0;
     double varianceGpu = 0.0;
+    double varianceMargin = 0.0;
 
     if (count > 1) {
         double squareSumMain = 0.0;
-        double squareSumRender = 0.0;
         double squareSumBackend = 0.0;
         for (uint32_t i = 0; i < count; ++i) {
             auto const& frameInfo = history[i];
             double const durationMain = static_cast<double>(frameInfo.endFrame - getCpuStart(frameInfo));
             squareSumMain += (durationMain - meanMain) * (durationMain - meanMain);
 
-            double const durationRender = static_cast<double>(frameInfo.endFrame - frameInfo.beginFrame);
-            squareSumRender += (durationRender - meanRender) * (durationRender - meanRender);
-
             double const durationBackend = static_cast<double>(frameInfo.backendEndFrame - frameInfo.backendBeginFrame);
             squareSumBackend += (durationBackend - meanBackend) * (durationBackend - meanBackend);
         }
         varianceMain = squareSumMain / (count - 1);
-        varianceRender = squareSumRender / (count - 1);
         varianceBackend = squareSumBackend / (count - 1);
     }
 
@@ -136,47 +144,119 @@ FramePipelineEstimator::Estimation FramePipelineEstimator::estimate(FrameInfoHis
         varianceGpu = squareSumGpu / (countGpu - 1);
     }
 
+    if (countMargin > 1) {
+        double squareSumMargin = 0.0;
+        for (uint32_t i = 0; i < count; ++i) {
+            auto const& frameInfo = history[i];
+            if (frameInfo.displayPresent > 0 && frameInfo.presentDeadline > 0 &&
+                    frameInfo.displayPresent != Renderer::FrameInfo::INVALID &&
+                    frameInfo.presentDeadline != Renderer::FrameInfo::INVALID &&
+                    frameInfo.displayPresent > frameInfo.presentDeadline) {
+                double const margin = static_cast<double>(frameInfo.displayPresent - frameInfo.presentDeadline);
+                squareSumMargin += (margin - meanMargin) * (margin - meanMargin);
+            }
+        }
+        varianceMargin = squareSumMargin / (countMargin - 1);
+    }
+
     double const standardDeviationMain = std::sqrt(varianceMain);
-    double const standardDeviationRender = std::sqrt(varianceRender);
     double const standardDeviationBackend = std::sqrt(varianceBackend);
     double const standardDeviationGpu = std::sqrt(varianceGpu);
+    double const standardDeviationMargin = std::sqrt(varianceMargin);
 
-    // Reverted math: CPU total duration (response time) is used for throughput bottleneck.
     double const effectiveMain = std::max(0.0, meanMain + (zScore * standardDeviationMain));
     double const effectiveBackend = std::max(0.0, meanBackend + (zScore * standardDeviationBackend));
     double const effectiveGpu = std::max(0.0, meanGpu + (zScore * standardDeviationGpu));
+    double const totalTransitTimeNs = effectiveMain + effectiveBackend + effectiveGpu;
+    double const effectiveCompositionMargin = std::max(0.0, meanMargin + (zScore * standardDeviationMargin));
 
-    double idealFrameTimeNs = std::max({effectiveMain, effectiveBackend, effectiveGpu});
+    return {
+        count,
+        countGpu,
+        countMargin,
+        meanMain,
+        meanBackend,
+        meanGpu,
+        meanMargin,
+        standardDeviationMain,
+        standardDeviationBackend,
+        standardDeviationGpu,
+        standardDeviationMargin,
+        effectiveMain,
+        effectiveBackend,
+        effectiveGpu,
+        totalTransitTimeNs,
+        effectiveCompositionMargin
+    };
+}
+} // namespace
+
+double FramePipelineEstimator::getZScore(TargetPercentile const targetPercentile) noexcept {
+    switch (targetPercentile) {
+        case TargetPercentile::P50: return 0.0;
+        case TargetPercentile::P90: return 1.282;
+        case TargetPercentile::P95: return 1.645;
+    }
+    return 0.0;
+}
+
+FramePipelineEstimator::Workload FramePipelineEstimator::estimateWorkload(FrameInfoHistory history,
+        TargetPercentile const targetPercentile) noexcept {
+    return estimateWorkload(history, getZScore(targetPercentile));
+}
+
+FramePipelineEstimator::Workload FramePipelineEstimator::estimateWorkload(FrameInfoHistory history,
+        double const zScore) noexcept {
+    if (history.empty()) {
+        return Workload{};
+    }
+
+    TelemetryStats const stats = computeStats(history, zScore);
+    double idealFrameTimeNs = std::max({stats.effectiveMain, stats.effectiveBackend, stats.effectiveGpu});
     if (idealFrameTimeNs <= 0.0) {
         idealFrameTimeNs = 16666666.0;
     }
 
-    double const totalTransitTimeNs = effectiveMain + effectiveBackend + effectiveGpu;
+    Workload workload;
+    workload.idealFrameDuration = std::chrono::nanoseconds(static_cast<int64_t>(idealFrameTimeNs));
+    workload.idealFrameRate = static_cast<float>(1e9 / idealFrameTimeNs);
+    return workload;
+}
 
-    uint32_t idealLatency = static_cast<uint32_t>(std::ceil(totalTransitTimeNs / idealFrameTimeNs));
+FramePipelineEstimator::PacingSizing FramePipelineEstimator::estimatePacing(FrameInfoHistory history,
+        std::chrono::nanoseconds pacingPeriod,
+        TargetPercentile const targetPercentile) noexcept {
+    return estimatePacing(history, pacingPeriod, getZScore(targetPercentile));
+}
+
+FramePipelineEstimator::PacingSizing FramePipelineEstimator::estimatePacing(FrameInfoHistory history,
+        std::chrono::nanoseconds pacingPeriod,
+        double const zScore) noexcept {
+    if (history.empty() || pacingPeriod.count() <= 0) {
+        return PacingSizing{};
+    }
+
+    TelemetryStats const stats = computeStats(history, zScore);
+
+    double const pacingIntervalNs = static_cast<double>(pacingPeriod.count());
+    uint32_t idealLatency = static_cast<uint32_t>(
+            std::ceil((stats.totalTransitTimeNs + stats.effectiveCompositionMarginNs) / pacingIntervalNs));
     if (idealLatency < 1) {
         idealLatency = 1;
     }
 
-    float const idealFrameRate = static_cast<float>(1e9 / idealFrameTimeNs);
+    double const budgetNs = idealLatency * pacingIntervalNs - stats.effectiveCompositionMarginNs;
+    double const safeDelayNs = budgetNs - stats.totalTransitTimeNs;
 
-    double const budgetNs = idealLatency * static_cast<double>(targetVsyncInterval.count());
-    double const safeDelayNs = budgetNs - totalTransitTimeNs;
+#if FILAMENT_LOG_PIPELINE_ESTIMATOR
+    PipelineLogger::log(stats, zScore, pacingIntervalNs, idealLatency, safeDelayNs);
+#endif
 
-    PipelineLogger::log(count, countGpu, zScore,
-            meanMain, meanApp, meanRender, meanBackend, meanGpu,
-            standardDeviationMain, standardDeviationRender, standardDeviationBackend, standardDeviationGpu,
-            effectiveMain, effectiveBackend, effectiveGpu,
-            idealFrameRate, idealLatency, safeDelayNs);
-
-    Estimation estimation;
-    estimation.idealFrameDuration = std::chrono::nanoseconds(static_cast<int64_t>(idealFrameTimeNs));
-    estimation.idealFrameRate     = idealFrameRate;
-    estimation.idealLatencyFrames = idealLatency;
-    estimation.safeDelayDuration  = std::chrono::nanoseconds(
+    PacingSizing sizing;
+    sizing.latencyFrames = idealLatency;
+    sizing.safeDelayDuration = std::chrono::nanoseconds(
             static_cast<int64_t>(std::max(0.0, safeDelayNs)));
-
-    return estimation;
+    return sizing;
 }
 
 } // namespace filament

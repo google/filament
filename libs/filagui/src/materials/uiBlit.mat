@@ -11,6 +11,7 @@ material {
         color
     ],
     shadingModel : unlit,
+    variantFilter : [ vsm ],
     culling : none,
     depthCulling: false,
     blending : transparent,

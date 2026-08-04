@@ -36,7 +36,7 @@
 
 #include <utils/getopt.h>
 
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 
 #define STB_PERLIN_IMPLEMENTATION
 #include <stb_perlin.h>
@@ -50,6 +50,7 @@
 
 #include <imgui.h>
 
+#include "common/SampleConfig.h"
 #include "generated/resources/resources.h"
 
 using namespace filament;
@@ -61,6 +62,7 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Skybox* skybox = nullptr;
     VertexBuffer* vb = nullptr;
     IndexBuffer* ib = nullptr;
@@ -121,7 +123,7 @@ static void printUsage(char* name) {
     std::cout << usage;
 }
 
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
     static constexpr const char* OPTSTR = "ha:";
     static const utils::getopt::option OPTIONS[] = {
             { "help",         utils::getopt::no_argument,       nullptr, 'h' },
@@ -258,7 +260,7 @@ static void gui(Engine*, View*) {
 }
 
 int main(int argc, char** argv) {
-    Config config;
+    SampleConfig config;
     config.title = "Heightfield";
 
     handleCommandLineArgments(argc, argv, &config);
@@ -390,44 +392,57 @@ int main(int argc, char** argv) {
         engine->destroy(app.ib);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        const size_t offset = g_params.updateSubRegion ? 64 : 0;
-        const size_t dimension = g_params.updateSubRegion ? textureSize / 2 : textureSize;
-        const size_t padding = g_params.addPadding ? 32 : 0;
-        TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
-        Texture* textureUpdate = nullptr;
+    app.filamentApp =
+            FilamentApp2::Builder()
+                    .title(config.title)
+                    .configDisplayManager(
+                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui(gui)
+                    .animation([&app](Engine* engine, View* view, double now) {
+                        const size_t offset = g_params.updateSubRegion ? 64 : 0;
+                        const size_t dimension =
+                                g_params.updateSubRegion ? textureSize / 2 : textureSize;
+                        const size_t padding = g_params.addPadding ? 32 : 0;
+                        TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
-        if (g_params.textureType != g_params.currentTextureType) {
-            if (g_params.textureType == 0) {
-                textureUpdate = app.r8Tex;
-            } else if (g_params.textureType == 1) {
-                textureUpdate = app.floatTex;
-            } else if (g_params.textureType == 2) {
-                textureUpdate = app.rgbTex;
-            }
+                        Texture* textureUpdate = nullptr;
 
-            g_params.currentTextureType = g_params.textureType;
-        }
+                        if (g_params.textureType != g_params.currentTextureType) {
+                            if (g_params.textureType == 0) {
+                                textureUpdate = app.r8Tex;
+                            } else if (g_params.textureType == 1) {
+                                textureUpdate = app.floatTex;
+                            } else if (g_params.textureType == 2) {
+                                textureUpdate = app.rgbTex;
+                            }
 
-        if (textureUpdate) {
-            app.matInstance->setParameter("height", textureUpdate, sampler);
-        }
+                            g_params.currentTextureType = g_params.textureType;
+                        }
 
-        const auto n = static_cast<float>(now);
-        if (g_params.textureType == 0) {
-            populateTextureWithPerlin<uint8_t>(app.r8Tex, *engine, n * g_params.speed, g_params,
-                    offset, offset, dimension, padding);
-        } else if (g_params.textureType == 1) {
-            populateTextureWithPerlin<float>(app.floatTex, *engine, n * g_params.speed, g_params,
-                    offset, offset, dimension, padding);
-        } else if (g_params.textureType == 2) {
-            populateTextureWithPerlin<filament::math::byte3>(app.rgbTex, *engine,
-                    n * g_params.speed, g_params, offset, offset, dimension, padding);
-        }
-    });
+                        if (textureUpdate) {
+                            app.matInstance->setParameter("height", textureUpdate, sampler);
+                        }
 
-    FilamentApp::get().run(config, setup, cleanup, gui);
+                        const auto n = static_cast<float>(now);
+                        if (g_params.textureType == 0) {
+                            populateTextureWithPerlin<uint8_t>(app.r8Tex, *engine,
+                                    n * g_params.speed, g_params, offset, offset, dimension,
+                                    padding);
+                        } else if (g_params.textureType == 1) {
+                            populateTextureWithPerlin<float>(app.floatTex, *engine,
+                                    n * g_params.speed, g_params, offset, offset, dimension,
+                                    padding);
+                        } else if (g_params.textureType == 2) {
+                            populateTextureWithPerlin<filament::math::byte3>(app.rgbTex, *engine,
+                                    n * g_params.speed, g_params, offset, offset, dimension,
+                                    padding);
+                        }
+                    })
+                    .build();
+    app.filamentApp->run();
 
     return 0;
 }

@@ -36,12 +36,11 @@ def commit_msg_has_tag(commit_hash, tag):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: check_bypass.py <commit_hash>", file=sys.stderr)
+        print("Usage: check_bypass.py <commit_hash> [commit_hash2...]", file=sys.stderr)
         sys.exit(1)
 
-    commit_hash = sys.argv[1]
-    
-    if commit_msg_has_tag(commit_hash, "SIZEGUARD_BYPASS"):
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    for commit_hash in sys.argv[1:]:
+        if commit_msg_has_tag(commit_hash, "SIZEGUARD_BYPASS"):
+            sys.exit(0)
+
+    sys.exit(1)

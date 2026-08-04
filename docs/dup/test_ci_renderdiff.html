@@ -169,7 +169,8 @@ work).</p>
 <p>The script <code>render.py</code> contains the core logic for taking input parameters (such as the test
 description file) and then running <code>gltf_viewer</code> to produce the renderings.</p>
 <p>In the <code>test</code> directory is a list of test descriptions that are specified in json. Please see
-<code>sample.json</code> to glean the structure.</p>
+<code>sample.json</code> to glean the structure. These tests declare which <strong>renderers</strong> they run on
+using the <code>platform-backend</code> specification format (e.g., <code>"desktop-opengl"</code>, <code>"desktop-vulkan"</code>).</p>
 <h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
 <p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
 renderings, do the following step</p>
@@ -210,12 +211,13 @@ golden repo.</li>
 <h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
 <p>You can control the behavior of the test scripts with the following flags passed to <code>local_test.sh</code>:</p>
 <ul>
-<li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests. The filter supports wildcards (<code>*</code>) to match test names.</li>
+<li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests using fnmatch wildcards (<code>*</code>). It filters against
+the pattern <code>{test.name}.{platform}-{backend}.{model}</code>.</li>
 <li><code>--no_rebuild</code>: Skip rebuilding the <code>gltf_viewer</code> executable.</li>
 <li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
 </ul>
-<p>For example, to run all <code>MSAA</code> tests without rebuilding and using 8 threads:</p>
-<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
+<p>For example, to run all <code>MSAA</code> tests on Vulkan without rebuilding and using 8 threads:</p>
+<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*vulkan*.*' --no_rebuild --num_threads=8
 </code></pre>
 <h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
 <p>The golden images are stored in a github repository:

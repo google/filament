@@ -158,7 +158,9 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .vkDestroyImage = vkDestroyImage,
         .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
-        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
+        .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR,
+        .vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR,
+        .vkGetPhysicalDeviceProperties2KHR = vkGetPhysicalDeviceProperties2KHR,
 #endif
     };
     VmaAllocatorCreateInfo const allocatorInfo{
@@ -193,7 +195,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) && FVK_ENABLED(FVK_DEBUG_VALIDATION)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
@@ -308,47 +310,55 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         Platform::DriverConfig const& driverConfig)
-    : DriverBase(driverConfig),
-      mPlatform(platform),
-      mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
-              driverConfig.disableHeapHandleTags),
-      // Note that we always create the default rendertarget before createDefaultRenderTarget(). We
-      // swap the content later when createDefaultRenderTarget() is called.  This frees
-      // createDefaultRenderTarget() from being ordered with makeCurrent().
-      mDefaultRenderTarget(
-              fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
-      mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
-              mPlatform->getDevice())),
-      mContext(context),
-      mSemaphoreManager(mPlatform->getDevice(), &mResourceManager),
-      mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
-              mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
-              mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
-      mPipelineLayoutCache(mPlatform->getDevice()),
-      mPipelineCache(*this, mPlatform->getDevice(), mContext),
-      mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
-      mBufferCache(mContext, mResourceManager, mAllocator),
-      mFramebufferCache(mPlatform->getDevice(),
-              mPlatform->getCustomization().timeBeforeEvictionFbo),
-      mYcbcrConversionCache(mPlatform->getDevice()),
-      mSamplerCache(mPlatform->getDevice()),
-      mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
-      mReadPixels(mPlatform->getDevice()),
-      mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
-      mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
-      mQueryManager(mPlatform->getDevice()),
-      mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
-              &mDescriptorSetLayoutCache),
-      mStreamedImageManager(&mExternalImageManager),
-      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
-      mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
-      mAcquireSwapChainInMakeCurrent(
-              driverConfig.featureFlagManager ?
-              driverConfig.featureFlagManager->features.backend.vulkan.enable_acquire_swapchain_in_make_current :
-              false),
-      mStereoscopicType(driverConfig.stereoscopicType),
-      mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
-      mAsynchronousMode(driverConfig.asynchronousMode) {
+        : DriverBase(driverConfig),
+          mPlatform(platform),
+          mResourceManager(driverConfig.handleArenaSize,
+                  (driverConfig.featureFlagManager
+                                  ? driverConfig.featureFlagManager->features.backend
+                                            .disable_handle_use_after_free_check
+                                  : false),
+                  (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features
+                                                             .backend.disable_heap_handle_tags
+                                                   : false)),
+          // Note that we always create the default rendertarget before createDefaultRenderTarget().
+          // We swap the content later when createDefaultRenderTarget() is called.  This frees
+          // createDefaultRenderTarget() from being ordered with makeCurrent().
+          mDefaultRenderTarget(
+                  fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
+          mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
+                  mPlatform->getDevice())),
+          mContext(context),
+          mSemaphoreManager(mPlatform->getDevice(), &mResourceManager),
+          mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
+                  mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
+                  mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
+          mPipelineLayoutCache(mPlatform->getDevice()),
+          mPipelineCache(*this, mPlatform->getDevice(), mContext),
+          mStagePool(mAllocator, &mResourceManager, &mCommands,
+                  &mContext.getPhysicalDeviceLimits()),
+          mBufferCache(mContext, mResourceManager, mAllocator),
+          mFramebufferCache(mPlatform->getDevice(),
+                  mPlatform->getCustomization().timeBeforeEvictionFbo),
+          mYcbcrConversionCache(mPlatform->getDevice()),
+          mSamplerCache(mPlatform->getDevice()),
+          mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
+          mReadPixels(mPlatform->getDevice()),
+          mDescriptorSetLayoutCache(mPlatform->getDevice(), &mResourceManager),
+          mDescriptorSetCache(mPlatform->getDevice(), &mResourceManager),
+          mQueryManager(mPlatform->getDevice()),
+          mExternalImageManager(&mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
+                  &mDescriptorSetLayoutCache),
+          mStreamedImageManager(&mExternalImageManager),
+          mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
+          mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
+          mAcquireSwapChainInMakeCurrent(
+                  driverConfig.featureFlagManager
+                          ? driverConfig.featureFlagManager->features.backend.vulkan
+                                    .enable_acquire_swapchain_in_make_current
+                          : false),
+          mStereoscopicType(driverConfig.stereoscopicType),
+          mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
+          mAsynchronousMode(driverConfig.asynchronousMode) {
 
     if (mAsynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
@@ -2349,6 +2359,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             discardEndVal &= ~TargetBufferFlags::STENCIL;
             clearVal &= ~TargetBufferFlags::STENCIL;
         }
+
+        VulkanAttachment& depthStencil = rt->getDepthStencil();
+        if (depthStencil.texture->isTransientAttachment()) {
+            discardEndVal |= TargetBufferFlags::DEPTH_AND_STENCIL;
+        }
+        
         currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
@@ -2377,12 +2393,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
 
 // Assign a label to the framebuffer for debugging purposes.
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS_RENDERPASS_NAME)
     auto const topMarker = mCommands.getTopGroupMarker();
     if (!topMarker.empty()) {
-        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(vkfb),
-                topMarker.c_str());
+        uint64_t fbVk = (uint64_t) vkfb->getVkFramebuffer();
+        uint64_t renderPassVk = (uint64_t) renderPass->getVkRenderPass();
+        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, fbVk, topMarker.c_str());
+        DebugUtils::setName(VK_OBJECT_TYPE_RENDER_PASS, renderPassVk,topMarker.c_str());
     }
+
 #endif
 
     // The current command buffer now has references to the render target and its attachments.

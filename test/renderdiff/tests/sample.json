@@ -1,7 +1,7 @@
 {
     "name": "SampleTest" ,                            // [required]
-    "backends": ["opengl"],                           // [required] Specifies the backend that will be used to render
-                                                      //     this test
+    "renderers": ["desktop-opengl"],                  // [required] Specifies the renderer target that will be used
+                                                      //     to render this test
     "model_search_paths": ["third_party/models"],     // [optional] Base iirectory from which we will glob for
                                                       //     .glb files and try to match against names in the 'models'
                                                       //     field.
