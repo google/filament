@@ -515,6 +515,19 @@ void Engine::compile(CompilerPriorityQueue priority, Material const* material, V
             handler, std::move(callback));
 }
 
+void Engine::compile(
+    CompilerPriorityQueue priority,
+    Material const* material,
+    ViewSettings const& settings,
+    tribool shadowReceiver,
+    tribool skinning,
+    CallbackHandler* handler,
+    Invocable<void(Material*)>&& callback) {
+   downcast(this)->compile(priority, downcast(material), settings,
+                          shadowReceiver, skinning, handler,
+                          std::move(callback));
+}
+
 #if defined(__EMSCRIPTEN__)
 void Engine::resetBackendState() noexcept {
     downcast(this)->resetBackendState();

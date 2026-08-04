@@ -482,3 +482,33 @@ TEST(Material, CompileUnlitMaterialShadowMultiplierWithShadowReceiverEnabled) {
     engine->destroy(material);
     Engine::destroy(engine);
 }
+
+TEST(MaterialCompile, CompileWithViewSettings) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    ASSERT_NE(engine, nullptr);
+
+    Material* material = Material::Builder()
+                                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
+                                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
+                                 .build(*engine);
+    ASSERT_NE(material, nullptr);
+
+    Engine::ViewSettings settings{
+        .hasDirectionalLighting = true,
+        .hasFog = true,
+        .hasStereo = false,
+        .hasPostProcessing = true,
+        .hasDynamicLighting = false,
+        .hasShadowing = true,
+        .shadowType = ShadowType::PCF,
+    };
+
+    // Test with different configurations.
+    engine->compile(backend::CompilerPriorityQueue::HIGH, material, Engine::ViewSettings{});
+    engine->compile(backend::CompilerPriorityQueue::HIGH, material, settings);
+    engine->compile(backend::CompilerPriorityQueue::LOW, material, settings,
+                    utils::tribool(true), utils::tribool(false));
+
+    engine->destroy(material);
+    Engine::destroy(engine);
+}
