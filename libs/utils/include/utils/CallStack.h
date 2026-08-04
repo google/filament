@@ -17,8 +17,9 @@
 #ifndef UTILS_CALLSTACK_H
 #define UTILS_CALLSTACK_H
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/compiler.h>
+#include <utils/sstream.h>
 
 #if defined(FILAMENT_USE_ABSEIL_LOGGING)
 #include <iosfwd>
@@ -96,6 +97,14 @@ public:
 #endif
     template <typename Stream>
     friend Stream& printCallStack(Stream& stream, CallStack const& callstack);
+
+    // make Callstack compatible with Abseil's stringification utilities
+    template<typename Sink>
+    friend void AbslStringify(Sink& sink, CallStack const& callstack) {
+        utils::io::sstream stream;
+        stream << callstack;
+        sink.Append(std::string_view(stream.c_str(), stream.length()));
+    }
 
     bool operator <(const CallStack& rhs) const;
 

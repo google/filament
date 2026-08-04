@@ -342,6 +342,12 @@ public:
         return std::string_view{data(), size()};
     }
 
+    // make CString compatible with Abseil's stringification utilities
+    template<typename Sink>
+    friend void AbslStringify(Sink& sink, CString const& str) {
+        sink.Append(str.c_str_safe());
+    }
+
 private:
     static void do_tracking(bool ctor);
     static void track(bool ctor) {
