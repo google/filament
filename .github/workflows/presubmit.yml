@@ -17,18 +17,18 @@ concurrency:
 # and that commit is cryptographically "verified". Typically, a verified commit (like a GitHub UI
 # squash-and-merge) has already passed through presubmit during the Pull Request phase.
 # The conditional explicitly checks:
-# 1. always() && !cancelled(): Ensures the job runs even if 'check-verification' is skipped, but
-#    aborts if the workflow was manually cancelled.
-# 2. github.event_name == 'pull_request': Presubmits should always run normally on PRs.
-# 3. github.event_name == 'push' && ...: If it's a push to main, it only runs if the
-#    'check-verification' job confirmed the commit is NOT verified.
+# 1. always() && !cancelled(): Ensures the job runs even if 'check-verification' is skipped
+#    (which happens normally on PRs), but aborts if the workflow was manually cancelled.
+# 2. !needs.check-verification.outputs.skip: Evaluates to true when the 'skip' output is empty.
+#    The 'skip' output is only set to 'true' if it's a push to main AND the commit is verified.
+#    In all other cases (including PRs where the job is skipped), it defaults to empty.
 
 jobs:
   check-verification:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      verified: ${{ steps.check.outputs.verified }}
+      skip: ${{ steps.check.outputs.skip }}
     steps:
       - name: Check commit verification
         id: check
@@ -40,22 +40,16 @@ jobs:
               repo: context.repo.repo,
               ref: context.sha
             });
-            core.setOutput('verified', data.commit.verification.verified);
+            if (data.commit.verification.verified) {
+              core.setOutput('skip', 'true');
+            }
 
   build-desktop-mac:
     name: build-mac
     runs-on: 'macos-14-xlarge'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -68,17 +62,9 @@ jobs:
   build-desktop-linux:
     name: build-linux
     runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -95,16 +81,7 @@ jobs:
     name: build-windows
     runs-on: 'windows-2022'
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -117,17 +94,9 @@ jobs:
   build-android:
     name: build-android
     runs-on: 'ubuntu-24.04-8core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -162,17 +131,9 @@ jobs:
   build-ios:
     name: build-iOS
     runs-on: 'macos-14-xlarge'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -190,17 +151,9 @@ jobs:
   build-web:
     name: build-web
     runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -215,16 +168,7 @@ jobs:
     name: validate-docs
     runs-on: 'ubuntu-24.04'
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -238,17 +182,9 @@ jobs:
   test-renderdiff:
     name: test-renderdiff
     runs-on: 'macos-14-xlarge'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -319,17 +255,9 @@ jobs:
   build-wgsl-webgpu:
     name: build-wgsl-webgpu
     runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -343,17 +271,9 @@ jobs:
   test-code-correctness:
     name: test-code-correctness
     runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -371,7 +291,12 @@ jobs:
         run: bash test/code-correctness/clang-tidy-proxy.sh
       - name: Check - public header inclusion
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
+      - name: Get commit message
+        id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
       - name: Check - header organization
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             FILES=()
@@ -392,17 +317,9 @@ jobs:
   test-backend:
     name: test-backend
     runs-on: 'arm-ubuntu-24.04-16core'
+    timeout-minutes: 45
     needs: [check-verification]
-    if: >
-      always() && !cancelled() &&
-      (
-        github.event_name == 'pull_request' ||
-        (
-          github.event_name == 'push' &&
-          needs.check-verification.result == 'success' &&
-          needs.check-verification.outputs.verified == 'false'
-        )
-      )
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
       - uses: actions/checkout@v4.1.6
         with:

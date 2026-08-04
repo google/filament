@@ -417,12 +417,12 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
             if (floatsCount == 0) {
                 continue;
             }
-            
+
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
             }
             const size_t floatsByteCount = sizeof(float) * floatsCount;
-            
+
             float* floatsData = (float*)malloc(floatsByteCount);
             if (!floatsData) {
                 LOG(WARNING) << "Failed to allocate memory for morph target unpacking, skipping.";
@@ -504,12 +504,12 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 if (floatsCount == 0) {
                     continue;
                 }
-                
+
                 if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                     continue;
                 }
                 const size_t floatsByteCount = sizeof(float) * floatsCount;
-                
+
                 float* floatsData = (float*) malloc(floatsByteCount);
                 if (!floatsData) {
                     LOG(WARNING) << "Failed to allocate memory for vertex buffer conversion, skipping.";
@@ -583,20 +583,20 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 capacity = accessor->buffer_view->buffer->size;
                 totalOffset = accessor->buffer_view->offset + accessor->offset;
             }
-            
+
             if (capacity == 0 || totalOffset >= capacity) {
                 continue;
             }
-            
+
             const cgltf_size availableBytes = capacity - totalOffset;
             const cgltf_size stride = accessor->stride;
             const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
-            
+
             cgltf_size maxCount = 0;
             if (stride > 0 && availableBytes >= elementSize) {
                 maxCount = 1 + (availableBytes - elementSize) / stride;
             }
-            
+
             cgltf_size safeCount = accessor->count;
             if (safeCount > maxCount) {
                 LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
@@ -611,7 +611,7 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
             if (floatsCount == 0) {
                 continue;
             }
-            
+
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
             }
@@ -944,9 +944,8 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
 
     // Finally, try the file system.
     else if constexpr (GLTFIO_USE_FILESYSTEM) {
-        utils::slog.w << "gltfio: Auto-loading resources from the filesystem is deprecated. "
-                      << "Please manually load bytes and use ResourceLoader::addResourceData."
-                      << utils::io::endl;
+        LOG(WARNING) << "gltfio: Auto-loading resources from the filesystem is deprecated. "
+                     << "Please manually load bytes and use ResourceLoader::addResourceData.";
         if (auto iter = mFilepathTextureCache[cacheIdx].find(uri);
                 iter != mFilepathTextureCache[cacheIdx].end()) {
             return {iter->second, CacheResult::FOUND};

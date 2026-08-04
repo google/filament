@@ -34,6 +34,7 @@
 
 namespace utils {
 class FeatureFlagManager;
+class InternalDebugRegistry;
 }
 
 namespace filament::backend {
@@ -325,6 +326,11 @@ public:
         utils::FeatureFlagManager const * UTILS_NULLABLE featureFlagManager = nullptr;
 
         /**
+         * Reference to the system's DebugRegistry. Can be nullptr.
+         */
+        utils::InternalDebugRegistry const* UTILS_NULLABLE debugRegistry = nullptr;
+
+        /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.
          */
@@ -332,28 +338,6 @@ public:
 
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
-        /**
-         * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL and Metal backends, and the Vulkan backend
-         * when some experimental features are enabled.
-         */
-        bool disableParallelShaderCompile = false;
-
-        /**
-         * Set to `true` to forcibly disable amortized shader compilation in the backend.
-         * Currently only honored by the GL backend.
-         */
-        bool disableAmortizedShaderCompile = true;
-
-        /**
-         * Disable backend handles use-after-free checks.
-         */
-        bool disableHandleUseAfterFreeCheck = false;
-
-        /**
-         * Disable backend handles tags for heap allocated (fallback) handles
-         */
-        bool disableHeapHandleTags = false;
 
         /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
@@ -372,12 +356,6 @@ public:
          */
         uint8_t stereoscopicEyeCount = 2;
 
-        /**
-         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
-         * This is only supported for:
-         *      - PlatformEGLAndroid
-         */
-        bool assertNativeWindowIsValid = false;
 
         /**
          * The action to take if a Drawable cannot be acquired. If true, the
@@ -392,24 +370,6 @@ public:
          *      - PlatformEGL
          */
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
-
-        /**
-         * Enables asynchronous pipeline cache preloading, if supported on this device.
-         * This is only supported for:
-         *      - VulkanPlatform
-         * When the following device extensions are available:
-         *      - VK_KHR_dynamic_rendering
-         *      - VK_EXT_vertex_input_dynamic_state
-         * Should be enabled only for devices where it has been shown this is effective.
-         */
-        bool vulkanEnableAsyncPipelineCachePrewarming = false;
-
-        /**
-         * Bypass the staging buffer because the device is of Unified Memory Architecture.
-         * This is only supported for:
-         *      - VulkanPlatform
-         */
-        bool vulkanEnableStagingBufferBypass = false;
 
         /**
          * Asynchronous mode for the engine. Defines how asynchronous operations are handled.

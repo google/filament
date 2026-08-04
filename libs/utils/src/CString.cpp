@@ -163,6 +163,12 @@ io::ostream& operator<<(io::ostream& out, const CString& rhs) {
 }
 #endif
 
+#if defined(FILAMENT_USE_ABSEIL_LOGGING)
+std::ostream& operator<<(std::ostream& out, const CString& rhs) {
+    return out << rhs.c_str_safe();
+}
+#endif
+
 namespace {
 
 // use a C-style variadic function to avoid code bloat from templates

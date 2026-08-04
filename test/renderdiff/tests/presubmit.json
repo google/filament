@@ -1,6 +1,6 @@
 {
     "name": "presubmit",
-    "backends": ["opengl", "vulkan", "webgpu"],
+    "renderers": ["desktop-opengl", "desktop-vulkan", "desktop-webgpu"],
     "model_search_paths": ["third_party/models", "gltf"],
     "presets": [
         {
@@ -84,8 +84,8 @@
             "name": "Bloom",
             "description": "Bloom",
             "apply_presets": ["base", "bloom_models"],
-            // Do not include "webgpu" in the following backend since it is flaky (b/454921221)
-            "backends": ["opengl", "vulkan"],
+            // Do not include "desktop-webgpu" in the following backend since it is flaky (b/454921221)
+            "renderers": ["desktop-opengl", "desktop-vulkan"],
             "rendering": {
                 "view.bloom.enabled": true
             }
@@ -101,8 +101,8 @@
         {
             "name": "Transimssion",
             "description": "transmission",
-            // Disable transmission for webgpu because it seems flaky (b/488070152)
-            "backends": ["opengl", "vulkan"],
+            // Disable transmission for desktop-webgpu because it seems flaky (b/488070152)
+            "renderers": ["desktop-opengl", "desktop-vulkan"],
             "apply_presets": ["base", "transmission_models"],
             "rendering": {
                 "camera.focalLength": 52.0
@@ -130,8 +130,6 @@
         {
             "name": "SSR",
             "description": "Screen space reflections",
-            // Do not include "webgpu" since it is flaky (b/454921221)
-            "backends": ["opengl", "vulkan"],
             "apply_presets": ["base", "ssr_models"],
             "rendering": {
                 "view.screenSpaceReflections.enabled": true

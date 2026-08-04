@@ -15,6 +15,7 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
 #include "generated/resources/gltf_demo.h"
 
@@ -30,9 +31,8 @@
 #include <gltfio/TextureProvider.h>
 
 #include <filamentapp/AssetLoader.h>
-#include <filamentapp/Config.h>
 #include <filamentapp/DesktopAssetLoader.h>
-#include <filamentapp/FilamentApp.h>
+#include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 
 #include <filagui/ImGuiExtensions.h>
@@ -94,9 +94,10 @@ enum MaterialSource {
 };
 
 struct App {
+    std::unique_ptr<FilamentApp2> filamentApp;
     Engine* engine;
     ViewerGui* viewer;
-    Config config;
+    SampleConfig config;
     Camera* mainCamera;
     Entity rootTransformEntity;
 
@@ -331,14 +332,14 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             }
             case 'x': {
-                app->config.displayManager = Config::DisplayManager::WEB;
+                app->config.displayManager = SampleConfig::DisplayManager::WEB;
                 app->config.headless = true;
                 break;
             }
         }
     }
     if (app->config.headless && app->batchFile.empty() &&
-            app->config.displayManager != Config::DisplayManager::WEB) {
+            app->config.displayManager != SampleConfig::DisplayManager::WEB) {
         std::cerr << "--headless is allowed only when --batch is present." << std::endl;
         app->config.headless = false;
     }
@@ -615,7 +616,7 @@ int main(int argc, char** argv) {
     App app;
 
     app.config.title = "Filament";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
+    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + DEFAULT_IBL;
 
     int const optionIndex = handleCommandLineArguments(argc, argv, &app);
 
@@ -684,7 +685,7 @@ int main(int argc, char** argv) {
     };
 
     auto setupIBL = [&app]() {
-        auto ibl = FilamentApp::get().getIBL();
+        auto ibl = app.filamentApp->getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
             app.viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
@@ -932,7 +933,7 @@ int main(int argc, char** argv) {
                 ImGui::Indent();
                 ImGui::Text("%zu entities in the asset", app.asset->getEntityCount());
                 ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
-                ImGui::Text("%zu skipped frames", FilamentApp::get().getSkippedFrameCount());
+                ImGui::Text("%zu skipped frames", app.filamentApp->getSkippedFrameCount());
                 ImGui::Unindent();
             }
 
@@ -1000,13 +1001,13 @@ int main(int argc, char** argv) {
                     }
                 }
 
-                bool cameraFrustum = FilamentApp::get().isCameraFrustumEnabled();
+                bool cameraFrustum = app.filamentApp->isCameraFrustumEnabled();
                 ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
-                FilamentApp::get().setCameraFrustumEnabled(cameraFrustum);
+                app.filamentApp->setCameraFrustumEnabled(cameraFrustum);
 
-                bool shadowFrustum = FilamentApp::get().isDirectionalShadowFrustumEnabled();
+                bool shadowFrustum = app.filamentApp->isDirectionalShadowFrustumEnabled();
                 ImGui::Checkbox("Show Shadow Frustum", &shadowFrustum);
-                FilamentApp::get().setDirectionalShadowFrustumEnabled(shadowFrustum);
+                app.filamentApp->setDirectionalShadowFrustumEnabled(shadowFrustum);
 
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
@@ -1014,7 +1015,7 @@ int main(int argc, char** argv) {
                     ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
                     debug.setProperty("d.lighting.debug_froxel_visualization",
                             debugFroxelVisualization);
-                    FilamentApp::get().setFroxelGridEnabled(debugFroxelVisualization);
+                    app.filamentApp->setFroxelGridEnabled(debugFroxelVisualization);
                 }
 
                 auto dataSource = debug.getDataSource("d.view.frame_info");
@@ -1152,7 +1153,7 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine*, View*) {
         app.viewer->updateUserInterface();
 
-        FilamentApp::get().setSidebarWidth(app.viewer->getSidebarWidth());
+        app.filamentApp->setSidebarWidth(app.viewer->getSidebarWidth());
     };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
@@ -1164,7 +1165,7 @@ int main(int argc, char** argv) {
 
         engine->setAutomaticInstancingEnabled(viewerOptions.autoInstancingEnabled);
 
-        if (auto* swapChain = FilamentApp::get().getPrimarySwapChain()) {
+        if (auto* swapChain = app.filamentApp->getPrimarySwapChain()) {
             if (swapChain->isFrameRateChangeSupported().is_true()) {
                 if (viewerOptions.cameraFrameRate != app.currentFrameRate) {
                     swapChain->setFrameRate(viewerOptions.cameraFrameRate,
@@ -1184,8 +1185,8 @@ int main(int argc, char** argv) {
                                   std::max(0.1f, focusDistance)) *
                           1000.0;
         }
-        FilamentApp::get().setCameraFocalLength(focalLength);
-        FilamentApp::get().setCameraNearFar(app.viewer->getSettings().camera.near,
+        app.filamentApp->setCameraFocalLength(focalLength);
+        app.filamentApp->setCameraNearFar(app.viewer->getSettings().camera.near,
                 app.viewer->getSettings().camera.far);
 
         size_t const cameraCount = app.asset->getCameraEntityCount();
@@ -1208,7 +1209,7 @@ int main(int argc, char** argv) {
         static bool stereoscopicEnabled = false;
         if (stereoscopicEnabled != view->getStereoscopicOptions().enabled) {
             // Stereo was turned on/off.
-            FilamentApp::get().reconfigureCameras();
+            app.filamentApp->reconfigureCameras();
             stereoscopicEnabled = view->getStereoscopicOptions().enabled;
         }
 
@@ -1266,7 +1267,7 @@ int main(int argc, char** argv) {
             app.screenshot = false;
         }
         if (app.automationEngine->shouldClose()) {
-            FilamentApp::get().close();
+            app.filamentApp->close();
             return;
         }
         AutomationEngine::ViewerContent const content = {
@@ -1283,34 +1284,49 @@ int main(int argc, char** argv) {
         };
         app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .iblDirectory(app.config.iblDirectory)
+                              .splitView(app.config.splitView)
+                              .backend(app.config.backend)
+                              .featureLevel(app.config.featureLevel)
+                              .cameraMode(app.config.cameraMode)
+                              .headless(app.config.headless)
+                              .stereoscopicEyeCount(app.config.stereoscopicEyeCount)
+                              .vulkanGPUHint(app.config.vulkanGPUHint)
+                              .forcedWebGPUBackend(app.config.forcedWebGPUBackend)
+                              .configDisplayManager(static_cast<FilamentApp2::DisplayManager>(
+                                      app.config.displayManager))
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .imgui(gui)
+                              .preRender(preRender)
+                              .postRender(postRender)
+                              .animation(animate)
+                              .resize(resize)
+                              .dropHandler([&](std::string_view path) {
+                                  utils::Path filename = getPathForGLTFAsset(path);
+                                  if (!filename.isEmpty()) {
+                                      if (checkGLTFAsset(filename)) {
+                                          app.resourceLoader->asyncCancelLoad();
+                                          app.resourceLoader->evictResourceData();
+                                          app.viewer->removeAsset();
+                                          app.assetLoader->destroyAsset(app.asset);
+                                          loadAsset(filename);
+                                          loadResources(filename);
+                                          app.viewer->setAsset(app.asset, app.instance);
+                                      }
+                                      return;
+                                  }
 
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.animate(animate);
-    filamentApp.resize(resize);
-
-    filamentApp.setDropHandler([&](std::string_view path) {
-        utils::Path filename = getPathForGLTFAsset(path);
-        if (!filename.isEmpty()) {
-            if (checkGLTFAsset(filename)) {
-                app.resourceLoader->asyncCancelLoad();
-                app.resourceLoader->evictResourceData();
-                app.viewer->removeAsset();
-                app.assetLoader->destroyAsset(app.asset);
-                loadAsset(filename);
-                loadResources(filename);
-                app.viewer->setAsset(app.asset, app.instance);
-            }
-            return;
-        }
-
-        filename = getPathForIBLAsset(path);
-        if (!filename.isEmpty()) {
-            FilamentApp::get().loadIBL(path);
-            setupIBL();
-        }
-    });
-
-    filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);
+                                  filename = getPathForIBLAsset(path);
+                                  if (!filename.isEmpty()) {
+                                      app.filamentApp->loadIBL(path);
+                                      setupIBL();
+                                  }
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

@@ -47,6 +47,8 @@
 #include <backend/platforms/WebGPUPlatform.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <private/utils/FeatureFlagManager.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/debug.h>
@@ -107,19 +109,24 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverCon
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
         const Platform::DriverConfig& driverConfig) noexcept
-    : DriverBase(driverConfig),
-      mPlatform{ platform },
-      mAdapter{ mPlatform.requestAdapter(nullptr) },
-      mDevice{ mPlatform.requestDevice(mAdapter) },
-      mQueueManager{ mDevice },
-      mStagePool{ mDevice },
-      mPipelineLayoutCache{ mDevice },
-      mPipelineCache{ mDevice },
-      mRenderPassMipmapGenerator{ mDevice, &mQueueManager },
-      mSpdComputePassMipmapGenerator{ mDevice },
-      mBlitter{ mDevice },
-      mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
-          driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags }{
+        : DriverBase(driverConfig),
+          mPlatform{ platform },
+          mAdapter{ mPlatform.requestAdapter(nullptr) },
+          mDevice{ mPlatform.requestDevice(mAdapter) },
+          mQueueManager{ mDevice },
+          mStagePool{ mDevice },
+          mPipelineLayoutCache{ mDevice },
+          mPipelineCache{ mDevice },
+          mRenderPassMipmapGenerator{ mDevice, &mQueueManager },
+          mSpdComputePassMipmapGenerator{ mDevice },
+          mBlitter{ mDevice },
+          mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
+              (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                         .disable_handle_use_after_free_check
+                                               : false),
+              (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                         .disable_heap_handle_tags
+                                               : false) } {
     mDevice.GetLimits(&mDeviceLimits);
 }
 

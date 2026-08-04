@@ -6,7 +6,7 @@ configuration: Release
 before_build:
   - echo running cmake...
   - cd test
-  - cmake -G "Visual Studio 12 Win64" -Bbuild -H.
+  - cmake -G "Visual Studio 12 Win64" -Bbuild -H..
 
 build:
   parallel: true

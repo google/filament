@@ -129,7 +129,6 @@ set(SRCS
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
-        src/details/DebugRegistry.cpp
         src/details/Engine.cpp
         src/details/Fence.cpp
         src/details/FramePacer.cpp

@@ -1,0 +1,5 @@
+# Reference material fetched by ../scripts/fetch_ocio_ref.sh for tocio validation.
+# These are external upstream repos / release artifacts — never commit them,
+# and they are deliberately NOT git submodules.
+*
+!.gitignore

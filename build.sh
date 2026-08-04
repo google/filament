@@ -85,6 +85,8 @@ function print_help {
     echo "        (debug|release|none) is meant to indicate the type of build of the resulting prebuilts,"
     echo "        or 'none' to disable the split build."
     echo "        Defaults to 'release' (tools are always prebuilt as release unless overridden)."
+    echo "    -D"
+    echo "        Build Android Markdown documentation using Dokka."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -186,6 +188,8 @@ ABI_GRADLE_OPTION="all"
 
 ISSUE_ARCHIVES=false
 BUILD_JS_DOCS=false
+BUILD_DOKKA_DOCS=false
+PLATFORM_SPECIFIED=false
 
 ISSUE_CMAKE_ALWAYS=false
 
@@ -894,7 +898,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
+while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
     case ${opt} in
         h)
             print_help
@@ -940,6 +944,7 @@ while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
             BUILD_COMMAND="make"
             ;;
         p)
+            PLATFORM_SPECIFIED=true
             ISSUE_DESKTOP_BUILD=false
             platforms=$(echo "${OPTARG}" | tr ',' '\n')
             for platform in ${platforms}
@@ -1071,6 +1076,9 @@ while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
             ;;
         X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
             ;;
+        D)
+            BUILD_DOKKA_DOCS=true
+            ;;
         y)
             SPLIT_BUILD_TYPE=${OPTARG}
             case $(echo "${SPLIT_BUILD_TYPE}" | tr '[:upper:]' '[:lower:]') in
@@ -1103,7 +1111,7 @@ while getopts ":hacCfgimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
     esac
 done
 
-if [[ "$#" == "0" ]]; then
+if [[ "$#" == "0" ]] && [[ "${BUILD_DOKKA_DOCS}" != "true" ]]; then
     print_help
     exit 1
 fi
@@ -1119,6 +1127,11 @@ for arg; do
         BUILD_CUSTOM_TARGETS="${BUILD_CUSTOM_TARGETS} ${arg}"
     fi
 done
+
+# Prevent building desktop if only docs are requested.
+if [[ "${BUILD_DOKKA_DOCS}" == "true" ]] && [[ "${PLATFORM_SPECIFIED}" != "true" ]]; then
+    ISSUE_DESKTOP_BUILD=false
+fi
 
 validate_build_command
 
@@ -1154,6 +1167,13 @@ fi
 
 if [[ "${ISSUE_WASM_BUILD}" == "true" ]]; then
     check_debug_release_build build_wasm
+fi
+
+if [[ "${BUILD_DOKKA_DOCS}" == "true" ]]; then
+    echo "Generating Android Markdown documentation using Dokka..."
+    pushd android > /dev/null
+    ./gradlew filament-android:dokkaGfm
+    popd > /dev/null
 fi
 
 if [[ "${PRINT_MATDBG_HELP}" == "true" ]]; then

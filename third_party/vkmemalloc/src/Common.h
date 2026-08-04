@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2026 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -280,8 +280,8 @@ struct MyUniformRandomNumberGenerator
 {
     typedef uint32_t result_type;
     MyUniformRandomNumberGenerator(RandomNumberGenerator& gen) : m_Gen(gen) { }
-    static uint32_t min() { return 0; }
-    static uint32_t max() { return UINT32_MAX; }
+    static constexpr uint32_t min() { return 0; }
+    static constexpr uint32_t max() { return UINT32_MAX; }
     uint32_t operator()() { return m_Gen.Generate(); }
 
 private:

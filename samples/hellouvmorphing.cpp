@@ -15,7 +15,11 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
+#include "generated/resources/resources.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -34,17 +38,11 @@
 #include <filament/Viewport.h>
 
 #include <utils/EntityManager.h>
+#include <utils/getopt.h>
 #include <utils/Path.h>
 
-#include <utils/getopt.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
-#include <vector>
 #include <iostream>
-
-#include "generated/resources/resources.h"
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;
@@ -58,7 +56,8 @@ struct Vertex {
 };
 
 struct App {
-    Config config;
+    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
     VertexBuffer* vb = nullptr;
     IndexBuffer* ib = nullptr;
     Material* mat = nullptr;
@@ -312,19 +311,26 @@ int main(int argc, char** argv) {
         EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        constexpr float ZOOM = 2.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float)w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM, aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
 
-        auto& rm = engine->getRenderableManager();
-        float weight = (sin(now * 2.0) + 1.0f) * 0.5f;
-        rm.setMorphWeights(rm.getInstance(app.renderable), &weight, 1);
-    });
+    app.filamentApp = FilamentApp2::Builder()
+                              .title(app.config.title)
+                              .backend(app.config.backend)
+                              .setup(setup)
+                              .cleanup(cleanup)
+                              .animation([&app](Engine* engine, View* view, double now) {
+                                  constexpr float ZOOM = 2.5f;
+                                  const uint32_t w = view->getViewport().width;
+                                  const uint32_t h = view->getViewport().height;
+                                  const float aspect = (float) w / h;
+                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                          aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
 
-    FilamentApp::get().run(app.config, setup, cleanup);
+                                  auto& rm = engine->getRenderableManager();
+                                  float weight = (sin(now * 2.0) + 1.0f) * 0.5f;
+                                  rm.setMorphWeights(rm.getInstance(app.renderable), &weight, 1);
+                              })
+                              .build();
+    app.filamentApp->run();
 
     return 0;
 }

@@ -208,3 +208,6 @@ if __name__ == "__main__":
 
   import copy_web_docs
   copy_web_docs.run()
+
+  import copy_dokka_docs
+  copy_dokka_docs.run()

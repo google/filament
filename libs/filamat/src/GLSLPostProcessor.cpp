@@ -48,7 +48,6 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -66,8 +65,6 @@ namespace filamat {
 using namespace utils;
 
 namespace msl {  // this is only used for MSL
-
-using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
 #ifndef DEBUG_LOG_DESCRIPTOR_SETS
 #define DEBUG_LOG_DESCRIPTOR_SETS 0
@@ -281,6 +278,63 @@ static void collectDescriptorSets(const GLSLPostProcessor::Config& config, Descr
 }
 
 } // namespace msl
+
+namespace {
+
+void rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) {
+    constexpr size_t HEADER_SIZE = 5;
+    size_t const dataSize = spirv.size();
+    uint32_t *data = spirv.data();
+
+    std::set<uint32_t> samplerTargetIDs;
+
+    auto pass = [&](uint32_t targetOp, std::function<void(uint32_t)> f) {
+        for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
+            uint32_t const firstWord = data[cursor];
+            uint32_t const wordCount = firstWord >> 16;
+            uint32_t const op = firstWord & 0x0000FFFF;
+            if (targetOp == op) {
+                f(cursor + 1);
+            }
+            cursor += wordCount;
+        }
+    };
+
+    // Parse through debug name info to determine which bindings are samplers and which are not.
+    //  This is possible because the sampler splitting pass outputs sampler and texture pairs of the
+    //  form: `uniform sampler2D var_x` => `uniform sampler var_sampler` and `uniform texture2D
+    //  var_texture`;
+    //  TODO: This works, but may limit what optimizations can be done and has the potential to
+    //  collide with user variable names. Ideally, trace usage to determine binding type.
+    constexpr char const* SAMPLER_POSTFIX = "_sampler";
+    uint8_t const SAMPLER_POSTFIX_LEN = strlen(SAMPLER_POSTFIX);
+
+    pass(spv::Op::OpName, [&](uint32_t pos) {
+        auto target = data[pos];
+        char* name = (char*) &data[pos + 1];
+        std::string_view view(name);
+        // _sampler must appear as the end of the var name
+        if (auto pos = view.find(SAMPLER_POSTFIX);
+                (pos != std::string_view::npos && pos + SAMPLER_POSTFIX_LEN == view.size())) {
+            samplerTargetIDs.insert(target);
+        }
+    });
+
+    // Write out the offset bindings: sampler = 2 * id + 1 and texture = 2 * id.
+    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
+        uint32_t const type = data[pos + 1];
+        if (type == spv::Decoration::DecorationBinding) {
+            uint32_t const targetVar = data[pos];
+            if (samplerTargetIDs.find(targetVar) != samplerTargetIDs.end()) {
+                data[pos + 2] = data[pos + 2] * 2 + 1;
+            } else {
+                data[pos + 2] = data[pos + 2] * 2;
+            }
+        }
+    });
+}
+
+} // anonymous
 
 GLSLPostProcessor::GLSLPostProcessor(
         MaterialBuilder::Optimization optimization,
@@ -515,91 +569,19 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     }
 }
 
-void GLSLPostProcessor::rebindImageSamplerForWGSL(std::vector<uint32_t> &spirv) {
-    constexpr size_t HEADER_SIZE = 5;
-    size_t const dataSize = spirv.size();
-    uint32_t *data = spirv.data();
-
-    std::set<uint32_t> samplerTargetIDs;
-
-    auto pass = [&](uint32_t targetOp, std::function<void(uint32_t)> f) {
-        for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
-            uint32_t const firstWord = data[cursor];
-            uint32_t const wordCount = firstWord >> 16;
-            uint32_t const op = firstWord & 0x0000FFFF;
-            if (targetOp == op) {
-                f(cursor + 1);
-            }
-            cursor += wordCount;
-        }
-    };
-
-    //Parse through debug name info to determine which bindings are samplers and which are not.
-    // This is possible because the sampler splitting pass outputs sampler and texture pairs of the form:
-    // `uniform sampler2D var_x` => `uniform sampler var_sampler` and `uniform texture2D var_texture`;
-    // TODO: This works, but may limit what optimizations can be done and has the potential to collide with user
-    // variable names. Ideally, trace usage to determine binding type.
-    pass(spv::Op::OpName, [&](uint32_t pos) {
-        auto target = data[pos];
-        char *name = (char *) &data[pos + 1];
-        std::string_view view(name);
-        if (view.find("_sampler") != std::string_view::npos) {
-            samplerTargetIDs.insert(target);
-        }
-    });
-
-    // Write out the offset bindings
-    pass(spv::Op::OpDecorate, [&](uint32_t pos) {
-        uint32_t const type = data[pos + 1];
-        if (type == spv::Decoration::DecorationBinding) {
-            uint32_t const targetVar = data[pos];
-            if (samplerTargetIDs.find(targetVar) != samplerTargetIDs.end()) {
-                data[pos + 2] = data[pos + 2] * 2 + 1;
-            } else {
-                data[pos + 2] = data[pos + 2] * 2;
-            }
-        }
-    });
-}
-
-bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
-#if FILAMENT_SUPPORTS_WEBGPU
-    //We need to run some opt-passes at all times to transpile to WGSL
+bool GLSLPostProcessor::spirvToWgsl(SpirvBlob* spirv, std::string* outWsl) {
+#ifdef FILAMENT_SUPPORTS_WEBGPU
+    // We need to run some opt-passes at all times to transpile to WGSL
     auto optimizer = createEmptyOptimizer();
     optimizer->RegisterPass(CreateSplitCombinedImageSamplerPass());
     optimizeSpirv(optimizer, *spirv);
 
-    //After splitting the image samplers, we need to remap the bindings to separate them.
+    // After splitting the image samplers, we need to remap the bindings to separate them.
     rebindImageSamplerForWGSL(*spirv);
 
-    //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
-    const tint::spirv::reader::Options readerOpts{};
-
-    auto tintReadResult = tint::spirv::reader::ReadIR(*spirv, readerOpts);
-    tint::SuccessType tintSuccess;
-
-    if (tintReadResult != tintSuccess) {
-        //We know errors can potentially crop up, and want the ability to ignore them if needed for sample bringup
-        slog.e << "Tint Reader Error ---- : " << tintReadResult.Failure().reason << io::endl;
-        spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
-        spv_text text = nullptr;
-        spv_diagnostic diagnostic = nullptr;
-        spv_result_t result = spvBinaryToText(
-            context,
-            spirv->data(),
-            spirv->size(),
-            SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_COLOR,
-            &text,
-            &diagnostic);
-        slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n" << text->str << "\n\nEndSPIRV\n" <<
-                io::endl;
-        spvTextDestroy(text);
-
-        spvContextDestroy(context);
-        return false;
-    }
-
-    tint::wgsl::writer::Options writerOptions;
+    // Allow non-uniform derivatives due to our nested shaders. See
+    // https://github.com/gpuweb/gpuweb/issues/3479
+    ::tint::wgsl::writer::Options writerOptions;
     // Allow non-uniform derivatives and disable unreachable code warnings.
     // Dawn/Tint strictly validates uniform control flow (e.g. calling `textureSampleCompare`
     // or derivatives). Filament materials often use uniform variables (e.g. from UBOs) in
@@ -608,17 +590,30 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     // the underlying UBO conditionals are uniform across the draw call.
     writerOptions.allow_non_uniform_derivatives = true;
     writerOptions.disable_unreachable_code_warning = true;
-    writerOptions.allowed_features.extensions.insert(tint::wgsl::Extension::kClipDistances);
+    // clipdistance is used with instancing-based stereo
+    writerOptions.allowed_features.extensions.insert(::tint::wgsl::Extension::kClipDistances);
+    // webgpu immediates are push constants
     writerOptions.allowed_features.features.insert(
-            tint::wgsl::LanguageFeature::kImmediateAddressSpace);
-    tint::Result<tint::wgsl::writer::Output> wgslOut =
-            tint::wgsl::writer::WgslFromIR(tintReadResult.Get(), writerOptions);
+            ::tint::wgsl::LanguageFeature::kImmediateAddressSpace);
 
-    if (wgslOut != tintSuccess) {
-        slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
+    ::tint::Result<std::string> wgslOut = ::tint::SpirvToWgsl(*spirv, writerOptions);
+
+    if (wgslOut != ::tint::Success) {
+        slog.e << "Tint error ---- : " << wgslOut.Failure().reason << io::endl;
+        spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
+        spv_text text = nullptr;
+        spv_diagnostic diagnostic = nullptr;
+        spv_result_t result = spvBinaryToText(context, spirv->data(), spirv->size(),
+                SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_COLOR, &text,
+                &diagnostic);
+        slog.e << "Beginning SpirV-output dump with ret " << result << "\n\n"
+               << text->str << "\n\nEndSPIRV\n"
+               << io::endl;
+        spvTextDestroy(text);
+        spvContextDestroy(context);
         return false;
     }
-    *outWsl = wgslOut->wgsl;
+    *outWsl = wgslOut.Get();
     return true;
 #else
     slog.i << "Trying to emit WGSL without including WebGPU dependencies,"
@@ -626,11 +621,11 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
             << io::endl;
     return false;
 #endif
-
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
-                                std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl, std::string* outputWgsl) {
+        std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl,
+        std::string* outputWgsl) {
     using TargetLanguage = MaterialBuilder::TargetLanguage;
 
     if (config.targetLanguage == TargetLanguage::GLSL &&
@@ -962,7 +957,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
                     ext != "GL_OES_EGL_image_external" &&
                     ext != "GL_EXT_shader_framebuffer_fetch" &&
                     ext != "GL_EXT_shader_framebuffer_fetch_non_coherent") {
-                    slog.e << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". " 
+                    slog.e << "ERROR: Feature Level 0 shaders cannot require: " << ext << ". "
                            << "spirv-cross attempted to unilaterally inject it." << io::endl;
                     return false;
                 }

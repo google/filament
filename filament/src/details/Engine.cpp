@@ -139,32 +139,21 @@ utils::CString getPortString(std::string_view serviceType) {
 #endif // FILAMENT_ENABLE_FGVIEWER || FILAMENT_ENABLE_MATDBG
 
 Platform::DriverConfig getDriverConfig(FEngine* instance) {
-    Platform::DriverConfig const driverConfig {
+    Platform::DriverConfig const driverConfig{
         .featureFlagManager = instance,
+        .debugRegistry = &instance->getDebugRegistry().internalRegistry,
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
-        .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
-        .disableAmortizedShaderCompile =
-                instance->features.backend.disable_amortized_shader_compile,
-        .disableHandleUseAfterFreeCheck =
-                instance->features.backend.disable_handle_use_after_free_check,
-        .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
         .forceGLES2Context = instance->getConfig().forceGLES2Context,
         .stereoscopicType = instance->getConfig().stereoscopicType,
         .stereoscopicEyeCount = instance->getConfig().stereoscopicEyeCount,
-        .assertNativeWindowIsValid =
-                instance->features.backend.opengl.assert_native_window_is_valid,
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
-        .vulkanEnableAsyncPipelineCachePrewarming =
-                instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
-        .vulkanEnableStagingBufferBypass =
-                instance->features.backend.vulkan.enable_staging_buffer_bypass,
-        .asynchronousMode = instance->features.backend.enable_asynchronous_operation ?
-                instance->getConfig().asynchronousMode : AsynchronousMode::NONE,
+        .asynchronousMode = instance->features.backend.enable_asynchronous_operation
+                                    ? instance->getConfig().asynchronousMode
+                                    : AsynchronousMode::NONE,
     };
-
     return driverConfig;
 }
 
@@ -353,6 +342,11 @@ FEngine::FEngine(Builder const& builder) :
 
     LOG(INFO) << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
               << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)");
+
+    // Backend debug flags
+    // Must be registered before the driver thread starts.
+    mDebugRegistry.registerProperty("d.vulkan.debug_utils_names",
+            &debug.vulkan.enable_debug_utils_names);
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {

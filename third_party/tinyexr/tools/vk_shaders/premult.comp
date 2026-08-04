@@ -1,0 +1,9 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) buffer B { float buf[]; };
+layout(push_constant) uniform PC { uint n,ch,ac,undo; } p;
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; uint base=i*p.ch; float a=buf[base+p.ac];
+  if(p.undo==0u){ for(uint c=0u;c<p.ch;c++) if(c!=p.ac) buf[base+c]*=a; }
+  else { if(a!=0.0){ float ia=1.0/a; for(uint c=0u;c<p.ch;c++) if(c!=p.ac) buf[base+c]*=ia; } }
+}

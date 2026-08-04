@@ -25,6 +25,9 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <private/utils/FeatureFlagManager.h>
+#include <private/utils/InternalDebugRegistry.h>
+
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -42,7 +45,7 @@ using ExtensionSet = VulkanPlatform::ExtensionSet;
 
 inline bool setContains(ExtensionSet const& set, utils::CString const& extension) {
     return set.find(extension) != set.end();
-};
+}
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 // These strings need to be allocated outside a function stack
@@ -169,15 +172,13 @@ void printDepthFormats(VkPhysicalDevice device) {
 }
 #endif
 
-ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = {}) {
+ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = {},
+        bool enableDebugUtils = false) {
     ExtensionSet const TARGET_EXTS = {
         // Request all cross-platform extensions.
         VK_KHR_SURFACE_EXTENSION_NAME,
 
-        // Request these if available.
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
+    // Request these if available.
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 #endif
@@ -200,38 +201,42 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = 
             continue;
         }
 
-        if (setContains(TARGET_EXTS, name) || setContains(externallyRequiredExts, name)) {
+        if (setContains(TARGET_EXTS, name) || setContains(externallyRequiredExts, name) ||
+                (enableDebugUtils && name == VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
             exts.insert(name);
         }
     }
     return exts;
 }
 
-ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
+ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils = false) {
     ExtensionSet const TARGET_EXTS = {
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-        VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
-        // We only support external image for Android for now, but nothing bars us from
-        // supporting other platforms.
+    // We only support external image for Android for now, but nothing bars us from
+    // supporting other platforms.
 #if defined(__ANDROID__)
+
+        // Required for external images
         VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
-        VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
-        VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
-        VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
-        // This is needed for external images.  See VulkanPlatformAndroid
         VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME,
+        VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
+        VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+        VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
+
+        // External samplers
+        VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
 #endif
         // MoltenVk is the only non-conformant implementation we're interested in.
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
-        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
+
+        // Required for dynamic rendering
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-        // Required for dynamic rendering, enable this too.
+        VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
         VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
+        VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
+
         VK_KHR_GLOBAL_PRIORITY_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
@@ -253,7 +258,8 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
             continue;
         }
 
-        if (setContains(TARGET_EXTS, name)) {
+        if (setContains(TARGET_EXTS, name) ||
+                (enableDebugUtils && name == VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
             exts.insert(name);
         }
     }
@@ -268,13 +274,11 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
     ExtensionSet newInstExts = instExts;
     ExtensionSet newDeviceExts = deviceExts;
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // debugUtils and debugMarkers extensions are used mutually exclusively.
     if (setContains(newInstExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) &&
-            setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+            setContains(newDeviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
-#endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // debugMarker must also request debugReport the instance extension. So check if that's present.
@@ -558,13 +562,21 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mSharedContext = true;
     }
 
+    bool enableDebugUtils = false;
+    bool enableDebugUtilsNames = false;
+    if (driverConfig.debugRegistry &&
+            driverConfig.debugRegistry->hasProperty("d.vulkan.debug_utils_names")) {
+        driverConfig.debugRegistry->getProperty("d.vulkan.debug_utils_names", &enableDebugUtilsNames);
+        enableDebugUtils = enableDebugUtils || enableDebugUtilsNames;
+    }
+
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
         // This constains instance extensions that are required for the platform, which includes
         // swapchain surface extensions.
         auto const& swapchainExts = getSwapchainInstanceExtensions();
-        instExts = getInstanceExtensions(swapchainExts);
+        instExts = getInstanceExtensions(swapchainExts, enableDebugUtils);
 
 #if defined(FILAMENT_SUPPORTS_XCB) && defined(FILAMENT_SUPPORTS_XLIB)
         // For the special case where we're on linux and both xcb and xlib are "required", then we
@@ -605,7 +617,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // If a shared context is not used, we will use our own provided list; otherwise, we do not
     // assume any extensions.
     if (!mImpl->mSharedContext) {
-        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice, enableDebugUtils);
         auto [prunedInstExts, prunedDeviceExts] =
                 pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
         instExts = prunedInstExts;
@@ -614,6 +626,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     // Query all the supported physical device features and enable/disable any feature as needed
     queryAndSetDeviceFeatures(driverConfig, instExts, deviceExts, sharedContext);
+
+    mImpl->mContext.mDebugUtilsNamesEnabled = enableDebugUtilsNames;
 
     VulkanContext const& context = mImpl->mContext;
 
@@ -683,12 +697,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         vkGetDeviceQueue2(mImpl->mDevice, &info, &mImpl->mProtectedGraphicsQueue);
         assert_invariant(mImpl->mProtectedGraphicsQueue != VK_NULL_HANDLE);
     }
-
-#ifdef NDEBUG
-    // If we are in release build, we should not have turned on debug extensions
-    FILAMENT_CHECK_POSTCONDITION(!context.mDebugUtilsSupported && !context.mDebugMarkersSupported)
-            << "Debug utils should not be enabled in release build.";
-#endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     printDepthFormats(mImpl->mPhysicalDevice);
@@ -1003,11 +1011,10 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     // Store the extension support in the context
     if (sharedContext) {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
-        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugUtilsEnabled = scontext->debugUtilsEnabled;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
     } else {
-        context.mDebugUtilsSupported =
-                setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.mDebugUtilsEnabled = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =
                 setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         context.mPipelineCreationFeedbackSupported =
@@ -1018,9 +1025,18 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     }
 
     // Pass along relevant driver config (feature flags)
-    context.mAsyncPipelineCachePrewarmingEnabled = driverConfig.vulkanEnableAsyncPipelineCachePrewarming;
-    context.mParallelShaderCompileDisabled = driverConfig.disableParallelShaderCompile;
-    context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
+    context.mAsyncPipelineCachePrewarmingEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_pipeline_cache_prewarming
+                                             : false);
+    context.mParallelShaderCompileDisabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
+                                                       .disable_parallel_shader_compile
+                                             : false);
+    context.mStagingBufferBypassEnabled =
+            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
+                                                       .enable_staging_buffer_bypass
+                                             : false);
 
     // We know we need to allocate the protected version of the VK objects
     context.mProtectedMemorySupported =
