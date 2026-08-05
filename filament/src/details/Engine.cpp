@@ -19,7 +19,6 @@
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
 #include "TextureCache.h"
-#include "../../../libs/viewer/include/viewer/Settings.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -156,6 +155,119 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
                                     : AsynchronousMode::NONE,
     };
     return driverConfig;
+}
+
+Engine::ViewSettings extractViewSettings(const FView* view) noexcept {
+    return Engine::ViewSettings {
+        .hasDirectionalLighting = view->hasDirectionalLighting(),
+        .hasFog = view->hasFog(),
+        .hasStereo = view->hasStereo(),
+        .hasPostProcessing = view->hasPostProcessPass(),
+        .hasDynamicLighting = view->hasDynamicLighting(),
+        .hasShadowing = view->hasShadowing(),
+        .shadowType = view->getShadowType()
+    };
+}
+
+FixedCapacityVector<Variant> getMaterialCompileVariants(
+    FMaterial const* material,
+    Engine::ViewSettings const& settings,
+    tribool const shadowReceiver,
+    tribool const skinning) noexcept {
+
+    // the maximum possible is 6 variants (4 color + 2 depth)
+    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
+
+    // apply() iteratively expands the `variants` vector by mutating existing elements
+    // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
+    //
+    // @param start   The index in `variants` to begin the operation.
+    // @param value   The tribool state (false, true, or indeterminate) of the feature.
+    // @param setter  A pointer to a member function of Variant that sets the feature bit.
+    auto apply = [&variants](size_t const start, tribool const value, auto setter) {
+        if (value.is_indeterminate()) {
+            size_t const count = variants.size();
+            for (size_t i = start; i < count; ++i) {
+                // To maintain permutations, we first grab a copy of the variant
+                Variant v = variants[i];
+                // Mutate the original in-place for the `false` state
+                (variants[i].*setter)(false);
+                // Set the `true` state on our copy and push it as a new permutation
+                (v.*setter)(true);
+                variants.push_back(v);
+            }
+        } else {
+            // The feature is statically known, so just mutate all existing elements in-place
+            bool const b = value.is_true();
+            for (size_t i = start; i < variants.size(); ++i) {
+                (variants[i].*setter)(b);
+            }
+        }
+    };
+
+    // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
+    Variant baseVariant{};
+    baseVariant.setDirectionalLighting(isMaterialLit && settings.hasDirectionalLighting);
+    // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
+    baseVariant.setDynamicLighting(false);
+    baseVariant.setFog(settings.hasFog);
+    baseVariant.setShadowSampler2D(isMaterialLit && settings.hasShadowing && (settings.shadowType != ShadowType::PCF));
+    baseVariant.setStereo(settings.hasStereo);
+
+    variants.push_back(baseVariant);
+    apply(0, skinning, &Variant::setSkinning);
+    // Only respect shadowReceiver variant when the shading model is lit or hasShadowMultiplier.
+    if (isMaterialLit) {
+        apply(0, shadowReceiver, &Variant::setShadowReceiver);
+    } else {
+        apply(0, tribool(false), &Variant::setShadowReceiver);
+    }
+
+    Variant depthVariant{};
+    if (isMaterialLit && settings.hasShadowing) {
+        // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+        depthVariant.setDepthMoments(settings.shadowType == ShadowType::VSM);
+    }
+    if (settings.hasPostProcessing) {
+        // This is needed if we're going to generate the structure pass. That is however very hard to tell
+        // because the logic exists only in the FrameGraph. For now, we assume that if postFx is enabled, we'll
+        // need the depth variant.
+        depthVariant = Variant{Variant::DEPTH_VARIANT};
+    }
+
+    if (Variant::isValidDepthVariant(depthVariant)) {
+        // if we have a valid depth variant, add the stereo and skinning bits
+        depthVariant.setStereo(settings.hasStereo);
+
+        size_t const depthStart = variants.size();
+        variants.push_back(depthVariant);
+        apply(depthStart, skinning, &Variant::setSkinning);
+    }
+
+    return variants;
+}
+
+FixedCapacityVector<Variant> getMaterialCompileVariants(
+        FView const* view,
+        FMaterial const* material,
+        tribool const shadowReceiver,
+        tribool const skinning) noexcept {
+    return getMaterialCompileVariants(material, extractViewSettings(view), shadowReceiver, skinning);
+}
+
+FixedCapacityVector<DynamicSpecConstKey> getMaterialCompileDynamicSpecConstKey(
+        bool hasDynamicLighting, FMaterial const* material) noexcept {
+    // Will add more as we turn more variants into spec constants
+    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
+    DynamicSpecConstKey baseKey;
+    const bool isMaterialLit = material->getDefinition().isVariantLit;
+    baseKey.setDynamicLighting(isMaterialLit && hasDynamicLighting);
+
+    keys.push_back(baseKey);
+
+    return keys;
 }
 
 } // anonymous
@@ -1741,119 +1853,6 @@ std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
 
 bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
     return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
-}
-
-Engine::ViewSettings FEngine::extractViewSettings(const FView* view) noexcept {
-    return ViewSettings {
-        .hasDirectionalLighting = view->hasDirectionalLighting(),
-        .hasFog = view->hasFog(),
-        .hasStereo = view->hasStereo(),
-        .hasPostProcessing = view->hasPostProcessPass(),
-        .hasDynamicLighting = view->hasDynamicLighting(),
-        .hasShadowing = view->hasShadowing(),
-        .shadowType = view->getShadowType()
-    };
-}
-
-FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
-    FMaterial const* material,
-    ViewSettings const& settings,
-    tribool const shadowReceiver,
-    tribool const skinning) noexcept {
-
-    // the maximum possible is 6 variants (4 color + 2 depth)
-    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
-
-    // apply() iteratively expands the `variants` vector by mutating existing elements
-    // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
-    //
-    // @param start   The index in `variants` to begin the operation.
-    // @param value   The tribool state (false, true, or indeterminate) of the feature.
-    // @param setter  A pointer to a member function of Variant that sets the feature bit.
-    auto apply = [&variants](size_t const start, tribool const value, auto setter) {
-        if (value.is_indeterminate()) {
-            size_t const count = variants.size();
-            for (size_t i = start; i < count; ++i) {
-                // To maintain permutations, we first grab a copy of the variant
-                Variant v = variants[i];
-                // Mutate the original in-place for the `false` state
-                (variants[i].*setter)(false);
-                // Set the `true` state on our copy and push it as a new permutation
-                (v.*setter)(true);
-                variants.push_back(v);
-            }
-        } else {
-            // The feature is statically known, so just mutate all existing elements in-place
-            bool const b = value.is_true();
-            for (size_t i = start; i < variants.size(); ++i) {
-                (variants[i].*setter)(b);
-            }
-        }
-    };
-
-    // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
-    const bool isMaterialLit = material->getDefinition().isVariantLit;
-    Variant baseVariant{};
-    baseVariant.setDirectionalLighting(isMaterialLit && settings.hasDirectionalLighting);
-    // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
-    baseVariant.setDynamicLighting(false);
-    baseVariant.setFog(settings.hasFog);
-    baseVariant.setShadowSampler2D(isMaterialLit && settings.hasShadowing && (settings.shadowType != ShadowType::PCF));
-    baseVariant.setStereo(settings.hasStereo);
-
-    variants.push_back(baseVariant);
-    apply(0, skinning, &Variant::setSkinning);
-    // Only respect shadowReceiver variant when the shading model is lit or hasShadowMultiplier.
-    if (isMaterialLit) {
-        apply(0, shadowReceiver, &Variant::setShadowReceiver);
-    } else {
-        apply(0, tribool(false), &Variant::setShadowReceiver);
-    }
-
-    Variant depthVariant{};
-    if (isMaterialLit && settings.hasShadowing) {
-        // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
-        depthVariant = Variant{Variant::DEPTH_VARIANT};
-        depthVariant.setDepthMoments(settings.shadowType == ShadowType::VSM);
-    }
-    if (settings.hasPostProcessing) {
-        // This is needed if we're going to generate the structure pass. That is however very hard to tell
-        // because the logic exists only in the FrameGraph. For now, we assume that if postFx is enabled, we'll
-        // need the depth variant.
-        depthVariant = Variant{Variant::DEPTH_VARIANT};
-    }
-
-    if (Variant::isValidDepthVariant(depthVariant)) {
-        // if we have a valid depth variant, add the stereo and skinning bits
-        depthVariant.setStereo(settings.hasStereo);
-
-        size_t const depthStart = variants.size();
-        variants.push_back(depthVariant);
-        apply(depthStart, skinning, &Variant::setSkinning);
-    }
-
-    return variants;
-}
-
-FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
-        FView const* view,
-        FMaterial const* material,
-        tribool const shadowReceiver,
-        tribool const skinning) noexcept {
-    return getMaterialCompileVariants(material, extractViewSettings(view), shadowReceiver, skinning);
-}
-
-FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
-        bool hasDynamicLighting, FMaterial const* material) noexcept {
-    // Will add more as we turn more variants into spec constants
-    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
-    DynamicSpecConstKey baseKey;
-    const bool isMaterialLit = material->getDefinition().isVariantLit;
-    baseKey.setDynamicLighting(isMaterialLit && hasDynamicLighting);
-
-    keys.push_back(baseKey);
-
-    return keys;
 }
 
 void FEngine::compile(

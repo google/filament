@@ -623,21 +623,6 @@ public:
         backend::CallbackHandler* handler = nullptr,
         utils::Invocable<void(Material*)>&& callback = {});
 
-    static ViewSettings extractViewSettings(const FView* view) noexcept;
-
-    static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
-        FMaterial const* material, ViewSettings const& settings, utils::tribool shadowReceiver,
-        utils::tribool skinning) noexcept;
-
-    static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
-        FView const* view,
-        FMaterial const* material,
-        utils::tribool shadowReceiver,
-        utils::tribool skinning) noexcept;
-
-    static utils::FixedCapacityVector<DynamicSpecConstKey> getMaterialCompileDynamicSpecConstKey(
-        bool hasDynamicLighting, FMaterial const* material) noexcept;
-
 private:
     explicit FEngine(Builder const& builder);
     void init();
