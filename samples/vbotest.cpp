@@ -61,13 +61,14 @@ static void setCameraProjection(App* app, View* view) {
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "vbotest";
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+    samples::handleCommandLineArguments(argc, argv, &config);
 
     // Aggregate positions and colors into a single buffer without interleaving.
     std::vector<uint8_t> vbo(sizeof(POSITIONS) + sizeof(COLORS));
     memcpy(vbo.data(), POSITIONS, sizeof(POSITIONS));
     memcpy(vbo.data() + sizeof(POSITIONS), COLORS, sizeof(COLORS));
 
+    auto dm = samples::getDisplayManager(config);
     App app;
     auto setup = [&app, &vbo](Engine* engine, View* view, Scene* scene) {
         // Populate vertex buffer.
@@ -109,20 +110,17 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-
     app.filamentApp =
             FilamentApp2::Builder()
+                    .displayManager(dm.get())
                     .title(config.title)
                     .backend(config.backend)
                     .configDisplayManager(
                             static_cast<FilamentApp2::DisplayManager>(config.displayManager))
                     .setup(setup)
                     .cleanup(cleanup)
-                    .imgui({})
                     .preRender([](Engine*, View*, Scene*, Renderer* renderer) {
-                        Renderer::ClearOptions options;
-                        options.clear = true;
-                        renderer->setClearOptions(options);
+                        renderer->setClearOptions({ .clear = true });
                     })
                     .resize([&app](Engine* engine, View* view) { setCameraProjection(&app, view); })
                     .build();

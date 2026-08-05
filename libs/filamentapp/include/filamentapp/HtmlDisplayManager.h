@@ -47,7 +47,8 @@ public:
     void* getNativeWindow(FilamentApp2::Window::Handle window) const override;
 
     void setWindowTitle(FilamentApp2::Window::Handle window, const char* title) override;
-    void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w, uint32_t* h) const override;
+    void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
+            uint32_t* h) const override;
     void getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
             uint32_t* h) const override;
 
