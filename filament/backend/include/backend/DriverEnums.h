@@ -155,7 +155,7 @@ enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
-constexpr std::string_view to_string(FeatureLevel level) noexcept {
+[[nodiscard]] constexpr std::string_view to_string(FeatureLevel level) noexcept {
     switch (level) {
         case FeatureLevel::FEATURE_LEVEL_0:
             return "FEATURE_LEVEL_0";
@@ -220,7 +220,7 @@ enum class ShaderLanguage {
     WGSL = 5,
 };
 
-constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
+[[nodiscard]] constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
     switch (shaderLanguage) {
         case ShaderLanguage::ESSL1:
             return "ESSL 1.0";
@@ -240,24 +240,9 @@ constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
     return "UNKNOWN";
 }
 
+// DEPRECATED: use to_string(ShaderLanguage)
 constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noexcept {
-    switch (shaderLanguage) {
-        case ShaderLanguage::ESSL1:
-            return "ESSL 1.0";
-        case ShaderLanguage::ESSL3:
-            return "ESSL 3.0";
-        case ShaderLanguage::SPIRV:
-            return "SPIR-V";
-        case ShaderLanguage::MSL:
-            return "MSL";
-        case ShaderLanguage::METAL_LIBRARY:
-            return "Metal precompiled library";
-        case ShaderLanguage::WGSL:
-            return "WGSL";
-        case ShaderLanguage::UNSPECIFIED:
-            return "Unspecified";
-    }
-    return "UNKNOWN";
+    return to_string(shaderLanguage).data();
 }
 
 enum class ShaderStage : uint8_t {
