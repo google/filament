@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- web: expand JS bindings coverage for View and Material getters, TextureSampler accessors, the ToneMapper hierarchy, integer material parameters, and other previously unbound APIs
