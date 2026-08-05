@@ -48,9 +48,11 @@
 #include <EGL/eglext.h>
 #include <jni.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <mutex>
 #include <new>
@@ -68,6 +70,11 @@
 // the minimum for Jetpack at the time of this comment.
 #if __ANDROID_API__ < 19
 #   error "__ANDROID_API__ must be at least 19"
+#endif
+
+// Fallback for NDKs older than API 28.
+#ifndef AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE
+#define AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE 0x4000000ULL
 #endif
 
 using namespace utils;
@@ -472,6 +479,19 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
         AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
+
+        // A complete chain runs down to 1x1: floor(log2(max(w,h))) + 1 levels.
+        // ilogbf() reads the float exponent directly, so it is exact; floor(log2(...)) would
+        // depend on log2() being correctly rounded, which is not guaranteed (e.g. log2(1024.0f)
+        // may compute as 9.9999999f, yielding one level too few). Mirrors
+        // FTexture::maxLevelCount().
+        if (hardwareBufferDescription.usage & AHARDWAREBUFFER_USAGE_GPU_MIPMAP_COMPLETE) {
+            uint32_t const maxDimension = std::max(p->width, p->height);
+            p->mipLevels = uint8_t(std::max(1, std::ilogbf(float(maxDimension)) + 1));
+        } else {
+            p->mipLevels = 1;
+        }
+
         auto const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
         // Only set sRGB as true if the filament format requires it, otherwise the eglCreateImage might fail.
         p->sRGB = textureFormat == TextureFormat::SRGB8 || textureFormat == TextureFormat::SRGB8_A8;
@@ -496,6 +516,22 @@ PlatformEGLAndroid::ExternalImageDescAndroid PlatformEGLAndroid::getExternalImag
     metadata.format = eglExternalImage->format;
     metadata.usage = eglExternalImage->usage;
     return metadata;
+}
+
+uint8_t PlatformEGLAndroid::getExternalImageMipLevels(
+        ExternalImageHandleRef externalImage) const noexcept {
+    // Importing a full mip chain requires glEGLImageTargetTexStorageEXT. Check the extension
+    // string as well as the entry point, because eglGetProcAddress() may return a non-null
+    // pointer for a function the driver doesn't actually support.
+    // Note: PlatformEGLAndroid declares its own `ext`, which hides PlatformEGL's, so the base
+    // class member has to be named explicitly here.
+    if (!PlatformEGL::ext.gl.EXT_EGL_image_storage ||
+            glEGLImageTargetTexStorageEXT == nullptr) {
+        return 1;
+    }
+    auto const* const img =
+            static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
+    return img ? img->mipLevels : 1;
 }
 
 bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
@@ -572,10 +608,27 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         glBindTexture(GL_TEXTURE_2D, prevTexture);
         return false;
     }
-    glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
+    // Use the level count the driver sized the texture for -- it is the only decision maker,
+    // so the imported levels and the texture's GL_TEXTURE_MAX_LEVEL can never disagree. It is
+    // > 1 only if getExternalImageMipLevels() reported a chain, which requires the extension.
+    bool const mipmapped = texture->levels > 1;
+    if (mipmapped) {
+        // mipmapped external textures cannot use GL_TEXTURE_EXTERNAL_OES, the driver only
+        // reports levels > 1 for a GL_TEXTURE_2D import.
+        assert_invariant(texture->target == GL_TEXTURE_2D);
+        // glEGLImageTargetTexStorageEXT establishes immutable storage covering the entire mip
+        // chain present in the EGLImage in a single call.
+        glEGLImageTargetTexStorageEXT(texture->target, static_cast<GLeglImageOES>(eglImage),
+                /*attrib_list=*/nullptr);
+    } else {
+        glEGLImageTargetTexture2DOES(texture->target, static_cast<GLeglImageOES>(eglImage));
+    }
     error = glGetError();
     if (UTILS_UNLIKELY(error != GL_NO_ERROR)) {
-        LOG(ERROR) << "Error after glEGLImageTargetTexture2DOES: " << error;
+        LOG(ERROR) << "Error after "
+                   << (mipmapped ? "glEGLImageTargetTexStorageEXT"
+                                 : "glEGLImageTargetTexture2DOES")
+                   << ": " << error;
         glDeleteTextures(1, &texture->id);
         eglDestroyImageKHR(eglGetCurrentDisplay(), eglImage);
         glActiveTexture(prevActiveTexture);

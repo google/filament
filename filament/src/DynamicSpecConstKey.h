@@ -21,8 +21,6 @@
 
 #include <filament/MaterialEnums.h>
 
-#include <utils/Slice.h>
-
 #include <array>
 
 namespace filament {
@@ -42,7 +40,6 @@ struct DynamicSpecConstKey {
 
     static constexpr type_t DYNAMIC_LIGHTING = 0x1;
 
-    static utils::Slice<const DynamicSpecConstKey> getAllPossibleKeys() noexcept;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -98,7 +95,32 @@ struct DynamicSpecConstKey {
         }
         return specKey;
     }
+
+    struct ValidKeys;
+
+    [[nodiscard]] static constexpr ValidKeys getValidKeys(Variant const variant,
+            MaterialDomain const materialDomain, bool const isLit) noexcept;
 };
+
+struct DynamicSpecConstKey::ValidKeys {
+    std::array<DynamicSpecConstKey, DYNAMIC_SPEC_CONST_KEY_COUNT> keys{};
+    uint8_t size = 0;
+
+    constexpr DynamicSpecConstKey const* begin() const noexcept { return keys.data(); }
+    constexpr DynamicSpecConstKey const* end() const noexcept { return keys.data() + size; }
+};
+
+inline constexpr DynamicSpecConstKey::ValidKeys DynamicSpecConstKey::getValidKeys(
+        Variant const variant, MaterialDomain const materialDomain, bool const isLit) noexcept {
+    ValidKeys result{};
+    for (size_t i = 0; i < DYNAMIC_SPEC_CONST_KEY_COUNT; ++i) {
+        DynamicSpecConstKey const specKey{ static_cast<type_t>(i) };
+        if (isValidProgramSpecKey(variant, specKey, materialDomain, isLit)) {
+            result.keys[result.size++] = specKey;
+        }
+    }
+    return result;
+}
 
 } // namespace filament
 
