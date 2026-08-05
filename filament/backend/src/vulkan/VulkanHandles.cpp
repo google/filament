@@ -321,6 +321,9 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     auto& rpkey = mInfo->rpkey;
     rpkey.samples = samples;
     rpkey.depthStencilFormat = depthStencil.getFormat();
+    // TODO: This specifies the multiview view count, but we could have a case where the viewcount
+    // and the layercount are not necessarily the same (imagine rendering to a layer of a 2D array
+    // but not in the multiview context.)
     rpkey.viewCount = layerCount;
 
     auto& fbkey = mInfo->fbkey;
@@ -483,12 +486,12 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
         bool const isDepth = attachment.isDepth();
         auto texture = attachment.texture;
         if (isDepth) {
-            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT);
+            texture->setLayout(range, VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
             if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }
         } else {
-            texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
+            texture->setLayout(range, VulkanLayout::COLOR_ATTACHMENT);
             if (texture->isSampleable() &&
                     !texture->transitionLayout(&commands, range, VulkanLayout::FRAG_READ)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
