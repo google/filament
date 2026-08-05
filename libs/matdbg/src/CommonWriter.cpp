@@ -46,7 +46,6 @@ std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept
         }
 
         if (variant.key & Variant::DIR) variantString += "DIR|";
-        if (variant.key & Variant::DYN) variantString += "DYN|";
         if (variant.key & Variant::SRE) variantString += "SRE|";
         if (variant.key & Variant::SKN) variantString += "SKN|";
         if (variant.key & Variant::DEP) variantString += "DEP|";

@@ -119,7 +119,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
 
     // --------------------------------------------------------------------------------------------
-    // Dynamic Lighting [variant: DYN]
+    // Dynamic Lighting (controlled via dynamic specialization constants)
     // --------------------------------------------------------------------------------------------
     math::float4 zParams;                       // froxel Z parameters
     math::uint3 fParams;                        // stride-x, stride-y, stride-z
