@@ -156,10 +156,11 @@ protected:
 
     struct ExternalImageEGLAndroid : public ExternalImageEGL {
         AHardwareBuffer* aHardwareBuffer = nullptr;
-        uint32_t width;      // Texture width
-        uint32_t height;     // Texture height
-        TextureFormat format;// Texture format
-        TextureUsage usage;  // Texture usage flags
+        uint32_t width;         // Texture width
+        uint32_t height;        // Texture height
+        uint8_t mipLevels = 1;  // Number of mip levels in the AHB (1 if not mipmap-complete)
+        TextureFormat format;   // Texture format
+        TextureUsage usage;     // Texture usage flags
         bool sRGB = false;
 
     protected:
@@ -170,6 +171,9 @@ protected:
             ExternalTexture* texture) noexcept override;
     bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
             ExternalTexture* texture) noexcept;
+
+    uint8_t getExternalImageMipLevels(
+            ExternalImageHandleRef externalImage) const noexcept override;
 
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,

@@ -730,6 +730,7 @@ void PlatformEGL::initializeGlExtensions() noexcept {
     if (extensions) {
         GLUtils::unordered_string_set const glExtensions = GLUtils::split(extensions);
         ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
+        ext.gl.EXT_EGL_image_storage = glExtensions.has("GL_EXT_EGL_image_storage");
     }
 }
 
