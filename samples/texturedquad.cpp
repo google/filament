@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -51,7 +52,8 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -80,155 +82,126 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage("TEXTUREDQUAD renders a textured quad moving back and forth in a loop\n"
-                      "Usage:\n"
-                      "    TEXTUREDQUAD [options]\n"
-                      "Options:\n"
-                      "   --help, -h\n"
-                      "       Prints this message\n\n"
-                      "API_USAGE");
-    const std::string from("TEXTUREDQUAD");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-static int handleCommandLineArguments(int argc, char* argv[], SampleConfig& config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help", utils::getopt::no_argument, nullptr, 'h' },
-        { "api", utils::getopt::required_argument, nullptr, 'a' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "texturedquad";
-    handleCommandLineArguments(argc, argv, config);
-
-    App app;
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         // Load texture
         Path path = FilamentApp2::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
         if (!path.exists()) {
-            std::cerr << "The texture " << path << " does not exist" << std::endl;
+            std::cerr << "The texture " << path.c_str() << " does not exist" << std::endl;
             exit(1);
         }
         int w, h, n;
         unsigned char* data = stbi_load(path.c_str(), &w, &h, &n, 4);
         if (data == nullptr) {
-            std::cerr << "The texture " << path << " could not be loaded" << std::endl;
+            std::cerr << "The texture " << path.c_str() << " could not be loaded" << std::endl;
             exit(1);
         }
         std::cout << "Loaded texture: " << w << "x" << h << std::endl;
         Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
                 Texture::Format::RGBA, Texture::Type::UBYTE,
                 (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
-        app.tex = Texture::Builder()
-                .width(uint32_t(w))
-                .height(uint32_t(h))
-                .levels(1)
-                .sampler(Texture::Sampler::SAMPLER_2D)
-                .format(Texture::InternalFormat::RGBA8)
-                .build(*engine);
-                app.tex->setImage(*engine, 0, std::move(buffer));
+        app->tex = Texture::Builder()
+                           .width(uint32_t(w))
+                           .height(uint32_t(h))
+                           .levels(1)
+                           .sampler(Texture::Sampler::SAMPLER_2D)
+                           .format(Texture::InternalFormat::RGBA8)
+                           .build(*engine);
+        app->tex->setImage(*engine, 0, std::move(buffer));
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
         // Set up view
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-        scene->setSkybox(app.skybox);
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+        scene->setSkybox(app->skybox);
 
         view->setPostProcessingEnabled(false);
-        app.camera = utils::EntityManager::get().create();
-        app.cam = engine->createCamera(app.camera);
-        view->setCamera(app.cam);
+        app->camera = utils::EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
+        view->setCamera(app->cam);
 
         // Create quad renderable
         static_assert(sizeof(Vertex) == 16, "Strange vertex size.");
-        app.vb = VertexBuffer::Builder()
-                .vertexCount(4)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
-                .build(*engine);
-        app.vb->setBufferAt(*engine, 0,
+        app->vb = VertexBuffer::Builder()
+                          .vertexCount(4)
+                          .bufferCount(1)
+                          .attribute(VertexAttribute::POSITION, 0,
+                                  VertexBuffer::AttributeType::FLOAT2, 0, 16)
+                          .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2,
+                                  8, 16)
+                          .build(*engine);
+        app->vb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(QUAD_VERTICES, 64, nullptr));
-        app.ib = IndexBuffer::Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(QUAD_INDICES, 12, nullptr));
-        app.mat = Material::Builder()
-                .package(RESOURCES_BAKEDTEXTURE_DATA, RESOURCES_BAKEDTEXTURE_SIZE)
-                .build(*engine);
-        app.matInstance = app.mat->createInstance();
-        app.matInstance->setParameter("albedo", app.tex, sampler);
-        app.renderable = EntityManager::get().create();
+        app->ib = IndexBuffer::Builder()
+                          .indexCount(6)
+                          .bufferType(IndexBuffer::IndexType::USHORT)
+                          .build(*engine);
+        app->ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(QUAD_INDICES, 12, nullptr));
+        app->mat = Material::Builder()
+                           .package(RESOURCES_BAKEDTEXTURE_DATA, RESOURCES_BAKEDTEXTURE_SIZE)
+                           .build(*engine);
+        app->matInstance = app->mat->createInstance();
+        app->matInstance->setParameter("albedo", app->tex, sampler);
+        app->renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.matInstance)
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 6)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->matInstance)
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 6)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .build(*engine, app.renderable);
-        scene->addEntity(app.renderable);
+                .build(*engine, app->renderable);
+        scene->addEntity(app->renderable);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.skybox);
-        engine->destroy(app.renderable);
-        engine->destroy(app.matInstance);
-        engine->destroy(app.mat);
-        engine->destroy(app.tex);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->renderable);
+        engine->destroy(app->matInstance);
+        engine->destroy(app->mat);
+        engine->destroy(app->tex);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
 
-        engine->destroyCameraComponent(app.camera);
-        utils::EntityManager::get().destroy(app.camera);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
     };
 
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(config.title)
-                              .backend(config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  const float zoom = 2.0 + 2.0 * sin(now);
-                                  const uint32_t w = view->getViewport().width;
-                                  const uint32_t h = view->getViewport().height;
-                                  const float aspect = (float) w / h;
-                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * zoom,
-                                          aspect * zoom, -zoom, zoom, -1, 1);
-                              })
-                              .build();
-    app.filamentApp->run();
+    auto fApp = FilamentApp2::Builder()
+                        .displayManager(dm)
+                        .title(app->config.title)
+                        .backend(app->config.backend)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            const float zoom = 2.0 + 2.0 * sin(now);
+                            const uint32_t w = view->getViewport().width;
+                            const uint32_t h = view->getViewport().height;
+                            const float aspect = (float) w / h;
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * zoom,
+                                    aspect * zoom, -zoom, zoom, -1, 1);
+                        })
+                        .build();
+
+    app->filamentApp = fApp.get();
+
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "texturedquad";
+    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
 
     return 0;
 }
+#endif

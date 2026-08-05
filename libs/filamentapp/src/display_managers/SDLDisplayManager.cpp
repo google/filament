@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#include "SDLDisplayManager.h"
-
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/NativeWindowHelper.h>
+#include <filamentapp/SDLDisplayManager.h>
 
 #include <utils/Panic.h>
 

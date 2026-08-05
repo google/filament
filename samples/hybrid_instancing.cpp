@@ -39,6 +39,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -182,7 +183,7 @@ struct Emitter {
 
 // Holds all the state for this application.
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
 
     struct UiState {
@@ -221,8 +222,7 @@ struct App {
 // Function Declarations
 // ------------------------------------------------------------------------------------------------
 
-static void printUsage(char* name);
-static int handleCommandLineArguments(int argc, char* argv[], App* app);
+
 static void doUserInterface(App& app);
 static void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition);
 static void setupSkybox(Engine& engine, Scene& scene, App& app);
@@ -238,19 +238,22 @@ static void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager
 // Main
 // ------------------------------------------------------------------------------------------------
 
-int main(int const argc, char** argv) {
-    App app;
-    app.config.title = "Hybrid Instancing";
-    handleCommandLineArguments(argc, argv, &app);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+    if (config.customArgs.find("emitters") != config.customArgs.end()) {
+        app->ui.emitterCount = atoi(config.customArgs["emitters"].c_str());
+    }
 
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.scene = scene;
-        setupSkybox(*engine, *scene, app);
-        setupGroundPlane(*engine, *scene, app);
-        setupMoonlight(*engine, *scene, app);
-        createEmitterResources(*engine, app);
-        createEmitterInstances(*engine, *scene, app);
-        app.currentEmitterCount = app.ui.emitterCount;
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->scene = scene;
+        setupSkybox(*engine, *scene, *app);
+        setupGroundPlane(*engine, *scene, *app);
+        setupMoonlight(*engine, *scene, *app);
+        createEmitterResources(*engine, *app);
+        createEmitterInstances(*engine, *scene, *app);
+        app->currentEmitterCount = app->ui.emitterCount;
 
         view->getCamera().setExposure(CAMERA_EXPOSURE_APERTURE, CAMERA_EXPOSURE_SHUTTER_SPEED,
                 CAMERA_EXPOSURE_SENSITIVITY);
@@ -259,88 +262,126 @@ int main(int const argc, char** argv) {
         view->setBloomOptions({ .enabled = true });
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
         // Destroy all the Filament objects that we created.
-        for (auto const& emitter: app.emitters) {
+        for (auto const& emitter: app->emitters) {
             engine->destroy(emitter.renderable);
             engine->destroy(emitter.instanceBuffer);
             engine->destroy(emitter.materialInstance);
         }
-        engine->destroy(app.moonlight);
-        engine->destroy(app.groundPlane);
-        engine->destroy(app.groundMi);
-        engine->destroy(app.groundMaterial);
-        engine->destroy(app.groundVb);
-        engine->destroy(app.groundIb);
-        engine->destroy(app.skybox);
-        engine->destroy(app.material);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
+        engine->destroy(app->moonlight);
+        engine->destroy(app->groundPlane);
+        engine->destroy(app->groundMi);
+        engine->destroy(app->groundMaterial);
+        engine->destroy(app->groundVb);
+        engine->destroy(app->groundIb);
+        engine->destroy(app->skybox);
+        engine->destroy(app->material);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
     };
 
-    auto animate = [&app](Engine* engine, View*, double const now) {
+    auto animate = [app](Engine* engine, View*, double const now) {
         auto& lm = engine->getLightManager();
 
         // Toggle moonlight
-        auto const moonlightInstance = lm.getInstance(app.moonlight);
-        lm.setIntensity(moonlightInstance, app.ui.moonlightEnabled ? MOONLIGHT_INTENSITY : 0.0f);
+        auto const moonlightInstance = lm.getInstance(app->moonlight);
+        lm.setIntensity(moonlightInstance, app->ui.moonlightEnabled ? MOONLIGHT_INTENSITY : 0.0f);
 
         // Handle emitter count changes from the UI.
-        if (app.ui.emitterCount != app.currentEmitterCount) {
-            for (auto const& emitter: app.emitters) {
+        if (app->ui.emitterCount != app->currentEmitterCount) {
+            for (auto const& emitter: app->emitters) {
                 engine->destroy(emitter.renderable);
                 engine->destroy(emitter.instanceBuffer);
                 engine->destroy(emitter.materialInstance);
             }
-            app.emitters.clear();
-            createEmitterInstances(*engine, *app.scene, app);
-            app.currentEmitterCount = app.ui.emitterCount;
-            if (app.ui.emitterMode == App::EmitterMode::FIREWORKS) {
-                setupFireworks(app);
+            app->emitters.clear();
+            createEmitterInstances(*engine, *app->scene, *app);
+            app->currentEmitterCount = app->ui.emitterCount;
+            if (app->ui.emitterMode == App::EmitterMode::FIREWORKS) {
+                setupFireworks(*app);
             }
         }
 
         // If fireworks mode has just been enabled, set up the emitters for it.
-        if (app.ui.emitterMode == App::EmitterMode::FIREWORKS &&
-            app.previousFireworksMode == false) {
-            setupFireworks(app);
+        if (app->ui.emitterMode == App::EmitterMode::FIREWORKS &&
+                app->previousFireworksMode == false) {
+            setupFireworks(*app);
         }
-        app.previousFireworksMode = (app.ui.emitterMode == App::EmitterMode::FIREWORKS);
+        app->previousFireworksMode = (app->ui.emitterMode == App::EmitterMode::FIREWORKS);
 
         // Calculate the time delta since the last frame.
-        double dt = now - app.lastTime;
-        if (app.lastTime == 0.0) {
+        double dt = now - app->lastTime;
+        if (app->lastTime == 0.0) {
             dt = 1.0 / 60.0; // First frame
         }
-        app.lastTime = now;
+        app->lastTime = now;
 
         auto& tcm = engine->getTransformManager();
         std::mt19937 gen(static_cast<unsigned int>(now * 1000));
 
         // Animate each emitter and its particles.
-        for (auto& emitter: app.emitters) {
-            animateEmitter(emitter, tcm, lm, now, dt, gen, app);
+        for (auto& emitter: app->emitters) {
+            animateEmitter(emitter, tcm, lm, now, dt, gen, *app);
         }
     };
 
-    auto imgui = [&app](Engine*, View*) {
-        doUserInterface(app);
+    auto imgui = [app](Engine*, View*) { doUserInterface(*app); };
+
+
+    auto fApp = FilamentApp2::Builder()
+                        .title(app->config.title)
+                        .displayManager(dm)
+                        .backend(app->config.backend)
+                        .cameraMode(app->config.cameraMode)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(imgui)
+                        .animation(animate)
+                        .build();
+    app->filamentApp = fApp.get();
+
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Hybrid Instancing";
+    static constexpr const char* CUSTOM_OPTSTR = "e:c:";
+    static const utils::getopt::option CUSTOM_OPTIONS[] = {
+        { "emitters", utils::getopt::required_argument, nullptr, 'e' },
+        { "camera", utils::getopt::required_argument, nullptr, 'c' }, { nullptr, 0, nullptr, 0 }
     };
-
-
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(app.config.title)
-                              .backend(app.config.backend)
-                              .cameraMode(app.config.cameraMode)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .imgui(imgui)
-                              .animation(animate)
-                              .build();
-    app.filamentApp->run();
-
+    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
+        switch (opt) {
+            case 'e':
+                config.customArgs["emitters"] = utils::CString(arg.c_str());
+                return true;
+            case 'c':
+                if (arg == "flight") {
+                    config.cameraMode = filament::camutils::Mode::FREE_FLIGHT;
+                } else if (arg == "orbit") {
+                    config.cameraMode = filament::camutils::Mode::ORBIT;
+                } else {
+                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
+                }
+                return true;
+        }
+        return false;
+    };
+    int optind = samples::handleCommandLineArguments(argc, argv, &config,
+            {
+                .customHandler = customHandler,
+                .customOptStr = CUSTOM_OPTSTR,
+                .customOptions = CUSTOM_OPTIONS,
+            });
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif
 
 // ------------------------------------------------------------------------------------------------
 // Helper functions
@@ -371,73 +412,7 @@ void doUserInterface(App& app) {
 }
 
 // Prints command-line usage information.
-static void printUsage(char* name) {
-    const std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-            "HYBRID_INSTANCING showcases renderable instancing with instance buffers.\n"
-            "Usage:\n"
-            "    HYBRID_INSTANCING [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "   --emitters=<count>, -e <count>\n"
-            "       Sets the number of particle emitters (default: 32)\n\n"
-            "   --camera=<mode>, -c <mode>\n"
-            "       Sets the camera mode: orbit (default), map, or flight\n\n"
-            "API_USAGE");
-    const std::string from("HYBRID_INSTANCING");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos;
-         pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
 // Parses command-line arguments.
-static int handleCommandLineArguments(int const argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "he:a:c:";
-    static constexpr utils::getopt::option OPTIONS[] = {
-        { "help", utils::getopt::no_argument, nullptr, 'h' },
-        { "api", utils::getopt::required_argument, nullptr, 'a' },
-        { "emitters", utils::getopt::required_argument, nullptr, 'e' },
-        { "camera", utils::getopt::required_argument, nullptr, 'c' },
-        { nullptr, 0, nullptr, 0 } };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        const std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-            case 'e':
-                app->ui.emitterCount = atoi(arg.c_str());
-                break;
-            case 'c':
-                if (arg == "flight") {
-                    app->config.cameraMode = camutils::Mode::FREE_FLIGHT;
-                } else if (arg == "orbit") {
-                    app->config.cameraMode = camutils::Mode::ORBIT;
-                } else if (arg == "map") {
-                    app->config.cameraMode = camutils::Mode::MAP;
-                } else {
-                    std::cerr << "Unrecognized camera mode. Must be 'flight' | 'orbit' | 'map'."
-                            << std::endl;
-                }
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
 // Resets a particle to a new random state.
 static void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition) {
     std::uniform_real_distribution vel_dist(-1.0f, 1.0f);
