@@ -1368,7 +1368,17 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
     }
     assert_invariant(internalFormat);
 
-    GLTexture* const t = construct<GLTexture>(th, target, 1, 1, width, height, 1, format, usage, false);
+    uint8_t levels = mPlatform.getExternalImageMipLevels(image); // 1 unless mipmap-complete
+    assert_invariant(levels >= 1);
+    if (UTILS_UNLIKELY(levels > 1 && target != SamplerType::SAMPLER_2D)) {
+        // Only a GL_TEXTURE_2D import can be mipmapped: GL_TEXTURE_EXTERNAL_OES doesn't support
+        // mipmaps and its material sampler is authored as samplerExternalOES, which cannot be
+        // bound to a GL_TEXTURE_2D. Keep those imports single-level.
+        LOG(WARNING) << "External image has mipmaps, but the texture is not SAMPLER_2D; only "
+                        "the base level will be sampled.";
+        levels = 1;
+    }
+    GLTexture* const t = construct<GLTexture>(th, target, levels, 1, width, height, 1, format, usage, false);
     assert_invariant(t);
 
     t->externalTexture = mPlatform.createExternalImageTexture();
@@ -1383,6 +1393,9 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
         } else {
             t->externalTexture->target = getTextureTargetNotExternal(target);
         }
+        // tell the platform how many levels we sized this texture for, so that it imports the
+        // image with a matching number of levels.
+        t->externalTexture->levels = levels;
 
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
@@ -1390,7 +1403,7 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
         // because it's not used anywhere for anything important.
         t->gl.internalFormat = internalFormat;
         t->gl.baseLevel = 0;
-        t->gl.maxLevel = 0;
+        t->gl.maxLevel = levels - 1;
         t->gl.external = true; // forces bindTexture() call (they're never cached)
     }
 

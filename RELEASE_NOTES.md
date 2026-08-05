@@ -7,6 +7,15 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.75.1
+
+
+## v1.75.0
+
+- web: expand JS bindings coverage for Fence, SkinningBuffer, MorphTargetBuffer, and other previously unbound APIs
+- variant: compile MNT variant for unlit materials by default. [⚠️ **Recompile Materials**]
+- materials: fix punctual-only shadow receivers selecting the SSR shader. [⚠️ **Recompile Materials**]
+
 ## v1.74.1
 
 
