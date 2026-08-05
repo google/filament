@@ -1443,6 +1443,13 @@ public:
         utils::tribool skinning = utils::tribool::kIndeterminate,
         backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
         utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {});
+
+    /**
+     * @param view The View in which you want to extract the settings from.
+     * @return ViewSettings
+     */
+    ViewSettings extractViewSettings(View const* UTILS_NONNULL view) noexcept;
+
 protected:
     //! \privatesection
     Engine() noexcept = default;

@@ -528,6 +528,10 @@ void Engine::compile(
                             std::move(callback));
 }
 
+Engine::ViewSettings Engine::extractViewSettings(View const *view) noexcept {
+    return downcast(this)->extractViewSettings(downcast(view));
+}
+
 #if defined(__EMSCRIPTEN__)
 void Engine::resetBackendState() noexcept {
     downcast(this)->resetBackendState();
