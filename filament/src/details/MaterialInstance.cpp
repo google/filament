@@ -479,16 +479,14 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
             if (variantFilter && variant != Variant::filterUserVariant(variant, variantFilter))
                 continue;
 
-            for (auto specKey: DynamicSpecConstKey::getAllPossibleKeys()) {
+            for (auto const specKey:
+                    DynamicSpecConstKey::getValidKeys(variant, materialDomain, isMaterialLit)) {
                 // Although certain variant bits were migrated to specialization constants, we
                 // still evaluate them against the variant filter mask to prune unnecessary
                 // shader permutations from the compilation queue.
                 if (variantFilter &&
                         specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
                     continue;
-
-                specKey = DynamicSpecConstKey::filterProgramSpecKey(variant, specKey,
-                        materialDomain, isMaterialLit);
 
                 if (definition.isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
 #ifndef NDEBUG
@@ -519,7 +517,7 @@ void FMaterialInstance::compile(CompilerPriorityQueue const priority,
                 continue;
 
             for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey:
-                    DynamicSpecConstKey::getAllPossibleKeys()) {
+                    DynamicSpecConstKey::getValidKeys(variant, materialDomain, isMaterialLit)) {
                 if (variantFilter &&
                         specKey != DynamicSpecConstKey::filterUserVariant(specKey, variantFilter))
                     continue;
