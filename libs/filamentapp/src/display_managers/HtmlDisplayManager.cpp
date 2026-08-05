@@ -21,6 +21,7 @@
 
 #include <utils/Log.h>
 #include <utils/Mutex.h>
+#include <utils/Panic.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
@@ -116,28 +117,26 @@ public:
 static WebHandler sWebHandler;
 
 HtmlDisplayManager::HtmlDisplayManager()
-        : mStartTime(std::chrono::steady_clock::now().time_since_epoch().count()) {}
+        : mStartTime(std::chrono::steady_clock::now().time_since_epoch().count()) {
+    init();
+}
 
 HtmlDisplayManager::~HtmlDisplayManager() { terminate(); }
 
-bool HtmlDisplayManager::init(const Config& config) {
-    mConfig = config;
+bool HtmlDisplayManager::init() {
     const char* options[] = { "listening_ports", "8888", nullptr };
 
     slog.i << "HtmlDisplayManager initializing on port 8888..." << io::endl;
 
     try {
         mServer = std::make_unique<CivetServer>(options);
-        if (!mServer->getContext()) {
-            slog.e << "CivetServer failed to start (context is null)" << io::endl;
-            return false;
-        }
+        FILAMENT_CHECK_PRECONDITION(mServer->getContext())
+                << "CivetServer failed to start (context is null)";
         mWebSocketHandler = std::make_unique<WebSocketHandler>(this);
         mServer->addWebSocketHandler("/ws", mWebSocketHandler.get());
         mServer->addHandler("", &sWebHandler);
     } catch (const CivetException& e) {
-        slog.e << "CivetServer exception: " << e.what() << io::endl;
-        return false;
+        FILAMENT_CHECK_PRECONDITION(false) << "CivetServer exception: " << e.what();
     }
 
     slog.i << "HtmlDisplayManager started on port 8888" << io::endl;
@@ -151,32 +150,32 @@ void HtmlDisplayManager::terminate() {
     }
 }
 
-FilamentApp2::Window::Handle HtmlDisplayManager::createWindow(const char* title, uint32_t w,
+WindowHandle HtmlDisplayManager::createWindow(const char* title, uint32_t w,
         uint32_t h, bool resizable, bool headless) {
     LockGuard<Mutex> lock(mMutex);
-    FilamentApp2::Window::Handle handle =
-            (FilamentApp2::Window::Handle)(uintptr_t) (mWindows.size() + 1);
+    WindowHandle handle =
+            (WindowHandle)(uintptr_t) (mWindows.size() + 1);
     mWindows[handle] = { utils::CString(title), w, h };
     return handle;
 }
 
-void HtmlDisplayManager::destroyWindow(FilamentApp2::Window::Handle window) {
+void HtmlDisplayManager::destroyWindow(WindowHandle window) {
     LockGuard<Mutex> lock(mMutex);
     mWindows.erase(window);
 }
 
-void* HtmlDisplayManager::getNativeWindow(FilamentApp2::Window::Handle window) const {
+void* HtmlDisplayManager::getNativeWindow(WindowHandle window) const {
     return nullptr; // Headless
 }
 
-void HtmlDisplayManager::setWindowTitle(FilamentApp2::Window::Handle window, const char* title) {
+void HtmlDisplayManager::setWindowTitle(WindowHandle window, const char* title) {
     LockGuard<Mutex> lock(mMutex);
     if (mWindows.count(window)) {
         mWindows[window].title = utils::CString(title);
     }
 }
 
-void HtmlDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
+void HtmlDisplayManager::getWindowSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
     LockGuard<Mutex> lock(mMutex);
     if (mWindows.count(window)) {
@@ -186,7 +185,7 @@ void HtmlDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint
     }
 }
 
-void HtmlDisplayManager::getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
+void HtmlDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
     getWindowSize(window, w, h);
 }
@@ -225,7 +224,7 @@ struct ReadPixelsUser {
     uint32_t height;
 };
 
-void HtmlDisplayManager::onFrameFinished(FilamentApp2::Window::Handle window,
+void HtmlDisplayManager::onFrameFinished(WindowHandle window,
         filament::Engine* engine, filament::Renderer* renderer) {
     uint32_t width, height;
     getWindowSize(window, &width, &height);
