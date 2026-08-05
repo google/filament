@@ -17,11 +17,9 @@
 #ifndef TNT_FILAMENT_ENGINE_H
 #define TNT_FILAMENT_ENGINE_H
 
-
-#include "Options.h"
-
 #include <filament/ColorGrading.h>
 #include <filament/FilamentAPI.h>
+#include <filament/Options.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -1394,13 +1392,13 @@ public:
      * with different rendering settings than the active one.
      */
     struct ViewSettings {
-      bool hasDirectionalLighting;
-      bool hasFog;
-      bool hasStereo;
-      bool hasPostProcessing;
-      bool hasDynamicLighting;
-      bool hasShadowing;
-      ShadowType shadowType;
+        bool hasDirectionalLighting = false;
+        bool hasFog = false;
+        bool hasStereo = false;
+        bool hasPostProcessing = false;
+        bool hasDynamicLighting = false;
+        bool hasShadowing = false;
+        ShadowType shadowType = ShadowType::PCF;
     };
 
     /**

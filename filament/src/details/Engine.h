@@ -623,10 +623,10 @@ public:
         backend::CallbackHandler* handler = nullptr,
         utils::Invocable<void(Material*)>&& callback = {});
 
+    static ViewSettings extractViewSettings(const FView* view) noexcept;
+
     static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
-        FMaterial const* material, bool hasDirectionalLighting, bool hasFog,
-        bool hasStereo, bool hasPostProcessing, bool hasShadowing,
-        ShadowType shadowType, utils::tribool shadowReceiver,
+        FMaterial const* material, ViewSettings const& settings, utils::tribool shadowReceiver,
         utils::tribool skinning) noexcept;
 
     static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(

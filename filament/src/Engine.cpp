@@ -523,9 +523,9 @@ void Engine::compile(
     tribool skinning,
     CallbackHandler* handler,
     Invocable<void(Material*)>&& callback) {
-   downcast(this)->compile(priority, downcast(material), settings,
-                          shadowReceiver, skinning, handler,
-                          std::move(callback));
+    downcast(this)->compile(priority, downcast(material), settings,
+                            shadowReceiver, skinning, handler,
+                            std::move(callback));
 }
 
 #if defined(__EMSCRIPTEN__)

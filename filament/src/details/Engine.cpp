@@ -19,6 +19,7 @@
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
 #include "TextureCache.h"
+#include "../../../libs/viewer/include/viewer/Settings.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -1742,16 +1743,23 @@ bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant
     return FeatureFlagManager::getFeatureFlagPtr(name, allowConstant);
 }
 
+Engine::ViewSettings FEngine::extractViewSettings(const FView* view) noexcept {
+    return ViewSettings {
+        .hasDirectionalLighting = view->hasDirectionalLighting(),
+        .hasFog = view->hasFog(),
+        .hasStereo = view->hasStereo(),
+        .hasPostProcessing = view->hasPostProcessPass(),
+        .hasDynamicLighting = view->hasDynamicLighting(),
+        .hasShadowing = view->hasShadowing(),
+        .shadowType = view->getShadowType()
+    };
+}
+
 FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
-        FMaterial const* material,
-        bool const hasDirectionalLighting,
-        bool hasFog,
-        bool hasStereo,
-        bool hasPostProcessing,
-        bool hasShadowing,
-        ShadowType shadowType,
-        tribool const shadowReceiver,
-        tribool const skinning) noexcept {
+    FMaterial const* material,
+    ViewSettings const& settings,
+    tribool const shadowReceiver,
+    tribool const skinning) noexcept {
 
     // the maximum possible is 6 variants (4 color + 2 depth)
     auto variants = FixedCapacityVector<Variant>::with_capacity(6);
@@ -1786,12 +1794,12 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    baseVariant.setDirectionalLighting(isMaterialLit && hasDirectionalLighting);
+    baseVariant.setDirectionalLighting(isMaterialLit && settings.hasDirectionalLighting);
     // Dynamic lighting is now handled via specialization constants. The variant bit is always 0.
     baseVariant.setDynamicLighting(false);
-    baseVariant.setFog(hasFog);
-    baseVariant.setShadowSampler2D(isMaterialLit && hasShadowing && (shadowType != ShadowType::PCF));
-    baseVariant.setStereo(hasStereo);
+    baseVariant.setFog(settings.hasFog);
+    baseVariant.setShadowSampler2D(isMaterialLit && settings.hasShadowing && (settings.shadowType != ShadowType::PCF));
+    baseVariant.setStereo(settings.hasStereo);
 
     variants.push_back(baseVariant);
     apply(0, skinning, &Variant::setSkinning);
@@ -1803,12 +1811,12 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     }
 
     Variant depthVariant{};
-    if (isMaterialLit && hasShadowing) {
+    if (isMaterialLit && settings.hasShadowing) {
         // needsShadowMap() is no good here, because it can change based on the visibility of the shadow maps
         depthVariant = Variant{Variant::DEPTH_VARIANT};
-        depthVariant.setDepthMoments(shadowType == ShadowType::VSM);
+        depthVariant.setDepthMoments(settings.shadowType == ShadowType::VSM);
     }
-    if (hasPostProcessing) {
+    if (settings.hasPostProcessing) {
         // This is needed if we're going to generate the structure pass. That is however very hard to tell
         // because the logic exists only in the FrameGraph. For now, we assume that if postFx is enabled, we'll
         // need the depth variant.
@@ -1817,7 +1825,7 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
 
     if (Variant::isValidDepthVariant(depthVariant)) {
         // if we have a valid depth variant, add the stereo and skinning bits
-        depthVariant.setStereo(hasStereo);
+        depthVariant.setStereo(settings.hasStereo);
 
         size_t const depthStart = variants.size();
         variants.push_back(depthVariant);
@@ -1832,13 +1840,11 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         FMaterial const* material,
         tribool const shadowReceiver,
         tribool const skinning) noexcept {
-    return getMaterialCompileVariants(material, view->hasDirectionalLighting(), view->hasFog(),
-            view->hasStereo(), view->hasPostProcessPass(), view->hasShadowing(),
-            view->getShadowType(), shadowReceiver, skinning);
+    return getMaterialCompileVariants(material, extractViewSettings(view), shadowReceiver, skinning);
 }
 
 FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
-        bool const hasDynamicLighting, FMaterial const* material) noexcept {
+        bool hasDynamicLighting, FMaterial const* material) noexcept {
     // Will add more as we turn more variants into spec constants
     auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
     DynamicSpecConstKey baseKey;
@@ -1873,9 +1879,7 @@ void FEngine::compile(
         tribool skinning,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
-    auto const variants = getMaterialCompileVariants(material, settings.hasDirectionalLighting,
-            settings.hasFog, settings.hasStereo, settings.hasPostProcessing, settings.hasShadowing,
-            settings.shadowType, shadowReceiver, skinning);
+    auto const variants = getMaterialCompileVariants(material, settings, shadowReceiver, skinning);
     auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(
             settings.hasDynamicLighting, material);
     const_cast<FMaterial*>(material)->compile(priority, variants, dynamicSpecConstKeys, handler,
