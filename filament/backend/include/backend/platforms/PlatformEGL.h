@@ -170,6 +170,7 @@ protected:
     struct {
         struct {
             bool OES_EGL_image_external_essl3 = false;
+            bool EXT_EGL_image_storage = false;
         } gl;
         struct {
             bool ANDROID_recordable = false;

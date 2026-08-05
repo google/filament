@@ -115,6 +115,14 @@ void importGLESExtensionsEntryPoints();
 #ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
+// GL_EXT_EGL_image_storage (added to the Khronos registry in 2018) is required to import an
+// AHB's full mipmap chain. A recent NDK <GLES2/gl2ext.h> defines this typedef, but the build
+// cannot rely on that, so declare it behind a guard if it isn't already present.
+#ifndef GL_EXT_EGL_image_storage
+#define GL_EXT_EGL_image_storage 1
+typedef void (GL_APIENTRYP PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC) (GLenum target, GLeglImageOES image, const GLint* attrib_list);
+#endif
+extern PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC glEGLImageTargetTexStorageEXT;
 #endif
 #ifdef GL_EXT_debug_marker
 extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
