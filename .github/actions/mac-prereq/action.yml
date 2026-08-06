@@ -7,12 +7,12 @@ runs:
       id: set-up-homebrew
       uses: Homebrew/actions/setup-homebrew@master
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.x'
     - name: Cache Brew
       id: brew-cache
-      uses: actions/cache@v4 # Use a specific version
+      uses: actions/cache@v6 # Use a specific version
       with:
         path: ~/Library/Caches/Homebrew
         key: ${{ runner.os }}-brew-20251211

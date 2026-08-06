@@ -237,7 +237,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: vcheckout@v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: actions/setup-java@v5

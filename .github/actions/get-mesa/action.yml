@@ -6,7 +6,7 @@ runs:
   steps:
     - uses: ./.github/actions/dep-versions
     - name: Cache Mesa and deps
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: mesa
         key: ${{ runner.os }}-${{ runner.arch }}-mesa-deps-${{ env.GITHUB_MESA_VERSION }}
