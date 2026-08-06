@@ -2247,6 +2247,7 @@ export interface View$SoftShadowOptions {
 export interface View$StereoscopicOptions {
     enabled?: boolean;
 }
+// End of beamsplitter-generated code
 
 export enum Camutils$Mode {
     ORBIT,
