@@ -155,7 +155,7 @@ enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
-[[nodiscard]] constexpr std::string_view to_string(FeatureLevel level) noexcept {
+constexpr std::string_view to_string(FeatureLevel level) noexcept {
     switch (level) {
         case FeatureLevel::FEATURE_LEVEL_0:
             return "FEATURE_LEVEL_0";
@@ -220,7 +220,7 @@ enum class ShaderLanguage {
     WGSL = 5,
 };
 
-[[nodiscard]] constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
+constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
     switch (shaderLanguage) {
         case ShaderLanguage::ESSL1:
             return "ESSL 1.0";
