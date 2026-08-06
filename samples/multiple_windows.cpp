@@ -15,12 +15,14 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
 
 #include "generated/resources/monkey.h"
 #include "generated/resources/resources.h"
 
 #include <filameshio/MeshReader.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/NativeWindowHelper.h>
@@ -93,11 +95,20 @@ void setup_animating_scene(Window& w, Engine* engine);
 void animation_new_frame(Window& w, double dt);
 IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine);
 
-int main(int argc, char *argv[]) {
+struct App {
+    FilamentApp2* filamentApp = nullptr;
+    SampleConfig config;
+};
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
     // ---- initialize ----
     FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
 
-    kBackend = samples::parseArgumentsForBackend(argc, argv);
+    kBackend = config.backend;
     std::vector<Window> windows = { Window(), Window() };
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
                            | SDL_WINDOW_RESIZABLE;
@@ -200,8 +211,21 @@ int main(int argc, char *argv[]) {
     Engine::destroy(&engine);
 
     SDL_Quit();
+    return nullptr;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char* argv[]) {
+    SampleConfig config;
+    samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    if (fApp) {
+        fApp->run();
+    }
     return 0;
 }
+#endif
 
 void setup_window(Window& w, Engine* engine) {
     w.renderer = engine->createRenderer();

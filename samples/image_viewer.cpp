@@ -23,6 +23,7 @@
 
 #include <imageio/ImageDecoder.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -63,7 +64,7 @@ using namespace image;
 using namespace utils;
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     Engine* engine;
     ViewerGui* viewer;
     SampleConfig config;
@@ -86,70 +87,6 @@ struct App {
 
     ColorGrading* colorGrading = nullptr;
 };
-
-static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
-    std::string usage(
-        "IMAGE_VIEWER displays the specified image\n"
-        "Usage:\n"
-        "    IMAGE_VIEWER [options] <image path>\n"
-        "Options:\n"
-        "   --help, -h\n"
-        "       Prints this message\n\n"
-        "API_USAGE"
-        "   --camera=<camera mode>, -c <camera mode>\n"
-        "       Set the camera mode: orbit (default) or flight\n"
-        "       Flight mode uses the following controls:\n"
-        "           Click and drag the mouse to pan the camera\n"
-        "           Use the scroll weel to adjust movement speed\n"
-        "           W / S: forward / backward\n"
-        "           A / D: left / right\n"
-        "           E / Q: up / down\n\n"
-    );
-    const std::string from("IMAGE_VIEWER");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:c:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help",         utils::getopt::no_argument,       nullptr, 'h' },
-        { "api",          utils::getopt::required_argument, nullptr, 'a' },
-        { "camera",       utils::getopt::required_argument, nullptr, 'c' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-            case 'c':
-                if (arg == "flight") {
-                    app->config.cameraMode = camutils::Mode::FREE_FLIGHT;
-                } else if (arg == "orbit") {
-                    app->config.cameraMode = camutils::Mode::ORBIT;
-                } else {
-                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
-                }
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
 
 static constexpr float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },
@@ -273,82 +210,79 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
     app.showImage = true;
 }
 
-int main(int argc, char** argv) {
-    App app;
-
-    app.config.title = "Filament Image Viewer";
-
-    int optionIndex = handleCommandLineArguments(argc, argv, &app);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
     Path filename;
-    int num_args = argc - optionIndex;
-    if (num_args >= 1) {
-        filename = argv[optionIndex];
+    if (config.customArgs.find("filename") != config.customArgs.end()) {
+        filename = Path(config.customArgs["filename"].c_str());
     }
 
-    auto setup = [&](Engine* engine, View* view, Scene* scene) {
-        app.engine = engine;
-        app.viewer = new ViewerGui(engine, scene, view, 410);
-        app.viewer->getSettings().viewer.autoScaleEnabled = false;
-        app.viewer->getSettings().viewer.autoInstancingEnabled = true;
-        app.viewer->getSettings().view.bloom.enabled = false;
-        app.viewer->getSettings().view.ssao.enabled = false;
-        app.viewer->getSettings().view.dithering = Dithering::NONE;
-        app.viewer->getSettings().view.antiAliasing = AntiAliasing::NONE;
+    auto setup = [app, filename](Engine* engine, View* view, Scene* scene) {
+        app->engine = engine;
+        app->viewer = new ViewerGui(engine, scene, view, 410);
+        app->viewer->getSettings().viewer.autoScaleEnabled = false;
+        app->viewer->getSettings().viewer.autoInstancingEnabled = true;
+        app->viewer->getSettings().view.bloom.enabled = false;
+        app->viewer->getSettings().view.ssao.enabled = false;
+        app->viewer->getSettings().view.dithering = Dithering::NONE;
+        app->viewer->getSettings().view.antiAliasing = AntiAliasing::NONE;
 
-        createImageRenderable(engine, scene, app);
+        createImageRenderable(engine, scene, *app);
 
-        loadImage(app, engine, filename);
+        loadImage(*app, engine, filename);
 
-        app.viewer->setUiCallback([&app] () {
+        app->viewer->setUiCallback([app]() {
             if (ImGui::CollapsingHeader("Image", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::ColorEdit3("Background color", &app.backgroundColor.r);
+                ImGui::ColorEdit3("Background color", &app->backgroundColor.r);
             }
         });
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.scene.imageEntity);
-        engine->destroy(app.scene.imageVertexBuffer);
-        engine->destroy(app.scene.imageIndexBuffer);
-        engine->destroy(app.scene.imageMaterial);
-        engine->destroy(app.scene.imageTexture);
-        engine->destroy(app.scene.defaultTexture);
-        engine->destroy(app.colorGrading);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->scene.imageEntity);
+        engine->destroy(app->scene.imageVertexBuffer);
+        engine->destroy(app->scene.imageIndexBuffer);
+        engine->destroy(app->scene.imageMaterial);
+        engine->destroy(app->scene.imageTexture);
+        engine->destroy(app->scene.defaultTexture);
+        engine->destroy(app->colorGrading);
 
-        delete app.viewer;
+        delete app->viewer;
     };
 
-    auto gui = [&app](Engine* engine, View* view) {
-        app.viewer->updateUserInterface();
+    auto gui = [app](Engine* engine, View* view) {
+        app->viewer->updateUserInterface();
 
-        app.filamentApp->setSidebarWidth(app.viewer->getSidebarWidth());
+        app->filamentApp->setSidebarWidth(app->viewer->getSidebarWidth());
     };
 
-    auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+    auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         auto& rcm = engine->getRenderableManager();
 
         // This applies clear options, the skybox mask, and some camera settings.
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
-        applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
+        applySettings(engine, app->viewer->getSettings().viewer, &camera, skybox, renderer);
 
         // Check if color grading has changed.
-        ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
+        ColorGradingSettings& options = app->viewer->getSettings().view.colorGrading;
         if (options.enabled) {
-            if (options != app.lastColorGradingOptions) {
+            if (options != app->lastColorGradingOptions) {
                 ColorGrading *colorGrading = createColorGrading(options, engine);
-                engine->destroy(app.colorGrading);
-                app.colorGrading = colorGrading;
-                app.lastColorGradingOptions = options;
+                engine->destroy(app->colorGrading);
+                app->colorGrading = colorGrading;
+                app->lastColorGradingOptions = options;
             }
-            view->setColorGrading(app.colorGrading);
+            view->setColorGrading(app->colorGrading);
         } else {
             view->setColorGrading(nullptr);
         }
 
-        if (app.showImage) {
-            Texture *texture = app.scene.imageTexture;
+        if (app->showImage) {
+            Texture* texture = app->scene.imageTexture;
             float srcWidth = (float) texture->getWidth();
             float srcHeight = (float) texture->getHeight();
             float dstWidth = (float) view->getViewport().width;
@@ -378,33 +312,50 @@ int main(int argc, char** argv) {
                     -tx,        -ty,         1.0f
             );
 
-            app.scene.imageMaterial->setDefaultParameter("transform", transform);
-            app.scene.imageMaterial->setDefaultParameter(
-                    "image", app.scene.imageTexture, app.scene.sampler);
+            app->scene.imageMaterial->setDefaultParameter("transform", transform);
+            app->scene.imageMaterial->setDefaultParameter("image", app->scene.imageTexture,
+                    app->scene.sampler);
         } else {
-            app.scene.imageMaterial->setDefaultParameter(
-                    "image", app.scene.defaultTexture, app.scene.sampler);
+            app->scene.imageMaterial->setDefaultParameter("image", app->scene.defaultTexture,
+                    app->scene.sampler);
         }
 
-        app.scene.imageMaterial->setDefaultParameter("showImage", app.showImage ? 1 : 0);
-        app.scene.imageMaterial->setDefaultParameter(
-                "backgroundColor", RgbType::sRGB, app.backgroundColor);
+        app->scene.imageMaterial->setDefaultParameter("showImage", app->showImage ? 1 : 0);
+        app->scene.imageMaterial->setDefaultParameter("backgroundColor", RgbType::sRGB,
+                app->backgroundColor);
     };
-    app.filamentApp =
-            FilamentApp2::Builder()
-                    .title(app.config.title)
-                    .backend(app.config.backend)
-                    .cameraMode(app.config.cameraMode)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(app.config.displayManager))
-                    .setup(setup)
-                    .cleanup(cleanup)
-                    .imgui(gui)
-                    .preRender(preRender)
-                    .dropHandler(
-                            [&](std::string_view path) { loadImage(app, app.engine, Path(path)); })
-                    .build();
-    app.filamentApp->run();
+    auto fApp = FilamentApp2::Builder()
+                        .displayManager(dm)
+                        .title(app->config.title)
+                        .backend(app->config.backend)
+                        .cameraMode(app->config.cameraMode)
+                        .configDisplayManager(static_cast<FilamentApp2::DisplayManager>(
+                                app->config.displayManager))
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .preRender(preRender)
+                        .dropHandler([app](std::string_view path) {
+                            loadImage(*app, app->engine, Path(path));
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
 
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Filament Image Viewer";
+    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+    int num_args = argc - optind;
+    if (num_args >= 1) {
+        config.customArgs["filename"] = utils::CString(argv[optind]);
+    }
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif

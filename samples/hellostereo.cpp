@@ -22,6 +22,7 @@
 
 #include <filameshio/MeshReader.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <private/filament/EngineEnums.h>
@@ -56,7 +57,7 @@ struct Vertex {
 };
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     SampleConfig config;
 
     Material* monkeyMaterial;
@@ -79,98 +80,12 @@ struct App {
     std::vector<MaterialInstance*> quadMatInstances;
 };
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-        "SHOWCASE renders multiple quads displaying the contents of stereoscopic rendering\n"
-        "Usage:\n"
-        "    SHOWCASE [options]\n"
-        "Options:\n"
-        "   --help, -h\n"
-        "       Prints this message\n\n"
-        "API_USAGE"
-        "   --eyes=<stereoscopic eyes>, -y <stereoscopic eyes>\n"
-        "       Sets the number of stereoscopic eyes (default: 2) when stereoscopic rendering is\n"
-        "       enabled.\n"
-        "   --samples=<number of samples for MSAA>, -m <number of samples for MSAA>\n"
-        "       Sets the number of samples for MSAA\n\n"
-    );
-    const std::string from("SHOWCASE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:y:m:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help",    utils::getopt::no_argument,       nullptr, 'h' },
-        { "api",     utils::getopt::required_argument, nullptr, 'a' },
-        { "eyes",    utils::getopt::required_argument, nullptr, 'y' },
-        { "samples", utils::getopt::required_argument, nullptr, 'm'},
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-            case 'y': {
-                int eyeCount = 0;
-                try {
-                    eyeCount = std::stoi(arg);
-                } catch (std::invalid_argument &e) { }
-                if (eyeCount >= 2 && eyeCount <= CONFIG_MAX_STEREOSCOPIC_EYES) {
-                    app->config.stereoscopicEyeCount = eyeCount;
-                } else {
-                    std::cerr << "Eye count must be between 2 and CONFIG_MAX_STEREOSCOPIC_EYES ("
-                              << (int)CONFIG_MAX_STEREOSCOPIC_EYES << ") (inclusive).\n";
-                    exit(1);
-                }
-                break;
-            }
-            case 'm': {
-                int samples = 0;
-                try {
-                    samples = std::stoi(arg);
-                } catch (std::invalid_argument &e) { }
-                if (samples > 0) {
-                    app->config.samples = samples;
-                } else {
-                    std::cerr << "Sample count must be a positive number\n";
-                    exit(1);
-                }
-                break;
-            }
-        }
-    }
-    return utils::getopt::optind;
-}
-
-int main(int argc, char** argv) {
-
-#if !defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
-    std::cerr << "This sample only works with multiview enabled.\n";
-    exit(1);
-#endif
-
-    App app{};
-    app.config.title = "stereoscopic rendering";
-    handleCommandLineArguments(argc, argv, &app);
-
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -178,45 +93,46 @@ int main(int argc, char** argv) {
 
         constexpr float3 monkeyPosition{ 0, 0, -4};
         constexpr float3 upVector{ 0, 1, 0};
-        const int eyeCount = app.config.stereoscopicEyeCount;
-        const uint8_t sampleCount = app.config.samples;
+        const int eyeCount = app->config.stereoscopicEyeCount;
+        const uint8_t sampleCount = app->config.samples;
 
         // Create a mesh material and an instance.
-        app.monkeyMaterial = Material::Builder()
-              .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
-              .build(*engine);
-        auto mi = app.monkeyMatInstance = app.monkeyMaterial->createInstance();
+        app->monkeyMaterial =
+                Material::Builder()
+                        .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                        .build(*engine);
+        auto mi = app->monkeyMatInstance = app->monkeyMaterial->createInstance();
         mi->setParameter("baseColor", RgbType::LINEAR, {0.8, 1.0, 1.0});
         mi->setParameter("metallic", 0.0f);
         mi->setParameter("roughness", 0.4f);
         mi->setParameter("reflectance", 0.5f);
 
         // Add a monkey and a light source into the main scene.
-        app.monkeyMesh = MeshReader::loadMeshFromBuffer(
-                engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
-        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-        app.monkeyTransform = mat4f{mat3f(1), monkeyPosition } * tcm.getWorldTransform(ti);
-        rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
-        scene->addEntity(app.monkeyMesh.renderable);
+        app->monkeyMesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
+                MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
+        auto ti = tcm.getInstance(app->monkeyMesh.renderable);
+        app->monkeyTransform = mat4f{ mat3f(1), monkeyPosition } * tcm.getWorldTransform(ti);
+        rcm.setCastShadows(rcm.getInstance(app->monkeyMesh.renderable), false);
+        scene->addEntity(app->monkeyMesh.renderable);
 
-        app.lightEntity = em.create();
+        app->lightEntity = em.create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(110000)
                 .direction({ 0.7, -1, -0.8 })
                 .sunAngularRadius(1.9f)
                 .castShadows(false)
-                .build(*engine, app.lightEntity);
-        scene->addEntity(app.lightEntity);
+                .build(*engine, app->lightEntity);
+        scene->addEntity(app->lightEntity);
 
         // Create a stereo render target that will be rendered as an offscreen view.
-        app.stereoScene = engine->createScene();
-        app.stereoScene->addEntity(app.monkeyMesh.renderable);
-        app.stereoScene->addEntity(app.lightEntity);
-        app.stereoView = engine->createView();
-        app.stereoView->setScene(app.stereoScene);
-        app.stereoView->setPostProcessingEnabled(false);
-        app.stereoColorTexture =
+        app->stereoScene = engine->createScene();
+        app->stereoScene->addEntity(app->monkeyMesh.renderable);
+        app->stereoScene->addEntity(app->lightEntity);
+        app->stereoView = engine->createView();
+        app->stereoView->setScene(app->stereoScene);
+        app->stereoView->setPostProcessingEnabled(false);
+        app->stereoColorTexture =
                 Texture::Builder()
                         .width(vp.width)
                         .height(vp.height)
@@ -227,7 +143,7 @@ int main(int argc, char** argv) {
                         .format(Texture::InternalFormat::RGBA8)
                         .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
                         .build(*engine);
-        app.stereoDepthTexture =
+        app->stereoDepthTexture =
                 Texture::Builder()
                         .width(vp.width)
                         .height(vp.height)
@@ -238,19 +154,20 @@ int main(int argc, char** argv) {
                         .format(Texture::InternalFormat::DEPTH32F)
                         .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
                         .build(*engine);
-        app.stereoRenderTarget = RenderTarget::Builder()
-                .texture(RenderTarget::AttachmentPoint::COLOR, app.stereoColorTexture)
-                .texture(RenderTarget::AttachmentPoint::DEPTH, app.stereoDepthTexture)
-                .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
-                .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
-                .samples(sampleCount)
-                .build(*engine);
-        app.stereoView->setRenderTarget(app.stereoRenderTarget);
-        app.stereoView->setViewport({0, 0, vp.width, vp.height});
-        app.stereoCamera = engine->createCamera(em.create());
-        app.stereoView->setCamera(app.stereoCamera);
-        app.stereoView->setStereoscopicOptions({.enabled = true});
-        app.filamentApp->addOffscreenView(app.stereoView);
+        app->stereoRenderTarget =
+                RenderTarget::Builder()
+                        .texture(RenderTarget::AttachmentPoint::COLOR, app->stereoColorTexture)
+                        .texture(RenderTarget::AttachmentPoint::DEPTH, app->stereoDepthTexture)
+                        .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
+                        .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
+                        .samples(sampleCount)
+                        .build(*engine);
+        app->stereoView->setRenderTarget(app->stereoRenderTarget);
+        app->stereoView->setViewport({ 0, 0, vp.width, vp.height });
+        app->stereoCamera = engine->createCamera(em.create());
+        app->stereoView->setCamera(app->stereoCamera);
+        app->stereoView->setStereoscopicOptions({ .enabled = true });
+        app->filamentApp->addOffscreenView(app->stereoView);
 
         // Camera settings for the stereo render target
         constexpr double projNear  = 0.1;
@@ -263,14 +180,15 @@ int main(int argc, char** argv) {
         projections[1] = Camera::projection(70, 1.0, projNear, projFar);
         projections[2] = Camera::projection(50, 1.0, projNear, projFar);
         projections[3] = Camera::projection(35, 1.0, projNear, projFar);
-        app.stereoCamera->setCustomEyeProjection(projections, 4, projections[0], projNear, projFar);
+        app->stereoCamera->setCustomEyeProjection(projections, 4, projections[0], projNear,
+                projFar);
 
         eyeModels[0] = mat4::lookAt(float3{ -4, 0, 0 }, monkeyPosition, upVector);
         eyeModels[1] = mat4::lookAt(float3{ 4, 0, 0 }, monkeyPosition, upVector);
         eyeModels[2] = mat4::lookAt(float3{ 0, 3, 0 }, monkeyPosition, upVector);
         eyeModels[3] = mat4::lookAt(float3{ 0, -3, 0 }, monkeyPosition, upVector);
         for (int i = 0; i < eyeCount; ++i) {
-            app.stereoCamera->setEyeModelMatrix(i, eyeModels[i]);
+            app->stereoCamera->setEyeModelMatrix(i, eyeModels[i]);
         }
 
         // Create a vertex buffer and an index buffer for a quad. This will be used to display the contents
@@ -287,41 +205,45 @@ int main(int argc, char** argv) {
         };
 
         static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
-        app.quadVb = VertexBuffer::Builder()
-                .vertexCount(4)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 12, sizeof(Vertex))
-                .build(*engine);
-        app.quadVb->setBufferAt(*engine, 0,
+        app->quadVb = VertexBuffer::Builder()
+                              .vertexCount(4)
+                              .bufferCount(1)
+                              .attribute(VertexAttribute::POSITION, 0,
+                                      VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
+                              .attribute(VertexAttribute::UV0, 0,
+                                      VertexBuffer::AttributeType::FLOAT2, 12, sizeof(Vertex))
+                              .build(*engine);
+        app->quadVb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(quadVertices, sizeof(Vertex) * 4, nullptr));
 
         static constexpr uint16_t quadIndices[6] = { 0, 1, 2, 3, 2, 1 };
-        app.quadIb = IndexBuffer::Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.quadIb->setBuffer(*engine, IndexBuffer::BufferDescriptor(quadIndices, 12, nullptr));
+        app->quadIb = IndexBuffer::Builder()
+                              .indexCount(6)
+                              .bufferType(IndexBuffer::IndexType::USHORT)
+                              .build(*engine);
+        app->quadIb->setBuffer(*engine, IndexBuffer::BufferDescriptor(quadIndices, 12, nullptr));
 
         // Create quad material instances and renderables.
-        app.quadMaterial = Material::Builder()
-                .package(RESOURCES_ARRAYTEXTURE_DATA, RESOURCES_ARRAYTEXTURE_SIZE)
-                .build(*engine);
+        app->quadMaterial =
+                Material::Builder()
+                        .package(RESOURCES_ARRAYTEXTURE_DATA, RESOURCES_ARRAYTEXTURE_SIZE)
+                        .build(*engine);
 
         for (int i = 0; i < eyeCount; ++i) {
-            MaterialInstance* quadMatInst = app.quadMaterial->createInstance();
+            MaterialInstance* quadMatInst = app->quadMaterial->createInstance();
             TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
-            quadMatInst->setParameter("image", app.stereoColorTexture, sampler);
+            quadMatInst->setParameter("image", app->stereoColorTexture, sampler);
             quadMatInst->setParameter("layerIndex", i);
             quadMatInst->setParameter("borderEffect", true);
-            app.quadMatInstances.push_back(quadMatInst);
+            app->quadMatInstances.push_back(quadMatInst);
 
             utils::Entity quadEntity = em.create();
-            app.quadEntities.push_back(quadEntity);
+            app->quadEntities.push_back(quadEntity);
             RenderableManager::Builder(1)
-                    .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                    .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
                     .material(0, quadMatInst)
-                    .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.quadVb, app.quadIb, 0, 6)
+                    .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->quadVb,
+                            app->quadIb, 0, 6)
                     .culling(false)
                     .receiveShadows(false)
                     .castShadows(false)
@@ -338,62 +260,94 @@ int main(int argc, char** argv) {
         }
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
         auto& em = utils::EntityManager::get();
 
-        for (utils::Entity e : app.quadEntities) {
+        for (utils::Entity e: app->quadEntities) {
             engine->destroy(e);
         }
-        for (MaterialInstance* mi : app.quadMatInstances) {
+        for (MaterialInstance* mi: app->quadMatInstances) {
             engine->destroy(mi);
         }
-        engine->destroy(app.quadMaterial);
-        engine->destroy(app.quadIb);
-        engine->destroy(app.quadVb);
-        engine->destroy(app.stereoRenderTarget);
-        engine->destroy(app.stereoDepthTexture);
-        engine->destroy(app.stereoColorTexture);
-        auto camera = app.stereoCamera->getEntity();
+        engine->destroy(app->quadMaterial);
+        engine->destroy(app->quadIb);
+        engine->destroy(app->quadVb);
+        engine->destroy(app->stereoRenderTarget);
+        engine->destroy(app->stereoDepthTexture);
+        engine->destroy(app->stereoColorTexture);
+        auto camera = app->stereoCamera->getEntity();
         engine->destroyCameraComponent(camera);
         em.destroy(camera);
-        engine->destroy(app.stereoScene);
-        engine->destroy(app.stereoView);
-        engine->destroy(app.lightEntity);
-        engine->destroy(app.monkeyMesh.renderable);
-        engine->destroy(app.monkeyMesh.indexBuffer);
-        engine->destroy(app.monkeyMesh.vertexBuffer);
-        engine->destroy(app.monkeyMatInstance);
-        engine->destroy(app.monkeyMaterial);
+        engine->destroy(app->stereoScene);
+        engine->destroy(app->stereoView);
+        engine->destroy(app->lightEntity);
+        engine->destroy(app->monkeyMesh.renderable);
+        engine->destroy(app->monkeyMesh.indexBuffer);
+        engine->destroy(app->monkeyMesh.vertexBuffer);
+        engine->destroy(app->monkeyMatInstance);
+        engine->destroy(app->monkeyMaterial);
     };
 
-    auto preRender = [&app](Engine*, View*, Scene*, Renderer* renderer) {
+    auto preRender = [app](Engine*, View*, Scene*, Renderer* renderer) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
 
-    app.filamentApp =
-            FilamentApp2::Builder()
-                    .title(app.config.title)
-                    .backend(app.config.backend)
-                    .stereoscopicEyeCount(app.config.stereoscopicEyeCount)
-                    .samples(app.config.samples)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(app.config.displayManager))
-                    .setup(setup)
-                    .cleanup(cleanup)
-                    .imgui({})
-                    .preRender(preRender)
-                    .animation([&app](Engine* engine, View* view, double now) {
-                        auto& tcm = engine->getTransformManager();
+    auto fApp = FilamentApp2::Builder()
+                        .title(app->config.title)
+                        .backend(app->config.backend)
+                        .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
+                        .samples(app->config.samples)
+                        .displayManager(dm)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .preRender(preRender)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            auto& tcm = engine->getTransformManager();
 
-                        // Animate the monkey by spinning and sliding back and forth along Z.
-                        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-                        mat4f xform = app.monkeyTransform * mat4f::rotation(now, float3{ 0, 1, 0 });
-                        tcm.setTransform(ti, xform);
-                    })
-                    .build();
-    app.filamentApp->run();
+                            // Animate the monkey by spinning and sliding back and forth along Z.
+                            auto ti = tcm.getInstance(app->monkeyMesh.renderable);
+                            mat4f xform =
+                                    app->monkeyTransform * mat4f::rotation(now, float3{ 0, 1, 0 });
+                            tcm.setTransform(ti, xform);
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
 
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+
+#if !defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+    std::cerr << "This sample only works with multiview enabled.\n";
+    exit(1);
+#endif
+
+    SampleConfig config;
+    config.title = "stereoscopic rendering";
+    static constexpr const char* CUSTOM_OPTSTR = "m:";
+    static const utils::getopt::option CUSTOM_OPTIONS[] = {
+        { "samples", utils::getopt::required_argument, nullptr, 'm' }, { nullptr, 0, nullptr, 0 }
+    };
+    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
+        switch (opt) {
+            case 'm':
+                config.customArgs["msaa"] = utils::CString(arg.c_str());
+                return true;
+        }
+        return false;
+    };
+    int optind = samples::handleCommandLineArguments(argc, argv, &config,
+            {
+                .customHandler = customHandler,
+                .customOptStr = CUSTOM_OPTSTR,
+                .customOptions = CUSTOM_OPTIONS,
+            });
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif

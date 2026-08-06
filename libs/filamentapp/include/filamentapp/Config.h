@@ -24,11 +24,11 @@
 #include <string>
 
 struct [[deprecated("Use FilamentApp2::Builder methods instead. Deadline: 2027/07/20")]] Config {
-    std::string title;
+    utils::CString title;
     uint32_t width = 1024;
     uint32_t height = 640;
-    std::string iblDirectory;
-    std::string dirt;
+    utils::CString iblDirectory;
+    utils::CString dirt;
     float scale = 1.0f;
     bool splitView = false;
     mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
@@ -41,7 +41,7 @@ struct [[deprecated("Use FilamentApp2::Builder methods instead. Deadline: 2027/0
     uint8_t samples = 1;
 
     // Indicate GPU preference for vulkan
-    std::string vulkanGPUHint;
+    utils::CString vulkanGPUHint;
 
 
     // Note that WebGPU has its own enums for backends, but to avoid leaking webgpu headers to

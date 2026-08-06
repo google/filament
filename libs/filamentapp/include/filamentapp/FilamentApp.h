@@ -103,7 +103,7 @@ private:
     ResizeCallback mResize;
     DropCallback mDropHandler;
     int mSidebarWidth = 0;
-    std::string mWindowTitle;
+    utils::CString mWindowTitle;
     float mCameraFocalLength = 0.0f;
     float mCameraNear = 0.0f;
     float mCameraFar = 0.0f;

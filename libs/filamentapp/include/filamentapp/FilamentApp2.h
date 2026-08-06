@@ -86,7 +86,7 @@ public:
     public:
         Builder() = default;
 
-        Builder& title(const std::string& title) {
+        Builder& title(const utils::CString& title) {
             mTitle = title;
             return *this;
         }
@@ -95,11 +95,11 @@ public:
             mHeight = height;
             return *this;
         }
-        Builder& iblDirectory(const std::string& iblDirectory) {
+        Builder& iblDirectory(const utils::CString& iblDirectory) {
             mIblDirectory = iblDirectory;
             return *this;
         }
-        Builder& dirt(const std::string& dirt) {
+        Builder& dirt(const utils::CString& dirt) {
             mDirt = dirt;
             return *this;
         }
@@ -139,7 +139,7 @@ public:
             mSamples = samples;
             return *this;
         }
-        Builder& vulkanGPUHint(const std::string& vulkanGPUHint) {
+        Builder& vulkanGPUHint(const utils::CString& vulkanGPUHint) {
             mVulkanGPUHint = vulkanGPUHint;
             return *this;
         }
@@ -261,11 +261,11 @@ public:
 
     private:
         friend class FilamentApp2;
-        std::string mTitle;
+        utils::CString mTitle;
         uint32_t mWidth = 1024;
         uint32_t mHeight = 640;
-        std::string mIblDirectory;
-        std::string mDirt;
+        utils::CString mIblDirectory;
+        utils::CString mDirt;
         float mScale = 1.0f;
         bool mSplitView = false;
         filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
@@ -275,7 +275,7 @@ public:
         bool mHeadless = false;
         int mStereoscopicEyeCount = 2;
         uint8_t mSamples = 1;
-        std::string mVulkanGPUHint;
+        utils::CString mVulkanGPUHint;
         WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
         DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
         filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
@@ -364,7 +364,7 @@ private:
 
     class CView {
     public:
-        CView(filament::Renderer& renderer, std::string name);
+        CView(filament::Renderer& renderer, utils::CString name);
         virtual ~CView();
 
         void setCameraManipulator(CameraManipulator* cm);
@@ -390,7 +390,7 @@ private:
         filament::Viewport mViewport;
         filament::View* view = nullptr;
         CameraManipulator* mCameraManipulator = nullptr;
-        std::string mName;
+        utils::CString mName;
     };
 
     class GodView : public CView {
@@ -424,7 +424,7 @@ public:
         virtual ~Window();
 
     private:
-        Window(FilamentApp2* filamentApp, std::string title,
+        Window(FilamentApp2* filamentApp, utils::CString title,
                 WindowCameraParams const& cameraParams, size_t w, size_t h);
 
         void mouseDown(int button, ssize_t x, ssize_t y);
@@ -506,7 +506,7 @@ private:
     ResizeCallback mResize;
     DropCallback mDropHandler;
     size_t mSkippedFrames = 0;
-    std::string mWindowTitle;
+    utils::CString mWindowTitle;
     std::vector<filament::View*> mOffscreenViews;
     WindowCameraParams mCameraParams{};
     bool mReconfigureCameras = false;
@@ -523,8 +523,8 @@ private:
     std::unique_ptr<Window> mWindow;
     uint32_t mWindowWidth = 1024;
     uint32_t mWindowHeight = 640;
-    std::string mIblDirectory;
-    std::string mDirtPath;
+    utils::CString mIblDirectory;
+    utils::CString mDirtPath;
     float mScale = 1.0f;
     filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
     filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
@@ -533,7 +533,7 @@ private:
     bool mHeadless = false;
     int mStereoscopicEyeCount = 2;
     uint8_t mSamples = 1;
-    std::string mVulkanGPUHint;
+    utils::CString mVulkanGPUHint;
     WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
     DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
     filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;

@@ -22,13 +22,13 @@
 
 
 #if defined(FILAMENTAPP_HAS_WEB_UI)
-#include "display_managers/HtmlDisplayManager.h"
+#include "filamentapp/HtmlDisplayManager.h"
 #endif // defined(FILAMENTAPP_HAS_WEB_UI)
 
 #include <filamentapp/DisplayManager.h>
 
 #ifdef FILAMENTAPP_HAS_SDL
-#include "display_managers/SDLDisplayManager.h"
+#include "filamentapp/SDLDisplayManager.h"
 #endif // defined(FILAMENTAPP_HAS_SDL)
 
 #if defined(WIN32)
@@ -126,7 +126,6 @@ FilamentApp2::FilamentApp2(const Builder& builder)
 FilamentApp2::~FilamentApp2() {
     if (mDisplayManager) {
         mDisplayManager->terminate();
-        delete mDisplayManager;
     }
 }
 
@@ -190,20 +189,7 @@ void FilamentApp2::run() {
     // By now we have resolved to a specific backend (instead of default).
     mBackend = backend;
 
-    if (!mDisplayManager) {
-        if (mDisplayManagerConfig == DisplayManager::WEB) {
-#if defined(FILAMENTAPP_HAS_WEB_UI)
-            mDisplayManager = new HtmlDisplayManager();
-#endif // defined(FILAMENTAPP_HAS_WEB_UI)
-        } else {
-#ifdef FILAMENTAPP_HAS_SDL
-            mDisplayManager = new SDLDisplayManager();
-#else  // !defined(FILAMENTAPP_HAS_SDL)
-            FILAMENT_CHECK_POSTCONDITION(false)
-                    << "SDLDisplayManager is not available on this platform";
-#endif // defined(FILAMENTAPP_HAS_SDL)
-        }
-    }
+    FILAMENT_CHECK_POSTCONDITION(mDisplayManager != nullptr) << "DisplayManager must be provided";
 
 
     Config dummyConfig;
@@ -701,7 +687,7 @@ bool FilamentApp2::isFroxelGridEnabled() const noexcept { return !!mFroxelGridEn
 
 // ------------------------------------------------------------------------------------------------
 
-FilamentApp2::Window::Window(FilamentApp2* filamentApp, std::string title,
+FilamentApp2::Window::Window(FilamentApp2* filamentApp, utils::CString title,
         WindowCameraParams const& cameraParams, size_t w, size_t h)
         : mDisplayManager(filamentApp->mDisplayManager),
           mEngine(filamentApp->mEngine),
@@ -961,7 +947,7 @@ void FilamentApp2::Window::configureCamerasForWindow(WindowCameraParams const& c
 
 // ------------------------------------------------------------------------------------------------
 
-FilamentApp2::CView::CView(Renderer& renderer, std::string name)
+FilamentApp2::CView::CView(Renderer& renderer, utils::CString name)
         : engine(*renderer.getEngine()),
           mName(name) {
     view = engine.createView();
