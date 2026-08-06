@@ -12,7 +12,7 @@ jobs:
     name: update-renderdiff-goldens
     runs-on: 'macos-14'
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: get_commit_msg
@@ -67,7 +67,7 @@ jobs:
     name: update-docs
     runs-on: 'ubuntu-24.04-4core'
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -94,14 +94,14 @@ jobs:
     name: update-sizeguard
     runs-on: 'ubuntu-24.04-4core'
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Build and generate size report

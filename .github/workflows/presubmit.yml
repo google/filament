@@ -51,7 +51,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/mac-prereq
@@ -66,7 +66,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -83,7 +83,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Run build script
@@ -98,14 +98,14 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
       - name: Run build script
         # Only build 1 64 bit target during presubmit to cut down build times during presubmit
         # Continuous builds will build everything
@@ -135,7 +135,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/mac-prereq
@@ -155,7 +155,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -170,7 +170,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: get_commit_msg
@@ -186,7 +186,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: get_commit_msg
@@ -259,7 +259,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -275,7 +275,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -321,7 +321,7 @@ jobs:
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
