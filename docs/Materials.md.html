@@ -2903,6 +2903,8 @@ The command line flags relevant to application development are described in tabl
 **-S**, **--optimize-size**     | N/A                | Optimize compiled material for size instead of just performance
 **-r**, **--reflect**           | parameters         | Outputs the specified metadata as JSON
 **-v**, **--variant-filter**    | [variant]          | Filters out the specified, comma-separated variants
+**-f**, **-output-format**      | blob/header/mat    | Default to blob, when mat is set, returns a `.mat` with `#include`s resolved
+**--include-source-mat**        | N/A                | Embeds the source ASCII material definition if set
 [Table [matcFlags]: List of `matc` flags]
 
 `matc` offers a few other flags that are irrelevant to application developers and for internal
@@ -2993,6 +2995,16 @@ in the material itself.
 
 Use this flag with caution, filtering out a variant required at runtime may lead to crashes.
 
+### --output-format
+Specifies the output format:
+- blob (default): Outputs a compiled binary material package file.
+- header: Outputs a C++ header file containing the compiled material package embedded as a static byte array, allowing direct inclusion in C++ source code.
+- mat: Outputs a processed .mat source text file with all #include directives fully resolved into a single standalone source file.
+
+### --include-source-mat
+Embeds the source ASCII material definition into the compiled material package (blob). The embedded source code has all
+`#include` directives recursively resolved.
+
 # Handling colors
 
 ## Linear colors
@@ -3053,4 +3065,22 @@ Finally if `variantFilter` contains the `fog` filter, an extra sampler is made a
 !!! TIP: external samplers
                Be aware that `external` samplers account for 2 regular samplers.
 
+## Material API level
+In cases of remote renderers where an app and the system run different Filament instances and materials are compiled at
+runtime on the remote end, material API versioning ensures compatibility across versions. It is less relevant if your
+project uses a single Filament instance, but apiLevel is still required when opting into features introduced at higher
+API levels features.
+
+When authoring a material, you can specify apiLevel inside the material block. If omitted, it defaults to 1.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+material {
+    name: "MyMaterial",
+    apiLevel: 2, // Client-requested API level
+    // ...
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Check the documentation for specific material features (for example, morphing requires API level 2) or refer to the
+Shader public APIs section above. If no API level is explicitly mentioned for a function or feature, it is available at
+baseline `apiLevel: 1`; otherwise, use the level specified.
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="../third_party/markdeep/markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
