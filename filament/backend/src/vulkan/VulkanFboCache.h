@@ -42,10 +42,6 @@ struct VulkanRenderPass;
 //
 class VulkanFboCache {
 public:
-    constexpr static VulkanLayout FINAL_COLOR_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
-    constexpr static VulkanLayout FINAL_RESOLVE_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
-    constexpr static VulkanLayout FINAL_DEPTH_STENCIL_ATTACHMENT_LAYOUT = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
-
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
