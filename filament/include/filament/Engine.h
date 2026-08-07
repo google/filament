@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_ENGINE_H
 #define TNT_FILAMENT_ENGINE_H
 
-
 #include <filament/ColorGrading.h>
 #include <filament/FilamentAPI.h>
+#include <filament/Options.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -1385,6 +1385,70 @@ public:
             utils::tribool skinning,
             backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
             utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {});
+    /**
+     * View configuration settings used to pre-compile material shader variants without requiring a View instance.
+     *
+     * Useful for pre-compiling material variants ahead of time for a specific View configuration or for a View
+     * with different rendering settings than the active one.
+     */
+    struct ViewSettings {
+        bool hasDirectionalLighting = false;
+        bool hasFog = false;
+        bool hasStereo = false;
+        bool hasPostProcessing = false;
+        bool hasDynamicLighting = false;
+        bool hasShadowing = false;
+        ShadowType shadowType = ShadowType::PCF;
+    };
+
+    /**
+     * Asynchronously compiles the Material with the variants based on the provided ViewSettings (e.g. dynamic lighting, fog, stereo, shadowing), alongside the specified shadow receiver
+     * and skinning configurations.
+     *
+     * After issuing several Engine::compile() calls in a row, it is recommended to call
+     * Engine::flush() such that the backend can start the compilation work as soon as possible.
+     * The provided callback is guaranteed to be called on the main thread after all computed
+     * variants of the material are compiled. This can take hundreds of milliseconds.
+     *
+     * If all the needed variants are already compiled, the callback will be scheduled as
+     * soon as possible, but this might take a few dozen milliseconds, corresponding to how
+     * many previous frames are enqueued in the backend.
+     *
+     * If the same variant is scheduled for compilation multiple times, the first scheduling
+     * takes precedence; later scheduling are ignored.
+     *
+     * The callback is guaranteed to be called. If the engine is destroyed while some material
+     * variants are still compiling or in the queue, these will be discarded and the corresponding
+     * callback will be called. In that case however the Material pointer passed to the callback
+     * is guaranteed to be invalid (either because it's been destroyed by the user already, or,
+     * because it's been cleaned-up by the Engine).
+     *
+     * @param priority       Which priority queue to use, LOW or HIGH.
+     * @param material       The Material to compile.
+     * @param settings       The ViewSettings that is used to get necessary variants.
+     * @param shadowReceiver Indicates whether to compile the shadow-receiving variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param skinning       Indicates whether to compile the skinning variants.
+     *                       Pass \p utils::tribool::indeterminate to compile both permutations.
+     * @param handler        Handler to dispatch the callback or nullptr for the default handler.
+     * @param callback       Callback called on the main thread when the compilation is done
+     *                       by the backend.
+     * @see Material::compile
+     */
+    void compile(
+        backend::CompilerPriorityQueue priority,
+        Material const* UTILS_NONNULL material,
+        ViewSettings const& settings,
+        utils::tribool shadowReceiver = utils::tribool::kIndeterminate,
+        utils::tribool skinning = utils::tribool::kIndeterminate,
+        backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+        utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {});
+
+    /**
+     * @param view The View in which you want to extract the settings from.
+     * @return ViewSettings
+     */
+    ViewSettings extractViewSettings(View const* UTILS_NONNULL view) noexcept;
 
 protected:
     //! \privatesection
