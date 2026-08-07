@@ -110,6 +110,8 @@ public:
     // this is to work around our lack of RTTI -- otherwise we could use dynamic_cast
     virtual ImportedRenderTarget* asImportedRenderTarget() noexcept { return nullptr; }
 
+    virtual size_t getSize() const = 0;
+
 protected:
     void addOutgoingEdge(ResourceNode* node, ResourceEdgeBase* edge) noexcept;
     void setIncomingEdge(ResourceNode* node, ResourceEdgeBase* edge) noexcept;
@@ -203,6 +205,8 @@ public:
         return true;
     }
 
+    size_t getSize() const override { return sizeof(Resource); }
+
 protected:
     /*
      * The virtual below must be in a header file as RESOURCE is only known at compile time
@@ -278,6 +282,8 @@ public:
         this->usage = usage;
     }
 
+    size_t getSize() const override { return sizeof(ImportedResource); }
+
 protected:
     void devirtualize(ResourceCreationContext const&) noexcept override {
         // imported resources don't need to devirtualize
@@ -325,6 +331,8 @@ public:
             backend::Handle<backend::HwRenderTarget> target);
 
     ~ImportedRenderTarget() noexcept override;
+
+    size_t getSize() const override { return sizeof(ImportedRenderTarget); }
 
 protected:
     UTILS_NOINLINE

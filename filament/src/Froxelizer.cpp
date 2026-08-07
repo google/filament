@@ -224,7 +224,7 @@ void Froxelizer::setProjection(const mat4f& projection,
 }
 
 bool Froxelizer::prepare(
-        FEngine::DriverApi& driverApi, RootArenaScope& rootArenaScope,
+        FEngine::DriverApi& driverApi, LinearAllocatorArena& arena,
         filament::Viewport const& viewport,
         const mat4f& projection, float const projectionNear, float const projectionFar,
         float4 const& clipTransform) noexcept {
@@ -261,12 +261,12 @@ bool Froxelizer::prepare(
 
     // light records per froxel (~256 KiB with 4096 froxels)
     mLightRecords.set(
-            rootArenaScope.allocate<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
+            arena.alloc<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
             getFroxelBufferEntryCount());
 
     // froxel thread data (~256KiB with 8192 max froxels and 256 lights)
     mFroxelShardedData.set(
-            rootArenaScope.allocate<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
+            arena.alloc<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
             uint32_t(GROUP_COUNT));
 
     assert_invariant(mFroxelBufferUser.begin());
@@ -278,6 +278,13 @@ bool Froxelizer::prepare(
     memset(mLightRecords.data(), 0, mLightRecords.sizeInBytes());
 
     return uniformsNeedUpdating;
+}
+
+void Froxelizer::finish(LinearAllocatorArena& arena) {
+    arena.free(mLightRecords.data(), mLightRecords.sizeInBytes());
+    arena.free(mFroxelShardedData.data(), mFroxelShardedData.sizeInBytes());
+    mLightRecords.clear();
+    mFroxelShardedData.clear();
 }
 
 void Froxelizer::computeFroxelLayout(

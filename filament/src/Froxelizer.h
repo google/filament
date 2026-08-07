@@ -114,10 +114,16 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope,
+    bool prepare(backend::DriverApi& driverApi, LinearAllocatorArena& arena,
             Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar,
             math::float4 const& clipTransform) noexcept;
+
+    /*
+     * Release the per-frame data structures allocated in prepare().
+     * This mostly exists for accounting. This call is very low overhead.
+     */
+    void finish(LinearAllocatorArena& arena);
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }

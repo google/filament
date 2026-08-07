@@ -919,8 +919,6 @@ TEST(FilamentTest, FroxelData) {
     FEngine* engine = downcast(Engine::Builder().backend(Engine::Backend::NOOP).build());
 
     LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
-    ArenaScope scope(arena);
-
 
     // view-port size is chosen so that we fit exactly a integer # of froxels horizontally
     // (unfortunately there is no way to guarantee it as it depends on the max # of froxel
@@ -931,7 +929,7 @@ TEST(FilamentTest, FroxelData) {
 
     Froxelizer froxelData(*engine);
     froxelData.setOptions(5, 100);
-    froxelData.prepare(engine->getDriverApi(), scope, vp, p, 0.1, 100, {1,1,0,0});
+    froxelData.prepare(engine->getDriverApi(), arena, vp, p, 0.1, 100, {1,1,0,0});
 
     Froxel f = froxelData.getFroxelAt(0,0,0);
 

@@ -93,7 +93,7 @@ TEST(AllocatorTest, PoolAllocator) {
     std::bitset<16> used;
 
     // verify buffers have not been clobbered
-    auto check = [](char const* p, int v, size_t s)->bool {
+    auto check = [](char const* p, int const v, size_t const s)->bool {
         for (size_t i = 0; i<s ; ++i) {
             if (p[i] != v) {
                 return false;
@@ -114,7 +114,7 @@ TEST(AllocatorTest, PoolAllocator) {
             EXPECT_NE(nullptr, p);
             EXPECT_EQ(0, uintptr_t(p) & 31);
 
-            size_t j = (uintptr_t(p) - uintptr_t(b)) / 64;
+            size_t const j = (uintptr_t(p) - uintptr_t(b)) / 64;
             //printf("%3d", j);
             memset(p, int(j + 1), 64);
         }
@@ -136,7 +136,7 @@ TEST(AllocatorTest, PoolAllocator) {
         q = b;
         for (size_t i = 0; i < 16; i++) {
             // use gray-coding so we don't free exactly linearly
-            size_t j = ((i^k) >> 1) ^ (i^k);
+            size_t const j = ((i^k) >> 1) ^ (i^k);
             p = pointermath::add(q, j * 64);
             pa.free(p);
             used[j] = false;
@@ -161,8 +161,8 @@ TEST(AllocatorTest, CppAllocator) {
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
-        void onFree(void* p) {
-            auto pos = std::find(allocations.begin(), allocations.end(), p);
+        void onFree(void* p, size_t) {
+            auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
         }
         std::vector<void*> allocations;
@@ -178,16 +178,18 @@ TEST(AllocatorTest, CppAllocator) {
         struct Tag {
             CppArena* arena;
         };
-        static void* operator new(size_t size, CppArena& arena) {
+
+        void* operator new(size_t const size, CppArena& arena) {
             void* p = arena.alloc(size, alignof(Foo), sizeof(Tag));
             Tag* tag = static_cast<Tag*>(p) - 1;
             tag->arena = &arena;
             return p;
         }
-        static void operator delete(void* p, size_t s) {
+
+        void operator delete(void* p, size_t s) {
             // don't do anything
-            Tag* tag = static_cast<Tag*>(p) - 1;
-            tag->arena->free(p);
+            Tag const* tag = static_cast<Tag*>(p) - 1;
+            tag->arena->free(p, s);
         }
         char dummy[8];
     };
@@ -209,79 +211,74 @@ TEST(AllocatorTest, CppAllocator) {
     EXPECT_EQ(2, count);
 }
 
+TEST(AllocatorTest, ArenaScope) {
+    using LinearArena = Arena<LinearAllocator, LockingPolicy::NoLock>;
+    LinearArena arena("ArenaScopeTest", 1024);
 
-TEST(AllocatorTest, ScopedStackArena) {
-    void* p = nullptr;
-
-    struct Foo {
-        explicit Foo(std::function<void(void)> f) : dtor(std::move(f)) { }
-        ~Foo() { dtor(); }
-    private:
-        std::function<void(void)> dtor;
-    };
-
-
-    struct Pod {
-        int a;
-        float b;
-    };
-
-    struct PodWithDtor {
-        int a;
-        float b;
-        ~PodWithDtor() { };
-    };
-
-    int dtorCalled = 0;
-    using Allocator = Arena<LinearAllocator, LockingPolicy::NoLock>;
-    Allocator allocator("ArenaScope", 1024);
+    void* const initial = arena.getAllocator().getCurrent();
 
     {
-        ArenaScope<Allocator> ssa(allocator);
-        Foo* f0 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f0);
+        ArenaScope scope(arena);
+        EXPECT_EQ(&arena, &scope.getArena());
 
-        Foo* f1 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f1);
+        void* const p0 = arena.alloc(128);
+        EXPECT_NE(nullptr, p0);
+        EXPECT_EQ(pointermath::add(initial, 128), arena.getAllocator().getCurrent());
 
-        Foo* f2 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f2);
+        {
+            ArenaScope const nestedScope(arena);
+            void* const p1 = arena.alloc(256);
+            EXPECT_NE(nullptr, p1);
+            EXPECT_EQ(pointermath::add(p1, 256), arena.getAllocator().getCurrent());
+        }
 
-        EXPECT_EQ(0, dtorCalled);
+        // After nested scope exits, current should be rewound to p0 + 128
+        EXPECT_EQ(pointermath::add(initial, 128), arena.getAllocator().getCurrent());
+
+        // We can allocate again from that rewind point
+        void* const p2 = arena.alloc(64);
+        EXPECT_NE(nullptr, p2);
+        EXPECT_EQ(pointermath::add(p2, 64), arena.getAllocator().getCurrent());
     }
-    allocator.getAllocator().reset();
 
-    // check dtors have been called
-    EXPECT_EQ(3, dtorCalled);
+    // After outer scope exits, current should be rewound to initial
+    EXPECT_EQ(initial, arena.getAllocator().getCurrent());
+
+    // Check with another arena type that supports rewind, e.g. LinearAllocatorWithFallback
+    using FallbackArena = Arena<LinearAllocatorWithFallback, LockingPolicy::NoLock>;
+    FallbackArena fallbackArena("FallbackArenaScopeTest", 1024);
+    void* const fallbackInitial = fallbackArena.getAllocator().getCurrent();
 
     {
-        ArenaScope<Allocator> ssa(allocator);
-        // check that we can allocate everything at this point
-        p = ssa.allocate(1024);
+        ArenaScope const fallbackScope(fallbackArena);
+        void* const pf0 = fallbackArena.alloc(256);
+        EXPECT_NE(nullptr, pf0);
+        EXPECT_NE(fallbackInitial, fallbackArena.getAllocator().getCurrent());
+    }
+
+    EXPECT_EQ(fallbackInitial, fallbackArena.getAllocator().getCurrent());
+
+    // Check with TrackingPolicy::Debug to verify active allocation count and bytes tracking
+    using DebugArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::Debug>;
+    DebugArena debugArena("DebugArenaScopeTest", 1024);
+    EXPECT_EQ(0, debugArena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0, debugArena.getListener().getActiveAllocationBytes());
+
+    {
+        ArenaScope debugScope(debugArena);
+        void* const p = debugArena.alloc(128);
         EXPECT_NE(nullptr, p);
+        EXPECT_EQ(1, debugArena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(128, debugArena.getListener().getActiveAllocationBytes());
+
+        // Logical free balances the active count and bytes
+        debugArena.free(p, 128);
+        EXPECT_EQ(0, debugArena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(0, debugArena.getListener().getActiveAllocationBytes());
     }
-    allocator.getAllocator().reset();
 
-    {
-        ArenaScope<Allocator> ssa(allocator);
-        // check that we fail allocating too much
-        p = ssa.allocate(1025);
-        EXPECT_EQ(nullptr, p);
-    }
-    allocator.getAllocator().reset();
-
-
-    {
-        ArenaScope<Allocator> ssa(allocator);
-        Pod* p0 = ssa.make<Pod>();
-        Pod* p1 = ssa.make<Pod>();
-        EXPECT_EQ(sizeof(Pod), uintptr_t(p1) - uintptr_t(p0));
-
-        PodWithDtor* pd0 = ssa.make<PodWithDtor>();
-        PodWithDtor* pd1 = ssa.make<PodWithDtor>();
-        EXPECT_NE(sizeof(PodWithDtor), uintptr_t(pd1) - uintptr_t(pd0));
-    }
-    allocator.getAllocator().reset();
+    EXPECT_EQ(0, debugArena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0, debugArena.getListener().getActiveAllocationBytes());
 }
 
 TEST(AllocatorTest, STLAllocator) {
@@ -292,15 +289,23 @@ TEST(AllocatorTest, STLAllocator) {
             allocations.push_back(p);
         }
         void onFree(void* p, size_t) {
-            auto pos = std::find(allocations.begin(), allocations.end(), p);
+            auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
             allocations.erase(pos);
         }
+        void onLogicalFree(void* p, size_t size) {
+            onFree(p, size);
+        }
+        void onReset() noexcept { }
+        void onRewind(void const* addr) noexcept { }
+        size_t getActiveAllocationCount() const noexcept { return allocations.size(); }
+        size_t getActiveAllocationBytes() const noexcept { return 0; }
         std::vector<void*> allocations;
     };
 
 
     using Arena = Arena<LinearAllocator, LockingPolicy::NoLock, Tracking>;
+    static_assert(detail::has_logical_free_v<Tracking>, "Tracking must have onLogicalFree");
     Arena arena("arena", 1204);
     Arena arena2("arena2", 1204);
     STLAllocator<int, Arena> allocator(arena);
