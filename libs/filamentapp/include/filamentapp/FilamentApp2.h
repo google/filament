@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 
+#include "AppEvent.h"
 #include "Config.h"
 #include "Cube.h"
 #include "Grid.h"
@@ -62,7 +63,6 @@ class WebGPUPlatform;
 
 namespace filament::app {
 class DisplayManager;
-enum class AppKey : uint32_t;
 } // namespace filament::app
 
 class FilamentApp2 {
@@ -303,7 +303,7 @@ public:
     IBL* getIBL() const noexcept { return mIBL.get(); }
     filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
-    filament::SwapChain* getPrimarySwapChain() const noexcept { return mPrimarySwapChain; }
+    filament::SwapChain* getPrimarySwapChain() const noexcept { return mSwapChain; }
 
     void close() { mClosed = true; }
 
@@ -415,70 +415,7 @@ private:
         }
     };
 
-public:
-    class Window {
-        friend class FilamentApp2;
-
-    public:
-        using Handle = void*;
-        virtual ~Window();
-
-    private:
-        Window(FilamentApp2* filamentApp, utils::CString title,
-                WindowCameraParams const& cameraParams, size_t w, size_t h);
-
-        void mouseDown(int button, ssize_t x, ssize_t y);
-        void mouseUp(ssize_t x, ssize_t y);
-        void mouseMoved(ssize_t x, ssize_t y);
-        void mouseWheel(ssize_t x);
-        void keyDown(filament::app::AppKey scancode);
-        void keyUp(filament::app::AppKey scancode);
-        void resize(WindowCameraParams const& cameraParams);
-
-        filament::Renderer* getRenderer() { return mRenderer; }
-        filament::SwapChain* getSwapChain() { return mSwapChain; }
-
-        void configureCamerasForWindow(WindowCameraParams const& camera);
-        void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
-
-        filament::app::DisplayManager* const mDisplayManager = nullptr;
-        filament::Engine* const mEngine = nullptr;
-        FilamentApp2* const mApp = nullptr;
-
-        Handle mWindow = nullptr;
-        filament::Renderer* mRenderer = nullptr;
-        filament::Engine::Backend mBackend;
-
-        CameraManipulator* mMainCameraMan;
-        CameraManipulator* mDebugCameraMan;
-        filament::SwapChain* mSwapChain = nullptr;
-
-        utils::Entity mCameraEntities[3];
-        filament::Camera* mCameras[3] = { nullptr };
-        filament::Camera* mMainCamera;
-        filament::Camera* mDebugCamera;
-        filament::Camera* mOrthoCamera;
-
-        std::vector<std::unique_ptr<CView>> mViews;
-        CView* mMainView; // well, the main view
-        CView* mUiView;   // the imgui ui
-        CView* mDepthView;
-        GodView* mGodView; // the debug view with "god" camera
-        CView* mOrthoView; // directional shadow map view
-
-        size_t mWidth = 0;
-        size_t mHeight = 0;
-        ssize_t mLastX = 0;
-        ssize_t mLastY = 0;
-
-        CView* mMouseEventTarget = nullptr;
-
-        // Keep track of which view should receive a key's keyUp event.
-        std::unordered_map<filament::app::AppKey, CView*> mKeyEventTarget;
-    };
-
 private:
-    friend class Window;
     friend class Builder;
 
     explicit FilamentApp2(const Builder& builder);
@@ -489,10 +426,20 @@ private:
     bool doFrame();
     void shutdown();
 
+    void mouseDown(int button, ssize_t x, ssize_t y);
+    void mouseUp(ssize_t x, ssize_t y);
+    void mouseMoved(ssize_t x, ssize_t y);
+    void mouseWheel(ssize_t x);
+    void keyDown(filament::app::AppKey scancode);
+    void keyUp(filament::app::AppKey scancode);
+    void resize(WindowCameraParams const& cameraParams);
+
+    void configureCamerasForWindow(WindowCameraParams const& camera);
+    void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
+
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
-    filament::SwapChain* mPrimarySwapChain = nullptr;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     double mTime = 0;
@@ -520,7 +467,36 @@ private:
     filament::backend::Platform* mVulkanPlatform = nullptr;
     filament::backend::Platform* mWebGPUPlatform = nullptr;
 
-    std::unique_ptr<Window> mWindow;
+    filament::app::WindowHandle mWindow = nullptr;
+    filament::Renderer* mRenderer = nullptr;
+    filament::SwapChain* mSwapChain = nullptr;
+
+    CameraManipulator* mMainCameraMan = nullptr;
+    CameraManipulator* mDebugCameraMan = nullptr;
+
+    utils::Entity mCameraEntities[3];
+    filament::Camera* mCameras[3] = { nullptr };
+    filament::Camera* mMainCamera = nullptr;
+    filament::Camera* mDebugCamera = nullptr;
+    filament::Camera* mOrthoCamera = nullptr;
+
+    std::vector<std::unique_ptr<CView>> mViews;
+    CView* mMainView = nullptr;
+    CView* mUiView = nullptr;
+    CView* mDepthView = nullptr;
+    GodView* mGodView = nullptr;
+    CView* mOrthoView = nullptr;
+
+    size_t mWidth = 0;
+    size_t mHeight = 0;
+    ssize_t mLastX = 0;
+    ssize_t mLastY = 0;
+
+    CView* mMouseEventTarget = nullptr;
+
+    // Keep track of which view should receive a key's keyUp event.
+    std::unordered_map<filament::app::AppKey, CView*> mKeyEventTarget;
+
     uint32_t mWindowWidth = 1024;
     uint32_t mWindowHeight = 640;
     utils::CString mIblDirectory;

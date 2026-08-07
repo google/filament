@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMENT_FILAMENTAPP_APPEVENT_H
 #define TNT_FILAMENT_FILAMENTAPP_APPEVENT_H
 
-#include <filamentapp/FilamentApp2.h>
-
 #include <cstdint>
 #include <string>
 
 namespace filament::app {
+
+using WindowHandle = void*;
 
 /**
  * Key codes for FilamentApp.
@@ -167,7 +167,7 @@ struct AppEvent {
         TEXTINPUT
     } type;
 
-    FilamentApp2::Window::Handle windowId = nullptr;
+    WindowHandle windowId = nullptr;
 
     union {
         struct {
