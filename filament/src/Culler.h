@@ -49,8 +49,12 @@ public:
      */
     static void intersects(result_type* results,
             Frustum const& frustum,
-            math::float3 const* center,
-            math::float3 const* extent,
+            float const* centerX,
+            float const* centerY,
+            float const* centerZ,
+            float const* extentX,
+            float const* extentY,
+            float const* extentZ,
             size_t count, size_t bit) noexcept;
 
     /*
@@ -80,8 +84,12 @@ public:
     struct UTILS_PUBLIC Test {
         static void intersects(result_type* results,
                 Frustum const& frustum,
-                math::float3 const* c,
-                math::float3 const* e,
+                float const* centerX,
+                float const* centerY,
+                float const* centerZ,
+                float const* extentX,
+                float const* extentY,
+                float const* extentZ,
                 size_t count) noexcept;
 
         static void intersects(result_type* results,

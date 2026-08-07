@@ -232,11 +232,15 @@ void FScene::prepare(JobSystem& js,
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
             sceneData.elementAt<MORPHING_BUFFER>(index)     = rcm.getMorphingBufferInfo(ri);
             sceneData.elementAt<INSTANCES>(index)           = rcm.getInstancesInfo(ri);
-            sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
+            sceneData.elementAt<WORLD_AABB_CENTER_X>(index) = worldAABB.center.x;
+            sceneData.elementAt<WORLD_AABB_CENTER_Y>(index) = worldAABB.center.y;
+            sceneData.elementAt<WORLD_AABB_CENTER_Z>(index) = worldAABB.center.z;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
             sceneData.elementAt<CHANNELS>(index)            = rcm.getLightChannels(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
-            sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
+            sceneData.elementAt<WORLD_AABB_EXTENT_X>(index) = worldAABB.halfExtent.x;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Y>(index) = worldAABB.halfExtent.y;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Z>(index) = worldAABB.halfExtent.z;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
             sceneData.elementAt<SUMMED_PRIMITIVE_COUNT>(index) = 0;
             //sceneData.elementAt<UBO>(index)                 = {}; // not needed here
@@ -359,7 +363,7 @@ void FScene::prepare(JobSystem& js,
 void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, FScene::SceneCacheData& cache) const noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     RenderableSoa& sceneData = cache.renderableData;
-    
+
     cache.hasContactShadows = false;
     for (uint32_t const i : visibleRenderables) {
         PerRenderableData& uboData = sceneData.elementAt<UBO>(i);

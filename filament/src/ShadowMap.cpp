@@ -1157,8 +1157,12 @@ void ShadowMap::visitScene(FScene::RenderableSoa const& soa, uint32_t const visi
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     using State = FRenderableManager::Visibility;
-    float3 const* const worldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* const worldAABBExtent = soa.data<FScene::WORLD_AABB_EXTENT>();
+    float const* const worldAABBCenterX = soa.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* const worldAABBCenterY = soa.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* const worldAABBCenterZ = soa.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* const worldAABBExtentX = soa.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* const worldAABBExtentY = soa.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* const worldAABBExtentZ = soa.data<FScene::WORLD_AABB_EXTENT_Z>();
     uint8_t const* const layers = soa.data<FScene::LAYERS>();
     State const* const visibility = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const visibleMasks = soa.data<FScene::VISIBLE_MASK>();
@@ -1166,8 +1170,12 @@ void ShadowMap::visitScene(FScene::RenderableSoa const& soa, uint32_t const visi
     for (size_t i = 0; i < c; i++) {
         if (layers[i] & visibleLayers) {
             Aabb const aabb{
-                worldAABBCenter[i] - worldAABBExtent[i],
-                worldAABBCenter[i] + worldAABBExtent[i]
+                                { worldAABBCenterX[i] - worldAABBExtentX[i],
+                                    worldAABBCenterY[i] - worldAABBExtentY[i],
+                                    worldAABBCenterZ[i] - worldAABBExtentZ[i] },
+                                { worldAABBCenterX[i] + worldAABBExtentX[i],
+                                    worldAABBCenterY[i] + worldAABBExtentY[i],
+                                    worldAABBCenterZ[i] + worldAABBExtentZ[i] }
             };
             visitor(aabb, visibleMasks[i], visibility[i]);
         }

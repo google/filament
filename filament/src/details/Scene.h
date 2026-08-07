@@ -90,13 +90,17 @@ public:
         SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset, indices and weights
         MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
         INSTANCES,              //  16 | instancing info for this Renderable
-        WORLD_AABB_CENTER,      //  12 | world-space bounding box center of the renderable
+        WORLD_AABB_CENTER_X,    //   4 | world-space bounding box center.x of the renderable
+        WORLD_AABB_CENTER_Y,    //   4 | world-space bounding box center.y of the renderable
+        WORLD_AABB_CENTER_Z,    //   4 | world-space bounding box center.z of the renderable
         VISIBLE_MASK,           //   2 | each bit represents a visibility in a pass
         CHANNELS,               //   1 | currently light channels only
 
         // These are not needed anymore after culling
         LAYERS,                 //   1 | layers
-        WORLD_AABB_EXTENT,      //  12 | world-space bounding box half-extent of the renderable
+        WORLD_AABB_EXTENT_X,    //   4 | world-space bounding box half-extent.x of the renderable
+        WORLD_AABB_EXTENT_Y,    //   4 | world-space bounding box half-extent.y of the renderable
+        WORLD_AABB_EXTENT_Z,    //   4 | world-space bounding box half-extent.z of the renderable
 
         // These are temporaries and should be stored out of line
         PRIMITIVES,             //   8 | level-of-detail'ed primitives
@@ -116,11 +120,15 @@ public:
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
             FRenderableManager::InstancesInfo,          // INSTANCES
-            math::float3,                               // WORLD_AABB_CENTER
+            float,                                      // WORLD_AABB_CENTER_X
+            float,                                      // WORLD_AABB_CENTER_Y
+            float,                                      // WORLD_AABB_CENTER_Z
             VisibleMaskType,                            // VISIBLE_MASK
             uint8_t,                                    // CHANNELS
             uint8_t,                                    // LAYERS
-            math::float3,                               // WORLD_AABB_EXTENT
+            float,                                      // WORLD_AABB_EXTENT_X
+            float,                                      // WORLD_AABB_EXTENT_Y
+            float,                                      // WORLD_AABB_EXTENT_Z
             utils::Slice<const FRenderPrimitive>,       // PRIMITIVES
             uint32_t,                                   // SUMMED_PRIMITIVE_COUNT
             PerRenderableData,                          // UBO
@@ -129,7 +137,7 @@ public:
             float                                       // USER_DATA
     >;
 
-    
+
 
     bool hasContactShadows(SceneCacheData const& cache) const noexcept;
 
