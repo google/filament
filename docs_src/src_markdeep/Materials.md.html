@@ -2768,17 +2768,18 @@ type aliases:
 
 ### Matrices
 
-                 Name                     |   Type   |            Description
-:-----------------------------------------|:--------:|:------------------------------------
-**getViewFromWorldMatrix()**              | float4x4 |  Matrix that converts from world space to view/eye space
-**getWorldFromViewMatrix()**              | float4x4 |  Matrix that converts from view/eye space to world space
-**getClipFromViewMatrix()**               | float4x4 |  Matrix that converts from view/eye space to clip (NDC) space
-**getViewFromClipMatrix()**               | float4x4 |  Matrix that converts from clip (NDC) space to view/eye space
-**getEyeFromViewMatrix()**                | float4x4 |  Matrix that converts from view space to eye space
-**getEyeFromViewMatrix(int eyeIndex)**    | float4x4 |  Matrix that converts from view space to eye space for the eye referred to by eyeIndex
-**getClipFromWorldMatrix()**              | float4x4 |  Matrix that converts from world to clip (NDC) space
-**getClipFromWorldMatrix(int eyeIndex)**  | float4x4 |  Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex
-**getWorldFromClipMatrix()**              | float4x4 |  Matrix that converts from clip (NDC) space to world space
+                 Name                     |   Type   | ApiLevel |            Description
+:-----------------------------------------|:--------:|:--------:|:------------------------------------
+**getViewFromWorldMatrix()**              | float4x4 |     1    |  Matrix that converts from world space to view/eye space
+**getWorldFromViewMatrix()**              | float4x4 |     1    |  Matrix that converts from view/eye space to world space
+**getClipFromViewMatrix()**               | float4x4 |     1    |  Matrix that converts from view/eye space to clip (NDC) space
+**getViewFromClipMatrix()**               | float4x4 |     1    |  Matrix that converts from clip (NDC) space to view/eye space
+**getEyeFromViewMatrix()**                | float4x4 |     1    |  Matrix that converts from view space to eye space
+**getEyeFromViewMatrix(int eyeIndex)**    | float4x4 |     1    |  Matrix that converts from view space to eye space for the eye referred to by eyeIndex
+**getClipFromWorldMatrix()**              | float4x4 |     1    |  Matrix that converts from world to clip (NDC) space
+**getClipFromWorldMatrix(int eyeIndex)**  | float4x4 |     1    |  Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex
+**getWorldFromClipMatrix()**              | float4x4 |     1    |  Matrix that converts from clip (NDC) space to world space
+**getWorldRayFromClip(float2 clipXY)**    | float3   |     2    |  Transforms a 2D clip-space position directly into an un-normalized, un-translated world-space ray direction
 
 ### Frame constants
 
