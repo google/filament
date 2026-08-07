@@ -486,7 +486,7 @@ private:
     friend class RenderPassNode;
     friend struct ResourceCreationContext;
 
-    LinearAllocatorArena& getArena() noexcept { return mArena; }
+    FrameGraphAllocator& getArena() noexcept { return mArena; }
     DependencyGraph& getGraph() noexcept { return mGraph; }
     TextureCacheInterface& getTextureCache() noexcept { return mResourceAllocator; }
 
@@ -567,7 +567,7 @@ private:
 
     Blackboard mBlackboard;
     TextureCacheInterface& mResourceAllocator;
-    LinearAllocatorArena mArena;
+    FrameGraphAllocator mArena;
     DependencyGraph mGraph;
     const Mode mMode;
 
@@ -575,6 +575,7 @@ private:
     Vector<VirtualResource*> mResources;
     Vector<ResourceNode*> mResourceNodes;
     Vector<PassNode*> mPassNodes;
+
     Vector<PassNode*>::iterator mActivePassNodesEnd;
 
 #if FILAMENT_ENABLE_FGVIEWER

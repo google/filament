@@ -35,6 +35,7 @@ namespace filament {
 ResourceNode::ResourceNode(FrameGraph& fg, FrameGraphHandle const h, FrameGraphHandle const parent) noexcept
         : Node(fg.getGraph()),
           resourceHandle(h), mFrameGraph(fg), mReaderPasses(fg.getArena()), mParentHandle(parent) {
+    mReaderPasses.reserve(16);
 }
 
 ResourceNode::~ResourceNode() noexcept {

@@ -36,6 +36,8 @@ PassNode::PassNode(FrameGraph& fg) noexcept
           mFrameGraph(fg),
           devirtualize(fg.getArena()),
           destroy(fg.getArena()) {
+   devirtualize.reserve(8);
+   destroy.reserve(8);
 }
 
 PassNode::PassNode(PassNode&& rhs) noexcept = default;

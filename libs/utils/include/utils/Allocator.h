@@ -17,14 +17,17 @@
 #ifndef TNT_UTILS_ALLOCATOR_H
 #define TNT_UTILS_ALLOCATOR_H
 
+#include <utils/CallStack.h>
 #include <utils/compiler.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 
 #include <atomic>
 #include <cstddef>
+#include <map>
 #include <mutex>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <assert.h>
@@ -41,7 +44,7 @@ static P* add(P* a, T b) noexcept {
 }
 
 template<typename P>
-static P* align(P* p, size_t alignment) noexcept {
+static P* align(P* p, size_t const alignment) noexcept {
     // alignment must be a power-of-two
     assert(alignment && !(alignment & alignment-1));
     return (P*) ((uintptr_t(p) + alignment - 1) & ~(alignment - 1));
@@ -55,6 +58,97 @@ static P* align(P* p, size_t alignment, size_t offset) noexcept {
 }
 
 }
+
+namespace detail {
+
+template<typename AlwaysVoid, typename Alloc, typename Ptr, typename Size, typename... Args>
+struct has_variadic_free : std::false_type {};
+
+template<typename Alloc, typename Ptr, typename Size, typename... Args>
+struct has_variadic_free<
+            std::void_t<decltype(
+                std::declval<Alloc>().free(
+                        std::declval<Ptr>(),
+                        std::declval<Size>(),
+                        std::declval<Args>()...
+                        )
+            )>,
+            Alloc, Ptr, Size, Args...
+        > : std::true_type {};
+
+// Helper variable template for cleaner syntax
+template<typename Alloc, typename Ptr, typename Size, typename... Args>
+inline constexpr bool has_variadic_free_v = has_variadic_free<void, Alloc, Ptr, Size, Args...>::value;
+
+// Detect reset()
+template<typename T, typename = void>
+struct has_reset : std::false_type {};
+
+template<typename T>
+struct has_reset<T, std::void_t<decltype(std::declval<T>().reset())>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_reset_v = has_reset<T>::value;
+
+// Detect rewind(void*)
+template<typename T, typename = void>
+struct has_rewind : std::false_type {};
+
+template<typename T>
+struct has_rewind<T, std::void_t<decltype(std::declval<T>().rewind(std::declval<void*>()))>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_rewind_v = has_rewind<T>::value;
+
+// Detect onLogicalFree(void*, size_t)
+template<typename T, typename = void>
+struct has_logical_free : std::false_type {};
+
+template<typename T>
+struct has_logical_free<T, std::void_t<decltype(std::declval<T>().onLogicalFree(std::declval<void*>(), std::declval<size_t>()))>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_logical_free_v = has_logical_free<T>::value;
+
+// Detect getActiveAllocationCount()
+template<typename T, typename = void>
+struct has_active_allocation_count : std::false_type {};
+
+template<typename T>
+struct has_active_allocation_count<T, std::void_t<decltype(std::declval<T>().getActiveAllocationCount())>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_active_allocation_count_v = has_active_allocation_count<T>::value;
+
+template<typename Tracking>
+uint32_t getActiveAllocationCount(Tracking const& listener) noexcept {
+    if constexpr (has_active_allocation_count_v<Tracking>) {
+        return listener.getActiveAllocationCount();
+    } else {
+        return 0;
+    }
+}
+
+// Detect getActiveAllocationBytes()
+template<typename T, typename = void>
+struct has_active_allocation_bytes : std::false_type {};
+
+template<typename T>
+struct has_active_allocation_bytes<T, std::void_t<decltype(std::declval<T>().getActiveAllocationBytes())>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_active_allocation_bytes_v = has_active_allocation_bytes<T>::value;
+
+template<typename Tracking>
+uint32_t getActiveAllocationBytes(Tracking const& listener) noexcept {
+    if constexpr (has_active_allocation_bytes_v<Tracking>) {
+        return listener.getActiveAllocationBytes();
+    } else {
+        return 0;
+    }
+}
+
+} // namespace detail
 
 /* ------------------------------------------------------------------------------------------------
  * LinearAllocator
@@ -85,7 +179,7 @@ public:
     ~LinearAllocator() noexcept = default;
 
     // our allocator concept
-    void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) UTILS_RESTRICT {
+    void* alloc(size_t const size, size_t const alignment = alignof(std::max_align_t), size_t const extra = 0) UTILS_RESTRICT {
         // branch-less allocation
         void* const p = pointermath::align(current(), alignment, extra);
         void* const c = pointermath::add(p, size);
@@ -123,8 +217,6 @@ public:
     void *base() noexcept { return mBegin; }
     void const *base() const noexcept { return mBegin; }
 
-    void free(void*, size_t) UTILS_RESTRICT noexcept { }
-
 protected:
     void* end() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mSize); }
     void const* end() const UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mSize); }
@@ -156,7 +248,7 @@ public:
     explicit HeapAllocator(const AREA&) { }
 
     // our allocator concept
-    void* alloc(size_t size, size_t alignment = alignof(std::max_align_t)) {
+    void* alloc(size_t const size, size_t const alignment = alignof(std::max_align_t)) {
         return aligned_alloc(size, alignment);
     }
 
@@ -209,8 +301,6 @@ public:
     }
 
     void reset() noexcept;
-
-    void free(void*, size_t) noexcept { }
 
     bool isHeapAllocation(void* p) const noexcept {
         return p < base() || p >= end();
@@ -382,8 +472,8 @@ class PoolAllocator {
             "ELEMENT_SIZE must accommodate at least a FreeList::Node");
 public:
     // our allocator concept
-    void* alloc(size_t size = ELEMENT_SIZE,
-                size_t alignment = ALIGNMENT, size_t offset = OFFSET) noexcept {
+    void* alloc(size_t const size = ELEMENT_SIZE,
+                size_t const alignment = ALIGNMENT, size_t const offset = OFFSET) noexcept {
         assert(size <= ELEMENT_SIZE);
         assert(alignment <= ALIGNMENT);
         assert(offset == OFFSET);
@@ -400,7 +490,7 @@ public:
         : mFreeList(begin, end, ELEMENT_SIZE, ALIGNMENT, OFFSET) {
     }
 
-    PoolAllocator(void* begin, size_t size) noexcept
+    PoolAllocator(void* begin, size_t const size) noexcept
         : PoolAllocator(begin, static_cast<char *>(begin) + size) {
     }
 
@@ -422,7 +512,7 @@ public:
 
     // API specific to this allocator
 
-    void *getCurrent() noexcept {
+    void *getBase() noexcept {
         return mFreeList.getFirst();
     }
 
@@ -445,7 +535,7 @@ public:
             : PoolAllocator(begin, end), mBegin(begin), mEnd(end) {
     }
 
-    PoolAllocatorWithFallback(void* begin, size_t size) noexcept
+    PoolAllocatorWithFallback(void* begin, size_t const size) noexcept
             : PoolAllocatorWithFallback(begin, static_cast<char*>(begin) + size) {
     }
 
@@ -529,7 +619,7 @@ class HeapArea {
 public:
     HeapArea() noexcept = default;
 
-    explicit HeapArea(size_t size) {
+    explicit HeapArea(size_t const size) {
         if (size) {
             // TODO: policy committing memory
             mBegin = malloc(size);
@@ -592,62 +682,69 @@ namespace TrackingPolicy {
 // default no-op tracker
 struct Untracked {
     Untracked() noexcept = default;
-    Untracked(const char* name, void* base, size_t size) noexcept {
+    Untracked(const char* name, void const* base, size_t const size) noexcept {
         (void)name, void(base), (void)size;
     }
-    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    void onAlloc(void const* p, size_t const size, size_t const alignment, size_t const extra) noexcept {
         (void)p, (void)size, (void)alignment, (void)extra;
     }
-    void onFree(void* p, size_t = 0) noexcept { (void)p; }
+    void onFree(void const* p, size_t const size) noexcept { (void)p; (void)size; }
+    void onLogicalFree(void const* p, size_t const size) noexcept { (void)p; (void)size; }
     void onReset() noexcept { }
-    void onRewind(void* addr) noexcept { (void)addr; }
+    void onRewind(void const* addr) noexcept { (void)addr; }
 };
 
 // This just track the max memory usage and logs it in the destructor
 struct HighWatermark {
     HighWatermark() noexcept = default;
-    HighWatermark(const char* name, void* base, size_t size) noexcept
+    HighWatermark(char const* name, void const* base, size_t const size) noexcept
         : mName(name), mBase(base), mSize(uint32_t(size)) { }
     ~HighWatermark() noexcept;
     void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
     void onFree(void* p, size_t size) noexcept;
+    void onLogicalFree(void const* p, size_t const size) noexcept { (void)p; (void)size; }
     void onReset() noexcept;
     void onRewind(void const* addr) noexcept;
     uint32_t getHighWatermark() const noexcept { return mHighWaterMark; }
 protected:
-    const char* mName = nullptr;
-    void* mBase = nullptr;
-    uint32_t mSize = 0;
+    char const* const mName = nullptr;
+    void const* const mBase = nullptr;
+    uint32_t const mSize = 0;
     uint32_t mCurrent = 0;
     uint32_t mHighWaterMark = 0;
 };
 
-// This just fills buffers with known values to help catch uninitialized access and use after free.
+// This just poisons buffers with known values to help catch uninitialized access and use after free.
 struct Debug {
     Debug() noexcept = default;
-    Debug(const char* name, void* base, size_t size) noexcept
+    Debug(const char* name, void* base, size_t const size) noexcept
             : mName(name), mBase(base), mSize(uint32_t(size)) { }
     void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept;
     void onFree(void* p, size_t size) noexcept;
+    void onLogicalFree(void* p, size_t size) noexcept;
     void onReset() noexcept;
     void onRewind(void* addr) noexcept;
 protected:
-    const char* mName = nullptr;
-    void* mBase = nullptr;
-    uint32_t mSize = 0;
+    char const* const mName = nullptr;
+    void* const mBase = nullptr;
+    uint32_t const mSize = 0;
 };
 
 struct DebugAndHighWatermark : protected HighWatermark, protected Debug {
     DebugAndHighWatermark() noexcept = default;
-    DebugAndHighWatermark(const char* name, void* base, size_t size) noexcept
+    DebugAndHighWatermark(const char* name, void* base, size_t const size) noexcept
             : HighWatermark(name, base, size), Debug(name, base, size) { }
-    void onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+    void onAlloc(void* p, size_t const size, size_t const alignment, size_t const extra) noexcept {
         HighWatermark::onAlloc(p, size, alignment, extra);
         Debug::onAlloc(p, size, alignment, extra);
     }
-    void onFree(void* p, size_t size) noexcept {
+    void onFree(void* p, size_t const size) noexcept {
         HighWatermark::onFree(p, size);
         Debug::onFree(p, size);
+    }
+    void onLogicalFree(void* p, size_t const size) noexcept {
+        HighWatermark::onLogicalFree(p, size);
+        Debug::onLogicalFree(p, size);
     }
     void onReset() noexcept {
         HighWatermark::onReset();
@@ -657,7 +754,120 @@ struct DebugAndHighWatermark : protected HighWatermark, protected Debug {
         HighWatermark::onRewind(addr);
         Debug::onRewind(addr);
     }
+    uint32_t getHighWatermark() const noexcept { return HighWatermark::getHighWatermark(); }
 };
+
+enum class LeakDetectorBehavior {
+    LOG,
+    PANIC
+};
+
+class LeakDetectorBase {
+public:
+    struct AllocationInfo {
+        size_t size = 0;
+        size_t alignment = 0;
+        size_t extra = 0;
+        CallStack callstack;
+    };
+
+    LeakDetectorBase() noexcept = default;
+    LeakDetectorBase(char const* name, void const* base, size_t const size) noexcept
+        : mName(name), mBase(base), mSize(uint32_t(size)) { }
+    ~LeakDetectorBase() noexcept;
+
+    void onAlloc(void* p, size_t size, size_t alignment, size_t extra, size_t ignoreFrames) noexcept;
+    void onFree(void* p, size_t size) noexcept;
+    void onLogicalFree(void* p, size_t size) noexcept { onFree(p, size); }
+    void onReset(LeakDetectorBehavior behavior) noexcept;
+    void onRewind(void const* addr, LeakDetectorBehavior behavior) noexcept;
+
+    uint32_t getActiveAllocationCount() const noexcept { return uint32_t(mAllocations.size()); }
+    uint32_t getActiveAllocationBytes() const noexcept { return uint32_t(mActiveBytes); }
+    std::map<void*, AllocationInfo> const& getActiveAllocations() const noexcept { return mAllocations; }
+
+protected:
+    void dumpLeaksAndClear(std::map<void*, AllocationInfo>::iterator start,
+            std::map<void*, AllocationInfo>::iterator end,
+            char const* operation, LeakDetectorBehavior behavior) noexcept;
+
+    char const* mName = nullptr;
+    void const* mBase = nullptr;
+    uint32_t mSize = 0;
+    size_t mActiveBytes = 0;
+    std::map<void*, AllocationInfo> mAllocations;
+};
+
+template<LeakDetectorBehavior BEHAVIOR = LeakDetectorBehavior::LOG, size_t IGNORE_FRAMES = 3>
+struct TLeakDetector : public LeakDetectorBase {
+    TLeakDetector() noexcept = default;
+    TLeakDetector(char const* name, void const* base, size_t const size) noexcept
+        : LeakDetectorBase(name, base, size) { }
+    ~TLeakDetector() noexcept {
+        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "destruction", BEHAVIOR);
+    }
+
+    void onAlloc(void* p, size_t const size, size_t const alignment = 0, size_t const extra = 0) noexcept {
+        LeakDetectorBase::onAlloc(p, size, alignment, extra, IGNORE_FRAMES);
+    }
+
+    void onFree(void* p, size_t const size = 0) noexcept {
+        LeakDetectorBase::onFree(p, size);
+    }
+
+    void onLogicalFree(void* p, size_t const size = 0) noexcept {
+        LeakDetectorBase::onLogicalFree(p, size);
+    }
+
+    void onReset() noexcept {
+        LeakDetectorBase::onReset(BEHAVIOR);
+    }
+
+    void onRewind(void const* addr) noexcept {
+        LeakDetectorBase::onRewind(addr, BEHAVIOR);
+    }
+};
+
+using LeakDetector = TLeakDetector<LeakDetectorBehavior::LOG, 3>;
+
+template<LeakDetectorBehavior BEHAVIOR = LeakDetectorBehavior::LOG, size_t IGNORE_FRAMES = 3>
+struct TDebugAndLeakDetector : protected Debug, protected TLeakDetector<BEHAVIOR, IGNORE_FRAMES> {
+    using LeakDetectorType = TLeakDetector<BEHAVIOR, IGNORE_FRAMES>;
+
+    TDebugAndLeakDetector() noexcept = default;
+    TDebugAndLeakDetector(char const* name, void* base, size_t const size) noexcept
+            : Debug(name, base, size), LeakDetectorType(name, base, size) { }
+
+    void onAlloc(void* p, size_t const size, size_t const alignment = 0, size_t const extra = 0) noexcept {
+        Debug::onAlloc(p, size, alignment, extra);
+        LeakDetectorType::onAlloc(p, size, alignment, extra);
+    }
+    void onFree(void* p, size_t const size = 0) noexcept {
+        Debug::onFree(p, size);
+        LeakDetectorType::onFree(p, size);
+    }
+    void onLogicalFree(void* p, size_t const size = 0) noexcept {
+        Debug::onLogicalFree(p, size);
+        LeakDetectorType::onLogicalFree(p, size);
+    }
+    void onReset() noexcept {
+        Debug::onReset();
+        LeakDetectorType::onReset();
+    }
+    void onRewind(void* addr) noexcept {
+        Debug::onRewind(addr);
+        LeakDetectorType::onRewind(addr);
+    }
+
+    uint32_t getActiveAllocationCount() const noexcept {
+        return LeakDetectorType::getActiveAllocationCount();
+    }
+    uint32_t getActiveAllocationBytes() const noexcept {
+        return LeakDetectorType::getActiveAllocationBytes();
+    }
+};
+
+using DebugAndLeakDetector = TDebugAndLeakDetector<LeakDetectorBehavior::LOG, 3>;
 
 } // namespace TrackingPolicy
 
@@ -690,6 +900,8 @@ public:
               mListener(name, mArea.data(), mArea.size()) {
     }
 
+    // -----------------------------------------------------------------------------
+
     template<typename ... ARGS>
     void* alloc(size_t size, size_t alignment, size_t extra, ARGS&& ... args) noexcept {
         std::lock_guard<LockingPolicy> guard(mLock);
@@ -698,16 +910,7 @@ public:
         return p;
     }
 
-
-    // allocate memory from arena with given size and alignment
-    // (acceptable size/alignment may depend on the allocator provided)
-    void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        void* p = mAllocator.alloc(size, alignment, extra);
-        mListener.onAlloc(p, size, alignment, extra);
-        return p;
-    }
-
+    // some allocators don't support the "extra" parameter
     void* alloc(size_t size, size_t alignment = alignof(std::max_align_t)) noexcept {
         std::lock_guard<LockingPolicy> guard(mLock);
         void* p = mAllocator.alloc(size, alignment);
@@ -719,69 +922,57 @@ public:
     // for safety, we disable the object-based alloc method if the object type is not
     // trivially destructible, since free() won't call the destructor and this is allocating
     // an array.
-    template <typename T,
-            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-    T* alloc(size_t count, size_t alignment, size_t extra) noexcept {
+    template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
+    T* alloc(size_t const count, size_t const alignment, size_t const extra) noexcept {
         size_t size;
         if (UTILS_UNLIKELY(UTILS_MUL_OVERFLOW(count, sizeof(T), &size))) {
             return nullptr;
         }
-        return (T*)alloc(size, alignment, extra);
+        return static_cast<T*>(alloc(size, alignment, extra));
     }
 
-    template <typename T,
-            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-    T* alloc(size_t count, size_t alignment = alignof(T)) noexcept {
+    template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
+    T* alloc(size_t const count, size_t const alignment = alignof(T)) noexcept {
         size_t size;
         if (UTILS_UNLIKELY(UTILS_MUL_OVERFLOW(count, sizeof(T), &size))) {
             return nullptr;
         }
-        return (T*)alloc(size, alignment);
+        return static_cast<T*>(alloc(size, alignment));
     }
 
     // some allocators require more parameters
-    template<typename ... ARGS>
-    void free(void* p, size_t size, ARGS&& ... args) noexcept {
+    template<typename... ARGS>
+    void free(void* p, size_t size, ARGS&&... args) noexcept {
         if (p) {
             std::lock_guard<LockingPolicy> guard(mLock);
-            mListener.onFree(p, size);
-            mAllocator.free(p, size, std::forward<ARGS>(args) ...);
+            if constexpr (detail::has_variadic_free_v<decltype(mAllocator), void*, size_t, ARGS...>) {
+                mListener.onFree(p, size);
+                mAllocator.free(p, size, std::forward<ARGS>(args)...);
+            } else {
+                if constexpr (detail::has_logical_free_v<TrackingPolicy>) {
+                    mListener.onLogicalFree(p, size);
+                }
+            }
         }
     }
 
-    // some allocators require the size of the allocation for free
-    void free(void* p, size_t size) noexcept {
-        if (p) {
-            std::lock_guard<LockingPolicy> guard(mLock);
-            mListener.onFree(p, size);
-            mAllocator.free(p, size);
-        }
-    }
-
-    // return memory pointed by p to the arena
-    // (actual behaviour may depend on allocator provided)
-    void free(void* p) noexcept {
-        if (p) {
-            std::lock_guard<LockingPolicy> guard(mLock);
-            mListener.onFree(p);
-            mAllocator.free(p);
-        }
-    }
-
-    // some allocators don't have a free() call, but a single reset() or rewind() instead
+    // Only present if the allocator has reset()
+    template<typename A = AllocatorPolicy, std::enable_if_t<detail::has_reset_v<A>, int> = 0>
     void reset() noexcept {
         std::lock_guard<LockingPolicy> guard(mLock);
         mListener.onReset();
         mAllocator.reset();
     }
 
-    void* getCurrent() noexcept { return mAllocator.getCurrent(); }
-
+    // Only present if the allocator has rewind(void*)
+    template<typename A = AllocatorPolicy, std::enable_if_t<detail::has_rewind_v<A>, int> = 0>
     void rewind(void *addr) noexcept {
         std::lock_guard<LockingPolicy> guard(mLock);
         mListener.onRewind(addr);
         mAllocator.rewind(addr);
     }
+
+    // -----------------------------------------------------------------------------
 
     // Allocate and construct an object
     template<typename T, size_t ALIGN = alignof(T), typename... ARGS>
@@ -790,14 +981,26 @@ public:
         return p ? new(p) T(std::forward<ARGS>(args)...) : nullptr;
     }
 
-    // destroys an object created with make<T>() above, and frees associated memory
     template<typename T>
+    void destroy(T* p, size_t const size) noexcept {
+        if (p) {
+            static_assert(!std::is_polymorphic_v<T> || std::has_virtual_destructor_v<T>,
+                    "Polymorphic types must declare a virtual destructor");
+            std::destroy_at(p);
+            this->free((void*)p, size);
+        }
+    }
+
+    // Visible if T is NOT polymorphic OR if T is final
+    template<typename T, std::enable_if_t<!std::is_polymorphic_v<T> || std::is_final_v<T>, int> = 0>
     void destroy(T* p) noexcept {
         if (p) {
-            p->~T();
+            std::destroy_at(p);
             this->free((void*)p, sizeof(T));
         }
     }
+
+    // -----------------------------------------------------------------------------
 
     char const* getName() const noexcept { return mArenaName; }
 
@@ -849,26 +1052,22 @@ using HeapArena = Arena<HeapAllocator, LockingPolicy::NoLock, TrackingPolicy>;
 
 // ------------------------------------------------------------------------------------------------
 
-// This doesn't implement our allocator concept, because it's too risky to use this as an allocator
-// in particular, doing ArenaScope<ArenaScope>.
-template<typename ARENA>
+/*
+ * ArenaScope wraps an Arena whose allocator supports rewind() and automatically rewinds
+ * the allocator when destroyed.
+ */
+template<typename AllocatorPolicy,
+        typename LockingPolicy,
+        typename TrackingPolicy = TrackingPolicy::Untracked,
+        typename AreaPolicy = AreaPolicy::HeapArea>
 class ArenaScope {
-
-    struct Finalizer {
-        void (*finalizer)(void* p) = nullptr;
-        Finalizer* next = nullptr;
-    };
-
-    template <typename T>
-    static void destruct(void* p) noexcept {
-        static_cast<T*>(p)->~T();
-    }
-
 public:
-    using Arena = ARENA;
+    using Arena = Arena<AllocatorPolicy, LockingPolicy, TrackingPolicy, AreaPolicy>;
 
-    explicit ArenaScope(ARENA& allocator)
-            : mArena(allocator), mRewind(allocator.getCurrent()) {
+    explicit ArenaScope(Arena& allocator)
+            : mArena(allocator),
+              mRewind(allocator.getAllocator().getCurrent())
+    {
     }
 
     ArenaScope& operator=(const ArenaScope& rhs) = delete;
@@ -876,56 +1075,19 @@ public:
     ArenaScope& operator=(ArenaScope&& rhs) noexcept = delete;
 
     ~ArenaScope() {
-        // run the finalizer chain
-        Finalizer* head = mFinalizerHead;
-        while (head) {
-            void* p = pointermath::add(head, sizeof(Finalizer));
-            head->finalizer(p);
-            head = head->next;
-        }
         // ArenaScope works only with Arena that implements rewind()
         mArena.rewind(mRewind);
     }
 
-    template<typename T, size_t ALIGN = alignof(T), typename... ARGS>
-    T* make(ARGS&& ... args) noexcept {
-        T* o = nullptr;
-        if (std::is_trivially_destructible_v<T>) {
-            o = mArena.template make<T, ALIGN>(std::forward<ARGS>(args)...);
-        } else {
-            void* const p = (Finalizer*)mArena.alloc(sizeof(T), ALIGN, sizeof(Finalizer));
-            if (p != nullptr) {
-                Finalizer* const f = static_cast<Finalizer*>(p) - 1;
-                // constructor must be called before adding the dtor to the list
-                // so that the ctor can allocate objects in a nested scope and have the
-                // finalizers called in reverse order.
-                o = new(p) T(std::forward<ARGS>(args)...);
-                f->finalizer = &destruct<T>;
-                f->next = mFinalizerHead;
-                mFinalizerHead = f;
-            }
-        }
-        return o;
-    }
-
-    void* allocate(size_t size, size_t alignment = 1) noexcept {
-        return mArena.template alloc<uint8_t>(size, alignment, 0);
-    }
-
-    template <typename T>
-    T* allocate(size_t size, size_t alignment = alignof(T), size_t extra = 0) noexcept {
-        return mArena.template alloc<T>(size, alignment, extra);
-    }
-
-    // use with caution
-    ARENA& getArena() noexcept { return mArena; }
+    Arena& getArena() noexcept { return mArena; }
+    Arena const& getArena() const noexcept { return mArena; }
 
 private:
-    ARENA& mArena;
+    Arena& mArena;
     void* mRewind = nullptr;
-    Finalizer* mFinalizerHead = nullptr;
 };
 
+// ------------------------------------------------------------------------------------------------
 
 template <typename TYPE, typename ARENA>
 class STLAllocator {
@@ -951,13 +1113,13 @@ public:
     template<typename U>
     explicit STLAllocator(STLAllocator<U, ARENA> const& rhs) : mArena(rhs.mArena) { }
 
-    TYPE* allocate(std::size_t n) {
+    TYPE* allocate(std::size_t const n) {
         auto p = static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
         assert(p);
         return p;
     }
 
-    void deallocate(TYPE* p, std::size_t n) {
+    void deallocate(TYPE* p, std::size_t const n) {
         mArena.free(p, n * sizeof(TYPE));
     }
 

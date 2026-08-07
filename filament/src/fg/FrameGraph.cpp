@@ -106,16 +106,19 @@ void FrameGraph::setFgviewerData(FgviewerManager* fgviewer, FView const* view) {
 UTILS_NOINLINE
 void FrameGraph::destroyInternal() noexcept {
     // the order of destruction is important here
-    LinearAllocatorArena& arena = mArena;
-    std::for_each(mPassNodes.begin(), mPassNodes.end(), [&arena](auto item) {
+    auto& arena = mArena;
+    std::for_each(mPassNodes.begin(), mPassNodes.end(), [&arena](PassNode* item) {
+        arena.destroy(item, item->getSize());
+    });
+    std::for_each(mResourceNodes.begin(), mResourceNodes.end(), [&arena](ResourceNode* item) {
         arena.destroy(item);
     });
-    std::for_each(mResourceNodes.begin(), mResourceNodes.end(), [&arena](auto item) {
-        arena.destroy(item);
+    std::for_each(mResources.begin(), mResources.end(), [&arena](VirtualResource* item) {
+        arena.destroy(item, item->getSize());
     });
-    std::for_each(mResources.begin(), mResources.end(), [&arena](auto item) {
-        arena.destroy(item);
-    });
+    mPassNodes.clear();
+    mResourceNodes.clear();
+    mResources.clear();
 }
 
 FrameGraph::~FrameGraph() noexcept {
@@ -124,9 +127,6 @@ FrameGraph::~FrameGraph() noexcept {
 
 void FrameGraph::reset() noexcept {
     destroyInternal();
-    mPassNodes.clear();
-    mResourceNodes.clear();
-    mResources.clear();
     mResourceSlots.clear();
     mGraph.clear();
 }
