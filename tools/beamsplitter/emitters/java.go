@@ -149,22 +149,29 @@ func EditJava(definitions []db.TypeDefinition, classname string, folder string) 
 		if _, exists := field.EmitterFlags["java_float"]; exists {
 			return ""
 		}
-		annotation := ""
+		// A field whose C++ comment carries @deprecated needs @Deprecated in
+		// Java, or javac and the IDE say nothing while the docblock does.
+		// These were added by hand and removed again by every run.
+		var annotations []string
+		if strings.Contains(field.Description, "@deprecated") {
+			annotations = append(annotations, "@Deprecated")
+		}
 		switch {
 		case field.DefaultValue == "nullptr":
-			annotation = "@Nullable"
+			annotations = append(annotations, "@Nullable")
 		case field.TypeString == "math::float2":
-			annotation = "@NonNull @Size(min = 2)"
+			annotations = append(annotations, "@NonNull @Size(min = 2)")
 		case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
-			annotation = "@NonNull @Size(min = 3)"
+			annotations = append(annotations, "@NonNull @Size(min = 3)")
 		case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
-			annotation = "@NonNull @Size(min = 4)"
+			annotations = append(annotations, "@NonNull @Size(min = 4)")
 		case strings.Contains(field.DefaultValue, "::"):
-			annotation = "@NonNull"
-		default:
+			annotations = append(annotations, "@NonNull")
+		}
+		if len(annotations) == 0 {
 			return ""
 		}
-		return annotation + "\n" + strings.Repeat("    ", depth)
+		return strings.Join(annotations, " ") + "\n" + strings.Repeat("    ", depth)
 	}
 
 	flattenStruct := func(defn *db.StructDefinition) string {
