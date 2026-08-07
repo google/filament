@@ -12,7 +12,7 @@ jobs:
     name: update-renderdiff-goldens
     runs-on: 'macos-14'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - id: get_commit_msg
@@ -35,15 +35,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
+          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
+          ACCEPT_OUTPUT: "${{ steps.check_accept.outputs.accept }}"
         run: |
           GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py)
-          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
 
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"
           git config --global credential.helper cache
 
-          if [[ "${{ steps.check_accept.outputs.accept }}" == "true" ]]; then
+          if [[ ${ACCEPT_OUTPUT} == "true" ]]; then
               SHORT_HASH="${COMMIT_HASH:0:8}"
               GOLDEN_BRANCH="accept-goldens-${SHORT_HASH}"
               echo "Generating new goldens for branch ${GOLDEN_BRANCH}"
@@ -67,7 +68,7 @@ jobs:
     name: update-docs
     runs-on: 'ubuntu-24.04-4core'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
@@ -80,9 +81,9 @@ jobs:
       - name: Run update script
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
         run: |
           bash docs_src/build/install_mdbook.sh && source ~/.bashrc
-          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"
           git config --global credential.helper cache
@@ -94,27 +95,28 @@ jobs:
     name: update-sizeguard
     runs-on: 'ubuntu-24.04-4core'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/linux-prereq
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
           java-version: '21'
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Build and generate size report
+        env:
+          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
         run: |
           cd build/android && printf "y" | ./build.sh release all
           cd ../..
-          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
           python3 test/sizeguard/dump_artifact_size.py out/*.tgz out/*.aar > "${COMMIT_HASH}.json"
       - name: Push to filament-assets
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
         run: |
-          COMMIT_HASH="${{ steps.get_commit_msg.outputs.hash }}"
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"
           git clone https://x-access-token:${GH_TOKEN}@github.com/google/filament-assets.git filament-assets

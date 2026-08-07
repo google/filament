@@ -42,7 +42,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -53,7 +53,7 @@ jobs:
           cd build/linux && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -75,7 +75,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -86,7 +86,7 @@ jobs:
           cd build/linux && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-linux.tgz out/filament-${TAG}-arm-linux.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -109,7 +109,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/mac-prereq
@@ -120,7 +120,7 @@ jobs:
           cd build/mac && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -143,7 +143,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -155,7 +155,7 @@ jobs:
           cd build/web && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-web.tgz out/filament-${TAG}-web.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -178,10 +178,10 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -211,7 +211,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
           APK_KEYSTORE_BASE64: ${{ secrets.APK_KEYSTORE_BASE64 }}
           APK_KEYSTORE_PASS: ${{ secrets.APK_KEYSTORE_PASS }}
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -237,10 +237,10 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -282,7 +282,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/mac-prereq
@@ -295,7 +295,7 @@ jobs:
           cd build/ios && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-ios.tgz out/filament-${TAG}-ios.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -319,7 +319,7 @@ jobs:
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -331,7 +331,7 @@ jobs:
           echo on
           move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:

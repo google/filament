@@ -11,7 +11,7 @@ runs:
       run: echo "hash=$(cat test/renderdiff/tests/gltf_models.txt | md5sum | sed 's/ -//g')" >> $GITHUB_OUTPUT
     - name: Cache glTF assets
       id: cache-gltf
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: gltf
         key: gltf-assets-${{ env.GITHUB_GLTF_SAMPLE_ASSETS_COMMIT }}-${{ steps.hash-models.outputs.hash }}
