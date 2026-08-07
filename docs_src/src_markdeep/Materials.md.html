@@ -3115,18 +3115,17 @@ material if the API level they provided is higher than the compiler API level.
 - Forward compatibility (client version > compiler version): Compilation fails with an error message.
 
 Material compilation should succeed as long as those two conditions are met:
-- The client exclusively uses APIs that are supported at their specified api_level.
-- The compiler's supported api_level is equal to or greater than the client's requested api_level.
+- The client exclusively uses APIs that are supported at their specified `apiLevel`.
+- The compiler's supported `apiLevel` is equal to or greater than the client's requested `apiLevel`.
 
 Below demonstrates some concrete examples:
-Here is the Markdown format for the table you highlighted:
 
-| Client api level                                                                 | Compiler api level           | Result  | Reason for Success/Failure                                                                                |
-| :--------------------------------------------------------------------------------| :----------------------------| :------ | :-------------------------------------------------------------------------------------------------------- |
-| Implicit api_level 1 (No api_level specified); uses api_level 1 features only    | Any api_level (api_level 1+) | SUCCESS | Sets apiLevel to 1. Since the material only uses api_level 1 features, the material compilation succeeds. |
-| Implicit api_level 1 (No api_level specified); but **uses api_level 2** features | Any api_level (api_level 1+) | FAILURE | Sets apiLevel to 1. The client requests api level 1, but the api level 2 feature is used.                 |
-| Explicit api_level 1; uses api_level 1 features only                             | Any api_level (api_level 1+) | SUCCESS | The requested level is 1. Material only uses api level 1 features. material compilation succeeds.         |
-| Explicit api_level 1; but **uses api_level 2** features                          | Any api_level (api_level 1+) | FAILURE | The client requests api level 1, but the api level 2 feature is used.                                     |
-| Explicit api_level 2                                                             | api_level 1                  | FAILURE | Client requests api level of 2. Compiler is only capable of api level 1.                                  |
-| Explicit api_level 2                                                             | api_level 2+                 | SUCCESS | The compiler is capable of api level 2.                                                                   |
+| Client api level                                                                | Compiler api level         | Result  | Reason for Success/Failure                                                                                |
+| :-------------------------------------------------------------------------------| :--------------------------| :------ | :---------------------------------------------------------------------------------------------------------|
+| Implicit apiLevel 1 (No apiLevel specified); uses apiLevel 1 features only      | Any apiLevel (apiLevel 1+)  | SUCCESS | Sets apiLevel to 1. Since the material only uses apiLevel 1 features, the material compilation succeeds. |
+| Implicit apiLevel 1 (No apiLevel specified); but **uses apiLevel 2** features   | Any apiLevel (apiLevel 1+)  | FAILURE | Sets apiLevel to 1. The client requests apiLevel 1, but the apiLevel 2 feature is used.                  |
+| Explicit apiLevel 1; uses apiLevel 1 features only                              | Any apiLevel (apiLevel 1+)  | SUCCESS | The requested level is 1. Material only uses apiLevel 1 features. material compilation succeeds.         |
+| Explicit apiLevel 1; but **uses apiLevel 2** features                           | Any apiLevel (apiLevel 1+)  | FAILURE | The client requests apiLevel 1, but the apiLevel 2 feature is used.                                      |
+| Explicit apiLevel 2                                                             | apiLevel 1                  | FAILURE | Client requests apiLevel of 2. Compiler is only capable of apiLevel 1.                                   |
+| Explicit apiLevel 2                                                             | apiLevel 2+                 | SUCCESS | The compiler is capable of apiLevel 2.                                                                   |
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="../third_party/markdeep/markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
