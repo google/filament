@@ -48,8 +48,8 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             srcStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
             break;
         case VulkanLayout::COLOR_ATTACHMENT:
-            srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            srcAccessMask =
+                    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
         case VulkanLayout::STAGING:
@@ -94,7 +94,7 @@ getVkTransition(const VulkanLayoutTransition& transition) {
         case VulkanLayout::COLOR_ATTACHMENT:
             dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
                             | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
         case VulkanLayout::STAGING:
             dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
