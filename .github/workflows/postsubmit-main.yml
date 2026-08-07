@@ -35,8 +35,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
-          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
-          ACCEPT_OUTPUT: "${{ steps.check_accept.outputs.accept }}"
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
+          ACCEPT_OUTPUT: ${{ steps.check_accept.outputs.accept }}
         run: |
           GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py)
 
@@ -81,7 +81,7 @@ jobs:
       - name: Run update script
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
-          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
         run: |
           bash docs_src/build/install_mdbook.sh && source ~/.bashrc
           git config --global user.email "filament.bot@gmail.com"
@@ -107,7 +107,7 @@ jobs:
         uses: ./.github/actions/get-commit-msg
       - name: Build and generate size report
         env:
-          COMMIT_HASH: "${{ steps.get_commit_msg.outputs.hash }}"
+          COMMIT_HASH: ${{ steps.get_commit_msg.outputs.hash }}
         run: |
           cd build/android && printf "y" | ./build.sh release all
           cd ../..

@@ -116,10 +116,12 @@ jobs:
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check artifact sizes
+        env:
+          OUTPUTS_HASHES: ${{ steps.get_commit_msg.outputs.hashes }}
         run: |
           python3 test/sizeguard/dump_artifact_size.py out/*.aar > current_size.json
           BYPASS_ARG=""
-          if python3 test/sizeguard/check_bypass.py ${{ steps.get_commit_msg.outputs.hashes }}; then
+          if python3 test/sizeguard/check_bypass.py ${OUTPUTS_HASHES}; then
               BYPASS_ARG="--bypass"
           fi
           python3 test/sizeguard/check_size.py current_size.json \
@@ -176,8 +178,10 @@ jobs:
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
+        env:
+          OUTPUTS_HASHES: ${{ steps.get_commit_msg.outputs.hashes }}
         run: |
-          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hashes }}
+          bash docs_src/build/presubmit_check.sh $OUTPUTS_HASHES
 
   test-renderdiff:
     name: test-renderdiff
@@ -245,8 +249,9 @@ jobs:
           path: ./out/renderdiff
       - name: Check results
         if: steps.check_accept.outputs.accept != 'true'
+        env:
+          ERROR_STR: ${{ steps.render_compare.outputs.err }}
         run: |
-          ERROR_STR="${{ steps.render_compare.outputs.err }}"
           if [ -n "${ERROR_STR}" ]; then
               echo "${ERROR_STR}"
               exit 1
@@ -297,6 +302,7 @@ jobs:
       - name: Check - header organization
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
+          GIHUB_SHA: ${{ github.sha }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             FILES=()
@@ -309,7 +315,7 @@ jobs:
               echo "No files to check."
             fi
           else
-            bash test/code-correctness/check-headers.sh ${{ github.sha }}
+            bash test/code-correctness/check-headers.sh ${GITHUB_SHA}
           fi
       - name: Check - Filament unit tests
         run: bash test/filament-unit-test/test.sh

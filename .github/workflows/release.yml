@@ -9,11 +9,6 @@ name: Release
 env:
   RELEASE_TAG: ${{ github.event.inputs.release_tag }}
 
-# The default GITHUB_TOKEN does not have write permissions, which is needed to upload release
-# assets.
-permissions:
-  contents: write
-
 on:
   workflow_dispatch:
     inputs:
@@ -33,7 +28,8 @@ jobs:
     name: build-linux
     runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -67,6 +63,8 @@ jobs:
     name: build-arm-linux
     runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -100,7 +98,8 @@ jobs:
     name: build-mac
     runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -134,7 +133,8 @@ jobs:
     name: build-web
     runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -169,7 +169,8 @@ jobs:
     name: build-android
     runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -228,7 +229,8 @@ jobs:
     # Depends on the Mac, Linux, and Windows builds for host tools.
     needs: [build-mac, build-linux, build-windows, build-android]
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -273,7 +275,8 @@ jobs:
     name: build-ios
     runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -309,7 +312,8 @@ jobs:
     name: build-windows
     runs-on: windows-2022-32core
     if: github.event_name == 'release' || github.event.inputs.platform == 'windows'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
