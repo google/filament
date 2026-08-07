@@ -555,7 +555,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
-    auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
+    auto const* const UTILS_RESTRICT soaWorldAABBCenterX = soa.data<FScene::WORLD_AABB_CENTER_X>();
+    auto const* const UTILS_RESTRICT soaWorldAABBCenterY = soa.data<FScene::WORLD_AABB_CENTER_Y>();
+    auto const* const UTILS_RESTRICT soaWorldAABBCenterZ = soa.data<FScene::WORLD_AABB_CENTER_Z>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaSkinningData    = soa.data<FScene::SKINNING_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
@@ -610,7 +612,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         //   Here, objects close to the camera (but behind) will be drawn first.
         // An alternative that keeps the mathematical ordering is given here:
         //   distanceBits ^= ((int32_t(distanceBits) >> 31) | 0x80000000u);
-        float const distance = -(dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward);
+        float const distance = -(
+                soaWorldAABBCenterX[i] * cameraForward.x +
+                soaWorldAABBCenterY[i] * cameraForward.y +
+                soaWorldAABBCenterZ[i] * cameraForward.z -
+                cameraPositionDotCameraForward);
         uint32_t const distanceBits = reinterpret_cast<uint32_t const&>(distance);
 
         // calculate the per-primitive face winding order inversion

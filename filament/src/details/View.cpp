@@ -564,26 +564,26 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 /*
  * Calculates an automatic grid size based on the camera frustum dimensions.
  * Handles both perspective and orthographic projections.
- * 
+ *
  * For perspective projections, it uses the width of the frustum at the far plane.
  * This ensures that the grid size scales with the visible volume and accounts for
  * field-of-view (zooming in reduces grid size to preserve precision).
  * For orthographic projections, it uses the absolute width of the frustum.
- * 
+ *
  * camera: The camera to use for the calculation.
  * Returns the calculated grid size (10% of the computed width, chosen as a
  * reasonable balance between precision and snapping frequency).
  */
 double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
     auto const& p = camera->getCullingProjectionMatrix();
-    
+
     // Base scale is the width of the frustum at Z=1 for perspective,
     // or the absolute width for orthographic.
     double baseScale = 2.0 / std::abs(p[0][0]);
-    
+
     // Detect perspective by checking if P[3][2] is non-zero
     bool const isPerspective = std::abs(p[3][2]) > 1e-5;
-    
+
     if (isPerspective) {
         double const zf = camera->getCullingFar();
         // Scale at far plane
@@ -598,11 +598,11 @@ double FView::calculateAutomaticGridSize(const FCamera* camera) const noexcept {
 /*
  * Computes a stable grid origin for the camera to improve floating-point precision.
  * Snapping only occurs when the camera moves beyond the grid boundary plus hysteresis.
- * 
+ *
  * This implementation follows Strategy A: only update the grid size when a position snap occurs.
  * This prevents instability when the frustum (and thus auto grid size) changes smoothly.
  * Alternative Strategy B (scale hysteresis) could be used if we want to respond to large scale changes without moving.
- * 
+ *
  * cameraPosition: The current world position of the camera.
  * currentGridSize: The grid size used in the previous frame (stable).
  * newGridSize: The new calculated grid size (target).
@@ -674,10 +674,10 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
                 currentGridSize = newGridSize;
                 mEffectiveGridSize = currentGridSize;
             }
-            
+
             // Force snap if user manually changed grid size to a positive value
             bool const forceSnap = (mGridSize > 0.0 && mGridSize != currentGridSize);
-            
+
             constexpr double hysteresisRatio = 0.5; // Automatic 50% hysteresis
             translation = -computeGridOrigin(cameraPosition, currentGridSize, newGridSize, hysteresisRatio, forceSnap);
         } else {
@@ -1340,18 +1340,30 @@ void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    float const* worldAABBCenterX = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* worldAABBCenterY = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* worldAABBCenterZ = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* worldAABBExtentX = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* worldAABBExtentY = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* worldAABBExtentZ = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
     FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
 
     // culling job (this runs on multiple threads)
-    auto functor = [&frustum, worldAABBCenter, worldAABBExtent, visibleArray, bit]
+    auto functor = [&frustum,
+            worldAABBCenterX, worldAABBCenterY, worldAABBCenterZ,
+            worldAABBExtentX, worldAABBExtentY, worldAABBExtentZ,
+            visibleArray, bit]
             (uint32_t const index, uint32_t const c) {
         Culler::intersects(
                 visibleArray + index,
                 frustum,
-                worldAABBCenter + index,
-                worldAABBExtent + index, c, bit);
+                worldAABBCenterX + index,
+                worldAABBCenterY + index,
+                worldAABBCenterZ + index,
+                worldAABBExtentX + index,
+                worldAABBExtentY + index,
+                worldAABBExtentZ + index,
+                c, bit);
     };
 
     // Note: we can't use jobs::parallel_for() here because Culler::intersects() must process

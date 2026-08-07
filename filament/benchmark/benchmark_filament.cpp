@@ -36,12 +36,40 @@
 
 #include <benchmark/benchmark.h>
 
+#include <math/fast.h>
+
+#include <cmath>
 #include <random>
 #include <vector>
 
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
+
+namespace {
+
+static void baselineAabbIntersects(Culler::result_type* UTILS_RESTRICT results,
+        Frustum const& UTILS_RESTRICT frustum,
+        float3 const* UTILS_RESTRICT center,
+        float3 const* UTILS_RESTRICT extent,
+        size_t count) noexcept {
+    float4 const* UTILS_RESTRICT const planes = frustum.getNormalizedPlanes();
+    count = Culler::round(count);
+    for (size_t i = 0; i < count; i++) {
+        int visible = ~0;
+        for (size_t j = 0; j < 6; j++) {
+            const float dot =
+                    planes[j].x * center[i].x - std::abs(planes[j].x) * extent[i].x +
+                    planes[j].y * center[i].y - std::abs(planes[j].y) * extent[i].y +
+                    planes[j].z * center[i].z - std::abs(planes[j].z) * extent[i].z +
+                    planes[j].w;
+            visible &= fast::signbit(dot);
+        }
+        results[i] = Culler::result_type(visible);
+    }
+}
+
+} // namespace
 
 
 class FilamentCullingFixture : public benchmark::Fixture {
@@ -51,6 +79,12 @@ protected:
     Frustum frustum{};
     std::vector<float3> boxesCenter;
     std::vector<float3> boxesExtent;
+    std::vector<float> boxesCenterX;
+    std::vector<float> boxesCenterY;
+    std::vector<float> boxesCenterZ;
+    std::vector<float> boxesExtentX;
+    std::vector<float> boxesExtentY;
+    std::vector<float> boxesExtentZ;
     std::vector<float4> spheres;
     Culler::result_type* UTILS_RESTRICT visibles = nullptr;
 
@@ -66,6 +100,12 @@ public:
 
         boxesCenter.resize(batch);
         boxesExtent.resize(batch);
+        boxesCenterX.resize(batch);
+        boxesCenterY.resize(batch);
+        boxesCenterZ.resize(batch);
+        boxesExtentX.resize(batch);
+        boxesExtentY.resize(batch);
+        boxesExtentZ.resize(batch);
         spheres.resize(batch);
         for (size_t i = 0; i < batch; i++) {
             float4& sphere = spheres[i];
@@ -81,6 +121,16 @@ public:
                     rand(gen, std::uniform_real_distribution<float>::param_type{ 0.11f, 25.0f }),
                     rand(gen, std::uniform_real_distribution<float>::param_type{ 0.11f, 25.0f })
             };
+
+        }
+
+        for (size_t i = 0; i < batch; i++) {
+            boxesCenterX[i] = boxesCenter[i].x;
+            boxesCenterY[i] = boxesCenter[i].y;
+            boxesCenterZ[i] = boxesCenter[i].z;
+            boxesExtentX[i] = boxesExtent[i].x;
+            boxesExtentY[i] = boxesExtent[i].y;
+            boxesExtentZ[i] = boxesExtent[i].z;
         }
 
         visibles = (Culler::result_type*)utils::aligned_alloc(batch * sizeof(*visibles), 32);
@@ -95,7 +145,22 @@ BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
     {
         PerformanceCounters pc(state);
         for (UTILS_UNUSED auto _ : state) {
-            Culler::Test::intersects(visibles, frustum, boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
+            Culler::Test::intersects(visibles, frustum,
+                    boxesCenterX.data(), boxesCenterY.data(), boxesCenterZ.data(),
+                    boxesExtentX.data(), boxesExtentY.data(), boxesExtentZ.data(),
+                    BATCH_SIZE);
+        }
+        benchmark::ClobberMemory();
+        pc.stop();
+        state.SetItemsProcessed(state.iterations() * BATCH_SIZE);
+    }
+}
+
+BENCHMARK_F(FilamentCullingFixture, boxCullingScalarBaseline)(benchmark::State& state) {
+    {
+        PerformanceCounters pc(state);
+        for (UTILS_UNUSED auto _ : state) {
+            baselineAabbIntersects(visibles, frustum, boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
         }
         benchmark::ClobberMemory();
         pc.stop();
