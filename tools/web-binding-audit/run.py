@@ -110,6 +110,8 @@ JAVA_TYPE_TOKENS = {
 DERIVED_FAMILIES = {
     "MaterialInstance.setParameter": "MaterialInstance",
     "MaterialInstance.setConstant": "MaterialInstance",
+    "LightManager$Builder.intensity": "LightManager",
+    "IndirectLight$Builder.irradiance": "IndirectLight",
 }
 
 # Overload shapes that the derivation cannot name on its own, because the web binding uses a name
@@ -118,6 +120,8 @@ IRREGULAR_FAMILY_MEMBERS = {
     "MaterialInstance.setParameter": ["setMat3Parameter", "setMat4Parameter",
                                       "setTextureParameter", "setColor3Parameter",
                                       "setColor4Parameter"],
+    "LightManager$Builder.intensity": ["intensity", "intensityEnergy"],
+    "IndirectLight$Builder.irradiance": ["irradianceTex", "irradianceSh"],
 }
 
 
@@ -379,16 +383,17 @@ def audit():
         for method, declaration in sorted(headers[cls].items()):
             if method in SKIPPED_METHODS or method == cls.split("$")[-1]:
                 continue
-            if method in bound:
-                continue
-            # embind commonly renames getX/setX to the property "x".
-            if method[:3] in ("get", "set") and (method[3:4].lower() + method[4:]) in bound:
-                continue
-            # Only report what Android already exposes.
-            if method not in java_bucket and \
-                    ("n" + method[0].upper() + method[1:]) not in java_bucket:
-                continue
             key = f"{cls}.{method}"
+            if key not in DERIVED_FAMILIES:
+                if method in bound:
+                    continue
+                # embind commonly renames getX/setX to the property "x".
+                if method[:3] in ("get", "set") and (method[3:4].lower() + method[4:]) in bound:
+                    continue
+                # Only report what Android already exposes.
+                if method not in java_bucket and \
+                        ("n" + method[0].upper() + method[1:]) not in java_bucket:
+                    continue
             if key in DERIVED_FAMILIES:
                 java_src = java_sources.get(DERIVED_FAMILIES[key], "")
                 tokens = java_overload_tokens(java_src, method)

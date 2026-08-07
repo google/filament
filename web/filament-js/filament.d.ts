@@ -202,6 +202,12 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(
         engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
+    public setImage(
+        engine: Engine, level: number, xoffset: number, yoffset: number,
+        width: number, height: number, pbd: driver$PixelBufferDescriptor): void;
+    public setImage(
+        engine: Engine, level: number, xoffset: number, yoffset: number, zoffset: number,
+        width: number, height: number, depth: number, pbd: driver$PixelBufferDescriptor): void;
     public getWidth(engine: Engine, level?: number) : number;
     public getHeight(engine: Engine, level?: number) : number;
     public getDepth(engine: Engine, level?: number) : number;
@@ -457,6 +463,7 @@ export class LightManager$Builder {
     public color(rgb: float3): LightManager$Builder;
     public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
+    public intensityEnergy(watts: number, efficiency: number): LightManager$Builder;
     public intensityCandela(value: number): LightManager$Builder;
     public falloff(value: number): LightManager$Builder;
     public position(value: float3): LightManager$Builder;
@@ -500,6 +507,8 @@ export class LightManager {
     public getFalloff(instance: LightManager$Instance): number;
     public setShadowOptions(instance: LightManager$Instance, options: LightManager$ShadowOptions): void;
     public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
+    public getSpotLightConeInner(instance: LightManager$Instance): number;
+    public getSpotLightConeOuter(instance: LightManager$Instance): number;
     public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
     public getSunAngularRadius(instance: LightManager$Instance): number;
     public setSunHaloSize(instance: LightManager$Instance, haloSize: number): void;

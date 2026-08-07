@@ -1093,6 +1093,11 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
+    .function("setCustomProjection", EMBIND_LAMBDA(void, (Camera* self,
+            flatmat4 m, flatmat4 mCull, double near, double far), {
+        self->setCustomProjection(filament::math::mat4(m.m), filament::math::mat4(mCull.m), near, far);
+    }), allow_raw_pointers())
+
     .function("setScaling", EMBIND_LAMBDA(void, (Camera* self, math::double2 scaling), {
         self->setScaling(scaling);
     }), allow_raw_pointers())
@@ -1789,6 +1794,9 @@ class_<LightBuilder>("LightManager$Builder")
         return &builder->color(value); })
     .BUILDER_FUNCTION("intensity", LightBuilder, (LightBuilder* builder, float value), {
         return &builder->intensity(value); })
+    .BUILDER_FUNCTION("intensityEnergy", LightBuilder,
+            (LightBuilder* builder, float watts, float efficiency), {
+        return &builder->intensity(watts, efficiency); })
     .BUILDER_FUNCTION("intensityCandela", LightBuilder, (LightBuilder* builder, float value), {
         return &builder->intensityCandela(value); })
     .BUILDER_FUNCTION("falloff", LightBuilder, (LightBuilder* builder, float value), {
@@ -1846,6 +1854,8 @@ class_<LightManager>("LightManager")
     .function("getFalloff", &LightManager::getFalloff)
     .function("_setShadowOptions", &LightManager::setShadowOptions)
     .function("setSpotLightCone", &LightManager::setSpotLightCone)
+    .function("getSpotLightConeInner", &LightManager::getSpotLightConeInner)
+    .function("getSpotLightConeOuter", &LightManager::getSpotLightConeOuter)
     .function("setSunAngularRadius", &LightManager::setSunAngularRadius)
     .function("getSunAngularRadius", &LightManager::getSunAngularRadius)
     .function("setSunHaloSize", &LightManager::setSunHaloSize)
@@ -2244,6 +2254,16 @@ class_<Texture>("Texture")
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, uint32_t xoffset, uint32_t yoffset,
+            uint32_t width, uint32_t height, PixelBufferDescriptor pbd), {
+        self->setImage(*engine, level, xoffset, yoffset, width, height, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor pbd), {
+        self->setImage(*engine, level, xoffset, yoffset, zoffset, width, height, depth, std::move(*pbd.pbd));
     }), allow_raw_pointers())
     .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
             Engine* engine, uint8_t level), {
