@@ -1835,7 +1835,12 @@ TEST(FilamentTest, ECREpochBasedReclamationManagers) {
 
 
 TEST(FilamentTest, MultipleDirectionalLights) {
-    FEngine* engine = downcast(Engine::create(backend::Backend::NOOP));
+    Engine::Config config{};
+    config.enableMultipleDirectionalLights = true;
+    FEngine* engine = downcast(Engine::Builder()
+            .backend(backend::Backend::NOOP)
+            .config(&config)
+            .build());
     FScene* scene = downcast(engine->createScene());
     auto& em = engine->getEntityManager();
     FLightManager& lcm = engine->getLightManager();

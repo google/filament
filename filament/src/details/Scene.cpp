@@ -352,7 +352,8 @@ void FScene::prepare(JobSystem& js,
      */
 
     cache.extraDirectionalLightCount = 0;
-    if (UTILS_UNLIKELY(directionalInstances.size() > DIRECTIONAL_LIGHTS_COUNT)) {
+    if (UTILS_UNLIKELY(mEngine.getConfig().enableMultipleDirectionalLights &&
+                directionalInstances.size() > DIRECTIONAL_LIGHTS_COUNT)) {
         mat3 const worldTransformNormals = mat3::getTransformForNormals(worldTransform.upperLeft());
         size_t const extraCount = std::min(directionalInstances.size() - DIRECTIONAL_LIGHTS_COUNT,
                 CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
@@ -366,7 +367,7 @@ void FScene::prepare(JobSystem& js,
             cache.extraDirectionalLightDirections[i] = float3(normalize(d));
             cache.extraDirectionalLightInstances[i] = li;
         }
-        cache.extraDirectionalLightCount = extraCount;
+        cache.extraDirectionalLightCount = uint8_t(extraCount);
     }
 
     // some elements past the end of the array will be accessed by SIMD code, we need to make
