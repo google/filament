@@ -139,21 +139,13 @@ material {
     vertexDomain : device,
     depthWrite : false,
     shadingModel : unlit,
+    apiLevel : 2,
     culling: none
 }
 
 vertex {
     void materialVertex(inout MaterialVertexInputs material) {
-        // This code is taken from computeWorldPosition and assumes the vertex domain is 'device'.
-        highp vec4 p = getPosition();
-        // GL convention to inverted DX convention
-        p.z = p.z * -0.5 + 0.5;
-        highp vec4 worldPosition = getWorldFromClipMatrix() * p;
-        // Getting the true world position would require dividing by w, but since this is a skybox
-        // at inifinity, this results in very large numbers for material.eyeDirection.
-        // Since the eyeDirection is only used as a direction vector in the fragment shader, we can
-        // skip that step to improve precision.
-        material.eyeDirection.xyz = worldPosition.xyz;
+        material.eyeDirection.xyz = getWorldRayFromClip(getPosition().xy);
     }
 }
 
