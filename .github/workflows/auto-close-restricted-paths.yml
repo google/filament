@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Auto-close PR if it touches restricted paths
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           MSG_GITHUB: >
             Thank you for your contribution. To maintain the security and stability of our CI/CD pipelines,

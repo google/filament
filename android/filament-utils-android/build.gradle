@@ -1,4 +1,3 @@
-apply plugin: 'kotlin-android'
 kotlin {
     jvmToolchain(versions.jdk)
 }

@@ -94,7 +94,7 @@ private fun internalFormat(type: TextureType) = when (type) {
 
 // Not required when SKIP_BITMAP_COPY is true
 // Use String representation for compatibility across API levels
-private fun format(bitmap: Bitmap) = when (bitmap.config.name) {
+private fun format(bitmap: Bitmap) = when (bitmap.config?.name) {
     "ALPHA_8"   -> Texture.Format.ALPHA
     "RGB_565"   -> Texture.Format.RGB
     "ARGB_8888" -> Texture.Format.RGBA
@@ -103,7 +103,7 @@ private fun format(bitmap: Bitmap) = when (bitmap.config.name) {
 }
 
 // Not required when SKIP_BITMAP_COPY is true
-private fun type(bitmap: Bitmap) = when (bitmap.config.name) {
+private fun type(bitmap: Bitmap) = when (bitmap.config?.name) {
     "ALPHA_8"   -> Texture.Type.USHORT
     "RGB_565"   -> Texture.Type.USHORT_565
     "ARGB_8888" -> Texture.Type.UBYTE
