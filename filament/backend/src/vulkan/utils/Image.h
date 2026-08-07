@@ -83,11 +83,7 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
             return VK_IMAGE_LAYOUT_GENERAL;
         case VulkanLayout::PRESENT:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        // Filament sometimes samples from one miplevel while writing to another level in the
-        // same texture (e.g. bloom does this). So, keep it simple and use GENERAL for all
-        // color-attachable textures.
         case VulkanLayout::COLOR_ATTACHMENT:
-            return VK_IMAGE_LAYOUT_GENERAL;
         case VulkanLayout::COLOR_ATTACHMENT_RESOLVE:
             return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
