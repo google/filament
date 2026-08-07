@@ -55,8 +55,14 @@ protected:
 
     using closure_t = std::function<void(uint8_t const* rgba, uint32_t width, uint32_t height)>;
 
+    // Tests needing a non-default engine configuration can override this.
+    virtual Engine::Config getEngineConfig() const {
+        return {};
+    }
+
     void SetUp() override {
-        mEngine = Engine::create();
+        Engine::Config const config = getEngineConfig();
+        mEngine = Engine::Builder().config(&config).build();
         mSurface = mEngine->createSwapChain(16, 16);
         mRenderer = mEngine->createRenderer();
 
@@ -246,7 +252,17 @@ private:
     utils::Entity mRedLight;
 };
 
-TEST_F(RenderingTest, MultipleDirectionalLights) {
+// Same as RenderingTest, but the engine opts into multiple directional lights.
+class MultipleDirectionalLightsRenderingTest : public RenderingTest {
+protected:
+    Engine::Config getEngineConfig() const override {
+        Engine::Config config{};
+        config.enableMultipleDirectionalLights = true;
+        return config;
+    }
+};
+
+TEST_F(MultipleDirectionalLightsRenderingTest, MultipleDirectionalLights) {
     LitQuadScene quad;
     quad.create(*mEngine, *mScene, *mView, *mCamera);
 
@@ -266,6 +282,25 @@ TEST_F(RenderingTest, MultipleDirectionalLights) {
     runTest([&callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
         uint8_t const* p = LitQuadScene::centerPixel(rgba, width, height);
         EXPECT_GT(p[0], 32);
+        EXPECT_GT(p[1], 64);
+        callbackCalled = true;
+    });
+    EXPECT_TRUE(callbackCalled);
+
+    quad.destroy();
+}
+
+TEST_F(RenderingTest, MultipleDirectionalLightsDisabledByDefault) {
+    LitQuadScene quad;
+    quad.create(*mEngine, *mScene, *mView, *mCamera);
+
+    // with the default engine configuration, only the dominant directional light is
+    // evaluated: adding a second one must not change the result
+    quad.addRedLight();
+    bool callbackCalled = false;
+    runTest([&callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
+        uint8_t const* p = LitQuadScene::centerPixel(rgba, width, height);
+        EXPECT_LT(p[0], 16);
         EXPECT_GT(p[1], 64);
         callbackCalled = true;
     });

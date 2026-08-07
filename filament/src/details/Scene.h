@@ -195,7 +195,7 @@ public:
                 extraDirectionalLightDirections{};
         std::array<FLightManager::Instance, CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS>
                 extraDirectionalLightInstances{};
-        size_t extraDirectionalLightCount = 0;
+        uint8_t extraDirectionalLightCount = 0;
         bool hasContactShadows = false;
     };
 

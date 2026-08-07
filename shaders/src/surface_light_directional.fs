@@ -112,8 +112,16 @@ void evaluateExtraDirectionalLights(const MaterialInputs material,
     if (!RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS) {
         return;
     }
+    // At feature level 0, GLSL ES 1.00 only guarantees support for loops with a constant
+    // bound, and only allows indexing a uniform array with such a loop's index, so we
+    // iterate over the maximum and guard the body with the actual count. At higher feature
+    // levels the loop is simply bounded by the count.
+#if MATERIAL_FEATURE_LEVEL == 0
     for (int i = 0; i < CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS; i++) {
         if (i < frameUniforms.extraLightCount) {
+#else
+    for (int i = 0; i < frameUniforms.extraLightCount; i++) {
+#endif
             Light light;
             // note: colorIntensity.w is always premultiplied by the exposure
             light.colorIntensity = frameUniforms.extraLightColorIntensity[i];
@@ -140,6 +148,8 @@ void evaluateExtraDirectionalLights(const MaterialInputs material,
                 }
 #endif
             }
+#if MATERIAL_FEATURE_LEVEL == 0
         }
+#endif
     }
 }
