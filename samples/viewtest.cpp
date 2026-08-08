@@ -93,7 +93,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         utils::EntityManager::get().destroy(app->camera);
     };
 
-    auto preRender = [](Engine*, View*, Scene*, Renderer* renderer) {
+    auto preRender = [app](Engine*, View*, Scene*, Renderer* renderer) {
         renderer->setClearOptions({ .clear = true });
     };
 
