@@ -54,8 +54,6 @@ using LinearAllocatorArena = utils::Arena<
 
 #endif
 
-using RootArenaScope = utils::ArenaScope<LinearAllocatorArena>;
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_ALLOCATORS_H

@@ -30,11 +30,17 @@ template<typename T, typename ARENA>
 struct Deleter {
     ARENA* arena = nullptr;
     Deleter(ARENA& arena) noexcept: arena(&arena) {} // NOLINT
-    void operator()(T* object) noexcept { arena->destroy(object); }
+    void operator()(T* object) noexcept {
+        if (object) {
+            arena->destroy(object, object->getSize());
+        }
+    }
 };
 
+using FrameGraphAllocator = LinearAllocatorArena;
+
 template<typename T, typename ARENA> using UniquePtr = std::unique_ptr<T, Deleter<T, ARENA>>;
-template<typename T> using Allocator = utils::STLAllocator<T, LinearAllocatorArena>;
+template<typename T> using Allocator = utils::STLAllocator<T, FrameGraphAllocator>;
 template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
 
 } // namespace filament

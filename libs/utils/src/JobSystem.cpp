@@ -182,7 +182,7 @@ void JobSystem::setThreadAffinityById(size_t id) noexcept {
 UTILS_NOINLINE
 JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCount) noexcept
     : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
-      mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
+      mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getBase()))
 {
     FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 

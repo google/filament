@@ -68,7 +68,7 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(utils::JobSystem& js, RootArenaScope& rootArenaScope,
+    void prepare(utils::JobSystem& js, LinearAllocatorArena& arena,
             math::mat4 const& worldTransform, bool shadowReceiversAreCasters, SceneCacheData& cache) noexcept;
 
     void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables, SceneCacheData& cache) const noexcept;

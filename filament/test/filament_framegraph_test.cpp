@@ -108,7 +108,8 @@ public:
 };
 
 TEST(DependencyGraphTest, Simple) {
-    DependencyGraph graph;
+    FrameGraphAllocator arena("FrameGraph Test Arena", 64 * 1024);
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -117,7 +118,7 @@ TEST(DependencyGraphTest, Simple) {
     new DependencyGraph::Edge(graph, n1, n2);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
@@ -142,7 +143,8 @@ TEST(DependencyGraphTest, Simple) {
 }
 
 TEST(DependencyGraphTest, Culling1) {
-    DependencyGraph graph;
+    FrameGraphAllocator arena("FrameGraph Test Arena", 64 * 1024);
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -153,7 +155,7 @@ TEST(DependencyGraphTest, Culling1) {
     new DependencyGraph::Edge(graph, n1, n1_0);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
@@ -181,7 +183,8 @@ TEST(DependencyGraphTest, Culling1) {
 }
 
 TEST(DependencyGraphTest, Culling2) {
-    DependencyGraph graph;
+    FrameGraphAllocator arena("FrameGraph Test Arena", 64 * 1024);
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -196,7 +199,7 @@ TEST(DependencyGraphTest, Culling2) {
     new DependencyGraph::Edge(graph, n1_0, n1_0_1);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
