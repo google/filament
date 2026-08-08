@@ -66,8 +66,6 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
     using Bitmask = fvkutils::SamplerBitmask;
     uint32_t count = 0;
     Bitmask alreadySeen;
-    uint8_t immutableIndex = 0;
-    size_t const immutableSamplerCount = immutableSamplers.size();
     mask.forEachSetBit([&](size_t index) {
         VkShaderStageFlags stages = 0;
         uint32_t binding = 0;
@@ -86,14 +84,26 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
         }
 
         if (stages) {
+            auto const immutableSampler = std::find_if(immutableSamplers.begin(),
+                    immutableSamplers.end(), [binding](auto const& entry) {
+                return entry.first == binding;
+            });
+
+            bool const isExternal = external.test(index) ||
+                    (index < fvkutils::getFragmentStageShift<Bitmask>() &&
+                     external.test(index + fvkutils::getFragmentStageShift<Bitmask>()));
+
+            VkSampler const* sampler = nullptr;
+            if (isExternal && immutableSampler != immutableSamplers.end()) {
+                sampler = &immutableSampler->second;
+            }
+
             toBind[count++] = {
                 .binding = binding,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = 1,
                 .stageFlags = stages,
-                .pImmutableSamplers = external[index] && immutableSamplerCount > immutableIndex
-                                              ? &(immutableSamplers[immutableIndex++].second)
-                                              : nullptr,
+                .pImmutableSamplers = sampler,
             };
         }
     });
