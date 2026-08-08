@@ -16,18 +16,18 @@ runs:
       shell: bash
       env:
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
+        AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+        TSTAMP: ${{ github.event.head_commit.timestamp }}
+        HASH: ${{ github.event.head_commit.id }}
       run: |
-        AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
-        AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
-        TSTAMP="${{ github.event.head_commit.timestamp }}"
-        HASH="${{ github.event.head_commit.id }}"
-        echo "commit $HASH" >> /tmp/commit_msg.txt
+        echo "commit ${HASH}" >> /tmp/commit_msg.txt
         echo "Author: ${AUTHOR_NAME}<${AUTHOR_EMAIL}>" >> /tmp/commit_msg.txt
         echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
         echo "" >> /tmp/commit_msg.txt
         echo "$COMMIT_MESSAGE" >> /tmp/commit_msg.txt
-        echo "$HASH" > /tmp/commit_hash.txt
-        echo "$HASH" > /tmp/commit_hashes.txt
+        echo "${HASH}" > /tmp/commit_hash.txt
+        echo "${HASH}" > /tmp/commit_hashes.txt
     - name: Find commit message (PR)
       shell: bash
       if: github.event_name == 'pull_request'
