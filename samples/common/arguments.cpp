@@ -75,12 +75,10 @@ filament::Engine::Backend parseArgumentsForBackend(const utils::CString& backend
 }
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
-#if defined(FILAMENTAPP_HAS_WEB_UI)
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
     }
-#endif
-    return std::make_unique<filament::app::SDLDisplayManager>();
+    return std::make_unique<filament::app::SDLDisplayManager>(config.backend);
 }
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,

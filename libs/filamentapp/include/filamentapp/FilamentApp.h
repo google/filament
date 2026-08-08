@@ -97,6 +97,7 @@ public:
 private:
     FilamentApp();
 
+    std::unique_ptr<filament::app::DisplayManager> mDisplayManager;
     std::unique_ptr<FilamentApp2> mImpl;
 
     AnimCallback mAnimation;

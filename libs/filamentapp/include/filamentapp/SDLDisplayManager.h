@@ -27,38 +27,39 @@ namespace filament::app {
 
 class SDLDisplayManager : public DisplayManager {
 public:
-    SDLDisplayManager();
+    SDLDisplayManager(filament::Engine::Backend);
     ~SDLDisplayManager() override;
 
-    bool init(const Config& config) override;
     void terminate() override;
 
-    FilamentApp2::Window::Handle createWindow(const char* title, uint32_t w, uint32_t h,
+    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
             bool resizable, bool headless) override;
-    void destroyWindow(FilamentApp2::Window::Handle window) override;
+    void destroyWindow(WindowHandle window) override;
 
-    void* getNativeWindow(FilamentApp2::Window::Handle window) const override;
+    void* getNativeWindow(WindowHandle window) const override;
 
-    void setWindowTitle(FilamentApp2::Window::Handle window, const char* title) override;
-    void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
+    void setWindowTitle(WindowHandle window, const char* title) override;
+    void getWindowSize(WindowHandle window, uint32_t* w,
             uint32_t* h) const override;
-    void getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
+    void getDrawableSize(WindowHandle window, uint32_t* w,
             uint32_t* h) const override;
 
     uint32_t getMouseState(int* x, int* y) const override;
-    bool isWindowFocused(FilamentApp2::Window::Handle window) const override;
+    bool isWindowFocused(WindowHandle window) const override;
 
     void pollEvents(std::vector<AppEvent>& events) override;
 
-    void onWindowResized(FilamentApp2::Window::Handle window) override;
+    void onWindowResized(WindowHandle window) override;
 
     double getTime() const override;
 
     void startRendering(std::function<bool()> doFrame) override;
 
 private:
-    Config mConfig;
-    mutable std::unordered_map<FilamentApp2::Window::Handle, void*> mNativeWindowMap;
+    bool init();
+
+    filament::Engine::Backend const mBackend;
+    mutable std::unordered_map<WindowHandle, void*> mNativeWindowMap;
     static AppKey mapKey(SDL_Scancode scancode);
     static uint16_t getModifiers();
 };

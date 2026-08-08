@@ -155,6 +155,9 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
 #define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
 #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+/**
+ * @api-level 2
+ */
 void morphData2(inout vec2 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
@@ -168,6 +171,9 @@ void morphData2(inout vec2 v, highp sampler2DArray data) {
     }
 }
 
+/**
+ * @api-level 2
+ */
 void morphData3(inout vec3 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
@@ -181,6 +187,9 @@ void morphData3(inout vec3 v, highp sampler2DArray data) {
     }
 }
 
+/**
+ * @api-level 2
+ */
 void morphData4(inout vec4 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
