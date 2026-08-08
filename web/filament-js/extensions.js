@@ -501,9 +501,9 @@ Filament.loadClassExtensions = function() {
         return result;
     }
 
-    Filament.Texture.prototype.setImage = function(engine, level, pbd) {
-        this._setImage(engine, level, pbd);
-        pbd.delete();
+    Filament.Texture.prototype.setImage = function(engine, level, ...args) {
+        this._setImage(engine, level, ...args);
+        args[args.length - 1].delete();
     }
 
     Filament.Texture.prototype.getWidth = function(engine, level = 0) {
@@ -562,6 +562,10 @@ Filament.loadClassExtensions = function() {
         this.t32Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t32Pointer);
         this._triangles32(this.t32Pointer);
+    };
+
+    Filament.LightManager$Builder.prototype.intensityEnergy = function(watts, efficiency) {
+        return this._intensityEnergy(watts, efficiency);
     };
 
     Filament.SurfaceOrientation$Builder.prototype.build = function() {

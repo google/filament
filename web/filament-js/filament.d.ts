@@ -75,6 +75,12 @@ export const assets: {[url: string]: Uint8Array};
  */
 export type BufferReference = string | ArrayBufferView;
 
+export type int2 = number[];
+export type int3 = number[];
+export type int4 = number[];
+export type bool2 = boolean[];
+export type bool3 = boolean[];
+export type bool4 = boolean[];
 export type float2 = glm.vec2|number[];
 export type float3 = glm.vec3|number[];
 export type float4 = glm.vec4|number[];
@@ -178,9 +184,17 @@ export class Texture$Builder {
     public height(height: number): Texture$Builder;
     public depth(depth: number): Texture$Builder;
     public levels(levels: number): Texture$Builder;
+    public samples(samples: number): Texture$Builder;
     public sampler(sampler: Texture$Sampler): Texture$Builder;
     public format(format: Texture$InternalFormat): Texture$Builder;
     public usage(usage: number): Texture$Builder;
+    /**
+     * @throws on the WebGL backend, where build() rejects a swizzled texture with
+     * "WebGL does not support texture swizzling" (WebGL 2.0 spec 5.19). Guard with
+     * Texture.isTextureSwizzleSupported(engine), which returns false on the web.
+     */
+    public swizzle(r: Texture$Swizzle, g: Texture$Swizzle, b: Texture$Swizzle,
+            a: Texture$Swizzle): Texture$Builder;
     public build(engine: Engine) : Texture;
 }
 
@@ -188,6 +202,12 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(
         engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
+    public setImage(
+        engine: Engine, level: number, xoffset: number, yoffset: number,
+        width: number, height: number, pbd: driver$PixelBufferDescriptor): void;
+    public setImage(
+        engine: Engine, level: number, xoffset: number, yoffset: number, zoffset: number,
+        width: number, height: number, depth: number, pbd: driver$PixelBufferDescriptor): void;
     public getWidth(engine: Engine, level?: number) : number;
     public getHeight(engine: Engine, level?: number) : number;
     public getDepth(engine: Engine, level?: number) : number;
@@ -197,6 +217,12 @@ export class Texture {
     public static validatePixelFormatAndType(internalFormat: Texture$InternalFormat,
             format: PixelDataFormat, type: PixelDataType): boolean;
     public static isTextureSwizzleSupported(engine: Engine): boolean;
+    public static isTextureFormatSupported(engine: Engine,
+            format: Texture$InternalFormat): boolean;
+    public static getMaxTextureSize(engine: Engine, type: Texture$Sampler): number;
+    public static getMaxArrayTextureLayers(engine: Engine): number;
+    public getTarget(): Texture$Sampler;
+    public getFormat(): Texture$InternalFormat;
 }
 
 export class SkinningBuffer$Builder {
@@ -250,6 +276,13 @@ export class Skybox {
     public static Builder(): Skybox$Builder;
 }
 
+export class LightManager$ShadowCascades {
+    public static computeUniformSplits(cascades: number): number[];
+    public static computeLogSplits(cascades: number, near: number, far: number): number[];
+    public static computePracticalSplits(cascades: number, near: number, far: number,
+            lambda: number): number[];
+}
+
 export class LightManager$Instance {
     public delete(): void;
 }
@@ -265,7 +298,20 @@ export class TransformManager$Instance {
 export class TextureSampler {
     constructor(minfilter: MinFilter, magfilter: MagFilter, wrapmode: WrapMode);
     public setAnisotropy(value: number): void;
+    public getAnisotropy(): number;
     public setCompareMode(mode: CompareMode, func: CompareFunc): void;
+    public getCompareMode(): CompareMode;
+    public getCompareFunc(): CompareFunc;
+    public setMinFilter(filter: MinFilter): void;
+    public getMinFilter(): MinFilter;
+    public setMagFilter(filter: MagFilter): void;
+    public getMagFilter(): MagFilter;
+    public setWrapModeS(mode: WrapMode): void;
+    public getWrapModeS(): WrapMode;
+    public setWrapModeT(mode: WrapMode): void;
+    public getWrapModeT(): WrapMode;
+    public setWrapModeR(mode: WrapMode): void;
+    public getWrapModeR(): WrapMode;
 }
 
 export class MaterialInstance {
@@ -274,6 +320,13 @@ export class MaterialInstance {
     public duplicate(): MaterialInstance;
     public duplicateNamed(name: string): MaterialInstance;
     public setBoolParameter(name: string, value: boolean): void;
+    public setBool2Parameter(name: string, value: bool2): void;
+    public setBool3Parameter(name: string, value: bool3): void;
+    public setBool4Parameter(name: string, value: bool4): void;
+    public setIntParameter(name: string, value: number): void;
+    public setInt2Parameter(name: string, value: int2): void;
+    public setInt3Parameter(name: string, value: int3): void;
+    public setInt4Parameter(name: string, value: int4): void;
     public setFloatParameter(name: string, value: number): void;
     public setFloat2Parameter(name: string, value: float2): void;
     public setFloat3Parameter(name: string, value: float3): void;
@@ -287,6 +340,9 @@ export class MaterialInstance {
     public setMaskThreshold(threshold: number): void;
     public setScissor(left: number, bottom: number, width: number, height: number): void;
     public unsetScissor(): void;
+    public setConstantBool(name: string, value: boolean): void;
+    public setConstantFloat(name: string, value: number): void;
+    public setConstantInt(name: string, value: number): void;
     public getConstantBool(name: string): boolean;
     public getConstantFloat(name: string): number;
     public getConstantInt(name: string): number;
@@ -304,6 +360,7 @@ export class MaterialInstance {
     public setStencilReferenceValue(value: Number, face?: StencilFace): void;
     public setStencilReadMask(readMask: Number, face?: StencilFace): void;
     public setStencilWriteMask(writeMask: Number, face?: StencilFace): void;
+    public isStencilWriteEnabled(): boolean;
     public getMaskThreshold(): number;
     public setSpecularAntiAliasingVariance(variance: number): void;
     public getSpecularAntiAliasingVariance(): number;
@@ -406,6 +463,8 @@ export class LightManager$Builder {
     public color(rgb: float3): LightManager$Builder;
     public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
+    public intensityEnergy(watts: number, efficiency: number): LightManager$Builder;
+    public intensityCandela(value: number): LightManager$Builder;
     public falloff(value: number): LightManager$Builder;
     public position(value: float3): LightManager$Builder;
     public spotLightCone(inner: number, outer: number): LightManager$Builder;
@@ -419,6 +478,7 @@ export class Skybox$Builder {
     public build(engine: Engine): Skybox;
     public color(rgba: float4): Skybox$Builder;
     public environment(envmap: Texture): Skybox$Builder;
+    public intensity(envIntensity: number): Skybox$Builder;
     public showSun(show: boolean): Skybox$Builder;
     public priority(priority: number): Skybox$Builder;
 }
@@ -441,10 +501,14 @@ export class LightManager {
     public setIntensity(instance: LightManager$Instance, intensity: number): void;
     public setIntensityEnergy(instance: LightManager$Instance, watts: number, efficiency: number): void;
     public getIntensity(instance: LightManager$Instance): number;
+    public destroy(entity: Entity): void;
+    public setIntensityCandela(instance: LightManager$Instance, intensity: number): void;
     public setFalloff(instance: LightManager$Instance, radius: number): void;
     public getFalloff(instance: LightManager$Instance): number;
     public setShadowOptions(instance: LightManager$Instance, options: LightManager$ShadowOptions): void;
     public setSpotLightCone(instance: LightManager$Instance, inner: number, outer: number): void;
+    public getSpotLightConeInner(instance: LightManager$Instance): number;
+    public getSpotLightConeOuter(instance: LightManager$Instance): number;
     public setSunAngularRadius(instance: LightManager$Instance, angularRadius: number): void;
     public getSunAngularRadius(instance: LightManager$Instance): number;
     public setSunHaloSize(instance: LightManager$Instance, haloSize: number): void;
@@ -478,8 +542,14 @@ export class RenderableManager {
             offset: number): void
     public setBonesFromMatrices(instance: RenderableManager$Instance, transforms: mat4[],
             offset: number): void
-    public setMorphWeights(instance: RenderableManager$Instance, a: number, b: number, c: number,
-            d: number): void;
+    public setMorphWeights(instance: RenderableManager$Instance, weights: number[]): void;
+    public setMorphWeightsOffset(instance: RenderableManager$Instance, weights: number[],
+            offset: number): void;
+    public getMorphTargetCount(instance: RenderableManager$Instance): number;
+    public setMorphTargetBufferOffsetAt(instance: RenderableManager$Instance, level: number,
+            primitiveIndex: number, offset: number): void;
+    public setSkinningBuffer(instance: RenderableManager$Instance, skinningBuffer: SkinningBuffer,
+            count: number, offset: number): void;
     public getAxisAlignedBoundingBox(instance: RenderableManager$Instance): Box;
     public getPrimitiveCount(instance: RenderableManager$Instance): number;
     public setMaterialInstanceAt(instance: RenderableManager$Instance,
@@ -519,6 +589,7 @@ export class RenderableManager {
 
 export class VertexBuffer {
     public static Builder(): VertexBuffer$Builder;
+    public getVertexCount(): number;
     public setBufferAt(engine: Engine, bufindex: number, f32array: BufferReference,
             byteOffset?: number): void;
     public setBufferObjectAt(engine: Engine, bufindex: number, bo: BufferObject): void;
@@ -532,6 +603,7 @@ export class BufferObject {
 
 export class IndexBuffer {
     public static Builder(): IndexBuffer$Builder;
+    public getIndexCount(): number;
     public setBuffer(engine: Engine, u16array: BufferReference, byteOffset?: number): void;
 }
 
@@ -565,12 +637,48 @@ export class Renderer {
             callback: (pixels: Uint8Array) => void): void;
 }
 
+export interface Material$ParameterInfo {
+    name: string;
+    isSampler: boolean;
+    isSubpass: boolean;
+    /** Present when neither isSampler nor isSubpass. */
+    type?: number;
+    /** Present when isSampler. */
+    samplerType?: number;
+    /** Present when isSubpass. */
+    subpassType?: number;
+    count: number;
+    precision: number;
+}
+
 export class Material {
     public createInstance(): MaterialInstance;
     public createNamedInstance(name: string): MaterialInstance;
     public getDefaultInstance(): MaterialInstance;
     public getName(): string;
     public getParameterTransformName(samplerName: string): string;
+    public hasParameter(name: string): boolean;
+    public getParameterCount(): number;
+    public getParameters(): Material$ParameterInfo[];
+    public getShading(): Shading;
+    public getInterpolation(): Interpolation;
+    public getBlendingMode(): BlendingMode;
+    public getRefractionMode(): RefractionMode;
+    public getRefractionType(): RefractionType;
+    public getReflectionMode(): ReflectionMode;
+    public getVertexDomain(): VertexDomain;
+    public getCullingMode(): CullingMode;
+    public getTransparencyMode(): TransparencyMode;
+    public getFeatureLevel(): FeatureLevel;
+    public getMaskThreshold(): number;
+    public getSpecularAntiAliasingVariance(): number;
+    public getSpecularAntiAliasingThreshold(): number;
+    public getRequiredAttributes(): number;
+    public isDoubleSided(): boolean;
+    public isAlphaToCoverageEnabled(): boolean;
+    public isColorWriteEnabled(): boolean;
+    public isDepthWriteEnabled(): boolean;
+    public isDepthCullingEnabled(): boolean;
 }
 
 export enum Material$UboBatchingMode {
@@ -619,16 +727,53 @@ export class Camera {
     public setFocusDistance(distance: number): void;
     public setShift(shift: double2): void;
     public getShift(): double2;
+    public getEntity(): Entity;
+    public setEyeModelMatrix(eyeId: number, model: mat4): void;
+    public setCustomEyeProjection(projections: mat4[], projectionForCulling: mat4,
+            near: number, far: number): void;
     public static inverseProjection(p: mat4): mat4;
     public static computeEffectiveFocalLength(focalLength: number, focusDistance: number) : number;
     public static computeEffectiveFov(fovInDegrees: number, focusDistance: number) : number;
+}
+
+export class ToneMapper {
+    public delete(): void;
+}
+
+export class LinearToneMapper extends ToneMapper { constructor(); }
+export class ACESToneMapper extends ToneMapper { constructor(); }
+export class ACESLegacyToneMapper extends ToneMapper { constructor(); }
+export class FilmicToneMapper extends ToneMapper { constructor(); }
+export class PBRNeutralToneMapper extends ToneMapper { constructor(); }
+export class GT7ToneMapper extends ToneMapper { constructor(); }
+export class DisplayRangeToneMapper extends ToneMapper { constructor(); }
+
+export class AgxToneMapper extends ToneMapper {
+    constructor(look: AgxToneMapper$AgxLook);
+}
+
+export class GenericToneMapper extends ToneMapper {
+    constructor(contrast: number, midGrayIn: number, midGrayOut: number, hdrMax: number);
+    public getContrast(): number;
+    public setContrast(contrast: number): void;
+    public getMidGrayIn(): number;
+    public setMidGrayIn(midGrayIn: number): void;
+    public getMidGrayOut(): number;
+    public setMidGrayOut(midGrayOut: number): void;
+    public getHdrMax(): number;
+    public setHdrMax(hdrMax: number): void;
 }
 
 export class ColorGrading$Builder {
     public quality(qualityLevel: ColorGrading$QualityLevel): ColorGrading$Builder;
     public format(format: ColorGrading$LutFormat): ColorGrading$Builder;
     public dimensions(dim: number): ColorGrading$Builder;
+    /**
+     * @deprecated Use toneMapper(ToneMapper) instead. The ToneMapping enum has only five values
+     * and cannot select the PBRNeutral, GT7, AgX or Generic operators.
+     */
     public toneMapping(toneMapping: ColorGrading$ToneMapping): ColorGrading$Builder;
+    public toneMapper(toneMapper: ToneMapper): ColorGrading$Builder;
     public luminanceScaling(luminanceScaling: boolean): ColorGrading$Builder;
     public gamutMapping(gamutMapping: boolean): ColorGrading$Builder;
     public exposure(exposure: number): ColorGrading$Builder;
@@ -665,6 +810,7 @@ export class IndirectLight$Builder {
     public reflections(cubemap: Texture): IndirectLight$Builder;
     public irradianceTex(cubemap: Texture): IndirectLight$Builder;
     public irradianceSh(nbands: number, f32array: any): IndirectLight$Builder;
+    public radianceSh(nbands: number, f32array: any): IndirectLight$Builder;
     public intensity(value: number): IndirectLight$Builder;
     public rotation(value: mat3): IndirectLight$Builder;
     public build(engine: Engine): IndirectLight;
@@ -705,27 +851,49 @@ export class RenderTarget {
 export class View {
     public pick(x: number, y: number, cb: PickCallback): void;
     public setCamera(camera: Camera): void;
+    public getCamera(): Camera;
     public setColorGrading(colorGrading: ColorGrading): void;
     public getColorGrading(): ColorGrading;
     public setScene(scene: Scene): void;
+    public getScene(): Scene;
+    public setName(name: string): void;
+    public getName(): string;
     public setViewport(viewport: float4): void;
     public setVisibleLayers(select: number, values: number): void;
+    public getVisibleLayers(): number;
+    public setLayerEnabled(layer: number, enabled: boolean): void;
     public setRenderTarget(renderTarget: RenderTarget): void;
+    public getRenderTarget(): RenderTarget;
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
+    public getAmbientOcclusionOptions(): View$AmbientOcclusionOptions;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
+    public getDepthOfFieldOptions(): View$DepthOfFieldOptions;
     public setMultiSampleAntiAliasingOptions(options: View$MultiSampleAntiAliasingOptions): void;
+    public getMultiSampleAntiAliasingOptions(): View$MultiSampleAntiAliasingOptions;
     public setTemporalAntiAliasingOptions(options: View$TemporalAntiAliasingOptions): void;
+    public getTemporalAntiAliasingOptions(): View$TemporalAntiAliasingOptions;
     public setScreenSpaceReflectionsOptions(options: View$ScreenSpaceReflectionsOptions): void;
+    public getScreenSpaceReflectionsOptions(): View$ScreenSpaceReflectionsOptions;
+    public setScreenSpaceRefractionEnabled(enabled: boolean): void;
+    public isScreenSpaceRefractionEnabled(): boolean;
     public setBloomOptions(options: View$BloomOptions): void;
+    public getBloomOptions(): View$BloomOptions;
     public setFogOptions(options: View$FogOptions): void;
+    public getFogOptions(): View$FogOptions;
     public setVignetteOptions(options: View$VignetteOptions): void;
+    public getVignetteOptions(): View$VignetteOptions;
     public setGuardBandOptions(options: View$GuardBandOptions): void;
+    public getGuardBandOptions(): View$GuardBandOptions;
     public setStereoscopicOptions(options: View$StereoscopicOptions): void;
+    public getStereoscopicOptions(): View$StereoscopicOptions;
+    public setRenderQuality(renderQuality: View$RenderQuality): void;
+    public getRenderQuality(): View$RenderQuality;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
     public getBlendMode(): View$BlendMode;
     public setPostProcessingEnabled(enabled: boolean): void;
+    public isPostProcessingEnabled(): boolean;
     public setAntiAliasing(antialiasing: View$AntiAliasing): void;
     public setStencilBufferEnabled(enabled: boolean): void;
     public isStencilBufferEnabled(): boolean;
@@ -748,6 +916,7 @@ export class View {
     public getSampleCount(): number;
     public getVisibleRenderableCount(): number;
     public setDithering(dithering: View$Dithering): void;
+    public getDithering(): View$Dithering;
     public setDynamicResolutionOptions(options: View$DynamicResolutionOptions): void;
     public getDynamicResolutionOptions(): View$DynamicResolutionOptions;
     public getLastDynamicResolutionScale(): float2;
@@ -772,6 +941,9 @@ export class TransformManager {
     public setTransform(instance: TransformManager$Instance, xform: mat4): void;
     public getTransform(instance: TransformManager$Instance): mat4;
     public getWorldTransform(instance: TransformManager$Instance): mat4;
+    public getChildCount(instance: TransformManager$Instance): number;
+    public setAccurateTranslationsEnabled(enable: boolean): void;
+    public isAccurateTranslationsEnabled(): boolean;
     public openLocalTransformTransaction(): void;
     public commitLocalTransformTransaction(): void;
     public getParent(instance: TransformManager$Instance): Entity;
@@ -819,6 +991,8 @@ export class Engine {
     public static create(canvas: HTMLCanvasElement, options?: { backend?: Backend }): Engine;
     public static destroy(engine: Engine): void;
     public execute(): void;
+    public flush(): void;
+    public flushAndWait(): void;
     public createCamera(entity: Entity): Camera;
     public createMaterial(urlOrBuffer: BufferReference, options?: { uboBatching?: Material$UboBatchingMode }): Material;
     public createRenderer(): Renderer;
@@ -940,6 +1114,8 @@ export class gltfio$AssetLoader {
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public destroyAsset(asset: gltfio$FilamentAsset): void;
     public createInstance(asset: gltfio$FilamentAsset): (gltfio$FilamentInstance | null);
+    public enableDiagnostics(enable: boolean): void;
+    public static destroy(loader: gltfio$AssetLoader): void;
     public delete(): void;
 }
 
@@ -955,9 +1131,18 @@ export class gltfio$FilamentAsset {
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
+    public popRenderables(count: number): Vector<Entity>;
     public getInstance(): gltfio$FilamentInstance;
     public getAssetInstances(): gltfio$FilamentInstance[];
     public getResourceUris(): string[];
+    public getEntityCount(): number;
+    public getLightEntityCount(): number;
+    public getRenderableEntityCount(): number;
+    public getCameraEntityCount(): number;
+    public getResourceUriCount(): number;
+    public getMorphTargetCountAt(entity: Entity): number;
+    public getSceneCount(): number;
+    public getAssetInstanceCount(): number;
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
@@ -974,6 +1159,9 @@ export class gltfio$FilamentInstance {
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
     public getSkinNames(): Vector<string>;
+    public getEntityCount(): number;
+    public getMaterialVariantCount(): number;
+    public getMaterialInstanceCount(): number;
     public getSkinCount(): number;
     public getJointCountAt(skinIndex: number): number;
     public getJointsAt(skinIndex: number): Entity[];
@@ -1024,6 +1212,8 @@ export class gltfio$ResourceLoader {
     public asyncBeginLoad(asset: gltfio$FilamentAsset): boolean;
     public asyncGetLoadProgress(): number;
     public asyncUpdateLoad(): void;
+    public asyncCancelLoad(): void;
+    public evictResourceData(): void;
 }
 
 export class SurfaceOrientation$Builder {
@@ -1194,6 +1384,62 @@ export enum TransparencyMode {
     DEFAULT,
     TWO_PASSES_ONE_SIDE,
     TWO_PASSES_TWO_SIDES,
+}
+
+export enum Shading {
+    UNLIT,
+    LIT,
+    SUBSURFACE,
+    CLOTH,
+    SPECULAR_GLOSSINESS,
+}
+
+export enum Interpolation {
+    SMOOTH,
+    FLAT,
+}
+
+export enum BlendingMode {
+    OPAQUE,
+    TRANSPARENT,
+    ADD,
+    MASKED,
+    FADE,
+    MULTIPLY,
+    SCREEN,
+    CUSTOM,
+}
+
+export enum VertexDomain {
+    OBJECT,
+    WORLD,
+    VIEW,
+    DEVICE,
+}
+
+export enum RefractionMode {
+    NONE,
+    CUBEMAP,
+    SCREEN_SPACE,
+}
+
+export enum RefractionType {
+    SOLID,
+    THIN,
+}
+
+export enum ReflectionMode {
+    DEFAULT,
+    SCREEN_SPACE,
+}
+
+export enum Texture$Swizzle {
+    SUBSTITUTE_ZERO,
+    SUBSTITUTE_ONE,
+    CHANNEL_0,
+    CHANNEL_1,
+    CHANNEL_2,
+    CHANNEL_3,
 }
 
 export enum FeatureLevel {

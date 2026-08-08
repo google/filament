@@ -72,6 +72,7 @@
 #include <filament/Skybox.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
+#include <filament/ToneMapper.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -283,6 +284,38 @@ value_array<filament::math::float4>("float4")
     .element(&filament::math::float4::y)
     .element(&filament::math::float4::z)
     .element(&filament::math::float4::w);
+
+// Integer and boolean vectors, needed by MaterialInstance::setParameter for materials that
+// declare int/bool vector parameters.
+value_array<filament::math::int2>("int2")
+    .element(&filament::math::int2::x)
+    .element(&filament::math::int2::y);
+
+value_array<filament::math::int3>("int3")
+    .element(&filament::math::int3::x)
+    .element(&filament::math::int3::y)
+    .element(&filament::math::int3::z);
+
+value_array<filament::math::int4>("int4")
+    .element(&filament::math::int4::x)
+    .element(&filament::math::int4::y)
+    .element(&filament::math::int4::z)
+    .element(&filament::math::int4::w);
+
+value_array<filament::math::bool2>("bool2")
+    .element(&filament::math::bool2::x)
+    .element(&filament::math::bool2::y);
+
+value_array<filament::math::bool3>("bool3")
+    .element(&filament::math::bool3::x)
+    .element(&filament::math::bool3::y)
+    .element(&filament::math::bool3::z);
+
+value_array<filament::math::bool4>("bool4")
+    .element(&filament::math::bool4::x)
+    .element(&filament::math::bool4::y)
+    .element(&filament::math::bool4::z)
+    .element(&filament::math::bool4::w);
 
 value_array<filament::math::double2>("double2")
     .element(&filament::math::double2::x)
@@ -528,6 +561,15 @@ class_<Engine>("Engine")
         engine->execute();
     }), allow_raw_pointers())
 
+    .function("flush", &Engine::flush)
+
+    /// flushAndWait ::method:: Flushes the command stream and waits for it to drain.
+    /// On the single-threaded web build this drains the queue directly rather than
+    /// creating a fence, so it does not block the page.
+    .function("flushAndWait", EMBIND_LAMBDA(void, (Engine* engine), {
+        engine->flushAndWait();
+    }), allow_raw_pointers())
+
     /// destroy ::static method:: Destroys an engine instance and cleans up resources.
     /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
@@ -769,6 +811,10 @@ class_<Fence>("Fence")
         return self->wait(mode, (uint64_t) timeout);
     }), allow_raw_pointers());
 
+// Fence::waitAndDestroy is deliberately not bound: it hardcodes FENCE_WAIT_FOR_EVER, and the web
+// build is single-threaded, so an unbounded wait can never be satisfied. Use _wait with a timeout
+// of 0 followed by Engine::destroyFence instead.
+
 /// Renderer ::core class:: Represents the platform's native window.
 /// See also the [Engine] methods `createRenderer` and `destroyRenderer`.
 class_<Renderer>("Renderer")
@@ -873,8 +919,21 @@ class_<View>("View")
     }), allow_raw_pointers())
 
     .function("setScene", &View::setScene, allow_raw_pointers())
+    .function("getScene", EMBIND_LAMBDA(Scene*, (View* self), {
+        return self->getScene();
+    }), allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
+    .function("getCamera", EMBIND_LAMBDA(Camera*, (View* self), {
+        return &self->getCamera();
+    }), allow_raw_pointers())
     .function("hasCamera", &View::hasCamera)
+    .function("setName", EMBIND_LAMBDA(void, (View* self, std::string name), {
+        self->setName(name.c_str());
+    }), allow_raw_pointers())
+    .function("getName", EMBIND_LAMBDA(std::string, (View* self), {
+        const char* name = self->getName();
+        return name ? std::string(name) : std::string();
+    }), allow_raw_pointers())
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
     .function("getColorGrading", EMBIND_LAMBDA(ColorGrading*, (View* self), {
         return const_cast<ColorGrading*>(self->getColorGrading());
@@ -889,14 +948,38 @@ class_<View>("View")
     .function("getGridSize", &View::getGridSize)
     .function("getEffectiveGridSize", &View::getEffectiveGridSize)
     .function("setVisibleLayers", &View::setVisibleLayers)
+    .function("getVisibleLayers", &View::getVisibleLayers)
+    .function("setLayerEnabled", &View::setLayerEnabled)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
+    .function("isPostProcessingEnabled", &View::isPostProcessingEnabled)
+    .function("setScreenSpaceRefractionEnabled", &View::setScreenSpaceRefractionEnabled)
+    .function("isScreenSpaceRefractionEnabled", &View::isScreenSpaceRefractionEnabled)
     .function("setDithering", &View::setDithering)
+    .function("getDithering", &View::getDithering)
     .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
+    .function("getAmbientOcclusionOptions", EMBIND_LAMBDA(View::AmbientOcclusionOptions,
+            (View* self), {
+        return self->getAmbientOcclusionOptions();
+    }), allow_raw_pointers())
     .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
+    .function("getDepthOfFieldOptions", &View::getDepthOfFieldOptions)
     .function("_setMultiSampleAntiAliasingOptions", &View::setMultiSampleAntiAliasingOptions)
+    .function("getMultiSampleAntiAliasingOptions", EMBIND_LAMBDA(
+            View::MultiSampleAntiAliasingOptions, (View* self), {
+        return self->getMultiSampleAntiAliasingOptions();
+    }), allow_raw_pointers())
     .function("_setTemporalAntiAliasingOptions", &View::setTemporalAntiAliasingOptions)
+    .function("getTemporalAntiAliasingOptions", EMBIND_LAMBDA(
+            View::TemporalAntiAliasingOptions, (View* self), {
+        return self->getTemporalAntiAliasingOptions();
+    }), allow_raw_pointers())
     .function("_setScreenSpaceReflectionsOptions", &View::setScreenSpaceReflectionsOptions)
+    .function("getScreenSpaceReflectionsOptions", EMBIND_LAMBDA(
+            View::ScreenSpaceReflectionsOptions, (View* self), {
+        return self->getScreenSpaceReflectionsOptions();
+    }), allow_raw_pointers())
     .function("_setBloomOptions", &View::setBloomOptions)
+    .function("getBloomOptions", &View::getBloomOptions)
     .function("setShadowingEnabled", &View::setShadowingEnabled)
     .function("isShadowingEnabled", &View::isShadowingEnabled)
     .function("setShadowType", &View::setShadowType)
@@ -911,12 +994,21 @@ class_<View>("View")
     .function("isFrontFaceWindingInverted", &View::isFrontFaceWindingInverted)
     .function("setDynamicLightingOptions", &View::setDynamicLightingOptions)
     .function("setRenderQuality", &View::setRenderQuality)
+    .function("getRenderQuality", &View::getRenderQuality)
     .function("setDynamicResolutionOptions", &View::setDynamicResolutionOptions)
     .function("getDynamicResolutionOptions", &View::getDynamicResolutionOptions)
     .function("_setFogOptions", &View::setFogOptions)
+    .function("getFogOptions", &View::getFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
+    .function("getVignetteOptions", &View::getVignetteOptions)
     .function("_setGuardBandOptions", &View::setGuardBandOptions)
+    .function("getGuardBandOptions", EMBIND_LAMBDA(View::GuardBandOptions, (View* self), {
+        return self->getGuardBandOptions();
+    }), allow_raw_pointers())
     .function("_setStereoscopicOptions", &View::setStereoscopicOptions)
+    .function("getStereoscopicOptions", EMBIND_LAMBDA(View::StereoscopicOptions, (View* self), {
+        return self->getStereoscopicOptions();
+    }), allow_raw_pointers())
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)
@@ -927,6 +1019,7 @@ class_<View>("View")
     .function("setRenderTarget", EMBIND_LAMBDA(void, (View* self, RenderTarget* renderTarget), {
         self->setRenderTarget(renderTarget);
     }), allow_raw_pointers())
+    .function("getRenderTarget", &View::getRenderTarget, allow_raw_pointers())
     .function("setTransparentPickingEnabled", &View::setTransparentPickingEnabled)
     .function("isTransparentPickingEnabled", &View::isTransparentPickingEnabled)
     .function("setStencilBufferEnabled", &View::setStencilBufferEnabled)
@@ -1000,6 +1093,11 @@ class_<Camera>("Camera")
         self->setCustomProjection(filament::math::mat4(m.m), near, far);
     }), allow_raw_pointers())
 
+    .function("setCustomProjection", EMBIND_LAMBDA(void, (Camera* self,
+            flatmat4 m, flatmat4 mCull, double near, double far), {
+        self->setCustomProjection(filament::math::mat4(m.m), filament::math::mat4(mCull.m), near, far);
+    }), allow_raw_pointers())
+
     .function("setScaling", EMBIND_LAMBDA(void, (Camera* self, math::double2 scaling), {
         self->setScaling(scaling);
     }), allow_raw_pointers())
@@ -1015,6 +1113,25 @@ class_<Camera>("Camera")
     .function("getScaling", &Camera::getScaling)
     .function("setShift", &Camera::setShift)
     .function("getShift", &Camera::getShift)
+    .function("getEntity", &Camera::getEntity)
+    // setEyeModelMatrix has no mat4f overload (unlike setModelMatrix), so widen explicitly.
+    .function("setEyeModelMatrix", EMBIND_LAMBDA(void, (Camera* self, uint8_t eyeId, flatmat4 m), {
+        self->setEyeModelMatrix(eyeId, filament::math::mat4(m.m));
+    }), allow_raw_pointers())
+
+    /// setCustomEyeProjection ::method:: Sets a per-eye projection for stereoscopic rendering.
+    /// projections ::argument:: array of mat4, one per eye
+    /// projectionForCulling ::argument:: a mat4 encompassing all eye frustums
+    .function("setCustomEyeProjection", EMBIND_LAMBDA(void, (Camera* self, val projections,
+            flatmat4 projectionForCulling, double near, double far), {
+        size_t const count = projections["length"].as<size_t>();
+        std::vector<filament::math::mat4> matrices(count);
+        for (size_t i = 0; i < count; i++) {
+            matrices[i] = filament::math::mat4(projections[i].as<flatmat4>().m);
+        }
+        self->setCustomEyeProjection(matrices.data(), count,
+                filament::math::mat4(projectionForCulling.m), near, far);
+    }), allow_raw_pointers())
 
     .function("getNear", &Camera::getNear)
     .function("getCullingFar", &Camera::getCullingFar)
@@ -1060,6 +1177,47 @@ class_<Camera>("Camera")
         return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };
     }, allow_raw_pointers());
 
+// ToneMapper hierarchy. ColorGrading$Builder::toneMapper supersedes the deprecated
+// toneMapping(ToneMapping) enum, whose 5 values cannot reach PBRNeutral, GT7, AgX or the tunable
+// Generic operator. Each subclass is bound as its own class so JS can construct one and hand it to
+// the builder; build() consumes it synchronously, so it is safe to delete afterwards.
+class_<ToneMapper>("ToneMapper");
+
+class_<LinearToneMapper, base<ToneMapper>>("LinearToneMapper")
+    .constructor<>();
+
+class_<ACESToneMapper, base<ToneMapper>>("ACESToneMapper")
+    .constructor<>();
+
+class_<ACESLegacyToneMapper, base<ToneMapper>>("ACESLegacyToneMapper")
+    .constructor<>();
+
+class_<FilmicToneMapper, base<ToneMapper>>("FilmicToneMapper")
+    .constructor<>();
+
+class_<PBRNeutralToneMapper, base<ToneMapper>>("PBRNeutralToneMapper")
+    .constructor<>();
+
+class_<GT7ToneMapper, base<ToneMapper>>("GT7ToneMapper")
+    .constructor<>();
+
+class_<DisplayRangeToneMapper, base<ToneMapper>>("DisplayRangeToneMapper")
+    .constructor<>();
+
+class_<AgxToneMapper, base<ToneMapper>>("AgxToneMapper")
+    .constructor<AgxToneMapper::AgxLook>();
+
+class_<GenericToneMapper, base<ToneMapper>>("GenericToneMapper")
+    .constructor<float, float, float, float>()
+    .function("getContrast", &GenericToneMapper::getContrast)
+    .function("setContrast", &GenericToneMapper::setContrast)
+    .function("getMidGrayIn", &GenericToneMapper::getMidGrayIn)
+    .function("setMidGrayIn", &GenericToneMapper::setMidGrayIn)
+    .function("getMidGrayOut", &GenericToneMapper::getMidGrayOut)
+    .function("setMidGrayOut", &GenericToneMapper::setMidGrayOut)
+    .function("getHdrMax", &GenericToneMapper::getHdrMax)
+    .function("setHdrMax", &GenericToneMapper::setHdrMax);
+
 class_<ColorGrading>("ColorGrading")
     .class_function("Builder", (ColorBuilder (*)()) [] { return ColorBuilder(); });
 
@@ -1085,6 +1243,11 @@ class_<ColorBuilder>("ColorGrading$Builder")
     .BUILDER_FUNCTION("toneMapping", ColorBuilder, (ColorBuilder* builder,
             ColorGrading::ToneMapping tm), {
         return &builder->toneMapping(tm);
+    })
+
+    .BUILDER_FUNCTION("toneMapper", ColorBuilder, (ColorBuilder* builder,
+            ToneMapper const* toneMapper), {
+        return &builder->toneMapper(toneMapper);
     })
 
     .BUILDER_FUNCTION("luminanceScaling", ColorBuilder, (ColorBuilder* builder,
@@ -1409,6 +1572,24 @@ class_<RenderableManager>("RenderableManager")
         self->setMorphWeights(instance, floats.data(), nfloats);
     }), allow_raw_pointers())
 
+    // Same as setMorphWeights, but writes into the target buffer at the given offset. embind
+    // cannot overload on arity, so this follows the "geometry"/"geometryOffset" naming precedent.
+    .function("setMorphWeightsOffset", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, emscripten::val weights, size_t offset), {
+        auto nfloats = weights["length"].as<size_t>();
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = weights[i].as<float>();
+        }
+        self->setMorphWeights(instance, floats.data(), nfloats, offset);
+    }), allow_raw_pointers())
+
+    .function("getMorphTargetCount", &RenderableManager::getMorphTargetCount)
+
+    .function("setMorphTargetBufferOffsetAt", &RenderableManager::setMorphTargetBufferOffsetAt)
+
+    .function("setSkinningBuffer", &RenderableManager::setSkinningBuffer, allow_raw_pointers())
+
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("getInstanceCount", &RenderableManager::getInstanceCount)
@@ -1577,6 +1758,13 @@ class_<TransformManager>("TransformManager")
             (TransformManager* self, TransformManager::Instance instance), {
         return flatmat4 { self->getWorldTransform(instance) } ; }), allow_raw_pointers())
 
+    .function("getChildCount", &TransformManager::getChildCount)
+
+    .function("setAccurateTranslationsEnabled",
+            &TransformManager::setAccurateTranslationsEnabled)
+    .function("isAccurateTranslationsEnabled",
+            &TransformManager::isAccurateTranslationsEnabled)
+
     .function("openLocalTransformTransaction", &TransformManager::openLocalTransformTransaction)
     .function("commitLocalTransformTransaction",
             &TransformManager::commitLocalTransformTransaction);
@@ -1606,6 +1794,11 @@ class_<LightBuilder>("LightManager$Builder")
         return &builder->color(value); })
     .BUILDER_FUNCTION("intensity", LightBuilder, (LightBuilder* builder, float value), {
         return &builder->intensity(value); })
+    .BUILDER_FUNCTION("intensityEnergy", LightBuilder,
+            (LightBuilder* builder, float watts, float efficiency), {
+        return &builder->intensity(watts, efficiency); })
+    .BUILDER_FUNCTION("intensityCandela", LightBuilder, (LightBuilder* builder, float value), {
+        return &builder->intensityCandela(value); })
     .BUILDER_FUNCTION("falloff", LightBuilder, (LightBuilder* builder, float value), {
         return &builder->falloff(value); })
     .BUILDER_FUNCTION("spotLightCone", LightBuilder,
@@ -1654,11 +1847,15 @@ class_<LightManager>("LightManager")
         self->setIntensity(instance, watts, efficiency);
     }), allow_raw_pointers())
 
+    .function("destroy", &LightManager::destroy)
+    .function("setIntensityCandela", &LightManager::setIntensityCandela)
     .function("getIntensity", &LightManager::getIntensity)
     .function("setFalloff", &LightManager::setFalloff)
     .function("getFalloff", &LightManager::getFalloff)
     .function("_setShadowOptions", &LightManager::setShadowOptions)
     .function("setSpotLightCone", &LightManager::setSpotLightCone)
+    .function("getSpotLightConeInner", &LightManager::getSpotLightConeInner)
+    .function("getSpotLightConeOuter", &LightManager::getSpotLightConeOuter)
     .function("setSunAngularRadius", &LightManager::setSunAngularRadius)
     .function("getSunAngularRadius", &LightManager::getSunAngularRadius)
     .function("setSunHaloSize", &LightManager::setSunHaloSize)
@@ -1670,6 +1867,34 @@ class_<LightManager>("LightManager")
     .function("setLightChannel", &LightManager::setLightChannel)
     .function("getLightChannel", &LightManager::getLightChannel)
     ;
+
+/// LightManager$ShadowCascades ::class:: Utilities for computing cascade split positions.
+/// These take an out-parameter array in C++; the JS forms return a (cascades - 1) length array
+/// suitable for LightManager$ShadowOptions.cascadeSplitPositions.
+class_<LightManager::ShadowCascades>("LightManager$ShadowCascades")
+    .class_function("computeUniformSplits", EMBIND_LAMBDA(val, (uint8_t cascades), {
+        float splits[3] = {};
+        LightManager::ShadowCascades::computeUniformSplits(splits, cascades);
+        val result = val::array();
+        for (uint8_t i = 0; i + 1 < cascades; i++) { result.set(i, splits[i]); }
+        return result;
+    }))
+    .class_function("computeLogSplits", EMBIND_LAMBDA(val, (uint8_t cascades, float near,
+            float far), {
+        float splits[3] = {};
+        LightManager::ShadowCascades::computeLogSplits(splits, cascades, near, far);
+        val result = val::array();
+        for (uint8_t i = 0; i + 1 < cascades; i++) { result.set(i, splits[i]); }
+        return result;
+    }))
+    .class_function("computePracticalSplits", EMBIND_LAMBDA(val, (uint8_t cascades, float near,
+            float far, float lambda), {
+        float splits[3] = {};
+        LightManager::ShadowCascades::computePracticalSplits(splits, cascades, near, far, lambda);
+        val result = val::array();
+        for (uint8_t i = 0; i + 1 < cascades; i++) { result.set(i, splits[i]); }
+        return result;
+    }));
 
 /// LightManager$Instance ::class:: Component instance returned by [LightManager]
 /// Be sure to call the instance's `delete` method when you're done with it.
@@ -1722,6 +1947,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
 /// VertexBuffer ::core class:: Bundle of buffers and associated vertex attributes.
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
+    .function("getVertexCount", &VertexBuffer::getVertexCount)
     .function("setBufferObjectAt", &VertexBuffer::setBufferObjectAt, allow_raw_pointers())
     .function("_setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
             Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd, uint32_t byteOffset), {
@@ -1741,6 +1967,7 @@ class_<IndexBuilder>("IndexBuffer$Builder")
 /// IndexBuffer ::core class:: Array of 16-bit or 32-bit unsigned integers consumed by the GPU.
 class_<IndexBuffer>("IndexBuffer")
     .class_function("Builder", (IndexBuilder (*)()) [] { return IndexBuilder(); })
+    .function("getIndexCount", &IndexBuffer::getIndexCount)
     .function("_setBuffer", EMBIND_LAMBDA(void, (IndexBuffer* self,
             Engine* engine, BufferDescriptor ibd, uint32_t byteOffset), {
         self->setBuffer(*engine, std::move(*ibd.bd), byteOffset);
@@ -1761,7 +1988,61 @@ class_<Material>("Material")
     .function("getParameterTransformName", EMBIND_LAMBDA(std::string, (Material* self, std::string samplerName), {
         const char* transformName = self->getParameterTransformName(samplerName.c_str());
         return transformName ? std::string(transformName) : std::string();
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+
+    .function("hasParameter", EMBIND_LAMBDA(bool, (Material* self, std::string name), {
+        return self->hasParameter(name.c_str());
+    }), allow_raw_pointers())
+    .function("getParameterCount", &Material::getParameterCount)
+
+    // ParameterInfo holds a union and a const char*, so it cannot be a value_object. Return an
+    // array of plain JS objects instead, reading the union member that isSampler/isSubpass selects.
+    .function("getParameters", EMBIND_LAMBDA(val, (Material* self), {
+        const size_t count = self->getParameterCount();
+        std::vector<Material::ParameterInfo> info(count);
+        const size_t written = self->getParameters(info.data(), count);
+        val result = val::array();
+        for (size_t i = 0; i < written; i++) {
+            const auto& p = info[i];
+            val entry = val::object();
+            entry.set("name", std::string(p.name));
+            entry.set("isSampler", p.isSampler);
+            entry.set("isSubpass", p.isSubpass);
+            if (p.isSampler) {
+                entry.set("samplerType", int(p.samplerType));
+            } else if (p.isSubpass) {
+                entry.set("subpassType", int(p.subpassType));
+            } else {
+                entry.set("type", int(p.type));
+            }
+            entry.set("count", p.count);
+            entry.set("precision", int(p.precision));
+            result.set(i, entry);
+        }
+        return result;
+    }), allow_raw_pointers())
+
+    .function("getShading", &Material::getShading)
+    .function("getInterpolation", &Material::getInterpolation)
+    .function("getBlendingMode", &Material::getBlendingMode)
+    .function("getRefractionMode", &Material::getRefractionMode)
+    .function("getRefractionType", &Material::getRefractionType)
+    .function("getReflectionMode", &Material::getReflectionMode)
+    .function("getVertexDomain", &Material::getVertexDomain)
+    .function("getCullingMode", &Material::getCullingMode)
+    .function("getTransparencyMode", &Material::getTransparencyMode)
+    .function("getFeatureLevel", &Material::getFeatureLevel)
+    .function("getMaskThreshold", &Material::getMaskThreshold)
+    .function("getSpecularAntiAliasingVariance", &Material::getSpecularAntiAliasingVariance)
+    .function("getSpecularAntiAliasingThreshold", &Material::getSpecularAntiAliasingThreshold)
+    .function("getRequiredAttributes", EMBIND_LAMBDA(uint32_t, (Material* self), {
+        return self->getRequiredAttributes().getValue();
+    }), allow_raw_pointers())
+    .function("isDoubleSided", &Material::isDoubleSided)
+    .function("isAlphaToCoverageEnabled", &Material::isAlphaToCoverageEnabled)
+    .function("isColorWriteEnabled", &Material::isColorWriteEnabled)
+    .function("isDepthWriteEnabled", &Material::isDepthWriteEnabled)
+    .function("isDepthCullingEnabled", &Material::isDepthCullingEnabled);
 
 enum_<Material::UboBatchingMode>("Material$UboBatchingMode")
     .value("DISABLED", Material::UboBatchingMode::DISABLED)
@@ -1800,11 +2081,44 @@ class_<MaterialInstance>("MaterialInstance")
             std::string name), {
         return self->getConstant<int32_t>(name.c_str(), name.size());
     }), allow_raw_pointers())
+    .function("setConstantBool", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, bool value), {
+        self->setConstant(name.c_str(), name.size(), value);
+    }), allow_raw_pointers())
+    .function("setConstantFloat", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, float value), {
+        self->setConstant(name.c_str(), name.size(), value);
+    }), allow_raw_pointers())
+    .function("setConstantInt", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, int32_t value), {
+        self->setConstant(name.c_str(), name.size(), value);
+    }), allow_raw_pointers())
     .function("setBoolParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, bool value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloatParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, float value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setBool2Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::bool2 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setBool3Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::bool3 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setBool4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::bool4 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setIntParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, int32_t value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setInt2Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::int2 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setInt3Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::int3 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setInt4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::int4 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloat2Parameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, filament::math::float2 value), {
@@ -1888,6 +2202,7 @@ class_<MaterialInstance>("MaterialInstance")
             (MaterialInstance* self, uint8_t readMask), {
                 self->setStencilReadMask(readMask, backend::StencilFace::FRONT_AND_BACK);
             }), allow_raw_pointers())
+    .function("isStencilWriteEnabled", &MaterialInstance::isStencilWriteEnabled)
     .function("setStencilWriteMask", &MaterialInstance::setStencilWriteMask)
     .function("setStencilWriteMask", EMBIND_LAMBDA(void,
             (MaterialInstance* self, uint8_t writeMask), {
@@ -1897,7 +2212,20 @@ class_<MaterialInstance>("MaterialInstance")
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()
     .function("setAnisotropy", &TextureSampler::setAnisotropy)
-    .function("setCompareMode", &TextureSampler::setCompareMode);
+    .function("getAnisotropy", &TextureSampler::getAnisotropy)
+    .function("setCompareMode", &TextureSampler::setCompareMode)
+    .function("getCompareMode", &TextureSampler::getCompareMode)
+    .function("getCompareFunc", &TextureSampler::getCompareFunc)
+    .function("setMinFilter", &TextureSampler::setMinFilter)
+    .function("getMinFilter", &TextureSampler::getMinFilter)
+    .function("setMagFilter", &TextureSampler::setMagFilter)
+    .function("getMagFilter", &TextureSampler::getMagFilter)
+    .function("setWrapModeS", &TextureSampler::setWrapModeS)
+    .function("getWrapModeS", &TextureSampler::getWrapModeS)
+    .function("setWrapModeT", &TextureSampler::setWrapModeT)
+    .function("getWrapModeT", &TextureSampler::getWrapModeT)
+    .function("setWrapModeR", &TextureSampler::setWrapModeR)
+    .function("getWrapModeR", &TextureSampler::getWrapModeR);
 
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
@@ -1907,10 +2235,35 @@ class_<Texture>("Texture")
     .class_function("isTextureSwizzleSupported", (bool (*)(Engine*)) [] (Engine* engine) {
         return Texture::isTextureSwizzleSupported(*engine);
     }, allow_raw_pointers())
+    .class_function("isTextureFormatSupported",
+            (bool (*)(Engine*, Texture::InternalFormat)) [] (Engine* engine,
+                    Texture::InternalFormat format) {
+        return Texture::isTextureFormatSupported(*engine, format);
+    }, allow_raw_pointers())
+    .class_function("getMaxTextureSize",
+            (size_t (*)(Engine*, Texture::Sampler)) [] (Engine* engine, Texture::Sampler type) {
+        return Texture::getMaxTextureSize(*engine, type);
+    }, allow_raw_pointers())
+    .class_function("getMaxArrayTextureLayers",
+            (size_t (*)(Engine*)) [] (Engine* engine) {
+        return Texture::getMaxArrayTextureLayers(*engine);
+    }, allow_raw_pointers())
+    .function("getTarget", &Texture::getTarget)
+    .function("getFormat", &Texture::getFormat)
     .function("generateMipmaps", &Texture::generateMipmaps)
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, uint32_t xoffset, uint32_t yoffset,
+            uint32_t width, uint32_t height, PixelBufferDescriptor pbd), {
+        self->setImage(*engine, level, xoffset, yoffset, width, height, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+            uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor pbd), {
+        self->setImage(*engine, level, xoffset, yoffset, zoffset, width, height, depth, std::move(*pbd.pbd));
     }), allow_raw_pointers())
     .function("_getWidth", EMBIND_LAMBDA(size_t, (Texture* self,
             Engine* engine, uint8_t level), {
@@ -1941,12 +2294,20 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->depth(depth); })
     .BUILDER_FUNCTION("levels", TexBuilder, (TexBuilder* builder, uint8_t levels), {
         return &builder->levels(levels); })
+    .BUILDER_FUNCTION("samples", TexBuilder, (TexBuilder* builder, uint8_t samples), {
+        return &builder->samples(samples); })
     .BUILDER_FUNCTION("sampler", TexBuilder, (TexBuilder* builder, Texture::Sampler target), {
         return &builder->sampler(target); })
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
     .BUILDER_FUNCTION("external", TexBuilder, (TexBuilder* builder), {
         return &builder->external(); })
+    // Note build() rejects a swizzled texture on WebGL, which has no texture swizzle; the binding
+    // exists so callers get that explicit error rather than a missing method. Pair with
+    // isTextureSwizzleSupported, which is already bound and returns false here.
+    .BUILDER_FUNCTION("swizzle", TexBuilder, (TexBuilder* builder, Texture::Swizzle r,
+            Texture::Swizzle g, Texture::Swizzle b, Texture::Swizzle a), {
+        return &builder->swizzle(r, g, b, a); })
 
     // This takes a bitfield that can be composed by or'ing constants.
     // - JS clients should use the value member, as in: "Texture$Usage.SAMPLEABLE.value".
@@ -2008,6 +2369,17 @@ class_<IblBuilder>("IndirectLight$Builder")
             floats[i] = ta[i].as<float>();
         }
         return &builder->irradiance(nbands, (filament::math::float3 const*) floats.data()); })
+    .BUILDER_FUNCTION("radianceSh", IblBuilder, (IblBuilder* builder, uint8_t nbands, val ta), {
+        size_t nfloats = ta["length"].as<size_t>();
+        if (nfloats != nbands * nbands * 3) {
+            printf("Received %zu floats for spherical harmonics, expected %d.", nfloats, nbands);
+            return builder;
+        }
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return &builder->radiance(nbands, (filament::math::float3 const*) floats.data()); })
     .BUILDER_FUNCTION("intensity", IblBuilder, (IblBuilder* builder, float value), {
         return &builder->intensity(value); })
     .BUILDER_FUNCTION("rotation", IblBuilder, (IblBuilder* builder, flatmat3 value), {
@@ -2033,6 +2405,10 @@ class_<SkyBuilder>("Skybox$Builder")
         return &builder->color(color); })
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
         return &builder->environment(cubemap); })
+    .BUILDER_FUNCTION("intensity", SkyBuilder, (SkyBuilder* builder, float envIntensity), {
+        return &builder->intensity(envIntensity); })
+    .BUILDER_FUNCTION("intensity", SkyBuilder, (SkyBuilder* builder, float envIntensity), {
+        return &builder->intensity(envIntensity); })
     .BUILDER_FUNCTION("showSun", SkyBuilder, (SkyBuilder* builder, bool show), {
         return &builder->showSun(show); });
 
@@ -2406,6 +2782,14 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
 
     .function("popRenderable", &FilamentAsset::popRenderable)
 
+    // Batched form of popRenderable; returns up to `count` entities (fewer when the queue drains).
+    .function("popRenderables", EMBIND_LAMBDA(EntityVector, (FilamentAsset* self, size_t count), {
+        EntityVector result(count);
+        const size_t popped = self->popRenderables(result.data(), count);
+        result.resize(popped);
+        return result;
+    }), allow_raw_pointers())
+
     .function("getInstance", &FilamentAsset::getInstance, allow_raw_pointers())
 
     .function("_getAssetInstances", EMBIND_LAMBDA(std::vector<FilamentInstance*>,
@@ -2422,6 +2806,16 @@ class_<FilamentAsset>("gltfio$FilamentAsset")
         }
         return retval;
     }), allow_raw_pointers())
+
+    // Count accessors, so callers can size a buffer without materializing the entity vector.
+    .function("getEntityCount", &FilamentAsset::getEntityCount)
+    .function("getLightEntityCount", &FilamentAsset::getLightEntityCount)
+    .function("getRenderableEntityCount", &FilamentAsset::getRenderableEntityCount)
+    .function("getCameraEntityCount", &FilamentAsset::getCameraEntityCount)
+    .function("getResourceUriCount", &FilamentAsset::getResourceUriCount)
+    .function("getMorphTargetCountAt", &FilamentAsset::getMorphTargetCountAt)
+    .function("getSceneCount", &FilamentAsset::getSceneCount)
+    .function("getAssetInstanceCount", &FilamentAsset::getAssetInstanceCount)
 
     .function("getBoundingBox", &FilamentAsset::getBoundingBox)
     .function("getName", EMBIND_LAMBDA(std::string, (FilamentAsset* self, utils::Entity entity), {
@@ -2465,6 +2859,9 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
     .function("attachSkin", &FilamentInstance::attachSkin)
     .function("detachSkin", &FilamentInstance::detachSkin)
 
+    .function("getEntityCount", &FilamentInstance::getEntityCount)
+    .function("getMaterialVariantCount", &FilamentInstance::getMaterialVariantCount)
+    .function("getMaterialInstanceCount", &FilamentInstance::getMaterialInstanceCount)
     .function("getSkinCount", &FilamentInstance::getSkinCount)
     .function("getJointCountAt", &FilamentInstance::getJointCountAt)
 
@@ -2562,7 +2959,16 @@ class_<AssetLoader>("gltfio$AssetLoader")
     
     // gc ::method::
     // Performs a Garbage Collection sweep over all internal component managers.
-    .function("gc", &AssetLoader::gc, allow_raw_pointers());
+    .function("gc", &AssetLoader::gc, allow_raw_pointers())
+
+    // enableDiagnostics ::method:: Enables the diagnostic "wireframe" renderable.
+    .function("enableDiagnostics", &AssetLoader::enableDiagnostics, allow_raw_pointers())
+
+    // destroy ::method:: Frees the loader itself (not its assets or material cache).
+    // The embind raw_destructor for AssetLoader is a no-op, so `delete` does not release it.
+    .class_function("destroy", EMBIND_LAMBDA(void, (AssetLoader* loader), {
+        AssetLoader::destroy(&loader);
+    }), allow_raw_pointers());
 
 class_<ResourceLoader>("gltfio$ResourceLoader")
     .constructor(EMBIND_LAMBDA(ResourceLoader*, (Engine* engine, bool normalizeSkinningWeights), {
@@ -2608,7 +3014,9 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
     }), allow_raw_pointers())
 
     .function("asyncGetLoadProgress", &ResourceLoader::asyncGetLoadProgress)
-    .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad);
+    .function("asyncUpdateLoad", &ResourceLoader::asyncUpdateLoad)
+    .function("asyncCancelLoad", &ResourceLoader::asyncCancelLoad)
+    .function("evictResourceData", &ResourceLoader::evictResourceData);
 
 class_<Settings>("Settings");
 
