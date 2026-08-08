@@ -48,6 +48,8 @@ class PassNode : public DependencyGraph::Node {
 protected:
     friend class FrameGraphResources;
     FrameGraph& mFrameGraph;
+    // CAVEAT: if we ever change the allocator for mDeclaredHandles to use the main FrameGraphAllocator,
+    // we will need to remove the ArenaScopes in FrameGraph::compile()
     std::unordered_set<FrameGraphHandle::Index> mDeclaredHandles;
 public:
     explicit PassNode(FrameGraph& fg) noexcept;
@@ -123,7 +125,7 @@ private:
     UniquePtr<FrameGraphPassBase, FrameGraphAllocator> mPassBase;
 
     // set during setup
-    std::vector<RenderPassData> mRenderTargetData;
+    Vector<RenderPassData> mRenderTargetData;
 };
 
 class PresentPassNode final : public PassNode {

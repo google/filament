@@ -32,10 +32,10 @@
 
 namespace filament {
 
-DependencyGraph::DependencyGraph() noexcept {
-    // Some reasonable defaults size for our vectors
-    mNodes.reserve(8);
-    mEdges.reserve(16);
+DependencyGraph::DependencyGraph(FrameGraphAllocator& arena) noexcept
+    : mNodes(arena), mEdges(arena)  {
+    mNodes.reserve(128);
+    mEdges.reserve(128);
 }
 
 DependencyGraph::~DependencyGraph() noexcept = default;
@@ -47,13 +47,7 @@ uint32_t DependencyGraph::generateNodeId() noexcept {
 void DependencyGraph::registerNode(Node* node, NodeID const id) noexcept {
     // Node* is not fully constructed here
     assert_invariant(id == mNodes.size());
-
-    // here we manually grow the fixed-size vector
-    NodeContainer& nodes = mNodes;
-    if (UTILS_UNLIKELY(nodes.capacity() == nodes.size())) {
-        nodes.reserve(nodes.capacity() * 2);
-    }
-    nodes.push_back(node);
+    mNodes.push_back(node);
 }
 
 bool DependencyGraph::isEdgeValid(Edge const* edge) const noexcept {
@@ -64,41 +58,37 @@ bool DependencyGraph::isEdgeValid(Edge const* edge) const noexcept {
 }
 
 void DependencyGraph::link(Edge* edge) noexcept {
-    // here we manually grow the fixed-size vector
-    EdgeContainer& edges = mEdges;
-    if (UTILS_UNLIKELY(edges.capacity() == edges.size())) {
-        edges.reserve(edges.capacity() * 2);
-    }
-    edges.push_back(edge);
+    mEdges.push_back(edge);
 }
 
 DependencyGraph::EdgeContainer const& DependencyGraph::getEdges() const noexcept {
     return mEdges;
 }
 
-
 DependencyGraph::NodeContainer const& DependencyGraph::getNodes() const noexcept {
     return mNodes;
 }
 
 DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
-        Node const* node) const noexcept {
+        Node const* node, FrameGraphAllocator& arena) const noexcept {
     // TODO: we might need something more efficient
-    auto result = EdgeContainer::with_capacity(mEdges.size());
+
+    EdgeContainer result(arena);
+    result.reserve(8);
     NodeID const nodeId = node->getId();
-    std::copy_if(mEdges.begin(), mEdges.end(),
-            std::back_insert_iterator<EdgeContainer>(result),
+    std::copy_if(mEdges.begin(), mEdges.end(), std::back_inserter(result),
             [nodeId](auto edge) { return edge->to == nodeId; });
     return result;
 }
 
 DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
-        Node const* node) const noexcept {
+        Node const* node, FrameGraphAllocator& arena) const noexcept {
     // TODO: we might need something more efficient
-    auto result = EdgeContainer::with_capacity(mEdges.size());
+
+    EdgeContainer result(arena);
+    result.reserve(8);
     NodeID const nodeId = node->getId();
-    std::copy_if(mEdges.begin(), mEdges.end(),
-            std::back_insert_iterator<EdgeContainer>(result),
+    std::copy_if(mEdges.begin(), mEdges.end(), std::back_inserter(result),
             [nodeId](auto edge) { return edge->from == nodeId; });
     return result;
 }
@@ -111,33 +101,42 @@ DependencyGraph::Node* DependencyGraph::getNode(NodeID const id) noexcept {
     return mNodes[id];
 }
 
-void DependencyGraph::cull() noexcept {
+void DependencyGraph::cull(FrameGraphAllocator& arena) noexcept {
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    auto& nodes = mNodes;
-    auto& edges = mEdges;
+    auto const& nodes = mNodes;
+    auto const& edges = mEdges;
 
     // update reference counts
-    for (Edge* const pEdge : edges) {
+    for (Edge const* const pEdge : edges) {
         Node* node = nodes[pEdge->from];
         node->mRefCount++;
     }
 
+    // Temporary allocations
+    utils::ArenaScope const scope(arena);
+
     // cull nodes with a 0 reference count
-    auto stack = NodeContainer::with_capacity(nodes.size());
+    NodeContainer stack(arena);
+    stack.reserve(nodes.size());
     for (Node* const pNode : nodes) {
         if (pNode->getRefCount() == 0) {
+            // note: this is guaranteed to not reallocate
             stack.push_back(pNode);
         }
     }
     while (!stack.empty()) {
-        Node* const pNode = stack.back();
+        Node const* const pNode = stack.back();
         stack.pop_back();
-        EdgeContainer const& incoming = getIncomingEdges(pNode);
-        for (Edge* edge : incoming) {
+
+        utils::ArenaScope const stackScope(arena); // safe because stack never reallocates by construction
+        EdgeContainer const incoming = getIncomingEdges(pNode, arena);
+        for (Edge const* edge : incoming) {
             Node* pLinkedNode = getNode(edge->from);
             if (--pLinkedNode->mRefCount == 0) {
+                assert_invariant(stack.size() < stack.capacity());
+                // note: this is guaranteed to not reallocate
                 stack.push_back(pLinkedNode);
             }
         }
@@ -149,7 +148,11 @@ void DependencyGraph::clear() noexcept {
     mNodes.clear();
 }
 
-void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name) const noexcept {
+void DependencyGraph::export_graphviz(FrameGraphAllocator& arena,
+        utils::io::ostream& out, char const* name) const noexcept {
+
+    utils::ArenaScope const scope(arena);
+
 #ifndef NDEBUG
     const char* graphName = name ? name : "graph";
     out << "digraph \"" << graphName << "\" {\n";
@@ -188,7 +191,7 @@ void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name)
         }
         uint32_t id = node->getId();
 
-        auto edges = getOutgoingEdges(node);
+        auto edges = getOutgoingEdges(node, arena);
         auto first = edges.begin();
         auto pos = std::partition(first, edges.end(),
                 [this](auto const& edge) { return isEdgeValid(edge); });
@@ -246,10 +249,11 @@ void DependencyGraph::export_graphviz(utils::io::ostream& out, char const* name)
 #endif
 }
 
-bool DependencyGraph::isAcyclic() const noexcept {
+bool DependencyGraph::isAcyclic(FrameGraphAllocator& arena) const noexcept {
 #ifndef NDEBUG
     // We work on a copy of the graph
-    DependencyGraph graph;
+    utils::ArenaScope const scope(arena);
+    DependencyGraph graph(arena);
     graph.mEdges = mEdges;
     graph.mNodes = mNodes;
     return isAcyclicInternal(graph);

@@ -531,9 +531,9 @@ private:
             FrameGraphId<RESOURCE> input, typename RESOURCE::Usage usage);
 
     ResourceSlot& getResourceSlot(FrameGraphHandle const handle) noexcept {
-        assert_invariant((size_t)handle.index < mResourceSlots.size());
-        assert_invariant((size_t)mResourceSlots[handle.index].rid < mResources.size());
-        assert_invariant((size_t)mResourceSlots[handle.index].nid < mResourceNodes.size());
+        assert_invariant(size_t(handle.index) < mResourceSlots.size());
+        assert_invariant(size_t(mResourceSlots[handle.index].rid) < mResources.size());
+        assert_invariant(size_t(mResourceSlots[handle.index].nid) < mResourceNodes.size());
         return mResourceSlots[handle.index];
     }
 
@@ -544,14 +544,14 @@ private:
     VirtualResource* getResource(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle.isInitialized());
         ResourceSlot const& slot = getResourceSlot(handle);
-        assert_invariant((size_t)slot.rid < mResources.size());
+        assert_invariant(size_t(slot.rid) < mResources.size());
         return mResources[slot.rid];
     }
 
     ResourceNode* getActiveResourceNode(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle);
         ResourceSlot const& slot = getResourceSlot(handle);
-        assert_invariant((size_t)slot.nid < mResourceNodes.size());
+        assert_invariant(size_t(slot.nid) < mResourceNodes.size());
         return mResourceNodes[slot.nid];
     }
 
@@ -567,7 +567,7 @@ private:
 
     Blackboard mBlackboard;
     TextureCacheInterface& mResourceAllocator;
-    FrameGraphAllocator mArena;
+    mutable FrameGraphAllocator mArena;
     DependencyGraph mGraph;
     const Mode mMode;
 
