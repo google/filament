@@ -837,6 +837,8 @@ public:
     filament::UserVariantFilterMask getVariantFilter() const { return mVariantFilter; }
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
+
+    uint32_t getApiLevel() const noexcept { return mApiLevel; }
     /// @endcond
 
     struct Attribute {
