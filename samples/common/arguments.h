@@ -32,9 +32,6 @@
 
 namespace samples {
 
-filament::Engine::Backend parseArgumentsForBackend(const utils::CString& backend);
-utils::CString getBackendAPIArgumentsUsage();
-
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
 
 using CustomArgumentHandler = std::function<bool(int opt, const utils::CString& arg)>;
