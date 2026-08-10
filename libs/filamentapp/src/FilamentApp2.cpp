@@ -135,8 +135,7 @@ void FilamentApp2::onTouchEvent(int action, float x, float y) {
 View* FilamentApp2::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
 
 void FilamentApp2::run() {
-    // Note that we need to determine the backend in order to build custom platforms.
-    Engine::Backend backend = filament::app::resolveBackend(mBackend);
+    Engine::Backend backend = mBackend;
 
     backend::Platform* platform = nullptr;
     if (backend == Engine::Backend::VULKAN) {
