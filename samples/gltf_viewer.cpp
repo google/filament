@@ -324,6 +324,8 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* 
                 .material(0, matInstances[i])
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
                 .culling(false)
+                .castShadows(false)
+                .receiveShadows(false)
                 .priority(7u)   // ensure the overdraw primitives are drawn last
                 .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
                 .build(*engine, overdrawEntity);
