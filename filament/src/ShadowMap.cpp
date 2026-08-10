@@ -1216,7 +1216,7 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene::RenderableSo
                     sceneInfo.lsCastersNearFar.x = max(sceneInfo.lsCastersNearFar.x, r.max.z);
                     sceneInfo.lsCastersNearFar.y = min(sceneInfo.lsCastersNearFar.y, r.min.z);
                 }
-                if (visibility.castShadows) {
+                if (visibility.receiveShadows) {
                     // account only for objects that are visible by the camera
                     constexpr auto mask = 1u << VISIBLE_RENDERABLE_BIT;
                     if ((vis & mask) == mask) {
