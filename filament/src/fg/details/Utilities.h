@@ -37,7 +37,23 @@ struct Deleter {
     }
 };
 
-using FrameGraphAllocator = LinearAllocatorArena;
+#ifndef NDEBUG
+
+using FrameGraphAllocator = utils::Arena<
+        utils::LinearAllocator,
+        utils::LockingPolicy::NoLock,
+        utils::TrackingPolicy::DebugAndLeakDetector,
+        utils::AreaPolicy::ArenaArea<LinearAllocatorArena>>;
+
+#else
+
+using FrameGraphAllocator = utils::Arena<
+        utils::LinearAllocator,
+        utils::LockingPolicy::NoLock,
+        utils::TrackingPolicy::Untracked,
+        utils::AreaPolicy::ArenaArea<LinearAllocatorArena>>;
+
+#endif
 
 template<typename T, typename ARENA> using UniquePtr = std::unique_ptr<T, Deleter<T, ARENA>>;
 template<typename T> using Allocator = utils::STLAllocator<T, FrameGraphAllocator>;

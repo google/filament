@@ -653,6 +653,36 @@ private:
     void* mEnd = nullptr;
 };
 
+template<typename ARENA>
+class ArenaArea {
+    ARENA& mArena;
+public:
+    ArenaArea(ARENA& arena, size_t const size) : mArena(arena) {
+        if (size) {
+            mBegin = mArena.alloc(size);
+            mEnd = pointermath::add(mBegin, size);
+        }
+    }
+
+    ~ArenaArea() noexcept {
+        mArena.free(mBegin, size());
+    }
+
+    ArenaArea(const ArenaArea& rhs) = delete;
+    ArenaArea& operator=(const ArenaArea& rhs) = delete;
+    ArenaArea(ArenaArea&& rhs) noexcept = default;
+    ArenaArea& operator=(ArenaArea&& rhs) noexcept = delete;
+
+    void* data() const noexcept { return mBegin; }
+    void* begin() const noexcept { return mBegin; }
+    void* end() const noexcept { return mEnd; }
+    size_t size() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
+
+private:
+    void* mBegin = nullptr;
+    void* mEnd = nullptr;
+};
+
 class NullArea {
 public:
     void* data() const noexcept { return nullptr; }
@@ -875,7 +905,9 @@ using DebugAndLeakDetector = TDebugAndLeakDetector<LeakDetectorBehavior::LOG, 3>
 // Arenas
 // ------------------------------------------------------------------------------------------------
 
-template<typename AllocatorPolicy, typename LockingPolicy,
+template<
+        typename AllocatorPolicy,
+        typename LockingPolicy,
         typename TrackingPolicy = TrackingPolicy::Untracked,
         typename AreaPolicy = AreaPolicy::HeapArea>
 class Arena {

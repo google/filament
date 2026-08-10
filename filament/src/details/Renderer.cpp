@@ -948,7 +948,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     /*
      * Frame graph
      */
-    FrameGraph fg(*mResourceAllocator,
+    FrameGraph fg(arena,
+        *mResourceAllocator,
         isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
 
 #if FILAMENT_ENABLE_FGVIEWER

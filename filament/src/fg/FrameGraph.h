@@ -236,7 +236,9 @@ public:
         PROTECTED,
     };
 
-    explicit FrameGraph(TextureCacheInterface& resourceAllocator,
+    explicit FrameGraph(
+            LinearAllocatorArena& arena,
+            TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
 
 #if FILAMENT_ENABLE_FGVIEWER

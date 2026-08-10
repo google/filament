@@ -79,10 +79,12 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 // ------------------------------------------------------------------------------------------------
 
 
-FrameGraph::FrameGraph(TextureCacheInterface& resourceAllocator,
+FrameGraph::FrameGraph(
+        LinearAllocatorArena& arena,
+        TextureCacheInterface& resourceAllocator,
         Mode const mode)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", 384 * 1024),   // real max usage about 260KiB
+          mArena("FrameGraph Arena", {arena, 384 * 1024}), // real max usage about 260KiB
           mGraph(mArena),
           mMode(mode),
           mResourceSlots(mArena),
