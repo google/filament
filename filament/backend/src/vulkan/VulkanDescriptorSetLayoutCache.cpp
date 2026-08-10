@@ -61,7 +61,7 @@ uint32_t appendBindings(VkDescriptorSetLayoutBinding* toBind, VkDescriptorType t
 }
 
 uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
-        fvkutils::SamplerBitmask const& mask, fvkutils::SamplerBitmask const& external,
+        fvkutils::SamplerBitmask const& mask,
         utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> const& immutableSamplers) {
     using Bitmask = fvkutils::SamplerBitmask;
     uint32_t count = 0;
@@ -89,12 +89,8 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
                 return entry.first == binding;
             });
 
-            bool const isExternal = external.test(index) ||
-                    (index < fvkutils::getFragmentStageShift<Bitmask>() &&
-                     external.test(index + fvkutils::getFragmentStageShift<Bitmask>()));
-
             VkSampler const* sampler = nullptr;
-            if (isExternal && immutableSampler != immutableSamplers.end()) {
+            if (immutableSampler != immutableSamplers.end()) {
                 sampler = &immutableSampler->second;
             }
 
@@ -152,8 +148,7 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             bitmasks.dynamicUbo);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bitmasks.ubo);
-    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, externalSamplers,
-            immutableSamplers);
+    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, immutableSamplers);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
             bitmasks.inputAttachment);
 
