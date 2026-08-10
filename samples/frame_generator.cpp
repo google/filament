@@ -125,6 +125,7 @@ static MaterialInstance* g_materialInstance = nullptr;
 static Entity g_light;
 
 static SampleConfig g_config;
+static float g_meshScale = 1.0f;
 FilamentApp2* g_filamentApp = nullptr;
 
 struct App {
@@ -284,7 +285,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     auto& tcm = engine->getTransformManager();
     auto const ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
-    tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
+    tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
             tcm.getWorldTransform(ei));
 
     auto& rcm = engine->getRenderableManager();
@@ -417,7 +418,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto fApp = FilamentApp2::Builder()
                         .title(app->config.title)
                         .size(g_width, g_height)
-                        .scale(app->config.scale)
                         .headless(app->config.headless)
                         .displayManager(dm)
                         .setup(setup)
@@ -449,11 +449,11 @@ int main(int const argc, char* argv[]) {
         switch (opt) {
             case 's':
                 try {
-                    g_config.scale = std::stof(arg.c_str());
+                    g_meshScale = std::stof(arg.c_str());
                 } catch (std::invalid_argument& e) {
-                    g_config.scale = 1.0f;
+                    g_meshScale = 1.0f;
                 } catch (std::out_of_range& e) {
-                    g_config.scale = 1.0f;
+                    g_meshScale = 1.0f;
                 }
                 return true;
             case 'b':

@@ -86,6 +86,12 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->config = config;
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        uint8_t sampleCount = 1;
+        if (app->config.customArgs.find("msaa") != app->config.customArgs.end()) {
+            sampleCount = std::stoi(app->config.customArgs.at("msaa").c_str());
+        }
+        if (sampleCount > 1) view->setSampleCount(sampleCount);
+
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -94,7 +100,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         constexpr float3 monkeyPosition{ 0, 0, -4};
         constexpr float3 upVector{ 0, 1, 0};
         const int eyeCount = app->config.stereoscopicEyeCount;
-        const uint8_t sampleCount = app->config.samples;
 
         // Create a mesh material and an instance.
         app->monkeyMaterial =
@@ -138,7 +143,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .height(vp.height)
                         .depth(eyeCount)
                         .levels(1)
-                        .samples(sampleCount)
                         .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                         .format(Texture::InternalFormat::RGBA8)
                         .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -149,7 +153,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .height(vp.height)
                         .depth(eyeCount)
                         .levels(1)
-                        .samples(sampleCount)
                         .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                         .format(Texture::InternalFormat::DEPTH32F)
                         .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -160,7 +163,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .texture(RenderTarget::AttachmentPoint::DEPTH, app->stereoDepthTexture)
                         .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
                         .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
-                        .samples(sampleCount)
                         .build(*engine);
         app->stereoView->setRenderTarget(app->stereoRenderTarget);
         app->stereoView->setViewport({ 0, 0, vp.width, vp.height });
@@ -297,7 +299,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
-                        .samples(app->config.samples)
                         .displayManager(dm)
                         .setup(setup)
                         .cleanup(cleanup)

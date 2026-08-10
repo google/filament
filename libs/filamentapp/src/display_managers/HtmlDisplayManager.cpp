@@ -414,12 +414,4 @@ void HtmlDisplayManager::WebSocketHandler::handleClose(CivetServer* server,
     }
 }
 
-void HtmlDisplayManager::startRendering(std::function<bool()> doFrame) {
-    // TODO: use websocket throughput to throttle rendering.
-    while (!doFrame()) {
-        // Delay rendering for roughly one monitor refresh interval
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-    }
-}
-
 } // namespace filament::app
