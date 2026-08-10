@@ -28,6 +28,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <charconv>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -41,36 +42,38 @@ using namespace filament;
 
 namespace matc {
 
-static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:";
+static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:A:i";
 static const utils::getopt::option OPTIONS[] = {
-        { "help",                    utils::getopt::no_argument, nullptr, 'h' },
-        { "license",                 utils::getopt::no_argument, nullptr, 'L' },
-        { "output",            utils::getopt::required_argument, nullptr, 'o' },
-        { "output-format",     utils::getopt::required_argument, nullptr, 'f' },
-        { "debug",                   utils::getopt::no_argument, nullptr, 'd' },
-        { "variant-filter",    utils::getopt::required_argument, nullptr, 'V' },
-        { "platform",          utils::getopt::required_argument, nullptr, 'p' },
-        { "optimize",                utils::getopt::no_argument, nullptr, 'x' }, // for backward compatibility
-        { "optimize",                utils::getopt::no_argument, nullptr, 'O' }, // for backward compatibility
-        { "optimize-size",           utils::getopt::no_argument, nullptr, 'S' },
-        { "optimize-none",           utils::getopt::no_argument, nullptr, 'g' },
-        { "preprocessor-only",       utils::getopt::no_argument, nullptr, 'E' },
-        { "api",               utils::getopt::required_argument, nullptr, 'a' },
-        { "feature-level",     utils::getopt::required_argument, nullptr, 'l' },
-        { "no-essl1",                utils::getopt::no_argument, nullptr, '1' },
-        { "define",            utils::getopt::required_argument, nullptr, 'D' },
-        { "template",          utils::getopt::required_argument, nullptr, 'T' },
-        { "material-parameter",utils::getopt::required_argument, nullptr, 'P' },
-        { "reflect",           utils::getopt::required_argument, nullptr, 'r' },
-        { "print",                   utils::getopt::no_argument, nullptr, 't' },
-        { "version",                 utils::getopt::no_argument, nullptr, 'v' },
-        { "raw",                     utils::getopt::no_argument, nullptr, 'w' },
-        { "no-sampler-validation",   utils::getopt::no_argument, nullptr, 'F' },
-        { "save-raw-variants",       utils::getopt::no_argument, nullptr, 'R' },
-        { "workarounds",       utils::getopt::required_argument, nullptr, 'W' },
-        { "no-insert-line-directives",       utils::getopt::no_argument, nullptr, 'n' },
-        { "no-insert-line-directive-check",       utils::getopt::no_argument, nullptr, 'N' },
-        { "include-source-mat",       utils::getopt::no_argument, nullptr, 'm' },
+        { "help",                           utils::getopt::no_argument, nullptr, 'h' },
+        { "license",                        utils::getopt::no_argument, nullptr, 'L' },
+        { "output",                   utils::getopt::required_argument, nullptr, 'o' },
+        { "output-format",            utils::getopt::required_argument, nullptr, 'f' },
+        { "debug",                          utils::getopt::no_argument, nullptr, 'd' },
+        { "variant-filter",           utils::getopt::required_argument, nullptr, 'V' },
+        { "platform",                 utils::getopt::required_argument, nullptr, 'p' },
+        { "optimize",                       utils::getopt::no_argument, nullptr, 'x' }, // for backward compatibility
+        { "optimize",                       utils::getopt::no_argument, nullptr, 'O' }, // for backward compatibility
+        { "optimize-size",                  utils::getopt::no_argument, nullptr, 'S' },
+        { "optimize-none",                  utils::getopt::no_argument, nullptr, 'g' },
+        { "preprocessor-only",              utils::getopt::no_argument, nullptr, 'E' },
+        { "api",                      utils::getopt::required_argument, nullptr, 'a' },
+        { "feature-level",            utils::getopt::required_argument, nullptr, 'l' },
+        { "no-essl1",                       utils::getopt::no_argument, nullptr, '1' },
+        { "define",                   utils::getopt::required_argument, nullptr, 'D' },
+        { "template",                 utils::getopt::required_argument, nullptr, 'T' },
+        { "material-parameter",       utils::getopt::required_argument, nullptr, 'P' },
+        { "reflect",                  utils::getopt::required_argument, nullptr, 'r' },
+        { "print",                          utils::getopt::no_argument, nullptr, 't' },
+        { "version",                        utils::getopt::no_argument, nullptr, 'v' },
+        { "raw",                            utils::getopt::no_argument, nullptr, 'w' },
+        { "no-sampler-validation",          utils::getopt::no_argument, nullptr, 'F' },
+        { "save-raw-variants",              utils::getopt::no_argument, nullptr, 'R' },
+        { "workarounds",              utils::getopt::required_argument, nullptr, 'W' },
+        { "no-insert-line-directives",      utils::getopt::no_argument, nullptr, 'n' },
+        { "no-insert-line-directive-check", utils::getopt::no_argument, nullptr, 'N' },
+        { "include-source-mat",             utils::getopt::no_argument, nullptr, 'm' },
+        { "api-level",                utils::getopt::required_argument, nullptr, 'A' },
+        { "api-level-info",                 utils::getopt::no_argument, nullptr, 'i' },
         { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
 };
 
@@ -165,7 +168,14 @@ static void usage(char* name) {
             "       Some drivers may complain about the use of cpp style #line directives\n"
             "       if they don't support it.\n\n"
             "   --include-source-mat\n"
-            "       Embeds the source ASCII material definition if set.\n"
+            "       Embeds the source ASCII material definition if set.\n\n"
+            "   --api-level, -A\n"
+            "       Specify the API level to compile the material against.\n"
+            "       If the source ASCII material already has an `apiLevel` tag, this overrides it.\n"
+            "       The value cannot exceed the unstable API level:\n"
+            "           MATC --api-level 2\n\n"
+            "   --api-level-info, -i\n"
+            "       Print the MATC API levels (both current and unstable).\n\n"
 
             "Internal use and debugging only:\n"
             "   --optimize-none, -g, -O0\n"
@@ -412,6 +422,23 @@ bool CommandlineConfig::parse() {
             case 'm':
                 mIncludeSourceMaterial = true;
                 break;
+            case 'A': {
+                int apiLevel = 0;
+                auto const [ptr, ec] = std::from_chars(optarg, optarg + strlen(optarg), apiLevel);
+                if (ec != std::errc{} || ptr != optarg + strlen(optarg) || apiLevel < 1 || apiLevel >
+                    UNSTABLE_MATERIAL_API_LEVEL) {
+                    std::cerr << "Invalid matc api level. Must be [1, " << UNSTABLE_MATERIAL_API_LEVEL << "]" <<
+                            std::endl;
+                    return false;
+                }
+                mApiLevelOverride = apiLevel;
+                break;
+            }
+            case 'i':
+                std::cout << "current MATC API level: " << RELEASED_MATERIAL_API_LEVEL << "\n"
+                        << "unstable MATC API level: " << UNSTABLE_MATERIAL_API_LEVEL << std::endl;
+                // exit to avoid subsequent error spew such as "Missing input filename" etc.
+                exit(0);
         }
     }
 
