@@ -33,24 +33,6 @@ namespace filament::app {
 
 using namespace filament::backend;
 
-filament::Engine::Backend resolveBackend(filament::Engine::Backend backend) {
-    if (backend == Engine::Backend::DEFAULT) {
-        // This mirrors the logic for choosing a backend given compile-time flags and client having
-        // provided DEFAULT as the backend (see PlatformFactory.cpp)
-#if defined(FILAMENT_IOS) || defined(__APPLE__)
-        backend = Engine::Backend::METAL;
-#elif defined(__EMSCRIPTEN__) || defined(__ANDROID__)
-        backend = Engine::Backend::OPENGL;
-#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        backend = Engine::Backend::VULKAN;
-#elif defined(FILAMENT_DRIVER_SUPPORTS_WEBGPU)
-        backend = Engine::Backend::WEBGPU;
-#endif
-    }
-    return backend;
-}
-
-
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 void destroyVulkanPlatform(filament::backend::Platform* platform) {
     delete static_cast<VulkanPlatform*>(platform);
