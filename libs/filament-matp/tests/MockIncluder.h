@@ -18,8 +18,10 @@
 
 #include <utils/CString.h>
 
-#include <unordered_map>
+#include <gtest/gtest.h>
+
 #include <string>
+#include <unordered_map>
 
 // Functor used for test cases.
 class MockIncluder {
