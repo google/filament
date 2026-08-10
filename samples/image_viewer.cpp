@@ -125,6 +125,8 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
             .material(0, material->getDefaultInstance())
             .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
             .culling(false)
+            .castShadows(false)
+            .receiveShadows(false)
             .build(*engine, imageEntity);
 
     scene->addEntity(imageEntity);
