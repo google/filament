@@ -29,6 +29,7 @@
 #include "AndroidNativeWindow.h"
 #endif
 
+#include <cstdint>
 #include <unordered_map>
 
 using namespace bluevk;
@@ -59,6 +60,8 @@ struct VulkanPlatformSwapChainBase : public Platform::SwapChain {
     virtual bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const;
 
     virtual bool setPresentFrameId(uint64_t frameId) const;
+
+    virtual void setPresentationTime(int64_t presentationTime) noexcept;
 
     virtual bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const;
 
@@ -109,6 +112,8 @@ protected:
 
     bool setPresentFrameId(uint64_t frameId) const override;
 
+    void setPresentationTime(int64_t presentationTime) noexcept override;
+
     bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const override;
 
 private:
@@ -130,6 +135,9 @@ private:
     bool const mIsProtected = false;
     bool mSuboptimal;
     UTILS_UNUSED void* mNativeWindow = nullptr;
+
+    uint32_t mArbitraryFrameId = 0;
+    int64_t mPresentationTime = 0;
 
 #ifdef __ANDROID__
     AndroidSwapChainHelper mImpl{};
