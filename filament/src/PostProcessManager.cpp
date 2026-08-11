@@ -294,28 +294,33 @@ static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[]
 };
 
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
-        { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
-        { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
-        { "clearDepth",                 MATERIAL(MATERIALS, CLEARDEPTH) },
-        { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 1} } },
-        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 1} } },
-        { "separableGaussianBlur2",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 2} } },
-        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 2} } },
-        { "separableGaussianBlur3",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 3} } },
-        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 3} } },
-        { "separableGaussianBlur4",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", false}, {"componentCount", 4} } },
-        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
-                { {"arraySampler", true }, {"componentCount", 4} } },
-        { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
-        { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
-        { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
+    { "blitArray", MATERIAL(MATERIALS, BLITARRAY), { { "multiview", false } } },
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+    // gl_ViewIndex is only available in the multiview package, so this cannot be a
+    // constant-only variant of the entry above.
+    { "blitArrayMultiview", MATERIAL(MATERIALS, BLITARRAY_MULTIVIEW), { { "multiview", true } } },
+#endif
+    { "blitDepth", MATERIAL(MATERIALS, BLITDEPTH) },
+    { "clearDepth", MATERIAL(MATERIALS, CLEARDEPTH) },
+    { "separableGaussianBlur1", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", false }, { "componentCount", 1 } } },
+    { "separableGaussianBlur1L", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", true }, { "componentCount", 1 } } },
+    { "separableGaussianBlur2", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", false }, { "componentCount", 2 } } },
+    { "separableGaussianBlur2L", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", true }, { "componentCount", 2 } } },
+    { "separableGaussianBlur3", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", false }, { "componentCount", 3 } } },
+    { "separableGaussianBlur3L", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", true }, { "componentCount", 3 } } },
+    { "separableGaussianBlur4", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", false }, { "componentCount", 4 } } },
+    { "separableGaussianBlur4L", MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
+        { { "arraySampler", true }, { "componentCount", 4 } } },
+    { "debugShadowCascades", MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
+    { "resolveDepth", MATERIAL(MATERIALS, RESOLVEDEPTH) },
+    { "shadowmap", MATERIAL(MATERIALS, SHADOWMAP) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -1652,7 +1657,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
             input = ppm.resolve(fg, "ssr", input, { .levels = 1 });
             // Then blit into an appropriate texture, this handles scaling and format conversion.
             // The input/output sizes may differ when non-homogenous DSR is enabled.
-            input = ppm.blit(fg, false, input, { 0, 0, desc.width, desc.height }, outDesc,
+            input = ppm.blit(fg, false, false, input, { 0, 0, desc.width, desc.height }, outDesc,
                     SamplerMagFilter::LINEAR, SamplerMinFilter::LINEAR);
         }
     }
@@ -2569,10 +2574,14 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         ColorGradingConfig const& colorGradingConfig,
         VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
-    auto& material = getPostProcessMaterial("colorGradingAsSubpass");
-    FMaterialInstance const* const mi =
-            configureColorGradingMaterial(driver, material, colorGrading, colorGradingConfig,
-                    vignetteOptions, width, height);
+    bool const multisampled = colorGradingConfig.subpassSampleCount > 1;
+    auto& material = getPostProcessMaterial(
+            multisampled ? "colorGradingAsSubpassMS" : "colorGradingAsSubpass");
+    FMaterialInstance* const mi = configureColorGradingMaterial(driver, material, colorGrading,
+            colorGradingConfig, vignetteOptions, width, height);
+    if (multisampled) {
+        mi->setParameter("sampleCount", int32_t(colorGradingConfig.subpassSampleCount));
+    }
     mi->commit(driver, getUboManager());
 }
 
@@ -2585,7 +2594,9 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     PostProcessVariant const variant = colorGradingConfig.translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
 
-    auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
+    auto const& material = getPostProcessMaterial(colorGradingConfig.subpassSampleCount > 1
+                                                          ? "colorGradingAsSubpassMS"
+                                                          : "colorGradingAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine);
     // the UBO has been set and committed in colorGradingPrepareSubpass()
     FMaterialInstance const* mi =
@@ -2790,12 +2801,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                 auto const& input = resources.getDescriptor(data.input);
                 auto const& output = resources.getDescriptor(data.output);
 
-                auto& material = getPostProcessMaterial("colorGrading");
+                // A multiview color pass leaves its result in an array, one layer per eye.
+                bool const isArray = input.type == SamplerType::SAMPLER_2D_ARRAY;
+                auto& material = getPostProcessMaterial(isArray ? "colorGradingArray"
+                                                                : "colorGrading");
                 FMaterialInstance* const mi =
                         configureColorGradingMaterial(driver, material, colorGrading, colorGradingConfig,
                                 vignetteOptions, output.width, output.height);
 
-                mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
+                if (isArray) {
+                    mi->setParameter("colorBufferArray", colorTexture, { /* shader uses texelFetch */ });
+                    mi->setParameter("colorBuffer", getZeroTexture(), {});
+                } else {
+                    mi->setParameter("colorBuffer", colorTexture, { /* shader uses texelFetch */ });
+                    mi->setParameter("colorBufferArray", getZeroTextureArray(), {});
+                }
                 mi->setParameter("bloomBuffer", bloomTexture, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR /* always read base level in shader */
@@ -3552,10 +3572,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool const translucent,
-        FrameGraphId<FrameGraphTexture> const input,
+        bool const multiview, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
-        SamplerMagFilter filterMag,
-        SamplerMinFilter filterMin) noexcept {
+        SamplerMagFilter filterMag, SamplerMinFilter filterMin) noexcept {
 
     uint32_t const layer = fg.getSubResourceDescriptor(input).layer;
     float const levelOfDetail = fg.getSubResourceDescriptor(input).level;
@@ -3586,8 +3605,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
                 // --------------------------------------------------------------------------------
                 // set uniforms
 
-                PostProcessMaterial const& material =
-                        getPostProcessMaterial(layer ? "blitArray" : "blitLow");
+                PostProcessMaterial const& material = getPostProcessMaterial(
+                        multiview ? "blitArrayMultiview" : (layer ? "blitArray" : "blitLow"));
                 FMaterial const* const ma = material.getMaterial(mEngine);
                 auto* mi = getMaterialInstance(driver, ma);
                 mi->setParameter("color", color, SamplerParams{

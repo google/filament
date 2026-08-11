@@ -81,6 +81,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
 
                 data.color = colorPassInput.linearColor;
+                data.output = colorPassInput.tonemappedColor;
                 data.depth = colorPassInput.depth;
                 data.shadows = colorPassInput.shadows;
                 data.ssao = colorPassInput.ssao;
@@ -161,13 +162,13 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 }
 
                 if (colorGradingConfig.asSubpass) {
-                    assert_invariant(config.msaa <= 1);
-                    assert_invariant(colorBufferDesc.samples <= 1);
-                    data.output = builder.createTexture("Tonemapped Buffer", {
-                            .width = colorBufferDesc.width,
-                            .height = colorBufferDesc.height,
-                            .format = colorGradingConfig.ldrFormat
-                    });
+                    if (!data.output) {
+                        data.output = builder.createTexture("Tonemapped Buffer", {
+                                .width = colorBufferDesc.width,
+                                .height = colorBufferDesc.height,
+                                .format = colorGradingConfig.ldrFormat
+                        });
+                    }
                     data.color = builder.read(data.color, FrameGraphTexture::Usage::SUBPASS_INPUT);
                     data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 } else if (colorGradingConfig.customResolve) {
@@ -255,6 +256,9 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
 
                 if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
                     out.params.subpassMask = 1;
+                    out.params.subpassInputIsMultisampled =
+                            colorGradingConfig.asSubpass &&
+                            colorGradingConfig.subpassSampleCount > 1;
                 }
 
                 driver.beginRenderPass(out.target, out.params);

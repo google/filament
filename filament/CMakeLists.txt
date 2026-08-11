@@ -281,6 +281,7 @@ set(MATERIAL_SRCS
         src/materials/bloom/bloomUpsample.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
+        src/materials/colorGrading/colorGradingAsSubpassMS.mat
         src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/debugShadowCascades.mat
         src/materials/defaultMaterial.mat
@@ -322,9 +323,11 @@ if (NOT FILAMENT_DISABLE_GTAO)
 endif()
 
 set(MATERIAL_MULTIVIEW_SRCS
+        src/materials/blitArray.mat
         src/materials/clearDepth.mat
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
+        src/materials/colorGrading/colorGrading.mat
 )
 
 # This set of materials should only be compiled for vulkan or metal because they contain operations
@@ -501,6 +504,16 @@ add_custom_command(
         DEPENDS ../shaders/src/inline_dithering.fs
         DEPENDS ../shaders/src/inline_vignette.fs
         DEPENDS src/materials/colorGrading/colorGrading.fs
+    DEPENDS src/materials/colorGrading/colorGradingAsSubpass.fs
+    APPEND
+)
+
+add_custom_command(
+    OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpassMS.filamat"
+    DEPENDS ../shaders/src/inline_dithering.fs
+    DEPENDS ../shaders/src/inline_vignette.fs
+    DEPENDS src/materials/colorGrading/colorGrading.fs
+    DEPENDS src/materials/colorGrading/colorGradingAsSubpass.fs
         APPEND
 )
 

@@ -895,7 +895,12 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
             glslOptions.emit_uniform_buffer_as_plain_uniforms = true;
         }
 
-        if (config.variant.hasStereo() && config.shaderType == ShaderStage::VERTEX) {
+        bool const isMultiviewPostProcessVertex =
+                config.shaderType == ShaderStage::VERTEX &&
+                config.materialInfo->stereoscopicType == StereoscopicType::MULTIVIEW &&
+                config.domain == MaterialDomain::POST_PROCESS;
+        if ((config.variant.hasStereo() && config.shaderType == ShaderStage::VERTEX) ||
+                isMultiviewPostProcessVertex) {
             switch (config.materialInfo->stereoscopicType) {
             case StereoscopicType::MULTIVIEW:
                 // For stereo variants using multiview feature, this generates the shader code below.

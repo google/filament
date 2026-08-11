@@ -7,6 +7,11 @@ material {
             precision: medium
         },
         {
+            type : sampler2dArray,
+            name : colorBufferArray,
+            precision: medium
+        },
+        {
             type : sampler3d,
             name : lut,
             precision: medium
@@ -74,6 +79,10 @@ material {
         {
             type : bool,
             name : isLDR
+        },
+        {
+            type : bool,
+            name : arraySampler
         }
     ],
     variables : [
@@ -139,10 +148,27 @@ vec3 bloom(highp vec2 uv, const vec3 color) {
 }
 
 vec4 resolveFragment(const highp vec2 uv) {
-#if POST_PROCESS_OPAQUE
-    return vec4(textureLod(materialParams_colorBuffer, uv, 0.0).rgb, 1.0);
+    vec4 color;
+    if (materialConstants_arraySampler) {
+        // A multiview target gives each eye its own layer of the source. This mirrors
+        // getEyeIndex(), which is unavailable here because post-process variants never carry
+        // VARIANT_HAS_STEREO.
+#if defined(FILAMENT_STEREO_MULTIVIEW)
+#   if defined(TARGET_VULKAN_ENVIRONMENT)
+        float layer = float(gl_ViewIndex);
+#   else
+        float layer = float(gl_ViewID_OVR);
+#   endif
 #else
-    vec4 color = textureLod(materialParams_colorBuffer, uv, 0.0);
+        float layer = 0.0;
+#endif
+        color = textureLod(materialParams_colorBufferArray, vec3(uv, layer), 0.0);
+    } else {
+        color = textureLod(materialParams_colorBuffer, uv, 0.0);
+    }
+#if POST_PROCESS_OPAQUE
+    return vec4(color.rgb, 1.0);
+#else
     color.rgb *= 1.0 / (color.a + FLT_EPS);
     return color;
 #endif

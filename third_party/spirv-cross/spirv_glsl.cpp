@@ -652,10 +652,12 @@ void CompilerGLSL::find_static_extensions()
 			else
 			{
 				require_extension_internal("GL_OVR_multiview2");
-				if (options.ovr_multiview_view_count == 0)
+				if (get_execution_model() == ExecutionModelVertex &&
+				    options.ovr_multiview_view_count == 0)
 					SPIRV_CROSS_THROW("ovr_multiview_view_count must be non-zero when using GL_OVR_multiview2.");
-				if (get_execution_model() != ExecutionModelVertex)
-					SPIRV_CROSS_THROW("OVR_multiview2 can only be used with Vertex shaders.");
+				if (get_execution_model() != ExecutionModelVertex &&
+				    get_execution_model() != ExecutionModelFragment)
+					SPIRV_CROSS_THROW("OVR_multiview2 can only be used with Vertex or Fragment shaders.");
 			}
 			break;
 

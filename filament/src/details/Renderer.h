@@ -248,6 +248,7 @@ private:
     bool mIsRGB8Supported : 1;
     bool mIsFrameBufferFetchSupported : 1;
     bool mIsFrameBufferFetchMultiSampleSupported : 1;
+    uint32_t mSupportedMsaaSampleCounts = ~0u;
     bool mIsAutoDepthResolveSupported : 1;
     Epoch mUserEpoch;
     math::float4 mShaderUserTime{};

@@ -81,6 +81,7 @@ public:
         bool translucent{};
         bool outputLuminance{}; // Whether to output luminance in the alpha channel. Ignored by the TRANSLUCENT variant.
         bool dithering{};
+        uint8_t subpassSampleCount = 1;
         backend::TextureFormat ldrFormat{};
     };
 
@@ -289,10 +290,9 @@ public:
             RcasMode mode);
 
     // color blitter using shaders
-    FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
-            FrameGraphId<FrameGraphTexture> input,
-            Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filterMag,
+    FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent, bool multiview,
+            FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
+            FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filterMag,
             backend::SamplerMinFilter filterMin) noexcept;
 
     // depth blitter using shaders

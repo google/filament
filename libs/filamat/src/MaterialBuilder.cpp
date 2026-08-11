@@ -730,6 +730,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.blendingMode = mBlendingMode;
     info.postLightingBlendingMode = mPostLightingBlendingMode;
     info.shading = mShading;
+    info.domain = mMaterialDomain;
     info.hasShadowMultiplier = mShadowMultiplier;
     info.hasTransparentShadow = mTransparentShadow;
     info.hasColoredPenumbra = mColoredPenumbra;

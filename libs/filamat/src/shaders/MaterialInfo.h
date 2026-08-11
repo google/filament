@@ -64,6 +64,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::BlendingMode blendingMode;
     filament::BlendingMode postLightingBlendingMode;
     filament::Shading shading;
+    filament::MaterialDomain domain;
     filament::BufferInterfaceBlock uib;
     filament::SamplerInterfaceBlock sib;
     filament::SubpassInfo subpass;

@@ -28,9 +28,16 @@
 namespace filament {
 
 static const StaticMaterialInfo sMaterialList[] = {
-    { "colorGrading",               MATERIAL(COLORGRADING, COLORGRADING) },
-    { "colorGradingAsSubpass",      MATERIAL(COLORGRADING, COLORGRADINGASSUBPASS) },
-    { "customResolveAsSubpass",     MATERIAL(COLORGRADING, CUSTOMRESOLVEASSUBPASS) },
+    { "colorGrading", MATERIAL(COLORGRADING, COLORGRADING) },
+    { "colorGradingAsSubpass", MATERIAL(COLORGRADING, COLORGRADINGASSUBPASS) },
+    { "colorGradingAsSubpassMS", MATERIAL(COLORGRADING, COLORGRADINGASSUBPASSMS) },
+    { "customResolveAsSubpass", MATERIAL(COLORGRADING, CUSTOMRESOLVEASSUBPASS) },
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+    // gl_ViewIndex is only available in the multiview package, so this cannot be a constant-only
+    // variant of the entry above.
+    { "colorGradingArray", MATERIAL(COLORGRADING, COLORGRADING_MULTIVIEW),
+        { { "arraySampler", true } } },
+#endif
 };
 
 utils::Slice<const StaticMaterialInfo> getColorGradingMaterialList() noexcept {

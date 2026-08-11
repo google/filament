@@ -23,6 +23,12 @@ material {
     variables : [
         vertex
     ],
+    constants : [
+        {
+            type : bool,
+            name : multiview
+        }
+    ],
     depthWrite : false,
     depthCulling : false,
     domain: postprocess
@@ -37,6 +43,19 @@ vertex {
 
 fragment {
     void postProcess(inout PostProcessInputs postProcess) {
-        postProcess.color = textureLod(materialParams_color, vec3(variable_vertex.xy, materialParams.layerIndex), materialParams.levelOfDetail);
+        float layer = float(materialParams.layerIndex);
+        if (materialConstants_multiview) {
+            // A multiview target gives each eye its own layer of the source. This mirrors
+            // getEyeIndex(), which is unavailable here because post-process variants never carry
+            // VARIANT_HAS_STEREO.
+#if defined(FILAMENT_STEREO_MULTIVIEW)
+#   if defined(TARGET_VULKAN_ENVIRONMENT)
+            layer = float(gl_ViewIndex);
+#   else
+            layer = float(gl_ViewID_OVR);
+#   endif
+#endif
+        }
+        postProcess.color = textureLod(materialParams_color, vec3(variable_vertex.xy, layer), materialParams.levelOfDetail);
     }
 }

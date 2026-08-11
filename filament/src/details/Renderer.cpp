@@ -146,6 +146,14 @@ FRenderer::FRenderer(FEngine& engine) :
     mIsFrameBufferFetchSupported = driver.isFrameBufferFetchSupported();
     mIsFrameBufferFetchMultiSampleSupported = driver.isFrameBufferFetchMultiSampleSupported();
     mIsAutoDepthResolveSupported = driver.isAutoDepthResolveSupported();
+    if (engine.getBackend() == Backend::VULKAN) {
+        mSupportedMsaaSampleCounts = 1;
+        for (uint32_t const samples: { 2u, 4u, 8u, 16u }) {
+            if (driver.isRenderTargetSampleCountSupported(samples)) {
+                mSupportedMsaaSampleCounts |= samples;
+            }
+        }
+    }
 
     // our default HDR translucent format, fallback to LDR if not supported by the backend
     if (!driver.isRenderTargetFormatSupported(TextureFormat::RGBA16F)) {
@@ -773,16 +781,29 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
             engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW;
-    // FIXME: This is to override some settings that are not supported for multiview at the moment.
-    // Remove this when all features are supported.
+    // Multiview only supports the post-processing that fits in the color pass's second subpass.
+    // A subpass input resolves to the current view's layer on its own, whereas a full-screen pass
+    // would have to sample the layered target with the plain 2D samplers these materials declare.
+    const bool multiviewSubpassSupported =
+            mIsFrameBufferFetchSupported && !engine.debug.renderer.disable_subpasses;
     if (isRenderingMultiview) {
-        hasPostProcess = false;
-        msaaOptions.enabled = false;
+        hasPostProcess = hasPostProcess && multiviewSubpassSupported;
+        dofOptions.enabled = false;
+        bloomOptions.enabled = false;
+        taaOptions.enabled = false;
+        hasFXAA = false;
+        scale = 1.0f;
 
         // Picking is not supported for multiview rendering. Clear any pending picking queries.
         view.clearPickingQueries();
     }
-    const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
+    uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
+    while (msaaSampleCount & (msaaSampleCount - 1u)) {
+        msaaSampleCount &= msaaSampleCount - 1u;
+    }
+    while (msaaSampleCount > 1 && !(mSupportedMsaaSampleCounts & msaaSampleCount)) {
+        msaaSampleCount >>= 1u;
+    }
 
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
@@ -820,32 +841,35 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // Conditions to meet to be able to use the sub-pass rendering path. This is regardless of
     // whether the backend supports subpasses (or if they are disabled in the debugRegistry).
     const bool isSubpassPossible =
-             msaaSampleCount <= 1 &&
-             hasColorGrading &&
-             !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled;
+            hasColorGrading && !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled;
 
     // whether we're scaled at all
     bool scaled = any(notEqual(scale, float2(1.0f)));
 
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
-    const PostProcessManager::ColorGradingConfig colorGradingConfig{
-            .asSubpass =
-                    isSubpassPossible &&
-                    mIsFrameBufferFetchSupported &&
-                    !engine.debug.renderer.disable_subpasses,
-            .customResolve =
-                    msaaSampleCount > 1 &&
-                    mIsFrameBufferFetchMultiSampleSupported &&
-                    msaaOptions.customResolve &&
-                    hasColorGrading &&
-                    !engine.debug.renderer.disable_subpasses,
-            .translucent = needsAlphaChannel,
-            .outputLuminance = hasFXAA || scaled, // ignored by translucent variants (false)
-            .dithering = hasDithering,
-            .ldrFormat = (hasColorGrading && (hasFXAA || scaled)) ?
-                    TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
-    };
+    //
+    // The subpass output has to be the final target. A custom RenderTarget exposes its attachment
+    // textures to the frame graph, while the swapchain would require a full-image blit afterwards.
+    bool const canSubpassIntoTarget = view.getRenderTarget() != nullptr;
+    bool const framebufferFetchSupported = msaaSampleCount > 1
+                                                   ? engine.getBackend() == Backend::VULKAN
+                                                   : mIsFrameBufferFetchSupported;
+    bool const useColorGradingSubpass = isSubpassPossible && framebufferFetchSupported &&
+                                        !(msaaSampleCount > 1 && ssReflectionsOptions.enabled) &&
+                                        (!isRenderingMultiview || canSubpassIntoTarget) &&
+                                        !engine.debug.renderer.disable_subpasses;
+    const PostProcessManager::ColorGradingConfig colorGradingConfig{ .asSubpass =
+                                                                             useColorGradingSubpass,
+        .customResolve = !useColorGradingSubpass && msaaSampleCount > 1 &&
+                         mIsFrameBufferFetchMultiSampleSupported && msaaOptions.customResolve &&
+                         hasColorGrading && !engine.debug.renderer.disable_subpasses,
+        .translucent = needsAlphaChannel,
+        .outputLuminance = hasFXAA || scaled, // ignored by translucent variants (false)
+        .dithering = hasDithering,
+        .subpassSampleCount = useColorGradingSubpass ? msaaSampleCount : uint8_t(1),
+        .ldrFormat = (hasColorGrading && (hasFXAA || scaled)) ? TextureFormat::RGBA8
+                                                              : getLdrFormat(needsAlphaChannel) };
 
     // by construction (msaaSampleCount) both asSubpass and customResolve can't be true
     assert_invariant(colorGradingConfig.asSubpass + colorGradingConfig.customResolve < 2);
@@ -1091,15 +1115,6 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // is "replacing" another one. E.g. typically when the color pass ends-up drawing directly
     // here.
     auto [viewRenderTarget, attachmentMask] = getRenderTarget(view);
-    FrameGraphId<FrameGraphTexture> const fgViewRenderTarget = fg.import("viewRenderTarget", {
-            .attachments = attachmentMask,
-            .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
-            .clearColor = clearColor,
-            .samples = 0,
-            .clearFlags = clearFlags,
-            .keepOverrideStart = keepOverrideStartFlags,
-            .keepOverrideEnd = keepOverrideEndFlags
-    }, viewRenderTarget);
 
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
@@ -1220,6 +1235,9 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
         if (isRenderingMultiview) {
             desc.depth = engine.getConfig().stereoscopicEyeCount;
             desc.type = SamplerType::SAMPLER_2D_ARRAY;
+        }
+        if (colorGradingConfig.asSubpass && colorGradingConfig.subpassSampleCount > 1) {
+            desc.samples = colorGradingConfig.subpassSampleCount;
         }
         return desc;
     }();
@@ -1363,8 +1381,81 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     const_cast<RenderPass&>(pass).finalize(engine, driver);
 
+    // A custom RenderTarget owns its attachments, so the color pass can render straight into them
+    // instead of into intermediate buffers the caller never sees. That is what lets an XR runtime
+    // be handed both the depth it needs for reprojection and the tone mapped color.
+    //
+    // The attachments are imported with only the usage the caller's textures actually have, which
+    // for an XR swapchain image is attachment-only, so each is only safe while nothing downstream
+    // samples it. Rather than enumerate the safe cases, anything that could introduce a reader
+    // falls back to the intermediate buffer for that attachment.
+    //
+    // Depth needs nothing from the color path: when the color pass is multi-sampled the backend
+    // gives it a sidecar and resolves into the imported image, exactly as it does when the color
+    // pass renders into the RenderTarget directly.
+    bool const canImportDepth =
+            customRenderTarget && (msaaSampleCount <= 1 || mIsAutoDepthResolveSupported) &&
+            customRenderTarget->getSamples() <= 1 &&
+            none(customRenderTarget->getAttachmentMask() &
+                    ~(TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL)) &&
+            !dofOptions.enabled && !taaOptions.enabled && !hasScreenSpaceRefraction &&
+            !ssReflectionsOptions.enabled &&
+            // colorPass() only attaches stencil to a depth buffer it allocated itself.
+            !view.isStencilBufferEnabled() &&
+            !(engine.debug.shadowmap.visualize_cascades && view.hasShadowing() &&
+                    view.hasDirectionalLighting());
+
+    // Color additionally has to be the last thing written, since the tone mapping subpass is what
+    // puts it there and nothing may run afterwards.
+    bool const canImportColor = canImportDepth && colorGradingConfigForColor.asSubpass &&
+                                !hasFXAA && !scaled && !blendModeTranslucent && xvp == svp &&
+                                !engine.debug.stereo.combine_multiview_images &&
+                                !engine.debug.shadowmap.display_shadow_texture;
+
+    FrameGraphId<FrameGraphTexture> importedDepth{};
+    FrameGraphId<FrameGraphTexture> importedTonemappedColor{};
+    if (canImportDepth) {
+        auto importAttachment = [&](RenderTarget::AttachmentPoint const point,
+                                        utils::StaticString const name,
+                                        FrameGraphTexture::Usage const usage) {
+            FrameGraphId<FrameGraphTexture> id{};
+            auto const attachment = customRenderTarget->getAttachment(point);
+            FTexture const* const texture = attachment.texture;
+            uint32_t const layerCount = std::max<uint32_t>(1u, attachment.layerCount);
+            // A non-default subresource would have to be plumbed through the import to be attached
+            // correctly, so leave those to the intermediate buffers.
+            if (texture && attachment.mipLevel == 0 && attachment.layer == 0 &&
+                    attachment.face == RenderTarget::CubemapFace::POSITIVE_X &&
+                    texture->getTarget() != Texture::Sampler::SAMPLER_CUBEMAP &&
+                    layerCount == colorBufferDesc.depth && texture->getWidth(0) == svp.width &&
+                    texture->getHeight(0) == svp.height) {
+                id = fg.import(name,
+                        {
+                            .width = svp.width,
+                            .height = svp.height,
+                            .depth = layerCount,
+                            .type = layerCount > 1 ? SamplerType::SAMPLER_2D_ARRAY
+                                                   : SamplerType::SAMPLER_2D,
+                            .format = texture->getFormat(),
+                        },
+                        usage | (texture->getUsage() & TextureUsage::SAMPLEABLE),
+                        FrameGraphTexture{ .handle = texture->getHwHandle() });
+            }
+            return id;
+        };
+
+        importedDepth = importAttachment(RenderTarget::AttachmentPoint::DEPTH, "custom depth",
+                FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+        if (canImportColor) {
+            importedTonemappedColor = importAttachment(RenderTarget::AttachmentPoint::COLOR0,
+                    "custom color", FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+        }
+    }
+
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
+                .tonemappedColor = importedTonemappedColor,
+                .depth = importedDepth,
                 .shadows = blackboard.get<FrameGraphTexture>("shadows"),
                 .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                 .ssr = ssrConfig.ssr,
@@ -1596,16 +1687,15 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
         // Determine if our `input` is in fact the output of the color pass, in which case
         // many of the caveat above apply.
         bool const inputIsColorPass = (input == postProcessInput);
-        if (blendModeTranslucent ||
-            xvp != svp ||
-            (inputIsColorPass &&
-                    (msaaSampleCount > 1 ||
-                    colorGradingConfig.asSubpass ||
-                    hasScreenSpaceRefraction ||
-                    ssReflectionsOptions.enabled))) {
-            input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
-                            .width = vp.width, .height = vp.height,
-                            .format = colorGradingConfig.ldrFormat },
+        if (blendModeTranslucent || xvp != svp ||
+                (inputIsColorPass &&
+                        ((msaaSampleCount > 1 && !importedTonemappedColor) ||
+                                (colorGradingConfig.asSubpass && !importedTonemappedColor) ||
+                                hasScreenSpaceRefraction || ssReflectionsOptions.enabled))) {
+            input = ppm.blit(fg, blendModeTranslucent, isRenderingMultiview, input, xvp,
+                    { .width = vp.width,
+                        .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat },
                     SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
         }
     }
@@ -1623,8 +1713,40 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 //    auto debug = structure
 //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
 
-    fg.forwardResource(fgViewRenderTarget, input);
-    fg.present(fgViewRenderTarget);
+    if (input == importedTonemappedColor) {
+        // The tone mapping subpass already wrote the target's color attachment, so there is
+        // nothing left to forward into it. Presenting the depth marks it as consumed outside the
+        // graph, which is what stops the color pass from discarding it.
+        if (importedDepth) {
+            fg.present(colorPassOutput.depth);
+        }
+        fg.present(input);
+    } else {
+        // A later pass renders into the target the color pass already wrote depth into, so that
+        // pass must leave the depth alone.
+        TargetBufferFlags targetClearFlags = clearFlags;
+        TargetBufferFlags targetKeepEndFlags = keepOverrideEndFlags;
+        if (importedDepth) {
+            targetClearFlags &= ~TargetBufferFlags::DEPTH_AND_STENCIL;
+            targetKeepEndFlags |= TargetBufferFlags::DEPTH_AND_STENCIL;
+            fg.present(colorPassOutput.depth);
+        }
+        // the clearFlags and clearColor set below are "sticky" to the imported target, meaning
+        // they will apply anytime we render into this target, THIS INCLUDES when this target
+        // is "replacing" another one. E.g. typically when the color pass ends-up drawing directly
+        // here.
+        FrameGraphId<FrameGraphTexture> const fgViewRenderTarget = fg.import("viewRenderTarget",
+                { .attachments = attachmentMask,
+                    .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
+                    .clearColor = clearColor,
+                    .samples = 0,
+                    .clearFlags = targetClearFlags,
+                    .keepOverrideStart = keepOverrideStartFlags,
+                    .keepOverrideEnd = targetKeepEndFlags },
+                viewRenderTarget);
+        fg.forwardResource(fgViewRenderTarget, input);
+        fg.present(fgViewRenderTarget);
+    }
 
     fg.compile();
 

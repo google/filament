@@ -1,5 +1,5 @@
 material {
-    name : colorGradingAsSubpass,
+    name : colorGradingAsSubpassMS,
     parameters : [
         {
             type : sampler3d,
@@ -30,6 +30,10 @@ material {
         {
             type : float4,
             name : vignetteColor
+        },
+        {
+            type : int,
+            name : sampleCount
         }
     ],
     constants : [
@@ -44,7 +48,7 @@ material {
     ],
     subpasses : [
         {
-            type : subpassInput,
+            type : subpassInputMS,
             format : float,
             precision : medium,
             name : colorBuffer,
@@ -52,16 +56,10 @@ material {
     ],
     outputs : [
         {
-            name : dummy,
-            target : color,
-            type : float4,
-            location : 0
-        },
-        {
             name : tonemappedOutput,
             target : color,
             type : float4,
-            location : 1
+            location : 0
         }
     ],
     variables : [
@@ -82,13 +80,16 @@ vertex {
 fragment {
 vec4 resolveFragment() {
 #ifdef TARGET_WEBGPU_ENVIRONMENT
-    //WebGPU Can not handle subpasses.
-    return vec4(0,0,0,1);
+    return vec4(0.0, 0.0, 0.0, 1.0);
 #else
+    vec4 color = vec4(0.0);
+    for (int sampleIndex = 0; sampleIndex < materialParams.sampleCount; ++sampleIndex) {
+        color += subpassLoad(materialParams_colorBuffer, sampleIndex);
+    }
+    color *= 1.0 / float(materialParams.sampleCount);
 #if POST_PROCESS_OPAQUE
-    return vec4(subpassLoad(materialParams_colorBuffer).rgb, 1.0);
+    return vec4(color.rgb, 1.0);
 #else
-    vec4 color = subpassLoad(materialParams_colorBuffer);
     color.rgb *= 1.0 / (color.a + FLT_EPS);
     return color;
 #endif

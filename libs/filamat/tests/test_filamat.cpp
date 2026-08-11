@@ -784,6 +784,23 @@ TEST_F(MaterialCompiler, MultisampledSubpassInput) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, OpenGLMultiviewPostProcess) {
+    const std::string shaderCode(R"(
+        void postProcess(inout PostProcessInputs postProcess) {
+            postProcess.color = vec4(float(getViewIndex()));
+        }
+    )");
+
+    MaterialBuilder builder;
+    builder.materialDomain(MaterialBuilder::MaterialDomain::POST_PROCESS)
+            .platform(MaterialBuilder::Platform::MOBILE)
+            .targetApi(MaterialBuilder::TargetApi::OPENGL)
+            .stereoscopicType(StereoscopicType::MULTIVIEW)
+            .material(shaderCode.c_str());
+    const Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
 TEST_F(MaterialCompiler, Uv0AndUv1) {
     MaterialBuilder builder;
     // Requiring both sets of UV coordinates should not fail.

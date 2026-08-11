@@ -133,7 +133,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     // #included code. This way, glslang reports errors more accurately.
     out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
 
-    if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+    bool const isMultiviewPostProcessVertex = stage == ShaderStage::VERTEX &&
+            material.stereoscopicType == StereoscopicType::MULTIVIEW &&
+            material.domain == MaterialDomain::POST_PROCESS;
+    if ((v.hasStereo() && stage == ShaderStage::VERTEX) || isMultiviewPostProcessVertex) {
         switch (material.stereoscopicType) {
         case StereoscopicType::INSTANCED:
             // Nothing to generate
