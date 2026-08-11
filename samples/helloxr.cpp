@@ -89,6 +89,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -123,9 +124,14 @@ struct Config {
     bool listExtensions = false;
     bool renderModels = true;
     bool handMeshes = true;
+#if defined(__ANDROID__)
+    bool foveation = true;
+#else
     bool quadLayer = true;
     bool passthrough = false;
     bool postProcessing = true;
+    bool foveation = false;
+#endif
     bool dumpQuad = false;          // dump the quad layer instead of the projection layer
     uint32_t dumpFrame = 0;         // 0 means "never dump"
     std::string dumpPrefix = "helloxr";
@@ -172,9 +178,15 @@ mat4 projectionFromFov(XrFovf const& fov, double near, double far) {
 // override below runs on Filament's driver thread.
 class XrVulkanPlatform final : public VulkanPlatform {
 public:
+    struct DensityMapImage {
+        VkImage image = VK_NULL_HANDLE;
+        VkExtent2D extent = {};
+    };
+
     struct ImageBundle {
         utils::FixedCapacityVector<VkImage> colors;
         utils::FixedCapacityVector<VkImage> depths;
+        utils::FixedCapacityVector<DensityMapImage> densityMaps;
         VkFormat colorFormat = VK_FORMAT_UNDEFINED;
         VkFormat depthFormat = VK_FORMAT_UNDEFINED;
         VkExtent2D extent = {};
@@ -186,6 +198,19 @@ public:
         XrSwapchain depth = XR_NULL_HANDLE;
         ImageBundle bundle;
     };
+
+    void registerFragmentDensityMap(VkImage colorImage, VkImageView densityMapView) {
+        mFragmentDensityMaps.emplace_back(colorImage,
+                FragmentDensityMap{ densityMapView, VK_FORMAT_R8G8_UNORM });
+    }
+
+    void clearFragmentDensityMaps() { mFragmentDensityMaps.clear(); }
+
+    FragmentDensityMap getFragmentDensityMap(VkImage colorImage) const noexcept override {
+        auto const entry = std::find_if(mFragmentDensityMaps.begin(), mFragmentDensityMaps.end(),
+                [colorImage](auto const& candidate) { return candidate.first == colorImage; });
+        return entry != mFragmentDensityMaps.end() ? entry->second : FragmentDensityMap{};
+    }
 
     // Copies one presented image back to the host. Used to verify from the command line that both
     // multiview layers and the depth buffer really were written.
@@ -200,6 +225,8 @@ protected:
     }
 
 private:
+    std::vector<std::pair<VkImage, FragmentDensityMap>> mFragmentDensityMaps;
+
     uint32_t findMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties) const {
         VkPhysicalDeviceMemoryProperties memoryProperties = {};
         vkGetPhysicalDeviceMemoryProperties(getPhysicalDevice(), &memoryProperties);
@@ -551,6 +578,11 @@ public:
             em.destroy(mLight);
             Engine::destroy(&mEngine);
         }
+        mPlatform.clearFragmentDensityMaps();
+        for (VkImageView const view: mFragmentDensityMapViews) {
+            vkDestroyImageView(mVkDevice, view, nullptr);
+        }
+        mFragmentDensityMapViews.clear();
         if (mXrSwapChain.color != XR_NULL_HANDLE) {
             xrDestroySwapchain(mXrSwapChain.color);
         }
@@ -562,6 +594,10 @@ public:
         }
         if (mQuad.depth != XR_NULL_HANDLE) {
             xrDestroySwapchain(mQuad.depth);
+        }
+        if (mFoveationProfile != XR_NULL_HANDLE && mDestroyFoveationProfile != nullptr) {
+            mDestroyFoveationProfile(mFoveationProfile);
+            mFoveationProfile = XR_NULL_HANDLE;
         }
         if (mAppSpace != XR_NULL_HANDLE) {
             xrCheck(xrDestroySpace(mAppSpace), "xrDestroySpace(app)");
@@ -753,6 +789,23 @@ private:
         } else {
             XRLOG("warning: runtime does not support %s; submitting color only",
                     XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+        }
+
+        if (mConfig.foveation) {
+            char const* const foveationExtensions[] = {
+                XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME,
+                XR_FB_FOVEATION_EXTENSION_NAME,
+                XR_FB_FOVEATION_CONFIGURATION_EXTENSION_NAME,
+                XR_FB_FOVEATION_VULKAN_EXTENSION_NAME,
+            };
+            mFoveationSupported = std::all_of(std::begin(foveationExtensions),
+                    std::end(foveationExtensions), supports);
+            if (mFoveationSupported) {
+                extensions.insert(extensions.end(), std::begin(foveationExtensions),
+                        std::end(foveationExtensions));
+            } else {
+                XRLOG("foveation disabled: the runtime is missing an FB foveation extension");
+            }
         }
 
         // A feature is only kept if the runtime has everything it asked for.
@@ -1004,6 +1057,9 @@ private:
         VkPhysicalDevicePipelineCreationCacheControlFeatures cacheControlFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES,
         };
+        VkPhysicalDeviceFragmentDensityMapFeaturesEXT fragmentDensityMapFeatures = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT,
+        };
         VkPhysicalDeviceFeatures2 optionalFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
         };
@@ -1019,6 +1075,14 @@ private:
             cacheControlFeatures.pNext = optionalFeatures.pNext;
             optionalFeatures.pNext = &cacheControlFeatures;
         }
+        if (mFoveationSupported && supportsExtension(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME)) {
+            fragmentDensityMapFeatures.pNext = optionalFeatures.pNext;
+            optionalFeatures.pNext = &fragmentDensityMapFeatures;
+        } else if (mFoveationSupported) {
+            XRLOG("foveation disabled: the GPU does not support %s",
+                    VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);
+            mFoveationSupported = false;
+        }
         vkGetPhysicalDeviceFeatures2(mVkPhysicalDevice, &optionalFeatures);
         if (timelineFeatures.timelineSemaphore == VK_TRUE) {
             if (mVulkanApiVersion < VK_API_VERSION_1_2) {
@@ -1031,6 +1095,15 @@ private:
             deviceExtensions.push_back(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
             cacheControlFeatures.pNext = features.pNext;
             features.pNext = &cacheControlFeatures;
+        }
+        if (mFoveationSupported && fragmentDensityMapFeatures.fragmentDensityMap == VK_TRUE &&
+                fragmentDensityMapFeatures.fragmentDensityMapNonSubsampledImages == VK_TRUE) {
+            deviceExtensions.push_back(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);
+            fragmentDensityMapFeatures.pNext = features.pNext;
+            features.pNext = &fragmentDensityMapFeatures;
+        } else if (mFoveationSupported) {
+            XRLOG("foveation disabled: ordinary Vulkan attachments cannot use density maps");
+            mFoveationSupported = false;
         }
 
         if (mVulkanApiVersion < VK_API_VERSION_1_1) {
@@ -1168,6 +1241,9 @@ private:
     }
 
     bool createSwapChains() {
+        if (!initializeFoveation()) {
+            return false;
+        }
         uint32_t formatCount = 0;
         if (!xrCheck(xrEnumerateSwapchainFormats(mSession, 0, &formatCount, nullptr),
                     "xrEnumerateSwapchainFormats")) {
@@ -1205,7 +1281,8 @@ private:
             XRLOG("the runtime exposes no depth format; rendering without a depth buffer");
         }
 
-        if (!createXrSwapChain(&mXrSwapChain, mEyeWidth, mEyeHeight, kEyeCount, true)) {
+        if (!createXrSwapChain(&mXrSwapChain, mEyeWidth, mEyeHeight, kEyeCount, true,
+                mFoveationSupported)) {
             return false;
         }
         mDepthLayerSupported = mDepthLayerSupported && mXrSwapChain.depth != XR_NULL_HANDLE;
@@ -1213,7 +1290,8 @@ private:
 
         // A flat panel the compositor samples at its own resolution, which is why it is worth a
         // layer of its own rather than a quad inside the scene.
-        if (mQuadLayerEnabled && !createXrSwapChain(&mQuad, kQuadSize, kQuadSize, 1, false)) {
+        if (mQuadLayerEnabled && !createXrSwapChain(&mQuad, kQuadSize, kQuadSize, 1, false,
+                false)) {
             return false;
         }
         return true;
@@ -1222,8 +1300,15 @@ private:
     // Every one of these becomes its own Filament SwapChain, so another composition layer only
     // needs another call.
     bool createXrSwapChain(XrVulkanPlatform::XrSwapChain* out, uint32_t width, uint32_t height,
-            uint32_t arraySize, bool const createDepth) {
+            uint32_t arraySize, bool const createDepth, bool const foveated) {
         XrSwapchainCreateInfo createInfo = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
+        XrSwapchainCreateInfoFoveationFB foveationInfo = {
+            XR_TYPE_SWAPCHAIN_CREATE_INFO_FOVEATION_FB
+        };
+        if (foveated) {
+            foveationInfo.flags = XR_SWAPCHAIN_CREATE_FOVEATION_FRAGMENT_DENSITY_MAP_BIT_FB;
+            createInfo.next = &foveationInfo;
+        }
         createInfo.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
         if (mConfig.dumpFrame != 0) {
             createInfo.usageFlags |= XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT;
@@ -1240,13 +1325,27 @@ private:
             return false;
         }
 
+        if (foveated) {
+            XrSwapchainStateFoveationFB const state = {
+                XR_TYPE_SWAPCHAIN_STATE_FOVEATION_FB, nullptr, 0, mFoveationProfile
+            };
+            if (!xrCheck(mUpdateSwapchain(out->color,
+                                 reinterpret_cast<XrSwapchainStateBaseHeaderFB const*>(&state)),
+                        "xrUpdateSwapchainFB(foveation)")) {
+                return false;
+            }
+        }
+
         std::vector<VkImage> colorImages;
-        if (!enumerateSwapChainImages(out->color, &colorImages)) {
+        std::vector<XrSwapchainImageFoveationVulkanFB> densityMapImages;
+        if (!enumerateSwapChainImages(out->color, &colorImages,
+                    foveated ? &densityMapImages : nullptr)) {
             return false;
         }
 
         std::vector<VkImage> depthImages;
         if (createDepth && mDepthFormat != 0) {
+            createInfo.next = nullptr;
             createInfo.usageFlags = XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             if (mConfig.dumpFrame != 0) {
                 createInfo.usageFlags |= XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT;
@@ -1256,7 +1355,7 @@ private:
                         "xrCreateSwapchain(depth)")) {
                 return false;
             }
-            if (!enumerateSwapChainImages(out->depth, &depthImages)) {
+            if (!enumerateSwapChainImages(out->depth, &depthImages, nullptr)) {
                 return false;
             }
         }
@@ -1270,6 +1369,12 @@ private:
         for (VkImage const image: depthImages) {
             bundle.depths.push_back(image);
         }
+        bundle.densityMaps =
+                utils::FixedCapacityVector<XrVulkanPlatform::DensityMapImage>::with_capacity(
+                        densityMapImages.size());
+        for (auto const& image: densityMapImages) {
+            bundle.densityMaps.push_back({ image.image, { image.width, image.height } });
+        }
         bundle.colorFormat = VkFormat(mColorFormat);
         bundle.depthFormat = VkFormat(mDepthFormat);
         bundle.extent = { width, height };
@@ -1282,7 +1387,8 @@ private:
         return true;
     }
 
-    bool enumerateSwapChainImages(XrSwapchain swapChain, std::vector<VkImage>* outImages) {
+    bool enumerateSwapChainImages(XrSwapchain swapChain, std::vector<VkImage>* outImages,
+            std::vector<XrSwapchainImageFoveationVulkanFB>* outDensityMaps) {
         uint32_t count = 0;
         if (!xrCheck(xrEnumerateSwapchainImages(swapChain, 0, &count, nullptr),
                     "xrEnumerateSwapchainImages")) {
@@ -1290,6 +1396,12 @@ private:
         }
         std::vector<XrSwapchainImageVulkanKHR> images(count,
                 { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+        if (outDensityMaps != nullptr) {
+            outDensityMaps->assign(count, { XR_TYPE_SWAPCHAIN_IMAGE_FOVEATION_VULKAN_FB });
+            for (uint32_t index = 0; index < count; ++index) {
+                images[index].next = &(*outDensityMaps)[index];
+            }
+        }
         if (!xrCheck(xrEnumerateSwapchainImages(swapChain, count, &count,
                             reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data())),
                     "xrEnumerateSwapchainImages")) {
@@ -1299,6 +1411,67 @@ private:
         for (auto const& image: images) {
             outImages->push_back(image.image);
         }
+        return true;
+    }
+
+    bool initializeFoveation() {
+        if (!mFoveationSupported) {
+            return true;
+        }
+        if (!loadXrFunction("xrCreateFoveationProfileFB", &mCreateFoveationProfile) ||
+                !loadXrFunction("xrDestroyFoveationProfileFB", &mDestroyFoveationProfile) ||
+                !loadXrFunction("xrUpdateSwapchainFB", &mUpdateSwapchain)) {
+            return false;
+        }
+
+        XrFoveationLevelProfileCreateInfoFB levelInfo = {
+            XR_TYPE_FOVEATION_LEVEL_PROFILE_CREATE_INFO_FB
+        };
+        levelInfo.level = XR_FOVEATION_LEVEL_MEDIUM_FB;
+        levelInfo.verticalOffset = 0.0f;
+        levelInfo.dynamic = XR_FOVEATION_DYNAMIC_LEVEL_ENABLED_FB;
+        XrFoveationProfileCreateInfoFB createInfo = {
+            XR_TYPE_FOVEATION_PROFILE_CREATE_INFO_FB, &levelInfo
+        };
+        if (!xrCheck(mCreateFoveationProfile(mSession, &createInfo, &mFoveationProfile),
+                    "xrCreateFoveationProfileFB")) {
+            return false;
+        }
+        XRLOG("foveation: medium dynamic profile enabled");
+        return true;
+    }
+
+    bool createFragmentDensityMapViews(XrVulkanPlatform::ImageBundle const& bundle) {
+        if (bundle.densityMaps.empty()) {
+            return true;
+        }
+        if (bundle.densityMaps.size() != bundle.colors.size()) {
+            XRLOG("foveation: density map count does not match color image count");
+            return false;
+        }
+        for (size_t index = 0; index < bundle.densityMaps.size(); ++index) {
+            auto const& densityMap = bundle.densityMaps[index];
+            VkImageViewCreateInfo const createInfo = {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image = densityMap.image,
+                .viewType = bundle.layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+                                                   : VK_IMAGE_VIEW_TYPE_2D,
+                .format = VK_FORMAT_R8G8_UNORM,
+                .subresourceRange = {
+                    VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, bundle.layerCount
+                },
+            };
+            VkImageView view = VK_NULL_HANDLE;
+            VkResult const result = vkCreateImageView(mVkDevice, &createInfo, nullptr, &view);
+            if (result != VK_SUCCESS) {
+                XRLOG("foveation: vkCreateImageView returned %d", int(result));
+                return false;
+            }
+            mFragmentDensityMapViews.push_back(view);
+            mPlatform.registerFragmentDensityMap(bundle.colors[index], view);
+        }
+        XRLOG("foveation: %u density maps at %ux%u", bundle.densityMaps.size(),
+                bundle.densityMaps[0].extent.width, bundle.densityMaps[0].extent.height);
         return true;
     }
 
@@ -1332,6 +1505,10 @@ private:
             return false;
         }
         XRLOG("Filament engine created with multiview stereo");
+
+        if (!createFragmentDensityMapViews(mXrSwapChain.bundle)) {
+            return false;
+        }
 
         // Filament renders into RenderTargets that wrap the XR images, so its own swapchain is
         // headless and never presented. This is what lets the color pass reach those images as
@@ -2050,6 +2227,8 @@ private:
     uint32_t mGraphicsQueueFamilyIndex = 0;
     bool mDebugUtilsEnabled = false;
     bool mDepthLayerSupported = false;
+    bool mCompositionLayerDepthTestSupported = false;
+    bool mFoveationSupported = false;
 
     // Passthrough is just an environment blend mode: the runtime shows the physical world
     // wherever the submitted frame is transparent.
@@ -2064,6 +2243,7 @@ private:
     RenderTargetSet mRenderTargets;
     RenderTargetSet mQuadRenderTargets;
     std::vector<filament::Texture*> mImportedTextures;
+    std::vector<VkImageView> mFragmentDensityMapViews;
     bool mDumpPending = false;
     Renderer* mQuadRenderer = nullptr;
     View* mQuadView = nullptr;
@@ -2100,6 +2280,11 @@ private:
     bool mDriverFrameBegun = false;
     float3 mLastHeadPosition = {};
     float3 mLastEyeOffsets[kEyeCount] = {};
+
+    XrFoveationProfileFB mFoveationProfile = XR_NULL_HANDLE;
+    PFN_xrCreateFoveationProfileFB mCreateFoveationProfile = nullptr;
+    PFN_xrDestroyFoveationProfileFB mDestroyFoveationProfile = nullptr;
+    PFN_xrUpdateSwapchainFB mUpdateSwapchain = nullptr;
 };
 
 namespace {
@@ -2127,6 +2312,8 @@ void printUsage() {
           "  --passthrough     composite the scene over the physical world, with the\n"
           "                    environment map lighting the scene but never drawn\n"
           "  --no-postprocess  render straight to the target, skipping tone mapping\n"
+          "  --foveation       enable medium dynamic foveation (Android default: on)\n"
+          "  --no-foveation    disable foveated rendering\n"
           "  --dump-quad       dump the quad layer rather than the projection layer\n"
           "  --help            print this message");
 }
@@ -2171,6 +2358,10 @@ bool parseArguments(std::vector<std::string> const& args, Config* config) {
             config->passthrough = true;
         } else if (arg == "--no-postprocess") {
             config->postProcessing = false;
+        } else if (arg == "--foveation") {
+            config->foveation = true;
+        } else if (arg == "--no-foveation") {
+            config->foveation = false;
         } else if (arg == "--dump-quad") {
             config->dumpQuad = true;
         } else {

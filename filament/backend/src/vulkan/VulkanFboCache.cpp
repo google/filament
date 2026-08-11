@@ -36,11 +36,12 @@ namespace {
 
 // A depth resolve can only be expressed through VK_KHR_create_renderpass2, so the render pass built
 // with the Vulkan 1.0 structures is translated rather than duplicated. Everything is copied
-// verbatim except multiview, which moves from a chained struct onto each subpass.
+// verbatim except multiview and the fragment density map, whose chains are rebuilt below.
 VkResult createRenderPass2(VkDevice device, VkRenderPassCreateInfo const& info, uint32_t viewMask,
-        VkAttachmentReference const& depthResolveRef, VkRenderPass* outRenderPass) {
+        VkAttachmentReference const& depthResolveRef,
+        VkAttachmentReference const& fragmentDensityMapRef, VkRenderPass* outRenderPass) {
     constexpr size_t kMaxAttachments =
-            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 3;
     constexpr size_t kMaxSubpasses = 2;
 
     assert_invariant(info.attachmentCount <= kMaxAttachments);
@@ -148,8 +149,15 @@ VkResult createRenderPass2(VkDevice device, VkRenderPassCreateInfo const& info, 
         };
     }
 
+    VkRenderPassFragmentDensityMapCreateInfoEXT const fragmentDensityMapInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT,
+        .fragmentDensityMapAttachment = fragmentDensityMapRef,
+    };
     VkRenderPassCreateInfo2 const info2 = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
+        .pNext = fragmentDensityMapRef.attachment != VK_ATTACHMENT_UNUSED
+                         ? &fragmentDensityMapInfo
+                         : nullptr,
         .attachmentCount = info.attachmentCount,
         .pAttachments = attachments,
         .subpassCount = info.subpassCount,
@@ -174,6 +182,7 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         if (k1.colorSamples[i] != k2.colorSamples[i]) return false;
     }
     if (k1.depthStencilFormat != k2.depthStencilFormat) return false;
+    if (k1.fragmentDensityMapFormat != k2.fragmentDensityMapFormat) return false;
     if (k1.clear != k2.clear) return false;
     if (k1.discardStart != k2.discardStart) return false;
     if (k1.discardEnd != k2.discardEnd) return false;
@@ -195,6 +204,7 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     if (k1.samples != k2.samples) return false;
     if (k1.depthStencil != k2.depthStencil) return false;
     if (k1.depthStencilResolve != k2.depthStencilResolve) return false;
+    if (k1.fragmentDensityMap != k2.fragmentDensityMap) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.color[i] != k2.color[i]) return false;
         if (k1.resolve[i] != k2.resolve[i]) return false;
@@ -224,7 +234,8 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     // the resolve target for the Depth Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getRenderPass.
-    VkImageView attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2];
+    VkImageView attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 3];
     uint32_t attachmentCount = 0;
     for (VkImageView attachment : config.color) {
         if (attachment) {
@@ -241,6 +252,9 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     }
     if (config.depthStencilResolve) {
         attachments[attachmentCount++] = config.depthStencilResolve;
+    }
+    if (config.fragmentDensityMap) {
+        attachments[attachmentCount++] = config.fragmentDensityMap;
     }
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
@@ -324,7 +338,8 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     // Attachment, and the resolve target for the Depth/Stencil Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
-    VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2] = {};
+        VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 3] = {};
 
     // We support 2 subpasses, which means we need to supply 1 dependency struct.
     VkSubpassDependency dependencies[1] = { {
@@ -345,6 +360,15 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         .pSubpasses = subpasses,
         .dependencyCount = hasSubpasses ? 1u : 0u,
         .pDependencies = dependencies
+    };
+
+    VkAttachmentReference fragmentDensityMapRef = {
+        .attachment = VK_ATTACHMENT_UNUSED,
+        .layout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
+    };
+    VkRenderPassFragmentDensityMapCreateInfoEXT fragmentDensityMapInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT,
+        .fragmentDensityMapAttachment = fragmentDensityMapRef,
     };
 
     VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};
@@ -508,6 +532,23 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
             };
         }
     }
+
+    if (config.fragmentDensityMapFormat != VK_FORMAT_UNDEFINED) {
+        fragmentDensityMapRef.attachment = attachmentIndex;
+        fragmentDensityMapInfo.fragmentDensityMapAttachment = fragmentDensityMapRef;
+        fragmentDensityMapInfo.pNext = renderPassInfo.pNext;
+        renderPassInfo.pNext = &fragmentDensityMapInfo;
+        attachments[attachmentIndex++] = {
+            .format = config.fragmentDensityMapFormat,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = kDontCare,
+            .storeOp = kDisableStore,
+            .stencilLoadOp = kDontCare,
+            .stencilStoreOp = kDisableStore,
+            .initialLayout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
+            .finalLayout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
+        };
+    }
     renderPassInfo.attachmentCount = attachmentIndex;
 
     // Finally, create the VkRenderPass.
@@ -518,7 +559,7 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         // what was built above rather than duplicating the logic.
         error = createRenderPass2(mDevice, renderPassInfo,
                 config.viewCount > 1 ? subpassViewMask : 0u, depthStencilResolveAttachmentRef,
-                &renderPass);
+            fragmentDensityMapRef, &renderPass);
     } else {
         error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
     }

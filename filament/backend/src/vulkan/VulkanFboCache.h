@@ -48,6 +48,7 @@ public:
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         uint8_t colorSamples[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 8 bytes
         VkFormat depthStencilFormat; // 4 bytes
+        VkFormat fragmentDensityMapFormat; // 4 bytes
         TargetBufferFlags clear; // 4 bytes
         TargetBufferFlags discardStart; // 4 bytes
         TargetBufferFlags discardEnd; // 4 bytes
@@ -68,7 +69,7 @@ public:
     static_assert(0 == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT % 8);
     static_assert(sizeof(TargetBufferFlags) == 4, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 64, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 72, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;
@@ -87,6 +88,7 @@ public:
         VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
         VkImageView depthStencil; // 8 bytes
         VkImageView depthStencilResolve; // 8 bytes
+        VkImageView fragmentDensityMap; // 8 bytes
     };
     struct FboVal {
         fvkmemory::resource_ptr<VulkanFramebuffer> handle;
@@ -94,7 +96,7 @@ public:
     };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
     static_assert(sizeof(VkImageView) == 8, "VkImageView has unexpected size.");
-    static_assert(sizeof(FboKey) == 160, "FboKey has unexpected size.");
+    static_assert(sizeof(FboKey) == 168, "FboKey has unexpected size.");
     using FboKeyHashFn = utils::hash::MurmurHashFn<FboKey>;
     struct FboKeyEqualFn {
         bool operator()(const FboKey& k1, const FboKey& k2) const;

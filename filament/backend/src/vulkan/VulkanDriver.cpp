@@ -1207,6 +1207,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     UTILS_UNUSED_IN_RELEASE size_t attachmentCount = 0;
 
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VulkanPlatform::FragmentDensityMap fragmentDensityMap;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
             colorTargets[i] = {
@@ -1219,6 +1220,10 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
             tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
             attachmentCount++;
+            if (fragmentDensityMap.imageView == VK_NULL_HANDLE) {
+                fragmentDensityMap =
+                        mPlatform->getFragmentDensityMap(colorTargets[i].getImage());
+            }
         }
     }
 
@@ -1252,7 +1257,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     auto rt = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, &mResourceManager, mAllocator, &mCommands,
-            width, height, samples, colorTargets, depthStencil, mStagePool, layerCount);
+            width, height, samples, colorTargets, depthStencil, fragmentDensityMap.imageView,
+            fragmentDensityMap.format, mStagePool, layerCount);
     rt.inc();
 
     mResourceManager.associateHandle(rth.getId(), std::move(tag));

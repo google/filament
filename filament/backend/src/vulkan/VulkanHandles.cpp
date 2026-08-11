@@ -312,7 +312,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
         VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
         uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount)
+        VulkanAttachment depthStencil, VkImageView const fragmentDensityMap,
+        VkFormat const fragmentDensityMapFormat, VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       mOffscreen(true),
       mProtected(false),
@@ -336,6 +337,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     fbkey.width = width;
     fbkey.height = height;
     fbkey.samples = samples;
+    fbkey.fragmentDensityMap = fragmentDensityMap;
+    rpkey.fragmentDensityMapFormat = fragmentDensityMapFormat;
 
     std::vector<VulkanAttachment>& attachments = mInfo->attachments;
     std::vector<VulkanAttachment> msaaAttachments;

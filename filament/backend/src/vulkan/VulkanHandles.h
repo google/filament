@@ -252,7 +252,8 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
             VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
             VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-            VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount);
+            VulkanAttachment depthStencil, VkImageView fragmentDensityMap,
+            VkFormat fragmentDensityMapFormat, VulkanStagePool& stagePool, uint8_t layerCount);
 
     ~VulkanRenderTarget();
 

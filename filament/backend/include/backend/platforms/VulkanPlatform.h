@@ -123,6 +123,23 @@ public:
         bool isProtected = false;
     };
 
+    /**
+     * A fragment density map associated with an externally owned color image.
+     */
+    struct FragmentDensityMap {
+        VkImageView imageView = VK_NULL_HANDLE;
+        VkFormat format = VK_FORMAT_UNDEFINED;
+    };
+
+    /**
+     * Returns the optional fragment density map that should be used whenever colorImage is bound
+     * to a render target. The client owns the returned image view and must keep it alive until the
+     * Engine has released every render target that references colorImage.
+     */
+    virtual FragmentDensityMap getFragmentDensityMap(VkImage colorImage) const noexcept {
+        return {};
+    }
+
     struct ImageSyncData {
         static constexpr uint32_t INVALID_IMAGE_INDEX = UINT32_MAX;
 
