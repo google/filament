@@ -28,8 +28,10 @@
 
 #include <utils/JobSystem.h>
 
+#include <private/utils/ThreadMap.h>
 #include <private/utils/Tracing.h>
 
+#include <utils/algorithm.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
@@ -201,21 +203,31 @@ JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCo
             // one of the thread will be the user thread
             threadPoolCount = hwThreads - 1;
         }
-        // make sure we have at least one thread in the thread pool
-        threadPoolCount = std::max(1u, threadPoolCount);
-        // and also limit the pool to 32 threads
-        threadPoolCount = std::min(UTILS_HAS_THREADING ? 32u : 0u, threadPoolCount);
+        // clamp adoptableThreadsCount so it does not exceed MAX_THREADS
+        adoptableThreadsCount = std::min(adoptableThreadsCount, MAX_THREADS);
+        // limit the pool such that threadPoolCount + adoptableThreadsCount <= MAX_THREADS
+        const uint32_t maxThreadPoolCount = MAX_THREADS - adoptableThreadsCount;
+        // make sure we have at least one thread in the thread pool if capacity permits
+        threadPoolCount = std::max(maxThreadPoolCount > 0 ? 1u : 0u, threadPoolCount);
+        threadPoolCount = std::min(UTILS_HAS_THREADING ? maxThreadPoolCount : 0u, threadPoolCount);
     } else {
         threadPoolCount = 0;
         adoptableThreadsCount = 1;
     }
 
     mThreadStates = aligned_vector<ThreadState>(threadPoolCount + adoptableThreadsCount);
+    mThreadMap = std::make_unique<ThreadMap<ThreadState*>>(threadPoolCount + adoptableThreadsCount);
     mThreadCount = uint16_t(threadPoolCount);
     mParallelSplitCount = uint8_t(std::ceil((std::log2f(threadPoolCount + adoptableThreadsCount))));
 
+    uint32_t adoptableMask = 0;
+    for (uint32_t i = 0; i < adoptableThreadsCount; ++i) {
+        adoptableMask |= (1u << (threadPoolCount + i));
+    }
+    mAdoptableSlotsMask.store(adoptableMask, std::memory_order_relaxed);
+
     static_assert(std::atomic<bool>::is_always_lock_free);
-    static_assert(std::atomic<uint16_t>::is_always_lock_free);
+    static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
     const size_t hardwareThreadCount = mThreadCount;
     auto& states = mThreadStates;
@@ -349,10 +361,9 @@ void JobSystem::wakeOne() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() {
-    LockGuard const lock(mThreadMapLock);
-    auto const iter = mThreadMap.find(std::this_thread::get_id());
-    FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
-    return *iter->second;
+    ThreadState* const state = mThreadMap->get();
+    FILAMENT_CHECK_PRECONDITION(state) << "This thread has not been adopted.";
+    return *state;
 }
 
 JobSystem::Job* JobSystem::allocateJob() noexcept {
@@ -413,10 +424,7 @@ JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
 
 inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state) noexcept {
     auto& threadStates = mThreadStates;
-    // memory_order_relaxed is okay because we don't take any action that has data dependency
-    // on this value (in particular mThreadStates, is always initialized properly).
-    uint16_t const adopted = mAdoptedThreads.load(std::memory_order_relaxed);
-    uint16_t const threadCount = mThreadCount + adopted;
+    uint16_t const threadCount = uint16_t(threadStates.size());
 
     ThreadState* stateToStealFrom = nullptr;
 
@@ -478,13 +486,8 @@ void JobSystem::loop(ThreadState* state) {
     setThreadPriority(Priority::DISPLAY);
 
     // record our work queue
-    bool inserted;
-    {
-        LockGuard const lock(mThreadMapLock);
-        inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
-    }
-
-    FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
+    size_t const index = std::distance(mThreadStates.data(), state);
+    mThreadMap->set(uint32_t(index), state);
 
     // run our main loop...
     do {
@@ -663,15 +666,7 @@ void JobSystem::runAndWait(Job*& job) noexcept {
 }
 
 void JobSystem::adopt() {
-    const auto tid = std::this_thread::get_id();
-
-    ThreadState const* state = nullptr;
-    {
-        LockGuard const lock(mThreadMapLock);
-        auto const iter = mThreadMap.find(tid);
-        state = iter ==  mThreadMap.end() ? nullptr : iter->second;
-    }
-
+    ThreadState const* const state = mThreadMap->get();
     if (state) {
         // we're already part of a JobSystem, do nothing.
         FILAMENT_CHECK_PRECONDITION(this == state->js)
@@ -680,10 +675,16 @@ void JobSystem::adopt() {
         return;
     }
 
-    // memory_order_relaxed is safe because we don't take action on this value.
-    uint16_t const adopted = mAdoptedThreads.fetch_add(1, std::memory_order_relaxed);
-    size_t const index = mThreadCount + adopted;
+    uint32_t mask = mAdoptableSlotsMask.load(std::memory_order_relaxed);
+    uint32_t bit = 0;
+    do {
+        FILAMENT_CHECK_POSTCONDITION(mask != 0)
+                << "Too many calls to adopt(). No more adoptable threads!";
+        bit = 1u << utils::ctz(mask);
+    } while (!mAdoptableSlotsMask.compare_exchange_weak(mask, mask & ~bit,
+            std::memory_order_acquire, std::memory_order_relaxed));
 
+    size_t const index = utils::ctz(bit);
     FILAMENT_CHECK_POSTCONDITION(index < mThreadStates.size())
             << "Too many calls to adopt(). No more adoptable threads!";
 
@@ -694,20 +695,16 @@ void JobSystem::adopt() {
     // however, it's not a problem since mThreadState is pre-initialized and valid
     // (e.g.: the queue is empty).
 
-    {
-        LockGuard const lock(mThreadMapLock);
-        mThreadMap[tid] = &mThreadStates[index];
-    }
+    mThreadMap->set(uint32_t(index), &mThreadStates[index]);
 }
 
 void JobSystem::emancipate() {
-    const auto tid = std::this_thread::get_id();
-    LockGuard const lock(mThreadMapLock);
-    auto const iter = mThreadMap.find(tid);
-    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    ThreadState const* const state = mThreadMap->get();
     FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";
     FILAMENT_CHECK_PRECONDITION(state->js == this) << "this thread is not adopted by us";
-    mThreadMap.erase(iter);
+    size_t const index = std::distance(mThreadStates.data(), const_cast<ThreadState*>(state));
+    mThreadMap->erase();
+    mAdoptableSlotsMask.fetch_or(1u << index, std::memory_order_release);
 }
 
 io::ostream& operator<<(io::ostream& out, JobSystem const& js) {

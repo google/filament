@@ -27,10 +27,9 @@
 #include <utils/Slice.h>
 #include <utils/WorkStealingDequeue.h>
 
-#include <tsl/robin_map.h>
-
 #include <atomic>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <type_traits>
@@ -43,7 +42,11 @@
 
 namespace utils {
 
+template <typename VALUE>
+class ThreadMap;
+
 class JobSystem {
+    static constexpr uint32_t MAX_THREADS = 32;
     static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
     static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
     static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
@@ -475,14 +478,13 @@ private:
     alignas(16) // at least we align to half (or quarter) cache-line
     aligned_vector<ThreadState> mThreadStates;          // actual data is stored offline
     std::atomic<bool> mExitRequested = { false };       // this one is almost never written
-    std::atomic<uint16_t> mAdoptedThreads = { 0 };      // this one is almost never written
+    std::atomic<uint32_t> mAdoptableSlotsMask = { 0 };  // available slots for adoptable threads
     Job* const mJobStorageBase;                         // Base for conversion to indices
     uint16_t mThreadCount = 0;                          // total # of threads in the pool
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
     Job* mRootJob = nullptr;
 
-    Mutex mThreadMapLock; // this should have very little contention
-    tsl::robin_map<std::thread::id, ThreadState *> mThreadMap UTILS_GUARDED_BY(mThreadMapLock);
+    std::unique_ptr<ThreadMap<ThreadState*>> mThreadMap;
 };
 
 // -------------------------------------------------------------------------------------------------

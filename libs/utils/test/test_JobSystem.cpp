@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
+#include <utils/Allocator.h>
 #include <utils/JobSystem.h>
 #include <utils/WorkStealingDequeue.h>
 
-#include <math/vec3.h>
 #include <math/mat3.h>
+#include <math/vec3.h>
+
+#include <gtest/gtest.h>
 
 #include <array>
 #include <thread>
-#include <utils/Allocator.h>
 
 using namespace utils;
 using namespace jobs;
@@ -343,4 +343,60 @@ TEST(JobSystem, JobSystemDelegates) {
 
 
     js.emancipate();
+}
+
+TEST(JobSystem, JobSystemConcurrentStress) {
+    // 8 worker threads + 16 adoptable user threads
+    JobSystem js(8, 16);
+
+    constexpr size_t THREAD_COUNT = 16;
+    constexpr size_t ITERATIONS = 20;
+    constexpr size_t ARRAY_SIZE = 1024;
+
+    std::atomic<bool> start{false};
+    std::vector<std::thread> threads;
+    threads.reserve(THREAD_COUNT);
+
+    std::atomic<uint64_t> totalSum{0};
+
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        threads.emplace_back([&, t]() {
+            while (!start.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+
+            for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+                js.adopt();
+
+                std::vector<uint32_t> data(ARRAY_SIZE, uint32_t(t + 1));
+                auto* job = parallel_for(js, nullptr, data.data(), data.size(),
+                        [](uint32_t* slice, size_t count) {
+                            for (size_t i = 0; i < count; ++i) {
+                                slice[i] *= 2;
+                            }
+                        }, CountSplitter<4>());
+                js.runAndWait(job);
+
+                uint64_t localSum = 0;
+                for (uint32_t val : data) {
+                    localSum += val;
+                }
+                totalSum.fetch_add(localSum, std::memory_order_relaxed);
+
+                js.emancipate();
+            }
+        });
+    }
+
+    start.store(true, std::memory_order_release);
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    uint64_t expectedTotal = 0;
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        expectedTotal += uint64_t(t + 1) * 2 * ARRAY_SIZE * ITERATIONS;
+    }
+
+    EXPECT_EQ(totalSum.load(), expectedTotal);
 }
