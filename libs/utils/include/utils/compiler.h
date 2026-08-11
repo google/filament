@@ -82,7 +82,7 @@
 #endif
 
 #define UTILS_NO_SANITIZE_THREAD
-#if __has_feature(thread_sanitizer)
+#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
 #undef UTILS_NO_SANITIZE_THREAD
 #define UTILS_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
 #endif
