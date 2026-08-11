@@ -398,9 +398,9 @@ private:
     void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
             TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
             TextureSwizzle a, utils::ImmutableCString&& tag);
-    void importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-            TextureUsage usage, utils::ImmutableCString&& tag);
+    void importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, uint64_t id, SamplerType target,
+            uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+            uint32_t depth, TextureUsage usage, utils::ImmutableCString&& tag);
     void createBufferObjectCommon(OpenGLState& gl, Handle<HwBufferObject> boh, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag);
     void setVertexBufferObjectCommon(Handle<HwVertexBuffer> vbh, uint32_t index,

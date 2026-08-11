@@ -698,11 +698,11 @@ void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
-void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
-        SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+void MetalDriver::importTextureR(Handle<HwTexture> th, uint64_t i, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage, utils::ImmutableCString&& tag) {
-    id<MTLTexture> metalTexture = (id<MTLTexture>) CFBridgingRelease((void*) i);
+    id<MTLTexture> metalTexture =
+            (id<MTLTexture>) CFBridgingRelease(reinterpret_cast<void*>(uintptr_t(i)));
     FILAMENT_CHECK_PRECONDITION(metalTexture.width == width)
             << "Imported id<MTLTexture> width (" << metalTexture.width
             << ") != Filament texture width (" << width << ")";
@@ -723,7 +723,7 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
-void MetalDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t i, SamplerType target,
+void MetalDriver::importTextureAsyncR(Handle<HwTexture> th, uint64_t i, SamplerType target,
         uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage, CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
@@ -1437,6 +1437,10 @@ bool MetalDriver::isSRGBSwapChainSupported() {
 
 bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
     return true;
+}
+
+bool MetalDriver::isRenderTargetSampleCountSupported(uint32_t samples) {
+    return [mContext->device supportsTextureSampleCount:samples];
 }
 
 bool MetalDriver::isProtectedContentSupported() {

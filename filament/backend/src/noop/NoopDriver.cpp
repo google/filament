@@ -248,6 +248,8 @@ bool NoopDriver::isDepthStencilResolveSupported() {
     return true;
 }
 
+bool NoopDriver::isRenderTargetSampleCountSupported(uint32_t) { return true; }
+
 bool NoopDriver::isDepthStencilBlitSupported(TextureFormat format) {
     return true;
 }

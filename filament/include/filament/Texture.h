@@ -310,6 +310,7 @@ public:
          * The texture id is backend-specific:
          *   - OpenGL: GLuint texture ID
          *   - Metal: id<MTLTexture>
+         *   - Vulkan: VkImage
          *
          * With Metal, the id<MTLTexture> object should be cast to an intptr_t using
          * CFBridgingRetain to transfer ownership to Filament. Filament will release ownership of
@@ -317,12 +318,17 @@ public:
          *
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
          *  id <MTLTexture> metalTexture = ...
-         *  filamentTexture->import((intptr_t) CFBridgingRetain(metalTexture));
+         *  filamentTexture->import(uint64_t(uintptr_t(CFBridgingRetain(metalTexture))));
          *  // free to release metalTexture
          *
          *  // after using texture:
          *  engine->destroy(filamentTexture);   // metalTexture is released
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * With Vulkan, the caller retains ownership of the VkImage and its memory, and must keep
+         * both alive until the Filament Texture is destroyed. The VkImage must have been created
+         * with every usage specified on this Builder. Filament initially treats its layout as
+         * undefined, so existing image contents are not preserved.
          *
          * @warning This method should be used as a last resort. This API is subject to change or
          * removal.
@@ -331,7 +337,7 @@ public:
          *
          * @return This Builder, for chaining calls.
          */
-        Builder& import(intptr_t id) noexcept;
+        Builder& import(uint64_t id) noexcept;
 
     private:
         friend class FTexture;

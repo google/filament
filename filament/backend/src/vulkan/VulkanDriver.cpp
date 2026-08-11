@@ -1003,7 +1003,9 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
             mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
             vkformat, conversion, imgData.internal.stagingMemory, imgData.internal.stagingBuffer,
             externalImage, static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
-            metadata.width, metadata.height, metadata.layers, usage, mStagePool);
+            metadata.width, metadata.height, metadata.layers, usage, mStagePool,
+            metadata.filamentFormat,
+            metadata.layers > 1 ? SamplerType::SAMPLER_2D_ARRAY : SamplerType::SAMPLER_2D);
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
@@ -1031,28 +1033,41 @@ void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
     assert_invariant(false && "Not supported in Vulkan backend");
 }
 
-void VulkanDriver::importTextureCommon(Handle<HwTexture> th, intptr_t id,
-        SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, utils::ImmutableCString&& tag) {
-    // not supported in this backend
-    assert_invariant(false && "Not supported in Vulkan backend");
+void VulkanDriver::importTextureCommon(Handle<HwTexture> th, uint64_t id, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t w, uint32_t h,
+        uint32_t depth, TextureUsage usage, utils::ImmutableCString&& tag) {
+    // The caller owns the image and its memory; we only wrap it so it can be used as an attachment
+    // or sampled from. Layout tracking starts from UNDEFINED, so the first use discards whatever
+    // the image held.
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
+            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, (VkImage) id,
+            VK_NULL_HANDLE, fvkutils::getVkFormat(format), VK_NULL_HANDLE, VK_NULL_HANDLE,
+            VK_NULL_HANDLE, Platform::ExternalImageHandle(), levels, samples, w, h, depth, usage,
+            mStagePool, format, target);
+
+    // Attachment-only images transition at first render-pass use. This is important for external
+    // swapchains because the image may not be touched before the owner has acquired and waited it.
+    if (any(usage & TextureUsage::SAMPLEABLE)) {
+        VulkanCommandBuffer& commandsBuf = mCommands.get();
+        texture->transitionLayout(&commandsBuf, texture->getPrimaryViewRange(),
+                texture->getDefaultLayout());
+    }
+
+    texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
 
-void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
-        SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, utils::ImmutableCString&& tag) {
+void VulkanDriver::importTextureR(Handle<HwTexture> th, uint64_t id, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t w, uint32_t h,
+        uint32_t depth, TextureUsage usage, utils::ImmutableCString&& tag) {
     importTextureCommon(th, id, target, levels, format, samples, w, h, depth, usage,
             std::move(tag));
 }
 
-void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t id,
-        SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
-        void* user, utils::ImmutableCString&& tag) {
+void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, uint64_t id, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t w, uint32_t h,
+        uint32_t depth, TextureUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
     importTextureCommon(th, id, target, levels, format, samples, w, h, depth, usage,
             std::move(tag));
     // Still fire the callback to avoid deadlocking the frontend's `CountdownCallbackHandler`. In
@@ -1311,11 +1326,11 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
         FVK_LOGW << "sRGB swapchain requested, but Platform does not support it";
-        flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
+        flags &= ~backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
     }
     if ((flags & backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) != 0 && !isMSAASwapChainSupported(4)) {
         FVK_LOGW << "MSAAx4 swapchain requested, but Platform does not support it";
-        flags = flags | ~(backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES);
+        flags &= ~backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
     }
     if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         if (!isProtectedContentSupported()) {
@@ -1700,7 +1715,9 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                             VK_NULL_HANDLE, Platform::ExternalImageHandle(),
                             static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
                             metadata.width, metadata.height, metadata.layers,
-                            metadata.filamentUsage, mStagePool);
+                            metadata.filamentUsage, mStagePool, metadata.filamentFormat,
+                            metadata.layers > 1 ? SamplerType::SAMPLER_2D_ARRAY
+                                                : SamplerType::SAMPLER_2D);
 
                     auto& commands = mCommands.get();
                     // Unlike uploaded textures or swapchains, we need to explicit transition this
@@ -1865,9 +1882,7 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
-    // TODO: we must fix this before landing descriptor set change.  Otherwise, the scuba tests will fail.
-    //return true;
-    return false;
+    return true;
 }
 
 bool VulkanDriver::isFrameBufferFetchMultiSampleSupported() {
@@ -1879,16 +1894,25 @@ bool VulkanDriver::isFrameTimeSupported() {
 }
 
 bool VulkanDriver::isAutoDepthResolveSupported() {
-    // TODO: this could be supported with vk 1.2 or VK_KHR_depth_stencil_resolve
-    return false;
+    return mContext.isDepthStencilResolveSupported();
 }
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
     return mIsSRGBSwapChainSupported;
 }
 
-bool VulkanDriver::isMSAASwapChainSupported(uint32_t) {
-    return mIsMSAASwapChainSupported;
+bool VulkanDriver::isMSAASwapChainSupported(uint32_t const samples) {
+    return mIsMSAASwapChainSupported && isRenderTargetSampleCountSupported(samples);
+}
+
+bool VulkanDriver::isRenderTargetSampleCountSupported(uint32_t const samples) {
+    if (samples == 0 || (samples & (samples - 1u)) != 0) {
+        return false;
+    }
+    auto const& limits = mContext.getPhysicalDeviceLimits();
+    VkSampleCountFlags const supported =
+            limits.framebufferDepthSampleCounts & limits.framebufferColorSampleCounts;
+    return (supported & samples) != 0;
 }
 
 bool VulkanDriver::isProtectedContentSupported() {
@@ -1912,8 +1936,7 @@ bool VulkanDriver::isParallelShaderCompileSupported() {
 }
 
 bool VulkanDriver::isDepthStencilResolveSupported() {
-    // TODO: apparently it could be supported in core 1.2 and/or with VK_KHR_depth_stencil_resolve
-    return false;
+    return mContext.isDepthStencilResolveSupported();
 }
 
 bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
@@ -2355,10 +2378,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
 
         VulkanAttachment& depthStencil = rt->getDepthStencil();
-        if (depthStencil.texture->isTransientAttachment()) {
+        if (depthStencil.texture->isTransientAttachment() || rt->hasDepthResolve()) {
             discardEndVal |= TargetBufferFlags::DEPTH_AND_STENCIL;
         }
-        
+
         currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
@@ -2371,6 +2394,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     rpkey.discardEnd = discardEndVal;
     rpkey.initialDepthStencilLayout = currentDepthStencilLayout;
     rpkey.subpassMask = uint8_t(params.subpassMask);
+    rpkey.multisampledSubpassInput = params.subpassInputIsMultisampled;
 
     fvkmemory::resource_ptr<VulkanRenderPass> renderPass =
             mFramebufferCache.getRenderPass(rpkey, &mResourceManager);
@@ -2532,7 +2556,10 @@ void VulkanDriver::nextSubpass(int) {
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
         VulkanAttachment& subpassInput = renderTarget->getColor(0);
-        mDescriptorSetCache.updateInputAttachment({}, subpassInput);
+        mDescriptorSetCache.updateInputAttachment({}, subpassInput,
+                mCurrentRenderPass.params.subpassInputIsMultisampled
+                        ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                        : VK_IMAGE_LAYOUT_GENERAL);
     }
 }
 
@@ -2894,7 +2921,7 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& pipelineState,
         .srcAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcAlpha),
         .dstAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
-        .rasterizationSamples = rt->getSamples(),
+        .rasterizationSamples = rt->getSamples(mCurrentRenderPass),
         .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,

@@ -168,6 +168,10 @@ public:
         return mPhysicalDeviceVk11Features.multiview == VK_TRUE;
     }
 
+    inline bool isDepthStencilResolveSupported() const noexcept {
+        return mDepthStencilResolveSupported;
+    }
+
     inline bool isClipDistanceSupported() const noexcept {
         return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
     }
@@ -252,6 +256,7 @@ private:
     // device and instance.
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsEnabled = false;
+    bool mDepthStencilResolveSupported = false;
     bool mDebugUtilsNamesEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;

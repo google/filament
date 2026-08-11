@@ -101,6 +101,7 @@ public:
         bool debugUtilsEnabled = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
+        bool depthStencilResolveSupported = false;
     };
 
     /**

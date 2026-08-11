@@ -143,9 +143,13 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
         fvkmemory::resource_ptr<VulkanTexture> texture, VkDevice device,
         VkPhysicalDevice physicalDevice, VulkanContext const& context, VmaAllocator allocator,
         VulkanCommands* commands, fvkmemory::ResourceManager* resManager, uint8_t levels,
-        uint8_t samples, VulkanStagePool& stagePool) {
+        uint8_t samples, VulkanStagePool& stagePool, bool const allowTransientDepth = false) {
     assert_invariant(texture);
     auto msTexture = texture->getSidecar();
+    if (msTexture && (msTexture->samples != samples ||
+                             msTexture->isNativeDepthResolveOnly() != allowTransientDepth)) {
+        msTexture = {};
+    }
     if (UTILS_UNLIKELY(!msTexture)) {
         // Clear all usage flags that are not related to attachments, so that we can
         // use the transient usage flag.
@@ -154,7 +158,8 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
 
         msTexture = resource_ptr<VulkanTexture>::construct(resManager, device, physicalDevice,
                 context, allocator, resManager, commands, texture->target, levels, texture->format,
-                samples, texture->width, texture->height, texture->depth, usage, stagePool);
+                samples, texture->width, texture->height, texture->depth, usage, stagePool,
+                allowTransientDepth);
         texture->setSidecar(msTexture);
     }
     return msTexture;
@@ -256,6 +261,7 @@ VulkanRenderTarget::VulkanRenderTarget()
       mProtected(false),
       mInfo(std::make_unique<Auxiliary>()) {
     mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
+    mInfo->rpkey.colorSamples[0] = 1;
 }
 
 VulkanRenderTarget::~VulkanRenderTarget() = default;
@@ -334,6 +340,12 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     std::vector<VulkanAttachment>& attachments = mInfo->attachments;
     std::vector<VulkanAttachment> msaaAttachments;
 
+    bool const hasExplicitMultisampledSubpassInput = std::any_of(color,
+            color + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, [](VulkanAttachment const& attachment) {
+                return attachment.texture && attachment.texture->samples > 1 &&
+                       any(attachment.texture->usage & TextureUsage::SUBPASS_INPUT);
+            });
+
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         VulkanAttachment& attachment = color[index];
         auto texture = attachment.texture;
@@ -360,7 +372,10 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
         if (samples > 1) {
             VulkanAttachment msaaAttachment = {};
-            if (texture->samples == 1) {
+            bool const isSingleSampleSubpassOutput =
+                    hasExplicitMultisampledSubpassInput && texture->samples == 1 &&
+                    !any(texture->usage & TextureUsage::SUBPASS_INPUT);
+            if (texture->samples == 1 && !isSingleSampleSubpassOutput) {
                 auto msaaTexture = initMsaaTexture(texture, device, physicalDevice, context,
                         allocator, commands, resourceManager, texture->levels, samples, stagePool);
                 if (msaaTexture && msaaTexture->isTransientAttachment()) {
@@ -380,9 +395,15 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                     .texture = texture,
                     .layerCount = layerCount,
                 };
+                if (texture->isTransientAttachment()) {
+                    rpkey.usesLazilyAllocatedMemory |= (1 << index);
+                }
             }
             fbkey.color[index] = msaaAttachment.getImageView();
             msaaAttachments.push_back(msaaAttachment);
+            rpkey.colorSamples[index] = msaaAttachment.texture->samples;
+        } else {
+            rpkey.colorSamples[index] = texture->samples;
         }
     }
 
@@ -396,15 +417,16 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         mInfo->depthStencilIndex = (uint8_t) attachments.size();
         attachments.push_back(depthStencil);
         fbkey.depthStencil = depthStencil.getImageView();
-        if (samples > 1) {
+        if (samples > 1 && context.isDepthStencilResolveSupported()) {
             mInfo->msaaDepthStencilIndex = mInfo->depthStencilIndex;
             if (depthStencilTexture->samples == 1) {
                 // MSAA depth texture must have the mipmap count of 1
                 uint8_t const msLevel = 1;
                 // Create sidecar MSAA texture for the depth attachment if it does not already
                 // exist.
-                auto msaaTexture = initMsaaTexture(depthStencilTexture, device, physicalDevice, context,
-                        allocator, commands, resourceManager, msLevel, samples, stagePool);
+                auto msaaTexture = initMsaaTexture(depthStencilTexture, device, physicalDevice,
+                        context, allocator, commands, resourceManager, msLevel, samples, stagePool,
+                        true);
                 mInfo->msaaDepthStencilIndex = (uint8_t) attachments.size();
                 VulkanAttachment msaaAttachment = {
                     .texture = msaaTexture,
@@ -412,6 +434,10 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 };
                 attachments.push_back(msaaAttachment);
                 fbkey.depthStencil = msaaAttachment.getImageView();
+                // Keep the single-sampled image as the resolve target, otherwise everything drawn
+                // into the multi-sampled sidecar is thrown away at the end of the pass.
+                fbkey.depthStencilResolve = depthStencil.getImageView();
+                rpkey.needsDepthResolve = true;
             }
         }
     }
@@ -431,7 +457,9 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPassContext& p
         return 1;
     }
     if (pass.currentSubpass == 1) {
-        return mInfo->colors.count();
+        assert_invariant(!pass.params.subpassInputIsMultisampled || pass.params.subpassMask == 1);
+        return pass.params.subpassInputIsMultisampled ? mInfo->colors.count() - 1
+                                                      : mInfo->colors.count();
     }
     uint8_t count = 0;
     mInfo->colors.forEachSetBit([&count, &pass](size_t index) {
@@ -487,7 +515,10 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
         auto texture = attachment.texture;
         if (isDepth) {
             texture->setLayout(range, VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
-            if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
+            // A depth texture nothing can sample has no sampler layout to move to, and leaving it
+            // in the attachment layout is what an imported image's owner expects to get back.
+            if (texture->isSampleable() &&
+                    !texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }
         } else {

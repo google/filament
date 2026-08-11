@@ -677,14 +677,14 @@ void WebGPUDriver::createTextureExternalImagePlaneR(Handle<HwTexture> textureHan
     PANIC_POSTCONDITION("External WebGPU Texture is not supported");
 }
 
-void WebGPUDriver::importTextureR(Handle<HwTexture> textureHandle, const intptr_t id,
+void WebGPUDriver::importTextureR(Handle<HwTexture> textureHandle, const uint64_t id,
         const SamplerType target, const uint8_t levels, const TextureFormat format,
         const uint8_t samples, const uint32_t width, const uint32_t height, const uint32_t depth,
         const TextureUsage usage, utils::ImmutableCString&& tag) {
     PANIC_POSTCONDITION("Import WebGPU Texture is not supported");
 }
 
-void WebGPUDriver::importTextureAsyncR(Handle<HwTexture> textureHandle, const intptr_t id,
+void WebGPUDriver::importTextureAsyncR(Handle<HwTexture> textureHandle, const uint64_t id,
         const SamplerType target, const uint8_t levels, const TextureFormat format,
         const uint8_t samples, const uint32_t width, const uint32_t height, const uint32_t depth,
         const TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
@@ -941,6 +941,10 @@ bool WebGPUDriver::isSRGBSwapChainSupported() {
 
 bool WebGPUDriver::isMSAASwapChainSupported(uint32_t) {
     return false;
+}
+
+bool WebGPUDriver::isRenderTargetSampleCountSupported(uint32_t samples) {
+    return samples == 1 || samples == 4;
 }
 
 bool WebGPUDriver::isProtectedContentSupported() {

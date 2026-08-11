@@ -176,9 +176,11 @@ void MaterialAttributesInfoChunk::flatten(Flattener& f) {
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialDescriptorBindingsChuck::MaterialDescriptorBindingsChuck(Container const& sib) noexcept
+MaterialDescriptorBindingsChuck::MaterialDescriptorBindingsChuck(Container const& sib,
+        SubpassInfo const& subpass) noexcept
         : Chunk(MaterialDescriptorBindingsInfo),
-          mSamplerInterfaceBlock(sib) {
+          mSamplerInterfaceBlock(sib),
+          mSubpass(subpass) {
 }
 
 void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
@@ -188,7 +190,7 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
     using namespace backend;
 
     // samplers + 1 descriptor for the UBO
-    f.writeUint8(mSamplerInterfaceBlock.getSize() + 1);
+    f.writeUint8(mSamplerInterfaceBlock.getSize() + 1 + (mSubpass.isValid ? 1 : 0));
 
     // our UBO descriptor is always at binding 0
     CString const uboName =
@@ -203,13 +205,23 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
         f.writeUint8(uint8_t(descriptor_sets::getDescriptorType(entry.type, entry.format)));
         f.writeUint8(entry.binding);
     }
+
+    if (mSubpass.isValid) {
+        CString const name = filament::SamplerInterfaceBlock::generateUniformName(
+                mSubpass.block.c_str(), mSubpass.name.c_str());
+        f.writeString({ name.data(), name.size() });
+        f.writeUint8(uint8_t(DescriptorType::INPUT_ATTACHMENT));
+        f.writeUint8(mSubpass.binding);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialDescriptorSetLayoutChunk::MaterialDescriptorSetLayoutChunk(Container const& sib) noexcept
+MaterialDescriptorSetLayoutChunk::MaterialDescriptorSetLayoutChunk(Container const& sib,
+        SubpassInfo const& subpass) noexcept
         : Chunk(MaterialDescriptorSetLayoutInfo),
-          mSamplerInterfaceBlock(sib) {
+          mSamplerInterfaceBlock(sib),
+          mSubpass(subpass) {
 }
 
 void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
@@ -219,7 +231,7 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
     using namespace backend;
 
     // samplers + 1 descriptor for the UBO
-    f.writeUint8(mSamplerInterfaceBlock.getSize() + 1);
+    f.writeUint8(mSamplerInterfaceBlock.getSize() + 1 + (mSubpass.isValid ? 1 : 0));
 
     // our UBO descriptor is always at binding 0
     f.writeUint8(uint8_t(DescriptorType::UNIFORM_BUFFER));
@@ -238,6 +250,14 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
         } else {
             f.writeUint8(uint8_t(DescriptorFlags::NONE));
         }
+        f.writeUint16(0);
+    }
+
+    if (mSubpass.isValid) {
+        f.writeUint8(uint8_t(DescriptorType::INPUT_ATTACHMENT));
+        f.writeUint8(uint8_t(ShaderStageFlags::FRAGMENT));
+        f.writeUint8(mSubpass.binding);
+        f.writeUint8(uint8_t(DescriptorFlags::NONE));
         f.writeUint16(0);
     }
 }

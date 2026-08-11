@@ -65,7 +65,7 @@ public:
 
 
     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-            VulkanAttachment const& attachment) noexcept;
+            VulkanAttachment const& attachment, VkImageLayout layout) noexcept;
 
     void bind(uint8_t setIndex, fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             backend::DescriptorSetOffsetArray&& offsets);

@@ -386,9 +386,47 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
 }
 
 void VulkanDescriptorSetCache::updateInputAttachment(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        VulkanAttachment const& attachment) noexcept {
-    // TOOD: fill this in.
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set, VulkanAttachment const& attachment,
+        VkImageLayout const layout) noexcept {
+    if (!set) {
+        // The caller does not know which set declares the subpass input, so find the bound one.
+        for (auto const& candidate: mStashedSets) {
+            if (candidate && candidate->getLayout()->bitmask.inputAttachment.any()) {
+                set = candidate;
+                break;
+            }
+        }
+    }
+    if (!set) {
+        return;
+    }
+
+    // We run inside the render pass, so the set may already be recorded in the command buffer.
+    if (set->isBound()) {
+        cloneSet(set, {});
+        mLastBoundInfo = {};
+    }
+
+    VkDescriptorImageInfo const info = {
+        .sampler = VK_NULL_HANDLE,
+        .imageView = const_cast<VulkanAttachment&>(attachment).getImageView(),
+        .imageLayout = layout,
+    };
+
+    using Bitmask = fvkutils::InputAttachmentBitmask;
+    constexpr size_t shift = fvkutils::getFragmentStageShift<Bitmask>();
+    set->getLayout()->bitmask.inputAttachment.forEachSetBit([&](size_t const index) {
+        uint32_t const binding = uint32_t(index >= shift ? index - shift : index);
+        VkWriteDescriptorSet const descriptorWrite = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = set->getVkSet(),
+            .dstBinding = binding,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+            .pImageInfo = &info,
+        };
+        vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
+    });
 }
 
 

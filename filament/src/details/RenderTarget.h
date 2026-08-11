@@ -62,6 +62,8 @@ public:
         return mSampleableAttachmentsMask;
     }
 
+    uint8_t getSamples() const noexcept { return mSamples; }
+
     uint8_t getSupportedColorAttachmentsCount() const noexcept {
         return mSupportedColorAttachmentsCount;
     }
@@ -79,6 +81,7 @@ private:
     HwHandle mHandle{};
     backend::TargetBufferFlags mAttachmentMask = {};
     backend::TargetBufferFlags mSampleableAttachmentsMask = {};
+    uint8_t mSamples = 1;
     const uint8_t mSupportedColorAttachmentsCount;
     bool mSupportsReadPixels = false;
 };

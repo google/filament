@@ -77,6 +77,7 @@ public:
     MOCK_METHOD(bool, isAutoDepthResolveSupported, (), (override));
     MOCK_METHOD(bool, isSRGBSwapChainSupported, (), (override));
     MOCK_METHOD(bool, isMSAASwapChainSupported, (uint32_t samples), (override));
+        MOCK_METHOD(bool, isRenderTargetSampleCountSupported, (uint32_t samples), (override));
     MOCK_METHOD(bool, isProtectedContentSupported, (), (override));
     MOCK_METHOD(bool, isStereoSupported, (), (override));
     MOCK_METHOD(bool, isParallelShaderCompileSupported, (), (override));

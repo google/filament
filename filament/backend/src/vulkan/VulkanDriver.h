@@ -142,7 +142,7 @@ private:
     void createTextureViewSwizzleCommon(Handle<HwTexture> th, Handle<HwTexture> srch,
             backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
             backend::TextureSwizzle a, utils::ImmutableCString&& tag);
-    void importTextureCommon(Handle<HwTexture> th, intptr_t id, SamplerType target, uint8_t levels,
+    void importTextureCommon(Handle<HwTexture> th, uint64_t id, SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage usage, utils::ImmutableCString&& tag);
     void setVertexBufferObjectCommon(resource_ptr<VulkanVertexBuffer> vb, uint32_t index,

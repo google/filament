@@ -211,6 +211,8 @@ inline
 const char* toString(backend::SubpassType type) noexcept {
     switch (type) {
         case backend::SubpassType::SUBPASS_INPUT: return "subpassInput";
+        case backend::SubpassType::SUBPASS_INPUT_MS:
+            return "subpassInputMS";
     }
     return "--";
 }

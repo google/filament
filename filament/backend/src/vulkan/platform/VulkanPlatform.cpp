@@ -1013,6 +1013,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsEnabled = scontext->debugUtilsEnabled;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mDepthStencilResolveSupported = scontext->depthStencilResolveSupported;
     } else {
         context.mDebugUtilsEnabled = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =
@@ -1022,6 +1023,9 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         context.mVertexInputDynamicStateSupported =
                 setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
         context.mGlobalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
+        context.mDepthStencilResolveSupported =
+                setContains(deviceExts, VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME) &&
+                setContains(deviceExts, VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
     }
 
     // Pass along relevant driver config (feature flags)

@@ -156,8 +156,9 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 // ------------------------------------------------------------------------------------------------
 
 FRenderTarget::FRenderTarget(FEngine& engine, const Builder& builder)
-    : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()),
-      mSupportsReadPixels(false) {
+        : mSamples(builder.mImpl->mSamples),
+          mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()),
+          mSupportsReadPixels(false) {
     std::copy(std::begin(builder.mImpl->mAttachments), std::end(builder.mImpl->mAttachments),
             std::begin(mAttachments));
 

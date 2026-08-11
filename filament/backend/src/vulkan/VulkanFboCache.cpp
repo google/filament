@@ -32,11 +32,146 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+namespace {
+
+// A depth resolve can only be expressed through VK_KHR_create_renderpass2, so the render pass built
+// with the Vulkan 1.0 structures is translated rather than duplicated. Everything is copied
+// verbatim except multiview, which moves from a chained struct onto each subpass.
+VkResult createRenderPass2(VkDevice device, VkRenderPassCreateInfo const& info, uint32_t viewMask,
+        VkAttachmentReference const& depthResolveRef, VkRenderPass* outRenderPass) {
+    constexpr size_t kMaxAttachments =
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
+    constexpr size_t kMaxSubpasses = 2;
+
+    assert_invariant(info.attachmentCount <= kMaxAttachments);
+    assert_invariant(info.subpassCount <= kMaxSubpasses);
+
+    VkAttachmentDescription2 attachments[kMaxAttachments] = {};
+    for (uint32_t i = 0; i < info.attachmentCount; i++) {
+        VkAttachmentDescription const& src = info.pAttachments[i];
+        attachments[i] = {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+            .flags = src.flags,
+            .format = src.format,
+            .samples = src.samples,
+            .loadOp = src.loadOp,
+            .storeOp = src.storeOp,
+            .stencilLoadOp = src.stencilLoadOp,
+            .stencilStoreOp = src.stencilStoreOp,
+            .initialLayout = src.initialLayout,
+            .finalLayout = src.finalLayout,
+        };
+    }
+
+    auto const convertRef = [](VkAttachmentReference const& src, VkImageAspectFlags aspectMask) {
+        return VkAttachmentReference2{
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+            .attachment = src.attachment,
+            .layout = src.layout,
+            .aspectMask = aspectMask,
+        };
+    };
+
+    VkAttachmentReference2 colorRefs[kMaxSubpasses][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkAttachmentReference2 inputRefs[kMaxSubpasses][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkAttachmentReference2 resolveRefs[kMaxSubpasses][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
+    VkAttachmentReference2 depthRefs[kMaxSubpasses] = {};
+    VkAttachmentReference2 depthResolveRefs[kMaxSubpasses] = {};
+    VkSubpassDescriptionDepthStencilResolve depthResolves[kMaxSubpasses] = {};
+    VkSubpassDescription2 subpasses[kMaxSubpasses] = {};
+
+    for (uint32_t s = 0; s < info.subpassCount; s++) {
+        VkSubpassDescription const& src = info.pSubpasses[s];
+        for (uint32_t i = 0; i < src.colorAttachmentCount; i++) {
+            colorRefs[s][i] = convertRef(src.pColorAttachments[i], 0);
+            if (src.pResolveAttachments) {
+                resolveRefs[s][i] = convertRef(src.pResolveAttachments[i], 0);
+            }
+        }
+        for (uint32_t i = 0; i < src.inputAttachmentCount; i++) {
+            inputRefs[s][i] = convertRef(src.pInputAttachments[i], VK_IMAGE_ASPECT_COLOR_BIT);
+        }
+        if (src.pDepthStencilAttachment) {
+            depthRefs[s] = convertRef(*src.pDepthStencilAttachment, 0);
+        }
+
+        subpasses[s] = {
+            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+            .flags = src.flags,
+            .pipelineBindPoint = src.pipelineBindPoint,
+            .viewMask = viewMask,
+            .inputAttachmentCount = src.inputAttachmentCount,
+            .pInputAttachments = src.inputAttachmentCount ? inputRefs[s] : nullptr,
+            .colorAttachmentCount = src.colorAttachmentCount,
+            .pColorAttachments = src.colorAttachmentCount ? colorRefs[s] : nullptr,
+            .pResolveAttachments =
+                    (src.colorAttachmentCount && src.pResolveAttachments) ? resolveRefs[s] : nullptr,
+            .pDepthStencilAttachment = src.pDepthStencilAttachment ? &depthRefs[s] : nullptr,
+        };
+
+        // Resolve when depth is used for the last time. A multisampled input-only color subpass
+        // deliberately omits depth, so its resolve belongs to the preceding scene subpass.
+        bool const isLastDepthUse =
+                src.pDepthStencilAttachment &&
+                (s + 1 == info.subpassCount || !info.pSubpasses[s + 1].pDepthStencilAttachment);
+        if (isLastDepthUse) {
+            depthResolveRefs[s] = convertRef(depthResolveRef, 0);
+            depthResolves[s] = {
+                .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE,
+                // Sample zero is the only mode every implementation is required to support.
+                .depthResolveMode =
+                        fvkutils::isVkDepthFormat(attachments[depthResolveRef.attachment].format)
+                                ? VK_RESOLVE_MODE_SAMPLE_ZERO_BIT
+                                : VK_RESOLVE_MODE_NONE,
+                .stencilResolveMode =
+                        fvkutils::isVkStencilFormat(attachments[depthResolveRef.attachment].format)
+                                ? VK_RESOLVE_MODE_SAMPLE_ZERO_BIT
+                                : VK_RESOLVE_MODE_NONE,
+                .pDepthStencilResolveAttachment = &depthResolveRefs[s],
+            };
+            subpasses[s].pNext = &depthResolves[s];
+        }
+    }
+
+    VkSubpassDependency2 dependencies[1] = {};
+    for (uint32_t i = 0; i < info.dependencyCount && i < 1; i++) {
+        VkSubpassDependency const& src = info.pDependencies[i];
+        dependencies[i] = {
+            .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+            .srcSubpass = src.srcSubpass,
+            .dstSubpass = src.dstSubpass,
+            .srcStageMask = src.srcStageMask,
+            .dstStageMask = src.dstStageMask,
+            .srcAccessMask = src.srcAccessMask,
+            .dstAccessMask = src.dstAccessMask,
+            .dependencyFlags = src.dependencyFlags,
+        };
+    }
+
+    VkRenderPassCreateInfo2 const info2 = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
+        .attachmentCount = info.attachmentCount,
+        .pAttachments = attachments,
+        .subpassCount = info.subpassCount,
+        .pSubpasses = subpasses,
+        .dependencyCount = info.dependencyCount,
+        .pDependencies = info.dependencyCount ? dependencies : nullptr,
+        .correlatedViewMaskCount = viewMask ? 1u : 0u,
+        .pCorrelatedViewMasks = viewMask ? &viewMask : nullptr,
+    };
+    assert_invariant(vkCreateRenderPass2KHR || vkCreateRenderPass2);
+    return vkCreateRenderPass2 ? vkCreateRenderPass2(device, &info2, VKALLOC, outRenderPass)
+                               : vkCreateRenderPass2KHR(device, &info2, VKALLOC, outRenderPass);
+}
+
+} // anonymous namespace
+
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     if (k1.initialDepthStencilLayout != k2.initialDepthStencilLayout) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.colorFormat[i] != k2.colorFormat[i]) return false;
+        if (k1.colorSamples[i] != k2.colorSamples[i]) return false;
     }
     if (k1.depthStencilFormat != k2.depthStencilFormat) return false;
     if (k1.clear != k2.clear) return false;
@@ -47,6 +182,8 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
     if (k1.usesLazilyAllocatedMemory != k2.usesLazilyAllocatedMemory) return false;
     if (k1.subpassMask != k2.subpassMask) return false;
     if (k1.viewCount != k2.viewCount) return false;
+    if (k1.needsDepthResolve != k2.needsDepthResolve) return false;
+    if (k1.multisampledSubpassInput != k2.multisampledSubpassInput) return false;
     return true;
 }
 
@@ -57,6 +194,7 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     if (k1.layers != k2.layers) return false;
     if (k1.samples != k2.samples) return false;
     if (k1.depthStencil != k2.depthStencil) return false;
+    if (k1.depthStencilResolve != k2.depthStencilResolve) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.color[i] != k2.color[i]) return false;
         if (k1.resolve[i] != k2.resolve[i]) return false;
@@ -82,10 +220,11 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
         return iter->second.handle;
     }
 
-    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth Attachment.
+    // The attachment list contains: Color Attachments, Resolve Attachments, Depth Attachment, and
+    // the resolve target for the Depth Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getRenderPass.
-    VkImageView attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1];
+    VkImageView attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2];
     uint32_t attachmentCount = 0;
     for (VkImageView attachment : config.color) {
         if (attachment) {
@@ -99,6 +238,9 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     }
     if (config.depthStencil) {
         attachments[attachmentCount++] = config.depthStencil;
+    }
+    if (config.depthStencilResolve) {
+        attachments[attachmentCount++] = config.depthStencilResolve;
     }
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
@@ -139,6 +281,10 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     }
     const bool hasSubpasses = config.subpassMask != 0;
 
+    // The second subpass reads its first color attachment while still writing it, and Vulkan only
+    // allows GENERAL for an attachment used both ways at once.
+    constexpr VkImageLayout kFeedbackLoopLayout = VK_IMAGE_LAYOUT_GENERAL;
+
     // Set up some const aliases for terseness.
     const VkAttachmentLoadOp kClear = VK_ATTACHMENT_LOAD_OP_CLEAR;
     const VkAttachmentLoadOp kDontCare = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -153,41 +299,43 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
     VkAttachmentReference colorAttachmentRefs[2][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference resolveAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference depthStencilAttachmentRef = {};
+    VkAttachmentReference depthStencilResolveAttachmentRef = {};
 
     const bool hasDepth = fvkutils::isVkDepthFormat(config.depthStencilFormat);
     const bool hasStencil = fvkutils::isVkStencilFormat(config.depthStencilFormat);
     const bool hasDepthOrStencil = hasDepth || hasStencil;
 
-    VkSubpassDescription subpasses[2] = {{
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .pInputAttachments = nullptr,
-        .pColorAttachments = colorAttachmentRefs[0],
-        .pResolveAttachments = resolveAttachmentRef,
-        .pDepthStencilAttachment = hasDepthOrStencil ? &depthStencilAttachmentRef : nullptr
-    },
-    {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .pInputAttachments = inputAttachmentRef,
-        .pColorAttachments = colorAttachmentRefs[1],
-        .pResolveAttachments = resolveAttachmentRef,
-        .pDepthStencilAttachment = hasDepthOrStencil ? &depthStencilAttachmentRef : nullptr
-    }};
+    VkSubpassDescription subpasses[2] = {
+        { .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .pInputAttachments = nullptr,
+            .pColorAttachments = colorAttachmentRefs[0],
+            .pResolveAttachments = resolveAttachmentRef,
+            .pDepthStencilAttachment = hasDepthOrStencil ? &depthStencilAttachmentRef : nullptr },
+        { .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .pInputAttachments = inputAttachmentRef,
+            .pColorAttachments = colorAttachmentRefs[1],
+            .pResolveAttachments = resolveAttachmentRef,
+            .pDepthStencilAttachment = hasDepthOrStencil && !config.multisampledSubpassInput
+                                               ? &depthStencilAttachmentRef
+                                               : nullptr }
+    };
 
-    // The attachment list contains: Color Attachments, Resolve Attachments, and Depth/Stencil Attachment.
+    // The attachment list contains: Color Attachments, Resolve Attachments, Depth/Stencil
+    // Attachment, and the resolve target for the Depth/Stencil Attachment.
     // For simplicity, create an array that can hold the maximum possible number of attachments.
     // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
-    VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
+    VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2] = {};
 
     // We support 2 subpasses, which means we need to supply 1 dependency struct.
-    VkSubpassDependency dependencies[1] = {{
+    VkSubpassDependency dependencies[1] = { {
         .srcSubpass = 0,
         .dstSubpass = 1,
         .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-    }};
+    } };
 
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -250,13 +398,18 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
                 colorAttachmentRefs[0][index].attachment = attachmentIndex;
 
                 index = subpasses[1].inputAttachmentCount++;
-                inputAttachmentRef[index].layout = subpassLayout;
+                inputAttachmentRef[index].layout =
+                        config.multisampledSubpassInput ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                                                        : kFeedbackLoopLayout;
                 inputAttachmentRef[index].attachment = attachmentIndex;
             }
 
-            index = subpasses[1].colorAttachmentCount++;
-            colorAttachmentRefs[1][index].layout = subpassLayout;
-            colorAttachmentRefs[1][index].attachment = attachmentIndex;
+            if (!(config.multisampledSubpassInput && (config.subpassMask & (1 << i)))) {
+                index = subpasses[1].colorAttachmentCount++;
+                colorAttachmentRefs[1][index].layout =
+                        (config.subpassMask & (1 << i)) ? kFeedbackLoopLayout : subpassLayout;
+                colorAttachmentRefs[1][index].attachment = attachmentIndex;
+            }
         }
 
         TargetBufferFlags const flag = TargetBufferFlags(int(TargetBufferFlags::COLOR0) << i);
@@ -266,7 +419,7 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
 
         attachments[attachmentIndex++] = {
             .format = config.colorFormat[i],
-            .samples = (VkSampleCountFlagBits) config.samples,
+            .samples = (VkSampleCountFlagBits) config.colorSamples[i],
             .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
             .storeOp = (discardEnd || (config.usesLazilyAllocatedMemory & (1 << i))) ? kDisableStore
                                                                                      : kEnableStore,
@@ -336,12 +489,39 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
             .initialLayout = fvkutils::getVkLayout(config.initialDepthStencilLayout),
             .finalLayout = fvkutils::getVkLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT),
         };
+
+        // The resolve target is single-sampled and is only ever written, so its prior contents
+        // never matter.
+        if (config.needsDepthResolve) {
+            depthStencilResolveAttachmentRef.layout =
+                    fvkutils::getVkLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
+            depthStencilResolveAttachmentRef.attachment = attachmentIndex;
+            attachments[attachmentIndex++] = {
+                .format = config.depthStencilFormat,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = kDontCare,
+                .storeOp = hasDepth ? kEnableStore : kDisableStore,
+                .stencilLoadOp = kDontCare,
+                .stencilStoreOp = hasStencil ? kEnableStore : kDisableStore,
+                .initialLayout = fvkutils::getVkLayout(config.initialDepthStencilLayout),
+                .finalLayout = fvkutils::getVkLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT),
+            };
+        }
     }
     renderPassInfo.attachmentCount = attachmentIndex;
 
     // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
-    VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
+    VkResult error;
+    if (config.needsDepthResolve) {
+        // Only the VK_KHR_create_renderpass2 structures can express a depth resolve, so translate
+        // what was built above rather than duplicating the logic.
+        error = createRenderPass2(mDevice, renderPassInfo,
+                config.viewCount > 1 ? subpassViewMask : 0u, depthStencilResolveAttachmentRef,
+                &renderPass);
+    } else {
+        error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
+    }
     FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create render pass."
                                                       << " error=" << error;
     fvkmemory::resource_ptr<VulkanRenderPass> rph =

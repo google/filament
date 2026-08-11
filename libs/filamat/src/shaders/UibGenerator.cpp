@@ -104,7 +104,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
                                            Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "worldRayFromClipMatrix", 0, Type::MAT3,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "worldRayFromClipMatrix", CONFIG_MAX_STEREOSCOPIC_EYES,
+                                           Type::MAT3,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipTransform",          0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 

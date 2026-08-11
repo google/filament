@@ -311,13 +311,16 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
         return mInfo->fbkey;
     }
 
-    inline uint8_t getSamples() const {
-        return mInfo->fbkey.samples;
+    inline uint8_t getSamples(VulkanRenderPassContext const& pass) const {
+        return pass.currentSubpass == 1 && pass.params.subpassInputIsMultisampled
+                       ? 1
+                       : mInfo->fbkey.samples;
     }
 
     uint8_t getColorTargetCount(VulkanRenderPassContext const& pass) const;
 
     inline bool hasDepthStencil() const { return mInfo->depthStencilIndex != Auxiliary::UNDEFINED_INDEX; }
+    inline bool hasDepthResolve() const { return mInfo->rpkey.needsDepthResolve; }
 
     inline bool isSwapChain() const { return !mOffscreen; }
     inline bool isProtected() const { return mProtected; }

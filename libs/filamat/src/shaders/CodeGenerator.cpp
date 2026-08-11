@@ -69,7 +69,10 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                     out << "#extension GL_OES_EGL_image_external : require\n\n";
                 }
             }
-            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+            // gl_ViewIndex / gl_ViewID_OVR are legal in the fragment stage, and post-process
+            // variants never carry the stereo bit, so declare the extension for every stage.
+            if ((v.hasStereo() && stage == ShaderStage::VERTEX) ||
+                    material.stereoscopicType == StereoscopicType::MULTIVIEW) {
                 switch (material.stereoscopicType) {
                 case StereoscopicType::INSTANCED:
                     // If we're not processing the shader through glslang (in the case of unoptimized
@@ -102,7 +105,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                 out << "#version 410 core\n\n";
                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
-            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+            if ((v.hasStereo() && stage == ShaderStage::VERTEX) ||
+                    material.stereoscopicType == StereoscopicType::MULTIVIEW) {
                 switch (material.stereoscopicType) {
                 case StereoscopicType::INSTANCED:
                     // Nothing to generate
@@ -816,7 +820,8 @@ io::sstream& CodeGenerator::generatePostProcessSubpass(io::sstream& out, Subpass
     CString subpassName =
             SamplerInterfaceBlock::generateUniformName(subpass.block.c_str(), subpass.name.c_str());
 
-    char const* const typeName = "subpassInput";
+    char const* const typeName =
+            subpass.type == SubpassType::SUBPASS_INPUT_MS ? "subpassInputMS" : "subpassInput";
     // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
     char const* const precision = getPrecisionQualifier(subpass.precision);
     out << "layout(input_attachment_index = " << (int) subpass.attachmentIndex

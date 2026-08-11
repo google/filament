@@ -765,6 +765,25 @@ TEST_F(MaterialCompiler, EmptyName) {
     const Package result = builder.build(*jobSystem);
 }
 
+TEST_F(MaterialCompiler, MultisampledSubpassInput) {
+    const std::string shaderCode(R"(
+        void postProcess(inout PostProcessInputs postProcess) {
+            postProcess.color = subpassLoad(materialParams_colorBuffer, 0);
+        }
+    )");
+
+    MaterialBuilder builder;
+    builder.materialDomain(MaterialBuilder::MaterialDomain::POST_PROCESS)
+            .platform(MaterialBuilder::Platform::MOBILE)
+            .targetApi(MaterialBuilder::TargetApi::VULKAN)
+            .enableFramebufferFetch()
+            .subpass(SubpassType::SUBPASS_INPUT_MS, SamplerFormat::FLOAT,
+                    MaterialBuilder::ParameterPrecision::MEDIUM, "colorBuffer")
+            .material(shaderCode.c_str());
+    const Package result = builder.build(*jobSystem);
+    EXPECT_TRUE(result.isValid());
+}
+
 TEST_F(MaterialCompiler, Uv0AndUv1) {
     MaterialBuilder builder;
     // Requiring both sets of UV coordinates should not fail.

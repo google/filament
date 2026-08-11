@@ -46,6 +46,7 @@ public:
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
+        uint8_t colorSamples[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 8 bytes
         VkFormat depthStencilFormat; // 4 bytes
         TargetBufferFlags clear; // 4 bytes
         TargetBufferFlags discardStart; // 4 bytes
@@ -57,7 +58,8 @@ public:
         uint8_t usesLazilyAllocatedMemory; // 1 byte
         uint8_t subpassMask; // 1 byte
         uint8_t viewCount; // 1 byte
-        uint8_t padding[2];
+        uint8_t needsDepthResolve; // 1 byte
+        uint8_t multisampledSubpassInput; // 1 byte
     };
     struct RenderPassVal {
         fvkmemory::resource_ptr<VulkanRenderPass> handle;
@@ -66,7 +68,7 @@ public:
     static_assert(0 == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT % 8);
     static_assert(sizeof(TargetBufferFlags) == 4, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 56, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 64, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;
@@ -84,6 +86,7 @@ public:
         VkImageView color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
         VkImageView resolve[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 64 bytes
         VkImageView depthStencil; // 8 bytes
+        VkImageView depthStencilResolve; // 8 bytes
     };
     struct FboVal {
         fvkmemory::resource_ptr<VulkanFramebuffer> handle;
@@ -91,7 +94,7 @@ public:
     };
     static_assert(sizeof(VkRenderPass) == 8, "VkRenderPass has unexpected size.");
     static_assert(sizeof(VkImageView) == 8, "VkImageView has unexpected size.");
-    static_assert(sizeof(FboKey) == 152, "FboKey has unexpected size.");
+    static_assert(sizeof(FboKey) == 160, "FboKey has unexpected size.");
     using FboKeyHashFn = utils::hash::MurmurHashFn<FboKey>;
     struct FboKeyEqualFn {
         bool operator()(const FboKey& k1, const FboKey& k2) const;

@@ -769,7 +769,8 @@ constexpr std::string_view to_string(SamplerType const type) noexcept {
 
 //! Subpass type
 enum class SubpassType : uint8_t {
-    SUBPASS_INPUT
+    SUBPASS_INPUT,
+    SUBPASS_INPUT_MS
 };
 
 //! Texture sampler format
@@ -1653,6 +1654,12 @@ struct RenderPassParams {
      * attachment (see MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT).
      */
     uint16_t subpassMask = 0;
+
+    /**
+     * True when the second subpass reads a multisampled input attachment and writes only
+     * single-sampled color attachments.
+     */
+    bool subpassInputIsMultisampled = false;
 
     /**
      * This mask makes a promise to the backend about read-only usage of the depth attachment (bit

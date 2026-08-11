@@ -104,7 +104,8 @@ std::unordered_map<std::string_view, SamplerType>& Enums::getMap<SamplerType>() 
 };
 
 std::unordered_map<std::string_view, SubpassType> Enums::mStringToSubpassType = {
-        { "subpassInput",       SubpassType::SUBPASS_INPUT },
+    { "subpassInput", SubpassType::SUBPASS_INPUT },
+    { "subpassInputMS", SubpassType::SUBPASS_INPUT_MS },
 };
 
 template <>

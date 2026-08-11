@@ -1473,9 +1473,9 @@ void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
     // not relevant for the OpenGL backend
 }
 
-void OpenGLDriver::importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, intptr_t const id,
-        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
+void OpenGLDriver::importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, uint64_t const id,
+        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width,
+        uint32_t height, uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
     GLTexture* t = handle_cast<GLTexture*>(th);
     t->samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
 
@@ -1528,9 +1528,9 @@ void OpenGLDriver::importTextureCommon(OpenGLState& gl, Handle<HwTexture> th, in
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
-void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t const id,
-        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
+void OpenGLDriver::importTextureR(Handle<HwTexture> th, uint64_t const id, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     // For object creation, the object should be constructed first to determine the initial settings
@@ -1542,11 +1542,10 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t const id,
             std::move(tag));
 }
 
-void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
-        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user,
-        ImmutableCString&& tag) {
+void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, uint64_t const id, SamplerType target,
+        uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user, ImmutableCString&& tag) {
 
     // For object creation, the object should be constructed first to determine the initial settings
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
@@ -3021,6 +3020,11 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
 
 bool OpenGLDriver::isMSAASwapChainSupported(uint32_t const samples) {
     return mPlatform.isMSAASwapChainSupported(samples);
+}
+
+bool OpenGLDriver::isRenderTargetSampleCountSupported(uint32_t const samples) {
+    return samples > 0 && (samples & (samples - 1u)) == 0 &&
+           samples <= uint32_t(getBackendState().gets.max_samples);
 }
 
 bool OpenGLDriver::isProtectedContentSupported() {

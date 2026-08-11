@@ -292,7 +292,7 @@ DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, createTextureExternalImagePla
         uint32_t, plane)
 
 DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, importTexture,
-        intptr_t, id,
+        uint64_t, id,
         backend::SamplerType, target,
         uint8_t, levels,
         backend::TextureFormat, format,
@@ -303,7 +303,7 @@ DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, importTexture,
         backend::TextureUsage, usage)
 
 DECL_DRIVER_API_TAGGED_R_N(backend::TextureHandle, importTextureAsync,
-        intptr_t, id,
+        uint64_t, id,
         backend::SamplerType, target,
         uint8_t, levels,
         backend::TextureFormat, format,
@@ -413,6 +413,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isMSAASwapChainSupported, uint32_t, samples)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isRenderTargetSampleCountSupported, uint32_t, samples)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)

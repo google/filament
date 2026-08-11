@@ -110,8 +110,6 @@ private:
     VmaAllocator const mAllocator;
     VkDevice const mDevice;
 
-    // The texture with the sidecar owns the sidecar.
-    fvkmemory::resource_ptr<VulkanTexture> mSidecarMSAA;
     // The stream this texture is associated with.
     fvkmemory::resource_ptr<VulkanStream> mStream;
 
@@ -166,15 +164,16 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
             VmaAllocator allocator, fvkmemory::ResourceManager* resourceManager,
             VulkanCommands* commands, SamplerType target, uint8_t levels, TextureFormat tformat,
             uint8_t samples, uint32_t w, uint32_t h, uint32_t depth, TextureUsage tusage,
-            VulkanStagePool& stagePool);
+            VulkanStagePool& stagePool, bool allowTransientDepth = false);
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     VulkanTexture(VulkanContext const& context, VkDevice device, VmaAllocator allocator,
             fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
             VkDeviceMemory memory, VkFormat format, VkSamplerYcbcrConversion conversion,
-            VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
-            uint8_t levels, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-            TextureUsage tusage, VulkanStagePool& stagePool);
+            VkDeviceMemory stagingMemory, VkBuffer stagingBuffer,
+            Platform::ExternalImageHandle ahBuffer, uint8_t levels, uint8_t samples, uint32_t width,
+            uint32_t height, uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool,
+            TextureFormat tformat, SamplerType target);
 
     // Constructor for creating a texture view for wrt specific mip range
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
@@ -227,13 +226,11 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     VulkanLayout getLayout(uint32_t layer, uint32_t level) const;
 
-    void setSidecar(fvkmemory::resource_ptr<VulkanTexture> sidecar) {
-        mState->mSidecarMSAA = sidecar;
-    }
+    void setSidecar(fvkmemory::resource_ptr<VulkanTexture> sidecar) { mSidecarMSAA = sidecar; }
 
-    fvkmemory::resource_ptr<VulkanTexture> getSidecar() const {
-        return mState->mSidecarMSAA;
-    }
+    fvkmemory::resource_ptr<VulkanTexture> getSidecar() const { return mSidecarMSAA; }
+
+    bool isNativeDepthResolveOnly() const noexcept { return mNativeDepthResolveOnly; }
 
     void setStream(fvkmemory::resource_ptr<VulkanStream> stream) {
         mState->mStream = stream;
@@ -311,11 +308,15 @@ private:
 
     fvkmemory::resource_ptr<VulkanTextureState> mState;
 
+    // Sidecars are view-specific because mip and layer views can have different extents.
+    fvkmemory::resource_ptr<VulkanTexture> mSidecarMSAA;
+
     // Track the range of subresources that define the "primary" image view, which is the special
     // image view that gets bound to an actual texture sampler.
     VkImageSubresourceRange mPrimaryViewRange;
 
     VkComponentMapping mSwizzle {};
+    bool mNativeDepthResolveOnly = false;
 };
 
 } // namespace filament::backend

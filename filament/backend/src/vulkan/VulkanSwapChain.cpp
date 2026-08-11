@@ -95,7 +95,8 @@ void VulkanSwapChain::update() {
                 bundle.colorFormat, VK_NULL_HANDLE /*ycrcb */, VK_NULL_HANDLE, VK_NULL_HANDLE,
                 Platform::ExternalImageHandle(),
                 /*levels=*/1, /*samples=*/1, bundle.extent.width, bundle.extent.height,
-                bundle.layerCount, colorUsage, mStagePool);
+                bundle.layerCount, colorUsage, mStagePool, TextureFormat::UNUSED,
+                bundle.layerCount > 1 ? SamplerType::SAMPLER_2D_ARRAY : SamplerType::SAMPLER_2D);
         mColors.push_back(colorTexture);
     }
 
@@ -104,7 +105,9 @@ void VulkanSwapChain::update() {
                 device, mAllocator, mResourceManager, mCommands, bundle.depth, VK_NULL_HANDLE,
                 bundle.depthFormat, VK_NULL_HANDLE /*ycrcb */, VK_NULL_HANDLE, VK_NULL_HANDLE,
                 Platform::ExternalImageHandle(), /*levels=*/1, /*samples=*/1, bundle.extent.width,
-                bundle.extent.height, bundle.layerCount, depthUsage, mStagePool);
+                bundle.extent.height, bundle.layerCount, depthUsage, mStagePool,
+                TextureFormat::UNUSED,
+                bundle.layerCount > 1 ? SamplerType::SAMPLER_2D_ARRAY : SamplerType::SAMPLER_2D);
     } else {
         mDepth = {};
     }

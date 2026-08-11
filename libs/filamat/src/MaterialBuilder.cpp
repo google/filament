@@ -685,8 +685,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         assert_invariant(param.isSubpass());
         // For now, we only support a single subpass for attachment 0.
         // Subpasses belong to the "MaterialParams" block.
+        // `binding` is past the samplers here; binding 0 is the UBO.
         info.subpass = { CString("MaterialParams"), param.name, param.subpassType,
-                         param.format, param.precision, 0, 0 };
+                         param.format, param.precision, 0, uint8_t(binding) };
     }
 
     for (auto const& buffer : mBuffers) {
@@ -1692,8 +1693,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.push<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
     // Descriptor layout and descriptor name/binding mapping
-    container.push<MaterialDescriptorBindingsChuck>(info.sib);
-    container.push<MaterialDescriptorSetLayoutChunk>(info.sib);
+    container.push<MaterialDescriptorBindingsChuck>(info.sib, info.subpass);
+    container.push<MaterialDescriptorSetLayoutChunk>(info.sib, info.subpass);
 
     // User constant parameters
     FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());
