@@ -108,21 +108,27 @@ public:
             locateInfo.baseSpace = mContext.appSpace;
             locateInfo.time = displayTime;
 
-            bool const active =
+            constexpr XrSpaceLocationFlags kTracked =
+                    XR_SPACE_LOCATION_POSITION_VALID_BIT |
+                    XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+                    XR_SPACE_LOCATION_POSITION_TRACKED_BIT |
+                    XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+            bool const located =
                     XR_SUCCEEDED(mLocateHandJoints(state.tracker, &locateInfo, &locations)) &&
-                    locations.isActive == XR_TRUE;
+                    locations.isActive == XR_TRUE &&
+                    (joints[XR_HAND_JOINT_PALM_EXT].locationFlags & kTracked) == kTracked;
 
-            if (active != state.visible) {
-                if (active) {
+            if (located != state.visible) {
+                if (located) {
                     mContext.scene->addEntity(state.renderable);
                 } else {
                     mContext.scene->remove(state.renderable);
                 }
-                state.visible = active;
+                state.visible = located;
                 XRLOG("hand meshes: %s hand %s", kHandNames[hand],
-                        active ? "tracked, now drawn" : "lost tracking, hidden");
+                        located ? "tracked, now drawn" : "lost tracking, hidden");
             }
-            if (!active) {
+            if (!located) {
                 continue;
             }
 
