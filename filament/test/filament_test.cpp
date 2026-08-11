@@ -1832,6 +1832,71 @@ TEST(FilamentTest, ECREpochBasedReclamationManagers) {
 
 
 
+TEST(FilamentTest, MultipleDirectionalLights) {
+    Engine::Config config{};
+    config.enableMultipleDirectionalLights = true;
+    FEngine* engine = downcast(Engine::Builder()
+            .backend(backend::Backend::NOOP)
+            .config(&config)
+            .build());
+    FScene* scene = downcast(engine->createScene());
+    auto& em = engine->getEntityManager();
+    FLightManager& lcm = engine->getLightManager();
+
+    // create more directional lights than can be supported, with decreasing intensity,
+    // in a random-ish direction each
+    constexpr size_t EXTRA_COUNT = CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS;
+    constexpr size_t LIGHT_COUNT = FScene::DIRECTIONAL_LIGHTS_COUNT + EXTRA_COUNT + 2;
+    Entity entities[LIGHT_COUNT];
+    float3 directions[LIGHT_COUNT];
+    for (size_t i = 0; i < LIGHT_COUNT; i++) {
+        entities[i] = em.create();
+        directions[i] = normalize(float3{ float(i + 1), 1.0f, -0.5f });
+        LightManager::Builder(LightManager::Type::DIRECTIONAL)
+                .intensity(1000.0f * float(LIGHT_COUNT - i))
+                .direction(directions[i])
+                .build(*engine, entities[i]);
+        static_cast<Scene*>(scene)->addEntity(entities[i]);
+    }
+
+    LinearAllocatorArena arena("MultipleDirectionalLights test arena", 3 * 1024 * 1024);
+    RootArenaScope rootArenaScope(arena);
+    FScene::SceneCacheData cache;
+    scene->prepare(engine->getJobSystem(), rootArenaScope, mat4{}, false, cache);
+
+    // the most intense directional light is the dominant one, at index 0 of the LightSoa
+    auto const& lightData = cache.lightData;
+    EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
+
+    // the next EXTRA_COUNT lights, by decreasing intensity, are the extra directional
+    // lights; the remaining ones are ignored
+    ASSERT_EQ(EXTRA_COUNT, cache.extraDirectionalLightCount);
+    for (size_t i = 0; i < EXTRA_COUNT; i++) {
+        size_t const entity = FScene::DIRECTIONAL_LIGHTS_COUNT + i;
+        EXPECT_TRUE(cache.extraDirectionalLightInstances[i] ==
+                lcm.getInstance(entities[entity]));
+        float3 const d = cache.extraDirectionalLightDirections[i];
+        EXPECT_NEAR(directions[entity].x, d.x, 1e-6f);
+        EXPECT_NEAR(directions[entity].y, d.y, 1e-6f);
+        EXPECT_NEAR(directions[entity].z, d.z, 1e-6f);
+    }
+
+    // with a single directional light there are no extras
+    for (size_t i = 1; i < LIGHT_COUNT; i++) {
+        static_cast<Scene*>(scene)->remove(entities[i]);
+    }
+    scene->prepare(engine->getJobSystem(), rootArenaScope, mat4{}, false, cache);
+    EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
+    EXPECT_EQ(0u, cache.extraDirectionalLightCount);
+
+    engine->destroy(scene);
+    for (auto& e : entities) {
+        engine->destroy(e);
+        em.destroy(e);
+    }
+    Engine::destroy((Engine**)&engine);
+}
+
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

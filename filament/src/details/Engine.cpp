@@ -1829,6 +1829,7 @@ FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecC
     DynamicSpecConstKey baseKey;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
+    baseKey.setExtraDirectionalLights(isMaterialLit && view->hasExtraDirectionalLights());
 
     keys.push_back(baseKey);
 
