@@ -126,6 +126,9 @@ struct Config {
     bool handMeshes = true;
     bool vertexStreaming = true;
 #if defined(__ANDROID__)
+    bool quadLayer = false;
+    bool passthrough = true;
+    bool postProcessing = false;
     bool foveation = true;
 #else
     bool quadLayer = true;
@@ -793,6 +796,16 @@ private:
         } else {
             XRLOG("warning: runtime does not support %s; submitting color only",
                     XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+        }
+
+        mCompositionLayerDepthTestSupported =
+                supports(XR_FB_COMPOSITION_LAYER_DEPTH_TEST_EXTENSION_NAME);
+        if (mCompositionLayerDepthTestSupported) {
+            extensions.push_back(XR_FB_COMPOSITION_LAYER_DEPTH_TEST_EXTENSION_NAME);
+            XRLOG("composition layer depth test: enabled");
+        } else {
+            XRLOG("warning: runtime does not support %s; composition layers will not share depth",
+                    XR_FB_COMPOSITION_LAYER_DEPTH_TEST_EXTENSION_NAME);
         }
 
         if (mConfig.foveation) {
@@ -1516,8 +1529,11 @@ private:
 
         // Filament renders into RenderTargets that wrap the XR images, so its own swapchain is
         // headless and never presented. This is what lets the color pass reach those images as
-        // ordinary attachments instead of through the swapchain path.
-        mFilamentSwapChain = mEngine->createSwapChain(1, 1);
+        // ordinary attachments instead of through the swapchain path. Its transparency flag still
+        // controls whether post-processing preserves alpha in those custom targets.
+        uint64_t const swapChainFlags =
+            mPassthroughActive ? filament::SwapChain::CONFIG_TRANSPARENT : uint64_t(0);
+        mFilamentSwapChain = mEngine->createSwapChain(1, 1, swapChainFlags);
         mRenderer = mEngine->createRenderer();
         if (mFilamentSwapChain == nullptr || mRenderer == nullptr) {
             return false;
@@ -1716,6 +1732,7 @@ private:
         mView->setShadowingEnabled(false);
         mView->setStereoscopicOptions({ .enabled = true });
         mView->setPostProcessingEnabled(mConfig.postProcessing);
+        XRLOG("post-processing: %s", mConfig.postProcessing ? "enabled" : "disabled");
         // Multi-sampling belongs to the View, not the RenderTarget: only then does the frame graph
         // render the scene itself multi-sampled and resolve into the single-sample XR image.
         mView->setMultiSampleAntiAliasingOptions({
@@ -1901,6 +1918,8 @@ private:
     struct FrameSubmission {
         XrCompositionLayerProjectionView projectionViews[kEyeCount];
         XrCompositionLayerDepthInfoKHR depthInfos[kEyeCount];
+        XrCompositionLayerDepthTestFB projectionDepthTest;
+        XrCompositionLayerDepthTestFB quadDepthTest;
         XrCompositionLayerProjection projection;
         XrCompositionLayerQuad quad;
         XrCompositionLayerBaseHeader const* layers[2];
@@ -1939,11 +1958,27 @@ private:
 
         if (frameState.shouldRender) {
             if (renderLayer(frameState.predictedDisplayTime, submission)) {
+                if (mCompositionLayerDepthTestSupported && mDepthLayerSupported) {
+                    // Seed compositor depth without rejecting any projection fragments.
+                    submission.projectionDepthTest = {
+                        XR_TYPE_COMPOSITION_LAYER_DEPTH_TEST_FB, nullptr, XR_TRUE,
+                        XR_COMPARE_OP_ALWAYS_FB
+                    };
+                    submission.projection.next = &submission.projectionDepthTest;
+                }
                 submission.layers[layerCount++] =
                         reinterpret_cast<XrCompositionLayerBaseHeader const*>(
                                 &submission.projection);
             }
             if (mQuadLayerEnabled && renderQuadLayer(&submission.quad)) {
+                if (mCompositionLayerDepthTestSupported) {
+                    // The later quad is visible only where it is closer than projection depth.
+                    submission.quadDepthTest = {
+                        XR_TYPE_COMPOSITION_LAYER_DEPTH_TEST_FB, nullptr, XR_TRUE,
+                        XR_COMPARE_OP_LESS_FB
+                    };
+                    submission.quad.next = &submission.quadDepthTest;
+                }
                 submission.layers[layerCount++] =
                         reinterpret_cast<XrCompositionLayerBaseHeader const*>(&submission.quad);
             }
@@ -2313,9 +2348,12 @@ void printUsage() {
           "  --no-render-models  do not draw the runtime's controller models\n"
           "  --no-hand-meshes  do not draw tracked hand meshes\n"
           "  --no-vertex-streaming  do not draw the CPU-streamed pulsing sphere\n"
+          "  --quad-layer      submit the second composition layer (Android default: off)\n"
           "  --no-quad-layer   do not submit the second composition layer\n"
-          "  --passthrough     composite the scene over the physical world, with the\n"
+          "  --passthrough     composite over the physical world (Android default: on), with the\n"
           "                    environment map lighting the scene but never drawn\n"
+          "  --no-passthrough  draw the environment instead of the physical world\n"
+          "  --postprocess     enable tone mapping (Android default: off)\n"
           "  --no-postprocess  render straight to the target, skipping tone mapping\n"
           "  --foveation       enable medium dynamic foveation (Android default: on)\n"
           "  --no-foveation    disable foveated rendering\n"
@@ -2359,10 +2397,16 @@ bool parseArguments(std::vector<std::string> const& args, Config* config) {
             config->handMeshes = false;
         } else if (arg == "--no-vertex-streaming") {
             config->vertexStreaming = false;
+        } else if (arg == "--quad-layer") {
+            config->quadLayer = true;
         } else if (arg == "--no-quad-layer") {
             config->quadLayer = false;
         } else if (arg == "--passthrough") {
             config->passthrough = true;
+        } else if (arg == "--no-passthrough") {
+            config->passthrough = false;
+        } else if (arg == "--postprocess") {
+            config->postProcessing = true;
         } else if (arg == "--no-postprocess") {
             config->postProcessing = false;
         } else if (arg == "--foveation") {
