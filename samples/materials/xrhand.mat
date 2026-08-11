@@ -1,0 +1,47 @@
+// Approximates the look the Meta shell uses for tracked hands: a mostly transparent fill that
+// brightens toward the silhouette, with a bright rim picking out the edge.
+//
+// Both terms come from the same fresnel factor, which is why the fill and the outline stay
+// consistent as the hand rotates: facing surfaces almost vanish while grazing ones light up.
+
+material {
+    name : xrhand,
+    shadingModel : unlit,
+    blending : transparent,
+    // The hand is a closed surface drawn over itself; writing depth would make the far side of the
+    // mesh cut holes in the near side.
+    depthWrite : false,
+    doubleSided : true,
+    // Unlit materials only get a shading normal when the mesh supplies a tangent frame.
+    requires : [ tangents ],
+    parameters : [
+        { type : float3, name : fillColor },
+        { type : float3, name : edgeColor },
+        { type : float,  name : fillOpacity },
+        { type : float,  name : edgeOpacity },
+        { type : float,  name : edgePower },
+        { type : float,  name : edgeWidth }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        vec3 normal = normalize(getWorldNormalVector());
+        vec3 view = normalize(getWorldViewVector());
+        float facing = saturate(dot(normal, view));
+
+        // 0 where the surface faces the eye, 1 at the silhouette.
+        float fresnel = pow(1.0 - facing, materialParams.edgePower);
+
+        // The outline is the outer slice of that gradient, remapped so edgeWidth controls how much
+        // of the silhouette lights up.
+        float edge = smoothstep(1.0 - materialParams.edgeWidth, 1.0, fresnel);
+
+        vec3 color = mix(materialParams.fillColor, materialParams.edgeColor, edge);
+        float alpha = mix(materialParams.fillOpacity * fresnel, materialParams.edgeOpacity, edge);
+
+        material.baseColor = vec4(color * alpha, alpha);
+    }
+}
