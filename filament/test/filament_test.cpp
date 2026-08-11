@@ -1764,6 +1764,15 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
     Engine::destroy(&engine);
 }
 
+TEST(FilamentTest, QueueDriverCommand) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    bool called = false;
+    engine->queueDriverCommand([&called] { called = true; });
+    engine->flushAndWait();
+    EXPECT_TRUE(called);
+    Engine::destroy(&engine);
+}
+
 TEST(FilamentTest, ECREpochBasedReclamationManagers) {
     Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
     auto& em = engine->getEntityManager();

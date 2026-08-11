@@ -382,6 +382,10 @@ void Engine::flush() {
     downcast(this)->flush();
 }
 
+void Engine::queueDriverCommand(std::function<void()> command) {
+    downcast(this)->getDriverApi().queueCommand(std::move(command));
+}
+
 EntityManager& Engine::getEntityManager() noexcept {
     return downcast(this)->getEntityManager();
 }
