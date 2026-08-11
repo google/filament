@@ -120,7 +120,7 @@ void FScene::prepare(JobSystem& js,
 
     // directional lights are handled separately from the punctual lights
     LightInstanceContainer directionalInstances{
-            LightInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
+            LightInstanceContainer::with_capacity(entities.size(), arena) };
 
     /*
      * First compute the exact number of renderables and lights in the scene.
