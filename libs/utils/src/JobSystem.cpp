@@ -489,6 +489,9 @@ void JobSystem::loop(ThreadState* state) {
     // run our main loop...
     do {
         if (!execute(*state)) {
+            if (hasActiveJobs()) {
+                continue;
+            }
             UniqueLock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
@@ -616,9 +619,13 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
     ThreadState& state(getState());
     do {
         if (UTILS_UNLIKELY(!execute(state))) {
-            // test if job has completed first, to possibly avoid taking the lock
-            if (hasJobCompleted(job)) {
+            // test if job has completed or exit was requested first, to possibly avoid taking the lock
+            if (hasJobCompleted(job) || exitRequested()) {
                 break;
+            }
+
+            if (hasActiveJobs()) {
+                continue;
             }
 
             // the only way we can be here is if the job we're waiting on it being handled
