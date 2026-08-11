@@ -365,6 +365,13 @@ public:
     AtomicFreeList(const AtomicFreeList& rhs) = delete;
     AtomicFreeList& operator=(const AtomicFreeList& rhs) = delete;
 
+    // We disable TSAN instrumentation on pop() and push() because in a lock-free tagged
+    // freelist, pop() speculatively reads node.next from memory that might concurrently
+    // be written to by another thread (either in push() or by user code writing to the
+    // allocated memory). In the C++ memory model, this constitutes a data race, even though
+    // it is logically benign because any corrupted/stale read is discarded when the subsequent
+    // compare_exchange_weak() on the tagged pointer fails.
+    UTILS_NO_SANITIZE_THREAD
     void* pop() noexcept {
         Node* const pStorage = mStorage;
 
@@ -374,7 +381,6 @@ public:
             // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
             // since compare_exchange_weak() fails. Then this thread will loop with the updated
             // value of currentHead, and try again.
-            // TSAN complains if we don't use a local variable here.
             Node const node = pStorage[currentHead.offset];
             Node const* const pNext = node.next;
             const HeadPtr newHead{ pNext ? int32_t(pNext - pStorage) : -1, currentHead.tag + 1 };
@@ -397,6 +403,7 @@ public:
         return p;
     }
 
+    UTILS_NO_SANITIZE_THREAD
     void push(void* p) noexcept {
         Node* const storage = mStorage;
         assert(p && p >= storage);
