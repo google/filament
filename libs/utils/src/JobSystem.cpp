@@ -309,7 +309,9 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
 
 inline void JobSystem::wait(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+    mSleepingThreads.fetch_add(1, std::memory_order_relaxed);
     mWaiterCondition.wait(lock);
+    mSleepingThreads.fetch_sub(1, std::memory_order_relaxed);
 }
 
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
@@ -324,7 +326,7 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
             job->runningJobCount.fetch_add(1 << WAITER_COUNT_SHIFT, std::memory_order_relaxed);
 
     if (runningJobCount & JOB_COUNT_MASK) {
-        mWaiterCondition.wait(lock);
+        wait(lock);
     }
 
     runningJobCount =
@@ -382,13 +384,14 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     // BEFORE workQueue.push(). If a preemption happened right there, other threads 
     // would see mActiveJobs > 0, enter the steal() loop, fail to find the job, and 
     // spin infinitely, recreating the exact same priority inversion lockup on the push side!
-    mActiveJobs.fetch_add(1, std::memory_order_release);
+    int32_t const prevActiveJobs = mActiveJobs.fetch_add(1, std::memory_order_release);
 
-    // Note: it's absolutely possible for mActiveJobs to be 0 here, because the job could have
-    // been handled by a zealous worker already. In that case we could avoid calling wakeOne(),
-    // but that is not the common case.
-
-    wakeOne();
+    // Only wake a sleeping thread if there are more sleeping threads than previously
+    // queued active jobs. This ensures we wake at most as many threads as are sleeping,
+    // avoiding redundant wakeOne() calls during batch job submissions (e.g. parallel_for).
+    if (UTILS_UNLIKELY(prevActiveJobs < int32_t(mSleepingThreads.load(std::memory_order_relaxed)))) {
+        wakeOne();
+    }
 }
 
 JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
