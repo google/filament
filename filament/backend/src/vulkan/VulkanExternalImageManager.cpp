@@ -107,8 +107,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
     std::for_each(samplerAndBindings.begin(), samplerAndBindings.end(),
             [&](auto const& b) { outSamplers.push_back({ static_cast<uint64_t>(std::get<0>(b)), std::get<1>(b) }); });
 
-    set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
-            actualExternalSamplers, outSamplers);
+    set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask, outSamplers);
 
     mDescriptorSetCache->cloneSet(set, actualExternalSamplers);
 
