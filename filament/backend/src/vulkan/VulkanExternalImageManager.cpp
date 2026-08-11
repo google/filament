@@ -72,12 +72,27 @@ void VulkanExternalImageManager::updateSetAndLayout(
             samplerAndBindings;
     samplerAndBindings.reserve(MAX_SAMPLER_COUNT);
 
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> const& layout = set->getLayout();
     fvkutils::SamplerBitmask actualExternalSamplers;
     for (auto& bindingInfo: mSetBindings) {
         if (bindingInfo.set != set) {
             continue;
         }
-        actualExternalSamplers.set(bindingInfo.binding);
+
+        uint8_t binding = bindingInfo.binding;
+        uint8_t const vertexIndex =
+                binding + fvkutils::getVertexStageShift<fvkutils::SamplerBitmask>();
+        uint8_t const fragmentIndex =
+                binding + fvkutils::getFragmentStageShift<fvkutils::SamplerBitmask>();
+
+        if (layout->bitmask.externalSampler.test(vertexIndex)) {
+            actualExternalSamplers.set(vertexIndex);
+        }
+
+        if (layout->bitmask.externalSampler.test(fragmentIndex)) {
+            actualExternalSamplers.set(fragmentIndex);
+        }
+
         samplerAndBindings.push_back(
                 { bindingInfo.binding, bindingInfo.sampler, bindingInfo.image });
     }
@@ -92,9 +107,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
     std::for_each(samplerAndBindings.begin(), samplerAndBindings.end(),
             [&](auto const& b) { outSamplers.push_back({ static_cast<uint64_t>(std::get<0>(b)), std::get<1>(b) }); });
 
-    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> const& layout = set->getLayout();
-    set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
-            actualExternalSamplers, outSamplers);
+    set->boundLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask, outSamplers);
 
     mDescriptorSetCache->cloneSet(set, actualExternalSamplers);
 
