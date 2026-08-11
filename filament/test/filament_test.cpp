@@ -980,8 +980,8 @@ TEST(FilamentTest, FroxelData) {
     float2 const spotParams = float2{lcm.getCosOuterSquared(li), lcm.getSinInverse(li)};
 
     FScene::LightSoa lights;
-    lights.push_back({}, {}, {}, {}, {}, {}, {}, {}, {});   // first one is always skipped
-    lights.push_back(float4{ 0, 0, -5, 1 }, {}, {}, {}, e, spotParams, 1, {}, {});
+    lights.push_back();   // first one is always skipped
+    lights.push_back(float4{ 0, 0, -5, 1 }, 0.0f, 0.0f, -5.0f, 1.0f, float3{}, float3{}, double2{}, e, spotParams, Culler::result_type(1), float2{}, FScene::ShadowInfo{});
 
     {
         froxelData.froxelizeLights(*engine, {}, lights);
@@ -998,6 +998,10 @@ TEST(FilamentTest, FroxelData) {
     {
         // light doesn't cross any froxel near or far plane
         lights.elementAt<FScene::POSITION_RADIUS>(1) = float4{ 0, 0, -3, 1 };
+        lights.elementAt<FScene::POSITION_X>(1) = 0;
+        lights.elementAt<FScene::POSITION_Y>(1) = 0;
+        lights.elementAt<FScene::POSITION_Z>(1) = -3;
+        lights.elementAt<FScene::RADIUS>(1) = 1;
 
         auto pos = lights.elementAt<FScene::POSITION_RADIUS>(1);
         EXPECT_TRUE(pos == float4( 0, 0, -3, 1 ));

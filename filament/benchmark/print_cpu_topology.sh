@@ -44,7 +44,7 @@ get_part_name() {
         0xd80) echo "Cortex-A520" ;;
         0xd81) echo "Cortex-A720" ;;
         0xd82) echo "Cortex-X4" ;;
-        0xd84) echo "Cortex-A725" ;;
+        0xd84|0xd87) echo "Cortex-A725" ;;
         0xd85) echo "Cortex-X925" ;;
         0x800|0x801) echo "Kryo-260/280" ;;
         0x804) echo "Kryo-485-Gold" ;;
@@ -135,19 +135,34 @@ for cpu_dir in /sys/devices/system/cpu/cpu[0-9]*; do
     printf "%-6s %-16s %-12s %-10s %-12s\n" "$cpu_id" "$model" "$max_freq" "$cap" "$cluster"
 done
 
+compute_hex_mask() {
+    echo "$1" | tr "," "\n" | awk "
+        BEGIN { mask = 0 }
+        {
+            m = 1
+            for (i = 0; i < \$1; i++) m *= 2
+            mask += m
+        }
+        END { printf \"%02x\", mask }
+    "
+}
+
 echo ""
 echo "Recommended taskset commands for benchmarking:"
 if [ -n "$mid_cpus" ]; then
     mid_range=$(format_ranges "$mid_cpus")
-    echo "  - Mid Cluster   (Recommended): taskset -c $mid_range"
+    mid_mask=$(compute_hex_mask "$mid_cpus")
+    echo "  - Mid Cluster   (Recommended): taskset $mid_mask (or taskset -c $mid_range)"
 fi
 if [ -n "$little_cpus" ]; then
     little_range=$(format_ranges "$little_cpus")
-    echo "  - Little Cluster (Efficiency):  taskset -c $little_range"
+    little_mask=$(compute_hex_mask "$little_cpus")
+    echo "  - Little Cluster (Efficiency):  taskset $little_mask (or taskset -c $little_range)"
 fi
 if [ -n "$big_cpus" ]; then
     big_range=$(format_ranges "$big_cpus")
-    echo "  - Prime/Big Core (Peak Speed):  taskset -c $big_range"
+    big_mask=$(compute_hex_mask "$big_cpus")
+    echo "  - Prime/Big Core (Peak Speed):  taskset $big_mask (or taskset -c $big_range)"
 fi
 echo ""
 '

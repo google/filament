@@ -98,6 +98,14 @@ public:
         LAYERS,                 //   1 | layers
         WORLD_AABB_EXTENT,      //  12 | world-space bounding box half-extent of the renderable
 
+        // Planar bounding box coordinates for high-throughput vectorized culling
+        WORLD_AABB_CENTER_X,    //   4 | center.x
+        WORLD_AABB_CENTER_Y,    //   4 | center.y
+        WORLD_AABB_CENTER_Z,    //   4 | center.z
+        WORLD_AABB_EXTENT_X,    //   4 | halfExtent.x
+        WORLD_AABB_EXTENT_Y,    //   4 | halfExtent.y
+        WORLD_AABB_EXTENT_Z,    //   4 | halfExtent.z
+
         // These are temporaries and should be stored out of line
         PRIMITIVES,             //   8 | level-of-detail'ed primitives
         SUMMED_PRIMITIVE_COUNT, //   4 | summed visible primitive counts
@@ -121,6 +129,12 @@ public:
             uint8_t,                                    // CHANNELS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
+            float,                                      // WORLD_AABB_CENTER_X
+            float,                                      // WORLD_AABB_CENTER_Y
+            float,                                      // WORLD_AABB_CENTER_Z
+            float,                                      // WORLD_AABB_EXTENT_X
+            float,                                      // WORLD_AABB_EXTENT_Y
+            float,                                      // WORLD_AABB_EXTENT_Z
             utils::Slice<const FRenderPrimitive>,       // PRIMITIVES
             uint32_t,                                   // SUMMED_PRIMITIVE_COUNT
             PerRenderableData,                          // UBO
@@ -160,6 +174,10 @@ public:
 
     enum {
         POSITION_RADIUS,
+        POSITION_X,
+        POSITION_Y,
+        POSITION_Z,
+        RADIUS,
         DIRECTION,
         SHADOW_DIRECTION,
         SHADOW_REF,
@@ -172,6 +190,10 @@ public:
 
     using LightSoa = utils::StructureOfArrays<
             math::float4,
+            float,
+            float,
+            float,
+            float,
             math::float3,
             math::float3,
             math::double2,

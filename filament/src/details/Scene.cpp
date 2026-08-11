@@ -237,6 +237,12 @@ void FScene::prepare(JobSystem& js,
             sceneData.elementAt<CHANNELS>(index)            = rcm.getLightChannels(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
+            sceneData.elementAt<WORLD_AABB_CENTER_X>(index) = worldAABB.center.x;
+            sceneData.elementAt<WORLD_AABB_CENTER_Y>(index) = worldAABB.center.y;
+            sceneData.elementAt<WORLD_AABB_CENTER_Z>(index) = worldAABB.center.z;
+            sceneData.elementAt<WORLD_AABB_EXTENT_X>(index) = worldAABB.halfExtent.x;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Y>(index) = worldAABB.halfExtent.y;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Z>(index) = worldAABB.halfExtent.z;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
             sceneData.elementAt<SUMMED_PRIMITIVE_COUNT>(index) = 0;
             //sceneData.elementAt<UBO>(index)                 = {}; // not needed here
@@ -263,7 +269,12 @@ void FScene::prepare(JobSystem& js,
             }
             size_t const index = DIRECTIONAL_LIGHTS_COUNT + std::distance(first, p) + i;
             assert_invariant(index < lightData.size());
-            lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, lcm.getRadius(li) };
+            float const r = lcm.getRadius(li);
+            lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, r };
+            lightData.elementAt<POSITION_X>(index) = position.x;
+            lightData.elementAt<POSITION_Y>(index) = position.y;
+            lightData.elementAt<POSITION_Z>(index) = position.z;
+            lightData.elementAt<RADIUS>(index)     = r;
             lightData.elementAt<DIRECTION>(index) = d;
             lightData.elementAt<SPOT_PARAMS>(index) = float2{lcm.getCosOuterSquared(li), lcm.getSinInverse(li)};
             lightData.elementAt<LIGHT_ENTITY>(index) = li ? lcm.getEntity(li) : utils::Entity{};
@@ -325,6 +336,10 @@ void FScene::prepare(JobSystem& js,
 
         constexpr float inf = std::numeric_limits<float>::infinity();
         lightData.elementAt<POSITION_RADIUS>(0) = float4{ 0, 0, 0, inf };
+        lightData.elementAt<POSITION_X>(0) = 0;
+        lightData.elementAt<POSITION_Y>(0) = 0;
+        lightData.elementAt<POSITION_Z>(0) = 0;
+        lightData.elementAt<RADIUS>(0)     = inf;
         lightData.elementAt<DIRECTION>(0) = normalize(d);
         lightData.elementAt<SHADOW_DIRECTION>(0) = normalize(s);
         lightData.elementAt<SHADOW_REF>(0) = lsReferencePoint;
@@ -338,6 +353,10 @@ void FScene::prepare(JobSystem& js,
     // (e.g. in computeLightRanges())
     for (size_t i = lightData.size(), e = lightData.capacity(); i < e; i++) {
         new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
+        lightData.data<POSITION_X>()[i] = 0;
+        lightData.data<POSITION_Y>()[i] = 0;
+        lightData.data<POSITION_Z>()[i] = 0;
+        lightData.data<RADIUS>()[i]     = 1;
     }
 
     // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
@@ -348,6 +367,12 @@ void FScene::prepare(JobSystem& js,
             sceneData.data<VISIBLE_MASK>()[i] = 0;
             sceneData.data<VISIBILITY_STATE>()[i] = {};
             sceneData.data<SKINNING_STATE>()[i] = {};
+            sceneData.data<WORLD_AABB_CENTER_X>()[i] = 0;
+            sceneData.data<WORLD_AABB_CENTER_Y>()[i] = 0;
+            sceneData.data<WORLD_AABB_CENTER_Z>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_X>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_Y>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_Z>()[i] = 0;
         }
     }
 
