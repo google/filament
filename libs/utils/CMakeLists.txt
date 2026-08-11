@@ -53,6 +53,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ThreadMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
@@ -229,6 +230,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_BinaryTreeArray.cpp
             test/test_Status.cpp
             test/test_Mutex.cpp
+            test/test_ThreadMap.cpp
     )
 
     if (WASM_PTHREADS)
