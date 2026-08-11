@@ -53,17 +53,6 @@ void PerViewDescriptorSetUtils::prepareCamera(PerViewUib& s,
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
 
-    // Collapsed 3x3 clip-to-world ray matrix (strips 3D translation).
-    // This perfectly generalizes to any projection matrix shape (including asymmetric,
-    // off-axis, or orthographic) by extracting the transformation of the (x, y, 1, 1) 
-    // clip-space coordinate into a purely rotational world-space ray.
-    mat3f const worldFromView_3x3 = worldFromView.upperLeft();
-    mat3f rayFromClip;
-    rayFromClip[0] = worldFromView_3x3 * viewFromClip[0].xyz;
-    rayFromClip[1] = worldFromView_3x3 * viewFromClip[1].xyz;
-    rayFromClip[2] = worldFromView_3x3 * (viewFromClip[2].xyz + viewFromClip[3].xyz);
-
-    s.worldRayFromClipMatrix = rayFromClip;
     s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
     s.clipTransform = camera.clipTransform;
     s.cameraFar = camera.zf;
@@ -79,6 +68,21 @@ void PerViewDescriptorSetUtils::prepareCamera(PerViewUib& s,
         // clipFromEye * eyeFromHead * headFromWorld
         s.clipFromWorldMatrix[i] = highPrecisionMultiply(
                 clipFromEye, highPrecisionMultiply(eyeFromHead, headFromWorld));
+
+        // Collapsed 3x3 clip-to-world ray matrix (strips 3D translation).
+        // This perfectly generalizes to any projection matrix shape (including asymmetric,
+        // off-axis, or orthographic) by extracting the transformation of the (x, y, 1, 1)
+        // clip-space coordinate into a purely rotational world-space ray.
+        // It must be per-eye: each eye has its own frustum, which in VR is asymmetric and
+        // not a mirror of the other, so a shared matrix would break stereo convergence.
+        mat4f const eyeFromClip{ inverse((mat4)clipFromEye) };
+        mat3f const worldFromEye_3x3 =
+                highPrecisionMultiply(worldFromView, inverse(eyeFromHead)).upperLeft();
+        mat3f rayFromClip;
+        rayFromClip[0] = worldFromEye_3x3 * eyeFromClip[0].xyz;
+        rayFromClip[1] = worldFromEye_3x3 * eyeFromClip[1].xyz;
+        rayFromClip[2] = worldFromEye_3x3 * (eyeFromClip[2].xyz + eyeFromClip[3].xyz);
+        s.worldRayFromClipMatrix[i] = rayFromClip;
     }
 
     // with a clip-space of [-w, w] ==> z' = -z

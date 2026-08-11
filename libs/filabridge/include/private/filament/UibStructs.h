@@ -83,7 +83,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f eyeFromViewMatrix[CONFIG_MAX_STEREOSCOPIC_EYES];   // clip    eye  <- view    world
     math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- eye  <- view <- world
     math::mat4f worldFromClipMatrix;    // clip -> view -> world
-    std140::mat33 worldRayFromClipMatrix;
+    std140::mat33 worldRayFromClipMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip -> eye -> world ray
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
 
@@ -218,7 +218,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[18];
+    math::float4 reserved[9];
 };
 
 // 2 KiB == 128 float4s

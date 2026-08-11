@@ -83,7 +83,7 @@ highp mat4 getWorldFromClipMatrix() {
  * @public-api
  */
 highp vec3 getWorldRayFromClip(highp vec2 clipXY) {
-    return frameUniforms.worldRayFromClipMatrix * vec3(clipXY, 1.0);
+    return frameUniforms.worldRayFromClipMatrix[getEyeIndex()] * vec3(clipXY, 1.0);
 }
 #endif
 
