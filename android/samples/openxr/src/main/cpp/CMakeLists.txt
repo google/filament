@@ -33,6 +33,8 @@ endif()
 add_library(helloxr SHARED
     "${REPO_ROOT}/samples/helloxr.cpp"
     "${REPO_ROOT}/samples/helloxr_features.cpp"
+    "${REPO_ROOT}/samples/helloxr_foveation.cpp"
+    "${REPO_ROOT}/samples/helloxr_quad_layer.cpp"
     "${REPO_ROOT}/samples/helloxr_rendermodel.cpp"
     "${REPO_ROOT}/samples/helloxr_handmesh.cpp"
     "${REPO_ROOT}/samples/helloxr_vertexstreaming.cpp"
