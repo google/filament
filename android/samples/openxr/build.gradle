@@ -1,0 +1,123 @@
+plugins {
+    id 'com.android.application' version '8.6.1'
+}
+
+// Assets are produced by the desktop build (matc/filamesh/cmgen) and copied in here, because the
+// Android build does not compile samples/.
+def desktopBuildDir = file("${rootDir}/../../../out/cmake-xr/samples")
+
+android {
+    namespace 'com.google.android.filament.openxr'
+    compileSdk 34
+    ndkVersion '29.0.14206865'
+
+    defaultConfig {
+        applicationId 'com.google.android.filament.openxr'
+        // OpenXR on Android requires the loader's Activity-aware initialization path.
+        minSdk 29
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared'
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+
+    buildFeatures {
+        prefab true
+    }
+
+    // Filament loads these straight out of the APK, so they must not be compressed.
+    androidResources {
+        noCompress 'filamat', 'filamesh', 'ktx'
+    }
+
+    sourceSets {
+        main {
+            assets.srcDirs += "${buildDir}/generated/filamentAssets"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.khronos.openxr:openxr_loader_for_android:1.1.41'
+}
+
+// Pull the mesh and IBL produced by the desktop build into the APK. Both are platform independent.
+tasks.register('collectFilamentAssets', Copy) {
+    into layout.buildDirectory.dir('generated/filamentAssets')
+
+    from("${desktopBuildDir}/generated/resources") {
+        include 'suzanne.filamesh'
+    }
+    from("${desktopBuildDir}/assets/ibl/lightroom_14b") {
+        include '*.ktx'
+    }
+
+    doFirst {
+        if (!desktopBuildDir.exists()) {
+            throw new GradleException(
+                    "Desktop build output not found at ${desktopBuildDir}. Build the desktop " +
+                    "samples first so filamesh/cmgen artifacts exist.")
+        }
+    }
+}
+
+// The materials have to be recompiled rather than copied: the desktop build targets `-p desktop`,
+// which contains no mobile shaders, and they must carry the multiview variants.
+tasks.register('compileMaterials') {
+    def matc = file("${rootDir}/../../../out/cmake-xr/tools/matc/matc" +
+            (System.getProperty('os.name').toLowerCase().contains('windows') ? '.exe' : ''))
+    def materials = ['aiDefaultMat', 'xrhand']
+    def sourceDir = file("${rootDir}/../../../samples/materials")
+    def outputDir = layout.buildDirectory.dir('generated/filamentAssets')
+
+    // matc is an input as much as the sources are: it bakes the engine's uniform block layout
+    // into each package, so a rebuilt engine invalidates every material compiled by the old one.
+    inputs.file matc
+    inputs.files materials.collect { new File(sourceDir, "${it}.mat") }
+    outputs.files materials.collect { outputDir.get().file("${it}.filamat").asFile }
+
+    doLast {
+        if (!matc.exists()) {
+            throw new GradleException("matc not found at ${matc}. Build the desktop tools first.")
+        }
+        outputDir.get().asFile.mkdirs()
+        materials.each { name ->
+            exec {
+                commandLine matc.absolutePath,
+                        '-a', 'vulkan',
+                        '-p', 'mobile',
+                        '-PstereoscopicType=multiview',
+                        '-o', outputDir.get().file("${name}.filamat").asFile.absolutePath,
+                        new File(sourceDir, "${name}.mat").absolutePath
+            }
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if ((task.name.startsWith('generate') || task.name.startsWith('merge')) &&
+            task.name.endsWith('Assets')) {
+        task.dependsOn 'collectFilamentAssets', 'compileMaterials'
+    }
+}

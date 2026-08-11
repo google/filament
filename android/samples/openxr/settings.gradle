@@ -1,0 +1,18 @@
+// Standalone, single-module Gradle project. It consumes the Filament arm64-v8a install directly
+// rather than the filament-android AAR, so it is deliberately not part of android/settings.gradle.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'filament-openxr'

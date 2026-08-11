@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.vr.headtracking" android:required="true" />
+    <uses-feature android:glEsVersion="0x00030002" android:required="true" />
+
+    <!-- The sample takes no input, but without declaring hand tracking the Quest shell refuses to
+         launch it unless controllers are powered on. -->
+    <uses-feature android:name="oculus.software.handtracking" android:required="false" />
+    <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
+
+    <!-- Meta only advertises XR_FB_render_model to apps that ask for it. -->
+    <uses-permission android:name="com.oculus.permission.RENDER_MODEL" />
+    <uses-feature android:name="com.oculus.feature.RENDER_MODEL" android:required="false" />
+
+    <!-- Meta gates passthrough behind this flag; without it the runtime offers no alpha blend
+         environment. Optional, because passthrough is opt-in and the sample runs fine without. -->
+    <uses-feature android:name="com.oculus.feature.PASSTHROUGH" android:required="false" />
+
+    <application
+        android:label="Filament OpenXR"
+        android:allowBackup="false"
+        android:hasCode="false">
+
+        <!-- Tells the Meta runtime this is an immersive app rather than a 2D panel. -->
+        <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3" />
+
+        <activity
+            android:name="android.app.NativeActivity"
+            android:label="Filament OpenXR"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:excludeFromRecents="false"
+            android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode|density"
+            android:exported="true">
+
+            <meta-data android:name="android.app.lib_name" android:value="helloxr" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- Required for the app to launch into the headset rather than the 2D panel. -->
+                <category android:name="com.oculus.intent.category.VR" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
