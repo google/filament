@@ -52,6 +52,9 @@ protected:
     std::vector<float3> boxesCenter;
     std::vector<float3> boxesExtent;
     std::vector<float4> spheres;
+    std::vector<float> box_cx, box_cy, box_cz;
+    std::vector<float> box_ex, box_ey, box_ez;
+    std::vector<float> sphere_cx, sphere_cy, sphere_cz, sphere_r;
     Culler::result_type* UTILS_RESTRICT visibles = nullptr;
 
 
@@ -67,6 +70,11 @@ public:
         boxesCenter.resize(batch);
         boxesExtent.resize(batch);
         spheres.resize(batch);
+
+        box_cx.resize(batch); box_cy.resize(batch); box_cz.resize(batch);
+        box_ex.resize(batch); box_ey.resize(batch); box_ez.resize(batch);
+        sphere_cx.resize(batch); sphere_cy.resize(batch); sphere_cz.resize(batch); sphere_r.resize(batch);
+
         for (size_t i = 0; i < batch; i++) {
             float4& sphere = spheres[i];
             float z = std::fabs(rand(gen));
@@ -81,6 +89,18 @@ public:
                     rand(gen, std::uniform_real_distribution<float>::param_type{ 0.11f, 25.0f }),
                     rand(gen, std::uniform_real_distribution<float>::param_type{ 0.11f, 25.0f })
             };
+
+            box_cx[i] = boxesCenter[i].x;
+            box_cy[i] = boxesCenter[i].y;
+            box_cz[i] = boxesCenter[i].z;
+            box_ex[i] = boxesExtent[i].x;
+            box_ey[i] = boxesExtent[i].y;
+            box_ez[i] = boxesExtent[i].z;
+
+            sphere_cx[i] = sphere.x;
+            sphere_cy[i] = sphere.y;
+            sphere_cz[i] = sphere.z;
+            sphere_r[i]  = sphere.w;
         }
 
         visibles = (Culler::result_type*)utils::aligned_alloc(batch * sizeof(*visibles), 32);
@@ -95,7 +115,10 @@ BENCHMARK_F(FilamentCullingFixture, boxCulling)(benchmark::State& state) {
     {
         PerformanceCounters pc(state);
         for (UTILS_UNUSED auto _ : state) {
-            Culler::Test::intersects(visibles, frustum, boxesCenter.data(), boxesExtent.data(), BATCH_SIZE);
+            Culler::Test::intersects(visibles, frustum,
+                    box_cx.data(), box_cy.data(), box_cz.data(),
+                    box_ex.data(), box_ey.data(), box_ez.data(),
+                    BATCH_SIZE);
         }
         benchmark::ClobberMemory();
         pc.stop();
@@ -107,7 +130,10 @@ BENCHMARK_F(FilamentCullingFixture, sphereCulling)(benchmark::State& state) {
     {
         PerformanceCounters pc(state);
         for (UTILS_UNUSED auto _ : state) {
-            Culler::Test::intersects(visibles, frustum, spheres.data(), BATCH_SIZE);
+            Culler::Test::intersects(visibles, frustum,
+                    sphere_cx.data(), sphere_cy.data(), sphere_cz.data(),
+                    sphere_r.data(),
+                    BATCH_SIZE);
         }
         benchmark::ClobberMemory();
         pc.stop();

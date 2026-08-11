@@ -171,18 +171,30 @@ public:
 #if defined(__linux__)
 
     void reset() noexcept {
-        int fd = mCountersFd[0];
-        ioctl(fd, PERF_EVENT_IOC_RESET,  PERF_IOC_FLAG_GROUP);
+        #pragma nounroll
+        for (int fd : mCountersFd) {
+            if (fd >= 0) {
+                ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+            }
+        }
     }
 
     void start() noexcept {
-        int fd = mCountersFd[0];
-        ioctl(fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+        #pragma nounroll
+        for (int fd : mCountersFd) {
+            if (fd >= 0) {
+                ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+            }
+        }
     }
 
     void stop() noexcept {
-        int fd = mCountersFd[0];
-        ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+        #pragma nounroll
+        for (int fd : mCountersFd) {
+            if (fd >= 0) {
+                ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+            }
+        }
     }
 
     Counters readCounters() noexcept;
