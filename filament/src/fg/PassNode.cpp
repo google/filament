@@ -36,6 +36,8 @@ PassNode::PassNode(FrameGraph& fg) noexcept
           mFrameGraph(fg),
           devirtualize(fg.getArena()),
           destroy(fg.getArena()) {
+   devirtualize.reserve(8);
+   destroy.reserve(8);
 }
 
 PassNode::PassNode(PassNode&& rhs) noexcept = default;
@@ -55,9 +57,16 @@ void PassNode::registerResource(FrameGraphHandle const resourceHandle) noexcept 
 // ------------------------------------------------------------------------------------------------
 
 RenderPassNode::RenderPassNode(FrameGraph& fg, const char* name, FrameGraphPassBase* base) noexcept
-        : PassNode(fg), mName(name), mPassBase(base, fg.getArena()) {
+    : PassNode(fg),
+        mName(name),
+        mPassBase(base, fg.getArena()),
+        mRenderTargetData(fg.getArena()) {
+    // RenderPassData is 416 bytes, with the current FrameGraph we seem to get up to 6.
+    mRenderTargetData.reserve(8);
 }
+
 RenderPassNode::RenderPassNode(RenderPassNode&& rhs) noexcept = default;
+
 RenderPassNode::~RenderPassNode() noexcept = default;
 
 void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& driver) noexcept {
@@ -89,33 +98,34 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
     // to compute the discard flags.
 
     DependencyGraph const& dependencyGraph = fg.getGraph();
-    auto incomingEdges = dependencyGraph.getIncomingEdges(this);
 
-    for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
-        FrameGraphId<FrameGraphTexture> const& handle =
-                data.descriptor.attachments[i];
-        if (handle) {
-            data.attachmentInfo[i] = handle;
+    { // scope of the local allocations
+        utils::ArenaScope const scope(fg.getArena());
+        auto incomingEdges = dependencyGraph.getIncomingEdges(this, fg.getArena());
 
-            // TODO: this is not very efficient
-            auto incomingPos = std::find_if(incomingEdges.begin(), incomingEdges.end(),
-                    [&dependencyGraph, handle]
-                            (DependencyGraph::Edge const* edge) {
-                        ResourceNode const* node = static_cast<ResourceNode const*>(
+        for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
+            FrameGraphId<FrameGraphTexture> const& handle = data.descriptor.attachments[i];
+            if (handle) {
+                data.attachmentInfo[i] = handle;
+
+                // TODO: this is not very efficient
+                auto incomingPos = std::find_if(incomingEdges.begin(), incomingEdges.end(),
+                        [&dependencyGraph, handle](DependencyGraph::Edge const* edge) {
+                            ResourceNode const* node = static_cast<ResourceNode const*>(
                                 dependencyGraph.getNode(edge->from));
-                        return node->resourceHandle == handle;
-                    });
+                            return node->resourceHandle == handle;
+                        });
 
-            if (incomingPos != incomingEdges.end()) {
-                data.incoming[i] = const_cast<ResourceNode*>(
-                        static_cast<ResourceNode const*>(
-                                dependencyGraph.getNode((*incomingPos)->from)));
-            }
+                if (incomingPos != incomingEdges.end()) {
+                    data.incoming[i] = const_cast<ResourceNode*>(
+                        static_cast<ResourceNode const*>(dependencyGraph.getNode((*incomingPos)->from)));
+                }
 
-            // this could be either outgoing or incoming (if there are no outgoing)
-            data.outgoing[i] = fg.getActiveResourceNode(handle);
-            if (data.outgoing[i] == data.incoming[i]) {
-                data.outgoing[i] = nullptr;
+                // this could be either outgoing or incoming (if there are no outgoing)
+                data.outgoing[i] = fg.getActiveResourceNode(handle);
+                if (data.outgoing[i] == data.incoming[i]) {
+                    data.outgoing[i] = nullptr;
+                }
             }
         }
     }
