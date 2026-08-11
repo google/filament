@@ -35,6 +35,7 @@ namespace filament {
 ResourceNode::ResourceNode(FrameGraph& fg, FrameGraphHandle const h, FrameGraphHandle const parent) noexcept
         : Node(fg.getGraph()),
           resourceHandle(h), mFrameGraph(fg), mReaderPasses(fg.getArena()), mParentHandle(parent) {
+    mReaderPasses.reserve(16);
 }
 
 ResourceNode::~ResourceNode() noexcept {
@@ -80,8 +81,13 @@ void ResourceNode::setIncomingEdge(ResourceEdgeBase* edge) noexcept {
 
 bool ResourceNode::hasActiveReaders() const noexcept {
     // here we don't use mReaderPasses because this wouldn't account for subresources
-    DependencyGraph& dependencyGraph = mFrameGraph.getGraph();
-    auto const& readers = dependencyGraph.getOutgoingEdges(this);
+
+    FrameGraph& fg = mFrameGraph;
+    auto& arena = fg.getArena();
+    utils::ArenaScope const scope(arena);
+
+    DependencyGraph& dependencyGraph = fg.getGraph();
+    auto const& readers = dependencyGraph.getOutgoingEdges(this, arena);
     for (auto const& reader : readers) {
         if (!dependencyGraph.getNode(reader->to)->isCulled()) {
             return true;
@@ -92,8 +98,13 @@ bool ResourceNode::hasActiveReaders() const noexcept {
 
 bool ResourceNode::hasActiveWriters() const noexcept {
     // here we don't use mReaderPasses because this wouldn't account for subresources
-    DependencyGraph const& dependencyGraph = mFrameGraph.getGraph();
-    auto const& writers = dependencyGraph.getIncomingEdges(this);
+
+    FrameGraph& fg = mFrameGraph;
+    auto& arena = fg.getArena();
+    utils::ArenaScope const scope(arena);
+
+    DependencyGraph const& dependencyGraph = fg.getGraph();
+    auto const& writers = dependencyGraph.getIncomingEdges(this, arena);
     // writers are not culled by definition if we're not culled ourselves
     return !writers.empty();
 }

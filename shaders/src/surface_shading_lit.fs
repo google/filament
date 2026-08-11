@@ -292,6 +292,7 @@ vec4 evaluateLights(const MaterialInputs material) {
 #if defined(MATERIAL_HAS_LIGHTING)
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     evaluateDirectionalLight(material, pixel, color);
+    evaluateExtraDirectionalLights(material, pixel, color);
 #endif
 
     if (RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING) {
