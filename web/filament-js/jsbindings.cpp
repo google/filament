@@ -350,7 +350,9 @@ value_object<filament::Engine::Config>("Engine$Config")
     .field("assertNativeWindowIsValid", &filament::Engine::Config::assertNativeWindowIsValid)
     .field("gpuContextPriority", &filament::Engine::Config::gpuContextPriority)
     .field("sharedUboInitialSizeInBytes", &filament::Engine::Config::sharedUboInitialSizeInBytes)
-    .field("asynchronousMode", &filament::Engine::Config::asynchronousMode);
+    .field("asynchronousMode", &filament::Engine::Config::asynchronousMode)
+    .field("enableMultipleDirectionalLights",
+            &filament::Engine::Config::enableMultipleDirectionalLights);
 
 value_object<filament::Renderer::ClearOptions>("Renderer$ClearOptions")
     .field("clearColor", &filament::Renderer::ClearOptions::clearColor)

@@ -1027,6 +1027,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     DynamicSpecConstKey specKey{0};
     specKey.setDynamicLighting(view.hasDynamicLighting());
+    specKey.setExtraDirectionalLights(view.hasExtraDirectionalLights());
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;

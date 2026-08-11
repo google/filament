@@ -209,6 +209,7 @@ public:
 
     // ultimately decides to use the DYN variant
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
+    bool hasExtraDirectionalLights() const noexcept { return mHasExtraDirectionalLights; }
 
     // ultimately decides to use the SRE variant
     bool hasShadowing() const noexcept { return mHasShadowing; }
@@ -675,6 +676,7 @@ private:
     utils::Slice<float> mDistancesBuffer{};
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;
+    mutable bool mHasExtraDirectionalLights = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
 

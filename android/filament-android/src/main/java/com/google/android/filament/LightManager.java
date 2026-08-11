@@ -68,8 +68,12 @@ import androidx.annotation.Size;
  * but the later also draws a sun's disk in the sky and its reflection on glossy objects.
  * </p>
  * <p>
- * <b>warning:</b> Currently, only a single directional light is supported. If several directional lights
- * are added to the scene, the dominant one will be used.
+ * By default, only the dominant directional light (the one with the highest intensity) of a
+ * scene is evaluated. Several directional lights can be used by enabling
+ * {@link Engine.Config#enableMultipleDirectionalLights}: the dominant one is still the only one
+ * that can cast shadows and draw a sun's disk, and up to four additional directional lights are
+ * evaluated without shadows; any further directional lights are ignored. Scenes with a single
+ * directional light don't pay any cost for this feature.
  * </p>
  *
  * <h2><u>Point lights</u></h2>
