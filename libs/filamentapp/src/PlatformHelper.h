@@ -27,8 +27,6 @@ class Platform;
 
 namespace filament::app {
 
-filament::Engine::Backend resolveBackend(filament::Engine::Backend);
-
 /**
  * Creates a Vulkan platform instance.
  * @param gpuHintCstr A string hint to choose the GPU.

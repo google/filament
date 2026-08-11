@@ -234,13 +234,9 @@ void setup_window(Window& w, Engine* engine) {
     void* nativeSwapChain = nativeWindow;
 #if defined(__APPLE__)
     void* metalLayer = nullptr;
-
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-    if (kBackend == filament::Engine::Backend::METAL || kBackend == filament::Engine::Backend::VULKAN
-        || kBackend == filament::Engine::Backend::WEBGPU) {
-#else
-    if (kBackend == filament::Engine::Backend::METAL || kBackend == filament::Engine::Backend::VULKAN) {
-#endif
+    if (kBackend == filament::Engine::Backend::METAL ||
+            kBackend == filament::Engine::Backend::VULKAN ||
+            kBackend == filament::Engine::Backend::WEBGPU) {
         metalLayer = setUpMetalLayer(nativeWindow);
         // The swap chain on both native Metal and MoltenVK is a CAMetalLayer.
         nativeSwapChain = metalLayer;
@@ -281,14 +277,11 @@ void destroy_window(Window& w, Engine* engine) {
 void resize_window(Window& w, Engine* engine) {
 #if defined(__APPLE__)
     void* nativeWindow = ::getNativeWindowFromSDL(w.sdl_window);
-    if (kBackend == filament::Engine::Backend::METAL) {
-        resizeMetalLayer(nativeWindow);
+    if (kBackend == filament::Engine::Backend::METAL ||
+            kBackend == filament::Engine::Backend::VULKAN ||
+            kBackend == filament::Engine::Backend::WEBGPU) {
+        resizeMetalLayerFromView(nativeWindow);
     }
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    if (kBackend == filament::Engine::Backend::VULKAN) {
-        resizeMetalLayer(nativeWindow);
-    }
-#endif
 #endif
 
     int width, height;

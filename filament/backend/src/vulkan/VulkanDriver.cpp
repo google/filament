@@ -590,6 +590,7 @@ void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+    mPlatform->setPresentationTime(monotonic_clock_ns);
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {

@@ -17,9 +17,9 @@
 #ifndef TNT_CONFIG_H
 #define TNT_CONFIG_H
 
-#include <filamat/MaterialBuilder.h>
-
 #include <filament/MaterialEnums.h>
+
+#include <filamat/MaterialBuilder.h>
 
 #include <backend/DriverEnums.h>
 
@@ -158,6 +158,7 @@ public:
     bool getInsertLineDirectives() const noexcept { return mInsertLineDirectives; }
     bool getInsertLineDirectiveChecks() const noexcept { return mInsertLineDirectiveChecks; }
     bool getIncludeSourceMaterial() const noexcept { return mIncludeSourceMaterial; }
+    uint32_t getApiLevelOverride() const noexcept { return mApiLevelOverride; }
 
 protected:
     bool mDebug = false;
@@ -181,6 +182,9 @@ protected:
     bool mInsertLineDirectives = true;
     bool mInsertLineDirectiveChecks = true;
     bool mIncludeSourceMaterial = false;
+    // Overrides the apiLevel to compile the material. If 0 (the default), compiles with the apiLevel defined in the
+    // .mat file. If the .mat file does not specify an apiLevel, defaults to 1.
+    uint32_t mApiLevelOverride = 0;
 };
 
 } // namespace matp

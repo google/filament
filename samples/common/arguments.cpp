@@ -29,12 +29,49 @@
 #include <string>
 #include <vector>
 
-namespace samples {
+namespace {
 
 utils::CString getBackendAPIArgumentsUsage() {
     return "   --api, -a\n"
            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n\n";
 }
+
+filament::Engine::Backend parseArgumentsForBackend(const utils::CString& backend) {
+    if (backend == "metal") {
+        return filament::Engine::Backend::METAL;
+    } else if (backend == "opengl") {
+        return filament::Engine::Backend::OPENGL;
+    } else if (backend == "vulkan") {
+        return filament::Engine::Backend::VULKAN;
+    } else if (backend == "webgpu") {
+        return filament::Engine::Backend::WEBGPU;
+    } else {
+        std::cerr << "Unrecognized target API. Must be 'opengl'|'vulkan'|'metal'|'webgpu'."
+                  << std::endl;
+        exit(1);
+    }
+}
+
+filament::Engine::Backend resolveBackend(filament::Engine::Backend backend) {
+    if (backend == filament::Engine::Backend::DEFAULT) {
+        // This mirrors the logic for choosing a backend given compile-time flags and client having
+        // provided DEFAULT as the backend (see PlatformFactory.cpp)
+#if defined(FILAMENT_IOS) || defined(__APPLE__)
+        backend = filament::Engine::Backend::METAL;
+#elif defined(__EMSCRIPTEN__) || defined(__ANDROID__)
+        backend = filament::Engine::Backend::OPENGL;
+#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        backend = filament::Engine::Backend::VULKAN;
+#elif defined(FILAMENT_DRIVER_SUPPORTS_WEBGPU)
+        backend = filament::Engine::Backend::WEBGPU;
+#endif
+    }
+    return backend;
+}
+
+} // namespace
+
+namespace samples {
 
 void printUsage(const char* name, const CommandLineSpecification& spec) {
     utils::CString exec_name(utils::Path(name).getName().c_str());
@@ -58,29 +95,11 @@ void printUsage(const char* name, const CommandLineSpecification& spec) {
     }
 }
 
-filament::Engine::Backend parseArgumentsForBackend(const utils::CString& backend) {
-    if (backend == "metal") {
-        return filament::Engine::Backend::METAL;
-    } else if (backend == "opengl") {
-        return filament::Engine::Backend::OPENGL;
-    } else if (backend == "vulkan") {
-        return filament::Engine::Backend::VULKAN;
-    } else if (backend == "webgpu") {
-        return filament::Engine::Backend::WEBGPU;
-    } else {
-        std::cerr << "Unrecognized target API. Must be 'opengl'|'vulkan'|'metal'|'webgpu'."
-                  << std::endl;
-        exit(1);
-    }
-}
-
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
-#if defined(FILAMENTAPP_HAS_WEB_UI)
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
     }
-#endif
-    return std::make_unique<filament::app::SDLDisplayManager>();
+    return std::make_unique<filament::app::SDLDisplayManager>(config.backend);
 }
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
@@ -251,6 +270,9 @@ int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
         printUsage(argv[0], spec);
         exit(1);
     }
+
+    // Make sure that default resolves to a particular backend.
+    config->backend = resolveBackend(config->backend);
 
     return utils::getopt::optind;
 }

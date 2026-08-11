@@ -224,6 +224,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 
         // External samplers
         VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+
+        // VK_GOOGLE_display_timing (for setting presentation time)
+        VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME,
 #endif
         // MoltenVk is the only non-conformant implementation we're interested in.
 #if defined(__APPLE__)
@@ -524,6 +527,8 @@ struct VulkanPlatformPrivate {
 
     bool mSharedContext = false;
     bool mForceXCBSwapchain = false;
+
+    int64_t mPresentationTime = 0;
 };
 
 void VulkanPlatform::terminate() {
@@ -566,7 +571,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     bool enableDebugUtilsNames = false;
     if (driverConfig.debugRegistry &&
             driverConfig.debugRegistry->hasProperty("d.vulkan.debug_utils_names")) {
-        driverConfig.debugRegistry->getProperty("d.vulkan.debug_utils_names", &enableDebugUtilsNames);
+        driverConfig.debugRegistry->getProperty("d.vulkan.debug_utils_names",
+                &enableDebugUtilsNames);
         enableDebugUtils = enableDebugUtils || enableDebugUtilsNames;
     }
 
@@ -627,7 +633,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Query all the supported physical device features and enable/disable any feature as needed
     queryAndSetDeviceFeatures(driverConfig, instExts, deviceExts, sharedContext);
 
-    mImpl->mContext.mDebugUtilsNamesEnabled = enableDebugUtilsNames;
+    mImpl->mContext.mDebugUtilsNamesEnabled =
+            mImpl->mContext.mDebugUtilsEnabled && enableDebugUtilsNames;
 
     VulkanContext const& context = mImpl->mContext;
 
@@ -745,7 +752,9 @@ VkResult VulkanPlatform::acquire(SwapChainPtr handle, ImageSyncData* outImageSyn
 }
 
 VkResult VulkanPlatform::present(SwapChainPtr handle, uint32_t index, VkSemaphore finishedDrawing) {
-    return static_cast<VulkanPlatformSwapChainBase*>(handle)->present(index, finishedDrawing);
+    auto sw = static_cast<VulkanPlatformSwapChainBase*>(handle);
+    sw->setPresentationTime(mImpl->mPresentationTime);
+    return sw->present(index, finishedDrawing);
 }
 
 bool VulkanPlatform::hasResized(SwapChainPtr handle) {
@@ -997,13 +1006,15 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     if (vkGetPhysicalDeviceProperties2) {
         vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
     } else {
-        vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties.properties);
+        vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice,
+                &context.mPhysicalDeviceProperties.properties);
     }
 
     if (vkGetPhysicalDeviceFeatures2) {
         vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
     } else {
-        vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures.features);
+        vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice,
+                &context.mPhysicalDeviceFeatures.features);
     }
 
     vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
@@ -1022,6 +1033,8 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         context.mVertexInputDynamicStateSupported =
                 setContains(deviceExts, VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
         context.mGlobalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
+        context.mGoogleDisplayTimingEnabled =
+                setContains(deviceExts, VK_GOOGLE_DISPLAY_TIMING_EXTENSION_NAME);
     }
 
     // Pass along relevant driver config (feature flags)
@@ -1197,6 +1210,10 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
     }
 
     mImpl->mDevice = createVkDevice(deviceCreateInfo);
+}
+
+void VulkanPlatform::setPresentationTime(int64_t presentTime) noexcept {
+    mImpl->mPresentationTime = presentTime;
 }
 
 } // namespace filament::backend

@@ -26,6 +26,8 @@
 
 #include "ds/DescriptorSet.h"
 
+#include <private/filament/EngineEnums.h>
+
 #include <filament/Scene.h>
 
 #include <utils/Entity.h>
@@ -34,6 +36,7 @@
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 
+#include <array>
 #include <unordered_map>
 #include <vector>
 
@@ -68,7 +71,7 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(utils::JobSystem& js, RootArenaScope& rootArenaScope,
+    void prepare(utils::JobSystem& js, LinearAllocatorArena& arena,
             math::mat4 const& worldTransform, bool shadowReceiversAreCasters, SceneCacheData& cache) noexcept;
 
     void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables, SceneCacheData& cache) const noexcept;
@@ -185,6 +188,14 @@ public:
     struct SceneCacheData {
         RenderableSoa renderableData;
         LightSoa lightData;
+        // Directional lights in addition to the dominant one (which is stored at index 0 of
+        // lightData). These are evaluated without shadows, so we only need their direction
+        // and LightManager instance.
+        std::array<math::float3, CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS>
+                extraDirectionalLightDirections{};
+        std::array<FLightManager::Instance, CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS>
+                extraDirectionalLightInstances{};
+        uint8_t extraDirectionalLightCount = 0;
         bool hasContactShadows = false;
     };
 

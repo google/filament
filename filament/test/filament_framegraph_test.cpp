@@ -96,7 +96,20 @@ protected:
     Platform* platform = PlatformFactory::create(&backend);
     CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr, {}), buffer };
     MockResourceAllocator resourceAllocator;
-    FrameGraph fg{resourceAllocator};
+    LinearAllocatorArena arena{"FrameGraph Test Arena", 512 * 1024};
+    FrameGraph fg{arena, resourceAllocator};
+};
+
+class DependencyGraphTest : public testing::Test {
+protected:
+    void SetUp() override {
+    }
+
+    void TearDown() override {
+    }
+
+    LinearAllocatorArena rootArena{"DependencyGraphTest Root Arena", 64 * 1024};
+    FrameGraphAllocator arena{"DependencyGraphTest Arena", {rootArena, 64 * 1024}};
 };
 
 class Node final : public DependencyGraph::Node {
@@ -107,8 +120,8 @@ public:
     bool isCulledCalled() const noexcept { return this->isCulled(); }
 };
 
-TEST(DependencyGraphTest, Simple) {
-    DependencyGraph graph;
+TEST_F(DependencyGraphTest, Simple) {
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -117,7 +130,7 @@ TEST(DependencyGraphTest, Simple) {
     new DependencyGraph::Edge(graph, n1, n2);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
@@ -141,8 +154,8 @@ TEST(DependencyGraphTest, Simple) {
     for (auto const n : nodes) { delete n; }
 }
 
-TEST(DependencyGraphTest, Culling1) {
-    DependencyGraph graph;
+TEST_F(DependencyGraphTest, Culling1) {
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -153,7 +166,7 @@ TEST(DependencyGraphTest, Culling1) {
     new DependencyGraph::Edge(graph, n1, n1_0);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
@@ -180,8 +193,8 @@ TEST(DependencyGraphTest, Culling1) {
     for (auto const n : nodes) { delete n; }
 }
 
-TEST(DependencyGraphTest, Culling2) {
-    DependencyGraph graph;
+TEST_F(DependencyGraphTest, Culling2) {
+    DependencyGraph graph(arena);
     Node* n0 = new Node(graph, "node 0");
     Node* n1 = new Node(graph, "node 1");
     Node* n2 = new Node(graph, "node 2");
@@ -196,7 +209,7 @@ TEST(DependencyGraphTest, Culling2) {
     new DependencyGraph::Edge(graph, n1_0, n1_0_1);
     n2->makeTarget();
 
-    graph.cull();
+    graph.cull(arena);
 
     //utils::io::sstream graphviz;
     //graph.export_graphviz(graphviz);
