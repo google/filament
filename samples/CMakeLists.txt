@@ -345,7 +345,7 @@ endif()
 if (FILAMENT_ENABLE_OPENXR)
     include_directories(${GENERATION_ROOT})
     add_executable(helloxr helloxr.cpp helloxr_features.cpp helloxr_rendermodel.cpp
-            helloxr_handmesh.cpp)
+            helloxr_handmesh.cpp helloxr_vertexstreaming.cpp)
     target_compile_options(helloxr PRIVATE ${COMPILER_FLAGS})
     target_link_libraries(helloxr PRIVATE
         filament

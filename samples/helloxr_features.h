@@ -100,6 +100,7 @@ public:
 
 std::unique_ptr<Feature> createRenderModels();
 std::unique_ptr<Feature> createHandMeshes();
+std::unique_ptr<Feature> createVertexStreaming();
 
 filament::math::mat4 poseToMat4(XrPosef const& pose);
 

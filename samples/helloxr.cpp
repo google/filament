@@ -124,6 +124,7 @@ struct Config {
     bool listExtensions = false;
     bool renderModels = true;
     bool handMeshes = true;
+    bool vertexStreaming = true;
 #if defined(__ANDROID__)
     bool foveation = true;
 #else
@@ -691,6 +692,9 @@ private:
         }
         if (mConfig.handMeshes) {
             mFeatures.push_back(helloxr::createHandMeshes());
+        }
+        if (mConfig.vertexStreaming) {
+            mFeatures.push_back(helloxr::createVertexStreaming());
         }
     }
 
@@ -2308,6 +2312,7 @@ void printUsage() {
           "  --list-extensions log every extension the runtime exposes\n"
           "  --no-render-models  do not draw the runtime's controller models\n"
           "  --no-hand-meshes  do not draw tracked hand meshes\n"
+          "  --no-vertex-streaming  do not draw the CPU-streamed pulsing sphere\n"
           "  --no-quad-layer   do not submit the second composition layer\n"
           "  --passthrough     composite the scene over the physical world, with the\n"
           "                    environment map lighting the scene but never drawn\n"
@@ -2352,6 +2357,8 @@ bool parseArguments(std::vector<std::string> const& args, Config* config) {
             config->renderModels = false;
         } else if (arg == "--no-hand-meshes") {
             config->handMeshes = false;
+        } else if (arg == "--no-vertex-streaming") {
+            config->vertexStreaming = false;
         } else if (arg == "--no-quad-layer") {
             config->quadLayer = false;
         } else if (arg == "--passthrough") {
