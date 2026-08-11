@@ -48,9 +48,10 @@ void VulkanStreamedImageManager::unbindStreamedTexture(
 
 void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
         fvkmemory::resource_ptr<VulkanStream> stream) {
-    for (StreamedTextureBinding const& data: mStreamedTexturesBindings) {
+    for (StreamedTextureBinding& data: mStreamedTexturesBindings) {
         // Find the right stream
         if (data.image->getStream() == stream) {
+            data.set->isLayoutDirty = true;
             mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
                     data.samplerParams);
         }
