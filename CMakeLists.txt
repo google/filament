@@ -81,6 +81,11 @@ option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
+option(FILAMENT_ENABLE_OPENXR "Build the OpenXR sample (requires Vulkan and multiview)" OFF)
+
+set(FILAMENT_OPENXR_SDK_TAG "release-1.1.62" CACHE STRING
+    "Tag of KhronosGroup/OpenXR-SDK to fetch when FILAMENT_ENABLE_OPENXR is ON")
+
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
@@ -772,6 +777,7 @@ function(list_licenses OUTPUT MODULES)
 endfunction()
 
 set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
+set(COMBINE_CMAKE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/combine-static-libs.cmake")
 
 # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
 function(combine_static_libs TARGET OUTPUT DEPS)
@@ -791,6 +797,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
             TARGET ${TARGET} POST_BUILD
             COMMAND lib.exe /nologo /out:temp.lib ${DEPS_FILES}
             COMMAND "${CMAKE_COMMAND}" -E rename temp.lib ${OUTPUT}
+            COMMENT "Combining ${target} dependencies into single shared library"
+            VERBATIM
+        )
+    elseif (CMAKE_HOST_WIN32)
+        # Cross-compiling from Windows, where the shell script below cannot run.
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -P "${COMBINE_CMAKE_SCRIPT}" --
+                    "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
             COMMENT "Combining ${target} dependencies into single shared library"
             VERBATIM
         )
@@ -978,6 +993,34 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${EXTERNAL}/spirv-headers)
+endif()
+
+# The OpenXR loader is fetched rather than vendored. Keep this block self-contained: an Android
+# port needs to swap it for the vendor-supplied loader (e.g. the Meta OpenXR Mobile SDK).
+if (FILAMENT_ENABLE_OPENXR)
+    if (NOT FILAMENT_SUPPORTS_VULKAN)
+        message(FATAL_ERROR "FILAMENT_ENABLE_OPENXR requires FILAMENT_SUPPORTS_VULKAN=ON")
+    endif()
+    if (NOT FILAMENT_ENABLE_MULTIVIEW)
+        message(FATAL_ERROR
+            "FILAMENT_ENABLE_OPENXR requires multiview; configure with"
+            " -DFILAMENT_SAMPLES_STEREO_TYPE=multiview")
+    endif()
+
+    include(FetchContent)
+    set(DYNAMIC_LOADER OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(openxr_sdk
+        GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
+        GIT_TAG ${FILAMENT_OPENXR_SDK_TAG}
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_GetProperties(openxr_sdk)
+    if (NOT openxr_sdk_POPULATED)
+        FetchContent_Populate(openxr_sdk)
+        add_subdirectory(${openxr_sdk_SOURCE_DIR} ${openxr_sdk_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
 endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU AND NOT WASM)
