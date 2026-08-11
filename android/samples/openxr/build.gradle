@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application' version '8.6.1'
+    id 'org.jetbrains.kotlin.android' version '1.9.24'
 }
 
 // Assets are produced by the desktop build (matc/filamesh/cmgen) and copied in here, because the
@@ -29,6 +30,15 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
     externalNativeBuild {
         cmake {
             path 'src/main/cpp/CMakeLists.txt'
@@ -37,7 +47,12 @@ android {
     }
 
     buildFeatures {
+        compose true
         prefab true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.14'
     }
 
     // Filament loads these straight out of the APK, so they must not be compressed.
@@ -59,6 +74,12 @@ android {
 }
 
 dependencies {
+    implementation platform('androidx.compose:compose-bom:2024.06.00')
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.3'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.3'
+    implementation 'androidx.savedstate:savedstate:1.2.1'
     implementation 'org.khronos.openxr:openxr_loader_for_android:1.1.41'
 }
 

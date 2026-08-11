@@ -35,6 +35,7 @@
 // Brings in BlueVK, the OpenXR headers in the right order, and XRLOG.
 #include "helloxr_features.h"
 #include "helloxr_foveation.h"
+#include "helloxr_jetpack_ui.h"
 #include "helloxr_quad_layer.h"
 
 #include <backend/platforms/VulkanPlatform.h>
@@ -130,11 +131,13 @@ struct Config {
     bool passthrough = true;
     bool postProcessing = false;
     bool foveation = true;
+    bool jetpackUi = true;
 #else
     bool quadLayer = true;
     bool passthrough = false;
     bool postProcessing = true;
     bool foveation = false;
+    bool jetpackUi = false;
 #endif
     bool dumpQuad = false;          // dump the quad layer instead of the projection layer
     uint32_t dumpFrame = 0;         // 0 means "never dump"
@@ -522,6 +525,7 @@ public:
 #if defined(__ANDROID__)
     HelloXr(Config const& config, android_app* app) : mConfig(config), mApp(app) {
         mPlatform.setFoveation(&mFoveation);
+        mJetpackUi.initializeJava(app->activity->vm, app->activity->clazz);
         addFeatures();
     }
 #else
@@ -587,6 +591,7 @@ public:
         if (mQuad.depth != XR_NULL_HANDLE) {
             xrDestroySwapchain(mQuad.depth);
         }
+        mJetpackUi.terminate();
         mFoveation.destroyProfile();
         if (mAppSpace != XR_NULL_HANDLE) {
             xrCheck(xrDestroySpace(mAppSpace), "xrDestroySpace(app)");
@@ -794,6 +799,7 @@ private:
         }
 
         mFoveation.requestExtensions(mConfig.foveation, supports, &extensions);
+        mJetpackUi.requestExtensions(mConfig.jetpackUi, supports, &extensions);
 
         // A feature is only kept if the runtime has everything it asked for.
         for (auto& feature: mFeatures) {
@@ -850,8 +856,12 @@ private:
         if (xrCheck(xrGetSystemProperties(mXrInstance, mSystemId, &systemProps),
                     "xrGetSystemProperties")) {
             XRLOG("system: %s", systemProps.systemName);
-            mQuadLayer.configure(mConfig.quadLayer,
-                systemProps.graphicsProperties.maxLayerCount, mConfig.msaa, mConfig.quadMsaa);
+            uint32_t const maximumLayerCount = systemProps.graphicsProperties.maxLayerCount;
+            mJetpackUi.configure(maximumLayerCount);
+            uint32_t const remainingLayerCount =
+                    maximumLayerCount - (mJetpackUi.isEnabled() ? 1u : 0u);
+            mQuadLayer.configure(mConfig.quadLayer, remainingLayerCount,
+                    mConfig.msaa, mConfig.quadMsaa);
         }
 
         uint32_t viewCount = 0;
@@ -1260,6 +1270,8 @@ private:
                 false, false)) {
             return false;
         }
+        mJetpackUi.initialize(mXrInstance, mSession, mAppSpace,
+                mCompositionLayerDepthTestSupported);
         return true;
     }
 
@@ -1740,7 +1752,7 @@ private:
         XrCompositionLayerDepthTestFB projectionDepthTest;
         XrCompositionLayerProjection projection;
         helloxr::QuadLayer::Submission quad;
-        XrCompositionLayerBaseHeader const* layers[2];
+        XrCompositionLayerBaseHeader const* layers[3];
         XrFrameEndInfo endInfo;
     };
 
@@ -1792,6 +1804,9 @@ private:
                 submission.layers[layerCount++] =
                         reinterpret_cast<XrCompositionLayerBaseHeader const*>(
                                 &submission.quad.layer);
+            }
+            if (auto const* jetpackUi = mJetpackUi.getLayer()) {
+                submission.layers[layerCount++] = jetpackUi;
             }
         }
 
@@ -2035,7 +2050,8 @@ private:
         float const seconds = float(double(displayTime - mAnimationStartTime) * 1e-9);
         auto& tcm = mEngine->getTransformManager();
         mat4f const transform = mat4f::translation(float3{ 0.0f, 0.0f, -2.0f }) *
-                                mat4f::rotation(seconds, float3{ 0.0f, 1.0f, 0.0f });
+                                mat4f::rotation(seconds, float3{ 0.0f, 1.0f, 0.0f }) *
+                                mat4f::scaling(0.25f);
         tcm.setTransform(tcm.getInstance(mMonkey.renderable), transform);
     }
 
@@ -2068,6 +2084,7 @@ private:
     XrEnvironmentBlendMode mBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 
     helloxr::Foveation mFoveation;
+    helloxr::JetpackUiLayer mJetpackUi;
     helloxr::QuadLayer mQuadLayer;
     XrVulkanPlatform mPlatform;
     Engine* mEngine = nullptr;
@@ -2141,6 +2158,8 @@ void printUsage() {
           "  --no-postprocess  render straight to the target, skipping tone mapping\n"
           "  --foveation       enable medium dynamic foveation (Android default: on)\n"
           "  --no-foveation    disable foveated rendering\n"
+          "  --jetpack-ui      show the Jetpack Compose quad (Android default: on)\n"
+          "  --no-jetpack-ui   hide the Jetpack Compose quad\n"
           "  --dump-quad       dump the quad layer rather than the projection layer\n"
           "  --help            print this message");
 }
@@ -2197,6 +2216,10 @@ bool parseArguments(std::vector<std::string> const& args, Config* config) {
             config->foveation = true;
         } else if (arg == "--no-foveation") {
             config->foveation = false;
+        } else if (arg == "--jetpack-ui") {
+            config->jetpackUi = true;
+        } else if (arg == "--no-jetpack-ui") {
+            config->jetpackUi = false;
         } else if (arg == "--dump-quad") {
             config->dumpQuad = true;
         } else {

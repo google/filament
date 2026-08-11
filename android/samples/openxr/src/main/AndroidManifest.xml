@@ -19,8 +19,7 @@
 
     <application
         android:label="Filament OpenXR"
-        android:allowBackup="false"
-        android:hasCode="false">
+        android:allowBackup="false">
 
         <!-- Tells the Meta runtime this is an immersive app rather than a 2D panel. -->
         <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3" />
