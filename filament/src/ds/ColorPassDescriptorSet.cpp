@@ -347,6 +347,24 @@ void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
     }
 }
 
+void ColorPassDescriptorSet::prepareExtraDirectionalLights(FEngine& engine,
+        float const exposure, size_t const count,
+        float3 const* sceneSpaceDirections,
+        LightManagerInstance const* instances) noexcept {
+    assert_invariant(count <= CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
+    FLightManager const& lcm = engine.getLightManager();
+    auto& s = mUniforms.edit();
+    for (size_t i = 0; i < count; i++) {
+        LightManagerInstance const li = instances[i];
+        // the channel mask fits in 8 bits, so the float conversion is exact
+        s.extraLightDirection[i] = float4{
+                -sceneSpaceDirections[i], float(lcm.getLightChannels(li)) };
+        s.extraLightColorIntensity[i] = float4{
+                lcm.getColor(li), lcm.getIntensity(li) * exposure };
+    }
+    s.extraLightCount = int32_t(count);
+}
+
 void ColorPassDescriptorSet::prepareAmbientLight(FEngine const& engine, FIndirectLight const& ibl,
         float const intensity, float const exposure) noexcept {
     auto& s = mUniforms.edit();

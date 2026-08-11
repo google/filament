@@ -221,6 +221,10 @@ public:
 
     inline bool isDriverPropertiesSupported() const noexcept { return mDriverPropertiesSupported; }
 
+    inline bool isGoogleDisplayTimingEnabled() const noexcept {
+        return mGoogleDisplayTimingEnabled;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -260,6 +264,9 @@ private:
     bool mVertexInputDynamicStateSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
+
+    // VK_GOOGLE_display_timing device extension
+    bool mGoogleDisplayTimingEnabled = false;
 
     // These are options that can be enabled or disabled at an application level.
     bool mAsyncPipelineCachePrewarmingEnabled = false;
