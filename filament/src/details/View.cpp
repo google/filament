@@ -1357,18 +1357,23 @@ void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    float const* cx = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* cy = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* cz = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* ex = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* ey = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* ez = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
     FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
 
     // culling job (this runs on multiple threads)
-    auto functor = [&frustum, worldAABBCenter, worldAABBExtent, visibleArray, bit]
+    auto functor = [&frustum, cx, cy, cz, ex, ey, ez, visibleArray, bit]
             (uint32_t const index, uint32_t const c) {
         Culler::intersects(
                 visibleArray + index,
                 frustum,
-                worldAABBCenter + index,
-                worldAABBExtent + index, c, bit);
+                cx + index, cy + index, cz + index,
+                ex + index, ey + index, ez + index,
+                c, bit);
     };
 
     // Note: we can't use jobs::parallel_for() here because Culler::intersects() must process
@@ -1386,12 +1391,15 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
-    auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
+    auto const* UTILS_RESTRICT cx              = lightData.data<FScene::POSITION_X>();
+    auto const* UTILS_RESTRICT cy              = lightData.data<FScene::POSITION_Y>();
+    auto const* UTILS_RESTRICT cz              = lightData.data<FScene::POSITION_Z>();
+    auto const* UTILS_RESTRICT r               = lightData.data<FScene::RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT entityArray   = lightData.data<FScene::LIGHT_ENTITY>();
+    auto const* UTILS_RESTRICT entityArray     = lightData.data<FScene::LIGHT_ENTITY>();
     auto      * UTILS_RESTRICT visibleArray    = lightData.data<FScene::VISIBILITY>();
 
-    Culler::intersects(visibleArray, frustum, sphereArray, lightData.size());
+    Culler::intersects(visibleArray, frustum, cx, cy, cz, r, lightData.size());
 
     const float4* const UTILS_RESTRICT planes = frustum.getNormalizedPlanes();
     // the directional light is considered visible
@@ -1410,7 +1418,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
             }
             // cull spotlights that cannot possibly intersect the view frustum
             if (lcm.isSpotLight(li)) {
-                const float3 position = sphereArray[i].xyz;
+                const float3 position = { cx[i], cy[i], cz[i] };
                 const float3 axis = directions[i];
                 const float cosSqr = lcm.getCosOuterSquared(li);
                 bool invisible = false;
