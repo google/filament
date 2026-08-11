@@ -48,6 +48,8 @@ class PassNode : public DependencyGraph::Node {
 protected:
     friend class FrameGraphResources;
     FrameGraph& mFrameGraph;
+    // CAVEAT: if we ever change the allocator for mDeclaredHandles to use the main FrameGraphAllocator,
+    // we will need to remove the ArenaScopes in FrameGraph::compile()
     std::unordered_set<FrameGraphHandle::Index> mDeclaredHandles;
 public:
     explicit PassNode(FrameGraph& fg) noexcept;
@@ -61,6 +63,7 @@ public:
 
     virtual void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept = 0;
     virtual void resolve() noexcept = 0;
+    virtual size_t getSize() const = 0;
     utils::CString graphvizifyEdgeColor() const noexcept override;
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -104,12 +107,14 @@ public:
     RenderPassData const* getRenderPassData(uint32_t id) const noexcept;
     size_t getRenderTargetCount() const noexcept { return mRenderTargetData.size(); }
 
-private:
     // virtuals from DependencyGraph::Node
     char const* getName() const noexcept override { return mName; }
     utils::CString graphvizify() const noexcept override;
     void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept override;
     void resolve() noexcept override;
+    size_t getSize() const override { return sizeof(RenderPassNode); }
+
+private:
 #if FILAMENT_ENABLE_FGVIEWER
     std::vector<fgviewer::FrameGraphInfo::Pass::RenderTargetInfo>
             getRenderTargetInfo() const noexcept override;
@@ -117,10 +122,10 @@ private:
 
     // constants
     const char* const mName = nullptr;
-    UniquePtr<FrameGraphPassBase, LinearAllocatorArena> mPassBase;
+    UniquePtr<FrameGraphPassBase, FrameGraphAllocator> mPassBase;
 
     // set during setup
-    std::vector<RenderPassData> mRenderTargetData;
+    Vector<RenderPassData> mRenderTargetData;
 };
 
 class PresentPassNode final : public PassNode {
@@ -132,6 +137,7 @@ public:
     PresentPassNode& operator=(PresentPassNode const&) = delete;
     void execute(FrameGraphResources const& resources, backend::DriverApi& driver) noexcept override;
     void resolve() noexcept override;
+    size_t getSize() const override { return sizeof(PresentPassNode); }
 private:
     // virtuals from DependencyGraph::Node
     char const* getName() const noexcept override;

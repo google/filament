@@ -261,6 +261,11 @@ void FView::terminate(FEngine& engine) {
 #endif
 }
 
+void FView::finish(LinearAllocatorArena& arena) {
+    arena.free(mDistancesBuffer.data(), mDistancesBuffer.sizeInBytes());
+    mDistancesBuffer.clear();
+}
+
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
     // catch the cases were user had an underflow and didn't catch it.
     assert(int32_t(viewport.width) > 0);
@@ -700,7 +705,7 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
     return { *camera, mat4{ rotation } * mat4::translation(translation) };
 }
 
-void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootArenaScope,
+void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& arena,
         filament::Viewport const viewport, CameraInfo cameraInfo,
         float4 const& userTime, bool const needsAlphaChannel) noexcept {
 
@@ -737,7 +742,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(js, rootArenaScope,
+    scene->prepare(js, arena,
             cameraInfo.worldTransform,
             hasVSM() || hasPCSS(), *mSceneCache);
 
@@ -754,13 +759,13 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // allocate a scratch buffer for distances outside the job below, so we don't need
         // to use a locked allocator; the downside is that we need to account for the worst case.
         size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
-        float* const distances = rootArenaScope.allocate<float>(
-                (positionalLightCount + 3u) & ~3u, CACHELINE_SIZE);
+        size_t const positionalLightCountRoundedUp = (positionalLightCount + 3u) & ~3u;
+        float* const distances = arena.alloc<float>(positionalLightCountRoundedUp, CACHELINE_SIZE);
+        mDistancesBuffer = { distances, positionalLightCountRoundedUp };
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = mSceneCache->lightData]
-                        (JobSystem&, JobSystem::Job*) {
+                 &lightData = mSceneCache->lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
                             viewMatrix, cullingFrustum, lightData);
@@ -810,7 +815,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
             auto& froxelizer = mFroxelizer;
-            if (froxelizer.prepare(driver, rootArenaScope, viewport,
+            if (froxelizer.prepare(driver, arena, viewport,
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf,
                     cameraInfo.clipTransform)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
@@ -1318,9 +1323,9 @@ void FView::commitDescriptorSet(DriverApi& driver) const noexcept {
     getColorPassDescriptorSet().commit(driver);
 }
 
-void FView::commitFroxels(DriverApi& driverApi) const noexcept {
+void FView::commitFroxels(DriverApi& driverApi, LinearAllocatorArena& arena) const noexcept {
     if (mHasDynamicLighting) {
-        mFroxelizer.commit(driverApi);
+        mFroxelizer.commit(driverApi, arena);
     }
 }
 

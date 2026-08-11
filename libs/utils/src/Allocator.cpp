@@ -17,7 +17,8 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 
 #include <algorithm>
 
@@ -58,7 +59,7 @@ void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
 // LinearAllocatorWithFallback
 // ------------------------------------------------------------------------------------------------
 
-void* LinearAllocatorWithFallback::alloc(size_t size, size_t alignment) {
+void* LinearAllocatorWithFallback::alloc(size_t const size, size_t const alignment) {
     void* p = LinearAllocator::alloc(size, alignment);
     if (UTILS_UNLIKELY(!p)) {
         p = HeapAllocator::alloc(size, alignment);
@@ -81,7 +82,7 @@ void LinearAllocatorWithFallback::reset() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 FreeList::Node* FreeList::init(void* begin, void* end,
-        size_t elementSize, size_t alignment, size_t extra) noexcept
+        size_t const elementSize, size_t const alignment, size_t const extra) noexcept
 {
     void* const p = pointermath::align(begin, alignment, extra);
     void* const n = pointermath::align(pointermath::add(p, elementSize), alignment, extra);
@@ -108,7 +109,7 @@ FreeList::Node* FreeList::init(void* begin, void* end,
 }
 
 FreeList::FreeList(void* begin, void* end,
-        size_t elementSize, size_t alignment, size_t extra) noexcept
+        size_t const elementSize, size_t const alignment, size_t const extra) noexcept
         : mHead(init(begin, end, elementSize, alignment, extra))
 #ifndef NDEBUG
         , mBegin(begin), mEnd(end)
@@ -117,7 +118,7 @@ FreeList::FreeList(void* begin, void* end,
 }
 
 AtomicFreeList::AtomicFreeList(void* begin, void* end,
-        size_t elementSize, size_t alignment, size_t extra) noexcept
+        size_t const elementSize, size_t const alignment, size_t const extra) noexcept
 {
 #ifdef __ANDROID__
     // on some platform (e.g. web) this returns false. we really only care about mobile though.
@@ -152,40 +153,39 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
 
 // ------------------------------------------------------------------------------------------------
 
-void TrackingPolicy::HighWatermark::onAlloc(
-        void* p, size_t size, size_t alignment, size_t extra) noexcept {
+void TrackingPolicy::HighWatermark::onAlloc(void* p, size_t const size, size_t, size_t) noexcept {
     mCurrent += uint32_t(size);
-    mHighWaterMark = mCurrent > mHighWaterMark ? mCurrent : mHighWaterMark;
+    mHighWaterMark = std::max(mCurrent, mHighWaterMark);
 }
 
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
-    const size_t wm = mHighWaterMark;
+    const size_t watermark = mHighWaterMark;
+    // if we have a bounded area, we can compute the usage ratio
     if (mSize > 0) {
-        size_t wmpct = wm / (mSize / 100);
-        if (wmpct > 80) {
-            slog.d << mName << " arena: High watermark "
-                   << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+        size_t usageRatio = (watermark * 100) / mSize;
+        if (usageRatio > 80) {
+            LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes (" << usageRatio << "%)";
         }
     } else {
-        slog.d << mName << " arena: High watermark " << wm / 1024 << " KiB" << io::endl;
+        LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes";
     }
 }
 
-void TrackingPolicy::HighWatermark::onFree(void* p, size_t size) noexcept {
-    // FIXME: this code is incorrect with LinearAllocators because free() is a no-op for them
+void TrackingPolicy::HighWatermark::onFree(void*, size_t const size) noexcept {
     assert_invariant(mCurrent >= size);
     mCurrent -= uint32_t(size);
 }
+
 void TrackingPolicy::HighWatermark::onReset() noexcept {
-    // we should never be here if mBase is nullptr because compilation would have failed when
-    // Arena::onReset() tries to call the underlying allocator's onReset()
+    // we should never be here if mBase is nullptr because we can't be here if the
+    // underlying allocator doesn't have reset().
     assert_invariant(mBase);
     mCurrent = 0;
 }
 
 void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
-    // we should never be here if mBase is nullptr because compilation would have failed when
-    // Arena::onRewind() tries to call the underlying allocator's onReset()
+    // we should never be here if mBase is nullptr because we can't be here if the
+    // underlying allocator doesn't have rewind().
     assert_invariant(mBase);
     // for LinearAllocatorWithFallback we could get pointers outside the range
     if (addr >= mBase && addr < pointermath::add(mBase, mSize)) {
@@ -195,31 +195,119 @@ void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void TrackingPolicy::Debug::onAlloc(void* p, size_t size, size_t alignment, size_t extra) noexcept {
+void TrackingPolicy::Debug::onAlloc(void* p, size_t const size, size_t, size_t) noexcept {
     if (p) {
         memset(p, 0xeb, size);
     }
 }
 
-void TrackingPolicy::Debug::onFree(void* p, size_t size) noexcept {
+void TrackingPolicy::Debug::onFree(void* p, size_t const size) noexcept {
     if (p) {
         memset(p, 0xef, size);
     }
 }
 
+void TrackingPolicy::Debug::onLogicalFree(void* p, size_t const size) noexcept {
+    onFree(p, size);
+}
+
 void TrackingPolicy::Debug::onReset() noexcept {
-    // we should never be here if mBase is nullptr because compilation would have failed when
-    // Arena::onReset() tries to call the underlying allocator's onReset()
+    // we should never be here if mBase is nullptr because we can't be here if the
+    // underlying allocator doesn't have reset().
     assert_invariant(mBase);
     memset(mBase, 0xec, mSize);
 }
 
 void TrackingPolicy::Debug::onRewind(void* addr) noexcept {
-    // we should never be here if mBase is nullptr because compilation would have failed when
-    // Arena::onRewind() tries to call the underlying allocator's onReset()
+    // we should never be here if mBase is nullptr because we can't be here if the
+    // underlying allocator doesn't have rewind().
     assert(mBase);
-    assert(addr >= mBase);
-    memset(addr, 0x55, uintptr_t(mBase) + mSize - uintptr_t(addr));
+    // for LinearAllocatorWithFallback we could get pointers outside the range
+    if (addr >= mBase && addr < pointermath::add(mBase, mSize)) {
+        memset(addr, 0xed, uintptr_t(mBase) + mSize - uintptr_t(addr));
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+TrackingPolicy::LeakDetectorBase::~LeakDetectorBase() noexcept {
+    if (!mAllocations.empty()) {
+        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "destruction", LeakDetectorBehavior::LOG);
+    }
+}
+
+void TrackingPolicy::LeakDetectorBase::onAlloc(void* p, size_t const size, size_t const alignment,
+        size_t const extra, size_t const ignoreFrames) noexcept {
+    if (p) {
+        // +3 to account for CallStack::unwind, CallStack::update, and CallStack::update_gcc
+        mAllocations.emplace(p, AllocationInfo{ size, alignment, extra, CallStack::unwind(ignoreFrames + 3) });
+        mActiveBytes += size;
+    }
+}
+
+void TrackingPolicy::LeakDetectorBase::onFree(void* p, size_t const size) noexcept {
+    if (p) {
+        auto const it = mAllocations.find(p);
+        if (it != mAllocations.end()) {
+            if (size != it->second.size) {
+                LOG(WARNING) << (mName ? mName : "Arena") << " arena: free() size mismatch for pointer "
+                             << p << " (freed with " << size << " bytes, but allocated with "
+                             << it->second.size << " bytes)\nAllocation callstack:\n"
+                             << it->second.callstack;
+            }
+            mActiveBytes -= it->second.size;
+            mAllocations.erase(it);
+        }
+    }
+}
+
+void TrackingPolicy::LeakDetectorBase::onReset(LeakDetectorBehavior const behavior) noexcept {
+    if (!mAllocations.empty()) {
+        dumpLeaksAndClear(mAllocations.begin(), mAllocations.end(), "reset", behavior);
+    }
+}
+
+void TrackingPolicy::LeakDetectorBase::onRewind(void const* addr, LeakDetectorBehavior const behavior) noexcept {
+    if (addr && !mAllocations.empty()) {
+        auto const start = mAllocations.lower_bound(const_cast<void*>(addr));
+        auto end = mAllocations.end();
+        if (mBase && mSize > 0) {
+            void const* const baseEnd = pointermath::add(mBase, mSize);
+            end = mAllocations.lower_bound(const_cast<void*>(baseEnd));
+        }
+        if (start != end) {
+            dumpLeaksAndClear(start, end, "rewind", behavior);
+        }
+    }
+}
+
+void TrackingPolicy::LeakDetectorBase::dumpLeaksAndClear(
+        std::map<void*, AllocationInfo>::iterator const start,
+        std::map<void*, AllocationInfo>::iterator const end,
+        char const* const operation, LeakDetectorBehavior const behavior) noexcept {
+    if (start == end) {
+        return;
+    }
+
+    size_t leakCount = 0;
+    size_t leakBytes = 0;
+    for (auto it = start; it != end; ++it) {
+        ++leakCount;
+        leakBytes += it->second.size;
+        LOG(ERROR) << (mName ? mName : "Arena") << " arena: Leaked " << it->second.size
+                   << " bytes at " << it->first << " during " << operation
+                   << " with allocation callstack:\n" << it->second.callstack;
+    }
+
+    if (behavior == LeakDetectorBehavior::PANIC) {
+        PANIC_POSTCONDITION("%s arena: %zu leaked allocations (%zu bytes) detected on %s",
+                mName ? mName : "Arena", leakCount, leakBytes, operation);
+    }
+
+    for (auto it = start; it != end; ) {
+        mActiveBytes -= it->second.size;
+        it = mAllocations.erase(it);
+    }
 }
 
 } // namespace utils
