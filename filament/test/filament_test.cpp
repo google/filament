@@ -1860,9 +1860,8 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     }
 
     LinearAllocatorArena arena("MultipleDirectionalLights test arena", 3 * 1024 * 1024);
-    RootArenaScope rootArenaScope(arena);
     FScene::SceneCacheData cache;
-    scene->prepare(engine->getJobSystem(), rootArenaScope, mat4{}, false, cache);
+    scene->prepare(engine->getJobSystem(), arena, mat4{}, false, cache);
 
     // the most intense directional light is the dominant one, at index 0 of the LightSoa
     auto const& lightData = cache.lightData;
@@ -1885,7 +1884,7 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     for (size_t i = 1; i < LIGHT_COUNT; i++) {
         static_cast<Scene*>(scene)->remove(entities[i]);
     }
-    scene->prepare(engine->getJobSystem(), rootArenaScope, mat4{}, false, cache);
+    scene->prepare(engine->getJobSystem(), arena, mat4{}, false, cache);
     EXPECT_TRUE(lightData.elementAt<FScene::LIGHT_ENTITY>(0) == entities[0]);
     EXPECT_EQ(0u, cache.extraDirectionalLightCount);
 

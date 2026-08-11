@@ -541,7 +541,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) con
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
-        auto const &readEdges = mGraph.getIncomingEdges(pass);
+        auto const &readEdges = mGraph.getIncomingEdges(pass, mArena);
         for (auto const &edge: readEdges) {
             // all incoming edges should be valid by construction
             assert_invariant(mGraph.isEdgeValid(edge));
@@ -554,7 +554,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) con
         }
 
         std::vector<fgviewer::ResourceId> writes;
-        auto const &writeEdges = mGraph.getOutgoingEdges(pass);
+        auto const &writeEdges = mGraph.getOutgoingEdges(pass, mArena);
         for (auto const &edge: writeEdges) {
             // It is possible that the node we're writing to has been culled.
             // In this case we'd like to ignore the edge.
