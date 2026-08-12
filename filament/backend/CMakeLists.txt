@@ -600,7 +600,6 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ReadPixels.cpp
             test/test_ReadTexture.cpp
             test/test_BufferUpdates.cpp
-            test/test_AsyncCompletion.cpp
             test/test_Callbacks.cpp
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp

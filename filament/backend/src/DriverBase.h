@@ -223,52 +223,6 @@ public:
     void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
 
     /**
-     * Holds the completion callback of an asynchronous call, and guarantees that it is scheduled
-     * exactly once: either by the job itself once it has run, or by this object's destructor if
-     * the job is destroyed without ever running. The latter happens when the call is canceled
-     * (see `cancelAsyncJob`) or dropped because the queue is stopping.
-     *
-     * Asynchronous jobs must capture this rather than the raw handler/callback/user triplet:
-     * a caller that never gets its completion callback cannot tell a canceled call apart from one
-     * that is still pending, and whatever the callback owns is leaked.
-     */
-    class AsyncCompletion {
-    public:
-        AsyncCompletion(DriverBase* driver, CallbackHandler* handler,
-                CallbackHandler::Callback callback, void* user) noexcept
-                : mDriver(driver), mHandler(handler), mCallback(callback), mUser(user) {}
-
-        AsyncCompletion(AsyncCompletion&& rhs) noexcept
-                : mDriver(rhs.mDriver), mHandler(rhs.mHandler), mCallback(rhs.mCallback),
-                  mUser(rhs.mUser) {
-            rhs.mCallback = nullptr;
-        }
-
-        AsyncCompletion(AsyncCompletion const&) = delete;
-        AsyncCompletion& operator=(AsyncCompletion const&) = delete;
-        AsyncCompletion& operator=(AsyncCompletion&&) = delete;
-
-        ~AsyncCompletion() { schedule(); }
-
-        /**
-         * Schedules the completion callback, unless it has already been scheduled. Can be called
-         * from any thread, `scheduleCallback` is thread-safe.
-         */
-        void schedule() {
-            if (mCallback) {
-                mDriver->scheduleCallback(mHandler, mUser, mCallback);
-                mCallback = nullptr;
-            }
-        }
-
-    private:
-        DriverBase* mDriver;
-        CallbackHandler* mHandler;
-        CallbackHandler::Callback mCallback;
-        void* mUser;
-    };
-
-    /**
      * Waits for a predicate to become true or until a timeout is reached.
      * Returns ERROR if the driver encountered an unrecoverable error.
      */
