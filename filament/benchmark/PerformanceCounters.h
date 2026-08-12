@@ -47,7 +47,7 @@ public:
             state.counters.insert({
                     { "C",   { avgItem * (double)counters.getCpuCycles(),    benchmark::Counter::kAvgIterations }},
                     { "I",   { avgItem * (double)counters.getInstructions(), benchmark::Counter::kAvgIterations }},
-                    { "BPU", { std::floor(0.5 + avgItem * (double)counters.getBranchMisses() / state.iterations()), benchmark::Counter::kDefaults }},
+                    { "BPU", { avgItem * (double)counters.getBranchMisses(), benchmark::Counter::kAvgIterations }},
                     { "CPI", {           (double)counters.getCPI(),          benchmark::Counter::kAvgThreads }},
             });
         }

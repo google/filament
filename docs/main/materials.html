@@ -297,12 +297,18 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;optimize-size" class="level3"><span class="tocNumber">5.2.3&nbsp; </span>&mdash;optimize-size</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;reflect" class="level3"><span class="tocNumber">5.2.4&nbsp; </span>&mdash;reflect</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;variant-filter" class="level3"><span class="tocNumber">5.2.5&nbsp; </span>&mdash;variant-filter</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;output-format" class="level3"><span class="tocNumber">5.2.6&nbsp; </span>&mdash;output-format</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;include-source-mat" class="level3"><span class="tocNumber">5.2.7&nbsp; </span>&mdash;include-source-mat</a><br/>
 <a href="#handlingcolors" class="level1"><span class="tocNumber">6&nbsp; </span>Handling colors</a><br/>
 &nbsp;&nbsp;<a href="#handlingcolors/linearcolors" class="level2"><span class="tocNumber">6.1&nbsp; </span>Linear colors</a><br/>
 &nbsp;&nbsp;<a href="#handlingcolors/pre-multipliedalpha" class="level2"><span class="tocNumber">6.2&nbsp; </span>Pre-multiplied alpha</a><br/>
 <a href="#samplerusageinmaterials" class="level1"><span class="tocNumber">7&nbsp; </span>Sampler usage in Materials</a><br/>
 &nbsp;&nbsp;<a href="#samplerusageinmaterials/featurelevel1and2" class="level2"><span class="tocNumber">7.1&nbsp; </span>Feature level 1 and 2</a><br/>
 &nbsp;&nbsp;<a href="#samplerusageinmaterials/featurelevel3" class="level2"><span class="tocNumber">7.2&nbsp; </span>Feature level 3</a><br/>
+&nbsp;&nbsp;<a href="#samplerusageinmaterials/materialapilevel" class="level2"><span class="tocNumber">7.3&nbsp; </span>Material API level</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#samplerusageinmaterials/materialapilevel/defineapilevelin.matfiles" class="level3"><span class="tocNumber">7.3.1&nbsp; </span>Define <code>apiLevel</code> in <code>.mat</code> files</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#samplerusageinmaterials/materialapilevel/controlmaterialbehaviors" class="level3"><span class="tocNumber">7.3.2&nbsp; </span>Control material behaviors</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#samplerusageinmaterials/materialapilevel/apilevelcompatibility" class="level3"><span class="tocNumber">7.3.3&nbsp; </span>API level compatibility</a><br/>
 </p></div><a class="target" name="about">&nbsp;</a><a class="target" name="about">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1 id="about"><a class="header" href="#about">About</a></h1>
 <p>
 <p>This document is part of the <a href="https://github.com/google/filament">Filament project</a>. To report errors in this document please use the <a href="https://github.com/google/filament/issues">project's issue tracker</a>.</p>
@@ -2656,16 +2662,17 @@ type aliases:</p>
 </p>
 <a class="target" name="matrices">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/matrices">&nbsp;</a><a class="target" name="toc4.5.3">&nbsp;</a><h3 id="matrices"><a class="header" href="#matrices">Matrices</a></h3>
 <p>
-<div class='table'><table class="table"><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getViewFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from world space to view/eye space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from view/eye space to world space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getClipFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from view/eye space to clip (NDC) space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getViewFromClipMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to view/eye space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from view space to eye space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix(int eyeIndex)</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from view space to eye space for the eye referred to by eyeIndex </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix(int eyeIndex)</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromClipMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to world space </td></tr>
+<div class='table'><table class="table"><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:center"> ApiLevel </th><th style="text-align:left"> Description </th></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getViewFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from world space to view/eye space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from view/eye space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getClipFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from view/eye space to clip (NDC) space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getViewFromClipMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to view/eye space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from view space to eye space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix(int eyeIndex)</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from view space to eye space for the eye referred to by eyeIndex </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix(int eyeIndex)</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldFromClipMatrix()</strong> </td><td style="text-align:center"> float4&times;4 </td><td style="text-align:center"> 1 </td><td style="text-align:left"> Matrix that converts from clip (NDC) space to world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldRayFromClip(float2 clipXY)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> 2 </td><td style="text-align:left"> Transforms a 2D clip-space position directly into an un-normalized, un-translated world-space ray direction </td></tr>
 </table></div>
 </p>
 <a class="target" name="frameconstants">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/frameconstants">&nbsp;</a><a class="target" name="toc4.5.4">&nbsp;</a><h3 id="frame-constants"><a class="header" href="#frame-constants">Frame constants</a></h3>
@@ -2783,6 +2790,8 @@ source material definition file.</p>
 <tr><td style="text-align:right"> <strong class="asterisk">-S</strong>, <strong class="asterisk">&mdash;optimize-size</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Optimize compiled material for size instead of just performance </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-r</strong>, <strong class="asterisk">&mdash;reflect</strong> </td><td style="text-align:center"> parameters </td><td style="text-align:left"> Outputs the specified metadata as JSON </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-v</strong>, <strong class="asterisk">&mdash;variant-filter</strong> </td><td style="text-align:center"> [variant] </td><td style="text-align:left"> Filters out the specified, comma-separated variants </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-f</strong>, <strong class="asterisk">-output-format</strong> </td><td style="text-align:center"> blob/header/mat </td><td style="text-align:left"> Default to blob, when mat is set, returns a <code>.mat</code> with <code>#include</code>s resolved </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">&mdash;include-source-mat</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Embeds the source ASCII material definition if set </td></tr>
 </table><center><div class="tablecaption"><a class="target" name="table_matcflags">&nbsp;</a><b style="font-style:normal;">Table&nbsp;17:</b> List of <code>matc</code> flags</div></center></div>
 </p><p>
 <code>matc</code> offers a few other flags that are irrelevant to application developers and for internal
@@ -2865,6 +2874,22 @@ in the material itself.
 </p><p>
 Use this flag with caution, filtering out a variant required at runtime may lead to crashes.
 </p>
+<a class="target" name="--output-format">&nbsp;</a><a class="target" name="compilingmaterials/flags/&mdash;output-format">&nbsp;</a><a class="target" name="toc5.2.6">&nbsp;</a><h3 id="mdashoutput-format"><a class="header" href="#mdashoutput-format">&mdash;output-format</a></h3>
+<p>
+Specifies the output format:
+</p><p>
+<ul>
+<li class="minus">blob (default): Outputs a compiled binary material package file.
+</li>
+<li class="minus">header: Outputs a C++ header file containing the compiled material package embedded as a static byte array, allowing direct inclusion in C++ source code.
+</li>
+<li class="minus">mat: Outputs a processed .mat source text file with all #include directives fully resolved into a single standalone source file.</li></ul>
+</p>
+<a class="target" name="--include-source-mat">&nbsp;</a><a class="target" name="compilingmaterials/flags/&mdash;include-source-mat">&nbsp;</a><a class="target" name="toc5.2.7">&nbsp;</a><h3 id="mdashinclude-source-mat"><a class="header" href="#mdashinclude-source-mat">&mdash;include-source-mat</a></h3>
+<p>
+Embeds the source ASCII material definition into the compiled material package (blob). The embedded source code has all
+<code>#include</code> directives recursively resolved.
+</p>
 <a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1 id="handling-colors"><a class="header" href="#handling-colors">Handling colors</a></h1>
 <a class="target" name="linearcolors">&nbsp;</a><a class="target" name="handlingcolors/linearcolors">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2 id="linear-colors"><a class="header" href="#linear-colors">Linear colors</a></h2>
 <p>
@@ -2912,7 +2937,73 @@ Finally if <code>variantFilter</code> contains the <code>fog</code> filter, an e
 <div class="admonition tip"><div class="admonition-title"> external samplers</div>
 </p><p>
                Be aware that <code>external</code> samplers account for 2 regular samplers.</div>
+</p>
+<a class="target" name="materialapilevel">&nbsp;</a><a class="target" name="samplerusageinmaterials/materialapilevel">&nbsp;</a><a class="target" name="toc7.3">&nbsp;</a><h2 id="material-api-level"><a class="header" href="#material-api-level">Material API level</a></h2>
+<p>
+In cases of remote renderers where an app and the system run different Filament instances and materials are compiled at
+runtime on the remote end, material API versioning ensures compatibility across versions. It is less relevant if your
+project uses a single Filament instance, but <code>apiLevel</code> is still required when opting into features introduced at higher
+API levels features.
+</p>
+<a class="target" name="defineapilevelin.matfiles">&nbsp;</a><a class="target" name="samplerusageinmaterials/materialapilevel/defineapilevelin.matfiles">&nbsp;</a><a class="target" name="toc7.3.1">&nbsp;</a><h3 id="define-apilevel-in-mat-files"><a class="header" href="#define-apilevel-in-mat-files">Define <code>apiLevel</code> in <code>.mat</code> files</a></h3>
+<p>
+When authoring a material, you can specify apiLevel inside the material block. If omitted, it defaults to 1.
+</p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    name: &quot;MyMaterial&quot;,</span>
+<span class="line">    apiLevel: <span class="hljs-number">2</span>, <span class="hljs-comment">// Client-requested API level</span></span>
+<span class="line">    <span class="hljs-comment">// ...</span></span>
+<span class="line">}</span></code></pre><p>
+Check the documentation for specific material features (for example, morphing requires API level 2) or refer to the
+<a href="#shaderpublicapis">Shader public APIs</a> section above. If no API level is explicitly mentioned for a function or feature, it is available at
+baseline <code>apiLevel: 1</code>; otherwise, use the level specified.
+</p>
+<a class="target" name="controlmaterialbehaviors">&nbsp;</a><a class="target" name="samplerusageinmaterials/materialapilevel/controlmaterialbehaviors">&nbsp;</a><a class="target" name="toc7.3.2">&nbsp;</a><h3 id="control-material-behaviors"><a class="header" href="#control-material-behaviors">Control material behaviors</a></h3>
+<p>
+System/remote renderers can use <code>#define</code>s injected during compilation:
 </p><p>
+<ul>
+<li class="minus"><code>CLIENT_MATERIAL_API_LEVEL</code>: The API level requested in the client's <code>.mat</code> file (defaults to <code>1</code>).
+</li>
+<li class="minus"><code>UNSTABLE_MATERIAL_API_LEVEL</code>: The next API level currently in development. Features at this level have not been officially released.</li></ul>
+</p><p>
+System renderers can use these defines to introduce features under development, branch shader implementation details,
+or guard new capabilities based on the client's declared API level:
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// Adding a new feature</span></span>
+<span class="line"><span class="hljs-meta">#if CLIENT_MATERIAL_API_LEVEL &gt;= UNSTABLE_MATERIAL_API_LEVEL</span></span>
+<span class="line"><span class="hljs-type">float</span> myNewFeatureUnstable() { <span class="hljs-comment">/* ... */</span> }</span>
+<span class="line"><span class="hljs-meta">#endif</span></span>
+<span class="line"></span>
+<span class="line"><span class="hljs-comment">// Branch behaviors</span></span>
+<span class="line"><span class="hljs-meta">#if CLIENT_MATERIAL_API_LEVEL &gt;= 2</span></span>
+<span class="line"><span class="hljs-comment">// New behavior or feature implementation for API level 2+</span></span>
+<span class="line"><span class="hljs-type">float</span> myFeature() { <span class="hljs-keyword">return</span> <span class="hljs-number">1.0</span>; }</span>
+<span class="line"><span class="hljs-meta">#else</span></span>
+<span class="line"><span class="hljs-comment">// Fallback implementation for clients requesting API level 1</span></span>
+<span class="line"><span class="hljs-type">float</span> myFeature() { <span class="hljs-keyword">return</span> <span class="hljs-number">0.0</span>; }</span>
+<span class="line"><span class="hljs-meta">#endif</span></span></code></pre>
+<a class="target" name="apilevelcompatibility">&nbsp;</a><a class="target" name="samplerusageinmaterials/materialapilevel/apilevelcompatibility">&nbsp;</a><a class="target" name="toc7.3.3">&nbsp;</a><h3 id="api-level-compatibility"><a class="header" href="#api-level-compatibility">API level compatibility</a></h3>
+<p>
+Note that this system doesn’t allow forward compatibility, meaning that there’s no way for the client to compile the
+material if the API level they provided is higher than the compiler API level.
+- Backward compatibility (client version <= compiler version): Compilation success.
+- Forward compatibility (client version > compiler version): Compilation fails with an error message.
+</p><p>
+Material compilation should succeed as long as those two conditions are met:
+</p><p>
+<ul>
+<li class="minus">The client exclusively uses APIs that are supported at their specified <code>apiLevel</code>.
+</li>
+<li class="minus">The compiler's supported <code>apiLevel</code> is equal to or greater than the client's requested <code>apiLevel</code>.</li></ul>
+</p><p>
+Below demonstrates some concrete examples:
+<div class='table'><table class="table"><tr><th style="text-align:left">  Client api level </th><th style="text-align:left"> Compiler api level </th><th style="text-align:left"> Result </th><th style="text-align:left"> Reason for Success/Failure                                                                                 </th></tr>
+<tr><td style="text-align:left">  Implicit apiLevel 1 (No apiLevel specified); uses apiLevel 1 features only </td><td style="text-align:left"> Any apiLevel (apiLevel 1+) </td><td style="text-align:left"> SUCCESS </td><td style="text-align:left"> Sets apiLevel to 1. Since the material only uses apiLevel 1 features, the material compilation succeeds.  </td></tr>
+<tr><td style="text-align:left">  Implicit apiLevel 1 (No apiLevel specified); but <strong class="asterisk">uses apiLevel 2</strong> features </td><td style="text-align:left"> Any apiLevel (apiLevel 1+) </td><td style="text-align:left"> FAILURE </td><td style="text-align:left"> Sets apiLevel to 1. The client requests apiLevel 1, but the apiLevel 2 feature is used.                   </td></tr>
+<tr><td style="text-align:left">  Explicit apiLevel 1; uses apiLevel 1 features only </td><td style="text-align:left"> Any apiLevel (apiLevel 1+) </td><td style="text-align:left"> SUCCESS </td><td style="text-align:left"> The requested level is 1. Material only uses apiLevel 1 features. material compilation succeeds.          </td></tr>
+<tr><td style="text-align:left">  Explicit apiLevel 1; but <strong class="asterisk">uses apiLevel 2</strong> features </td><td style="text-align:left"> Any apiLevel (apiLevel 1+) </td><td style="text-align:left"> FAILURE </td><td style="text-align:left"> The client requests apiLevel 1, but the apiLevel 2 feature is used.                                       </td></tr>
+<tr><td style="text-align:left">  Explicit apiLevel 2 </td><td style="text-align:left"> apiLevel 1 </td><td style="text-align:left"> FAILURE </td><td style="text-align:left"> Client requests apiLevel of 2. Compiler is only capable of apiLevel 1.                                    </td></tr>
+<tr><td style="text-align:left">  Explicit apiLevel 2 </td><td style="text-align:left"> apiLevel 2+ </td><td style="text-align:left"> SUCCESS </td><td style="text-align:left"> The compiler is capable of apiLevel 2.                                                                    </td></tr>
+</table></div>
 </p></span><div id="mdContextMenu" style="visibility:hidden"></div><div class="markdeepFooter"><i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.13&nbsp;&nbsp;</a></i><div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">&#x2712;</div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
                     </main>
 

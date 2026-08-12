@@ -590,6 +590,7 @@ void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
+    mPlatform->setPresentationTime(monotonic_clock_ns);
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
@@ -1149,7 +1150,7 @@ void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils
             utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> externalSamplers(
                     layouts[i]->bitmask.externalSampler.count(), { 0, externalSampler });
             vkLayouts[i] = mDescriptorSetLayoutCache.getVkLayout(
-                layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
+                layouts[i]->bitmask, externalSamplers);
         }
 
         mPipelineCache.asyncPrewarmCache(

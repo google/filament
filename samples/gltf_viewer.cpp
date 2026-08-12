@@ -324,6 +324,8 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* 
                 .material(0, matInstances[i])
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 3)
                 .culling(false)
+                .castShadows(false)
+                .receiveShadows(false)
                 .priority(7u)   // ensure the overdraw primitives are drawn last
                 .layerMask(0xFF, 1u << App::Scene::OVERDRAW_VISIBILITY_LAYER)
                 .build(*engine, overdrawEntity);
@@ -336,7 +338,7 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* 
     app->scene.fullScreenTriangleIndexBuffer = indexBuffer;
 }
 
-static void onClick(App* app, View* view, ImVec2 pos) {
+static void onClick(std::shared_ptr<App> app, View* view, ImVec2 pos) {
     view->pick(pos.x, pos.y, [app](View::PickingQueryResult const& result) {
         if (const char* name = app->asset->getName(result.renderable); name) {
             app->notificationText = utils::CString(name);
@@ -688,7 +690,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 pos.y *= ImGui::GetIO().DisplayFramebufferScale.y;
                 if (pos.x > 0) {
                     pos.y = view->getViewport().height - 1 - pos.y;
-                    onClick(app.get(), view, pos);
+                    onClick(app, view, pos);
                 }
             }
 
@@ -1128,7 +1130,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .postRender(postRender)
                         .animation(animate)
                         .resize(resize)
-                        .dropHandler([&](std::string_view path) {
+                        .dropHandler([app, loadAsset, loadResources, setupIBL](std::string_view path) {
                             utils::Path filename = getPathForGLTFAsset(path);
                             if (!filename.isEmpty()) {
                                 if (checkGLTFAsset(filename)) {

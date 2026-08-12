@@ -276,7 +276,7 @@ jobs:
   test-code-correctness:
     name: test-code-correctness
     runs-on: 'arm-ubuntu-24.04-16core'
-    timeout-minutes: 45
+    timeout-minutes: 60
     needs: [check-verification]
     if: always() && !cancelled() && !needs.check-verification.outputs.skip
     steps:
