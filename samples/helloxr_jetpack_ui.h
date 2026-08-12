@@ -13,6 +13,27 @@ namespace helloxr {
 
 class JetpackUiLayer {
 public:
+    struct Submission {
+        XrCompositionLayerDepthTestFB depthTest;
+        XrCompositionLayerQuad layer;
+    };
+
+    static constexpr int32_t PIXEL_WIDTH = 1024;
+    static constexpr int32_t PIXEL_HEIGHT = 640;
+    static constexpr float WIDTH_METERS = 1.0f;
+    static constexpr float HEIGHT_METERS =
+            WIDTH_METERS * float(PIXEL_HEIGHT) / float(PIXEL_WIDTH);
+    static constexpr float CENTER_X = -1.0f;
+    static constexpr float CENTER_Y = -0.2f;
+    static constexpr float PLANE_Z = -1.5f;
+
+    enum class TouchAction : int32_t {
+        DOWN = 0,
+        MOVE = 1,
+        UP = 2,
+        CANCEL = 3,
+    };
+
     JetpackUiLayer();
     ~JetpackUiLayer();
 
@@ -29,8 +50,11 @@ public:
             bool depthTestSupported);
     void terminate() noexcept;
 
-    XrCompositionLayerBaseHeader const* getLayer() const noexcept;
+    XrCompositionLayerBaseHeader const* getLayer(Submission* submission) const noexcept;
+    XrPosef getPose() const noexcept;
+    void setPose(XrPosef const& pose) noexcept;
     bool isEnabled() const noexcept;
+    void injectTouch(float u, float v, TouchAction action) const;
 
 private:
     struct Impl;

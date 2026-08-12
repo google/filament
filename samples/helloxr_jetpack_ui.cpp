@@ -10,11 +10,6 @@ namespace {
 
 constexpr char const* PANEL_CLASS =
         "com.google.android.filament.openxr.ComposePanelSurface";
-constexpr int32_t PANEL_WIDTH = 1024;
-constexpr int32_t PANEL_HEIGHT = 640;
-constexpr float PANEL_WIDTH_METERS = 1.0f;
-constexpr float PANEL_HEIGHT_METERS =
-        PANEL_WIDTH_METERS * float(PANEL_HEIGHT) / float(PANEL_WIDTH);
 
 } // anonymous namespace
 
@@ -67,7 +62,7 @@ struct JetpackUiLayer::Impl {
                 "(Landroid/app/Activity;Landroid/view/Surface;II)V");
             if (attachMethod != nullptr) {
             env->CallStaticVoidMethod(panelClass, attachMethod, activity, surface,
-                        PANEL_WIDTH, PANEL_HEIGHT);
+                PIXEL_WIDTH, PIXEL_HEIGHT);
             }
             env->DeleteLocalRef(panelClass);
         }
@@ -106,6 +101,31 @@ struct JetpackUiLayer::Impl {
         }
     }
 
+    void injectTouch(float u, float v, TouchAction action) const {
+        bool attached = false;
+        JNIEnv* env = getEnv(&attached);
+        if (env == nullptr || activity == nullptr) {
+            return;
+        }
+        jclass panelClass = loadPanelClass(env);
+        if (panelClass != nullptr) {
+            jmethodID injectMethod = env->GetStaticMethodID(panelClass, "injectTouch",
+                    "(Landroid/app/Activity;FFI)V");
+            if (injectMethod != nullptr) {
+                env->CallStaticVoidMethod(panelClass, injectMethod, activity,
+                        u * float(PIXEL_WIDTH), v * float(PIXEL_HEIGHT), int32_t(action));
+            }
+            env->DeleteLocalRef(panelClass);
+        }
+        if (env->ExceptionCheck()) {
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+        }
+        if (attached) {
+            javaVm->DetachCurrentThread();
+        }
+    }
+
     void releaseActivity() {
         bool attached = false;
         JNIEnv* env = getEnv(&attached);
@@ -122,6 +142,7 @@ struct JetpackUiLayer::Impl {
     jobject activity = nullptr;
     bool supported = false;
     bool enabled = false;
+    bool depthTestEnabled = false;
     XrSwapchain swapchain = XR_NULL_HANDLE;
     XrCompositionLayerDepthTestFB depthTest = { XR_TYPE_COMPOSITION_LAYER_DEPTH_TEST_FB };
     XrCompositionLayerQuad layer = { XR_TYPE_COMPOSITION_LAYER_QUAD };
@@ -182,8 +203,8 @@ bool JetpackUiLayer::initialize(XrInstance instance, XrSession session, XrSpace 
     createInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT |
                             XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT |
                             XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT;
-    createInfo.width = PANEL_WIDTH;
-    createInfo.height = PANEL_HEIGHT;
+    createInfo.width = PIXEL_WIDTH;
+    createInfo.height = PIXEL_HEIGHT;
 
     XRLOG("Jetpack UI: creating Android surface swapchain");
     jobject surface = nullptr;
@@ -200,16 +221,16 @@ bool JetpackUiLayer::initialize(XrInstance instance, XrSession session, XrSpace 
     mImpl->layer.space = space;
     mImpl->layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
     mImpl->layer.subImage.swapchain = mImpl->swapchain;
-    mImpl->layer.subImage.imageRect = { { 0, 0 }, { PANEL_WIDTH, PANEL_HEIGHT } };
+    mImpl->layer.subImage.imageRect = { { 0, 0 }, { PIXEL_WIDTH, PIXEL_HEIGHT } };
     mImpl->layer.subImage.imageArrayIndex = 0;
     mImpl->layer.pose.orientation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    mImpl->layer.pose.position = { -1.0f, -0.2f, -1.5f };
-    mImpl->layer.size = { PANEL_WIDTH_METERS, PANEL_HEIGHT_METERS };
+    mImpl->layer.pose.position = { CENTER_X, CENTER_Y, PLANE_Z };
+    mImpl->layer.size = { WIDTH_METERS, HEIGHT_METERS };
 
     if (depthTestSupported) {
         mImpl->depthTest = { XR_TYPE_COMPOSITION_LAYER_DEPTH_TEST_FB, nullptr, XR_TRUE,
             XR_COMPARE_OP_LESS_FB };
-        mImpl->layer.next = &mImpl->depthTest;
+        mImpl->depthTestEnabled = true;
     }
 
     if (!mImpl->attach(surface)) {
@@ -233,14 +254,36 @@ void JetpackUiLayer::terminate() noexcept {
     mImpl->enabled = false;
 }
 
-XrCompositionLayerBaseHeader const* JetpackUiLayer::getLayer() const noexcept {
-    return mImpl->enabled
-            ? reinterpret_cast<XrCompositionLayerBaseHeader const*>(&mImpl->layer)
-            : nullptr;
+XrCompositionLayerBaseHeader const* JetpackUiLayer::getLayer(
+        Submission* submission) const noexcept {
+    if (!mImpl->enabled) {
+        return nullptr;
+    }
+    submission->layer = mImpl->layer;
+    submission->layer.next = nullptr;
+    if (mImpl->depthTestEnabled) {
+        submission->depthTest = mImpl->depthTest;
+        submission->layer.next = &submission->depthTest;
+    }
+    return reinterpret_cast<XrCompositionLayerBaseHeader const*>(&submission->layer);
+}
+
+XrPosef JetpackUiLayer::getPose() const noexcept {
+    return mImpl->layer.pose;
+}
+
+void JetpackUiLayer::setPose(XrPosef const& pose) noexcept {
+    mImpl->layer.pose = pose;
 }
 
 bool JetpackUiLayer::isEnabled() const noexcept {
     return mImpl->enabled;
+}
+
+void JetpackUiLayer::injectTouch(float u, float v, TouchAction action) const {
+    if (mImpl->enabled) {
+        mImpl->injectTouch(u, v, action);
+    }
 }
 
 } // namespace helloxr
@@ -263,8 +306,13 @@ void JetpackUiLayer::requestExtensions(bool requested,
 void JetpackUiLayer::configure(uint32_t) {}
 bool JetpackUiLayer::initialize(XrInstance, XrSession, XrSpace, bool) { return true; }
 void JetpackUiLayer::terminate() noexcept {}
-XrCompositionLayerBaseHeader const* JetpackUiLayer::getLayer() const noexcept { return nullptr; }
+XrCompositionLayerBaseHeader const* JetpackUiLayer::getLayer(Submission*) const noexcept {
+    return nullptr;
+}
+XrPosef JetpackUiLayer::getPose() const noexcept { return {}; }
+void JetpackUiLayer::setPose(XrPosef const&) noexcept {}
 bool JetpackUiLayer::isEnabled() const noexcept { return false; }
+void JetpackUiLayer::injectTouch(float, float, TouchAction) const {}
 
 } // namespace helloxr
 

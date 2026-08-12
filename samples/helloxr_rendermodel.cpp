@@ -18,6 +18,7 @@
 // glTF binaries, and renders them at the tracked grip poses.
 
 #include "helloxr_features.h"
+#include "helloxr_input.h"
 
 #include <filament/Engine.h>
 #include <filament/Scene.h>
@@ -67,7 +68,7 @@ public:
     bool initialize(FeatureContext const& context) override {
         mContext = context;
 
-        if (!loadFunctions() || !createActions()) {
+        if (mContext.input == nullptr || !loadFunctions()) {
             return false;
         }
 
@@ -93,32 +94,11 @@ public:
     }
 
     void update(XrTime displayTime) override {
-        if (mActionSet == XR_NULL_HANDLE) {
-            return;
-        }
-
-        XrActiveActionSet activeActionSet = { mActionSet, XR_NULL_PATH };
-        XrActionsSyncInfo syncInfo = { XR_TYPE_ACTIONS_SYNC_INFO };
-        syncInfo.countActiveActionSets = 1;
-        syncInfo.activeActionSets = &activeActionSet;
-        if (XR_FAILED(xrSyncActions(mContext.session, &syncInfo))) {
-            return;
-        }
-
         auto& tcm = mContext.engine->getTransformManager();
         for (uint32_t hand = 0; hand < kHandCount; ++hand) {
             Hand& state = mHands[hand];
-            if (state.space == XR_NULL_HANDLE) {
-                continue;
-            }
-
-            XrSpaceLocation location = { XR_TYPE_SPACE_LOCATION };
-            constexpr XrSpaceLocationFlags kTracked = XR_SPACE_LOCATION_POSITION_VALID_BIT |
-                                                      XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
-            bool const tracked =
-                    XR_SUCCEEDED(xrLocateSpace(state.space, mContext.appSpace, displayTime,
-                            &location)) &&
-                    (location.locationFlags & kTracked) == kTracked;
+            XrPosef pose = {};
+            bool const tracked = mContext.input->getGripPose(hand, &pose);
 
             if (tracked && state.asset == nullptr && !state.loadFailed) {
                 loadModel(hand);
@@ -145,7 +125,7 @@ public:
             }
 
             auto const instance = tcm.getInstance(state.asset->getRoot());
-            tcm.setTransform(instance, mat4f(poseToMat4(location.pose)));
+            tcm.setTransform(instance, mat4f(poseToMat4(pose)));
         }
     }
 
@@ -156,10 +136,6 @@ public:
                         state.asset->getEntityCount());
                 mAssetLoader->destroyAsset(state.asset);
                 state.asset = nullptr;
-            }
-            if (state.space != XR_NULL_HANDLE) {
-                xrDestroySpace(state.space);
-                state.space = XR_NULL_HANDLE;
             }
         }
         delete mResourceLoader;
@@ -176,19 +152,10 @@ public:
             delete mMaterials;
             mMaterials = nullptr;
         }
-        if (mPoseAction != XR_NULL_HANDLE) {
-            xrDestroyAction(mPoseAction);
-            mPoseAction = XR_NULL_HANDLE;
-        }
-        if (mActionSet != XR_NULL_HANDLE) {
-            xrDestroyActionSet(mActionSet);
-            mActionSet = XR_NULL_HANDLE;
-        }
     }
 
 private:
     struct Hand {
-        XrSpace space = XR_NULL_HANDLE;
         gltfio::FilamentAsset* asset = nullptr;
         bool visible = false;
         bool loadFailed = false;
@@ -207,80 +174,6 @@ private:
                 !load("xrLoadRenderModelFB", &mLoadModel)) {
             XRLOG("render models: XR_FB_render_model entry points unavailable");
             return false;
-        }
-        return true;
-    }
-
-    bool createActions() {
-        XrActionSetCreateInfo setInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
-        strcpy(setInfo.actionSetName, "helloxr");
-        strcpy(setInfo.localizedActionSetName, "helloxr");
-        setInfo.priority = 0;
-        if (XR_FAILED(xrCreateActionSet(mContext.instance, &setInfo, &mActionSet))) {
-            XRLOG("render models: xrCreateActionSet failed");
-            return false;
-        }
-
-        XrPath handPaths[kHandCount] = {};
-        for (uint32_t hand = 0; hand < kHandCount; ++hand) {
-            xrStringToPath(mContext.instance, kHandPaths[hand], &handPaths[hand]);
-        }
-
-        XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
-        strcpy(actionInfo.actionName, "grip_pose");
-        strcpy(actionInfo.localizedActionName, "Grip pose");
-        actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
-        actionInfo.countSubactionPaths = kHandCount;
-        actionInfo.subactionPaths = handPaths;
-        if (XR_FAILED(xrCreateAction(mActionSet, &actionInfo, &mPoseAction))) {
-            XRLOG("render models: xrCreateAction failed");
-            return false;
-        }
-
-        // The Touch profile is what the render models correspond to; a runtime that remaps to some
-        // other physical controller still reports poses through these bindings.
-        XrPath profile = XR_NULL_PATH;
-        xrStringToPath(mContext.instance, "/interaction_profiles/oculus/touch_controller",
-                &profile);
-        XrActionSuggestedBinding bindings[kHandCount] = {};
-        for (uint32_t hand = 0; hand < kHandCount; ++hand) {
-            XrPath binding = XR_NULL_PATH;
-            xrStringToPath(mContext.instance, (std::string(kHandPaths[hand]) + "/input/grip/pose")
-                                                      .c_str(),
-                    &binding);
-            bindings[hand] = { mPoseAction, binding };
-        }
-        XrInteractionProfileSuggestedBinding suggested = {
-            XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING
-        };
-        suggested.interactionProfile = profile;
-        suggested.countSuggestedBindings = kHandCount;
-        suggested.suggestedBindings = bindings;
-        if (XR_FAILED(xrSuggestInteractionProfileBindings(mContext.instance, &suggested))) {
-            XRLOG("render models: xrSuggestInteractionProfileBindings failed");
-            return false;
-        }
-
-        XrSessionActionSetsAttachInfo attachInfo = {
-            XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO
-        };
-        attachInfo.countActionSets = 1;
-        attachInfo.actionSets = &mActionSet;
-        if (XR_FAILED(xrAttachSessionActionSets(mContext.session, &attachInfo))) {
-            XRLOG("render models: xrAttachSessionActionSets failed");
-            return false;
-        }
-
-        for (uint32_t hand = 0; hand < kHandCount; ++hand) {
-            XrActionSpaceCreateInfo spaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-            spaceInfo.action = mPoseAction;
-            spaceInfo.subactionPath = handPaths[hand];
-            spaceInfo.poseInActionSpace.orientation.w = 1.0f;
-            if (XR_FAILED(xrCreateActionSpace(mContext.session, &spaceInfo,
-                        &mHands[hand].space))) {
-                XRLOG("render models: xrCreateActionSpace failed for %s", kHandPaths[hand]);
-                return false;
-            }
         }
         return true;
     }
@@ -366,8 +259,6 @@ private:
     }
 
     FeatureContext mContext;
-    XrActionSet mActionSet = XR_NULL_HANDLE;
-    XrAction mPoseAction = XR_NULL_HANDLE;
     Hand mHands[kHandCount];
 
     gltfio::MaterialProvider* mMaterials = nullptr;

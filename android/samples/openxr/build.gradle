@@ -108,7 +108,7 @@ tasks.register('collectFilamentAssets', Copy) {
 tasks.register('compileMaterials') {
     def matc = file("${rootDir}/../../../out/cmake-xr/tools/matc/matc" +
             (System.getProperty('os.name').toLowerCase().contains('windows') ? '.exe' : ''))
-    def materials = ['aiDefaultMat', 'xrhand']
+    def materials = ['aiDefaultMat', 'xrglass', 'xrhand']
     def sourceDir = file("${rootDir}/../../../samples/materials")
     def outputDir = layout.buildDirectory.dir('generated/filamentAssets')
 

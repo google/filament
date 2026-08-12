@@ -35,6 +35,7 @@
 // Brings in BlueVK, the OpenXR headers in the right order, and XRLOG.
 #include "helloxr_features.h"
 #include "helloxr_foveation.h"
+#include "helloxr_input.h"
 #include "helloxr_jetpack_ui.h"
 #include "helloxr_quad_layer.h"
 
@@ -542,6 +543,7 @@ public:
             }
         }
         mFeatures.clear();
+        mControllerInput.terminate();
         if (mEngine) {
             mEngine->flushAndWait();
             mEngine->destroy(mSkybox);
@@ -615,6 +617,7 @@ public:
 
     bool initialize() {
         return createXrInstance() && createVulkanContext() && createSession() &&
+               mControllerInput.initialize(mXrInstance, mSession) &&
                createSwapChains() && createEngine() && createScene() && initializeFeatures();
     }
 
@@ -689,12 +692,17 @@ private:
         if (mConfig.vertexStreaming) {
             mFeatures.push_back(helloxr::createVertexStreaming());
         }
+        if (mConfig.jetpackUi) {
+            mFeatures.push_back(helloxr::createJetpackInteraction());
+        }
     }
 
     // Runs after the scene exists, and drops any feature that cannot set itself up.
     bool initializeFeatures() {
-        helloxr::FeatureContext const context{ mXrInstance, mSession, mAppSpace, mEngine, mScene,
-            mMaterial, mConfig.dumpFrame != 0 ? mConfig.dumpPrefix : std::string() };
+        helloxr::FeatureContext const context{ mXrInstance, mSession, mAppSpace, mViewSpace,
+            mEngine, mScene, mMaterial,
+            mConfig.dumpFrame != 0 ? mConfig.dumpPrefix : std::string(), &mControllerInput,
+            &mJetpackUi };
         for (auto& feature: mFeatures) {
             if (!feature) {
                 continue;
@@ -1752,6 +1760,7 @@ private:
         XrCompositionLayerDepthTestFB projectionDepthTest;
         XrCompositionLayerProjection projection;
         helloxr::QuadLayer::Submission quad;
+        helloxr::JetpackUiLayer::Submission jetpackUi;
         XrCompositionLayerBaseHeader const* layers[3];
         XrFrameEndInfo endInfo;
     };
@@ -1805,7 +1814,7 @@ private:
                         reinterpret_cast<XrCompositionLayerBaseHeader const*>(
                                 &submission.quad.layer);
             }
-            if (auto const* jetpackUi = mJetpackUi.getLayer()) {
+            if (auto const* jetpackUi = mJetpackUi.getLayer(&submission.jetpackUi)) {
                 submission.layers[layerCount++] = jetpackUi;
             }
         }
@@ -1926,6 +1935,7 @@ private:
         // the pose to displayTime, and a sample taken closer to that moment has less to
         // extrapolate, so it lands nearer the truth. Nothing below reads the camera.
         animate(displayTime);
+        mControllerInput.update(displayTime, mAppSpace);
 
         for (auto& feature: mFeatures) {
             if (feature) {
@@ -2084,6 +2094,7 @@ private:
     XrEnvironmentBlendMode mBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 
     helloxr::Foveation mFoveation;
+    helloxr::ControllerInput mControllerInput;
     helloxr::JetpackUiLayer mJetpackUi;
     helloxr::QuadLayer mQuadLayer;
     XrVulkanPlatform mPlatform;

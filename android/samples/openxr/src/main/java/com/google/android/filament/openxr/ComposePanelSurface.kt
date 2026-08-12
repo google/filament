@@ -5,7 +5,9 @@ import android.app.Presentation
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
+import android.os.SystemClock
 import android.util.Log
+import android.view.MotionEvent
 import android.view.Surface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface as MaterialSurface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +58,8 @@ object ComposePanelSurface {
     private var virtualDisplay: VirtualDisplay? = null
     private var presentation: Presentation? = null
     private var owner: PanelOwner? = null
+    private var composeView: ComposeView? = null
+    private var touchDownTime = 0L
 
     @JvmStatic
     fun attach(activity: Activity, surface: Surface, width: Int, height: Int) {
@@ -84,6 +93,7 @@ object ComposePanelSurface {
                 panelPresentation.show()
                 owner = panelOwner
                 presentation = panelPresentation
+                this.composeView = composeView
                 Log.i(TAG, "Jetpack UI attached to ${width}x$height XR surface")
             } catch (throwable: Throwable) {
                 Log.e(TAG, "Could not attach Jetpack UI", throwable)
@@ -97,7 +107,22 @@ object ComposePanelSurface {
         activity.runOnUiThread { release() }
     }
 
+    @JvmStatic
+    fun injectTouch(activity: Activity, x: Float, y: Float, action: Int) {
+        activity.runOnUiThread {
+            val target = composeView ?: return@runOnUiThread
+            val now = SystemClock.uptimeMillis()
+            if (action == MotionEvent.ACTION_DOWN) {
+                touchDownTime = now
+            }
+            val event = MotionEvent.obtain(touchDownTime, now, action, x, y, 0)
+            target.dispatchTouchEvent(event)
+            event.recycle()
+        }
+    }
+
     private fun release() {
+        composeView = null
         presentation?.dismiss()
         presentation = null
         owner?.close()
@@ -160,19 +185,9 @@ private fun PanelContent() {
                             letterSpacing = 0.sp,
                         )
                     }
-                    MaterialSurface(
-                        color = Color(0xFF173D32),
-                        shape = RoundedCornerShape(6.dp),
-                    ) {
-                        Text(
-                            text = "SESSION LIVE",
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.sp,
-                        )
+                    var tapCount by remember { mutableIntStateOf(0) }
+                    Button(onClick = { tapCount++ }) {
+                        Text("TRIGGER $tapCount")
                     }
                 }
 

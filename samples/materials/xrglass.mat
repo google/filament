@@ -1,0 +1,85 @@
+material {
+    name : xrglass,
+    shadingModel : unlit,
+    blending : transparent,
+    depthWrite : true,
+    culling : none,
+    requires : [ uv0 ],
+    parameters : [
+        { type : float4, name : color },
+        { type : float, name : glassEffect },
+        { type : float2, name : hitPoint },
+        { type : float, name : hitStrength }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        if (materialParams.glassEffect < 0.5) {
+            material.baseColor = vec4(
+                    materialParams.color.rgb * materialParams.color.a,
+                    materialParams.color.a);
+            return;
+        }
+
+        highp vec2 uv = getUV0();
+    highp vec3 worldPosition = getWorldPosition();
+    highp vec3 view = normalize(getWorldViewVector());
+
+        // Two fine interference waves act as a procedural height field. Their analytic slopes
+        // produce a slightly uneven surface without a normal texture or another texture sample.
+    highp float phaseA = uv.x * 47.0 + uv.y * 31.0;
+    highp float phaseB = uv.x * 23.0 - uv.y * 59.0;
+        highp float waveA = sin(phaseA);
+        highp float waveB = sin(phaseB);
+        highp float height = waveA * 0.55 + waveB * 0.45;
+        highp vec2 slope = vec2(
+                47.0 * cos(phaseA) * 0.55 + 23.0 * cos(phaseB) * 0.45,
+                31.0 * cos(phaseA) * 0.55 - 59.0 * cos(phaseB) * 0.45);
+        highp vec3 bumpNormal = normalize(vec3(-slope * 0.006, 1.0));
+
+        highp float facing = saturate(abs(view.z));
+        highp float fresnel = pow(1.0 - facing, 3.2);
+
+        // The pseudo-light is fixed in app space. Moving the glass changes its incident direction;
+        // moving the head changes the view and half vectors. With neither moving, lighting is
+        // perfectly still.
+        highp vec3 lightPosition = vec3(-0.25, 0.85, -0.35);
+        highp vec3 lightDirection = normalize(lightPosition - worldPosition);
+        highp float diffuse = saturate(dot(bumpNormal, lightDirection));
+        highp vec3 halfVector = normalize(lightDirection + vec3(view.xy, abs(view.z)));
+        highp float sparkle = pow(saturate(dot(bumpNormal, halfVector)), 52.0);
+        highp float sweepCoordinate = fract(
+            uv.x * 0.62 + uv.y * 0.31 + view.x * 0.34 - view.y * 0.21);
+        highp float sweep = exp(-90.0 * pow(sweepCoordinate - 0.5, 2.0));
+
+        // Angle- and height-dependent RGB separation suggests refraction while staying in the
+        // current render pass; no scene-color sampling or multiview-unsafe blit is introduced.
+        highp vec2 parallaxUv = uv + bumpNormal.xy * (0.018 + fresnel * 0.035) +
+                       view.xy * (0.035 / max(facing, 0.22));
+        highp float refractedPhase = height * 1.7 + bumpNormal.x * 2.1 + fresnel * 2.4 +
+                        dot(view.xy, vec2(3.1, -2.4));
+        highp vec3 spectrum = 0.5 + 0.5 * cos(
+                vec3(0.0, 2.0943951, 4.1887902) + refractedPhase);
+        highp float caustic = pow(saturate(0.5 + 0.5 * sin(
+            parallaxUv.x * 71.0 - parallaxUv.y * 43.0 + height * 2.0)), 7.0);
+
+        highp float hitDistance = length((uv - materialParams.hitPoint) * vec2(1.0, 1.6));
+        highp float hitGlow = materialParams.hitStrength * exp(-95.0 * hitDistance * hitDistance);
+
+        highp vec3 tint = materialParams.color.rgb;
+        highp vec3 refracted = mix(tint * 0.35, spectrum, 0.26 + fresnel * 0.22);
+        highp vec3 lighting = tint * (0.22 + diffuse * 0.42) +
+                              vec3(0.72, 0.94, 1.0) * (sparkle * 1.5 + sweep * 0.32) +
+                              spectrum * caustic * 0.16 +
+                              vec3(0.24, 1.0, 0.82) * hitGlow * 1.8;
+        highp vec3 glassColor = refracted + lighting;
+        highp float alpha = hitGlow * (0.10 + fresnel * 0.17 + sparkle * 0.20 +
+                      sweep * 0.055 + caustic * 0.025 + hitGlow * 0.22);
+        alpha = min(alpha, 0.48);
+
+        material.baseColor = vec4(glassColor * alpha, alpha);
+    }
+}

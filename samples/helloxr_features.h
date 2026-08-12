@@ -65,17 +65,23 @@ class Scene;
 
 namespace helloxr {
 
+class ControllerInput;
+class JetpackUiLayer;
+
 // Everything a feature module needs from the host application.
 struct FeatureContext {
     XrInstance instance = XR_NULL_HANDLE;
     XrSession session = XR_NULL_HANDLE;
     XrSpace appSpace = XR_NULL_HANDLE;
+    XrSpace viewSpace = XR_NULL_HANDLE;
     filament::Engine* engine = nullptr;
     filament::Scene* scene = nullptr;
     // The sample's lit material, shared so a module does not have to carry its own copy.
     filament::Material* material = nullptr;
     // When set, modules may write debug artifacts using this as a file name prefix.
     std::string dumpPrefix;
+    ControllerInput* input = nullptr;
+    JetpackUiLayer* jetpackUi = nullptr;
 };
 
 // An optional capability that renders extra content into the scene. Features are constructed before
@@ -101,6 +107,7 @@ public:
 std::unique_ptr<Feature> createRenderModels();
 std::unique_ptr<Feature> createHandMeshes();
 std::unique_ptr<Feature> createVertexStreaming();
+std::unique_ptr<Feature> createJetpackInteraction();
 
 filament::math::mat4 poseToMat4(XrPosef const& pose);
 
