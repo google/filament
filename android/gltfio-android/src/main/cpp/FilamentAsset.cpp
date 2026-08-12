@@ -249,8 +249,10 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetNames(JNIEn
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     Entity entity = Entity::import(entityId);
     for (size_t i = 0, n = asset->getMorphTargetCountAt(entity); i < n; ++i) {
-        const char* name = asset->getMorphTargetNameAt(entity, i);
-        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(name));
+        jstring name = env->NewStringUTF(asset->getMorphTargetNameAt(entity, i));
+        if (name == nullptr) return;
+        env->SetObjectArrayElement(result, (jsize) i, name);
+        env->DeleteLocalRef(name);
     }
 }
 
