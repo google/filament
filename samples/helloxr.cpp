@@ -1052,6 +1052,26 @@ private:
                     });
         };
 
+        bool const canResolveDepth = mVulkanApiVersion >= VK_API_VERSION_1_2 ||
+                                     supportsExtension(
+                                             VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
+        if (maximumSamples() > 1 && canResolveDepth) {
+            VkPhysicalDeviceDepthStencilResolveProperties resolveProperties = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES,
+            };
+            VkPhysicalDeviceProperties2 properties = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                .pNext = &resolveProperties,
+            };
+            vkGetPhysicalDeviceProperties2(mVkPhysicalDevice, &properties);
+            if (resolveProperties.supportedDepthResolveModes & VK_RESOLVE_MODE_MAX_BIT) {
+                mDepthResolveMode = VK_RESOLVE_MODE_MAX_BIT;
+                XRLOG("MSAA depth resolve: MAX (reversed-Z nearest sample)");
+            } else {
+                XRLOG("warning: GPU lacks MAX depth resolve; using SAMPLE_ZERO");
+            }
+        }
+
         VkPhysicalDeviceTimelineSemaphoreFeatures timelineFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
         };
@@ -1374,6 +1394,7 @@ private:
         sharedContext.debugUtilsEnabled = mDebugUtilsEnabled;
         sharedContext.multiviewSupported = true;
         sharedContext.depthStencilResolveSupported = maximumSamples() > 1;
+        sharedContext.depthResolveMode = mDepthResolveMode;
 
         Engine::Config config = {};
         config.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
@@ -1403,8 +1424,9 @@ private:
         // headless and never presented. This is what lets the color pass reach those images as
         // ordinary attachments instead of through the swapchain path. Its transparency flag still
         // controls whether post-processing preserves alpha in those custom targets.
-        uint64_t const swapChainFlags =
-            mPassthroughActive ? filament::SwapChain::CONFIG_TRANSPARENT : uint64_t(0);
+        uint64_t const swapChainFlags = mPassthroughActive || mJetpackUi.isEnabled()
+                                                ? filament::SwapChain::CONFIG_TRANSPARENT
+                                                : uint64_t(0);
         mFilamentSwapChain = mEngine->createSwapChain(1, 1, swapChainFlags);
         mRenderer = mEngine->createRenderer();
         if (mFilamentSwapChain == nullptr || mRenderer == nullptr) {
@@ -1604,7 +1626,7 @@ private:
             .sampleCount = mConfig.msaa,
         });
 
-        if (mPassthroughActive) {
+        if (mPassthroughActive || mJetpackUi.isEnabled()) {
             // The clear is what makes the frame transparent wherever the scene does not cover it.
             // View::BlendMode::TRANSLUCENT would be the obvious companion and must be avoided: it
             // forces a blit whose material samples a plain 2D texture, which a multiview array
@@ -1796,26 +1818,35 @@ private:
         uint32_t layerCount = 0;
 
         if (frameState.shouldRender) {
-            if (renderLayer(frameState.predictedDisplayTime, submission)) {
+            bool const projectionRendered =
+                    renderLayer(frameState.predictedDisplayTime, submission);
+            bool const quadRendered = mQuadLayer.isEnabled() && renderQuadLayer(&submission.quad);
+            XrCompositionLayerBaseHeader const* const jetpackUi =
+                    mJetpackUi.getLayer(&submission.jetpackUi);
+
+            // OpenXR composites back-to-front. Geometric quads first write their compositor depth;
+            // projection then blends its resolved MSAA coverage over them and rejects scene
+            // fragments that are behind the quad surfaces.
+            if (quadRendered) {
+                submission.layers[layerCount++] =
+                        reinterpret_cast<XrCompositionLayerBaseHeader const*>(
+                                &submission.quad.layer);
+            }
+            if (jetpackUi != nullptr) {
+                submission.layers[layerCount++] = jetpackUi;
+            }
+            if (projectionRendered) {
                 if (mCompositionLayerDepthTestSupported && mDepthLayerSupported) {
-                    // Seed compositor depth without rejecting any projection fragments.
                     submission.projectionDepthTest = {
                         XR_TYPE_COMPOSITION_LAYER_DEPTH_TEST_FB, nullptr, XR_TRUE,
-                        XR_COMPARE_OP_ALWAYS_FB
+                        quadRendered || jetpackUi != nullptr ? XR_COMPARE_OP_LESS_FB
+                                                            : XR_COMPARE_OP_ALWAYS_FB
                     };
                     submission.projection.next = &submission.projectionDepthTest;
                 }
                 submission.layers[layerCount++] =
                         reinterpret_cast<XrCompositionLayerBaseHeader const*>(
                                 &submission.projection);
-            }
-            if (mQuadLayer.isEnabled() && renderQuadLayer(&submission.quad)) {
-                submission.layers[layerCount++] =
-                        reinterpret_cast<XrCompositionLayerBaseHeader const*>(
-                                &submission.quad.layer);
-            }
-            if (auto const* jetpackUi = mJetpackUi.getLayer(&submission.jetpackUi)) {
-                submission.layers[layerCount++] = jetpackUi;
             }
         }
 
@@ -2031,8 +2062,9 @@ private:
             }
         }
         submission.projection = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-        if (mPassthroughActive) {
-            // Without this the compositor ignores our alpha and the world never shows through.
+        if (mPassthroughActive || mJetpackUi.isEnabled()) {
+            // Preserve clear and MSAA edge alpha so passthrough or preceding quad layers remain
+            // visible where projection coverage is partial.
             submission.projection.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
         }
         submission.projection.space = mAppSpace;
@@ -2084,6 +2116,7 @@ private:
     VkDevice mVkDevice = VK_NULL_HANDLE;
     uint32_t mVulkanApiVersion = VK_API_VERSION_1_1;
     uint32_t mGraphicsQueueFamilyIndex = 0;
+    VkResolveModeFlagBits mDepthResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
     bool mDebugUtilsEnabled = false;
     bool mDepthLayerSupported = false;
     bool mCompositionLayerDepthTestSupported = false;

@@ -172,6 +172,10 @@ public:
         return mDepthStencilResolveSupported;
     }
 
+    inline VkResolveModeFlagBits getDepthResolveMode() const noexcept {
+        return mDepthResolveMode;
+    }
+
     inline bool isClipDistanceSupported() const noexcept {
         return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
     }
@@ -257,6 +261,7 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsEnabled = false;
     bool mDepthStencilResolveSupported = false;
+    VkResolveModeFlagBits mDepthResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
     bool mDebugUtilsNamesEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;

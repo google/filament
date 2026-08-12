@@ -102,6 +102,8 @@ public:
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
         bool depthStencilResolveSupported = false;
+        // Must be supported by the physical device and match the client's depth convention.
+        VkResolveModeFlagBits depthResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
     };
 
     /**

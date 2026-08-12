@@ -102,7 +102,8 @@ public:
         bool operator()(const FboKey& k1, const FboKey& k2) const;
     };
 
-    explicit VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo);
+    explicit VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo,
+            VkResolveModeFlagBits depthResolveMode);
     ~VulkanFboCache();
 
     // Retrieves or creates a VkFramebuffer handle.
@@ -125,6 +126,7 @@ public:
 
 private:
     VkDevice mDevice;
+    VkResolveModeFlagBits mDepthResolveMode;
     using FboMap = tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn>;
     FboMap mFramebufferCache;
 

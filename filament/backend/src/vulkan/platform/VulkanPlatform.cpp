@@ -1014,6 +1014,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         context.mDebugUtilsEnabled = scontext->debugUtilsEnabled;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
         context.mDepthStencilResolveSupported = scontext->depthStencilResolveSupported;
+        context.mDepthResolveMode = scontext->depthResolveMode;
     } else {
         context.mDebugUtilsEnabled = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported =

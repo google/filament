@@ -39,7 +39,8 @@ namespace {
 // verbatim except multiview and the fragment density map, whose chains are rebuilt below.
 VkResult createRenderPass2(VkDevice device, VkRenderPassCreateInfo const& info, uint32_t viewMask,
         VkAttachmentReference const& depthResolveRef,
-        VkAttachmentReference const& fragmentDensityMapRef, VkRenderPass* outRenderPass) {
+    VkAttachmentReference const& fragmentDensityMapRef,
+    VkResolveModeFlagBits depthResolveMode, VkRenderPass* outRenderPass) {
     constexpr size_t kMaxAttachments =
             MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 3;
     constexpr size_t kMaxSubpasses = 2;
@@ -119,10 +120,9 @@ VkResult createRenderPass2(VkDevice device, VkRenderPassCreateInfo const& info, 
             depthResolveRefs[s] = convertRef(depthResolveRef, 0);
             depthResolves[s] = {
                 .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE,
-                // Sample zero is the only mode every implementation is required to support.
                 .depthResolveMode =
                         fvkutils::isVkDepthFormat(attachments[depthResolveRef.attachment].format)
-                                ? VK_RESOLVE_MODE_SAMPLE_ZERO_BIT
+                        ? depthResolveMode
                                 : VK_RESOLVE_MODE_NONE,
                 .stencilResolveMode =
                         fvkutils::isVkStencilFormat(attachments[depthResolveRef.attachment].format)
@@ -212,8 +212,10 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     return true;
 }
 
-VulkanFboCache::VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo)
+VulkanFboCache::VulkanFboCache(VkDevice device, uint32_t timeBeforeEvictionFbo,
+    VkResolveModeFlagBits depthResolveMode)
         : mDevice(device),
+      mDepthResolveMode(depthResolveMode),
           mTimeBeforeEvictionFbo(timeBeforeEvictionFbo) {}
 
 VulkanFboCache::~VulkanFboCache() {
@@ -559,7 +561,7 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         // what was built above rather than duplicating the logic.
         error = createRenderPass2(mDevice, renderPassInfo,
                 config.viewCount > 1 ? subpassViewMask : 0u, depthStencilResolveAttachmentRef,
-            fragmentDensityMapRef, &renderPass);
+            fragmentDensityMapRef, mDepthResolveMode, &renderPass);
     } else {
         error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
     }
