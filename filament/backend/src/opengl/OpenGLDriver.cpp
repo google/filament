@@ -328,9 +328,21 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform,
     if (driverConfig.asynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
 
-        bool const useThreadWorker =
-                (driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED) &&
-                UTILS_HAS_THREADING;
+        // The threaded worker needs its own GL context shared with the main one. If the platform
+        // doesn't support extra contexts, createContext() is a no-op and the worker would issue
+        // GL commands without a current context, so fall back to the amortization mode.
+        bool const threadWorkerRequested =
+                driverConfig.asynchronousMode == AsynchronousMode::THREAD_PREFERRED;
+
+        bool const useThreadWorker = threadWorkerRequested &&
+                UTILS_HAS_THREADING && mPlatform.isExtraContextSupported();
+
+        if (UTILS_UNLIKELY(threadWorkerRequested && !useThreadWorker)) {
+            LOG(INFO) << "Asynchronous mode: THREAD_PREFERRED requested, but "
+                      << (UTILS_HAS_THREADING ? "the platform doesn't support additional GL "
+                                                "contexts" : "threading is not available")
+                      << ". Falling back to amortization on the backend thread.";
+        }
 
         if (useThreadWorker) {
             ThreadWorker::Config threadWorkerConfig{
