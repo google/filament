@@ -217,9 +217,9 @@ void morphPosition(inout vec4 p) {
     morphData4(p, sampler1_positions);
 }
 #else
-#define morphData2 ERROR_morphData2_requires_api_level_2_END
-#define morphData3 ERROR_morphData3_requires_api_level_2_END
-#define morphData4 ERROR_morphData4_requires_api_level_2_END
+#define morphData2 ERROR_morphData2_api_level_2_END
+#define morphData3 ERROR_morphData3_api_level_2_END
+#define morphData4 ERROR_morphData4_api_level_2_END
 
 void morphPosition(inout vec4 p) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;

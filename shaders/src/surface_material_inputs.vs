@@ -34,7 +34,7 @@ struct MaterialVertexInputs {
 #if defined(MATERIAL_HAS_CLIP_SPACE_POSITION) && CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
     vec4 clipSpacePosition;
 #elif defined(MATERIAL_HAS_CLIP_SPACE_POSITION)
-#define clipSpacePosition ERROR_clipSpacePosition_requires_api_level_2_END
+#define clipSpacePosition ERROR_clipSpacePosition_api_level_2_END
 #endif // MATERIAL_HAS_CLIP_SPACE_POSITION
 #endif // VERTEX_DOMAIN_DEVICE
 };

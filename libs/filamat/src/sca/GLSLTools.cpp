@@ -60,36 +60,49 @@ static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
         }
         
         std::string_view line = fullLog.substr(start, end - start);
-        // Error message follows the format: ERROR_{custom_error_message}_END
+
+        // The error message follows the format: #define {myFunctionName} ERROR_{myFunctionName}_api_level_{N}_END
         constexpr std::string_view prefix = "ERROR_";
+        constexpr std::string_view postfix = "_END";
+
         size_t startPos = line.find(prefix);
-        if (startPos != std::string_view::npos) {
-            size_t endPos = line.find("_END", startPos);
-            if (endPos != std::string_view::npos) {
-                // Extract the message after "ERROR_" and before "_END"
-                size_t msgStart = startPos + prefix.length();
-                std::string_view rawMsg = line.substr(msgStart, endPos - msgStart);
-                
-                utils::CString message(rawMsg);
-                for (char& c : message) {
-                    if (c == '_') c = ' ';
-                }
-                
-                size_t quoteStart = line.rfind('\'', startPos);
-                if (quoteStart != std::string_view::npos) {
-                    // Print prefix (e.g. "ERROR: 0:9: ") and message, discarding everything after
-                    out << line.substr(0, quoteStart) << message;
-                } else {
-                    out << line.substr(0, startPos) << message;
-                }
-                out << utils::io::endl;
-            } else {
-                out << line << utils::io::endl;
-            }
-        } else {
+        size_t endPos = line.find(postfix, startPos);
+        if (startPos == std::string_view::npos || endPos == std::string_view::npos) {
+            // Doesn't fit to the template, simply print the log as is.
             out << line << utils::io::endl;
+            start = end + 1;
+            continue;
         }
-        
+
+        // Extract the message between "ERROR_" and "_END".
+        size_t msgStart = startPos + prefix.length();
+        std::string_view rawMsg = line.substr(msgStart, endPos - msgStart);
+
+        // First append prefix.
+        size_t quoteStart = line.rfind('\'', startPos);
+        if (quoteStart != std::string_view::npos) {
+            // Print prefix (e.g. "ERROR: 0:9: ") and message, discarding everything after.
+            out << line.substr(0, quoteStart);
+        } else {
+            out << line.substr(0, startPos);
+        }
+
+        // Check if this is a templated api level error.
+        constexpr std::string_view apiLevelMarker = "_api_level_";
+        size_t apiLevelPos = rawMsg.find(apiLevelMarker);
+
+        if (apiLevelPos != std::string_view::npos) {
+            std::string_view symbol = rawMsg.substr(0, apiLevelPos);
+            std::string_view level = rawMsg.substr(apiLevelPos + apiLevelMarker.length());
+            // Format using the template (single quotes around the symbol name).
+            out << "'" << symbol << "'" << " requires api level " << level;
+        } else {
+            // Fallback: Replace '_' with space when it doesn't follow the api level error template.
+            for (const char& c : rawMsg) {
+                out << ((c == '_') ? ' ' : c);
+            }
+        }
+        out << utils::io::endl;
         start = end + 1;
     }
 }
