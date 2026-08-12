@@ -90,7 +90,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         if (app->config.customArgs.find("msaa") != app->config.customArgs.end()) {
             sampleCount = std::stoi(app->config.customArgs.at("msaa").c_str());
         }
-        if (sampleCount > 1) view->setSampleCount(sampleCount);
 
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
@@ -143,6 +142,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .height(vp.height)
                         .depth(eyeCount)
                         .levels(1)
+                        .samples(sampleCount)
                         .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                         .format(Texture::InternalFormat::RGBA8)
                         .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -153,6 +153,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .height(vp.height)
                         .depth(eyeCount)
                         .levels(1)
+                        .samples(sampleCount)
                         .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                         .format(Texture::InternalFormat::DEPTH32F)
                         .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -163,6 +164,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .texture(RenderTarget::AttachmentPoint::DEPTH, app->stereoDepthTexture)
                         .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
                         .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
+                        .samples(sampleCount)
                         .build(*engine);
         app->stereoView->setRenderTarget(app->stereoRenderTarget);
         app->stereoView->setViewport({ 0, 0, vp.width, vp.height });
