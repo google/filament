@@ -29,6 +29,8 @@
 #include <InfoSink.h>
 #include <localintermediate.h>
 
+#include <string_view>
+
 using namespace utils;
 using namespace glslang;
 using namespace filament::backend;
@@ -45,6 +47,52 @@ GLSLangCleaner::~GLSLangCleaner() {
 }
 
 // ------------------------------------------------------------------------------------------------
+// If the error message is associated with API level, this formats it to be more human-readable.
+static void formatApiLevelErrorLog(utils::io::ostream& out, const char* log) {
+    if (!log) return;
+    
+    std::string_view fullLog(log);
+    size_t start = 0;
+    while (start < fullLog.length()) {
+        size_t end = fullLog.find('\n', start);
+        if (end == std::string_view::npos) {
+            end = fullLog.length();
+        }
+        
+        std::string_view line = fullLog.substr(start, end - start);
+        // Error message follows the format: ERROR_{custom_error_message}_END
+        constexpr std::string_view prefix = "ERROR_";
+        size_t startPos = line.find(prefix);
+        if (startPos != std::string_view::npos) {
+            size_t endPos = line.find("_END", startPos);
+            if (endPos != std::string_view::npos) {
+                // Extract the message after "ERROR_" and before "_END"
+                size_t msgStart = startPos + prefix.length();
+                std::string_view rawMsg = line.substr(msgStart, endPos - msgStart);
+                
+                utils::CString message(rawMsg);
+                for (char& c : message) {
+                    if (c == '_') c = ' ';
+                }
+                
+                size_t quoteStart = line.rfind('\'', startPos);
+                if (quoteStart != std::string_view::npos) {
+                    // Print prefix (e.g. "ERROR: 0:9: ") and message, discarding everything after
+                    out << line.substr(0, quoteStart) << message;
+                } else {
+                    out << line.substr(0, startPos) << message;
+                }
+                out << utils::io::endl;
+            } else {
+                out << line << utils::io::endl;
+            }
+        } else {
+            out << line << utils::io::endl;
+        }
+        
+        start = end + 1;
+    }
+}
 
 static std::string_view getMaterialFunctionName(MaterialBuilder::MaterialDomain domain) noexcept {
     switch (domain) {
@@ -346,7 +394,7 @@ bool GLSLTools::findProperties(
     if (!ok) {
         // Even with all properties set the shader doesn't build. This is likely a syntax error
         // with user provided code.
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        formatApiLevelErrorLog(utils::slog.e, tShader.getInfoLog());
         return false;
     }
 

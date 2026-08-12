@@ -85,6 +85,8 @@ highp mat4 getWorldFromClipMatrix() {
 highp vec3 getWorldRayFromClip(highp vec2 clipXY) {
     return frameUniforms.worldRayFromClipMatrix * vec3(clipXY, 1.0);
 }
+#else
+#define getWorldRayFromClip ERROR_getWorldRayFromClip_requires_api_level_2_END
 #endif
 
 /** @public-api */

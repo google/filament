@@ -2,7 +2,17 @@
 // Uniforms access
 //------------------------------------------------------------------------------
 
-#if CLIENT_MATERIAL_API_LEVEL < UNSTABLE_MATERIAL_API_LEVEL
+#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+/** @public-api */
+highp mat4 getWorldFromModelMatrix() {
+    return object_uniforms_worldFromModelMatrix;
+}
+
+/** @public-api */
+highp mat3 getWorldFromModelNormalMatrix() {
+    return object_uniforms_worldFromModelNormalMatrix;
+}
+#else
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
     return object_uniforms_worldFromModelMatrix;
@@ -207,6 +217,10 @@ void morphPosition(inout vec4 p) {
     morphData4(p, sampler1_positions);
 }
 #else
+#define morphData2 ERROR_morphData2_requires_api_level_2_END
+#define morphData3 ERROR_morphData3_requires_api_level_2_END
+#define morphData4 ERROR_morphData4_requires_api_level_2_END
+
 void morphPosition(inout vec4 p) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
     ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
