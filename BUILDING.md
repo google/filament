@@ -13,10 +13,10 @@ section below.
 
 To build Filament for Android you must also install the following:
 
-- Android Studio Flamingo or more recent
+- Android Studio Quail or more recent
 - Android SDK
-- Android NDK 25.1 or higher
-- Java 17
+- Android NDK 29 or higher
+- Java 21
 
 ## Environment variables
 
