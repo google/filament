@@ -211,4 +211,43 @@ TEST_F(BackendTest, BasicAsyncFlow) {
     }
 }
 
+TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
+    SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    bool commandCompleted = false;
+    bool commandRan = false;
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    // Only the first half of an asynchronous call runs here on the test thread, reserving the job
+    // id. The half that queues the actual job runs on the backend thread, when the command buffer
+    // below is executed, so the job is still cancelable at this point.
+    AsyncCallId const id = api.queueCommandAsync([&commandRan]() { commandRan = true; }, nullptr,
+            signalCallback, &commandCompleted);
+    EXPECT_TRUE(api.cancelAsyncJob(id));
+
+    // A canceled call must still notify the caller, otherwise cancellation is indistinguishable
+    // from a call that is taking a long time, and whatever the callback owns is leaked.
+    waitFor(commandCompleted);
+    EXPECT_FALSE(commandRan) << "the canceled command must not have been executed";
+
+    // The job is gone, so canceling it a second time reports that there was nothing to cancel.
+    EXPECT_FALSE(api.cancelAsyncJob(id));
+}
+
 } // namespace test
