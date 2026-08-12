@@ -17,7 +17,18 @@ runs:
         sudo apt-get update
         sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
         sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
-        sudo apt-get install cmake ninja-build
+        sudo apt-get install ninja-build
+
+        # Download and extract the correct CMake binary based on runner architecture
+        # We pin the CMake version to avoid sudden breakage due to runner updates.
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "aarch64" ]; then
+            CMAKE_ARCH="aarch64"
+        else
+            CMAKE_ARCH="x86_64"
+        fi
+
+        wget -qO- "https://github.com/Kitware/CMake/releases/download/v${GITHUB_CMAKE_VERSION}/cmake-${GITHUB_CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" | sudo tar xz -C /usr/local --strip-components=1
 
         # For dawn
         sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev
