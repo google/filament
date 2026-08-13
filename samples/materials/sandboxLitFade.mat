@@ -2,6 +2,7 @@ material {
     name : LitFade,
     shadingModel : lit,
     blending : fade,
+    apiLevel : 2,
     parameters : [
         {
             type : float,

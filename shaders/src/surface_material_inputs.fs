@@ -11,7 +11,7 @@
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && \
     !defined(SHADING_MODEL_UNLIT) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS) && \
-    defined(MATERIAL_HAS_SECOND_ROUGHNESS)
+    defined(MATERIAL_HAS_SECOND_ROUGHNESS) && CLIENT_MATERIAL_API_LEVEL >= 2
 
     #define MATERIAL_HAS_SECOND_SPECULAR_LOBE
 
@@ -33,8 +33,13 @@ struct MaterialInputs {
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
 #if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if CLIENT_MATERIAL_API_LEVEL >= 2
     float secondRoughness;
     float secondRoughnessWeight;
+#else
+    #define secondRoughness ERROR_secondRoughness_api_level_2_END
+    #define secondRoughnessWeight ERROR_secondRoughnessWeight_api_level_2_END
+#endif
 #endif
 
     vec3 sheenColor;

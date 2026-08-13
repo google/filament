@@ -3,6 +3,7 @@ material {
     shadingModel : lit,
     refractionType : solid,
     refractionMode : cubemap,
+    apiLevel : 2,
     parameters : [
         {
             type : float,

@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
 #define TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
 
+#include "generated/resources/resources.h"
+
 #include <filament/Color.h>
 #include <filament/ColorGrading.h>
 #include <filament/Engine.h>
@@ -30,8 +32,6 @@
 
 #include <math/vec3.h>
 #include <math/vec4.h>
-
-#include "generated/resources/resources.h"
 
 constexpr uint8_t MATERIAL_MODEL_UNLIT =       0;
 constexpr uint8_t MATERIAL_MODEL_LIT =         1;

@@ -169,6 +169,37 @@ The type and range of each property is described in table [standardPropertiesTyp
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
+        Property          |      API level
+-------------------------:|:---------------------
+**baseColor**             | 1
+**roughness**             | 1
+**metallic**              | 1
+**reflectance**           | 1
+**anisotropy**            | 1
+**anisotropyDirection**   | 1
+**specularFactor**        | 1
+**specularColorFactor**   | 1
+**secondRoughness**       | 2
+**secondRoughnessWeight** | 2
+**sheenColor**            | 1
+**sheenRoughness**        | 1
+**clearCoat**             | 1
+**clearCoatRoughness**    | 1
+**normal**                | 1
+**bentNormal**            | 1
+**clearCoatNormal**       | 1
+**ambientOcclusion**      | 1
+**emissive**              | 1
+**postLightingColor**     | 1
+**ior**                   | 1
+**transmission**          | 1
+**absorption**            | 1
+**microThickness**        | 1
+**thickness**             | 1
+**dispersion**            | 1
+**shadowStrength**        | 1
+[Table [standardPropertiesApiLevel]: API level of each property]
+
 !!! Note: About linear RGB
     Several material model properties expect RGB colors. Filament materials use RGB colors in linear
     space and you must take proper care of supplying colors in that space. See the Linear colors
@@ -3123,15 +3154,15 @@ Finally if `variantFilter` contains the `fog` filter, an extra sampler is made a
 16 samplers are available.
 
 !!! TIP: external samplers
-               Be aware that `external` samplers account for 2 regular samplers.
+    Be aware that `external` samplers account for 2 regular samplers.
 
-## Material API level
+# Material API level
 In cases of remote renderers where an app and the system run different Filament instances and materials are compiled at
 runtime on the remote end, material API versioning ensures compatibility across versions. It is less relevant if your
 project uses a single Filament instance, but `apiLevel` is still required when opting into features introduced at higher
 API levels features.
 
-### Define `apiLevel` in `.mat` files
+## Define `apiLevel` in `.mat` files
 When authoring a material, you can specify apiLevel inside the material block. If omitted, it defaults to 1.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
 material {
@@ -3145,7 +3176,7 @@ Check the documentation for specific material features (for example, morphing re
 Shader public APIs section above. If no API level is explicitly mentioned for a function or feature, it is available at
 baseline `apiLevel: 1`; otherwise, use the level specified.
 
-### Control material behaviors
+## Control material behaviors
 System/remote renderers can use `#define`s injected during compilation:
 - `CLIENT_MATERIAL_API_LEVEL`: The API level requested in the client's `.mat` file (defaults to `1`).
 - `UNSTABLE_MATERIAL_API_LEVEL`: The next API level currently in development. Features at this level have not been officially released.
@@ -3168,9 +3199,9 @@ float myFeature() { return 0.0; }
 #endif
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### API level compatibility
+## API level compatibility
 Note that this system doesn’t allow forward compatibility, meaning that there’s no way for the client to compile the
-material if the API level they provided is higher than the compiler API level.
+material if the API level they provided is higher than the compiler API level:
 - Backward compatibility (client version <= compiler version): Compilation success.
 - Forward compatibility (client version > compiler version): Compilation fails with an error message.
 
@@ -3188,4 +3219,5 @@ Below demonstrates some concrete examples:
 | Explicit apiLevel 1; but **uses apiLevel 2** features                           | Any apiLevel (apiLevel 1+)  | FAILURE | The client requests apiLevel 1, but the apiLevel 2 feature is used.                                      |
 | Explicit apiLevel 2                                                             | apiLevel 1                  | FAILURE | Client requests apiLevel of 2. Compiler is only capable of apiLevel 1.                                   |
 | Explicit apiLevel 2                                                             | apiLevel 2+                 | SUCCESS | The compiler is capable of apiLevel 2.                                                                   |
+
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="../third_party/markdeep/markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

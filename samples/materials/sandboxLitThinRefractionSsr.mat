@@ -3,6 +3,7 @@ material {
     shadingModel : lit,
     refractionType : thin,
     refractionMode : screenspace,
+    apiLevel : 2,
     parameters : [
         {
             type : float,

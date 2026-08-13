@@ -1,6 +1,7 @@
 material {
     name : LitOpaque,
     shadingModel : lit,
+    apiLevel : 2,
     parameters : [
         {
             type : float3,
