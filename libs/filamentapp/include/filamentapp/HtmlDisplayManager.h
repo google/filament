@@ -62,8 +62,6 @@ public:
     void onFrameFinished(WindowHandle window, filament::Engine* engine,
             filament::Renderer* renderer) override;
 
-    void startRendering(std::function<bool()> doFrame) override;
-
 private:
     struct WindowInfo {
         utils::CString title;

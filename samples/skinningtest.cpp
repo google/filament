@@ -573,8 +573,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             FilamentApp2::Builder()
                     .displayManager(dm)
                     .title(app->config.title)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(app->config.displayManager))
                     .setup(setup)
                     .cleanup(cleanup)
                     .animation([app](Engine* engine, View* view, double now) {

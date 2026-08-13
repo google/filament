@@ -131,17 +131,6 @@ public:
      */
     virtual void onFrameFinished(WindowHandle window, filament::Engine* engine,
             filament::Renderer* renderer) {}
-
-    /**
-     * Yields main thread to the display manager to let it drive rendering.
-     *
-     * On Android, this will not block but provide the app with the doFrame() function, which can
-     * then be called from the Choreographer.
-     *
-     * Similarly, on the Web/WASM (*not* the headless HtmlDisplayManager), the render will be driven
-     * by requestAnimationFrame().
-     */
-    virtual void startRendering(std::function<bool()> doFrame) = 0;
 };
 
 } // namespace filament::app

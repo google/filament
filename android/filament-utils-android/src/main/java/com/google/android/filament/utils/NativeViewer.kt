@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package com.google.android.filament.utils
 
 import android.view.MotionEvent
@@ -24,9 +23,9 @@ import android.view.Surface
  * A Kotlin wrapper class for handling the Android UI and lifecycle events for native Filament applications.
  *
  * This class uses a C++ JNI bridge to map Android lifecycle methods (such as surface creation,
- * resizing, destruction, and touch events) to native FilamentApp callbacks.
+ * resizing, destruction, and touch events) to native FilamentApp2 callbacks.
  */
-class NativeViewer {
+class NativeViewer(val nativeApp: Long = 0L) {
     companion object {
         init {
             System.loadLibrary("filament-utils-jni")
@@ -35,35 +34,53 @@ class NativeViewer {
 
     /**
      * Called when the Android surface is created.
-     * Maps to the native FilamentApp callback to initialize graphics resources for the surface.
+     * Maps to the native FilamentApp2 callback to initialize graphics resources for the surface.
      *
      * @param surface The newly created Android [Surface].
      */
-    external fun onSurfaceCreated(surface: Surface)
+    fun onSurfaceCreated(surface: Surface) {
+        nOnSurfaceCreated(nativeApp, surface)
+    }
 
     /**
      * Called when the Android surface is changed (e.g., resized or rotated).
-     * Maps to the native FilamentApp callback to handle screen dimensions updates.
+     * Maps to the native FilamentApp2 callback to handle screen dimensions updates.
      *
      * @param width The new width of the surface in pixels.
      * @param height The new height of the surface in pixels.
      */
-    external fun onSurfaceChanged(width: Int, height: Int)
+    fun onSurfaceChanged(width: Int, height: Int) {
+        nOnSurfaceChanged(nativeApp, width, height)
+    }
 
     /**
      * Called when the Android surface is destroyed.
-     * Maps to the native FilamentApp callback to clean up the swap chain and graphics resources.
+     * Maps to the native FilamentApp2 callback to clean up the swap chain and graphics resources.
      */
-    external fun onSurfaceDestroyed()
+    fun onSurfaceDestroyed() {
+        nOnSurfaceDestroyed(nativeApp)
+    }
 
     /**
-     * Passes raw touch event data to the native FilamentApp.
+     * Passes raw touch event data to the native FilamentApp2.
      *
      * @param action The masked action of the motion event (e.g., ACTION_DOWN, ACTION_MOVE).
      * @param x The X coordinate of the touch event.
      * @param y The Y coordinate of the touch event.
      */
-    external fun onTouchEvent(action: Int, x: Float, y: Float)
+    fun onTouchEvent(action: Int, x: Float, y: Float) {
+        nOnTouchEvent(nativeApp, action, x, y)
+    }
+
+    /**
+     * Advances and renders a single frame.
+     * Maps to the native FilamentApp2 callback to execute rendering.
+     *
+     * @return True if the app requested termination or closed.
+     */
+    fun doFrame(): Boolean {
+        return nDoFrame(nativeApp)
+    }
 
     /**
      * Helper method to process a [MotionEvent] from the Android View system.
@@ -76,4 +93,10 @@ class NativeViewer {
         onTouchEvent(event.actionMasked, event.x, event.y)
         return true
     }
+
+    private external fun nOnSurfaceCreated(nativeApp: Long, surface: Surface)
+    private external fun nOnSurfaceChanged(nativeApp: Long, width: Int, height: Int)
+    private external fun nOnSurfaceDestroyed(nativeApp: Long)
+    private external fun nOnTouchEvent(nativeApp: Long, action: Int, x: Float, y: Float)
+    private external fun nDoFrame(nativeApp: Long): Boolean
 }

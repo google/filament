@@ -82,6 +82,7 @@ struct App {
 
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;
+static float g_meshScale = 1.0f;
 static float g_rangePlot[1024 * 3];
 static float g_curvePlot[1024 * 3];
 
@@ -126,7 +127,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     auto& tcm = engine->getTransformManager();
     auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
-    tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
+    tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
             tcm.getWorldTransform(ei));
 
     size_t count = 0;
@@ -144,7 +145,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
             }
         } else {
             ei = tcm.getInstance(renderable);
-            tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -3.0f) } *
+            tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -3.0f) } *
                     tcm.getWorldTransform(ei));
         }
         count++;
@@ -957,7 +958,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
                         .title(config.title)
-                        .scale(config.scale)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
@@ -971,11 +971,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #ifndef __ANDROID__
 int main(const int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "pnd:";
+    static constexpr const char* CUSTOM_OPTSTR = "pnd:s:";
     static const utils::getopt::option CUSTOM_OPTIONS[] = {
         { "shadow-plane", utils::getopt::no_argument, nullptr, 'p' },
         { "single-mode", utils::getopt::no_argument, nullptr, 'n' },
-        { "dirt", utils::getopt::required_argument, nullptr, 'd' }, { nullptr, 0, nullptr, 0 }
+        { "dirt", utils::getopt::required_argument, nullptr, 'd' },
+        { "scale", utils::getopt::required_argument, nullptr, 's' },
+        { nullptr, 0, nullptr, 0 },
     };
     auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
         switch (opt) {
@@ -985,6 +987,10 @@ int main(const int argc, char* argv[]) {
             case 'n':
                 g_singleMode = true;
                 return true;
+            case 's':
+                g_meshScale = std::stof(arg.c_str());
+                return true;
+
             case 'd':
                 config.dirt = arg;
                 return true;
@@ -1000,7 +1006,9 @@ int main(const int argc, char* argv[]) {
                              "   --single-mode, -n\n"
                              "       Single object mode\n\n"
                              "   --dirt=<path>, -d <path>\n"
-                             "       Path to a dirt texture\n",
+                             "       Path to a dirt texture\n"
+                             "   --scale=[number], -s [number]\n"
+                             "       Applies uniform scale\n",
         .customHandler = customHandler,
         .customOptStr = CUSTOM_OPTSTR,
         .customOptions = CUSTOM_OPTIONS,

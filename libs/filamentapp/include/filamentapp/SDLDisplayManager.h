@@ -53,8 +53,6 @@ public:
 
     double getTime() const override;
 
-    void startRendering(std::function<bool()> doFrame) override;
-
 private:
     bool init();
 
