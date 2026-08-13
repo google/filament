@@ -9,11 +9,6 @@ name: Release
 env:
   RELEASE_TAG: ${{ github.event.inputs.release_tag }}
 
-# The default GITHUB_TOKEN does not have write permissions, which is needed to upload release
-# assets.
-permissions:
-  contents: write
-
 on:
   workflow_dispatch:
     inputs:
@@ -33,7 +28,8 @@ jobs:
     name: build-linux
     runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -42,7 +38,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -53,7 +49,7 @@ jobs:
           cd build/linux && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -67,6 +63,8 @@ jobs:
     name: build-arm-linux
     runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -75,7 +73,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -86,7 +84,7 @@ jobs:
           cd build/linux && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-linux.tgz out/filament-${TAG}-arm-linux.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -100,7 +98,8 @@ jobs:
     name: build-mac
     runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -109,7 +108,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/mac-prereq
@@ -120,7 +119,7 @@ jobs:
           cd build/mac && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -134,7 +133,8 @@ jobs:
     name: build-web
     runs-on: 'arm-ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -143,7 +143,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/linux-prereq
@@ -155,7 +155,7 @@ jobs:
           cd build/web && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-web.tgz out/filament-${TAG}-web.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -169,7 +169,8 @@ jobs:
     name: build-android
     runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -178,13 +179,13 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
       - uses: ./.github/actions/linux-prereq
       - name: Run build script
         env:
@@ -211,7 +212,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
           APK_KEYSTORE_BASE64: ${{ secrets.APK_KEYSTORE_BASE64 }}
           APK_KEYSTORE_PASS: ${{ secrets.APK_KEYSTORE_PASS }}
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -228,7 +229,8 @@ jobs:
     # Depends on the Mac, Linux, and Windows builds for host tools.
     needs: [build-mac, build-linux, build-windows, build-android]
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -237,13 +239,13 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
       - uses: ./.github/actions/linux-prereq
       - name: Download Android Release
         run: |
@@ -273,7 +275,8 @@ jobs:
     name: build-ios
     runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -282,7 +285,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: ./.github/actions/mac-prereq
@@ -295,7 +298,7 @@ jobs:
           cd build/ios && printf "y" | ./build.sh release
           cd ../..
           mv out/filament-release-ios.tgz out/filament-${TAG}-ios.tgz
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:
@@ -309,7 +312,8 @@ jobs:
     name: build-windows
     runs-on: windows-2022-32core
     if: github.event_name == 'release' || github.event.inputs.platform == 'windows'
-
+    permissions:
+      contents: write
     steps:
       - name: Decide Git ref
         id: git_ref
@@ -319,7 +323,7 @@ jobs:
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -331,7 +335,7 @@ jobs:
           echo on
           move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         with:

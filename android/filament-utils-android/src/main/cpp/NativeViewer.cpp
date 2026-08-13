@@ -14,31 +14,60 @@
  * limitations under the License.
  */
 
-#include <filamentapp/FilamentApp.h>
+#include "AndroidDisplayManager.h"
+
+#include <filamentapp/FilamentApp2.h>
 
 #include <android/native_window_jni.h>
 #include <jni.h>
 
+using namespace filament::app;
+
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_onSurfaceCreated(JNIEnv* env, jobject thiz, jobject surface) {
-    ANativeWindow* window = nullptr;
-    if (surface != nullptr) {
-        window = ANativeWindow_fromSurface(env, surface);
+Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceCreated(JNIEnv* env, jobject thiz,
+        jlong nativeApp, jobject surface) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    if (!app) {
+        return;
     }
-    FilamentApp::get().onSurfaceCreated(window);
+    // In Plan Z, the SurfaceView is passed directly to AndroidDisplayManager during its creation.
+    // We just tell the app to evaluate the surface state.
+    app->onSurfaceCreated();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_onSurfaceChanged(JNIEnv* env, jobject thiz, jint width, jint height) {
-    FilamentApp::get().onSurfaceChanged(width, height);
+Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceChanged(JNIEnv* env, jobject thiz,
+        jlong nativeApp, jint width, jint height) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    if (app) {
+        app->onSurfaceChanged(width, height);
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_onSurfaceDestroyed(JNIEnv* env, jobject thiz) {
-    FilamentApp::get().onSurfaceDestroyed();
+Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceDestroyed(JNIEnv* env, jobject thiz,
+        jlong nativeApp) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    if (app) {
+        app->onSurfaceDestroyed();
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_onTouchEvent(JNIEnv* env, jobject thiz, jint action, jfloat x, jfloat y) {
-    FilamentApp::get().onTouchEvent(action, x, y);
+Java_com_google_android_filament_utils_NativeViewer_nOnTouchEvent(JNIEnv* env, jobject thiz,
+        jlong nativeApp, jint action, jfloat x, jfloat y) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    if (app) {
+        auto* dm = static_cast<AndroidDisplayManager*>(app->getDisplayManager());
+        if (dm) {
+            dm->pushTouchEvent(action, x, y);
+        }
+    }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_utils_NativeViewer_nDoFrame(JNIEnv* env, jobject thiz,
+        jlong nativeApp) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    return (app && app->doFrame()) ? JNI_TRUE : JNI_FALSE;
 }

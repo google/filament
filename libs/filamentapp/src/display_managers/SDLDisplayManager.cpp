@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#include "SDLDisplayManager.h"
-
-#include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/NativeWindowHelper.h>
+#include <filamentapp/SDLDisplayManager.h>
 
 #include <utils/Panic.h>
 
@@ -28,12 +26,14 @@
 
 namespace filament::app {
 
-SDLDisplayManager::SDLDisplayManager() {}
+SDLDisplayManager::SDLDisplayManager(filament::Engine::Backend backend)
+        : mBackend(backend) {
+    FILAMENT_CHECK_PRECONDITION(init());
+}
 
-SDLDisplayManager::~SDLDisplayManager() {}
+SDLDisplayManager::~SDLDisplayManager() { terminate(); }
 
-bool SDLDisplayManager::init(const Config& config) {
-    mConfig = config;
+bool SDLDisplayManager::init() {
     if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
         return false;
     }
@@ -44,7 +44,7 @@ bool SDLDisplayManager::init(const Config& config) {
 void SDLDisplayManager::terminate() { SDL_Quit(); }
 
 
-FilamentApp2::Window::Handle SDLDisplayManager::createWindow(const char* title, uint32_t w,
+WindowHandle SDLDisplayManager::createWindow(const char* title, uint32_t w,
         uint32_t h, bool resizable, bool headless) {
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (resizable) {
@@ -67,31 +67,31 @@ FilamentApp2::Window::Handle SDLDisplayManager::createWindow(const char* title, 
     }
 
 #if defined(__APPLE__)
-    if (mConfig.backend == filament::Engine::Backend::METAL ||
-            mConfig.backend == filament::Engine::Backend::VULKAN ||
-            mConfig.backend == filament::Engine::Backend::WEBGPU) {
+    if (mBackend == filament::Engine::Backend::METAL ||
+            mBackend == filament::Engine::Backend::VULKAN ||
+            mBackend == filament::Engine::Backend::WEBGPU) {
         nativeWindow = ::setUpMetalLayer(nativeWindow);
     }
 #endif
 
     mNativeWindowMap[window] = nativeWindow;
-    return (FilamentApp2::Window::Handle) window;
+    return (WindowHandle) window;
 }
 
-void SDLDisplayManager::destroyWindow(FilamentApp2::Window::Handle window) {
+void SDLDisplayManager::destroyWindow(WindowHandle window) {
     SDL_DestroyWindow((SDL_Window*) window);
 }
 
-void* SDLDisplayManager::getNativeWindow(FilamentApp2::Window::Handle window) const {
+void* SDLDisplayManager::getNativeWindow(WindowHandle window) const {
     assert_invariant(mNativeWindowMap.count(window) > 0);
     return mNativeWindowMap[window];
 }
 
-void SDLDisplayManager::setWindowTitle(FilamentApp2::Window::Handle window, const char* title) {
+void SDLDisplayManager::setWindowTitle(WindowHandle window, const char* title) {
     SDL_SetWindowTitle((SDL_Window*) window, title);
 }
 
-void SDLDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
+void SDLDisplayManager::getWindowSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
     int iw, ih;
     SDL_GetWindowSize((SDL_Window*) window, &iw, &ih);
@@ -99,7 +99,7 @@ void SDLDisplayManager::getWindowSize(FilamentApp2::Window::Handle window, uint3
     *h = (uint32_t) ih;
 }
 
-void SDLDisplayManager::getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
+void SDLDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w,
         uint32_t* h) const {
     int iw, ih;
     SDL_GL_GetDrawableSize((SDL_Window*) window, &iw, &ih);
@@ -109,7 +109,7 @@ void SDLDisplayManager::getDrawableSize(FilamentApp2::Window::Handle window, uin
 
 uint32_t SDLDisplayManager::getMouseState(int* x, int* y) const { return SDL_GetMouseState(x, y); }
 
-bool SDLDisplayManager::isWindowFocused(FilamentApp2::Window::Handle window) const {
+bool SDLDisplayManager::isWindowFocused(WindowHandle window) const {
     return (SDL_GetWindowFlags((SDL_Window*) window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
@@ -186,12 +186,12 @@ void SDLDisplayManager::pollEvents(std::vector<AppEvent>& events) {
     }
 }
 
-void SDLDisplayManager::onWindowResized(FilamentApp2::Window::Handle window) {
+void SDLDisplayManager::onWindowResized(WindowHandle window) {
 #if defined(__APPLE__)
     void* nativeWindow = getNativeWindow(window);
-    if (mConfig.backend == filament::Engine::Backend::METAL ||
-            mConfig.backend == filament::Engine::Backend::VULKAN ||
-            mConfig.backend == filament::Engine::Backend::WEBGPU) {
+    if (mBackend == filament::Engine::Backend::METAL ||
+            mBackend == filament::Engine::Backend::VULKAN ||
+            mBackend == filament::Engine::Backend::WEBGPU) {
         resizeMetalLayer(nativeWindow);
     }
 #endif
@@ -457,14 +457,6 @@ AppKey SDLDisplayManager::mapKey(SDL_Scancode scancode) {
             return AppKey::SLASH;
         default:
             return AppKey::UNKNOWN;
-    }
-}
-
-void SDLDisplayManager::startRendering(std::function<bool()> doFrame) {
-    while (!doFrame()) {
-        // Delay rendering for roughly one monitor refresh interval
-        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 

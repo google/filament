@@ -79,10 +79,13 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 // ------------------------------------------------------------------------------------------------
 
 
-FrameGraph::FrameGraph(TextureCacheInterface& resourceAllocator,
+FrameGraph::FrameGraph(
+        LinearAllocatorArena& arena,
+        TextureCacheInterface& resourceAllocator,
         Mode const mode)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", 524288),
+          mArena("FrameGraph Arena", {arena, 384 * 1024}), // real max usage about 260KiB
+          mGraph(mArena),
           mMode(mode),
           mResourceSlots(mArena),
           mResources(mArena),
@@ -106,16 +109,19 @@ void FrameGraph::setFgviewerData(FgviewerManager* fgviewer, FView const* view) {
 UTILS_NOINLINE
 void FrameGraph::destroyInternal() noexcept {
     // the order of destruction is important here
-    LinearAllocatorArena& arena = mArena;
-    std::for_each(mPassNodes.begin(), mPassNodes.end(), [&arena](auto item) {
+    auto& arena = mArena;
+    std::for_each(mPassNodes.begin(), mPassNodes.end(), [&arena](PassNode* item) {
+        arena.destroy(item, item->getSize());
+    });
+    std::for_each(mResourceNodes.begin(), mResourceNodes.end(), [&arena](ResourceNode* item) {
         arena.destroy(item);
     });
-    std::for_each(mResourceNodes.begin(), mResourceNodes.end(), [&arena](auto item) {
-        arena.destroy(item);
+    std::for_each(mResources.begin(), mResources.end(), [&arena](VirtualResource* item) {
+        arena.destroy(item, item->getSize());
     });
-    std::for_each(mResources.begin(), mResources.end(), [&arena](auto item) {
-        arena.destroy(item);
-    });
+    mPassNodes.clear();
+    mResourceNodes.clear();
+    mResources.clear();
 }
 
 FrameGraph::~FrameGraph() noexcept {
@@ -124,9 +130,6 @@ FrameGraph::~FrameGraph() noexcept {
 
 void FrameGraph::reset() noexcept {
     destroyInternal();
-    mPassNodes.clear();
-    mResourceNodes.clear();
-    mResources.clear();
     mResourceSlots.clear();
     mGraph.clear();
 }
@@ -146,7 +149,7 @@ FrameGraph& FrameGraph::compile() noexcept {
     DependencyGraph& dependencyGraph = mGraph;
 
     // first we cull unreachable nodes
-    dependencyGraph.cull();
+    dependencyGraph.cull(mArena);
 
     /*
      * update the reference counter of the resource themselves and
@@ -165,22 +168,27 @@ FrameGraph& FrameGraph::compile() noexcept {
         first++;
         assert_invariant(!passNode->isCulled());
 
-
-        auto const& reads = dependencyGraph.getIncomingEdges(passNode);
-        for (auto const& edge : reads) {
-            // all incoming edges should be valid by construction
-            assert_invariant(dependencyGraph.isEdgeValid(edge));
-            auto pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->from));
-            passNode->registerResource(pNode->resourceHandle);
+        { // scope for the temporary allocations
+            utils::ArenaScope const scope(mArena);
+            auto const& reads = dependencyGraph.getIncomingEdges(passNode, mArena);
+            for (auto const& edge : reads) {
+                // all incoming edges should be valid by construction
+                assert_invariant(dependencyGraph.isEdgeValid(edge));
+                auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->from));
+                passNode->registerResource(pNode->resourceHandle);
+            }
         }
 
-        auto const& writes = dependencyGraph.getOutgoingEdges(passNode);
-        for (auto const& edge : writes) {
-            // An outgoing edge might be invalid if the node it points to has been culled
-            // but because we are not culled, and we're a pass we add a reference to
-            // the resource we are writing to.
-            auto pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->to));
-            passNode->registerResource(pNode->resourceHandle);
+        { // scope for the temporary allocations
+            utils::ArenaScope const scope(mArena);
+            auto const& writes = dependencyGraph.getOutgoingEdges(passNode, mArena);
+            for (auto const& edge : writes) {
+                // An outgoing edge might be invalid if the node it points to has been culled
+                // but because we are not culled, and we're a pass we add a reference to
+                // the resource we are writing to.
+                auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->to));
+                passNode->registerResource(pNode->resourceHandle);
+            }
         }
 
         passNode->resolve();
@@ -205,7 +213,7 @@ FrameGraph& FrameGraph::compile() noexcept {
     /*
      * Resolve Usage bits
      */
-    for (auto& pNode : mResourceNodes) {
+    for (auto const& pNode : mResourceNodes) {
         // we can't use isCulled() here because some culled resource are still active
         // we could use "getResource(pNode->resourceHandle)->refcount" but that's expensive.
         // We also can't remove or reorder this array, as handles are indices to it.
@@ -507,11 +515,11 @@ bool FrameGraph::isCulled(FrameGraphPassBase const& pass) const noexcept {
 }
 
 bool FrameGraph::isAcyclic() const noexcept {
-    return mGraph.isAcyclic();
+    return mGraph.isAcyclic(mArena);
 }
 
 void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) const noexcept {
-    mGraph.export_graphviz(out, name);
+    mGraph.export_graphviz(mArena, out, name);
 }
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -533,7 +541,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) con
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
-        auto const &readEdges = mGraph.getIncomingEdges(pass);
+        auto const &readEdges = mGraph.getIncomingEdges(pass, mArena);
         for (auto const &edge: readEdges) {
             // all incoming edges should be valid by construction
             assert_invariant(mGraph.isEdgeValid(edge));
@@ -546,7 +554,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) con
         }
 
         std::vector<fgviewer::ResourceId> writes;
-        auto const &writeEdges = mGraph.getOutgoingEdges(pass);
+        auto const &writeEdges = mGraph.getOutgoingEdges(pass, mArena);
         for (auto const &edge: writeEdges) {
             // It is possible that the node we're writing to has been culled.
             // In this case we'd like to ignore the edge.

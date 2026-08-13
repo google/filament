@@ -135,9 +135,9 @@ bool VulkanPlatformSwapChainBase::queryCompositorTiming(
     return false;
 }
 
-bool VulkanPlatformSwapChainBase::setPresentFrameId(uint64_t frameId) const {
-    return false;
-}
+bool VulkanPlatformSwapChainBase::setPresentFrameId(uint64_t frameId) const { return false; }
+
+void VulkanPlatformSwapChainBase::setPresentationTime(int64_t frameId) noexcept {}
 
 bool VulkanPlatformSwapChainBase::queryFrameTimestamps(uint64_t frameId,
         FrameTimestamps* outFrameTimestamps) const {
@@ -330,14 +330,31 @@ VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData* 
 VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore finished) {
     uint32_t currentIndex = index;
     VkSemaphore finishedDrawing = finished;
-    VkPresentInfoKHR presentInfo{
-            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-            .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &finishedDrawing,
-            .swapchainCount = 1,
-            .pSwapchains = &mSwapchain,
-            .pImageIndices = &currentIndex,
+
+    VkPresentTimeGOOGLE presentTime = {
+        .presentID = mArbitraryFrameId++,
+        .desiredPresentTime = uint64_t(mPresentationTime),
     };
+
+    VkPresentTimesInfoGOOGLE presentTimeInfoGoogle = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
+        .swapchainCount = 0,
+        .pTimes = &presentTime,
+    };
+
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &finishedDrawing,
+        .swapchainCount = 1,
+        .pSwapchains = &mSwapchain,
+        .pImageIndices = &currentIndex,
+    };
+
+    if (mContext.isGoogleDisplayTimingEnabled() && mPresentationTime != 0) {
+        presentInfo.pNext = &presentTimeInfoGoogle;
+    }
+
     VkResult result = vkQueuePresentKHR(mQueue, &presentInfo);
 
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
@@ -400,6 +417,10 @@ bool VulkanPlatformSurfaceSwapChain::setPresentFrameId(uint64_t frameId) const {
     return mImpl.setPresentFrameId(static_cast<ANativeWindow*>(mNativeWindow), frameId);
 #endif
     return VulkanPlatformSwapChainBase::setPresentFrameId(frameId);
+}
+
+void VulkanPlatformSurfaceSwapChain::setPresentationTime(int64_t presentationTime) noexcept {
+    mPresentationTime = presentationTime;
 }
 
 bool VulkanPlatformSurfaceSwapChain::queryFrameTimestamps(uint64_t const frameId,

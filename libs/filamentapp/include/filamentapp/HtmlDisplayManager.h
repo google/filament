@@ -37,32 +37,30 @@ public:
     HtmlDisplayManager();
     ~HtmlDisplayManager() override;
 
-    bool init(const Config& config) override;
     void terminate() override;
 
-    FilamentApp2::Window::Handle createWindow(const char* title, uint32_t w, uint32_t h,
+    WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
             bool resizable, bool headless) override;
-    void destroyWindow(FilamentApp2::Window::Handle window) override;
+    void destroyWindow(WindowHandle window) override;
 
-    void* getNativeWindow(FilamentApp2::Window::Handle window) const override;
+    void* getNativeWindow(WindowHandle window) const override;
 
-    void setWindowTitle(FilamentApp2::Window::Handle window, const char* title) override;
-    void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w, uint32_t* h) const override;
-    void getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
+    void setWindowTitle(WindowHandle window, const char* title) override;
+    void getWindowSize(WindowHandle window, uint32_t* w,
+            uint32_t* h) const override;
+    void getDrawableSize(WindowHandle window, uint32_t* w,
             uint32_t* h) const override;
 
     void pollEvents(std::vector<AppEvent>& events) override;
 
     uint32_t getMouseState(int* x, int* y) const override;
 
-    bool isWindowFocused(FilamentApp2::Window::Handle window) const override { return true; }
+    bool isWindowFocused(WindowHandle window) const override { return true; }
 
     double getTime() const override;
 
-    void onFrameFinished(FilamentApp2::Window::Handle window, filament::Engine* engine,
+    void onFrameFinished(WindowHandle window, filament::Engine* engine,
             filament::Renderer* renderer) override;
-
-    void startRendering(std::function<bool()> doFrame) override;
 
 private:
     struct WindowInfo {
@@ -85,12 +83,14 @@ private:
         HtmlDisplayManager* mDisplayManager;
     };
 
+    bool init();
+
     mutable utils::Mutex mMutex;
     std::unique_ptr<CivetServer> mServer;
     std::unique_ptr<WebSocketHandler> mWebSocketHandler;
     std::vector<struct mg_connection*> mConnections;
 
-    std::unordered_map<FilamentApp2::Window::Handle, WindowInfo> mWindows;
+    std::unordered_map<WindowHandle, WindowInfo> mWindows;
     std::queue<AppEvent> mEventQueue;
     uint32_t mMouseButtons = 0;
     int32_t mMouseX = 0;

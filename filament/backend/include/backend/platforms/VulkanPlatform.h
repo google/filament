@@ -484,6 +484,15 @@ public:
         return {};
     }
 
+    /**
+     * On certain platforms, it is possible to set the time that the committed buffers should be
+     * presented at. This affects all of the commited buffers across all swapchains provided to the
+     * backend. Set to 0 if this behavior is not desired.
+     *
+     * @param intended present time
+     */
+    virtual void setPresentationTime(int64_t presentTime) noexcept;
+
 protected:
     struct VulkanSync : public Sync {
         explicit VulkanSync(std::shared_ptr<VulkanCmdFence> fence) noexcept

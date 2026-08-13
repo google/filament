@@ -182,13 +182,7 @@ Froxelizer::~Froxelizer() {
 }
 
 void Froxelizer::terminate(DriverApi& driverApi) noexcept {
-    // call reset() on our LinearAllocator arenas
-    mArena.reset();
-
-    mBoundingSpheres = nullptr;
-    mPlanesY = nullptr;
-    mPlanesX = nullptr;
-    mDistancesZ = nullptr;
+    resetLocalArena();
 
     if (mRecordsBuffer) {
         driverApi.destroyBufferObject(mRecordsBuffer);
@@ -224,7 +218,7 @@ void Froxelizer::setProjection(const mat4f& projection,
 }
 
 bool Froxelizer::prepare(
-        FEngine::DriverApi& driverApi, RootArenaScope& rootArenaScope,
+        FEngine::DriverApi& driverApi, LinearAllocatorArena& arena,
         filament::Viewport const& viewport,
         const mat4f& projection, float const projectionNear, float const projectionFar,
         float4 const& clipTransform) noexcept {
@@ -261,12 +255,12 @@ bool Froxelizer::prepare(
 
     // light records per froxel (~256 KiB with 4096 froxels)
     mLightRecords.set(
-            rootArenaScope.allocate<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
+            arena.alloc<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
             getFroxelBufferEntryCount());
 
     // froxel thread data (~256KiB with 8192 max froxels and 256 lights)
     mFroxelShardedData.set(
-            rootArenaScope.allocate<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
+            arena.alloc<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
             uint32_t(GROUP_COUNT));
 
     assert_invariant(mFroxelBufferUser.begin());
@@ -381,7 +375,6 @@ void Froxelizer::updateBoundingSpheres(
     }
 }
 
-UTILS_NOINLINE
 bool Froxelizer::update() noexcept {
     bool uniformsNeedUpdating = false;
 
@@ -423,6 +416,7 @@ bool Froxelizer::update() noexcept {
         uint16_t froxelCountX, froxelCountY, froxelCountZ;
         computeFroxelLayout(&froxelDimension, &froxelCountX, &froxelCountY, &froxelCountZ,
                 getFroxelBufferEntryCount(), viewport);
+        const uint32_t froxelCount = uint32_t(froxelCountX * froxelCountY * froxelCountZ);
 
         mFroxelDimension = froxelDimension;
         // note: because froxelDimension is a power-of-two and viewport is an integer, mClipFroxel
@@ -439,21 +433,18 @@ bool Froxelizer::update() noexcept {
                    << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ
                    << " lost)";
 
-        mFroxelCountX = froxelCountX;
-        mFroxelCountY = froxelCountY;
-        mFroxelCountZ = froxelCountZ;
-        const uint32_t froxelCount = uint32_t(froxelCountX * froxelCountY * froxelCountZ);
-        mFroxelCount = froxelCount;
-
         if (mDistancesZ) {
-            // this is a LinearAllocator arena, use rewind() instead of free (which is a no op).
-            mArena.rewind(mDistancesZ);
+            resetLocalArena();
         }
 
         mDistancesZ      = mArena.alloc<float>(froxelCountZ + 1);
         mPlanesX         = mArena.alloc<float4>(froxelCountX + 1);
         mPlanesY         = mArena.alloc<float4>(froxelCountY + 1);
         mBoundingSpheres = mArena.alloc<float4>(froxelCount);
+        mFroxelCountX = froxelCountX;
+        mFroxelCountY = froxelCountY;
+        mFroxelCountZ = froxelCountZ;
+        mFroxelCount = froxelCount;
 
         assert_invariant(mDistancesZ);
         assert_invariant(mPlanesX);
@@ -563,6 +554,19 @@ bool Froxelizer::update() noexcept {
     return uniformsNeedUpdating;
 }
 
+UTILS_NOINLINE
+void Froxelizer::resetLocalArena() noexcept {
+    mArena.free(mDistancesZ, (mFroxelCountZ + 1) * sizeof(float));
+    mArena.free(mPlanesX, (mFroxelCountX + 1) * sizeof(float4));
+    mArena.free(mPlanesY, (mFroxelCountY + 1) * sizeof(float4));
+    mArena.free(mBoundingSpheres, mFroxelCount * sizeof(float4));
+    mArena.reset();
+    mBoundingSpheres = nullptr;
+    mPlanesY = nullptr;
+    mPlanesX = nullptr;
+    mDistancesZ = nullptr;
+}
+
 Froxel Froxelizer::getFroxelAt(size_t const x, size_t const y, size_t const z) const noexcept {
     assert_invariant(x < mFroxelCountX);
     assert_invariant(y < mFroxelCountY);
@@ -607,7 +611,7 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 }
 
 
-void Froxelizer::commit(DriverApi& driverApi) {
+void Froxelizer::commit(DriverApi& driverApi, LinearAllocatorArena& arena) {
     // send data to GPU
     driverApi.updateBufferObject(mFroxelsBuffer,
             { mFroxelBufferUser.data(), mFroxelBufferEntryCount * sizeof(FroxelEntry) }, 0);
@@ -615,11 +619,14 @@ void Froxelizer::commit(DriverApi& driverApi) {
     driverApi.updateBufferObject(mRecordsBuffer,
             { mRecordBufferUser.data(), mFroxelRecordBufferEntryCount }, 0);
 
-#ifndef NDEBUG
+    arena.free(mLightRecords.data(), mLightRecords.sizeInBytes());
+
+    arena.free(mFroxelShardedData.data(), mFroxelShardedData.sizeInBytes());
+
     mFroxelBufferUser.clear();
     mRecordBufferUser.clear();
+    mLightRecords.clear();
     mFroxelShardedData.clear();
-#endif
 }
 
 void Froxelizer::froxelizeLights(FEngine& engine,

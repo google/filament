@@ -223,7 +223,7 @@ private:
     }
 
     void renderInternal(backend::DriverApi& driver, FView const* view, bool flush);
-    void renderJob(backend::DriverApi& driver, RootArenaScope& rootArenaScope, FView& view);
+    void renderJob(backend::DriverApi& driver, LinearAllocatorArena& arena, FView& view);
 
     static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
             TemporalAntiAliasingOptions const& taaOptions,

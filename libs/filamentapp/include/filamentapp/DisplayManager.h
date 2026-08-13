@@ -19,9 +19,6 @@
 
 #include "AppEvent.h"
 
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp2.h>
-
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 
@@ -39,13 +36,6 @@ public:
     virtual ~DisplayManager() = default;
 
     /**
-     * Initializes the display manager.
-     * @param config The application configuration.
-     * @return true if successful.
-     */
-    virtual bool init(const Config& config) = 0;
-
-    /**
      * Terminates the display manager.
      */
     virtual void terminate() = 0;
@@ -59,14 +49,14 @@ public:
      * @param headless Whether the window should be created in headless mode.
      * @return A handle to the created window.
      */
-    virtual FilamentApp2::Window::Handle createWindow(const char* title, uint32_t w, uint32_t h,
+    virtual WindowHandle createWindow(const char* title, uint32_t w, uint32_t h,
             bool resizable, bool headless) = 0;
 
     /**
      * Destroys a window.
      * @param window The handle of the window to destroy.
      */
-    virtual void destroyWindow(FilamentApp2::Window::Handle window) = 0;
+    virtual void destroyWindow(WindowHandle window) = 0;
 
     /**
      * Returns the underlying native window handle for the specified platform window.
@@ -74,14 +64,14 @@ public:
      * @return The native window handle (e.g., HWND, NSWindow*). Returns nullptr for headless/web
      * platforms.
      */
-    virtual void* getNativeWindow(FilamentApp2::Window::Handle window) const = 0;
+    virtual void* getNativeWindow(WindowHandle window) const = 0;
 
     /**
      * Sets the title of a window.
      * @param window The window handle.
      * @param title The new title.
      */
-    virtual void setWindowTitle(FilamentApp2::Window::Handle window, const char* title) = 0;
+    virtual void setWindowTitle(WindowHandle window, const char* title) = 0;
 
     /**
      * Returns the size of a window.
@@ -89,7 +79,7 @@ public:
      * @param w Pointer to store the width.
      * @param h Pointer to store the height.
      */
-    virtual void getWindowSize(FilamentApp2::Window::Handle window, uint32_t* w,
+    virtual void getWindowSize(WindowHandle window, uint32_t* w,
             uint32_t* h) const = 0;
 
     /**
@@ -98,7 +88,7 @@ public:
      * @param w Pointer to store the width.
      * @param h Pointer to store the height.
      */
-    virtual void getDrawableSize(FilamentApp2::Window::Handle window, uint32_t* w,
+    virtual void getDrawableSize(WindowHandle window, uint32_t* w,
             uint32_t* h) const = 0;
 
     /**
@@ -111,7 +101,7 @@ public:
      * Called when a window has been resized.
      * @param window The window handle.
      */
-    virtual void onWindowResized(FilamentApp2::Window::Handle window) {}
+    virtual void onWindowResized(WindowHandle window) {}
 
     /**
      * Returns the current mouse state.
@@ -126,7 +116,7 @@ public:
      * @param window The window handle.
      * @return true if the window has focus.
      */
-    virtual bool isWindowFocused(FilamentApp2::Window::Handle window) const { return true; }
+    virtual bool isWindowFocused(WindowHandle window) const { return true; }
 
     /**
      * Returns the current time in seconds.
@@ -139,19 +129,8 @@ public:
      * @param engine The Filament engine.
      * @param renderer The Filament renderer.
      */
-    virtual void onFrameFinished(FilamentApp2::Window::Handle window, filament::Engine* engine,
+    virtual void onFrameFinished(WindowHandle window, filament::Engine* engine,
             filament::Renderer* renderer) {}
-
-    /**
-     * Yields main thread to the display manager to let it drive rendering.
-     *
-     * On Android, this will not block but provide the app with the doFrame() function, which can
-     * then be called from the Choreographer.
-     *
-     * Similarly, on the Web/WASM (*not* the headless HtmlDisplayManager), the render will be driven
-     * by requestAnimationFrame().
-     */
-    virtual void startRendering(std::function<bool()> doFrame) = 0;
 };
 
 } // namespace filament::app

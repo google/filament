@@ -5,7 +5,7 @@ runs:
     - uses: ./.github/actions/dep-versions
     - name: Cache EMSDK
       id: emsdk-cache
-      uses: actions/cache@v4 # Use a specific version
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: emsdk
         key: ${{ runner.os }}-${{ runner.arch }}-emsdk-${{ env.GITHUB_EMSDK_VERSION }}

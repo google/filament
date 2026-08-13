@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -35,7 +36,8 @@
 using namespace filament;
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -58,75 +60,88 @@ static void setCameraProjection(App* app, View* view) {
         -ZOOM, ZOOM, 0, 1);
 }
 
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "vbotest";
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
     // Aggregate positions and colors into a single buffer without interleaving.
     std::vector<uint8_t> vbo(sizeof(POSITIONS) + sizeof(COLORS));
     memcpy(vbo.data(), POSITIONS, sizeof(POSITIONS));
     memcpy(vbo.data() + sizeof(POSITIONS), COLORS, sizeof(COLORS));
 
-    App app;
-    auto setup = [&app, &vbo](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, vbo](Engine* engine, View* view, Scene* scene) {
         // Populate vertex buffer.
-        app.vb = VertexBuffer::Builder().vertexCount(3).bufferCount(1)
+        app->vb = VertexBuffer::Builder().vertexCount(3).bufferCount(1)
                 .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 8)
                 .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 24, 4)
                 .normalized(VertexAttribute::COLOR).build(*engine);
-        app.vb->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(vbo.data(), vbo.size(), 0));
+        app->vb->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(vbo.data(), vbo.size(), 0));
 
         // Populate index buffer.
-        app.ib = IndexBuffer::Builder().indexCount(3).bufferType(IndexBuffer::IndexType::USHORT)
+        app->ib = IndexBuffer::Builder().indexCount(3).bufferType(IndexBuffer::IndexType::USHORT)
                 .build(*engine);
-        app.ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, 0));
+        app->ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, 0));
 
         // Construct material.
-        app.mat = Material::Builder()
+        app->mat = Material::Builder()
                 .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE).build(*engine);
 
         // Construct renderable.
         RenderableManager::Builder(1)
                 .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
-                .build(*engine, app.renderable = utils::EntityManager::get().create());
-        scene->addEntity(app.renderable);
+                .material(0, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
+                .build(*engine, app->renderable = utils::EntityManager::get().create());
+        scene->addEntity(app->renderable);
 
         // Replace the FilamentApp camera with identity.
-        app.camera = utils::EntityManager::get().create();
-        view->setCamera(app.cam = engine->createCamera(app.camera));
-        setCameraProjection(&app, view);
+        app->camera = utils::EntityManager::get().create();
+        view->setCamera(app->cam = engine->createCamera(app->camera));
+        setCameraProjection(app.get(), view);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.renderable);
-        engine->destroy(app.mat);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
-        engine->destroyCameraComponent(app.camera);
-        utils::EntityManager::get().destroy(app.camera);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->renderable);
+        engine->destroy(app->mat);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
     };
 
+    auto preRender = [app](Engine*, View*, Scene*, Renderer* renderer) {
+        renderer->setClearOptions({ .clear = true });
+    };
 
-    app.filamentApp =
+    auto resize = [app](Engine* engine, View* view) {
+        setCameraProjection(app.get(), view);
+    };
+
+    auto fApp =
             FilamentApp2::Builder()
-                    .title(config.title)
-                    .backend(config.backend)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+                    .displayManager(dm)
+                    .title(app->config.title)
+                    .backend(app->config.backend)
                     .setup(setup)
                     .cleanup(cleanup)
-                    .imgui({})
-                    .preRender([](Engine*, View*, Scene*, Renderer* renderer) {
-                        Renderer::ClearOptions options;
-                        options.clear = true;
-                        renderer->setClearOptions(options);
-                    })
-                    .resize([&app](Engine* engine, View* view) { setCameraProjection(&app, view); })
+                    .preRender(preRender)
+                    .resize(resize)
                     .build();
-    app.filamentApp->run();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "vbotest";
+    samples::handleCommandLineArguments(argc, argv, &config);
+
+    auto dm = samples::getDisplayManager(config);
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
 
     return 0;
 }
+#endif

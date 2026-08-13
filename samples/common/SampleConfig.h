@@ -5,15 +5,16 @@
 
 #include <camutils/Manipulator.h>
 
-#include <string>
+#include <utils/CString.h>
+
+#include <unordered_map>
 
 struct SampleConfig {
-    std::string title;
+    utils::CString title;
     uint32_t width = 1024;
     uint32_t height = 640;
-    std::string iblDirectory;
-    std::string dirt;
-    float scale = 1.0f;
+    utils::CString iblDirectory;
+    utils::CString dirt;
     bool splitView = false;
     mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
     mutable filament::backend::FeatureLevel featureLevel =
@@ -22,13 +23,14 @@ struct SampleConfig {
     bool resizeable = true;
     bool headless = false;
     int stereoscopicEyeCount = 2;
-    uint8_t samples = 1;
-    std::string vulkanGPUHint;
+    utils::CString vulkanGPUHint;
     using WebGPUBackend = filament::Engine::Backend;
     WebGPUBackend forcedWebGPUBackend = WebGPUBackend::DEFAULT;
     enum class DisplayManager { SDL, WEB };
     DisplayManager displayManager = DisplayManager::SDL;
     filament::backend::AsynchronousMode asynchronousMode =
             filament::backend::AsynchronousMode::NONE;
+    utils::CString fileName;
+    std::unordered_map<utils::CString, utils::CString> customArgs;
 };
 #endif

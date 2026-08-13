@@ -1162,14 +1162,18 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
     const Frustum frustum(MpMv);
 
     // Cull shadow casters
-    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    float const* cx = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* cy = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* cz = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* ex = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* ey = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* ez = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
     FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
     Culler::intersects(
             visibleArray + range.first,
             frustum,
-            worldAABBCenter + range.first,
-            worldAABBExtent + range.first,
+            cx + range.first, cy + range.first, cz + range.first,
+            ex + range.first, ey + range.first, ez + range.first,
             range.size(),
             VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
 
@@ -1231,14 +1235,18 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
     Frustum const frustum{ highPrecisionMultiply(Mp, Mv) };
 
     // Cull shadow casters
-    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    float const* cx = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* cy = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* cz = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* ex = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* ey = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* ez = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
     FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
     Culler::intersects(
             visibleArray + range.first,
             frustum,
-            worldAABBCenter + range.first,
-            worldAABBExtent + range.first,
+            cx + range.first, cy + range.first, cz + range.first,
+            ex + range.first, ey + range.first, ez + range.first,
             range.size(),
             VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
 

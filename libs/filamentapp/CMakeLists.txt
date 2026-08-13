@@ -51,10 +51,12 @@ set(SRCS
 )
 
 if (IS_HOST_PLATFORM)
+    list(APPEND PUBLIC_HDRS
+            include/filamentapp/SDLDisplayManager.h
+            include/filamentapp/HtmlDisplayManager.h
+    )
     list(APPEND SRCS
-            src/display_managers/SDLDisplayManager.h
             src/display_managers/SDLDisplayManager.cpp
-            src/display_managers/HtmlDisplayManager.h
             src/display_managers/HtmlDisplayManager.cpp
     )
 endif()
