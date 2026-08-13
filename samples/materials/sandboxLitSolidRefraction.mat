@@ -21,6 +21,14 @@ material {
             name : metallic
         },
         {
+            type : float,
+            name : secondRoughness
+        },
+        {
+            type : float,
+            name : secondRoughnessWeight
+        },
+        {
             type : float3,
             name : sheenColor
         },
@@ -75,6 +83,8 @@ fragment {
         material.baseColor.a = materialParams.alpha;
         material.roughness = materialParams.roughness;
         material.metallic = materialParams.metallic;
+        material.secondRoughness = materialParams.secondRoughness;
+        material.secondRoughnessWeight = materialParams.secondRoughnessWeight;
         material.sheenColor = materialParams.sheenColor;
         material.sheenRoughness = materialParams.sheenRoughness;
         material.clearCoat = materialParams.clearCoat;

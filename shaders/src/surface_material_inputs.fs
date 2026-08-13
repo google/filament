@@ -9,6 +9,14 @@
     #define MATERIAL_CAN_SKIP_LIGHTING
 #endif
 
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && \
+    !defined(SHADING_MODEL_UNLIT) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS) && \
+    defined(MATERIAL_HAS_SECOND_ROUGHNESS)
+
+    #define MATERIAL_HAS_SECOND_SPECULAR_LOBE
+
+#endif
+
 struct MaterialInputs {
     vec4  baseColor;
 #if !defined(SHADING_MODEL_UNLIT)
@@ -24,6 +32,11 @@ struct MaterialInputs {
     vec4  emissive;
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    float secondRoughness;
+    float secondRoughnessWeight;
+#endif
+
     vec3 sheenColor;
     float sheenRoughness;
 #endif
@@ -124,6 +137,11 @@ void initMaterial(out MaterialInputs material) {
     material.ambientOcclusion = 1.0;
 #endif
     material.emissive = vec4(vec3(0.0), 1.0);
+
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    material.secondRoughness = 0.0f;
+    material.secondRoughnessWeight = 0.0;
+#endif
 
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_UNLIT)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)

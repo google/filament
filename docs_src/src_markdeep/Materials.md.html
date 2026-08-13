@@ -62,6 +62,35 @@ Filament materials can use one of the following material models:
 - Unlit
 - Specular glossiness (legacy)
 
+## Layering
+
+The material models described below can be made of one or more layers. Here is the order in which
+Filament stacks those layers (or diffuse/specular lobes), from top (outside) to bottom (inside):
+
+*************************************
+*        .-----------------.        *
+*        |                 |        *
+*        |   Clear coat    |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |      Sheen      |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |   2nd Specular  |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |     Specular    |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |     Diffuse     |        *
+*        |                 |        *
+*        '-----------------'        *
+*************************************
+
 ## Lit model
 
 The lit model is Filament's standard material model. This physically-based shading model was
@@ -75,63 +104,68 @@ The appearance of a material using the standard model is controlled using the pr
 in table [standardProperties].
 
 
-        Property        |      Definition
------------------------:|:---------------------
-**baseColor**           | Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces
-**roughness**           | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
-**metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
-**reflectance**         | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
-**specularFactor**      | Scales the amount of specular reflection for non-metallic surfaces
-**specularColorFactor** | Color of the specular reflection for non-metallic surfaces
-**ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
-**clearCoat**           | Strength of the clear coat layer
-**clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
-**clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
-**anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
-**anisotropyDirection** | Local surface direction in tangent space
-**thickness**           | Thickness of the solid volume of refractive objects
-**sheenColor**          | Strength of the sheen layer
-**sheenRoughness**      | Perceived smoothness or roughness of the sheen layer
-**emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
-**normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
-**postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
-**absorption**          | Absorption factor for refractive objects
-**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
-**ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
-**microThickness**      | Thickness of the thin layer of refractive objects
-**dispersion**          | Strength of the dispersion effect for refractive objects, specified as 20/Abbe number
-**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
-**shadowStrength**      | Strength factor between 0 and 1 for all shadows received by this material
+        Property          |      Definition
+-------------------------:|:---------------------
+**baseColor**             | Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces
+**roughness**             | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
+**metallic**              | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
+**reflectance**           | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
+**anisotropy**            | Amount of anisotropy in either the tangent or bitangent direction
+**anisotropyDirection**   | Local surface direction in tangent space
+**specularFactor**        | Scales the amount of specular reflection for non-metallic surfaces
+**specularColorFactor**   | Color of the specular reflection for non-metallic surfaces
+**secondRoughness**       | Perceived smoothness or roughness of the optional second specular lobe
+**secondRoughnessWeight** | Weight of the mix between the first specular lobe and the second specular lobe
+**sheenColor**            | Strength of the sheen layer
+**sheenRoughness**        | Perceived smoothness or roughness of the sheen layer
+**clearCoat**             | Strength of the clear coat layer
+**clearCoatRoughness**    | Perceived smoothness or roughness of the clear coat layer
+**normal**                | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**bentNormal**            | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
+**clearCoatNormal**       | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
+**ambientOcclusion**      | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
+**emissive**              | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
+**postLightingColor**     | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
+**ior**                   | Index of refraction, either for refractive objects or as an alternative to reflectance
+**transmission**          | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
+**absorption**            | Absorption factor for refractive objects
+**microThickness**        | Thickness of the thin layer of refractive objects
+**thickness**             | Thickness of the solid volume of refractive objects
+**dispersion**            | Strength of the dispersion effect for refractive objects, specified as 20/Abbe number
+**shadowStrength**        | Strength factor between 0 and 1 for all shadows received by this material
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
 
-        Property        |   Type   |            Range         |           Note
------------------------:|:--------:|:------------------------:|:-------------------------
-**baseColor**           | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**metallic**            | float    |  [0..1]                  | Should be 0 or 1
-**roughness**           | float    |  [0..1]                  |
-**reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
-**specularFactor**      | float    |  [0..1]                  | Optional, defaults to 1.0
-**specularColorFactor** | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
-**sheenColor**          | float3   |  [0..1]                  | Linear RGB
-**sheenRoughness**      | float    |  [0..1]                  |
-**clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
-**clearCoatRoughness**  | float    |  [0..1]                  |
-**anisotropy**          | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
-**anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**ambientOcclusion**    | float    |  [0..1]                  |
-**normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**bentNormal**          | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**emissive**            | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
-**postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
-**transmission**        | float    |  [0..1]                  |
-**absorption**          | float3   |  [0..n]                  |
-**microThickness**      | float    |  [0..n]                  |
-**thickness**           | float    |  [0..n]                  |
-**dispersion**          | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
+        Property          |   Type   |            Range         |           Note
+-------------------------:|:--------:|:------------------------:|:-------------------------
+**baseColor**             | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**roughness**             | float    |  [0..1]                  |
+**metallic**              | float    |  [0..1]                  | Should be 0 or 1
+**reflectance**           | float    |  [0..1]                  | Prefer values > 0.35
+**anisotropy**            | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
+**anisotropyDirection**   | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**specularFactor**        | float    |  [0..1]                  | Optional, defaults to 1.0
+**specularColorFactor**   | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
+**secondRoughness**       | float    |  [0..1]                  |
+**secondRoughnessWeight** | float    |  [0..1]                  |
+**sheenColor**            | float3   |  [0..1]                  | Linear RGB
+**sheenRoughness**        | float    |  [0..1]                  |
+**clearCoat**             | float    |  [0..1]                  | Should be 0 or 1
+**clearCoatRoughness**    | float    |  [0..1]                  |
+**normal**                | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**bentNormal**            | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**clearCoatNormal**       | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**ambientOcclusion**      | float    |  [0..1]                  |
+**emissive**              | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
+**postLightingColor**     | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**ior**                   | float    |  [1..n]                  | Optional, usually deduced from the reflectance
+**transmission**          | float    |  [0..1]                  |
+**absorption**            | float3   |  [0..n]                  |
+**microThickness**        | float    |  [0..n]                  |
+**thickness**             | float    |  [0..n]                  |
+**dispersion**            | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
+**shadowStrength**        | float    |  [0..1]                  |
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -321,6 +355,31 @@ The `specularColorFactor` property defines the color of the specular reflection 
 surfaces. This property is often used to implement the `KHR_materials_specular` glTF extension. This
 value scales the Fresnel reflectance at normal incidence (F0), which is also computed from the
 `reflectance` property.
+
+### Second roughness
+
+The `secondRoughness` property works exactly like the `roughness` property. When this property is
+set, a second specular lobe is computed and mixed with the primary specular lobe, according to the
+`secondRoughnessWeight` property.
+
+The ability to layer a second specular lobe is useful to create more complex surface appearances
+such as some metals or composite materials. For instance, when creating a smooth metal surface
+(`roughness` set to 0 or close to 0), adding a `secondRoughness` of 0.3 with a
+`secondRoughnessWeight` of 0.5 can create a layer of patina that improves the realisme of the
+surface.
+
+You can refer to the video [Forgotten Metal Knowledge](https://www.youtube.com/watch?v=uz8PIi3ELJg)
+which explores various examples of when this property can be useful.
+
+The second specular lobe is _always_ isotropic.
+
+### Second roughness weight
+
+Controls the mix between the base specular lobe and the second specular lobe.
+
+When `secondRoughnessWeight` is set to 0, the second specular lobe is not visible. When set to 1,
+only the second specular lobe is visible. Values between 0 and 1 select how much of each lobe should
+be visible.
 
 ### Sheen color
 
@@ -828,7 +887,8 @@ This alternative lighting model exists to comply with legacy standards. Since it
 physically-based formulation, we do not recommend using it except when loading legacy assets.
 
 This model encompasses the parameters previously defined for the standard lit mode except for
-_metallic_, _reflectance_, and _roughness_. It adds parameters for _specularColor_ and _glossiness_.
+_metallic_, _reflectance_, _roughness_, and `secondRoughness/secondRoughnessWeight`.
+It adds parameters for _specularColor_ and _glossiness_.
 
 Parameter             |      Definition
 ---------------------:|:---------------------

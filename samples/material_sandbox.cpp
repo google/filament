@@ -275,6 +275,8 @@ static MaterialInstance* updateInstances(SandboxParameters& params) {
         if (!hasRefraction) {
             materialInstance->setParameter("reflectance", params.reflectance);
         }
+        materialInstance->setParameter("secondRoughness", params.secondRoughness);
+        materialInstance->setParameter("secondRoughnessWeight", params.secondRoughnessWeight);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("sheenRoughness", params.sheenRoughness);
         materialInstance->setParameter("clearCoat", params.clearCoat);
@@ -451,6 +453,13 @@ static void gui(Engine* engine, View*) {
                         ImGui::SliderFloat("Metallic", &params.metallic, 0.0f, 1.0f);
                         ImGui::SliderFloat("Reflectance", &params.reflectance, 0.0f, 1.0f);
                     }
+                }
+
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                    params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE &&
+                    params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                    ImGui::SliderFloat("2nd Roughness", &params.secondRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("2nd Roughness Weight", &params.secondRoughnessWeight, 0.0f, 1.0f);
                 }
 
                 if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
@@ -961,6 +970,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
+                        .iblDirectory(config.iblDirectory)
                         .preRender(preRender)
                         .build();
     app->filamentApp = fApp.get();

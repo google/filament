@@ -137,6 +137,8 @@ struct SandboxParameters {
     float emissiveExposureWeight = 1.0f;
     float emissiveEV = 0.0f;
     float sheenRoughness = 0.0f;
+    float secondRoughness = 0.0f;
+    float secondRoughnessWeight = 0.0f;
     sRGBColor transmittanceColor =  { 1.0f };
     sRGBColor specularColor = { 0.0f };
     sRGBColor subsurfaceColor = { 0.0f };
