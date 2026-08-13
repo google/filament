@@ -395,12 +395,22 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
 }
 
 JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
+    // Fast check: if no jobs are active, avoid touching atomics.
+    if (UTILS_UNLIKELY(!hasActiveJobs())) {
+        return nullptr;
+    }
+
     // We speculatively decrement mActiveJobs before taking the job.
     // If a thread is preempted here, mActiveJobs is temporarily undercounted.
     // This is safe and desirable: it allows other idle threads to see 0 and go to sleep
     // (yielding the CPU) instead of spinning infinitely on hasActiveJobs(),
     // completely preventing priority inversion lockups.
-    mActiveJobs.fetch_sub(1, std::memory_order_acquire);
+    int32_t const prevActiveJobs = mActiveJobs.fetch_sub(1, std::memory_order_acquire);
+    if (UTILS_UNLIKELY(prevActiveJobs <= 0)) {
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+        return nullptr;
+    }
+
     size_t const index = workQueue.pop();
     assert(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
@@ -412,15 +422,9 @@ JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
 }
 
 JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
-    // See JobSystem::pop() for why we pre-decrement mActiveJobs.
-    mActiveJobs.fetch_sub(1, std::memory_order_acquire);
     size_t const index = workQueue.steal();
     assert_invariant(index <= MAX_JOB_COUNT);
-    Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
-    if (UTILS_UNLIKELY(!job)) {
-        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
-    }
-    return job;
+    return !index ? nullptr : &mJobStorageBase[index - 1];
 }
 
 inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state) noexcept {
@@ -444,14 +448,42 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state
 
 JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+
+    // Fast check: if no jobs are active, avoid attempting to steal or touch atomics.
+    if (UTILS_UNLIKELY(!hasActiveJobs())) {
+        return nullptr;
+    }
+
+    // Speculatively claim one job count before searching across queues.
+    // If preempted while stealing or executing, mActiveJobs is already decremented,
+    // allowing other threads to sleep rather than spin (preventing priority inversions).
+    int32_t const prevActiveJobs = mActiveJobs.fetch_sub(1, std::memory_order_acquire);
+    if (UTILS_UNLIKELY(prevActiveJobs <= 0)) {
+        // Another thread took the last available job; restore count and exit immediately.
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+        return nullptr;
+    }
+
     Job* job = nullptr;
+    auto const& threadStates = mThreadStates;
+    uint16_t const threadCount = uint16_t(threadStates.size());
+
+    // Search queues for the job we claimed.
+    // We try at least threadCount queues to find our job, and continue as long as
+    // additional active jobs remain in the system.
+    size_t attempts = 0;
     do {
         if (ThreadState* const stateToStealFrom = getStateToStealFrom(state)) {
             job = steal(stateToStealFrom->workQueue);
         }
-        // nullptr -> nothing to steal in that queue either, if there are active jobs,
-        // continue to try stealing one.
-    } while (!job && hasActiveJobs());
+        attempts++;
+    } while (!job && (attempts < threadCount || hasActiveJobs()));
+
+    if (UTILS_UNLIKELY(!job)) {
+        // If we couldn't find a job (e.g. consumed concurrently), restore the count.
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+    }
+
     return job;
 }
 
