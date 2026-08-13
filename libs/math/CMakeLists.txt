@@ -67,14 +67,16 @@ if (FILAMENT_BUILD_TESTING)
     # Benchmarks
     # ==================================================================================================
 
-    set(BENCHMARK_SRCS
-            benchmarks/benchmark_fast.cpp include/math/mathfwd.h)
+    if (NOT WASM)
+        set(BENCHMARK_SRCS
+                benchmarks/benchmark_fast.cpp include/math/mathfwd.h)
 
-    add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
+        add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
 
-    target_compile_options(benchmark_${TARGET} PRIVATE ${OPTIMIZATION_FLAGS})
+        target_compile_options(benchmark_${TARGET} PRIVATE ${OPTIMIZATION_FLAGS})
 
-    target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils math)
+        target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils math)
 
-    set_target_properties(benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)
+        set_target_properties(benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)
+    endif()
 endif()

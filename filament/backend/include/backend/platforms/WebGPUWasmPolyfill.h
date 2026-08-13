@@ -37,23 +37,23 @@ struct Origin2D {
     operator Origin3D() const { return {x, y, 0}; }
 };
 
-// b/508270158
-enum class ComponentSwizzle : uint32_t {
-    Undefined = 0,
-    Zero = 1,
-    One = 2,
-    R = 3,
-    G = 4,
-    B = 5,
-    A = 6,
-};
+// // b/508270158
+// enum class ComponentSwizzle : uint32_t {
+//     Undefined = 0,
+//     Zero = 1,
+//     One = 2,
+//     R = 3,
+//     G = 4,
+//     B = 5,
+//     A = 6,
+// };
 
-struct TextureComponentSwizzle {
-    ComponentSwizzle r = ComponentSwizzle::Undefined;
-    ComponentSwizzle g = ComponentSwizzle::Undefined;
-    ComponentSwizzle b = ComponentSwizzle::Undefined;
-    ComponentSwizzle a = ComponentSwizzle::Undefined;
-};
+// struct TextureComponentSwizzle {
+//     ComponentSwizzle r = ComponentSwizzle::Undefined;
+//     ComponentSwizzle g = ComponentSwizzle::Undefined;
+//     ComponentSwizzle b = ComponentSwizzle::Undefined;
+//     ComponentSwizzle a = ComponentSwizzle::Undefined;
+// };
 
 struct DawnTogglesDescriptor : public ChainedStruct {
     uint32_t enabledToggleCount = 0;

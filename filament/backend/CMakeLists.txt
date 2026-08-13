@@ -521,6 +521,7 @@ else()
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
             -Wover-aligned -Wreorder-init-list
+            -Wno-unused-template
             -Werror
     )
 endif()
