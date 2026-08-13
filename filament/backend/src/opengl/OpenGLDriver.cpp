@@ -805,7 +805,7 @@ void OpenGLDriver::createVertexBufferR(
 
 void OpenGLDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
         uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih,
-        CallbackHandler* handler, CallbackHandler::Callback const callback,
+        CallbackHandler* handler, AsyncCallback const callback,
         void* user, ImmutableCString&& tag) {
     // For object creation, the object should be constructed first to determine the initial settings
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
@@ -820,7 +820,7 @@ void OpenGLDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vbh,
     // to fire the callback after any previously-queued worker jobs.
     getJobQueue()->push([this, handler, callback, user]() mutable {
         DEBUG_MARKER_NAME("createVertexBufferAsyncR")
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -859,7 +859,7 @@ void OpenGLDriver::createIndexBufferAsyncR(
         ElementType const elementType,
         uint32_t indexCount,
         BufferUsage const usage,
-        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user,
+        CallbackHandler* handler, AsyncCallback const callback, void* user,
         ImmutableCString&& tag) {
     uint8_t const elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
     // For object creation, the object should be constructed first to determine the initial settings
@@ -877,7 +877,7 @@ void OpenGLDriver::createIndexBufferAsyncR(
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -918,7 +918,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
 
 void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user, ImmutableCString&& tag) {
+        AsyncCallback const callback, void* user, ImmutableCString&& tag) {
     // For object creation, the object should be constructed first to determine the initial settings
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
     // subsequent backend APIs can handle operations based on this setting.
@@ -934,7 +934,7 @@ void OpenGLDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -1198,7 +1198,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
 void OpenGLDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback const callback,
+        TextureUsage usage, CallbackHandler* handler, AsyncCallback const callback,
         void* user, ImmutableCString&& tag) {
     // For object creation, the object should be constructed first to determine the initial settings
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
@@ -1216,7 +1216,7 @@ void OpenGLDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -1340,7 +1340,7 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 
 void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<HwTexture> srch,
         TextureSwizzle const r, TextureSwizzle const g, TextureSwizzle const b, TextureSwizzle const a,
-        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user,
+        CallbackHandler* handler, AsyncCallback const callback, void* user,
         ImmutableCString&& tag) {
     // For object creation, the object should be constructed first to determine the initial settings
     // early. For example, the `asynchronous` field needs to be decided at this stage so that
@@ -1359,7 +1359,7 @@ void OpenGLDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<H
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -1557,7 +1557,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t const id,
 void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
         SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user,
+        CallbackHandler* handler, AsyncCallback const callback, void* user,
         ImmutableCString&& tag) {
 
     // For object creation, the object should be constructed first to determine the initial settings
@@ -1576,7 +1576,7 @@ void OpenGLDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t const id,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     });
 }
 
@@ -3303,7 +3303,7 @@ void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
 
 void OpenGLDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
         uint32_t const index, Handle<HwBufferObject> boh, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     getJobQueue()->push([this, vbh, index, boh, handler, callback, user]() mutable {
         DEBUG_MARKER_NAME("setVertexBufferObjectAsyncR")
         setVertexBufferObjectCommon(vbh, index, boh);
@@ -3311,7 +3311,7 @@ void OpenGLDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -3337,7 +3337,7 @@ void OpenGLDriver::updateIndexBuffer(
 
 void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
         BufferDescriptor&& p, uint32_t const byteOffset, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     getJobQueue()->push([this, ibh, p=std::move(p), byteOffset, handler, callback,
             user]() mutable {
         DEBUG_MARKER_NAME("updateIndexBufferAsyncR")
@@ -3346,7 +3346,7 @@ void OpenGLDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -3390,7 +3390,7 @@ void OpenGLDriver::updateBufferObject(
 
 void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
         BufferDescriptor&& bd, uint32_t const byteOffset, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     getJobQueue()->push([this, boh, bd=std::move(bd), byteOffset, handler, callback,
             user]() mutable {
         DEBUG_MARKER_NAME("updateBufferObjectAsyncR")
@@ -3399,7 +3399,7 @@ void OpenGLDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -3493,7 +3493,7 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         uint32_t const level, uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& data, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     getJobQueue()->push([this, th, level, xoffset, yoffset, zoffset, width, height, depth,
             data=std::move(data), handler, callback, user]() mutable {
         DEBUG_MARKER_NAME("update3DImageAsync")
@@ -3503,7 +3503,7 @@ void OpenGLDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
         // the driver may delay submitting commands to the GPU, preventing other contexts from
         // seeing the changes immediately. This ensures submitting the current commands right away.
         glFlush();
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -5177,14 +5177,14 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, uint3 const workGr
 }
 
 void OpenGLDriver::queueCommandAsyncR(AsyncCallId jobId, Invocable<void()>&& command, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
     getJobQueue()->push([this, command=std::move(command), handler, callback, user]() {
         DEBUG_MARKER_NAME("queueCommandAsync")
         if (command) {
             command();
         }
-        scheduleCallback(handler, user, callback);
+        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 

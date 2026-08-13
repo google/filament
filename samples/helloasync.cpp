@@ -52,6 +52,7 @@ using utils::EntityManager;
 using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
+using AsyncCallStatus = backend::AsyncCallStatus;
 
 struct Vertex {
     filament::math::float2 position;
@@ -430,7 +431,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         if (engine->isAsynchronousModeEnabled()) {
             // Build a pipeline for asynchronous operations.
-            app->onLoadImageComplete = [app](void* user) {
+            // Every completion callback receives an AsyncCallStatus. CANCELED means the operation
+            // never ran, so the resource it was meant to populate is not usable: the chain has to
+            // stop there instead of moving on to a stage that would read an empty resource.
+            app->onLoadImageComplete = [app](void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 // Load this once as it's universal across all objects
                 app->createMaterial();
                 // Initiate loading multiple renderables at the same time.
@@ -440,23 +447,45 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 app->startLoadingOneRenderable();
                 app->startLoadingOneRenderable();
             };
-            app->onCreateTextureComplete = [app](Texture* tex, void* user) {
+            app->onCreateTextureComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateTexture(user, app->onTextureUpdateComplete);
             };
-            app->onTextureUpdateComplete = [app](Texture* tex, void* user) {
+            app->onTextureUpdateComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->createMaterialInstance(user);
                 app->textureReady(user);
             };
-            app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user) {
+            app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateVertexBuffer(user, app->onVertexBufferUpdateComplete);
             };
-            app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user) {
+            app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->vertexBufferReady(user);
             };
-            app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user) {
+            app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateIndexBuffer(user, app->onIndexBufferUpdateComplete);
             };
-            app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user) {
+            app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->indexBufferReady(user);
             };
 
