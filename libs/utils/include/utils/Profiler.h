@@ -80,7 +80,7 @@ public:
     uint32_t getEnabledEvents() const noexcept { return mEnabledEvents; }
 
     // could return false if performance counters are not supported/enabled
-    bool isValid() const { return mCountersFd[0] >= 0; }
+    bool isValid() const { return mCountersFd[0][0] >= 0; }
 
     class Counters {
         friend class Profiler;
@@ -124,13 +124,13 @@ public:
         double getIPC() const noexcept {
             uint64_t cpuCycles = getCpuCycles();
             uint64_t instructions = getInstructions();
-            return double(instructions) / double(cpuCycles);
+            return (cpuCycles > 0) ? double(instructions) / double(cpuCycles) : 0.0;
         }
 
         double getCPI() const noexcept {
             uint64_t cpuCycles = getCpuCycles();
             uint64_t instructions = getInstructions();
-            return double(cpuCycles) / double(instructions);
+            return (instructions > 0) ? double(cpuCycles) / double(instructions) : 0.0;
         }
 
         double getL1DMissRate() const noexcept {
@@ -171,30 +171,45 @@ public:
 #if defined(__linux__)
 
     void reset() noexcept {
-        #pragma nounroll
-        for (int fd : mCountersFd) {
-            if (fd >= 0) {
-                ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        for (size_t i = 0; i < size_t(EVENT_COUNT); ++i) {
+            for (size_t c = 0; c < mCpuCount; ++c) {
+                if (mCountersFd[i][c] >= 0) {
+                    ioctl(mCountersFd[i][c], PERF_EVENT_IOC_RESET, 0);
+                }
             }
         }
     }
 
     void start() noexcept {
-        #pragma nounroll
-        for (int fd : mCountersFd) {
-            if (fd >= 0) {
-                ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        #if defined(__GNUC__) || defined(__clang__)
+        asm volatile("" ::: "memory");
+        #endif
+        for (size_t i = 0; i < size_t(EVENT_COUNT); ++i) {
+            for (size_t c = 0; c < mCpuCount; ++c) {
+                if (mCountersFd[i][c] >= 0) {
+                    ioctl(mCountersFd[i][c], PERF_EVENT_IOC_ENABLE, 0);
+                }
             }
         }
+        #if defined(__GNUC__) || defined(__clang__)
+        asm volatile("" ::: "memory");
+        #endif
     }
 
     void stop() noexcept {
-        #pragma nounroll
-        for (int fd : mCountersFd) {
-            if (fd >= 0) {
-                ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+        #if defined(__GNUC__) || defined(__clang__)
+        asm volatile("" ::: "memory");
+        #endif
+        for (size_t i = 0; i < size_t(EVENT_COUNT); ++i) {
+            for (size_t c = 0; c < mCpuCount; ++c) {
+                if (mCountersFd[i][c] >= 0) {
+                    ioctl(mCountersFd[i][c], PERF_EVENT_IOC_DISABLE, 0);
+                }
             }
         }
+        #if defined(__GNUC__) || defined(__clang__)
+        asm volatile("" ::: "memory");
+        #endif
     }
 
     Counters readCounters() noexcept;
@@ -209,16 +224,17 @@ public:
 #endif // __linux__
 
     bool hasBranchRates() const noexcept {
-        return (mCountersFd[BRANCHES] >= 0) && (mCountersFd[BRANCH_MISSES] >= 0);
+        return (mCountersFd[BRANCHES][0] >= 0) && (mCountersFd[BRANCH_MISSES][0] >= 0);
     }
 
     bool hasICacheRates() const noexcept {
-        return (mCountersFd[ICACHE_REFS] >= 0) && (mCountersFd[ICACHE_MISSES] >= 0);
+        return (mCountersFd[ICACHE_REFS][0] >= 0) && (mCountersFd[ICACHE_MISSES][0] >= 0);
     }
 
 private:
-    UTILS_UNUSED uint8_t mIds[EVENT_COUNT] = {};
-    int mCountersFd[EVENT_COUNT];
+    static constexpr size_t MAX_CPUS = 32;
+    int mCountersFd[EVENT_COUNT][MAX_CPUS];
+    size_t mCpuCount = 0;
     uint32_t mEnabledEvents = 0;
 };
 
