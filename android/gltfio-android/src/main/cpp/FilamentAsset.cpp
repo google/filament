@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <gltfio/FilamentAsset.h>
+
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::math;
