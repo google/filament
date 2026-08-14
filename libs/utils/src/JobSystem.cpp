@@ -291,7 +291,8 @@ void JobSystem::decRef(Job const* job) noexcept {
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
     LockGuard const lock(mWaiterLock);
-    mWaiterCondition.notify_all();
+    mWorkCondition.notify_all();
+    mJobCondition.notify_all();
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
@@ -307,11 +308,24 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
     return (job->runningJobCount.load(std::memory_order_acquire) & JOB_COUNT_MASK) == 0;
 }
 
-inline void JobSystem::wait(UniqueLock& lock) noexcept {
+inline void JobSystem::waitForWork(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
-    mSleepingThreads.fetch_add(1, std::memory_order_relaxed);
-    mWaiterCondition.wait(lock);
-    mSleepingThreads.fetch_sub(1, std::memory_order_relaxed);
+    mSleepingWorkers.fetch_add(1, std::memory_order_relaxed);
+    mWorkCondition.wait(lock);
+    mSleepingWorkers.fetch_sub(1, std::memory_order_relaxed);
+}
+
+inline void JobSystem::waitForJob(UniqueLock& lock, Job const* const job, uint32_t const expected) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS {
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+    if constexpr (Futex::HAS_FUTEX) {
+        lock.unlock();
+        Futex::wait(&job->runningJobCount, expected);
+        lock.lock();
+    } else {
+        mSleepingWaiters.fetch_add(1, std::memory_order_relaxed);
+        mJobCondition.wait(lock);
+        mSleepingWaiters.fetch_sub(1, std::memory_order_relaxed);
+    }
 }
 
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
@@ -322,31 +336,28 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
         return job->runningJobCount.load(std::memory_order_acquire);
     }
 
-    uint32_t runningJobCount =
-            job->runningJobCount.fetch_add(1 << WAITER_COUNT_SHIFT, std::memory_order_relaxed);
+    uint32_t runningJobCount = job->runningJobCount.fetch_add(1 << WAITER_COUNT_SHIFT, std::memory_order_relaxed);
 
     if (runningJobCount & JOB_COUNT_MASK) {
-        wait(lock);
+        waitForJob(lock, job, runningJobCount + (1 << WAITER_COUNT_SHIFT));
     }
 
-    runningJobCount =
-            job->runningJobCount.fetch_sub(1 << WAITER_COUNT_SHIFT, std::memory_order_acquire);
-
+    runningJobCount = job->runningJobCount.fetch_sub(1 << WAITER_COUNT_SHIFT, std::memory_order_acquire);
     assert_invariant((runningJobCount >> WAITER_COUNT_SHIFT) >= 1);
 
     return runningJobCount;
 }
 
 UTILS_NOINLINE
-void JobSystem::wakeAll() noexcept {
-    // wakeAll() is called when a job finishes (to wake up any thread that might be waiting on it)
+void JobSystem::wakeWaiters() noexcept {
+    // wakeWaiters() is called when a job finishes (to wake up any thread that might be waiting on it)
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_all() happens
     // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_all() can be pretty slow, and it doesn't need to be inside the lock.
-    mWaiterCondition.notify_all();
+    mJobCondition.notify_all();
 }
 
 void JobSystem::wakeOne() noexcept {
@@ -357,7 +368,13 @@ void JobSystem::wakeOne() noexcept {
     // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_one() can be pretty slow, and it doesn't need to be inside the lock.
-    mWaiterCondition.notify_one();
+    if (mSleepingWorkers.load(std::memory_order_relaxed) > 0) {
+        mWorkCondition.notify_one();
+    } else if constexpr (!Futex::HAS_FUTEX) {
+        if (mSleepingWaiters.load(std::memory_order_relaxed) > 0) {
+            mJobCondition.notify_one();
+        }
+    }
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() {
@@ -389,7 +406,11 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     // Only wake a sleeping thread if there are more sleeping threads than previously
     // queued active jobs. This ensures we wake at most as many threads as are sleeping,
     // avoiding redundant wakeOne() calls during batch job submissions (e.g. parallel_for).
-    if (UTILS_UNLIKELY(prevActiveJobs < int32_t(mSleepingThreads.load(std::memory_order_relaxed)))) {
+    uint32_t totalSleeping = mSleepingWorkers.load(std::memory_order_relaxed);
+    if constexpr (!Futex::HAS_FUTEX) {
+        totalSleeping += mSleepingWaiters.load(std::memory_order_relaxed);
+    }
+    if (UTILS_UNLIKELY(prevActiveJobs < int32_t(totalSleeping))) {
         wakeOne();
     }
 }
@@ -530,7 +551,7 @@ void JobSystem::loop(ThreadState* state) {
             }
             UniqueLock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
-                wait(lock);
+                waitForWork(lock);
             }
         }
     } while (!exitRequested());
@@ -540,7 +561,7 @@ UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
-    bool notify = false;
+    uint32_t totalWaiters = 0;
 
     // terminate this job and notify its parent
     Job* const storage = mJobStorageBase;
@@ -554,8 +575,12 @@ void JobSystem::finish(Job* job) noexcept {
         if (runningJobCount == 1) {
             // no more work, destroy this job and notify its parent
             uint32_t const waiters = v >> WAITER_COUNT_SHIFT;
-            if (waiters) {
-                notify = true;
+            if (UTILS_UNLIKELY(waiters)) {
+                if constexpr (Futex::HAS_FUTEX) {
+                    Futex::wakeAll(&job->runningJobCount);
+                } else {
+                    totalWaiters += waiters;
+                }
             }
             Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
             decRef(job);
@@ -566,10 +591,12 @@ void JobSystem::finish(Job* job) noexcept {
         }
     } while (job);
 
-    // wake-up all threads that could potentially be waiting on this job finishing
-    if (UTILS_UNLIKELY(notify)) {
-        // but avoid calling notify_all() at all cost, because it's always expensive
-        wakeAll();
+    if constexpr (!Futex::HAS_FUTEX) {
+        // wake-up threads that could potentially be waiting on this job finishing
+        if (UTILS_UNLIKELY(totalWaiters > 0)) {
+            // but avoid calling notify_all() at all cost, because it's always expensive
+            wakeWaiters();
+        }
     }
 }
 

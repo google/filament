@@ -21,6 +21,7 @@
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/Condition.h>
+#include <utils/Futex.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
@@ -452,16 +453,19 @@ private:
 
     [[nodiscard]]
     uint32_t wait(UniqueLock& lock, Job* job) noexcept;
-    void wait(UniqueLock& lock) noexcept;
-    void wakeAll() noexcept;
+    void waitForWork(UniqueLock& lock) noexcept;
+    void waitForJob(UniqueLock& lock, Job const* job, uint32_t expected) noexcept UTILS_NO_THREAD_SAFETY_ANALYSIS;
+    void wakeWaiters() noexcept;
     void wakeOne() noexcept;
 
     // these have thread contention, keep them together
     Mutex mWaiterLock;
-    Condition mWaiterCondition;
+    Condition mWorkCondition;
+    Condition mJobCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
-    std::atomic<uint32_t> mSleepingThreads = { 0 };
+    std::atomic<uint32_t> mSleepingWorkers = { 0 };
+    std::atomic<uint32_t> mSleepingWaiters = { 0 };
     Arena<ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
