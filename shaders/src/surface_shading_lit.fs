@@ -236,8 +236,7 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
 #if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
     pixel.secondPerceptualRoughness =
             clamp(secondPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
-    pixel.secondRoughness =
-            clamp(pixel.secondPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
+    pixel.secondRoughness = perceptualRoughnessToRoughness(pixel.secondPerceptualRoughness);
     pixel.secondRoughnessWeight = material.secondRoughnessWeight;
 #endif
 }
