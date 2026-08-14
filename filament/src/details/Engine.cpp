@@ -1565,9 +1565,9 @@ AsyncCallId FEngine::runCommandAsync(Invocable<void()>&& command,
     struct RunCommandAsyncCallback {
         AsyncCompletionCallback userCallback;
         void* userParam;
-        static void func(void* wrappedData) {
+        static void func(void* wrappedData, AsyncCallStatus const status) {
             auto const* const data = static_cast<RunCommandAsyncCallback*>(wrappedData);
-            data->userCallback(data->userParam);
+            data->userCallback(data->userParam, status);
             delete data;
         }
     };

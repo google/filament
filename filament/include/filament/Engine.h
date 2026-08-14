@@ -197,7 +197,8 @@ public:
     using Driver = backend::Driver;
     using GpuContextPriority = backend::Platform::GpuContextPriority;
     using AsynchronousMode = backend::AsynchronousMode;
-    using AsyncCompletionCallback = std::function<void(void* UTILS_NULLABLE)>;
+    using AsyncCallStatus = backend::AsyncCallStatus;
+    using AsyncCompletionCallback = std::function<void(void* UTILS_NULLABLE, AsyncCallStatus)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -1098,10 +1099,10 @@ public:
      *
      * Beware of overusing this method. It shares the execution queue with other asynchronous tasks
      * like texture updates, so flooding it can delay those critical engine tasks. The recommended
-     * practice is to use this method for resource preparation, such as asset loading(images/meshes).
-     * This facilitates an efficient chaining pattern, where subsequent asynchronous operations
-     * (e.g., creating textures/vertex buffers) can be initiated directly within the completion
-     * callback.
+     * practice is to use this method for resource preparation, such as asset
+     * loading(images/meshes). This facilitates an efficient chaining pattern, where subsequent
+     * asynchronous operations (e.g., creating textures/vertex buffers) can be initiated directly
+     * within the completion callback.
      *
      * Users can call the `Engine::cancelAsyncCall()` method with the returned ID to cancel the
      * asynchronous call.
@@ -1112,7 +1113,9 @@ public:
      * @param command The custom command to be executed.
      * @param handler The handler from which `onComplete` is invoked. If null, it's called from the
      * main thread.
-     * @param onComplete The callback function that runs once the command has finished.
+     * @param onComplete The callback function that runs once the command has finished. Its
+     *                   `AsyncCallStatus` argument reports the outcome: `COMPLETED` if the command
+     *                   ran, `CANCELED` if it never ran.
      * @param user    The custom data that will be passed as an argument to the `onComplete`.
      * @return A unique identifier for the asynchronous call.
      */
