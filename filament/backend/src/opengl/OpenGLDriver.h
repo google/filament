@@ -54,6 +54,7 @@
 #include <tsl/robin_map.h>
 
 #include <array>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -445,8 +446,10 @@ private:
 
     void draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount);
 
-    // ES2 only. Uniform buffer emulation binding points
-    GLuint mLastAssignedEmulatedUboId = 0;
+    // ES2 only. Uniform buffer emulation binding points.
+    // Atomic because buffer objects can be created either on the driver thread or, when the
+    // creation is asynchronous, on the job worker thread.
+    std::atomic<GLuint> mLastAssignedEmulatedUboId{ 0 };
 
     // this must be accessed from the driver thread only
     std::vector<GLTexture*> mTexturesWithStreamsAttached;
