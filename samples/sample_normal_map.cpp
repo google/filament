@@ -31,6 +31,7 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
+#include <filament/View.h>
 
 #include <filamat/MaterialBuilder.h>
 
@@ -54,6 +55,7 @@ using namespace filament;
 using namespace filamesh;
 using namespace filamat;
 using namespace utils;
+static float g_meshScale = 1.0f;
 
 static std::vector<Path> g_filenames;
 
@@ -268,7 +270,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
             if (mesh.renderable) {
                 auto ei = tcm.getInstance(mesh.renderable);
-                tcm.setTransform(ei, mat4f{ mat3f(app->config.scale), float3(0.0f, 0.0f, -4.0f) } *
+                tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
                                              tcm.getWorldTransform(ei));
                 scene->addEntity(mesh.renderable);
                 app->meshes.push_back(mesh);
@@ -287,7 +289,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
                         .title(app->config.title)
-                        .scale(app->config.scale)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)
@@ -299,12 +300,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "n:c:b:";
+    static constexpr const char* CUSTOM_OPTSTR = "n:c:b:s:";
     static const utils::getopt::option CUSTOM_OPTIONS[] = {
         { "normal-map", utils::getopt::required_argument, nullptr, 'n' },
         { "clearcoat-normal-map", utils::getopt::required_argument, nullptr, 'c' },
         { "basecolor-map", utils::getopt::required_argument, nullptr, 'b' },
-        { nullptr, 0, nullptr, 0 }
+        { "scale", utils::getopt::required_argument, nullptr, 's' },
+        { nullptr, 0, nullptr, 0 },
     };
     auto customHandler = [](int opt, const utils::CString& arg) -> bool {
         switch (opt) {
@@ -316,6 +318,9 @@ int main(int argc, char* argv[]) {
                 return true;
             case 'b':
                 g_normalConfig.baseColorMap = arg.c_str();
+                return true;
+            case 's':
+                g_meshScale = std::stof(arg.c_str());
                 return true;
         }
         return false;

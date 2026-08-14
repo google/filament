@@ -82,21 +82,18 @@ std::unique_ptr<FilamentApp2> FilamentApp2::Builder::build() {
 
 FilamentApp2::FilamentApp2(const Builder& builder)
         : mWindowTitle(builder.mTitle),
-          mWindowWidth(builder.mWidth),
-          mWindowHeight(builder.mHeight),
+          mInitialWindowWidth(builder.mWidth),
+          mInitialWindowHeight(builder.mHeight),
           mIblDirectory(builder.mIblDirectory),
           mDirtPath(builder.mDirt),
-          mScale(builder.mScale),
           mBackend(builder.mBackend),
           mFeatureLevel(builder.mFeatureLevel),
           mCameraMode(builder.mCameraMode),
           mResizeable(builder.mResizeable),
           mHeadless(builder.mHeadless),
           mStereoscopicEyeCount(builder.mStereoscopicEyeCount),
-          mSamples(builder.mSamples),
           mVulkanGPUHint(builder.mVulkanGPUHint),
           mForcedWebGPUBackend(builder.mForcedWebGPUBackend),
-          mDisplayManagerConfig(builder.mDisplayManagerConfig),
           mAsynchronousMode(builder.mAsynchronousMode),
           mDisplayManager(builder.mDisplayManager),
           mSetupCallback(builder.mSetup),
@@ -107,34 +104,21 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mAnimation(builder.mAnimation),
           mResize(builder.mResize),
           mDropHandler(builder.mDropHandler),
+          mSurfaceCreatedCallback(builder.mSurfaceCreatedCallback),
+          mSurfaceDestroyedCallback(builder.mSurfaceDestroyedCallback),
           mWidth(builder.mWidth),
           mHeight(builder.mHeight) {}
 
 FilamentApp2::~FilamentApp2() {
-    if (mDisplayManager) {
-        mDisplayManager->terminate();
+    shutdown();
+}
+
+void FilamentApp2::init() {
+    if (mInitialized) {
+        return;
     }
-}
 
-void FilamentApp2::onSurfaceCreated(void* nativeWindow) {
-    // To be implemented in later PRs
-}
-
-void FilamentApp2::onSurfaceChanged(int width, int height) {
-    // To be implemented in later PRs
-}
-
-void FilamentApp2::onSurfaceDestroyed() {
-    // To be implemented in later PRs
-}
-
-void FilamentApp2::onTouchEvent(int action, float x, float y) {
-    // To be implemented in later PRs
-}
-
-View* FilamentApp2::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
-
-void FilamentApp2::run() {
+    // Note that we need to determine the backend in order to build custom platforms.
     Engine::Backend backend = mBackend;
 
     backend::Platform* platform = nullptr;
@@ -170,26 +154,13 @@ void FilamentApp2::run() {
 
     assert_invariant(mEngine->getBackend() == backend);
 
-    // By now we have resolved to a specific backend (instead of default).
     mBackend = backend;
 
-    mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mWindowWidth, mWindowHeight,
-            mResizeable, mHeadless);
-
-    void* nativeWindow = mDisplayManager->getNativeWindow(mWindow);
-
-    mWidth = mWindowWidth;
-    mHeight = mWindowHeight;
+    mWidth = mInitialWindowWidth;
+    mHeight = mInitialWindowHeight;
 
     // Write back the active feature level.
     mFeatureLevel = mEngine->getActiveFeatureLevel();
-
-    if (mHeadless) {
-        mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
-    } else {
-        mSwapChain = mEngine->createSwapChain(nativeWindow,
-                filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
-    }
 
     mRenderer = mEngine->createRenderer();
 
@@ -312,9 +283,82 @@ void FilamentApp2::run() {
                 getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
     }
 
-    mDisplayManager->startRendering([this] { return doFrame(); });
+    mInitialized = true;
 }
 
+void FilamentApp2::run() {
+    init();
+
+    mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth, mInitialWindowHeight,
+            mResizeable, mHeadless);
+
+    onSurfaceCreated();
+    onSurfaceChanged((int) mInitialWindowWidth, (int) mInitialWindowHeight);
+
+    while (!doFrame()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    }
+
+    shutdown();
+}
+
+void FilamentApp2::onSurfaceCreated() {
+    if (!mInitialized) {
+        init();
+    }
+
+    void* nativeWindow = mDisplayManager ? mDisplayManager->getNativeWindow(mWindow) : nullptr;
+
+    if (mSwapChain) {
+        mEngine->destroy(mSwapChain);
+        mSwapChain = nullptr;
+    }
+
+    if (mHeadless) {
+        mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
+    } else if (nativeWindow) {
+        mSwapChain = mEngine->createSwapChain(nativeWindow,
+                filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+    }
+
+    if (mSurfaceCreatedCallback && mEngine) {
+        mSurfaceCreatedCallback(mEngine);
+    }
+}
+
+void FilamentApp2::onSurfaceChanged(int width, int height) {
+    mWidth = width;
+    mHeight = height;
+
+    if (mDisplayManager && mWindow) {
+        mDisplayManager->onWindowResized(mWindow);
+    }
+
+    configureCamerasForWindow(mCameraParams);
+
+    if (mHeadless && mSwapChain && mEngine) {
+        mEngine->destroy(mSwapChain);
+        mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
+    }
+
+    if (mResize && mEngine && mMainView) {
+        mResize(mEngine, mMainView->getView());
+    }
+}
+
+void FilamentApp2::onSurfaceDestroyed() {
+    if (mSurfaceDestroyedCallback && mEngine) {
+        mSurfaceDestroyedCallback(mEngine);
+    }
+
+    if (mSwapChain && mEngine) {
+        mEngine->destroy(mSwapChain);
+        mEngine->flushAndWait();
+        mSwapChain = nullptr;
+    }
+}
+
+View* FilamentApp2::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
 
 bool FilamentApp2::doFrame() {
 #ifdef __EXCEPTIONS
@@ -325,20 +369,27 @@ bool FilamentApp2::doFrame() {
             return true;
         }
 
+        if (!mInitialized || !mSwapChain || !mRenderer) {
+            return false;
+        }
+
         if (!UTILS_HAS_THREADING) {
             mEngine->execute();
         }
 
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
-            mAnimation(mEngine, mMainView->getView(), mDisplayManager->getTime());
+            double time = mDisplayManager ? mDisplayManager->getTime() : 0.0;
+            mAnimation(mEngine, mMainView->getView(), time);
         }
 
         // Loop over fresh events twice: first stash them and let ImGui process them, then allow
         // the app to process the stashed events. This is done because ImGui might wish to block
         // certain events from the app (e.g., when dragging the mouse over an obscuring window).
         std::vector<filament::app::AppEvent> events;
-        mDisplayManager->pollEvents(events);
+        if (mDisplayManager) {
+            mDisplayManager->pollEvents(events);
+        }
 
         if (mAppGui) {
             mAppGui->processAppEvents(events);
@@ -414,7 +465,7 @@ bool FilamentApp2::doFrame() {
 
         // Calculate the time step.
         static double lastTime = 0;
-        double now = mDisplayManager->getTime();
+        double now = mDisplayManager ? mDisplayManager->getTime() : 0.0;
         const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
         lastTime = now;
 
@@ -497,6 +548,7 @@ bool FilamentApp2::doFrame() {
             rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
             rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
         }
+
         if (!csm.empty()) {
             for (size_t i = 0, c = csm.size(); i < c; i++) {
                 if (csm[i]) {
@@ -544,7 +596,9 @@ bool FilamentApp2::doFrame() {
                 mRenderer->render(view->getView());
             }
 
-            mDisplayManager->onFrameFinished(mWindow, mEngine, mRenderer);
+            if (mDisplayManager) {
+                mDisplayManager->onFrameFinished(mWindow, mEngine, mRenderer);
+            }
 
             if (mPostRender) {
                 mPostRender(mEngine, mViews[0]->getView(), mScene, mRenderer);
@@ -568,6 +622,10 @@ bool FilamentApp2::doFrame() {
 }
 
 void FilamentApp2::shutdown() {
+    if (!mInitialized) {
+        return;
+    }
+
     if (mAppGui) {
         mAppGui.reset();
     }
@@ -587,11 +645,15 @@ void FilamentApp2::shutdown() {
             mEngine->destroyCameraComponent(e);
             em.destroy(e);
         }
-        mEngine->destroy(mRenderer);
-        mEngine->destroy(mSwapChain);
+        if (mRenderer) {
+            mEngine->destroy(mRenderer);
+            mRenderer = nullptr;
+        }
+        if (mSwapChain) {
+            mEngine->destroy(mSwapChain);
+            mSwapChain = nullptr;
+        }
     }
-    mRenderer = nullptr;
-    mSwapChain = nullptr;
 
     if (mDisplayManager && mWindow) {
         mDisplayManager->destroyWindow(mWindow);
@@ -622,6 +684,8 @@ void FilamentApp2::shutdown() {
         filament::app::destroyWebGPUPlatform(mWebGPUPlatform);
         mWebGPUPlatform = nullptr;
     }
+
+    mInitialized = false;
 }
 
 // RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
@@ -813,15 +877,22 @@ void FilamentApp2::keyUp(AppKey key) {
 }
 
 void FilamentApp2::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
-    uint32_t dw, dh, ww, wh;
+    if (!mDisplayManager || !mWindow) {
+        return;
+    }
+    uint32_t dw = 0, dh = 0, ww = 0, wh = 0;
     mDisplayManager->getDrawableSize(mWindow, &dw, &dh);
     mDisplayManager->getWindowSize(mWindow, &ww, &wh);
-    x = x * (ssize_t) dw / (ssize_t) ww;
-    y = y * (ssize_t) dh / (ssize_t) wh;
+    if (ww > 0 && wh > 0) {
+        x = x * (ssize_t) dw / (ssize_t) ww;
+        y = y * (ssize_t) dh / (ssize_t) wh;
+    }
 }
 
 void FilamentApp2::resize(WindowCameraParams const& cameraParams) {
-    mDisplayManager->onWindowResized(mWindow);
+    if (mDisplayManager && mWindow) {
+        mDisplayManager->onWindowResized(mWindow);
+    }
     configureCamerasForWindow(cameraParams);
 }
 
@@ -831,30 +902,41 @@ void FilamentApp2::configureCamerasForWindow(WindowCameraParams const& cameraPar
 
     // If the app is not headless, query the window for its physical & virtual sizes.
     if (!mHeadless) {
-        uint32_t width, height;
-        mDisplayManager->getDrawableSize(mWindow, &width, &height);
-        mWidth = (size_t) width;
-        mHeight = (size_t) height;
+        if (mDisplayManager && mWindow) {
+            uint32_t width = 0, height = 0;
+            mDisplayManager->getDrawableSize(mWindow, &width, &height);
+            mWidth = (size_t) width;
+            mHeight = (size_t) height;
 
-        uint32_t virtualWidth, virtualHeight;
-        mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
-        dpiScaleX = (float) width / virtualWidth;
-        dpiScaleY = (float) height / virtualHeight;
-    } else {
-        uint32_t width, height;
-        mDisplayManager->getWindowSize(mWindow, &width, &height);
-        if (width != mWidth || height != mHeight) {
-            mWidth = width;
-            mHeight = height;
-            if (mSwapChain) {
-                mEngine->destroy(mSwapChain);
+            uint32_t virtualWidth = 0, virtualHeight = 0;
+            mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
+            if (virtualWidth > 0 && virtualHeight > 0) {
+                dpiScaleX = (float) width / virtualWidth;
+                dpiScaleY = (float) height / virtualHeight;
             }
-            mSwapChain = mEngine->createSwapChain((uint32_t) width, (uint32_t) height);
+        }
+    } else {
+        if (mDisplayManager && mWindow) {
+            uint32_t width = 0, height = 0;
+            mDisplayManager->getWindowSize(mWindow, &width, &height);
+            if (width != mWidth || height != mHeight) {
+                mWidth = width;
+                mHeight = height;
+                if (mSwapChain && mEngine) {
+                    mEngine->destroy(mSwapChain);
+                }
+                if (mEngine) {
+                    mSwapChain = mEngine->createSwapChain((uint32_t) width, (uint32_t) height);
+                }
+            }
         }
     }
 
     const uint32_t width = mWidth;
     const uint32_t height = mHeight;
+    if (width == 0 || height == 0) {
+        return;
+    }
 
     const float3 at(0, 0, -4);
     const double ratio = double(height) / double(width);

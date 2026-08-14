@@ -66,10 +66,11 @@ static constexpr bool ENABLE_SHADOWS = true;
 
 static GroundPlane createGroundPlane(Engine* engine);
 
-static SampleConfig config{ .title = "shadowtest",
+static SampleConfig config{
+    .title = "shadowtest",
     .iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str()),
-    .scale = 1,
-    .splitView = false };
+    .splitView = false,
+};
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {

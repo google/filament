@@ -53,6 +53,7 @@ using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
+static float g_meshScale = 1.0f;
 
 struct App {
     FilamentApp2* filamentApp;
@@ -128,7 +129,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         auto& tcm = engine->getTransformManager();
         auto ti = tcm.getInstance(app->meshSet->getRenderables()[0]);
-        tcm.setTransform(ti, mat4f{ mat3f(app->config.scale), float3(0.0f, 0.0f, -4.0f) } *
+        tcm.setTransform(ti, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
                                      tcm.getWorldTransform(ti));
 
         auto& rcm = engine->getRenderableManager();
@@ -376,7 +377,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
                         .title(app->config.title)
-                        .scale(app->config.scale)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -390,11 +390,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "mdp";
+    static constexpr const char* CUSTOM_OPTSTR = "mdps:";
     static const utils::getopt::option CUSTOM_OPTIONS[] = {
         { "more-lights", utils::getopt::no_argument, nullptr, 'm' },
         { "disco", utils::getopt::no_argument, nullptr, 'd' },
-        { "shadow-plane", utils::getopt::no_argument, nullptr, 'p' }, { nullptr, 0, nullptr, 0 }
+        { "shadow-plane", utils::getopt::no_argument, nullptr, 'p' },
+        { "scale", utils::getopt::required_argument, nullptr, 's' },
+        { nullptr, 0, nullptr, 0 },
     };
     auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
         switch (opt) {
@@ -403,6 +405,9 @@ int main(int argc, char* argv[]) {
                 return true;
             case 'd':
                 config.customArgs["discoBall"] = utils::CString("true");
+                return true;
+            case 's':
+                g_meshScale = std::stof(arg.c_str());
                 return true;
             case 'p':
                 config.customArgs["shadowPlane"] = utils::CString("true");

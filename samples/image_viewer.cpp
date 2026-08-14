@@ -331,8 +331,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .cameraMode(app->config.cameraMode)
-                        .configDisplayManager(static_cast<FilamentApp2::DisplayManager>(
-                                app->config.displayManager))
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)

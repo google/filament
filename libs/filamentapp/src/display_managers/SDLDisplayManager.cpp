@@ -31,7 +31,7 @@ SDLDisplayManager::SDLDisplayManager(filament::Engine::Backend backend)
     FILAMENT_CHECK_PRECONDITION(init());
 }
 
-SDLDisplayManager::~SDLDisplayManager() {}
+SDLDisplayManager::~SDLDisplayManager() { terminate(); }
 
 bool SDLDisplayManager::init() {
     if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
@@ -457,14 +457,6 @@ AppKey SDLDisplayManager::mapKey(SDL_Scancode scancode) {
             return AppKey::SLASH;
         default:
             return AppKey::UNKNOWN;
-    }
-}
-
-void SDLDisplayManager::startRendering(std::function<bool()> doFrame) {
-    while (!doFrame()) {
-        // Delay rendering for roughly one monitor refresh interval
-        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 

@@ -123,8 +123,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     .displayManager(dm)
                     .title(app->config.title)
                     .backend(app->config.backend)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(app->config.displayManager))
                     .setup(setup)
                     .cleanup(cleanup)
                     .preRender(preRender)

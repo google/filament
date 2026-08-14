@@ -15,7 +15,6 @@ struct SampleConfig {
     uint32_t height = 640;
     utils::CString iblDirectory;
     utils::CString dirt;
-    float scale = 1.0f;
     bool splitView = false;
     mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
     mutable filament::backend::FeatureLevel featureLevel =
@@ -24,7 +23,6 @@ struct SampleConfig {
     bool resizeable = true;
     bool headless = false;
     int stereoscopicEyeCount = 2;
-    uint8_t samples = 1;
     utils::CString vulkanGPUHint;
     using WebGPUBackend = filament::Engine::Backend;
     WebGPUBackend forcedWebGPUBackend = WebGPUBackend::DEFAULT;

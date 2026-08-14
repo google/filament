@@ -16,6 +16,8 @@
 
 #include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp.h>
+#include <filament/View.h>
+#include <filament/Engine.h>
 #include <filamentapp/FilamentApp2.h>
 
 #if defined(FILAMENTAPP_HAS_WEB_UI)
@@ -68,17 +70,14 @@ void FilamentApp::run(const Config& config, SetupCallback setup, CleanupCallback
             .dropHandler(mDropHandler)
             .iblDirectory(config.iblDirectory)
             .dirt(config.dirt)
-            .scale(config.scale)
             .splitView(config.splitView)
             .featureLevel(config.featureLevel)
             .cameraMode(config.cameraMode)
             .resizeable(config.resizeable)
             .headless(config.headless)
             .stereoscopicEyeCount(config.stereoscopicEyeCount)
-            .samples(config.samples)
             .vulkanGPUHint(config.vulkanGPUHint)
             .forcedWebGPUBackend(static_cast<FilamentApp2::WebGPUBackend>(config.forcedWebGPUBackend))
-            .configDisplayManager(static_cast<FilamentApp2::DisplayManager>(config.displayManager))
             .displayManager(mDisplayManager.get())
             .asynchronousMode(config.asynchronousMode)
             .build();
@@ -121,22 +120,6 @@ filament::SwapChain* FilamentApp::getPrimarySwapChain() const noexcept {
 
 void FilamentApp::close() {
     if (mImpl) mImpl->close();
-}
-
-void FilamentApp::onSurfaceCreated(void* nativeWindow) {
-    if (mImpl) mImpl->onSurfaceCreated(nativeWindow);
-}
-
-void FilamentApp::onSurfaceChanged(int width, int height) {
-    if (mImpl) mImpl->onSurfaceChanged(width, height);
-}
-
-void FilamentApp::onSurfaceDestroyed() {
-    if (mImpl) mImpl->onSurfaceDestroyed();
-}
-
-void FilamentApp::onTouchEvent(int action, float x, float y) {
-    if (mImpl) mImpl->onTouchEvent(action, x, y);
 }
 
 void FilamentApp::setSidebarWidth(int width) {
