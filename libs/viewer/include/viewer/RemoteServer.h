@@ -85,6 +85,7 @@ public:
 private:
     void enqueueReceivedMessage(ReceivedMessage* message);
     void setIncomingMessage(ReceivedMessage* message);
+    void clearIncomingMessage(ReceivedMessage const* message);
     MessageSender* mMessageSender = nullptr;
     MessageReceiver* mMessageReceiver = nullptr;
     size_t mNextMessageUid = 0;

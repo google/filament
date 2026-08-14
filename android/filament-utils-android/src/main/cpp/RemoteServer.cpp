@@ -18,6 +18,8 @@
 
 #include <viewer/RemoteServer.h>
 
+#include <limits>
+
 using namespace filament::viewer;
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -43,35 +45,66 @@ Java_com_google_android_filament_utils_RemoteServer_nPeekIncomingLabel(JNIEnv* e
     return label ? env->NewStringUTF(label) : nullptr;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedLabel(JNIEnv* env, jclass, jlong native) {
-    RemoteServer* server = (RemoteServer*) native;
-    ReceivedMessage const* msg = server->peekReceivedMessage();
-    return msg ? env->NewStringUTF(msg->label) : nullptr;
-}
-
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nPeekReceivedBufferLength(JNIEnv* env, jclass, jlong native) {
-    RemoteServer* server = (RemoteServer*) native;
-    ReceivedMessage const* msg = server->peekReceivedMessage();
-    return msg ? msg->bufferByteCount : 0;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_RemoteServer_nAcquireReceivedMessage(JNIEnv* env, jclass, jlong native, jobject buffer, jint length) {
+extern "C" JNIEXPORT jboolean JNICALL
+        Java_com_google_android_filament_utils_RemoteServer_nAcquireReceivedMessage(JNIEnv* env,
+                jclass, jlong native, jobject result) {
     RemoteServer* server = (RemoteServer*) native;
     ReceivedMessage const* msg = server->acquireReceivedMessage();
     if (msg == nullptr) {
-        return;
+        return false;
     }
 
+    if (msg->bufferByteCount > std::numeric_limits<jint>::max()) {
+        jclass exception = env->FindClass("java/lang/IllegalStateException");
+        if (exception) {
+            env->ThrowNew(exception, "Received message is too large for a Java ByteBuffer");
+        }
+        server->releaseReceivedMessage(msg);
+        return false;
+    }
+
+    jclass resultClass = env->GetObjectClass(result);
+    jclass byteBufferClass = env->FindClass("java/nio/ByteBuffer");
+    if (env->ExceptionCheck() || resultClass == nullptr || byteBufferClass == nullptr) {
+        server->releaseReceivedMessage(msg);
+        return false;
+    }
+    jfieldID labelField = env->GetFieldID(resultClass, "label", "Ljava/lang/String;");
+    jfieldID bufferField = env->GetFieldID(resultClass, "buffer", "Ljava/nio/ByteBuffer;");
+    jmethodID allocateDirect =
+            env->GetStaticMethodID(byteBufferClass, "allocateDirect", "(I)Ljava/nio/ByteBuffer;");
+    if (env->ExceptionCheck() || labelField == nullptr || bufferField == nullptr ||
+            allocateDirect == nullptr) {
+        server->releaseReceivedMessage(msg);
+        return false;
+    }
+    jobject buffer = env->CallStaticObjectMethod(byteBufferClass, allocateDirect,
+            static_cast<jint>(msg->bufferByteCount));
+    jstring label = env->NewStringUTF(msg->label);
+    if (env->ExceptionCheck() || buffer == nullptr || label == nullptr) {
+        server->releaseReceivedMessage(msg);
+        return false;
+    }
     void* address = env->GetDirectBufferAddress(buffer);
-    if (address == nullptr) {
-        // This should never happen because the Java layer does allocateDirect.
-        return;
+    if (address == nullptr && msg->bufferByteCount != 0) {
+        jclass exception = env->FindClass("java/lang/IllegalStateException");
+        if (exception) {
+            env->ThrowNew(exception, "Could not access the allocated direct ByteBuffer");
+        }
+        server->releaseReceivedMessage(msg);
+        return false;
     }
 
-    memcpy(address, msg->buffer, length);
-    server->releaseReceivedMessage(msg);
-}
+    if (msg->bufferByteCount) {
+        memcpy(address, msg->buffer, msg->bufferByteCount);
+    }
 
+    env->SetObjectField(result, labelField, label);
+    if (env->ExceptionCheck()) {
+        server->releaseReceivedMessage(msg);
+        return false;
+    }
+    env->SetObjectField(result, bufferField, buffer);
+    server->releaseReceivedMessage(msg);
+    return !env->ExceptionCheck();
+}

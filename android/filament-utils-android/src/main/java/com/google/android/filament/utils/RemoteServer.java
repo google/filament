@@ -69,15 +69,11 @@ public class RemoteServer {
      * Pops a message off the incoming queue or returns null if there are no unread messages.
      */
     public @Nullable ReceivedMessage acquireReceivedMessage() {
-        int length = nPeekReceivedBufferLength(mNativeObject);
-        if (length == 0) {
+        ReceivedMessage message = new ReceivedMessage();
+        if (!nAcquireReceivedMessage(mNativeObject, message)) {
             return null;
         }
-        ReceivedMessage message = new ReceivedMessage();
-        message.label = nPeekReceivedLabel(mNativeObject);
-        message.buffer = ByteBuffer.allocateDirect(length);
         message.buffer.order(ByteOrder.LITTLE_ENDIAN);
-        nAcquireReceivedMessage(mNativeObject, message.buffer, length);
         return message;
     }
 
@@ -99,8 +95,6 @@ public class RemoteServer {
 
     private static native long nCreate(int port);
     private static native String nPeekIncomingLabel(long nativeObject);
-    private static native String nPeekReceivedLabel(long nativeObject);
-    private static native int nPeekReceivedBufferLength(long nativeObject);
-    private static native void nAcquireReceivedMessage(long nativeObject, ByteBuffer buffer, int length);
+    private static native boolean nAcquireReceivedMessage(long nativeObject, ReceivedMessage message);
     private static native void nDestroy(long nativeObject);
 }
