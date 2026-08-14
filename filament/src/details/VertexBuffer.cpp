@@ -73,7 +73,7 @@ struct VertexBuffer::BuilderDetails {
     bool mAdvancedSkinningEnabled = false; // TODO: use bits to save memory
     bool mAsynchronous = false;
     CallbackHandler* mAsyncCreationHandler = nullptr;
-    std::function<void(VertexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)> mAsyncCreationCallback;
+    VertexBuffer::AsyncCompletionCallback mAsyncCreationCallback;
     void* mAsyncCreationUserData = nullptr;
 };
 

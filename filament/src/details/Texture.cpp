@@ -86,7 +86,7 @@ struct Texture::BuilderDetails {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
     CallbackHandler* mAsyncCreationHandler = nullptr;
-    std::function<void(Texture* UTILS_NONNULL, void* UTILS_NULLABLE)> mAsyncCreationCallback;
+    Texture::AsyncCompletionCallback mAsyncCreationCallback;
     void* mAsyncCreationUserData = nullptr;
 };
 

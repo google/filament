@@ -45,7 +45,8 @@ struct AsyncState {
     bool commandQueued = false;
 };
 
-static void signalCallback(void* user) {
+static void signalCallback(void* user, AsyncCallStatus const status) {
+    EXPECT_EQ(status, AsyncCallStatus::COMPLETED);
     bool* flag = static_cast<bool*>(user);
     *flag = true;
 }

@@ -20,7 +20,9 @@
 #include <private/backend/Driver.h>
 
 #include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
 
+#include <atomic>
 #include <functional>
 
 namespace filament {
@@ -30,12 +32,12 @@ using namespace utils;
 // This acts as an adapter that bridges a user-provided callback with the specific requirements of
 // the Filament callback system.
 // E.g.
-//   The callback that users expect => std::function<void(Texture*, void*)>
-//   Filament callback system requirement => CallbackHandler::Callback* callback, void* user
+//   The callback that users expect => std::function<void(Texture*, void*, AsyncCallStatus)>
+//   Filament callback system requirement => AsyncCallback callback, void* user
 template<typename T>
 class CallbackAdapter {
 public:
-    using UserCallback = std::function<void(T*, void*)>;
+    using UserCallback = std::function<void(T*, void*, backend::AsyncCallStatus)>;
 
     template<typename... Args>
     static CallbackAdapter<T>* make(Args&&... args) {
@@ -45,9 +47,10 @@ public:
     CallbackAdapter(UserCallback&& callback, const T* param, void* custom)
         : mUserCallback(std::move(callback)), mUserParam1(param), mUserParam2(custom) {}
 
-    static void func(void* user) {
+    static void func(void* user, backend::AsyncCallStatus const status) {
         auto* const thisObject = static_cast<CallbackAdapter*>(user);
-        thisObject->mUserCallback(const_cast<T*>(thisObject->mUserParam1), thisObject->mUserParam2);
+        thisObject->mUserCallback(const_cast<T*>(thisObject->mUserParam1), thisObject->mUserParam2,
+                status);
         delete thisObject;
     }
 
@@ -63,7 +66,7 @@ private:
 template<typename T>
 class CountdownCallbackHandler : public backend::CallbackHandler {
 public:
-    using UserCallback = std::function<void(T*, void*)>;
+    using UserCallback = std::function<void(T*, void*, backend::AsyncCallStatus)>;
     using CountdownCompleteCallback = std::function<void()>;
 
     template<typename... Args>
@@ -93,8 +96,15 @@ public:
     // 3. Decreases the count of pending asynchronous operations. When the counter hits zero,
     // the final callback is scheduled with the *REAL* user's handler to execute the *REAL*
     // user's callback.
-    static void countdownCallback(void* user) {
+    static void countdownCallback(void* user, backend::AsyncCallStatus const status) {
         auto* thisObject = static_cast<CountdownCallbackHandler*>(user);
+        if (status == backend::AsyncCallStatus::CANCELED) {
+            // One canceled operation makes the whole aggregate canceled: the object being built is
+            // incomplete either way. `std::memory_order_relaxed` is sufficient because this write
+            // is sequenced before decreaseCountdown()'s fetch_sub(acq_rel), which publishes it to
+            // whichever thread observes the count reaching zero.
+            thisObject->mCanceled.store(true, std::memory_order_relaxed);
+        }
         if (thisObject->decreaseCountdown()) {
             if (thisObject->mCountdownCompleteCallback) {
                 thisObject->mCountdownCompleteCallback();
@@ -111,7 +121,12 @@ public:
         auto* thisObject = static_cast<CountdownCallbackHandler*>(user);
         // 6. Executes the *REAL* user's callback.
         if (thisObject->mUserCallback) {
-            thisObject->mUserCallback(thisObject->mUserParam1, thisObject->mUserParam2);
+            // `std::memory_order_relaxed` is sufficient because scheduleCallback() takes a mutex
+            // between the thread that stored this and the handler thread running us.
+            auto const status = thisObject->mCanceled.load(std::memory_order_relaxed)
+                    ? backend::AsyncCallStatus::CANCELED
+                    : backend::AsyncCallStatus::COMPLETED;
+            thisObject->mUserCallback(thisObject->mUserParam1, thisObject->mUserParam2, status);
         }
         delete thisObject;
     }
@@ -135,6 +150,8 @@ private:
     }
 
     std::atomic_uint32_t mCount = 0;
+    // set if any of the tracked operations was canceled
+    std::atomic_bool mCanceled = false;
     CallbackHandler* mUserHandler = nullptr;
     UserCallback mUserCallback;
     T* mUserParam1 = nullptr;
