@@ -52,8 +52,9 @@ class UTILS_PUBLIC IndexBuffer : public FilamentAPI {
 
 public:
     using BufferDescriptor = backend::BufferDescriptor;
-    using AsyncCompletionCallback =
-            std::function<void(IndexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
+    using AsyncCallStatus = backend::AsyncCallStatus;
+    using AsyncCompletionCallback = std::function<void(IndexBuffer* UTILS_NONNULL,
+            void* UTILS_NULLABLE, AsyncCallStatus)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -131,6 +132,8 @@ public:
          *
          * @param handler Handler to dispatch the callback or nullptr for the default handler
          * @param callback A function to be called upon the completion of an asynchronous creation.
+         *                 Its `AsyncCallStatus` argument reports whether the operation ran
+         *                 (`COMPLETED`) or never ran (`CANCELED`).
          * @param user The custom data that will be passed as the second argument to the `callback`.
          * @return This Builder, for chaining calls.
          */
@@ -185,6 +188,8 @@ public:
      * @param byteOffset Offset in *bytes* into the IndexBuffer. Must be multiple of 4.
      * @param handler   Handler to dispatch the callback or nullptr for the default handler
      * @param callback  A function to be called upon the completion of an asynchronous creation.
+     *                  Its `AsyncCallStatus` argument reports whether the operation ran
+     *                  (`COMPLETED`) or never ran (`CANCELED`).
      * @param user      The custom data that will be passed as the second argument to the `callback`.
      *
      * @return       An ID that the caller can use to cancel the operation.
