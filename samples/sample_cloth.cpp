@@ -31,6 +31,7 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
+#include <filament/View.h>
 
 #include <filamat/MaterialBuilder.h>
 
@@ -54,6 +55,7 @@ using namespace filament;
 using namespace filamesh;
 using namespace filamat;
 using namespace utils;
+static float g_meshScale = 1.0f;
 
 struct App {
     std::vector<Path> filenames;
@@ -174,7 +176,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
             if (mesh.renderable) {
                 auto ei = tcm.getInstance(mesh.renderable);
-                tcm.setTransform(ei, mat4f{ mat3f(app->config.scale), float3(0.0f, 0.0f, -4.0f) } *
+                tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
                                              tcm.getWorldTransform(ei));
                 scene->addEntity(mesh.renderable);
                 app->meshes.push_back(mesh);
@@ -217,7 +219,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .displayManager(dm)
-                        .scale(app->config.scale)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)
@@ -229,10 +230,29 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
+    static constexpr const char* CUSTOM_OPTSTR = "s:";
+    static const utils::getopt::option CUSTOM_OPTIONS[] = {
+        { "scale", utils::getopt::required_argument, nullptr, 's' },
+        { nullptr, 0, nullptr, 0 }
+    };
+    auto customHandler = [](int opt, const utils::CString& arg) -> bool {
+        switch (opt) {
+            case 's':
+                g_meshScale = std::stof(arg.c_str());
+                return true;
+        }
+        return false;
+    };
+
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_CLOTH demonstrates cloth shading in Filament.",
         .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
         .requiredPositionalArgCount = 1,
+        .customOptionsHelp = "   --scale=[number], -s [number]\n"
+                             "       Applies uniform scale\n",
+        .customHandler = customHandler,
+        .customOptStr = CUSTOM_OPTSTR,
+        .customOptions = CUSTOM_OPTIONS,
     };
     int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);

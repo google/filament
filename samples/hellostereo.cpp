@@ -86,6 +86,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->config = config;
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        uint8_t sampleCount = 1;
+        if (app->config.customArgs.find("msaa") != app->config.customArgs.end()) {
+            sampleCount = std::stoi(app->config.customArgs.at("msaa").c_str());
+        }
+
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -94,7 +99,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         constexpr float3 monkeyPosition{ 0, 0, -4};
         constexpr float3 upVector{ 0, 1, 0};
         const int eyeCount = app->config.stereoscopicEyeCount;
-        const uint8_t sampleCount = app->config.samples;
 
         // Create a mesh material and an instance.
         app->monkeyMaterial =
@@ -297,7 +301,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
-                        .samples(app->config.samples)
                         .displayManager(dm)
                         .setup(setup)
                         .cleanup(cleanup)

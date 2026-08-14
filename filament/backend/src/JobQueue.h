@@ -137,6 +137,10 @@ public:
     /**
      * Cancels a job by its ID.
      *
+     * The canceled job is destroyed on the calling thread, without the queue's lock held, so it is
+     * safe for the job (or anything it captured) to call back into this queue while being
+     * destroyed.
+     *
      * @param jobId The job ID to cancel.
      * @return true if the job was found and cancelled, false otherwise.
      */

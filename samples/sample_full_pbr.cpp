@@ -54,6 +54,7 @@ using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
+static float g_meshScale = 1.0f;
 
 constexpr int MAP_COUNT       = 7;
 constexpr int MAP_COLOR       = 0;
@@ -346,7 +347,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         for (auto renderable: app->meshSet->getRenderables()) {
             if (rcm.hasComponent(renderable)) {
                 auto ti = tcm.getInstance(renderable);
-                tcm.setTransform(ti, mat4f{ mat3f(app->config.scale), float3(0.0f, 0.0f, -4.0f) } *
+                tcm.setTransform(ti, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
                                              tcm.getWorldTransform(ti));
                 rcm.setReceiveShadows(rcm.getInstance(renderable), true);
                 rcm.setCastShadows(rcm.getInstance(renderable), true);
@@ -390,7 +391,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .displayManager(dm)
-                        .scale(app->config.scale)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -402,11 +402,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "m:cA";
+    static constexpr const char* CUSTOM_OPTSTR = "m:cAs:";
     static const utils::getopt::option CUSTOM_OPTIONS[] = {
         { "material-dir", utils::getopt::required_argument, nullptr, 'm' },
         { "clear-coat", utils::getopt::no_argument, nullptr, 'c' },
-        { "anisotropy", utils::getopt::no_argument, nullptr, 'A' }, { nullptr, 0, nullptr, 0 }
+        { "anisotropy", utils::getopt::no_argument, nullptr, 'A' },
+        { "scale", utils::getopt::required_argument, nullptr, 's' },
+        { nullptr, 0, nullptr, 0 },
     };
     auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
         switch (opt) {
@@ -418,6 +420,9 @@ int main(int argc, char* argv[]) {
                 return true;
             case 'A':
                 config.customArgs["anisotropy"] = utils::CString("true");
+                return true;
+            case 's':
+                g_meshScale = std::stof(arg.c_str());
                 return true;
         }
         return false;

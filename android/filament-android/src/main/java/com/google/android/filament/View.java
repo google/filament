@@ -2130,6 +2130,7 @@ public class View {
         /** exponential variance shadows (EVSM) */
         VSM,
         /** @deprecated falls back to PCSS */
+        @Deprecated
         DPCF,
         /** EVSM with soft shadows and contact hardening */
         PCSS,

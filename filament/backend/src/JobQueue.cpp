@@ -143,14 +143,22 @@ JobQueue::JobId JobQueue::issueJobId() noexcept {
 }
 
 bool JobQueue::cancel(JobId const jobId) noexcept {
-    LockGuard const lock(mQueueMutex);
+    // The canceled job is moved out of the map here and destroyed once the lock is released below.
+    // Destroying a job runs arbitrary user code (e.g. the release callback of a captured
+    // BufferDescriptor), which must not run while `mQueueMutex` is held: `mQueueMutex` is not
+    // recursive, so a callback calling back into this queue would deadlock.
+    Job job;
+    {
+        LockGuard const lock(mQueueMutex);
 
-    auto it = mJobsMap.find(jobId);
-    if (it == mJobsMap.end()) {
-        return false; // Job not found, must have been completed or canceled.
+        auto it = mJobsMap.find(jobId);
+        if (it == mJobsMap.end()) {
+            return false; // Job not found, must have been completed or canceled.
+        }
+
+        job = std::move(it->second);
+        mJobsMap.erase(it);
     }
-
-    mJobsMap.erase(it);
 
     return true;
 }

@@ -64,11 +64,6 @@ public:
 
     void close();
 
-    void onSurfaceCreated(void* nativeWindow);
-    void onSurfaceChanged(int width, int height);
-    void onSurfaceDestroyed();
-    void onTouchEvent(int action, float x, float y);
-
     void setSidebarWidth(int width);
     void setWindowTitle(const char* title);
     void setCameraFocalLength(float focalLength);
