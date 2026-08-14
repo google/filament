@@ -51,6 +51,7 @@ void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<Vu
     for (StreamedTextureBinding& data: mStreamedTexturesBindings) {
         // Find the right stream
         if (data.image->getStream() == stream) {
+            data.set->isAnExternalSamplerBound = true;
             data.set->isLayoutDirty = true;
             mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
                     data.samplerParams);
