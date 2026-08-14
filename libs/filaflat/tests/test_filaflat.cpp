@@ -21,6 +21,7 @@
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/Unflattener.h>
 #include <filament/MaterialChunkType.h>
+#include <smolv.h>
 
 #include <vector>
 #include <cstdint>
@@ -37,6 +38,32 @@ protected:
     }
     void write16(std::vector<uint8_t>& vec, uint16_t val) {
         for (int i = 0; i < 2; i++) vec.push_back((val >> (8 * i)) & 0xFF);
+    }
+    std::vector<uint8_t> makeSmolv(uint32_t decodedSize) {
+        std::vector<uint8_t> result;
+        write32(result, 0x534d4f4c); // "SMOL"
+        write32(result, 0x00010000); // SPIR-V version 1.0
+        write32(result, 0);          // generator
+        write32(result, 1);          // bound
+        write32(result, 0);          // schema
+        write32(result, decodedSize);
+        return result;
+    }
+    std::vector<uint8_t> makeSpirvDictionary(std::vector<uint8_t> const& smolv) {
+        std::vector<uint8_t> payload;
+        write32(payload, 1); // compression scheme
+        write32(payload, 1); // blob count
+        while ((12 + payload.size()) % 8 != 0) {
+            payload.push_back(0);
+        }
+        write64(payload, smolv.size());
+        payload.insert(payload.end(), smolv.begin(), smolv.end());
+
+        std::vector<uint8_t> result;
+        write64(result, uint64_t(filamat::ChunkType::DictionarySpirv));
+        write32(result, payload.size());
+        result.insert(result.end(), payload.begin(), payload.end());
+        return result;
     }
 };
 
@@ -218,6 +245,70 @@ TEST_F(FilaflatSecurityTest, UnflattenerIntegerWrapBypass) {
     // A secure implementation should evaluate the impossible wrapper size and explicitly return false.
     // The vulnerability forces it to return true, defying the integer boundaries and bypassing checks.
     EXPECT_FALSE(bypassed) << "VULNERABILITY: Integer wrap successfully bypassed Unflattener boundaries!";
+}
+
+TEST_F(FilaflatSecurityTest, SmolvRejectsInvalidDecodedSizes) {
+    for (uint32_t const decodedSize : { 0u, 1u, 4u, 19u, 21u }) {
+        auto const smolv = makeSmolv(decodedSize);
+        EXPECT_EQ(smolv::GetDecodedBufferSize(smolv.data(), smolv.size()), 0u);
+        std::vector<uint8_t> output(64);
+        EXPECT_FALSE(smolv::Decode(smolv.data(), smolv.size(), output.data(), output.size()));
+    }
+
+    auto const minimum = makeSmolv(20);
+    EXPECT_EQ(smolv::GetDecodedBufferSize(minimum.data(), minimum.size()), 20u);
+    std::vector<uint8_t> minimumOutput(20);
+    EXPECT_TRUE(smolv::Decode(
+            minimum.data(), minimum.size(), minimumOutput.data(), minimumOutput.size()));
+
+    auto const malformedLarge = makeSmolv(64);
+    EXPECT_EQ(smolv::GetDecodedBufferSize(malformedLarge.data(), malformedLarge.size()), 64u);
+    std::vector<uint8_t> malformedOutput(64);
+    EXPECT_FALSE(smolv::Decode(malformedLarge.data(), malformedLarge.size(),
+            malformedOutput.data(), malformedOutput.size()));
+}
+
+TEST_F(FilaflatSecurityTest, SmolvBoundsEveryDecodedWrite) {
+    std::vector<uint32_t> const spirv = {
+            0x07230203, 0x00010000, 0, 1, 0,
+            0x00010000, // OpNop
+    };
+    smolv::ByteArray encoded;
+    ASSERT_TRUE(smolv::Encode(spirv.data(), spirv.size() * sizeof(uint32_t), encoded, 0));
+
+    size_t const decodedSize = smolv::GetDecodedBufferSize(encoded.data(), encoded.size());
+    ASSERT_EQ(decodedSize, spirv.size() * sizeof(uint32_t));
+    std::vector<uint8_t> output(decodedSize);
+    EXPECT_TRUE(smolv::Decode(encoded.data(), encoded.size(), output.data(), output.size()));
+
+    encoded[20] = 20;
+    encoded[21] = encoded[22] = encoded[23] = 0;
+    std::vector<uint8_t> undersizedOutput(20);
+    EXPECT_FALSE(smolv::Decode(
+            encoded.data(), encoded.size(), undersizedOutput.data(), undersizedOutput.size()));
+}
+
+TEST_F(FilaflatSecurityTest, DictionarySpirvRejectsInvalidDecodedSizes) {
+    for (uint32_t const decodedSize : { 0u, 1u, 4u, 19u, 21u, 64u }) {
+        auto const package = makeSpirvDictionary(makeSmolv(decodedSize));
+        ChunkContainer container(package.data(), package.size());
+        ASSERT_TRUE(container.parse());
+        BlobDictionary dictionary;
+        EXPECT_FALSE(DictionaryReader::unflatten(
+                container, filamat::ChunkType::DictionarySpirv, dictionary));
+    }
+
+    std::vector<uint32_t> const spirv = { 0x07230203, 0x00010000, 0, 1, 0 };
+    smolv::ByteArray encoded;
+    ASSERT_TRUE(smolv::Encode(spirv.data(), spirv.size() * sizeof(uint32_t), encoded, 0));
+    auto const package = makeSpirvDictionary(encoded);
+    ChunkContainer container(package.data(), package.size());
+    ASSERT_TRUE(container.parse());
+    BlobDictionary dictionary;
+    EXPECT_TRUE(DictionaryReader::unflatten(
+            container, filamat::ChunkType::DictionarySpirv, dictionary));
+    ASSERT_EQ(dictionary.size(), 1u);
+    EXPECT_EQ(dictionary[0].size(), spirv.size() * sizeof(uint32_t));
 }
 
 
