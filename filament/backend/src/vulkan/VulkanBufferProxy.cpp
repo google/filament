@@ -54,7 +54,7 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // In the case the content is marked as memory mapped or static, is guaranteed to be safe to do
     // a memcpy if its available.
     bool const isStaticOrShared =
-            any(mUsage & (BufferUsage::STATIC | BufferUsage::SHARED_WRITE_BIT));
+            none(mUsage & BufferUsage::DYNAMIC_BIT) || any(mUsage & BufferUsage::SHARED_WRITE_BIT);
     bool const useMemcpy =
             ((isAvailable && mStagingBufferBypassEnabled) || isStaticOrShared) && isMemcopyable;
     if (useMemcpy) {
