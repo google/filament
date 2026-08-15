@@ -480,6 +480,7 @@ private:
     aligned_vector<ThreadState> mThreadStates;          // actual data is stored offline
     std::atomic<bool> mExitRequested = { false };       // this one is almost never written
     std::atomic<uint32_t> mAdoptableSlotsMask = { 0 };  // available slots for adoptable threads
+    std::atomic<uint16_t> mActiveThreadCount = { 0 };   // high-water mark of active threads
     Job* const mJobStorageBase;                         // Base for conversion to indices
     uint16_t mThreadCount = 0;                          // total # of threads in the pool
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for

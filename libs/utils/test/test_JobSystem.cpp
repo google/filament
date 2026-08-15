@@ -783,5 +783,32 @@ TEST(JobSystem, JobSystemWaitAndReleaseDoesNotBusySpin) {
     js.emancipate();
 }
 
+TEST(JobSystem, JobSystemStealingWithManyAdoptableSlots) {
+    bool const finished = runWithTimeout([]() {
+        // 4 pool threads, 28 adoptable slots (32 total)
+        JobSystem js(4, 28);
+        js.adopt();
+
+        std::atomic<uint32_t> completed{0};
+        constexpr size_t JOB_COUNT = 2000;
+
+        JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        for (size_t i = 0; i < JOB_COUNT; ++i) {
+            JobSystem::Job* child = js.createJob(root, [&completed](JobSystem&, JobSystem::Job*) {
+                completed.fetch_add(1, std::memory_order_relaxed);
+            });
+            js.run(child);
+        }
+        js.runAndWait(root);
+
+        EXPECT_EQ(JOB_COUNT, completed.load());
+
+        js.emancipate();
+    }, std::chrono::seconds(2));
+
+    EXPECT_TRUE(finished);
+}
+
+
 
 

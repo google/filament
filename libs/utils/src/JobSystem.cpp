@@ -219,6 +219,7 @@ JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCo
     mThreadMap = std::make_unique<ThreadMap<ThreadState*>>(threadPoolCount + adoptableThreadsCount);
     mThreadCount = uint16_t(threadPoolCount);
     mParallelSplitCount = uint8_t(std::ceil((std::log2f(threadPoolCount + adoptableThreadsCount))));
+    mActiveThreadCount.store(mThreadCount, std::memory_order_relaxed);
 
     uint32_t adoptableMask = 0;
     for (uint32_t i = 0; i < adoptableThreadsCount; ++i) {
@@ -423,7 +424,7 @@ JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
 
 inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state) noexcept {
     auto& threadStates = mThreadStates;
-    uint16_t const threadCount = uint16_t(threadStates.size());
+    uint16_t const threadCount = mActiveThreadCount.load(std::memory_order_relaxed);
 
     ThreadState* stateToStealFrom = nullptr;
 
@@ -432,7 +433,7 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state
         do {
             // This is biased, but frankly, we don't care. It's fast.
             uint16_t const index = uint16_t(state.rndGen() % threadCount);
-            assert(index < threadStates.size());
+            assert_invariant(index < threadStates.size());
             stateToStealFrom = &threadStates[index];
             // don't steal from our own queue
         } while (stateToStealFrom == &state);
@@ -729,6 +730,11 @@ void JobSystem::adopt() {
     size_t const index = utils::ctz(bit);
     FILAMENT_CHECK_POSTCONDITION(index < mThreadStates.size())
             << "Too many calls to adopt(). No more adoptable threads!";
+
+    uint16_t const targetCount = uint16_t(index + 1);
+    uint16_t current = mActiveThreadCount.load(std::memory_order_relaxed);
+    while (targetCount > current && !mActiveThreadCount.compare_exchange_weak(current, targetCount,
+            std::memory_order_relaxed, std::memory_order_relaxed)) {}
 
     // all threads adopted by the JobSystem need to run at the same priority
     setThreadPriority(Priority::DISPLAY);
