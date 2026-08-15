@@ -27,13 +27,13 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
+#include <utils/ImmutableCString.h>
 #include <utils/PrivateImplementation.h>
 
 #include <cstddef>
 #include <cstring>
 #include <functional>
 #include <tuple>
-#include <unordered_set>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -54,7 +54,8 @@ struct VulkanCmdFence;
 /**
  * A Platform interface that creates a Vulkan backend.
  */
-class UTILS_SHARED_LINKING VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
+class UTILS_SHARED_LINKING VulkanPlatform : public Platform,
+                                            utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
     /**
      * Encapsulates information required to instantiate a known external format,
@@ -67,20 +68,8 @@ public:
         VkSamplerYcbcrRange ycbcrRange;
     };
 
-    struct ExtensionHashFn {
-        std::size_t operator()(utils::CString const& s) const noexcept {
-            return std::hash<utils::CString>{}(s.data());
-        }
-    };
-    // Note: utils::CString::operator== has an edge case that breaks for the extension set.
-    // Instead, we'll provide our own comparator.
-    struct ExtensionEqualFn {
-        bool operator()(utils::CString const& a, utils::CString const& b) const noexcept {
-            return strcmp(a.c_str(), b.c_str()) == 0;
-        }
-    };
     // Utility for managing device or instance extensions during initialization.
-    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn, ExtensionEqualFn>;
+    using ExtensionSet = utils::FixedCapacityVector<utils::ImmutableCString>;
 
     /**
      * A collection of handles to objects and metadata that comprises a Vulkan context. The client

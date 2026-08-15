@@ -290,7 +290,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out,
         CASE(STAGING)
         CASE(TRANSFER_SRC)
         CASE(TRANSFER_DST)
-        CASE(DEPTH_ATTACHMENT)
+        CASE(DEPTH_STENCIL_ATTACHMENT)
         CASE(DEPTH_SAMPLER)
         CASE(PRESENT)
         CASE(COLOR_ATTACHMENT)
