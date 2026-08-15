@@ -460,24 +460,25 @@ JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
     }
 
     Job* job = nullptr;
-    auto const& threadStates = mThreadStates;
-    uint16_t const threadCount = uint16_t(threadStates.size());
+    uint16_t const activeThreads = mActiveThreadCount.load(std::memory_order_relaxed);
 
-    // Search queues for the job we claimed, bounded strictly to threadCount attempts.
+    // Search queues for the job we claimed, bounded strictly to activeThreads attempts.
     // Note: It is incorrect to check hasActiveJobs() in this loop because:
     // 1) mActiveJobs was already speculatively decremented above (so it may read 0 even if
     //    our claimed job is waiting in another queue).
     // 2) Checking hasActiveJobs() would turn this into an unbounded busy loop whenever jobs
     //    remain in other queues.
-    // Bounding strictly to threadCount guarantees prompt termination while giving a high
+    // Bounding strictly to activeThreads guarantees prompt termination while giving a high
     // probability of finding available work.
     size_t attempts = 0;
     do {
         if (ThreadState* const stateToStealFrom = getStateToStealFrom(state)) {
             job = steal(stateToStealFrom->workQueue);
+        } else {
+            break;
         }
         attempts++;
-    } while (!job && attempts < threadCount);
+    } while (!job && attempts < activeThreads);
 
     if (UTILS_UNLIKELY(!job)) {
         // If we couldn't find a job (e.g. consumed concurrently), restore the count.
