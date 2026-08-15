@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <ibl/CubemapUtils.h>
-
 #include "CubemapUtilsImpl.h"
 
+#include <ibl/CubemapUtils.h>
 #include <ibl/utilities.h>
 
 #include <utils/JobSystem.h>
@@ -263,7 +262,7 @@ void CubemapUtils::cubemapToEquirectangular(JobSystem& js, Image& dst, const Cub
     };
 
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
-            std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
+            std::ref(parallelJobTask), jobs::CountSplitter<1>());
     js.runAndWait(job);
 }
 
@@ -297,7 +296,7 @@ void CubemapUtils::cubemapToOctahedron(JobSystem& js, Image& dst, const Cubemap&
     };
 
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
-            std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
+            std::ref(parallelJobTask), jobs::CountSplitter<1>());
     js.runAndWait(job);
 }
 

@@ -64,7 +64,7 @@ void CubemapUtils::process(
             if (UTILS_LIKELY(isStateLess)) {
                 // create the job, copying it by value
                 auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
-                        parallelJobTask, jobs::CountSplitter<64, 8>());
+                        parallelJobTask, jobs::CountSplitter<64>());
                 // not need to signal here, since we're just scheduling work
                 js.run(job);
             } else {

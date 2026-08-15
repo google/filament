@@ -15,13 +15,12 @@
  */
 
 
-#include <ibl/CubemapIBL.h>
+#include "CubemapUtilsImpl.h"
 
 #include <ibl/Cubemap.h>
+#include <ibl/CubemapIBL.h>
 #include <ibl/CubemapUtils.h>
 #include <ibl/utilities.h>
-
-#include "CubemapUtilsImpl.h"
 
 #include <utils/JobSystem.h>
 
@@ -1032,7 +1031,7 @@ void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
                         *data = r;
                     }
                 }
-            }, jobs::CountSplitter<1, 8>());
+            }, jobs::CountSplitter<1>());
     js.runAndWait(job);
 }
 

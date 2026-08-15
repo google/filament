@@ -45,6 +45,11 @@ namespace utils {
 template <typename VALUE>
 class ThreadMap;
 
+namespace jobs::details {
+template<typename S, typename F>
+struct ParallelForJobData;
+}
+
 class JobSystem {
     static constexpr uint32_t MAX_THREADS = 32;
     static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
@@ -72,15 +77,15 @@ public:
         Job(const Job&) = delete;
         Job(Job&&) = delete;
 
-    private:
-        friend class JobSystem;
-
         // Size is chosen so that we can store at least std::function<>
         // the alignas() qualifier ensures we're multiple of a cache-line.
         static constexpr size_t JOB_STORAGE_SIZE_BYTES =
                 sizeof(std::function<void()>) > 48 ? sizeof(std::function<void()>) : 48;
         static constexpr size_t JOB_STORAGE_SIZE_WORDS =
                 (JOB_STORAGE_SIZE_BYTES + sizeof(void*) - 1) / sizeof(void*);
+
+    private:
+        friend class JobSystem;
 
         // keep it first, so it's correctly aligned with all architectures
         // this is where we store the job's data, typically a std::function<>
@@ -270,6 +275,17 @@ public:
             that->~T();
         });
         if (job) {
+            new(job->storage) T(std::forward<ARGS>(args)...);
+        }
+        return job;
+    }
+
+    // creates a job with in-place storage initialized with ARGS, without automatic destruction
+    template<typename T, typename ... ARGS>
+    Job* emplaceJobRaw(Job* parent, JobFunc const func, ARGS&& ... args) noexcept {
+        static_assert(sizeof(T) <= sizeof(Job::storage), "user data too large");
+        Job* job = create(parent, func);
+        if (UTILS_LIKELY(job)) {
             new(job->storage) T(std::forward<ARGS>(args)...);
         }
         return job;
@@ -539,104 +555,266 @@ JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
 }
 
 
+/**
+ * Policy for dividing parallel work into fixed-size chunks.
+ *
+ * @tparam COUNT Chunk size (number of elements per work unit) dynamically claimed by threads.
+ */
+template<size_t COUNT>
+class CountSplitter {
+public:
+    static constexpr size_t CHUNK_SIZE = COUNT;
+    size_t getChunkSize() const noexcept {
+        return COUNT;
+    }
+};
+
 namespace details {
 
+// Traits helper to detect if a splitter provides a custom getChunkSize() method.
+// If absent, computes an adaptive chunk size targeting ~4 chunks per available worker thread.
+template<typename S>
+struct SplitterTraits {
+    template<typename T>
+    static auto test(int) -> decltype(std::declval<T>().getChunkSize(), std::true_type{});
+    template<typename>
+    static auto test(...) -> std::false_type;
+
+    static constexpr bool has_chunk_size = decltype(test<S>(0))::value;
+
+    static uint32_t getChunkSize(const S& splitter, uint32_t const totalCount, uint32_t const threadCount) noexcept {
+        if constexpr (has_chunk_size) {
+            return uint32_t(std::max<size_t>(1, splitter.getChunkSize()));
+        } else {
+            // Adaptive chunking: split into 4 chunks per thread to balance load while
+            // keeping atomic fetch_add contention low.
+            uint32_t const targetChunks = std::max<uint32_t>(1, threadCount * 4);
+            return std::max<uint32_t>(1, totalCount / targetChunks);
+        }
+    }
+};
+
+/*
+ * ParallelForJobData coordinates dynamic range-based work stealing across threads.
+ *
+ * Architecture & Concurrency Model:
+ * 1. Range-Based Stealing:
+ *    Instead of recursively splitting child jobs into an O(N) binary tree, parallel_for creates
+ *    a single root job and at most (threadCount - 1) child helper jobs.
+ *    All workers share a single atomic iteration cursor (nextIndex). Each worker claims
+ *    contiguous slices of chunkSize items via relaxed fetch_add until nextIndex >= endIndex.
+ *
+ * 2. Memory Layout & Zero Heap Allocation:
+ *    For functors <= 32 bytes (which covers almost all lambdas capturing a few pointers/references),
+ *    ParallelForJobData fits entirely within Job::storage (48 bytes).
+ *    Its header is packed into 12 bytes (16 with alignment), so emplaceJobRaw constructs it
+ *    directly inside the root Job without any heap allocation (IS_INLINE == true).
+ *    If the functor is larger (> 32 bytes), parallel_for falls back to a single heap allocation.
+ *
+ * 3. Distributed Lifetime Management & Deallocation:
+ *    Because the root thread and helper tasks execute asynchronously, the lifetime of
+ *    ParallelForJobData is ref-counted by activeWorkers. There are two deallocation sites:
+ *    a) finishWorker() [delete this]: Normal execution path. Every finishing worker (root or helper)
+ *       atomically decrements activeWorkers with acq_rel. Whichever thread drops the count to 0
+ *       is guaranteed to be the last one accessing the state; if heap-allocated, it calls `delete this`
+ *       (or `~ParallelForJobData()` if stored inline in Job::storage).
+ *    b) parallel_for() [delete data]: Early-failure path. If JobSystem fails to allocate the root Job
+ *       (e.g., job pool exhaustion), root never runs, so finishWorker() is never invoked.
+ *       parallel_for() detects root == nullptr and deletes data immediately to prevent a leak.
+ */
 template<typename S, typename F>
 struct ParallelForJobData {
-    using SplitterType = S;
     using Functor = F;
-    using JobData = ParallelForJobData;
-    using size_type = uint32_t;
 
-    ParallelForJobData(size_type const start, size_type const count, uint8_t const splits,
-            Functor functor,
-            const SplitterType& splitter) noexcept
-            : start(start), count(count),
-              functor(std::move(functor)),
-              splits(splits),
-              splitter(splitter) {
+    ParallelForJobData(uint32_t const start, uint32_t const count, uint32_t const chunkSize,
+            uint32_t const totalWorkers, Functor functor) noexcept
+            : nextIndex(start),
+              endIndex(start + count),
+              activeWorkers(uint16_t(totalWorkers)),
+              chunkSize(uint16_t(chunkSize)),
+              functor(std::move(functor)) {
     }
 
-    void parallelWithJobs(JobSystem& js, JobSystem::Job* parent) noexcept {
-        assert(parent);
-
-        // this branch is often miss-predicted (it both sides happen 50% of the calls)
-right_side:
-        if (splitter.split(splits, count)) {
-            const size_type lc = count / 2;
-            JobSystem::Job* l = js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
-                    start, lc, splits + uint8_t(1), functor, splitter);
-            if (UTILS_UNLIKELY(l == nullptr)) {
-                // couldn't create a job, just pretend we're done splitting
-                goto execute;
-            }
-
-            // start the left side before attempting the right side, so we parallelize in case
-            // of job creation failure -- rare, but still.
-            js.run(l, JobSystem::getThreadId(parent));
-
-            // don't spawn a job for the right side, just reuse us -- spawning jobs is more
-            // costly than we'd like.
-            start += lc;
-            count -= lc;
-            ++splits;
-            goto right_side;
-
-        } else {
-execute:
-            // we're done splitting, do the real work here!
-            functor(start, count);
+    // Work-stealing loop: dynamically claims slices of chunkSize items until exhaustion.
+    void process() noexcept {
+        uint32_t current;
+        while ((current = nextIndex.fetch_add(chunkSize, std::memory_order_relaxed)) < endIndex) {
+            uint32_t const chunk = std::min<uint32_t>(chunkSize, endIndex - current);
+            functor(current, chunk);
         }
     }
 
-private:
-    size_type start;            // 4
-    size_type count;            // 4
-    Functor functor;            // ?
-    uint8_t splits;             // 1
-    SplitterType splitter;      // 1
+    // Invoked by the root job: spawns helper jobs for other threads, then processes chunks itself.
+    void runRoot(JobSystem& js, JobSystem::Job* root) noexcept {
+        uint32_t const total = activeWorkers.load(std::memory_order_relaxed);
+        uint32_t const helperCount = total > 0 ? total - 1 : 0;
+
+        for (uint32_t i = 0; i < helperCount; ++i) {
+            JobSystem::Job* helper =
+                    js.createJob<ParallelForJobData, &ParallelForJobData::runHelper>(root, this);
+            if (UTILS_LIKELY(helper)) {
+                js.run(helper);
+            } else {
+                // Failed to allocate a helper job; decrement active workers refcount.
+                finishWorker();
+            }
+        }
+
+        process();
+        finishWorker();
+    }
+
+    // Invoked by child helper jobs on other worker threads.
+    void runHelper(JobSystem&, JobSystem::Job*) noexcept {
+        process();
+        finishWorker();
+    }
+
+    // Decrements active worker count and destroys/deallocates when the last worker finishes.
+    void finishWorker() noexcept {
+        if (activeWorkers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            if constexpr (sizeof(ParallelForJobData) <= JobSystem::Job::JOB_STORAGE_SIZE_BYTES) {
+                // Inline storage: explicitly call the destructor. The memory is owned
+                // by the Job pool and recycled when the root Job's refCount hits 0.
+                this->~ParallelForJobData();
+            } else {
+                // Heap storage: this worker is the last one running across all threads.
+                // Safely deallocate the shared heap payload.
+                delete this;
+            }
+        }
+    }
+
+    // Raw job entry point for inline storage in the root Job.
+    static void jobFuncInline(void* storage, JobSystem& js, JobSystem::Job* root) noexcept {
+        auto* const that = static_cast<ParallelForJobData*>(storage);
+        that->runRoot(js, root);
+    }
+
+    // Packed struct members: total header = 12 bytes (+4 bytes padding for 8-byte aligned Functor)
+    std::atomic<uint32_t> nextIndex = { 0 };
+    uint32_t endIndex = 0;
+    std::atomic<uint16_t> activeWorkers = { 0 };
+    uint16_t chunkSize = 1;
+    Functor functor;
 };
+
+// Check whether this struct fits inline inside Job::storage (typically 48 bytes).
+template<typename S, typename F>
+inline constexpr bool IsParallelForInline =
+        (sizeof(ParallelForJobData<S, F>) <= JobSystem::Job::JOB_STORAGE_SIZE_BYTES);
 
 } // namespace details
 
 
-// parallel jobs with start/count indices
+/**
+ * Execute a function in parallel over a range of indices [start, start + count).
+ *
+ * The range is divided into chunks and dynamically claimed by available worker threads
+ * using lock-free range-based stealing.
+ *
+ * The functor is invoked with `(uint32_t start, uint32_t count)` representing contiguous,
+ * non-overlapping sub-ranges covering the entire iteration space.
+ *
+ * If the functor payload fits in Job storage (<= 48 bytes), zero heap allocations are performed.
+ * Larger functors automatically fall back to a single shared heap allocation.
+ *
+ * @param js The JobSystem instance.
+ * @param parent Optional parent job.
+ * @param start First index of the range.
+ * @param count Total number of items to process.
+ * @param functor Callable invoked with `(uint32_t start, uint32_t count)`.
+ * @param splitter Chunking policy (default: CountSplitter<16>).
+ * @return The root JobSystem::Job* representing this parallel operation.
+ */
 template<typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        uint32_t start, uint32_t count, F functor, const S& splitter) noexcept {
+        uint32_t const start, uint32_t const count, F functor, const S& splitter) noexcept {
+    if (UTILS_UNLIKELY(count == 0)) {
+        return js.createJob(parent, [](JobSystem&, JobSystem::Job*) {});
+    }
+
+    uint32_t const threadCount = uint32_t(js.getThreadCount());
+    uint32_t const chunkSize = details::SplitterTraits<S>::getChunkSize(splitter, count, threadCount);
+    uint32_t const numChunks = (count + chunkSize - 1) / chunkSize;
+    uint32_t const helperCount = (threadCount > 0 && numChunks > 1) ?
+            std::min<uint32_t>(threadCount, numChunks - 1) : 0;
+    uint32_t const totalWorkers = helperCount + 1;
+
     using JobData = details::ParallelForJobData<S, F>;
-    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
-            start, count, 0, std::move(functor), splitter);
+
+    if constexpr (details::IsParallelForInline<S, F>) {
+        return js.emplaceJobRaw<JobData>(parent, &JobData::jobFuncInline,
+                start, count, chunkSize, totalWorkers, std::move(functor));
+    } else {
+        auto* data = new JobData(start, count, chunkSize, totalWorkers, std::move(functor));
+        JobSystem::Job* root = js.createJob<JobData, &JobData::runRoot>(parent, data);
+        if (UTILS_UNLIKELY(!root)) {
+            // Early failure: Job pool exhausted, so root will never execute and finishWorker()
+            // will never be called. Clean up the heap-allocated payload immediately.
+            delete data;
+        }
+        return root;
+    }
 }
 
-// parallel jobs with pointer/count
+template<typename F>
+JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
+        uint32_t const start, uint32_t const count, F functor) noexcept {
+    return parallel_for(js, parent, start, count, std::move(functor), CountSplitter<16>{});
+}
+
+/**
+ * Execute a function in parallel over an array of elements [data, data + count).
+ *
+ * The functor is invoked with `(T* data, size_t count)` for contiguous sub-slices.
+ *
+ * @param js The JobSystem instance.
+ * @param parent Optional parent job.
+ * @param data Pointer to the start of the data array.
+ * @param count Total number of elements.
+ * @param functor Callable invoked with `(T* data, size_t count)`.
+ * @param splitter Chunking policy (default: CountSplitter<16>).
+ * @return The root JobSystem::Job* representing this parallel operation.
+ */
 template<typename T, typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        T* data, uint32_t count, F functor, const S& splitter) noexcept {
-    auto user = [data, f = std::move(functor)](uint32_t s, uint32_t c) {
+        T* const data, uint32_t const count, F functor, const S& splitter) noexcept {
+    auto user = [data, f = std::move(functor)](uint32_t const s, uint32_t const c) {
         f(data + s, c);
     };
-    using JobData = details::ParallelForJobData<S, decltype(user)>;
-    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
-            0, count, 0, std::move(user), splitter);
+    return parallel_for(js, parent, 0, count, std::move(user), splitter);
 }
 
-// parallel jobs on a Slice<>
+template<typename T, typename F>
+JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
+        T* const data, uint32_t const count, F functor) noexcept {
+    return parallel_for(js, parent, data, count, std::move(functor), CountSplitter<16>{});
+}
+
+/**
+ * Execute a function in parallel over a Slice<T>.
+ *
+ * The functor is invoked with `(T* data, size_t count)` for contiguous sub-slices.
+ *
+ * @param js The JobSystem instance.
+ * @param parent Optional parent job.
+ * @param slice Slice of elements to process.
+ * @param functor Callable invoked with `(T* data, size_t count)`.
+ * @param splitter Chunking policy (default: CountSplitter<16>).
+ * @return The root JobSystem::Job* representing this parallel operation.
+ */
 template<typename T, typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         Slice<T> slice, F functor, const S& splitter) noexcept {
-    return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter);
+    return parallel_for(js, parent, slice.data(), uint32_t(slice.size()), std::move(functor), splitter);
 }
 
-
-template<size_t COUNT, size_t MAX_SPLITS = 12>
-class CountSplitter {
-public:
-    bool split(size_t const splits, size_t const count) const noexcept {
-        return (splits < MAX_SPLITS && count >= COUNT * 2);
-    }
-};
-
+template<typename T, typename F>
+JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
+        Slice<T> slice, F functor) noexcept {
+    return parallel_for(js, parent, slice.data(), uint32_t(slice.size()), std::move(functor), CountSplitter<16>{});
+}
 } // namespace jobs
 } // namespace utils
 

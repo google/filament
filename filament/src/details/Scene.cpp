@@ -306,7 +306,7 @@ void FScene::prepare(JobSystem& js,
 
     auto* lightJob = parallel_for(js, rootJob,
             lightInstances.data(), lightInstances.size(),
-            std::cref(lightWork), jobs::CountSplitter<32, 5>());
+            std::cref(lightWork), jobs::CountSplitter<32>());
 
     js.run(renderableJob);
     js.run(lightJob);
