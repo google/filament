@@ -670,3 +670,28 @@ TEST(JobSystem, JobSystemWorkerWakeOnSubsequentPut) {
     EXPECT_TRUE(finished);
 }
 
+TEST(JobSystem, JobSystemStealFromEmancipatedQueue) {
+    bool const finished = runWithTimeout([]() {
+        JobSystem js(4, 2);
+        js.adopt();
+
+        JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        JobSystem::Job* child = js.createJob(root, [](JobSystem&, JobSystem::Job*) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        });
+
+        std::thread runner([&]() {
+            js.adopt();
+            js.run(child);
+            js.emancipate();
+        });
+        runner.join();
+
+        js.runAndWait(root);
+        js.emancipate();
+    }, std::chrono::seconds(2));
+
+    EXPECT_TRUE(finished);
+}
+
+
