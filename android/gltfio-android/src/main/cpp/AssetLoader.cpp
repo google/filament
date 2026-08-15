@@ -91,7 +91,7 @@ public:
     ~JavaMaterialProvider() override {
         mEnv->DeleteGlobalRef(mMaterialKeyClass);
         mEnv->DeleteGlobalRef(mJavaProvider);
-        delete mPreviousMaterials;
+        delete[] mPreviousMaterials;
     }
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label, const char* extras) override {
@@ -192,7 +192,7 @@ public:
 
         const size_t count = mEnv->GetArrayLength(javaMaterials);
 
-        delete mPreviousMaterials;
+        delete[] mPreviousMaterials;
         using MaterialPointer = Material*;
         mPreviousMaterials = new MaterialPointer[count];
 
@@ -201,14 +201,18 @@ public:
             jobject javaMaterial = mEnv->GetObjectArrayElement(javaMaterials, i);
             jlong matPointer = mEnv->CallLongMethod(javaMaterial, mMaterialGetNativeObject);
             mPreviousMaterials[i] = (Material*) matPointer;
+            mEnv->DeleteLocalRef(javaMaterial);
         }
+        mEnv->DeleteLocalRef(javaMaterials);
 
         return mPreviousMaterials;
     }
 
     size_t getMaterialsCount() const noexcept override {
         jobjectArray javaMaterials = (jobjectArray) mEnv->CallObjectMethod(mJavaProvider, mGetMaterials);
-        return mEnv->GetArrayLength(javaMaterials);
+        auto length = mEnv->GetArrayLength(javaMaterials);
+        mEnv->DeleteLocalRef(javaMaterials);
+        return length;
     }
 
     void destroyMaterials() override {

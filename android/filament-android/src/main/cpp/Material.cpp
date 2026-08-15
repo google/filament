@@ -264,10 +264,10 @@ Java_com_google_android_filament_Material_nGetParameters(JNIEnv* env, jclass,
             type = (jint) info[i].type;
         }
 
-        env->CallStaticVoidMethod(
-                parameterClass, parameterAdd,
-                parameters, env->NewStringUTF(info[i].name), type, (jint) info[i].precision,
-                (jint) info[i].count);
+        jstring name = env->NewStringUTF(info[i].name);
+        env->CallStaticVoidMethod(parameterClass, parameterAdd,
+                parameters, name, type, (jint) info[i].precision, (jint) info[i].count);
+        env->DeleteLocalRef(name);
     }
 
     env->DeleteLocalRef(parameterClass);
