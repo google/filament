@@ -294,7 +294,8 @@ void JobSystem::decRef(Job const* job) noexcept {
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
     LockGuard const lock(mWaiterLock);
-    mWaiterCondition.notify_all();
+    mWorkCondition.notify_all();
+    mJobCondition.notify_all();
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
@@ -310,11 +311,18 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
     return (job->runningJobCount.load(std::memory_order_acquire) & JOB_COUNT_MASK) == 0;
 }
 
-inline void JobSystem::wait(UniqueLock& lock) noexcept {
+inline void JobSystem::waitForWork(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
-    mSleepingThreads.fetch_add(1, std::memory_order_relaxed);
-    mWaiterCondition.wait(lock);
-    mSleepingThreads.fetch_sub(1, std::memory_order_relaxed);
+    mSleepingCounts.fetch_add(SLEEPING_WORKER_ONE, std::memory_order_relaxed);
+    mWorkCondition.wait(lock);
+    mSleepingCounts.fetch_sub(SLEEPING_WORKER_ONE, std::memory_order_relaxed);
+}
+
+inline void JobSystem::waitForJob(UniqueLock& lock) noexcept {
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+    mSleepingCounts.fetch_add(SLEEPING_WAITER_ONE, std::memory_order_relaxed);
+    mJobCondition.wait(lock);
+    mSleepingCounts.fetch_sub(SLEEPING_WAITER_ONE, std::memory_order_relaxed);
 }
 
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
@@ -333,7 +341,7 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
             job->runningJobCount.fetch_add(1 << WAITER_COUNT_SHIFT, std::memory_order_relaxed);
 
     if (runningJobCount & JOB_COUNT_MASK) {
-        wait(lock);
+        waitForJob(lock);
     }
 
     runningJobCount =
@@ -345,15 +353,15 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
 }
 
 UTILS_NOINLINE
-void JobSystem::wakeAll() noexcept {
-    // wakeAll() is called when a job finishes (to wake up any thread that might be waiting on it)
+void JobSystem::wakeWaiters() noexcept {
+    // wakeWaiters() is called when a job finishes (to wake up any thread that might be waiting on it)
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_all() happens
     // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_all() can be pretty slow, and it doesn't need to be inside the lock.
-    mWaiterCondition.notify_all();
+    mJobCondition.notify_all();
 }
 
 void JobSystem::wakeOne() noexcept {
@@ -364,7 +372,12 @@ void JobSystem::wakeOne() noexcept {
     // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_one() can be pretty slow, and it doesn't need to be inside the lock.
-    mWaiterCondition.notify_one();
+    uint32_t const sleeping = mSleepingCounts.load(std::memory_order_relaxed);
+    if (sleeping & SLEEPING_WORKER_MASK) {
+        mWorkCondition.notify_one();
+    } else if (sleeping & SLEEPING_WAITER_MASK) {
+        mJobCondition.notify_one();
+    }
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() {
@@ -393,10 +406,9 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     // spin infinitely, recreating the exact same priority inversion lockup on the push side!
     mActiveJobs.fetch_add(1, std::memory_order_release);
 
-    // Only wake a sleeping thread if there is at least one thread sleeping.
-    // If all worker threads are already awake and running (mSleepingThreads == 0),
-    // wakeOne() and its internal mWaiterLock are completely bypassed.
-    if (UTILS_UNLIKELY(mSleepingThreads.load(std::memory_order_relaxed) > 0)) {
+    // Only wake a sleeping thread if there is at least one thread sleeping (worker or waiter).
+    // If all threads are already awake and running, wakeOne() and its internal mWaiterLock are completely bypassed.
+    if (UTILS_UNLIKELY(mSleepingCounts.load(std::memory_order_relaxed) > 0)) {
         wakeOne();
     }
 }
@@ -534,7 +546,7 @@ void JobSystem::loop(ThreadState* state) {
             // take mWaiterLock and sleep in wait(lock).
             UniqueLock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
-                wait(lock);
+                waitForWork(lock);
             }
         }
     } while (!exitRequested());
@@ -573,7 +585,7 @@ void JobSystem::finish(Job* job) noexcept {
     // wake-up all threads that could potentially be waiting on this job finishing
     if (UTILS_UNLIKELY(notify)) {
         // but avoid calling notify_all() at all cost, because it's always expensive
-        wakeAll();
+        wakeWaiters();
     }
 }
 

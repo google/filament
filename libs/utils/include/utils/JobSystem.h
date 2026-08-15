@@ -455,16 +455,23 @@ private:
 
     [[nodiscard]]
     uint32_t wait(UniqueLock& lock, Job* job) noexcept;
-    void wait(UniqueLock& lock) noexcept;
-    void wakeAll() noexcept;
+    void waitForWork(UniqueLock& lock) noexcept;
+    void waitForJob(UniqueLock& lock) noexcept;
+    void wakeWaiters() noexcept;
     void wakeOne() noexcept;
+
+    static constexpr uint32_t SLEEPING_WORKER_ONE = 1 << 16;
+    static constexpr uint32_t SLEEPING_WAITER_ONE = 1;
+    static constexpr uint32_t SLEEPING_WORKER_MASK = 0xFFFF0000;
+    static constexpr uint32_t SLEEPING_WAITER_MASK = 0x0000FFFF;
 
     // these have thread contention, keep them together
     Mutex mWaiterLock;
-    Condition mWaiterCondition;
+    Condition mWorkCondition;
+    Condition mJobCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
-    std::atomic<uint32_t> mSleepingThreads = { 0 };
+    std::atomic<uint32_t> mSleepingCounts = { 0 };
     Arena<ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
