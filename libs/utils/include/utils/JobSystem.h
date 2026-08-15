@@ -417,12 +417,14 @@ private:
         }
     };
 
-    struct alignas(CACHELINE_SIZE) ThreadState {    // this causes 40-bytes padding
-        // make sure storage is cache-line aligned
+    struct alignas(CACHELINE_SIZE) ThreadState {
+        // Keep nextJob at the beginning so that nextJob, workQueue's top/bottom indices,
+        // and the initial workQueue slots all share the first 64-byte cache line.
+        std::atomic<uint16_t> nextJob = { 0 };
         WorkQueue workQueue;
 
-        // these are not accessed by the worker threads
-        alignas(CACHELINE_SIZE)         // this causes 56-bytes padding
+        // these are not accessed frequently by other threads
+        alignas(CACHELINE_SIZE)         // this causes 40-bytes padding
         JobSystem* js;                  // this is in fact const and always initialized
         std::thread thread;             // unused for adopted threads
         default_random_engine rndGen;
@@ -449,9 +451,9 @@ private:
     Job* steal(ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
-    void put(WorkQueue& workQueue, Job const* job) noexcept;
-    Job* pop(WorkQueue& workQueue) noexcept;
-    Job* steal(WorkQueue& workQueue) noexcept;
+    void put(ThreadState& state, Job const* job) noexcept;
+    Job* pop(ThreadState& state) noexcept;
+    Job* stealFrom(ThreadState& victim) noexcept;
 
     [[nodiscard]]
     uint32_t wait(UniqueLock& lock, Job* job) noexcept;

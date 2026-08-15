@@ -390,20 +390,24 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
     return mJobPool.make<Job>();
 }
 
-void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
+void JobSystem::put(ThreadState& state, Job const* job) noexcept {
     assert(job);
     assert(job >= mJobStorageBase && job < mJobStorageBase + MAX_JOB_COUNT);
 
-    size_t const index = job - mJobStorageBase;
+    uint16_t const index = uint16_t(job - mJobStorageBase + 1);
 
-    // put the job into the queue
-    workQueue.push(uint16_t(index + 1));
+    // Try to put into the fast 1-slot nextJob cache
+    uint16_t const prev = state.nextJob.exchange(index, std::memory_order_release);
+    if (UTILS_UNLIKELY(prev != 0)) {
+        // If nextJob was already occupied, push the older job into the workQueue
+        state.workQueue.push(prev);
+    }
 
     // Increase our active job count. We MUST use std::memory_order_release here.
     // If we used relaxed, the compiler or CPU could reorder this increment to happen 
-    // BEFORE workQueue.push(). If a preemption happened right there, other threads 
-    // would see mActiveJobs > 0, enter the steal() loop, fail to find the job, and 
-    // spin infinitely, recreating the exact same priority inversion lockup on the push side!
+    // BEFORE nextJob.exchange() or workQueue.push(). If a preemption happened right there,
+    // other threads would see mActiveJobs > 0, enter the steal() loop, fail to find the job,
+    // and spin infinitely, recreating the exact same priority inversion lockup on the push side!
     mActiveJobs.fetch_add(1, std::memory_order_release);
 
     // Only wake a sleeping thread if there is at least one thread sleeping (worker or waiter).
@@ -413,13 +417,21 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     }
 }
 
-JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
+JobSystem::Job* JobSystem::pop(ThreadState& state) noexcept {
+    // 1. First check our 1-slot nextJob continuation bypass
+    uint16_t const nextIdx = state.nextJob.exchange(0, std::memory_order_acquire);
+    if (UTILS_LIKELY(nextIdx != 0)) {
+        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
+        return &mJobStorageBase[nextIdx - 1];
+    }
+
+    // 2. Fall back to popping from our workQueue
     // By design, the owner thread must always attempt to pop from its own queue first without
     // inspecting or decrementing mActiveJobs. Popping from our own queue is wait-free and
     // contention-free. Gating pop() on global active job counters would cause owner threads to
     // starve and falsely skip their own runnable jobs if a concurrent stealer has speculatively
     // decremented mActiveJobs.
-    size_t const index = workQueue.pop();
+    size_t const index = state.workQueue.pop();
     assert(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
     if (UTILS_LIKELY(job)) {
@@ -428,10 +440,24 @@ JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
     return job;
 }
 
-JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
-    size_t const index = workQueue.steal();
-    assert_invariant(index <= MAX_JOB_COUNT);
-    return !index ? nullptr : &mJobStorageBase[index - 1];
+JobSystem::Job* JobSystem::stealFrom(ThreadState& victim) noexcept {
+    // 1. Try to steal from victim's workQueue
+    size_t const index = victim.workQueue.steal();
+    if (index != 0) {
+        assert_invariant(index <= MAX_JOB_COUNT);
+        return &mJobStorageBase[index - 1];
+    }
+
+    // 2. If workQueue is empty, try to steal victim's nextJob
+    uint16_t victimNext = victim.nextJob.load(std::memory_order_relaxed);
+    if (victimNext != 0) {
+        if (victim.nextJob.compare_exchange_strong(victimNext, 0,
+                std::memory_order_acquire, std::memory_order_relaxed)) {
+            return &mJobStorageBase[victimNext - 1];
+        }
+    }
+
+    return nullptr;
 }
 
 inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state) noexcept {
@@ -485,7 +511,7 @@ JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
     size_t attempts = 0;
     do {
         if (ThreadState* const stateToStealFrom = getStateToStealFrom(state)) {
-            job = steal(stateToStealFrom->workQueue);
+            job = stealFrom(*stateToStealFrom);
         } else {
             break;
         }
@@ -503,7 +529,7 @@ JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
 bool JobSystem::execute(ThreadState& state) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
-    Job* job = pop(state.workQueue);
+    Job* job = pop(state);
 
     // It is beneficial for some benchmarks to poll on steal() for a bit, because going back to
     // sleep and waking up is pretty expensive. However, it is unclear it helps in practice with
@@ -638,7 +664,7 @@ void JobSystem::run(Job*& job) noexcept {
 
     ThreadState& state(getState());
 
-    put(state.workQueue, job);
+    put(state, job);
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
     job = nullptr;
@@ -650,7 +676,7 @@ void JobSystem::run(Job*& job, uint8_t const id) noexcept {
     ThreadState& state = mThreadStates[id];
     assert_invariant(&state == &getState());
 
-    put(state.workQueue, job);
+    put(state, job);
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
     job = nullptr;
