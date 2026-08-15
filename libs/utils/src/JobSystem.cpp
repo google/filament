@@ -469,8 +469,10 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state
     // don't try to steal from someone else if we're the only thread (infinite loop)
     if (threadCount >= 2) {
         do {
-            // This is biased, but frankly, we don't care. It's fast.
-            uint16_t const index = uint16_t(state.rndGen() % threadCount);
+            // Fast range reduction (Lemire 2016, "Fast Random Integer Generation in an Interval",
+            // ACM Transactions on Modeling and Computer Simulation): avoids expensive hardware
+            // integer division (%) by scaling the 31-bit random integer as a fixed-point fraction.
+            uint16_t const index = uint16_t((uint64_t(state.rndGen()) * threadCount) >> 31);
             assert_invariant(index < threadStates.size());
             stateToStealFrom = &threadStates[index];
             // don't steal from our own queue
