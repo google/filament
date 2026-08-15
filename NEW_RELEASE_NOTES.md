@@ -13,3 +13,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   `Engine::Config::enableMultipleDirectionalLights`; the dominant one still provides shadows and
   the sun disc, up to 4 additional directional lights are evaluated without shadows [⚠️ **New
   Material Version**]
+- materials: a second specular lobe can be defined by setting the `secondRoughness` and
+  `secondRoughnessWeight` properties. This can be used to create hazy materials. These properties
+  require material to declare `apiLevel : 2` (or greater).
