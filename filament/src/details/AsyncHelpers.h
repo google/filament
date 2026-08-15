@@ -67,7 +67,8 @@ template<typename T>
 class CountdownCallbackHandler : public backend::CallbackHandler {
 public:
     using UserCallback = std::function<void(T*, void*, backend::AsyncCallStatus)>;
-    using CountdownCompleteCallback = std::function<void()>;
+    // Receives the aggregate status of all the tracked operations.
+    using CountdownCompleteCallback = std::function<void(backend::AsyncCallStatus)>;
 
     template<typename... Args>
     static CountdownCallbackHandler<T>* make(Args&&... args) {
@@ -107,7 +108,7 @@ public:
         }
         if (thisObject->decreaseCountdown()) {
             if (thisObject->mCountdownCompleteCallback) {
-                thisObject->mCountdownCompleteCallback();
+                thisObject->mCountdownCompleteCallback(thisObject->getAggregateStatus());
             }
             // 4. Schedules the final callback to execute the *REAL* user's callback.
             thisObject->mDriver->scheduleCallback(thisObject->mUserHandler, user,
@@ -121,12 +122,8 @@ public:
         auto* thisObject = static_cast<CountdownCallbackHandler*>(user);
         // 6. Executes the *REAL* user's callback.
         if (thisObject->mUserCallback) {
-            // `std::memory_order_relaxed` is sufficient because scheduleCallback() takes a mutex
-            // between the thread that stored this and the handler thread running us.
-            auto const status = thisObject->mCanceled.load(std::memory_order_relaxed)
-                    ? backend::AsyncCallStatus::CANCELED
-                    : backend::AsyncCallStatus::COMPLETED;
-            thisObject->mUserCallback(thisObject->mUserParam1, thisObject->mUserParam2, status);
+            thisObject->mUserCallback(thisObject->mUserParam1, thisObject->mUserParam2,
+                    thisObject->getAggregateStatus());
         }
         delete thisObject;
     }
@@ -140,6 +137,14 @@ public:
     }
 
 private:
+    // The status reported to the user: canceled if any of the tracked operations was canceled.
+    // `std::memory_order_relaxed` is sufficient because this is only read after
+    // decreaseCountdown()'s fetch_sub(acq_rel) returned true, which publishes the store.
+    backend::AsyncCallStatus getAggregateStatus() const {
+        return mCanceled.load(std::memory_order_relaxed) ? backend::AsyncCallStatus::CANCELED
+                                                         : backend::AsyncCallStatus::COMPLETED;
+    }
+
     // Reduces the countdown and returns true upon reaching zero.
     bool decreaseCountdown() {
         // `std::memory_order_acq_rel` is recommended here to ensure all member fields (mUserHandler,
