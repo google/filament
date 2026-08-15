@@ -41,7 +41,7 @@ LightManager allows you to create a light source in the scene, such as a sun or 
 
  To create a directional light use [DIRECTIONAL](-type/-d-i-r-e-c-t-i-o-n-a-l/index.md) or [SUN](-type/-s-u-n/index.md), both are similar, but the later also draws a sun's disk in the sky and its reflection on glossy objects. 
 
-**warning:** Currently, only a single directional light is supported. If several directional lights are added to the scene, the dominant one will be used. 
+ By default, only the dominant directional light (the one with the highest intensity) of a scene is evaluated. Several directional lights can be used by enabling [enableMultipleDirectionalLights](../-engine/-config/enable-multiple-directional-lights.md): the dominant one is still the only one that can cast shadows and draw a sun's disk, and up to four additional directional lights are evaluated without shadows; any further directional lights are ignored. Scenes with a single directional light don't pay any cost for this feature. 
 
 ## Point lights
 

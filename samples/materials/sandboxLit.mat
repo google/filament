@@ -1,6 +1,7 @@
 material {
     name : LitOpaque,
     shadingModel : lit,
+    apiLevel : 2,
     parameters : [
         {
             type : float3,
@@ -17,6 +18,14 @@ material {
         {
             type : float,
             name : reflectance
+        },
+        {
+            type : float,
+            name : secondRoughness
+        },
+        {
+            type : float,
+            name : secondRoughnessWeight
         },
         {
             type : float3,
@@ -53,6 +62,8 @@ fragment {
         material.roughness = materialParams.roughness;
         material.metallic = materialParams.metallic;
         material.reflectance = materialParams.reflectance;
+        material.secondRoughness = materialParams.secondRoughness;
+        material.secondRoughnessWeight = materialParams.secondRoughnessWeight;
         material.sheenColor = materialParams.sheenColor;
         material.sheenRoughness = materialParams.sheenRoughness;
         material.clearCoat = materialParams.clearCoat;
