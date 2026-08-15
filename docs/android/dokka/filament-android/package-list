@@ -283,6 +283,7 @@ $dokka.location:com.google.android.filament/Engine.Config/commandBufferSizeMB/#/
 $dokka.location:com.google.android.filament/Engine.Config/disableHandleUseAfterFreeCheck/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/disable-handle-use-after-free-check.md
 $dokka.location:com.google.android.filament/Engine.Config/disableParallelShaderCompile/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/disable-parallel-shader-compile.md
 $dokka.location:com.google.android.filament/Engine.Config/driverHandleArenaSizeMB/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/driver-handle-arena-size-m-b.md
+$dokka.location:com.google.android.filament/Engine.Config/enableMultipleDirectionalLights/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/enable-multiple-directional-lights.md
 $dokka.location:com.google.android.filament/Engine.Config/forceGLES2Context/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/force-g-l-e-s2-context.md
 $dokka.location:com.google.android.filament/Engine.Config/gpuContextPriority/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/gpu-context-priority.md
 $dokka.location:com.google.android.filament/Engine.Config/jobSystemThreadCount/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/-config/job-system-thread-count.md
