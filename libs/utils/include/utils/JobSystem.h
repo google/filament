@@ -464,6 +464,7 @@ private:
     Condition mWaiterCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
+    std::atomic<uint32_t> mSleepingThreads = { 0 };
     Arena<ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>

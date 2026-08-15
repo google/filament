@@ -311,7 +311,9 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
 
 inline void JobSystem::wait(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
+    mSleepingThreads.fetch_add(1, std::memory_order_relaxed);
     mWaiterCondition.wait(lock);
+    mSleepingThreads.fetch_sub(1, std::memory_order_relaxed);
 }
 
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
@@ -326,7 +328,7 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
             job->runningJobCount.fetch_add(1 << WAITER_COUNT_SHIFT, std::memory_order_relaxed);
 
     if (runningJobCount & JOB_COUNT_MASK) {
-        mWaiterCondition.wait(lock);
+        wait(lock);
     }
 
     runningJobCount =
@@ -386,11 +388,12 @@ void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     // spin infinitely, recreating the exact same priority inversion lockup on the push side!
     mActiveJobs.fetch_add(1, std::memory_order_release);
 
-    // Note: it's absolutely possible for mActiveJobs to be 0 here, because the job could have
-    // been handled by a zealous worker already. In that case we could avoid calling wakeOne(),
-    // but that is not the common case.
-
-    wakeOne();
+    // Only wake a sleeping thread if there is at least one thread sleeping.
+    // If all worker threads are already awake and running (mSleepingThreads == 0),
+    // wakeOne() and its internal mWaiterLock are completely bypassed.
+    if (UTILS_UNLIKELY(mSleepingThreads.load(std::memory_order_relaxed) > 0)) {
+        wakeOne();
+    }
 }
 
 JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
