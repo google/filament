@@ -25,6 +25,13 @@
 
 #include <array>
 #include <thread>
+#include <vector>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 using namespace utils;
 using namespace jobs;
@@ -693,5 +700,88 @@ TEST(JobSystem, JobSystemStealFromEmancipatedQueue) {
 
     EXPECT_TRUE(finished);
 }
+
+namespace {
+
+static double getThreadCpuTimeMs() noexcept {
+#if defined(_WIN32)
+    FILETIME creationTime, exitTime, kernelTime, userTime;
+    if (GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime, &userTime)) {
+        ULARGE_INTEGER kernel, user;
+        kernel.LowPart = kernelTime.dwLowDateTime;
+        kernel.HighPart = kernelTime.dwHighDateTime;
+        user.LowPart = userTime.dwLowDateTime;
+        user.HighPart = userTime.dwHighDateTime;
+        return double(kernel.QuadPart + user.QuadPart) / 10000.0;
+    }
+    return 0.0;
+#elif defined(CLOCK_THREAD_CPUTIME_ID)
+    struct timespec ts {};
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) {
+        return (double(ts.tv_sec) * 1000.0) + (double(ts.tv_nsec) / 1000000.0);
+    }
+    return 0.0;
+#else
+    return 0.0;
+#endif
+}
+
+} // namespace
+
+TEST(JobSystem, JobSystemWaitAndReleaseDoesNotBusySpin) {
+    JobSystem js(4, 28);
+    js.adopt();
+
+    // 4 worker threads run 100ms tasks
+    std::atomic<int> runningWorkers{0};
+    JobSystem::Job* targetJob = nullptr;
+    for (int i = 0; i < 4; ++i) {
+        JobSystem::Job* w = js.createJob(nullptr, [&](JobSystem&, JobSystem::Job*) {
+            runningWorkers.fetch_add(1, std::memory_order_relaxed);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        });
+        if (i == 0) {
+            targetJob = js.runAndRetain(w);
+        } else {
+            js.run(w);
+        }
+    }
+
+    while (runningWorkers.load(std::memory_order_relaxed) < 4) {
+        std::this_thread::yield();
+    }
+
+    // Push 1 job into a separate adopted thread's queue
+    std::atomic<bool> bgDone{false};
+    std::thread bgThread([&]() {
+        js.adopt();
+        JobSystem::Job* extra = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        js.run(extra);
+        while (!bgDone.load(std::memory_order_relaxed)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        js.emancipate();
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    double const startCpuTime = getThreadCpuTimeMs();
+
+    js.waitAndRelease(targetJob);
+
+    double const endCpuTime = getThreadCpuTimeMs();
+
+    bgDone.store(true, std::memory_order_release);
+    bgThread.join();
+
+    double const cpuTimeMs = endCpuTime - startCpuTime;
+
+    EXPECT_LT(cpuTimeMs, 30.0)
+            << "waitAndRelease() busy-spun at 100% CPU! Consumed " << cpuTimeMs
+            << "ms CPU time while waiting for 100ms child job.";
+
+    js.emancipate();
+}
+
 
 

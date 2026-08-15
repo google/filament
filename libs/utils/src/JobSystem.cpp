@@ -320,7 +320,11 @@ inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     // signal we are waiting
 
-    if (hasActiveJobs() || exitRequested()) {
+    // Note: Do NOT check hasActiveJobs() here to abort waiting. The caller has already
+    // executed execute() and found no work to run. If we returned immediately because
+    // unrelated active jobs exist in other queues, the caller would loop in a 100% CPU
+    // busy-spin without ever sleeping on the condition variable.
+    if (exitRequested()) {
         return job->runningJobCount.load(std::memory_order_acquire);
     }
 
@@ -520,6 +524,12 @@ void JobSystem::loop(ThreadState* state) {
     // run our main loop...
     do {
         if (!execute(*state)) {
+            // Note: Do NOT check hasActiveJobs() here before taking the lock to "double-check".
+            // If execute() failed to acquire a job (e.g. random steal probe missed or the owner
+            // is descheduled), immediately continuing on hasActiveJobs() creates a tight 100% CPU
+            // user-space busy-spin loop. This starves the thread holding the active job, turning
+            // transient contention into priority inversion livelocks. Instead, we proceed to
+            // take mWaiterLock and sleep in wait(lock).
             UniqueLock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
@@ -647,10 +657,14 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
     ThreadState& state(getState());
     do {
         if (UTILS_UNLIKELY(!execute(state))) {
-            // test if job has completed first, to possibly avoid taking the lock
-            if (hasJobCompleted(job)) {
+            // test if job has completed or exit was requested first, to possibly avoid taking the lock
+            if (hasJobCompleted(job) || exitRequested()) {
                 break;
             }
+
+            // Note: Do NOT check hasActiveJobs() here to loop again. If execute() found no work,
+            // we must proceed to wait on the job's condition variable rather than
+            // busy-spinning at 100% CPU.
 
             // the only way we can be here is if the job we're waiting on it being handled
             // by another thread:
