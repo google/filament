@@ -34,8 +34,8 @@ namespace filament {
 
 DependencyGraph::DependencyGraph(FrameGraphAllocator& arena) noexcept
     : mNodes(arena), mEdges(arena)  {
-    mNodes.reserve(128);
-    mEdges.reserve(128);
+    mNodes.reserve(512);
+    mEdges.reserve(1024);
 }
 
 DependencyGraph::~DependencyGraph() noexcept = default;
@@ -130,16 +130,14 @@ void DependencyGraph::cull(FrameGraphAllocator& arena) noexcept {
         Node const* const pNode = stack.back();
         stack.pop_back();
 
-        utils::ArenaScope const stackScope(arena); // safe because stack never reallocates by construction
-        EdgeContainer const incoming = getIncomingEdges(pNode, arena);
-        for (Edge const* edge : incoming) {
+        forEachIncomingEdge(pNode, [this, &stack](Edge const* edge) {
             Node* pLinkedNode = getNode(edge->from);
             if (--pLinkedNode->mRefCount == 0) {
                 assert_invariant(stack.size() < stack.capacity());
                 // note: this is guaranteed to not reallocate
                 stack.push_back(pLinkedNode);
             }
-        }
+        });
     }
 }
 
