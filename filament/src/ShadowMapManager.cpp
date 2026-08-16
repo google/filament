@@ -680,15 +680,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         // or indirectly via anisotropic filtering.
         // So generate the mipmaps for each layer
         if (UTILS_UNLIKELY(textureRequirements.levels > 1)) {
-            for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
-                // TODO: we could take a list of scissor maybe
-                if (view.hasPCSS()) {
-                    // for PCSS we do a higher quality gaussian mipmap generation
-                    gaussianMipmapPass(engine, fg, prepareShadowPass->shadows, layer, level, textureRequirements.clearColor);
-                } else {
-                    // for EVSM, a regular mipmap is enough
-                    vsmMipmapPass(engine, fg, prepareShadowPass->shadows, layer, level, textureRequirements.clearColor);
-                }
+            // TODO: we could take a list of scissor maybe
+            if (view.hasPCSS()) {
+                // for PCSS we do a higher quality gaussian mipmap generation
+                gaussianMipmapPass(engine, fg, prepareShadowPass->shadows,
+                        layer, textureRequirements.levels, textureRequirements.clearColor);
+            } else {
+                // for EVSM, a regular mipmap is enough
+                vsmMipmapPass(engine, fg, prepareShadowPass->shadows,
+                        layer, textureRequirements.levels, textureRequirements.clearColor);
             }
         }
 
@@ -808,8 +808,12 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianBlurSeparatedPass(
 FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
         FEngine& engine,
         FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> const input, uint8_t layer, size_t const level,
-        float4 clearColor) noexcept {
+        FrameGraphId<FrameGraphTexture> const input, uint8_t const layer, size_t const levelCount,
+        float4 const clearColor) noexcept {
+
+    if (UTILS_UNLIKELY(levelCount <= 1)) {
+        return input;
+    }
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -818,25 +822,25 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("EVSM Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.in = builder.sample(input);
-                auto out = builder.createSubresource(data.in, "EVSM Mipmap level", {
-                        .level = uint8_t(level + 1), .layer = layer });
-                out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass(builder.getName(input), {
-                    .attachments = { .color = { out }},
-                    .clearColor = clearColor,
-                    .clearFlags = TargetBufferFlags::COLOR
-                });
+                for (size_t level = 0; level < levelCount - 1; ++level) {
+                    auto out = builder.createSubresource(data.in, "EVSM Mipmap level", {
+                            .level = uint8_t(level + 1), .layer = layer });
+                    out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    builder.declareRenderPass(builder.getName(input), {
+                        .attachments = { .color = { out }},
+                        .clearColor = clearColor,
+                        .clearFlags = TargetBufferFlags::COLOR
+                    });
+                }
             },
             [=, &engine](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
-                auto [target, params] = resources.getRenderPassInfo();
-
                 auto const& inDesc = resources.getDescriptor(data.in);
-                auto width = inDesc.width;
+                auto const width = inDesc.width;
                 assert_invariant(width == inDesc.height);
-                uint32_t const dim = std::max(1u, width >> (level + 1));
+
+                auto const hwIn = resources.getTexture(data.in);
 
                 auto const& ppm = engine.getPostProcessManager();
                 ppm.bindPostProcessDescriptorSet(driver);
@@ -845,28 +849,36 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
                 auto& material = ppm.getPostProcessMaterial("vsmMipmap");
                 FMaterial const* const ma = material.getMaterial(engine);
                 auto const mi = ppm.getMaterialInstance(driver, ma);
-
                 auto const pipeline = ppm.getPipelineState(mi);
-                backend::Viewport const scissor = { 0, 0, dim, dim };
 
-                mi->setParameter("color", in, SamplerParams{
-                        .filterMag = SamplerMagFilter::NEAREST,
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
-                });
+                // Invariant uniform across all mip levels
                 mi->setParameter("layer", uint32_t(layer));
-                mi->commit(driver, engine.getUboManager());
 
+                for (size_t level = 0; level < levelCount - 1; ++level) {
+                    auto in = driver.createTextureView(hwIn, level, 1);
+                    auto [target, params] = resources.getRenderPassInfo(level);
 
-                // Do all the horizontal or vertical blur passes for this layer at once
-                driver.beginRenderPass(target, params);
-                {
-                    mi->use(driver);
-                    driver.scissor(scissor);
-                    driver.draw(pipeline, engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                    uint32_t const dim = std::max(1u, width >> (level + 1));
+                    backend::Viewport const scissor = { 0, 0, dim, dim };
+
+                    mi->setParameter("color", in, SamplerParams{
+                            .filterMag = SamplerMagFilter::NEAREST,
+                            .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                    });
+                    mi->commit(driver, engine.getUboManager());
+
+                    driver.beginRenderPass(target, params);
+                    {
+                        mi->use(driver);
+                        driver.scissor(scissor);
+                        driver.draw(pipeline, engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                    }
+                    driver.endRenderPass();
+
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+                    driver.destroyTexture(in);
                 }
-                driver.endRenderPass();
 
-                driver.destroyTexture(in); // `in` is just a view on `data.in`
                 ppm.unbindAllDescriptorSets(driver);
             });
 
@@ -876,8 +888,12 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
 FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianMipmapPass(
         FEngine& engine,
         FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> const input, uint8_t layer, size_t const level,
-        float4 clearColor) noexcept {
+        FrameGraphId<FrameGraphTexture> const input, uint8_t const layer, size_t const levelCount,
+        float4 const clearColor) noexcept {
+
+    if (UTILS_UNLIKELY(levelCount <= 1)) {
+        return input;
+    }
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -886,25 +902,25 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianMipmapPass(
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("EVSM Gaussian Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.in = builder.sample(input);
-                auto out = builder.createSubresource(data.in, "EVSM Mipmap level", {
-                        .level = uint8_t(level + 1), .layer = layer });
-                out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                builder.declareRenderPass(builder.getName(input), {
-                    .attachments = { .color = { out }},
-                    .clearColor = clearColor,
-                    .clearFlags = TargetBufferFlags::COLOR
-                });
+                for (size_t level = 0; level < levelCount - 1; ++level) {
+                    auto out = builder.createSubresource(data.in, "EVSM Gaussian Mipmap level", {
+                            .level = uint8_t(level + 1), .layer = layer });
+                    out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    builder.declareRenderPass(builder.getName(input), {
+                        .attachments = { .color = { out }},
+                        .clearColor = clearColor,
+                        .clearFlags = TargetBufferFlags::COLOR
+                    });
+                }
             },
             [=, &engine](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
-                auto [target, params] = resources.getRenderPassInfo();
-
                 auto const& inDesc = resources.getDescriptor(data.in);
-                auto width = inDesc.width;
+                auto const width = inDesc.width;
                 assert_invariant(width == inDesc.height);
-                uint32_t const dim = std::max(1u, width >> (level + 1));
+
+                auto const hwIn = resources.getTexture(data.in);
 
                 auto const& ppm = engine.getPostProcessManager();
                 ppm.bindPostProcessDescriptorSet(driver);
@@ -912,31 +928,41 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianMipmapPass(
 
                 auto& material = ppm.getPostProcessMaterial("gaussianMipmap");
                 FMaterial const* const ma = material.getMaterial(engine);
-                auto const mi = ppm.getMaterialInstance(driver, ma);
 
-                auto const pipeline = ppm.getPipelineState(mi);
-                backend::Viewport const scissor = { 0, 0, dim, dim };
+                for (size_t level = 0; level < levelCount - 1; ++level) {
+                    auto in = driver.createTextureView(hwIn, level, 1);
+                    auto [target, params] = resources.getRenderPassInfo(level);
 
-                mi->setParameter("color", in, SamplerParams{
-                        .filterMag = SamplerMagFilter::NEAREST,
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
-                });
-                // FIXME: use real scissor
-                mi->setParameter("srcRect", int4{ 0, 0, width, width });
-                mi->setParameter("dstRect", int4{ scissor.left, scissor.bottom, scissor.width, scissor.height });
-                mi->setParameter("layer", uint32_t(layer));
-                mi->commit(driver, engine.getUboManager());
+                    uint32_t const srcDim = std::max(1u, width >> level);
+                    uint32_t const dstDim = std::max(1u, width >> (level + 1));
+                    backend::Viewport const scissor = { 0, 0, dstDim, dstDim };
 
-                // Do all the horizontal or vertical blur passes for this layer at once
-                driver.beginRenderPass(target, params);
-                {
-                    mi->use(driver);
-                    driver.scissor(scissor);
-                    driver.draw(pipeline, engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                    // Fresh MaterialInstance from the pool ensures isolated UBO allocation
+                    auto const mi = ppm.getMaterialInstance(driver, ma);
+                    auto const pipeline = ppm.getPipelineState(mi);
+
+                    mi->setParameter("color", in, SamplerParams{
+                            .filterMag = SamplerMagFilter::NEAREST,
+                            .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST
+                    });
+                    // FIXME: use real scissor if atlas allocator is active
+                    mi->setParameter("srcRect", int4{ 0, 0, srcDim, srcDim });
+                    mi->setParameter("dstRect", int4{ scissor.left, scissor.bottom, scissor.width, scissor.height });
+                    mi->setParameter("layer", uint32_t(layer));
+                    mi->commit(driver, engine.getUboManager());
+
+                    driver.beginRenderPass(target, params);
+                    {
+                        mi->use(driver);
+                        driver.scissor(scissor);
+                        driver.draw(pipeline, engine.getFullScreenRenderPrimitive(), 0, 3, 1);
+                    }
+                    driver.endRenderPass();
+
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+                    driver.destroyTexture(in);
                 }
-                driver.endRenderPass();
 
-                driver.destroyTexture(in); // `in` is just a view on `data.in`
                 ppm.unbindAllDescriptorSets(driver);
             });
 
