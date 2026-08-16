@@ -101,6 +101,11 @@ public:
                 FrameGraphId<FrameGraphTexture> color, uint32_t* index = nullptr);
 
         /**
+         * Reserve space for the specified number of render passes/targets in this pass node.
+         */
+        void reserveRenderTargets(size_t count) noexcept;
+
+        /**
          * Creates a virtual resource of type RESOURCE
          * @tparam RESOURCE Type of the resource to create
          * @param name      A pointer to a null terminated string.
@@ -237,7 +242,7 @@ public:
     };
 
     explicit FrameGraph(
-            LinearAllocatorArena& arena,
+            LinearAllocatorArena& arena, size_t size,
             TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
 

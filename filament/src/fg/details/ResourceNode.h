@@ -60,7 +60,7 @@ public:
 
     // is at least one PassNode reading from this ResourceNode
     bool hasReaders() const noexcept {
-        return !mReaderPasses.empty();
+        return mReaderPassesHead != nullptr;
     }
 
     // is any non culled Node (of any type) reading from this ResourceNode
@@ -106,7 +106,7 @@ public:
 
 private:
     FrameGraph& mFrameGraph;
-    Vector<ResourceEdgeBase *> mReaderPasses;
+    ResourceEdgeBase* mReaderPassesHead = nullptr;
     ResourceEdgeBase* mWriterPass = nullptr;
     FrameGraphHandle mParentHandle;
     DependencyGraph::Edge* mParentReadEdge = nullptr;

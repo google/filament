@@ -299,7 +299,7 @@ FEngine::FEngine(Builder const& builder) :
                 builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
-                builder->mConfig.perRenderPassArenaSizeMB * MiB),
+                builder->mConfig.perRenderPassArenaSizeMB * MiB + FRenderer::FRAMEGRAPH_ARENA_SIZE),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
         mJobSystem(getJobSystemThreadPoolSize(builder->mConfig)),
         mEngineEpoch(std::chrono::steady_clock::now()),

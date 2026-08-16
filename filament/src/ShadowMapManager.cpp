@@ -821,6 +821,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::vsmMipmapPass(
 
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("EVSM Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
+                builder.reserveRenderTargets(levelCount - 1);
                 data.in = builder.sample(input);
                 for (size_t level = 0; level < levelCount - 1; ++level) {
                     auto out = builder.createSubresource(data.in, "EVSM Mipmap level", {
@@ -901,6 +902,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::gaussianMipmapPass(
 
     auto const& depthMipmapPass = fg.addPass<VsmMipData>("EVSM Gaussian Mipmap Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
+                builder.reserveRenderTargets(levelCount - 1);
                 data.in = builder.sample(input);
                 for (size_t level = 0; level < levelCount - 1; ++level) {
                     auto out = builder.createSubresource(data.in, "EVSM Gaussian Mipmap level", {
