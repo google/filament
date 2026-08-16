@@ -277,6 +277,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
 void FrameGraph::addPresentPass(const std::function<void(Builder&)>& setup) noexcept {
     PresentPassNode* node = mArena.make<PresentPassNode>(*this);
+    assert_invariant(node);
     mPassNodes.push_back(node);
     Builder builder(*this, node);
     setup(builder);
@@ -286,6 +287,7 @@ void FrameGraph::addPresentPass(const std::function<void(Builder&)>& setup) noex
 FrameGraph::Builder FrameGraph::addPassInternal(char const* name, FrameGraphPassBase* base) noexcept {
     // record in our pass list and create the builder
     PassNode* node = mArena.make<RenderPassNode>(*this, name, base);
+    assert_invariant(node);
     base->setNode(node);
     mPassNodes.push_back(node);
     return { *this, node };
@@ -300,6 +302,7 @@ FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle) noexcept 
     slot.version = ++handle.version;    // increase the parent's version
     slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
     ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, parent);
+    assert_invariant(newNode);
     mResourceNodes.push_back(newNode);
     return handle;
 }
@@ -312,6 +315,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
         node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());
+        assert_invariant(node);
         mResourceNodes.push_back(node);
     }
     return node;
@@ -329,6 +333,7 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
     slot.nid = (ResourceSlot::Index)mResourceNodes.size();
     mResources.push_back(resource);
     ResourceNode* pNode = mArena.make<ResourceNode>(*this, handle, parent);
+    assert_invariant(pNode);
     mResourceNodes.push_back(pNode);
     return handle;
 }
@@ -489,6 +494,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
                             .width = desc.viewport.width,
                             .height = desc.viewport.height
                     }, desc, target);
+    assert_invariant(vresource);
     return FrameGraphId<FrameGraphTexture>(addResourceInternal(vresource));
 }
 
