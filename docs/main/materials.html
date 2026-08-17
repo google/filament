@@ -302,6 +302,8 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;variant-filter" class="level3"><span class="tocNumber">5.2.5&nbsp; </span>&mdash;variant-filter</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;output-format" class="level3"><span class="tocNumber">5.2.6&nbsp; </span>&mdash;output-format</a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;include-source-mat" class="level3"><span class="tocNumber">5.2.7&nbsp; </span>&mdash;include-source-mat</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;api-level" class="level3"><span class="tocNumber">5.2.8&nbsp; </span>&mdash;api-level</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#compilingmaterials/flags/&mdash;api-level-info" class="level3"><span class="tocNumber">5.2.9&nbsp; </span>&mdash;api-level-info</a><br/>
 <a href="#handlingcolors" class="level1"><span class="tocNumber">6&nbsp; </span>Handling colors</a><br/>
 &nbsp;&nbsp;<a href="#handlingcolors/linearcolors" class="level2"><span class="tocNumber">6.1&nbsp; </span>Linear colors</a><br/>
 &nbsp;&nbsp;<a href="#handlingcolors/pre-multipliedalpha" class="level2"><span class="tocNumber">6.2&nbsp; </span>Pre-multiplied alpha</a><br/>
@@ -310,6 +312,7 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;<a href="#samplerusageinmaterials/featurelevel3" class="level2"><span class="tocNumber">7.2&nbsp; </span>Feature level 3</a><br/>
 <a href="#materialapilevel" class="level1"><span class="tocNumber">8&nbsp; </span>Material API level</a><br/>
 &nbsp;&nbsp;<a href="#materialapilevel/defineapilevelin.matfiles" class="level2"><span class="tocNumber">8.1&nbsp; </span>Define <code>apiLevel</code> in <code>.mat</code> files</a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialapilevel/defineapilevelin.matfiles/apilevelmismatch" class="level3"><span class="tocNumber">8.1.1&nbsp; </span>API level mismatch</a><br/>
 &nbsp;&nbsp;<a href="#materialapilevel/controlmaterialbehaviors" class="level2"><span class="tocNumber">8.2&nbsp; </span>Control material behaviors</a><br/>
 &nbsp;&nbsp;<a href="#materialapilevel/apilevelcompatibility" class="level2"><span class="tocNumber">8.3&nbsp; </span>API level compatibility</a><br/>
 </p></div><a class="target" name="about">&nbsp;</a><a class="target" name="about">&nbsp;</a><a class="target" name="toc1">&nbsp;</a><h1 id="about"><a class="header" href="#about">About</a></h1>
@@ -2873,6 +2876,8 @@ source material definition file.</p>
 <tr><td style="text-align:right"> <strong class="asterisk">-v</strong>, <strong class="asterisk">&mdash;variant-filter</strong> </td><td style="text-align:center"> [variant] </td><td style="text-align:left"> Filters out the specified, comma-separated variants </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-f</strong>, <strong class="asterisk">-output-format</strong> </td><td style="text-align:center"> blob/header/mat </td><td style="text-align:left"> Default to blob, when mat is set, returns a <code>.mat</code> with <code>#include</code>s resolved </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">&mdash;include-source-mat</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Embeds the source ASCII material definition if set </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-A</strong>, <strong class="asterisk">&mdash;api-level</strong> </td><td style="text-align:center"> number </td><td style="text-align:left"> Overrides the matc API level </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">-i</strong>, <strong class="asterisk">&mdash;api-level-info</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Outputs the highest supported material API level </td></tr>
 </table><center><div class="tablecaption"><a class="target" name="table_matcflags">&nbsp;</a><b style="font-style:normal;">Table&nbsp;18:</b> List of <code>matc</code> flags</div></center></div>
 </p><p>
 <code>matc</code> offers a few other flags that are irrelevant to application developers and for internal
@@ -2971,6 +2976,19 @@ Specifies the output format:
 Embeds the source ASCII material definition into the compiled material package (blob). The embedded source code has all
 <code>#include</code> directives recursively resolved.
 </p>
+<a class="target" name="--api-level">&nbsp;</a><a class="target" name="compilingmaterials/flags/&mdash;api-level">&nbsp;</a><a class="target" name="toc5.2.8">&nbsp;</a><h3 id="mdashapi-level"><a class="header" href="#mdashapi-level">&mdash;api-level</a></h3>
+<p>
+Overrides the API level to compile the material against. If the source material already specifies an <code>apiLevel</code> inside
+the <code>material</code> block, this command line option overrides it.
+</p><p>
+The provided value must be a valid API level (e.g. <code>1</code> or <code>2</code>) and cannot exceed the highest supported unstable API
+level of the compiler.
+</p>
+<a class="target" name="--api-level-info">&nbsp;</a><a class="target" name="compilingmaterials/flags/&mdash;api-level-info">&nbsp;</a><a class="target" name="toc5.2.9">&nbsp;</a><h3 id="mdashapi-level-info"><a class="header" href="#mdashapi-level-info">&mdash;api-level-info</a></h3>
+<p>
+Prints the compiler's supported API levels (both the current released API level and the next unstable API level under
+development).
+</p>
 <a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="handlingcolors">&nbsp;</a><a class="target" name="toc6">&nbsp;</a><h1 id="handling-colors"><a class="header" href="#handling-colors">Handling colors</a></h1>
 <a class="target" name="linearcolors">&nbsp;</a><a class="target" name="handlingcolors/linearcolors">&nbsp;</a><a class="target" name="toc6.1">&nbsp;</a><h2 id="linear-colors"><a class="header" href="#linear-colors">Linear colors</a></h2>
 <p>
@@ -3025,6 +3043,11 @@ In cases of remote renderers where an app and the system run different Filament 
 runtime on the remote end, material API versioning ensures compatibility across versions. It is less relevant if your
 project uses a single Filament instance, but <code>apiLevel</code> is still required when opting into features introduced at higher
 API levels features.
+</p><p>
+<div class="admonition tip"><div class="admonition-title"> Overriding API level via command-line</div>
+</p><p>
+    You can also override or query the API level at compile-time using the <code>matc</code> command-line flags
+    <a href="#--api-level"><code>--api-level</code></a> and <a href="#--api-level-info"><code>--api-level-info</code></a>.</div>
 </p>
 <a class="target" name="defineapilevelin.matfiles">&nbsp;</a><a class="target" name="materialapilevel/defineapilevelin.matfiles">&nbsp;</a><a class="target" name="toc8.1">&nbsp;</a><h2 id="define-apilevel-in-mat-files"><a class="header" href="#define-apilevel-in-mat-files">Define <code>apiLevel</code> in <code>.mat</code> files</a></h2>
 <p>
@@ -3038,6 +3061,11 @@ Check the documentation for specific material features (for example, morphing re
 <a href="#shaderpublicapis">Shader public APIs</a> section above. If no API level is explicitly mentioned for a function or feature, it is available at
 baseline <code>apiLevel: 1</code>; otherwise, use the level specified.
 </p>
+<a class="target" name="apilevelmismatch">&nbsp;</a><a class="target" name="materialapilevel/defineapilevelin.matfiles/apilevelmismatch">&nbsp;</a><a class="target" name="toc8.1.1">&nbsp;</a><h3 id="api-level-mismatch"><a class="header" href="#api-level-mismatch">API level mismatch</a></h3>
+<p>
+If there's a mismatch in apiLevel (for example, the material uses an API that requires API level of 2, but specifies
+<code>apiLevel: 1</code> in the material), you will get an error message:
+</p><pre class="listing tilde"><code><span class="line">ERROR: {line_number}: {api_name} requires api level N</span></code></pre>
 <a class="target" name="controlmaterialbehaviors">&nbsp;</a><a class="target" name="materialapilevel/controlmaterialbehaviors">&nbsp;</a><a class="target" name="toc8.2">&nbsp;</a><h2 id="control-material-behaviors"><a class="header" href="#control-material-behaviors">Control material behaviors</a></h2>
 <p>
 System/remote renderers can use <code>#define</code>s injected during compilation:
