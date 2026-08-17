@@ -351,8 +351,8 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // debugMarker must also request debugReport the instance extension. So check if that's present.
-    if (setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
-            !setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    if (setContains(newDeviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
+            !setContains(newInstExts, VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
         setErase(newDeviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
 #endif
