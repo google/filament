@@ -58,17 +58,25 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
 }
 #endif
 
-vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
+vec3 isotropicLobe(float roughness, vec3 f0, float f90, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
-    float D = distribution(pixel.roughness, NoH, h);
-    float V = visibility(pixel.roughness, NoV, NoL);
+    float D = distribution(roughness, NoH, h);
+    float V = visibility(roughness, NoV, NoL);
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
-    vec3  F = fresnel(pixel.f0, pixel.f90, LoH);
+    vec3  F = fresnel(f0, f90, LoH);
 #else
-    vec3  F = fresnel(pixel.f0, LoH);
+    vec3  F = fresnel(f0, LoH);
 #endif
     return (D * V) * F;
+}
+
+float f90(const PixelParams pixel) {
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    return pixel.f90;
+#else
+    return 1.0;
+#endif
 }
 
 vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
@@ -76,7 +84,7 @@ vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
 #if defined(MATERIAL_HAS_ANISOTROPY)
     return anisotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
 #else
-    return isotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    return isotropicLobe(pixel.roughness, pixel.f0, f90(pixel), h, NoV, NoL, NoH, LoH);
 #endif
 }
 
@@ -109,7 +117,17 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
-    vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+    // The energy compensation term is used to counteract the darkening effect
+    // at high roughness
+    vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH) * pixel.energyCompensation;
+
+    // Optional secondary specular lobe
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    vec3 secondFr = isotropicLobe(pixel.secondRoughness, pixel.f0, f90(pixel), h, NoV, NoL, NoH, LoH);
+    secondFr *= pixel.secondEnergyCompensation;
+    Fr = mix(Fr, secondFr, pixel.secondRoughnessWeight);
+#endif
+
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
 #if defined(MATERIAL_HAS_REFRACTION)
     Fd *= (1.0 - pixel.transmission);
@@ -123,9 +141,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     Fd = mix(penumbraColor, Fd, pow4(occlusion));
 #endif
 
-    // The energy compensation term is used to counteract the darkening effect
-    // at high roughness
-    vec3 color = Fd + Fr * pixel.energyCompensation;
+    vec3 color = Fd + Fr;
 
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     color *= pixel.sheenScaling;

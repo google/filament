@@ -223,6 +223,22 @@ public:
     void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
 
     /**
+     * Schedules the completion callback of an asynchronous operation, telling it whether the
+     * operation ran or was canceled. Can be called from any thread.
+     *
+     * The status has to be bound to the call site, so this goes through the functor overload above
+     * rather than dispatching the callback directly.
+     */
+    void scheduleAsyncCallback(CallbackHandler* handler, AsyncCallback callback, void* user,
+            AsyncCallStatus const status) {
+        if (callback) {
+            scheduleCallback(handler, [callback, user, status]() {
+                callback(user, status);
+            });
+        }
+    }
+
+    /**
      * Waits for a predicate to become true or until a timeout is reached.
      * Returns ERROR if the driver encountered an unrecoverable error.
      */
