@@ -63,6 +63,7 @@ using namespace filament::viewer;
 using namespace image;
 using namespace utils;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     Engine* engine;
@@ -87,6 +88,8 @@ struct App {
 
     ColorGrading* colorGrading = nullptr;
 };
+} // anonymous namespace
+
 
 static constexpr float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },

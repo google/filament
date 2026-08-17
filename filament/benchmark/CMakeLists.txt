@@ -17,6 +17,9 @@ set(BENCHMARK_SRCS
 add_executable(benchmark_filament ${BENCHMARK_SRCS})
 
 target_link_libraries(benchmark_filament PRIVATE benchmark_main utils filament)
+if (ANDROID)
+    target_link_libraries(benchmark_filament PRIVATE android)
+endif()
 target_compile_options(benchmark_filament PRIVATE ${COMPILER_FLAGS})
 
 set_target_properties(benchmark_filament PROPERTIES FOLDER Benchmarks)

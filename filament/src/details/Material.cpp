@@ -151,12 +151,25 @@ const char* toString(ShaderModel model) {
     }
 }
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 Material* Material::Builder::build(Engine& engine) const {
+#if defined(__ANDROID__)
+    __android_log_print(ANDROID_LOG_INFO, "Filament", "Material::Builder::build - Starting material acquire, size: %zu", mImpl->mSize);
+#endif
     MaterialDefinition* r = downcast(engine).getMaterialCache().acquireMaterial(downcast(engine),
             mImpl->mPayload, mImpl->mSize);
     if (r) {
+#if defined(__ANDROID__)
+        __android_log_print(ANDROID_LOG_INFO, "Filament", "Material::Builder::build - Successfully acquired material, creating material instance");
+#endif
         return downcast(engine).createMaterial(*this, *r);
     }
+#if defined(__ANDROID__)
+    __android_log_print(ANDROID_LOG_ERROR, "Filament", "Material::Builder::build - Failed to acquire material");
+#endif
     return nullptr;
 }
 

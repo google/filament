@@ -17,10 +17,9 @@
 #include "common/arguments.h"
 #include "common/SampleConfig.h"
 
-#include <filameshio/MeshReader.h>
-
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
+#include <filamentapp/MeshAssimp.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -47,26 +46,42 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 using namespace filament::math;
 using namespace filament;
-using namespace filamesh;
 using namespace filamat;
 using namespace utils;
 static float g_meshScale = 1.0f;
 
+namespace {
 struct App {
     std::vector<Path> filenames;
-    MeshReader::MaterialRegistry materialInstances;
-    std::vector<MeshReader::Mesh> meshes;
+    std::map<utils::CString, MaterialInstance*> materialInstances;
+    std::unique_ptr<MeshAssimp> meshSet;
     const Material* material = nullptr;
     Entity light;
     std::map<utils::CString, Texture*> maps;
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
 };
+} // anonymous namespace
+
+#ifdef __ANDROID__
+static const char* MODEL_FILE = "models/monkey/monkey.obj";
+static const char* TEXTURE_NORMAL = "models/monkey/normal.png";
+static const char* TEXTURE_BASECOLOR = "models/monkey/color.png";
+static const char* TEXTURE_ROUGHNESS = "models/monkey/roughness.png";
+static const char* IBL_FOLDER = "lightroom_14b.hdr";
+#else
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+static const char* TEXTURE_NORMAL = "assets/models/monkey/normal.png";
+static const char* TEXTURE_BASECOLOR = "assets/models/monkey/color.png";
+static const char* TEXTURE_ROUGHNESS = "assets/models/monkey/roughness.png";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+#endif
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -74,7 +89,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->config = config;
 
     if (config.customArgs.find("filenames") != config.customArgs.end()) {
-        std::string_view filenamesStr = config.customArgs.at("filenames").c_str();
+        std::string_view filenamesStr = config.customArgs.at("filenames").c_str_safe();
         size_t pos = 0;
         while ((pos = std::string_view(filenamesStr).find('|')) != std::string_view::npos) {
             app->filenames.push_back(utils::Path(filenamesStr.substr(0, pos)));
@@ -85,41 +100,56 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         }
     }
 
-    auto loadMap = [app](Engine* engine, const char* name, bool sRGB = true) -> Texture* {
-        Path path(name);
-        if (path.exists()) {
-            int w, h, n;
-            unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
-            if (data != nullptr) {
-                Texture* map =
-                        Texture::Builder()
-                                .width(uint32_t(w))
-                                .height(uint32_t(h))
-                                .levels(0xff)
-                                .format(sRGB ? Texture::InternalFormat::SRGB8
-                                             : Texture::InternalFormat::RGB8)
-                                .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
-                                .build(*engine);
-                Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3), Texture::Format::RGB,
-                        Texture::Type::UBYTE,
-                        (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
-                map->setImage(*engine, 0, std::move(buffer));
-                map->generateMipmaps(*engine);
-                app->maps[utils::CString(name)] = map;
-                return map;
-            } else {
-                std::cout << "The map " << path.c_str() << " could not be loaded" << std::endl;
+    auto loadMap = [app, loader](Engine* engine, const char* name, bool sRGB = true) -> Texture* {
+        int w = 0, h = 0, n = 0;
+        unsigned char* data = nullptr;
+        if (loader) {
+            auto buf = loader->load(name);
+            if (!buf.empty()) {
+                data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
             }
+        }
+        if (!data) {
+            Path path(name);
+            if (!path.exists()) {
+                path = Path(FilamentApp2::getRootAssetsPath() + name);
+            }
+            if (path.exists()) {
+                data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
+            }
+        }
+        if (data != nullptr) {
+            Texture* map =
+                    Texture::Builder()
+                            .width(uint32_t(w))
+                            .height(uint32_t(h))
+                            .levels(0xff)
+                            .format(sRGB ? Texture::InternalFormat::SRGB8
+                                         : Texture::InternalFormat::RGB8)
+                            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
+                            .build(*engine);
+            Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3), Texture::Format::RGB,
+                    Texture::Type::UBYTE,
+                    [](void* buffer, size_t, void*) { stbi_image_free(buffer); });
+            map->setImage(*engine, 0, std::move(buffer));
+            map->generateMipmaps(*engine);
+            app->maps[utils::CString(name)] = map;
+            return map;
         } else {
-            std::cout << "The map " << path.c_str() << " does not exist" << std::endl;
+            std::cout << "The map " << name << " could not be loaded" << std::endl;
         }
         return nullptr;
     };
 
-    auto setup = [app, loadMap](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loadMap, loader](Engine* engine, View* view, Scene* scene) {
         Texture* normal = loadMap(engine, "normal.png", false);
+        if (!normal) normal = loadMap(engine, TEXTURE_NORMAL, false);
+
         Texture* basecolor = loadMap(engine, "basecolor.png", true);
+        if (!basecolor) basecolor = loadMap(engine, TEXTURE_BASECOLOR, true);
+
         Texture* roughness = loadMap(engine, "roughness.png", false);
+        if (!roughness) roughness = loadMap(engine, TEXTURE_ROUGHNESS, false);
 
         if (!basecolor || !normal || !roughness) {
             std::cout << "Need basecolor.png, normal.png and roughness.png" << std::endl;
@@ -130,6 +160,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         MaterialBuilder builder;
         builder.name("DefaultMaterial")
                 .targetApi(MaterialBuilder::TargetApi::ALL)
+                .platform(MaterialBuilder::Platform::ALL)
 #ifndef NDEBUG
                 .optimization(MaterialBuilderBase::Optimization::NONE)
 #endif
@@ -156,31 +187,45 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         Package pkg = builder.build(engine->getJobSystem());
 
         app->material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
-        const utils::CString defaultMaterialName("DefaultMaterial");
-        app->materialInstances.registerMaterialInstance(defaultMaterialName,
-                app->material->createInstance());
+        if (app->material) {
+            const utils::CString defaultMaterialName("DefaultMaterial");
+            MaterialInstance* defaultMaterialInstance = app->material->createInstance();
+            app->materialInstances[defaultMaterialName] = defaultMaterialInstance;
 
-        TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
-        sampler.setAnisotropy(8.0f);
-        app->materialInstances.getMaterialInstance(defaultMaterialName)
-                ->setParameter("normalMap", normal, sampler);
-        app->materialInstances.getMaterialInstance(defaultMaterialName)
-                ->setParameter("basecolorMap", basecolor, sampler);
-        app->materialInstances.getMaterialInstance(defaultMaterialName)
-                ->setParameter("roughnessMap", roughness, sampler);
+            TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                    TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+            sampler.setAnisotropy(8.0f);
+            defaultMaterialInstance->setParameter("normalMap", normal, sampler);
+            defaultMaterialInstance->setParameter("basecolorMap", basecolor, sampler);
+            defaultMaterialInstance->setParameter("roughnessMap", roughness, sampler);
+        }
+
+        app->meshSet = std::make_unique<MeshAssimp>(*engine);
+        for (const auto& filename: app->filenames) {
+            app->meshSet->addFromFile(filename, app->materialInstances, true);
+        }
+        if (app->meshSet->getRenderables().empty()) {
+            if (loader) {
+                auto modelBuffer = loader->load(MODEL_FILE);
+                if (!modelBuffer.empty()) {
+                    app->meshSet->addFromMemory(modelBuffer.data(), modelBuffer.size(),
+                            utils::Path(MODEL_FILE), app->materialInstances, true);
+                }
+            }
+            if (app->meshSet->getRenderables().empty()) {
+                app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE,
+                        app->materialInstances, true);
+            }
+        }
 
         auto& tcm = engine->getTransformManager();
-        for (const auto& filename: app->filenames) {
-            MeshReader::Mesh mesh =
-                    MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
-            if (mesh.renderable) {
-                auto ei = tcm.getInstance(mesh.renderable);
-                tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
-                                             tcm.getWorldTransform(ei));
-                scene->addEntity(mesh.renderable);
-                app->meshes.push_back(mesh);
-            }
+        if (!app->meshSet->getRenderables().empty()) {
+            auto ei = tcm.getInstance(app->meshSet->getRenderables()[0]);
+            tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
+                                         tcm.getWorldTransform(ei));
+        }
+        for (auto renderable: app->meshSet->getRenderables()) {
+            scene->addEntity(renderable);
         }
 
         app->light = EntityManager::get().create();
@@ -193,32 +238,36 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View* view, Scene* scene) {
-        for (auto map: app->maps) {
-            engine->destroy(map.second);
+        app->meshSet.reset();
+        for (auto& map: app->maps) {
+            if (map.second) {
+                engine->destroy(map.second);
+                map.second = nullptr;
+            }
         }
-        std::vector<filament::MaterialInstance*> materialList(
-                app->materialInstances.numRegistered());
-        app->materialInstances.getRegisteredMaterials(materialList.data());
-        for (auto material: materialList) {
-            engine->destroy(material);
+        for (auto& item: app->materialInstances) {
+            if (item.second) {
+                engine->destroy(item.second);
+            }
         }
-        app->materialInstances.unregisterAll();
-        engine->destroy(app->material);
-        EntityManager& em = EntityManager::get();
-        for (auto mesh: app->meshes) {
-            engine->destroy(mesh.vertexBuffer);
-            engine->destroy(mesh.indexBuffer);
-            engine->destroy(mesh.renderable);
-            em.destroy(mesh.renderable);
+        app->materialInstances.clear();
+        if (app->material) {
+            engine->destroy(app->material);
+            app->material = nullptr;
         }
-        engine->destroy(app->light);
-        em.destroy(app->light);
+        if (app->light) {
+            engine->destroy(app->light);
+            EntityManager::get().destroy(app->light);
+            app->light = Entity{};
+        }
     };
 
     auto fApp = FilamentApp2::Builder()
                         .title(app->config.title)
                         .backend(app->config.backend)
+                        .iblDirectory(app->config.iblDirectory.empty() ? utils::CString(IBL_FOLDER) : app->config.iblDirectory)
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)
@@ -246,8 +295,8 @@ int main(int argc, char* argv[]) {
 
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_CLOTH demonstrates cloth shading in Filament.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
-        .requiredPositionalArgCount = 1,
+        .positionalArgsDescription = "[mesh files (.obj, .fbx)]",
+        .requiredPositionalArgCount = 0,
         .customOptionsHelp = "   --scale=[number], -s [number]\n"
                              "       Applies uniform scale\n",
         .customHandler = customHandler,

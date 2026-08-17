@@ -52,6 +52,7 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 using AttributeType = VertexBuffer::AttributeType;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -65,6 +66,8 @@ struct App {
     Texture* tex;
     Entity renderable;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     ::float2 position;

@@ -414,6 +414,9 @@ void FVertexBuffer::terminate(FEngine& engine) {
         for (BufferObjectHandle const& bo : mBufferObjects) {
             driver.destroyBufferObject(bo);
         }
+    } else if (mAdvancedSkinningEnabled) {
+        driver.destroyBufferObject(mBufferObjects[mAttributes[BONE_INDICES].buffer]);
+        driver.destroyBufferObject(mBufferObjects[mAttributes[BONE_WEIGHTS].buffer]);
     }
     driver.destroyVertexBuffer(mHandle);
     engine.getVertexBufferInfoFactory().destroy(driver, mVertexBufferInfoHandle);

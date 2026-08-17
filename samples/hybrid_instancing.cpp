@@ -182,6 +182,7 @@ struct Emitter {
 };
 
 // Holds all the state for this application.
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
@@ -217,6 +218,8 @@ struct App {
     Entity groundPlane;
     Entity moonlight;
 };
+} // anonymous namespace
+
 
 // ------------------------------------------------------------------------------------------------
 // Function Declarations

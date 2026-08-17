@@ -62,6 +62,7 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
@@ -78,6 +79,8 @@ struct App {
     Entity renderable;
     size_t textureSize = 512;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     filament::math::float3 position;

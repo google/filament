@@ -63,10 +63,12 @@ class WebGPUPlatform;
 
 namespace filament::app {
 class DisplayManager;
+class AssetLoader;
 } // namespace filament::app
 
-class FilamentApp2 {
+class UTILS_PUBLIC FilamentApp2 {
 public:
+
     using WebGPUBackend = filament::Engine::Backend;
     enum class DisplayManager { SDL, WEB };
 public:
@@ -164,6 +166,11 @@ public:
          *                       If nullptr or not set, the app will create a default one based on
          *                       the config's backend.
          */
+                Builder& assetLoader(filament::app::AssetLoader* assetLoader) {
+            mAssetLoader = assetLoader;
+            return *this;
+        }
+
         Builder& displayManager(filament::app::DisplayManager* displayManager) {
             mDisplayManager = displayManager;
             return *this;
@@ -302,6 +309,7 @@ public:
         DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
         filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
         filament::app::DisplayManager* mDisplayManager = nullptr;
+        filament::app::AssetLoader* mAssetLoader = nullptr;
         SetupCallback mSetup;
         CleanupCallback mCleanup;
         PreRenderCallback mPreRender;
@@ -340,6 +348,7 @@ public:
     void onSurfaceDestroyed();
 
     filament::app::DisplayManager* getDisplayManager() const noexcept { return mDisplayManager; }
+    filament::app::AssetLoader* getAssetLoader() const noexcept { return mAssetLoader; }
 
     void setSidebarWidth(int width) {
         mCameraParams.sidebarWidth = width;
@@ -492,6 +501,8 @@ private:
     uint8_t mCameraFrustumEnabled = 0x2;
 
     filament::app::DisplayManager* const mDisplayManager;
+    std::unique_ptr<filament::app::AssetLoader> mDefaultAssetLoader;
+    filament::app::AssetLoader* const mAssetLoader;
 
     filament::backend::Platform* mVulkanPlatform = nullptr;
     filament::backend::Platform* mWebGPUPlatform = nullptr;

@@ -64,6 +64,10 @@ public:
             std::map<utils::CString, filament::MaterialInstance*>& materials,
             bool overrideMaterial = false);
 
+    void addFromMemory(const uint8_t* buffer, size_t length, const utils::Path& hintPath,
+            std::map<utils::CString, filament::MaterialInstance*>& materials,
+            bool overrideMaterial = false);
+
     const std::vector<utils::Entity> getRenderables() const noexcept {
         return mRenderables;
     }
@@ -108,7 +112,8 @@ private:
     };
 
     bool setFromFile(Asset& asset,
-            std::map<utils::CString, filament::MaterialInstance*>& outMaterials);
+            std::map<utils::CString, filament::MaterialInstance*>& outMaterials,
+            const uint8_t* buffer = nullptr, size_t length = 0);
 
     void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
             const std::string& materialName, const std::string& dirName,

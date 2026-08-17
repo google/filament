@@ -44,6 +44,7 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp;
@@ -57,6 +58,8 @@ struct App {
     Entity colorTriangle;
     MaterialInstance::DepthFunc depthFunc;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     filament::math::float2 position;

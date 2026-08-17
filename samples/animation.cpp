@@ -42,6 +42,7 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp;
@@ -53,6 +54,8 @@ struct App {
     Skybox* skybox;
     Entity renderable;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     filament::math::float2 position;

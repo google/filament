@@ -22,6 +22,8 @@
 
 #include <android/native_window_jni.h>
 
+#include <utils/Log.h>
+
 #include <chrono>
 #include <cstdint>
 #include <utility>
@@ -42,6 +44,10 @@ AndroidDisplayManager::~AndroidDisplayManager() {
 }
 
 void AndroidDisplayManager::terminate() {
+    if (mNativeWindow) {
+        ANativeWindow_release(mNativeWindow);
+        mNativeWindow = nullptr;
+    }
     if (mSurfaceView) {
         JNIEnv* env;
         mJavaVM->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -54,6 +60,7 @@ void AndroidDisplayManager::terminate() {
 
 WindowHandle AndroidDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
         bool resizable, bool headless) {
+    utils::slog.e << "headless=" << headless << utils::io::endl;
     if (headless) {
         return nullptr;
     }
@@ -61,12 +68,20 @@ WindowHandle AndroidDisplayManager::createWindow(const char* title, uint32_t w, 
 }
 
 void AndroidDisplayManager::destroyWindow(WindowHandle window) {
-    // Handled in terminate
+    if (mNativeWindow) {
+        ANativeWindow_release(mNativeWindow);
+        mNativeWindow = nullptr;
+    }
 }
 
-
 void* AndroidDisplayManager::getNativeWindow(WindowHandle window) const {
-    if (!window) return nullptr;
+    if (!window) {
+        return nullptr;
+    }
+    
+    if (mNativeWindow) {
+        return mNativeWindow;
+    }
 
     jobject surfaceView = static_cast<jobject>(window);
 
@@ -90,27 +105,31 @@ void* AndroidDisplayManager::getNativeWindow(WindowHandle window) const {
     jclass surfaceClass = env->GetObjectClass(surface);
     jmethodID isValid = env->GetMethodID(surfaceClass, "isValid", "()Z");
 
-    void* nativeWindow = nullptr;
     if (env->CallBooleanMethod(surface, isValid)) {
-        nativeWindow = ANativeWindow_fromSurface(env, surface);
+        mNativeWindow = ANativeWindow_fromSurface(env, surface);
     }
 
     if (attached) {
         mJavaVM->DetachCurrentThread();
     }
-    return nativeWindow;
+    return mNativeWindow;
 }
 
 void AndroidDisplayManager::setWindowTitle(WindowHandle window, const char* title) {}
 
 void AndroidDisplayManager::getWindowSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
-    if (w) *w = mWidth;
-    if (h) *h = mHeight;
+    ANativeWindow* nw = (ANativeWindow*) getNativeWindow(window);
+    if (nw) {
+        if (w) *w = ANativeWindow_getWidth(nw);
+        if (h) *h = ANativeWindow_getHeight(nw);
+    } else {
+        if (w) *w = mWidth;
+        if (h) *h = mHeight;
+    }
 }
 
 void AndroidDisplayManager::getDrawableSize(WindowHandle window, uint32_t* w, uint32_t* h) const {
-    if (w) *w = mWidth;
-    if (h) *h = mHeight;
+    getWindowSize(window, w, h);
 }
 
 void AndroidDisplayManager::pollEvents(std::vector<AppEvent>& events) {
@@ -177,7 +196,7 @@ void AndroidDisplayManager::pushTouchEvent(int action, float x, float y) {
 } // namespace filament::app
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_utils_AndroidDisplayManager_nCreate(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_AndroidDisplayManager_nCreate(JNIEnv* env, jobject thiz,
         jobject surfaceView) {
     JavaVM* vm;
     env->GetJavaVM(&vm);
@@ -186,7 +205,7 @@ Java_com_google_android_filament_utils_AndroidDisplayManager_nCreate(JNIEnv* env
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_AndroidDisplayManager_nDestroy(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_AndroidDisplayManager_nDestroy(JNIEnv* env, jobject thiz,
         jlong nativeDm) {
     auto* dm = reinterpret_cast<filament::app::AndroidDisplayManager*>(nativeDm);
     delete dm;

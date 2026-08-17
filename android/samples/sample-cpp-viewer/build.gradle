@@ -1,0 +1,86 @@
+plugins {
+    id 'com.android.application'
+}
+
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+android {
+    namespace 'com.google.android.filament.cppviewer'
+    compileSdk versions.compileSdk
+
+    defaultConfig {
+        applicationId "com.google.android.filament.cppviewer"
+        minSdk versions.minSdk
+        targetSdk versions.targetSdk
+        versionCode 1
+        versionName "1.0"
+        
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DFILAMENT_DIST_DIR=${rootProject.ext.filamentPath}".toString()
+                if (rootProject.ext.has('hwasan') && rootProject.ext.hwasan) {
+                    arguments "-DANDROID_PLATFORM=29",
+                              "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=hwaddress",
+                              "-DCMAKE_MODULE_LINKER_FLAGS=-fsanitize=hwaddress",
+                              "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=hwaddress",
+                              "-DFILAMENT_ENABLE_HWASAN=ON"
+                    cppFlags "-std=c++20", "-fsanitize=hwaddress", "-fno-omit-frame-pointer", "-funwind-tables"
+                } else {
+                    cppFlags "-std=c++20"
+                }
+            }
+        }
+        
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+    
+    externalNativeBuild {
+        cmake {
+            version "3.19.0+"
+            path "CMakeLists.txt"
+        }
+    }
+
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!*.txt:!*.html:!*.md'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    sourceSets {
+        main {
+            assets.srcDirs += [
+                "../../../assets",
+                "../../../third_party/models",
+                "../../../third_party/environments",
+                "../../../third_party/textures"
+            ]
+            assets.exclude '**/URL.txt', '**/CC0.html', 'URL.txt', 'CC0.html'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation 'com.google.android.material:material:1.10.0'    
+    implementation project(':filament-android')
+    implementation project(':filament-utils-android')
+}

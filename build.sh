@@ -60,6 +60,8 @@ function print_help {
     echo "        When building for Android, also build select sample APKs."
     echo "        sampleN is an Android sample, e.g., sample-gltf-viewer."
     echo "        This automatically performs a partial desktop build and install."
+    echo "    -H"
+    echo "        Enable Hardware-Assisted AddressSanitizer (hwasan) for debugging (Android ARM64 only)."
     echo "    -b"
     echo "        Enable Address and Undefined Behavior Sanitizers (asan/ubsan) for debugging."
     echo "        This is only for the desktop build."
@@ -217,6 +219,8 @@ MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
+HWASAN_OPTION=""
+HWASAN_GRADLE_OPTION=""
 COVERAGE_OPTION=""
 ENABLE_PERFETTO=""
 
@@ -461,6 +465,9 @@ function build_android_target {
     pushd "out/cmake-android-${lc_target}-${arch}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
+        if [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
+            rm -rf CMakeCache.txt CMakeFiles
+        fi
         cmake \
             -G "${BUILD_GENERATOR}" \
             ${IMPORT_EXECUTABLES_DIR_OPTION} \
@@ -478,6 +485,7 @@ function build_android_target {
             ${ENABLE_PERFETTO} \
             ${EXCEPTIONS_OPTION} \
             ${MUTEX_DEBUG_OPTION} \
+            ${HWASAN_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -556,6 +564,14 @@ function build_android {
 
     INSTALL_COMMAND=${old_install_command}
 
+    if [[ -n "${HWASAN_OPTION}" ]]; then
+        ABI_ARM64_V8A=true
+        ABI_ARMEABI_V7A=false
+        ABI_X86_64=false
+        ABI_X86=false
+        ABI_GRADLE_OPTION="arm64-v8a"
+    fi
+
     if [[ "${ABI_ARM64_V8A}" == "true" ]]; then
         build_android_arch "aarch64" "aarch64-linux-android"
     fi
@@ -592,6 +608,7 @@ function build_android {
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             ${MUTEX_DEBUG_GRADLE_OPTION} \
+            ${HWASAN_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -601,6 +618,7 @@ function build_android {
             -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
+            ${HWASAN_GRADLE_OPTION} \
             :filamat-android:assembleDebug
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
@@ -610,6 +628,7 @@ function build_android {
                    -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
+                    ${HWASAN_GRADLE_OPTION} \
                     :samples:${sample}:assembleDebug
             done
         fi
@@ -648,6 +667,7 @@ function build_android {
             ${FGVIEWER_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             ${MUTEX_DEBUG_GRADLE_OPTION} \
+            ${HWASAN_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -657,6 +677,7 @@ function build_android {
             -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
+            ${HWASAN_GRADLE_OPTION} \
             :filamat-android:assembleRelease
 
         if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
@@ -666,6 +687,7 @@ function build_android {
                     -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
                     ${MATOPT_GRADLE_OPTION} \
+                    ${HWASAN_GRADLE_OPTION} \
                     :samples:${sample}:assembleRelease
             done
         fi
@@ -898,7 +920,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
+while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETuH" opt; do
     case ${opt} in
         h)
             print_help
@@ -1042,6 +1064,10 @@ while getopts ":hacCfgDimp:q:vWslwedtk:bVx:S:X:Py:ETu" opt; do
         k)
             BUILD_ANDROID_SAMPLES=true
             ANDROID_SAMPLES=$(echo "${OPTARG}" | tr ',' '\n')
+            ;;
+        H)  HWASAN_OPTION="-DFILAMENT_ENABLE_HWASAN=ON"
+            HWASAN_GRADLE_OPTION="-Pcom.google.android.filament.hwasan"
+            echo "Enabled HWASan"
             ;;
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"

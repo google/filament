@@ -27,6 +27,7 @@
 #include <utils/Mutex.h>
 
 #include <jni.h>
+#include <android/native_window.h>
 
 #include <chrono>
 #include <cstdint>
@@ -70,6 +71,7 @@ public:
 private:
     JavaVM* mJavaVM;
     jobject mSurfaceView = nullptr;
+    mutable ANativeWindow* mNativeWindow = nullptr;
     uint32_t mWidth = 0;
     uint32_t mHeight = 0;
     std::vector<AppEvent> mEventQueue UTILS_GUARDED_BY(mMutex);

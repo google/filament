@@ -48,6 +48,7 @@ struct GroundPlane {
     utils::Entity renderable;
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     Skybox* skybox;
@@ -58,9 +59,16 @@ struct App {
     GroundPlane plane;
     SampleConfig config;
 };
+} // anonymous namespace
 
+
+#ifdef __ANDROID__
+static const char* MODEL_FILE = "models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "lightroom_14b.hdr";
+#else
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+#endif
 
 static constexpr bool ENABLE_SHADOWS = true;
 
@@ -77,22 +85,32 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto app = std::make_shared<App>();
     app->config = config;
 
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
 
         // Add geometry into the scene.
         app->meshes = new MeshAssimp(*engine);
-        app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
-        auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
-        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        for (auto renderable: app->meshes->getRenderables()) {
-            auto instance = rcm.getInstance(renderable);
-            if (rcm.hasComponent(renderable)) {
-                rcm.setCastShadows(instance, ENABLE_SHADOWS);
-                rcm.setReceiveShadows(instance, false);
-                scene->addEntity(renderable);
+        if (loader) {
+            auto modelBuffer = loader->load(MODEL_FILE);
+            if (!modelBuffer.empty()) {
+                app->meshes->addFromMemory(modelBuffer.data(), modelBuffer.size(), utils::Path(MODEL_FILE), app->materials);
+            }
+        }
+        if (app->meshes->getRenderables().empty()) {
+            app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
+        }
+        if (!app->meshes->getRenderables().empty()) {
+            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+            app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+            for (auto renderable: app->meshes->getRenderables()) {
+                auto instance = rcm.getInstance(renderable);
+                if (rcm.hasComponent(renderable)) {
+                    rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                    rcm.setReceiveShadows(instance, false);
+                    scene->addEntity(renderable);
+                }
             }
         }
 
@@ -130,14 +148,18 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
+                        .assetLoader(loader)
+                        .iblDirectory(app->config.iblDirectory.empty() ? utils::CString(IBL_FOLDER) : app->config.iblDirectory)
                         .backend(app->config.backend)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
-                            auto& tcm = engine->getTransformManager();
-                            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
-                            tcm.setTransform(ti,
-                                    app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                            if (app->meshes && !app->meshes->getRenderables().empty()) {
+                                auto& tcm = engine->getTransformManager();
+                                auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+                                tcm.setTransform(ti,
+                                        app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                            }
                         })
                         .build();
     app->filamentApp = fApp.get();

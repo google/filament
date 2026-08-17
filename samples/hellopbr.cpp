@@ -45,6 +45,7 @@ using namespace filament::math;
 
 using Backend = Engine::Backend;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -54,8 +55,14 @@ struct App {
     MeshReader::Mesh mesh;
     mat4f transform;
 };
+} // anonymous namespace
 
+
+#ifdef __ANDROID__
+static const char* IBL_FOLDER = "lightroom_14b.hdr";
+#else
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+#endif
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -106,8 +113,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
+                        .iblDirectory(app->config.iblDirectory.empty() ? utils::CString(IBL_FOLDER) : app->config.iblDirectory)
                         .backend(app->config.backend)
                         .setup(setup)
                         .cleanup(cleanup)

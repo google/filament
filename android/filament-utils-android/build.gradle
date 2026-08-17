@@ -11,6 +11,17 @@ android {
         }
     }
 
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+
     packagingOptions {
         // No need to package up the following shared libs, which arise as a side effect of our
         // externalNativeBuild dependencies. When clients pick and choose from project-level gradle

@@ -47,6 +47,7 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -59,6 +60,8 @@ struct App {
     Entity renderable1, renderable2;
     SkinningBuffer *sb;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     float2 position;

@@ -47,6 +47,7 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
@@ -59,6 +60,8 @@ struct App {
     Entity renderable;
     MorphTargetBuffer *mt1;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     float2 position;

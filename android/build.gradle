@@ -67,6 +67,7 @@ buildscript {
     // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
     // variable, so here we convert the native path to a forward-slash path.
     filamentPath = filamentPath.replace(File.separator, '/')
+    ext.filamentPath = filamentPath
 
     // Warning: changing this property does not work well with incremental builds.
     def excludeVulkan = providers
@@ -93,18 +94,27 @@ buildscript {
             .gradleProperty("com.google.android.filament.mutexdebug")
             .isPresent()
 
+    def hwasan = providers
+            .gradleProperty("com.google.android.filament.hwasan")
+            .isPresent()
+    ext.hwasan = hwasan
+
     def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
-    def newAbis = providers
-            .gradleProperty("com.google.android.filament.abis")
-            .get()
-            .split(',')
-    if (!newAbis.contains("all")) {
-        abis = newAbis
+    if (hwasan) {
+        abis = ["arm64-v8a"]
+    } else {
+        def newAbis = providers
+                .gradleProperty("com.google.android.filament.abis")
+                .get()
+                .split(',')
+        if (!newAbis.contains("all")) {
+            abis = newAbis
+        }
     }
 
     ext.versions = [
         'jdk': 21,
-        'minSdk': 21,
+        'minSdk': hwasan ? 29 : 21,
         'targetSdk': 37,
         'compileSdk': 37,
         'kotlin': '2.4.0',
@@ -136,7 +146,7 @@ buildscript {
         "--no-warn-unused-cli",
         "-DANDROID_WEAK_API_DEFS=ON",
         "-DANDROID_PIE=ON",
-        "-DANDROID_PLATFORM=21",
+        "-DANDROID_PLATFORM=${hwasan ? '29' : '21'}",
         "-DANDROID_STL=c++_static",
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
@@ -146,6 +156,14 @@ buildscript {
         "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_DEBUG_MUTEX=${mutexdebug ? 'ON' : 'OFF'}".toString()
     ]
+    if (hwasan) {
+        ext.cmakeArgs.addAll([
+            "-DFILAMENT_ENABLE_HWASAN=ON",
+            "-DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=hwaddress",
+            "-DCMAKE_MODULE_LINKER_FLAGS=-fsanitize=hwaddress",
+            "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=hwaddress"
+        ])
+    }
 
     ext.cppFlags = [
         "-std=c++17",
@@ -169,6 +187,14 @@ buildscript {
         "-Wl,-Bsymbolic-functions",
         "-Wl,--hash-style=both", // Required to support API levels below 23
     ]
+    if (hwasan) {
+        ext.cppFlags.removeAll(["-fomit-frame-pointer", "-fno-unwind-tables", "-fno-asynchronous-unwind-tables"])
+        ext.cppFlags.addAll([
+            "-fsanitize=hwaddress",
+            "-fno-omit-frame-pointer",
+            "-funwind-tables"
+        ])
+    }
 
     ext.abis = abis
 

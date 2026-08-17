@@ -18,13 +18,15 @@
 
 #include <filamentapp/FilamentApp2.h>
 
+#include <utils/Log.h>
+
 #include <android/native_window_jni.h>
 #include <jni.h>
 
 using namespace filament::app;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceCreated(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_NativeViewer_nOnSurfaceCreated(JNIEnv* env, jobject thiz,
         jlong nativeApp, jobject surface) {
     auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
     if (!app) {
@@ -36,7 +38,7 @@ Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceCreated(JNIEnv* en
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceChanged(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_NativeViewer_nOnSurfaceChanged(JNIEnv* env, jobject thiz,
         jlong nativeApp, jint width, jint height) {
     auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
     if (app) {
@@ -45,7 +47,7 @@ Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceChanged(JNIEnv* en
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceDestroyed(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_NativeViewer_nOnSurfaceDestroyed(JNIEnv* env, jobject thiz,
         jlong nativeApp) {
     auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
     if (app) {
@@ -54,7 +56,7 @@ Java_com_google_android_filament_utils_NativeViewer_nOnSurfaceDestroyed(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_utils_NativeViewer_nOnTouchEvent(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_NativeViewer_nOnTouchEvent(JNIEnv* env, jobject thiz,
         jlong nativeApp, jint action, jfloat x, jfloat y) {
     auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
     if (app) {
@@ -66,8 +68,19 @@ Java_com_google_android_filament_utils_NativeViewer_nOnTouchEvent(JNIEnv* env, j
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_utils_NativeViewer_nDoFrame(JNIEnv* env, jobject thiz,
+Java_com_google_android_filament_cppviewer_NativeViewer_nDoFrame(JNIEnv* env, jobject thiz,
         jlong nativeApp) {
     auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+//    utils::slog.e <<"app=" << app << utils::io::endl;
     return (app && app->doFrame()) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_cppviewer_NativeViewer_nDestroy(JNIEnv* env, jobject thiz,
+        jlong nativeApp) {
+    auto* app = reinterpret_cast<FilamentApp2*>(nativeApp);
+    if (app) {
+        // This will call shutdown() and gracefully destroy the engine and all Filament resources.
+        delete app;
+    }
 }

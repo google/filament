@@ -16,8 +16,10 @@
 
 #include "arguments.h"
 
+#ifndef __ANDROID__
 #include <filamentapp/HtmlDisplayManager.h>
 #include <filamentapp/SDLDisplayManager.h>
+#endif
 
 #include <filament/Engine.h>
 
@@ -99,10 +101,14 @@ void printUsage(const char* name, const CommandLineSpecification& spec) {
 }
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
+#ifndef __ANDROID__
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();
     }
     return std::make_unique<filament::app::SDLDisplayManager>(config.backend);
+#else
+    return nullptr;
+#endif
 }
 
 int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,

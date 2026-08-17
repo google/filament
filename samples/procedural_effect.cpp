@@ -50,6 +50,7 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
@@ -62,6 +63,8 @@ struct App {
     Camera* cam = nullptr;
     double startTime = 0.0;
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {

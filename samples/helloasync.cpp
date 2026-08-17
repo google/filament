@@ -70,6 +70,7 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
@@ -386,6 +387,8 @@ struct App {
         scene->addEntity(data->renderable);
     }
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {

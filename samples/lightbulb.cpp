@@ -55,6 +55,7 @@ using namespace filamat;
 using namespace utils;
 static float g_meshScale = 1.0f;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -71,7 +72,17 @@ struct App {
     bool shadowPlane = false;
     bool discoBall = false;
 };
+} // anonymous namespace
 
+
+
+#ifdef __ANDROID__
+static const char* MODEL_FILE = "models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "lightroom_14b.hdr";
+#else
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+#endif
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -82,14 +93,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->shadowPlane = app->config.customArgs["shadowPlane"] == "true";
     app->discoBall = app->config.customArgs["discoBall"] == "true";
 
-    std::string_view filenames_str = app->config.customArgs["filenames"].c_str();
-    size_t pos = 0;
-    while ((pos = std::string_view(filenames_str).find(';')) != std::string_view::npos) {
-        app->filenames.push_back(utils::Path(filenames_str.substr(0, pos)));
-        filenames_str.remove_prefix(pos + 1);
-    }
-    if (!filenames_str.empty()) {
-        app->filenames.push_back(utils::Path(filenames_str));
+    if (app->config.customArgs.find("filenames") != app->config.customArgs.end()) {
+        std::string_view filenames_str = app->config.customArgs["filenames"].c_str_safe();
+        size_t pos = 0;
+        while ((pos = std::string_view(filenames_str).find(';')) != std::string_view::npos) {
+            app->filenames.push_back(utils::Path(filenames_str.substr(0, pos)));
+            filenames_str.remove_prefix(pos + 1);
+        }
+        if (!filenames_str.empty()) {
+            app->filenames.push_back(utils::Path(filenames_str));
+        }
     }
 
     auto cleanup = [app](Engine* engine, View* view, Scene* scene) {
@@ -119,18 +132,33 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !app->filamentApp->getIBL() });
     };
 
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
         app->meshSet.reset(new MeshAssimp(*engine));
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialLibrary);
+        }
+        if (app->meshSet->getRenderables().empty()) {
+            if (loader) {
+                auto modelBuffer = loader->load(MODEL_FILE);
+                if (!modelBuffer.empty()) {
+                    app->meshSet->addFromMemory(modelBuffer.data(), modelBuffer.size(),
+                            utils::Path(MODEL_FILE), app->materialLibrary);
+                }
+            }
+            if (app->meshSet->getRenderables().empty()) {
+                app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE,
+                        app->materialLibrary);
+            }
         }
 
         auto& lcm = engine->getLightManager();
 
         auto& tcm = engine->getTransformManager();
-        auto ti = tcm.getInstance(app->meshSet->getRenderables()[0]);
-        tcm.setTransform(ti, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
-                                     tcm.getWorldTransform(ti));
+        if (!app->meshSet->getRenderables().empty()) {
+            auto ti = tcm.getInstance(app->meshSet->getRenderables()[0]);
+            tcm.setTransform(ti, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
+                                         tcm.getWorldTransform(ti));
+        }
 
         auto& rcm = engine->getRenderableManager();
         for (auto renderable: app->meshSet->getRenderables()) {
@@ -272,21 +300,23 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->meshAabb.reset(
                 new Cube(*engine, app->filamentApp->getTransparentMaterial(), { 0, 0, 1 }));
 
-        Entity object = app->meshSet->getRenderables()[1];
+        if (app->meshSet->getRenderables().size() > 1) {
+            Entity object = app->meshSet->getRenderables()[1];
 
-        RenderableManager::Instance ri = rcm.getInstance(object);
-        if (ri) {
-            app->meshAabb->mapAabb(*engine, rcm.getAxisAlignedBoundingBox(ri));
-            scene->addEntity(app->meshAabb->getWireFrameRenderable());
-            scene->addEntity(app->meshAabb->getSolidRenderable());
+            RenderableManager::Instance ri = rcm.getInstance(object);
+            if (ri) {
+                app->meshAabb->mapAabb(*engine, rcm.getAxisAlignedBoundingBox(ri));
+                scene->addEntity(app->meshAabb->getWireFrameRenderable());
+                scene->addEntity(app->meshAabb->getSolidRenderable());
+            }
+
+            tcm.setParent(tcm.getInstance(app->meshAabb->getSolidRenderable()),
+                    tcm.getInstance(object));
+            tcm.setParent(tcm.getInstance(app->meshAabb->getWireFrameRenderable()),
+                    tcm.getInstance(object));
+            rcm.setLayerMask(rcm.getInstance(app->meshAabb->getSolidRenderable()), 0x3, 0x2);
+            rcm.setLayerMask(rcm.getInstance(app->meshAabb->getWireFrameRenderable()), 0x3, 0x2);
         }
-
-        tcm.setParent(tcm.getInstance(app->meshAabb->getSolidRenderable()),
-                tcm.getInstance(object));
-        tcm.setParent(tcm.getInstance(app->meshAabb->getWireFrameRenderable()),
-                tcm.getInstance(object));
-        rcm.setLayerMask(rcm.getInstance(app->meshAabb->getSolidRenderable()), 0x3, 0x2);
-        rcm.setLayerMask(rcm.getInstance(app->meshAabb->getWireFrameRenderable()), 0x3, 0x2);
 
         if (app->shadowPlane) {
             Material* shadowMaterial =
@@ -376,7 +406,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .title(app->config.title)
+                        .iblDirectory(app->config.iblDirectory.empty() ? utils::CString(IBL_FOLDER) : app->config.iblDirectory)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -417,8 +449,8 @@ int main(int argc, char* argv[]) {
     };
     samples::CommandLineSpecification spec = {
         .sampleDescription = "LIGHTBULB is a point light and shadow testing tool for Filament.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
-        .requiredPositionalArgCount = 1,
+        .positionalArgsDescription = "[mesh files (.obj, .fbx)]",
+        .requiredPositionalArgCount = 0,
         .customOptionsHelp = "   --more-lights, -m\n"
                              "       Enable more point lights\n\n"
                              "   --disco, -d\n"

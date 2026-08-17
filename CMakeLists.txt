@@ -76,6 +76,7 @@ option(FILAMENT_LINUX_IS_MOBILE "Treat Linux as Mobile" OFF)
 option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitizers" OFF)
 
 option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+option(FILAMENT_ENABLE_HWASAN "Enable Hardware-Assisted AddressSanitizer (HWASan)" OFF)
 
 option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
 
@@ -516,6 +517,14 @@ endif()
 if (FILAMENT_ENABLE_TSAN)
    set(EXTRA_SANITIZE_OPTIONS "-fsanitize=thread")
 endif()
+
+if (FILAMENT_ENABLE_HWASAN)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=hwaddress -fno-omit-frame-pointer")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=hwaddress -fno-omit-frame-pointer")
+   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=hwaddress")
+   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=hwaddress")
+endif()
+
 if (ANDROID)
     # keep STL debug infos (mimics what the NDK does)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-limit-debug-info")
@@ -996,6 +1005,7 @@ endif()
 
 if (IS_HOST_PLATFORM OR ANDROID)
    add_subdirectory(${LIBRARIES}/filamentapp)
+   add_subdirectory(${EXTERNAL}/libassimp/tnt)   
 endif()
 
 if (IS_HOST_PLATFORM)
@@ -1007,7 +1017,6 @@ if (IS_HOST_PLATFORM)
 
     add_subdirectory(${FILAMENT}/samples)
 
-    add_subdirectory(${EXTERNAL}/libassimp/tnt)
     add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)
@@ -1036,4 +1045,8 @@ endif()
 # Generate exported executables for cross-compiled builds (Android, WASM, and iOS)
 if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
+endif()
+
+if (ANDROID)
+    add_subdirectory(${FILAMENT}/samples)
 endif()

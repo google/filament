@@ -36,6 +36,7 @@
 
 using namespace filament;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -46,6 +47,8 @@ struct App {
     Skybox* skybox;
     utils::Entity renderable;
 };
+} // anonymous namespace
+
 
 static const filament::math::float2 TRIANGLE_VERTICES[3] = { {1, 0}, {-0.5, 0.866}, {-0.5, -0.866} };
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };

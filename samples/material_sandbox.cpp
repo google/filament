@@ -75,10 +75,13 @@ static ColorGrading* g_colorGrading = nullptr;
 static SampleConfig g_config;
 FilamentApp2* g_filamentApp = nullptr;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
 };
+} // anonymous namespace
+
 
 static bool g_shadowPlane = false;
 static bool g_singleMode = false;

@@ -56,6 +56,7 @@ struct Vertex {
     float2 uv;
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -77,6 +78,8 @@ struct App {
     std::vector<float4> posMorphData;
     bool posMorphing = false;
 };
+} // anonymous namespace
+
 
 static constexpr int GRID_SIZE = 20;
 static constexpr float GRID_SCALE = 2.0f;

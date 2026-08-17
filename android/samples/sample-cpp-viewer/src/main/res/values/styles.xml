@@ -1,0 +1,21 @@
+<resources>
+
+  <!-- Base application theme. -->
+  <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+    <item name="android:windowNoTitle">true</item>
+    <item name="android:windowActionBar">false</item>
+    <item name="android:windowFullscreen">true</item>
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    <item name="android:spinnerItemStyle">@style/SpinnerItemStyle</item>
+    <item name="android:spinnerDropDownItemStyle">@style/SpinnerDropDownItemStyle</item>
+  </style>
+
+  <style name="SpinnerItemStyle" parent="android:Widget.TextView.SpinnerItem">
+    <item name="android:textColor">#FFFFFF</item>
+  </style>
+
+  <style name="SpinnerDropDownItemStyle" parent="android:Widget.DropDownItem.Spinner">
+    <item name="android:textColor">#FFFFFF</item>
+  </style>
+
+</resources>

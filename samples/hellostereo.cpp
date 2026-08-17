@@ -56,6 +56,7 @@ struct Vertex {
     float2 uv;
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -79,6 +80,8 @@ struct App {
     std::vector<utils::Entity> quadEntities;
     std::vector<MaterialInstance*> quadMatInstances;
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {

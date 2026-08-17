@@ -62,6 +62,7 @@ enum MaterialSource {
     UBERSHADER,
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     Engine* engine;
@@ -79,6 +80,8 @@ struct App {
     int instanceToAnimate = -1;
     std::vector<FilamentInstance*> instances;
 };
+} // anonymous namespace
+
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 

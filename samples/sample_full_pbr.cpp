@@ -72,6 +72,13 @@ struct PbrMap {
     Texture* texture;
 };
 
+#ifdef __ANDROID__
+static const char* MODEL_FILE = "models/material_sphere/material_sphere.obj";
+#else
+static const char* MODEL_FILE = "assets/models/material_sphere/material_sphere.obj";
+#endif
+
+namespace {
 struct App {
     std::vector<Path> filenames;
     std::map<utils::CString, MaterialInstance*> materialInstances;
@@ -95,6 +102,8 @@ struct App {
     } pbrConfig;
     FilamentApp2* filamentApp = nullptr;
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -140,7 +149,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                                    .build(*engine);
                     Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                             Texture::Format::RGB, Texture::Type::UBYTE,
-                            (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+                            [](void* buffer, size_t, void*) { stbi_image_free(buffer); });
                     (*map)->setImage(*engine, 0, std::move(buffer));
                     (*map)->generateMipmaps(*engine);
                     return true;
@@ -153,7 +162,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         return false;
     };
 
-    auto setup = [app, loadTexture](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app, loadTexture, loader](Engine* engine, View* view, Scene* scene) {
         Path const path(app->pbrConfig.materialDir);
         std::string const name(path.getName());
 
@@ -302,6 +311,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         MaterialBuilder builder;
         builder.name("DefaultMaterial")
                 .targetApi(MaterialBuilder::TargetApi::ALL)
+                .platform(MaterialBuilder::Platform::ALL)
 #ifndef NDEBUG
                 .optimization(MaterialBuilderBase::Optimization::NONE)
                 .generateDebugInfo(true)
@@ -324,22 +334,37 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         Package const pkg = builder.build(engine->getJobSystem());
 
         app->material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
-        app->materialInstances["DefaultMaterial"] = app->material->createInstance();
+        if (app->material) {
+            app->materialInstances["DefaultMaterial"] = app->material->createInstance();
 
-        TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
-        sampler.setAnisotropy(8.0f);
+            TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                    TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+            sampler.setAnisotropy(8.0f);
 
-        for (auto& map: app->maps) {
-            if (map.texture != nullptr) {
-                app->materialInstances["DefaultMaterial"]->setParameter(map.parameterName,
-                        map.texture, sampler);
+            for (auto& map: app->maps) {
+                if (map.texture != nullptr) {
+                    app->materialInstances["DefaultMaterial"]->setParameter(map.parameterName,
+                            map.texture, sampler);
+                }
             }
         }
 
         app->meshSet = std::make_unique<MeshAssimp>(*engine);
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialInstances, true);
+        }
+        if (app->meshSet->getRenderables().empty()) {
+            if (loader) {
+                auto modelBuffer = loader->load(MODEL_FILE);
+                if (!modelBuffer.empty()) {
+                    app->meshSet->addFromMemory(modelBuffer.data(), modelBuffer.size(),
+                            utils::Path(MODEL_FILE), app->materialInstances, true);
+                }
+            }
+            if (app->meshSet->getRenderables().empty()) {
+                app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE,
+                        app->materialInstances, true);
+            }
         }
 
         auto& rcm = engine->getRenderableManager();
@@ -366,18 +391,29 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
+        app->meshSet.reset();
         for (auto& item: app->materialInstances) {
             auto materialInstance = item.second;
-            engine->destroy(materialInstance);
+            if (materialInstance) {
+                engine->destroy(materialInstance);
+            }
         }
-        app->meshSet.reset(nullptr);
-        engine->destroy(app->material);
-        for (const auto& map: app->maps) {
-            engine->destroy(map.texture);
+        app->materialInstances.clear();
+        if (app->material) {
+            engine->destroy(app->material);
+            app->material = nullptr;
         }
-        EntityManager& em = EntityManager::get();
-        engine->destroy(app->light);
-        em.destroy(app->light);
+        for (auto& map: app->maps) {
+            if (map.texture) {
+                engine->destroy(map.texture);
+                map.texture = nullptr;
+            }
+        }
+        if (app->light) {
+            engine->destroy(app->light);
+            EntityManager::get().destroy(app->light);
+            app->light = Entity{};
+        }
     };
 
     auto preRender = [app](filament::Engine*, filament::View*, filament::Scene*,
@@ -390,7 +426,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     auto fApp = FilamentApp2::Builder()
                         .title(app->config.title)
                         .backend(app->config.backend)
+                        .featureLevel(app->config.featureLevel)
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)

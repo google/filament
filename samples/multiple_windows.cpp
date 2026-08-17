@@ -95,10 +95,13 @@ void setup_animating_scene(Window& w, Engine* engine);
 void animation_new_frame(Window& w, double dt);
 IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine);
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {

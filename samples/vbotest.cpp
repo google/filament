@@ -35,6 +35,7 @@
 
 using namespace filament;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -45,6 +46,8 @@ struct App {
     utils::Entity camera;
     utils::Entity renderable;
 };
+} // anonymous namespace
+
 
 static constexpr filament::math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
 static constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };

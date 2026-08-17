@@ -280,24 +280,29 @@ MeshAssimp::~MeshAssimp() {
     for (Entity renderable : mRenderables) {
         mEngine.destroy(renderable);
     }
-    mEngine.destroy(mVertexBuffer);
-    mEngine.destroy(mIndexBuffer);
+    if (mVertexBuffer) mEngine.destroy(mVertexBuffer);
+    if (mIndexBuffer) mEngine.destroy(mIndexBuffer);
     for (auto& item : mMaterialInstances) {
-        mEngine.destroy(item.second);
+        if (item.second) mEngine.destroy(item.second);
     }
-    mEngine.destroy(mDefaultColorMaterial);
-    mEngine.destroy(mDefaultTransparentColorMaterial);
+    if (mDefaultColorMaterial) mEngine.destroy(mDefaultColorMaterial);
+    if (mDefaultTransparentColorMaterial) mEngine.destroy(mDefaultTransparentColorMaterial);
     for (auto& item : mGltfMaterialCache) {
         auto material = item.second;
-        mEngine.destroy(material);
+        if (material) mEngine.destroy(material);
     }
-    mEngine.destroy(mDefaultNormalMap);
-    mEngine.destroy(mDefaultMap);
+    if (mDefaultNormalMap) mEngine.destroy(mDefaultNormalMap);
+    if (mDefaultMap) mEngine.destroy(mDefaultMap);
     for (Texture* texture : mTextures) {
-        mEngine.destroy(texture);
+        if (texture) mEngine.destroy(texture);
     }
     // destroy the Entities itself
     EntityManager::get().destroy(mRenderables.size(), mRenderables.data());
+    if (rootEntity) {
+        mEngine.destroy(rootEntity);
+        EntityManager::get().destroy(rootEntity);
+        rootEntity = Entity{};
+    }
 }
 
 template<typename T>
@@ -632,31 +637,164 @@ void MeshAssimp::addFromFile(const Path& path,
     mMaterialInstances.swap(materials);
 }
 
+void MeshAssimp::addFromMemory(const uint8_t* buffer, size_t length, const Path& hintPath,
+        std::map<utils::CString, MaterialInstance*>& materials, bool overrideMaterial) {
+
+    Asset asset;
+    asset.file = hintPath;
+
+    { // This scope to make sure we're not using std::move()'d objects later
+
+        // TODO: if we had a way to allocate temporary buffers from the engine with a
+        // "command buffer" lifetime, we wouldn't need to have to deal with freeing the
+        // std::vectors here.
+
+        //TODO: a lot of these method arguments should probably be class or global variables
+        if (!setFromFile(asset, materials, buffer, length)) {
+            return;
+        }
+
+        VertexBuffer::Builder vertexBufferBuilder = VertexBuffer::Builder()
+                .vertexCount((uint32_t)asset.positions.size())
+                .bufferCount(4)
+                .attribute(VertexAttribute::POSITION,     0, VertexBuffer::AttributeType::HALF4)
+                .attribute(VertexAttribute::TANGENTS,     1, VertexBuffer::AttributeType::SHORT4)
+                .normalized(VertexAttribute::TANGENTS);
+
+        if (asset.snormUV0) {
+            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::SHORT2)
+                .normalized(VertexAttribute::UV0);
+        } else {
+            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::HALF2);
+        }
+
+        if (asset.snormUV1) {
+            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::SHORT2)
+                    .normalized(VertexAttribute::UV1);
+        } else {
+            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::HALF2);
+        }
+
+        mVertexBuffer = vertexBufferBuilder.build(mEngine);
+
+        auto ps = new State<half4>(std::move(asset.positions));
+        auto ns = new State<short4>(std::move(asset.tangents));
+        auto t0s = new State<ushort2>(std::move(asset.texCoords0));
+        auto t1s = new State<ushort2>(std::move(asset.texCoords1));
+        auto is = new State<uint32_t>(std::move(asset.indices));
+
+        mVertexBuffer->setBufferAt(mEngine, 0,
+                VertexBuffer::BufferDescriptor(ps->data(), ps->size(), State<half4>::free, ps));
+
+        mVertexBuffer->setBufferAt(mEngine, 1,
+                VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
+
+        mVertexBuffer->setBufferAt(mEngine, 2,
+                VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<ushort2>::free, t0s));
+
+        mVertexBuffer->setBufferAt(mEngine, 3,
+                VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<ushort2>::free, t1s));
+
+        mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
+        mIndexBuffer->setBuffer(mEngine,
+                IndexBuffer::BufferDescriptor(is->data(), is->size(), State<uint32_t>::free, is));
+    }
+
+    // always add the DefaultMaterial (with its default parameters), so we don't pick-up
+    // whatever defaults is used in mesh
+    if (materials.find(AI_DEFAULT_MATERIAL_NAME) == materials.end()) {
+        materials[AI_DEFAULT_MATERIAL_NAME] = mDefaultColorMaterial->createInstance();
+    }
+
+    size_t startIndex = mRenderables.size();
+    mRenderables.resize(startIndex + asset.meshes.size());
+    EntityManager::get().create(asset.meshes.size(), mRenderables.data() + startIndex);
+    EntityManager::get().create(1, &rootEntity);
+
+    TransformManager& tcm = mEngine.getTransformManager();
+    //Add root instance
+    tcm.create(rootEntity, TransformManager::Instance{}, mat4f());
+
+    for (auto& mesh : asset.meshes) {
+        RenderableManager::Builder builder(mesh.parts.size());
+        builder.boundingBox(mesh.aabb);
+        builder.screenSpaceContactShadows(true);
+
+        size_t partIndex = 0;
+        for (auto& part : mesh.parts) {
+            builder.geometry(partIndex, RenderableManager::PrimitiveType::TRIANGLES,
+                    mVertexBuffer, mIndexBuffer, part.offset, part.count);
+
+            if (overrideMaterial) {
+                builder.material(partIndex, materials[AI_DEFAULT_MATERIAL_NAME]);
+            } else {
+                auto pos = materials.find(utils::CString(part.material.c_str()));
+
+                if (pos != materials.end()) {
+                    builder.material(partIndex, pos->second);
+                } else {
+                    MaterialInstance* colorMaterial;
+                    if (part.opacity < 1.0f) {
+                        colorMaterial = mDefaultTransparentColorMaterial->createInstance();
+                        colorMaterial->setParameter("baseColor", RgbaType::sRGB,
+                                sRGBColorA { part.baseColor, part.opacity });
+                    } else {
+                        colorMaterial = mDefaultColorMaterial->createInstance();
+                        colorMaterial->setParameter("baseColor", RgbType::sRGB, part.baseColor);
+                        colorMaterial->setParameter("reflectance", part.reflectance);
+                    }
+                    colorMaterial->setParameter("metallic", part.metallic);
+                    colorMaterial->setParameter("roughness", part.roughness);
+                    builder.material(partIndex, colorMaterial);
+                    materials[utils::CString(part.material.c_str())] = colorMaterial;
+                }
+            }
+            partIndex++;
+        }
+
+        const size_t meshIndex = &mesh - asset.meshes.data();
+        Entity entity = mRenderables[startIndex + meshIndex];
+        if (!mesh.parts.empty()) {
+            builder.build(mEngine, entity);
+        }
+        auto pindex = asset.parents[meshIndex];
+        TransformManager::Instance parent((pindex < 0) ?
+                tcm.getInstance(rootEntity) : tcm.getInstance(mRenderables[pindex]));
+        tcm.create(entity, parent, mesh.transform);
+    }
+
+    // Takes over the ownership of the material instances so that resources are gracefully
+    // destroyed in a correct order. The caller doesn't need to handle the destruction.
+    mMaterialInstances.swap(materials);
+}
+
 using Assimp::Importer;
 
 bool MeshAssimp::setFromFile(Asset& asset,
-        std::map<utils::CString, MaterialInstance*>& outMaterials) {
+        std::map<utils::CString, MaterialInstance*>& outMaterials,
+        const uint8_t* buffer, size_t length) {
     Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE,
             aiPrimitiveType_LINE | aiPrimitiveType_POINT);
     importer.SetPropertyBool(AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION, true);
     importer.SetPropertyBool(AI_CONFIG_PP_PTV_KEEP_HIERARCHY, true);
 
-    aiScene const* scene = importer.ReadFile(asset.file,
-            // normals and tangents
-            aiProcess_GenSmoothNormals |
+    unsigned int flags = aiProcess_GenSmoothNormals |
             aiProcess_CalcTangentSpace |
-            // UV Coordinates
             aiProcess_GenUVCoords |
-            // topology optimization
             aiProcess_FindInstances |
             aiProcess_OptimizeMeshes |
             aiProcess_JoinIdenticalVertices |
-            // misc optimization
             aiProcess_ImproveCacheLocality |
             aiProcess_SortByPType |
-            // we only support triangles
-            aiProcess_Triangulate);
+            aiProcess_Triangulate;
+
+    aiScene const* scene = nullptr;
+    if (buffer) {
+        scene = importer.ReadFileFromMemory(buffer, length, flags, asset.file.getExtension().c_str());
+    } else {
+        scene = importer.ReadFile(asset.file, flags);
+    }
 
     size_t index = importer.GetImporterIndex(asset.file.getExtension().c_str());
     const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);

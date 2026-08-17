@@ -69,7 +69,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 set(LIBS
-        assimp
         camutils
         filamat
         filament
@@ -89,10 +88,12 @@ if (IS_HOST_PLATFORM)
         imgui
         imageio
         sdl2
+        assimp
     )
 else()
     list(APPEND LIBS
         imageio-lite
+        assimp
     )
 endif()
 

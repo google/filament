@@ -50,6 +50,7 @@ using namespace filament::math;
 using namespace utils;
 using namespace filamesh;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
@@ -74,6 +75,8 @@ struct App {
     std::vector<MaterialInstance*> materialInstances;
     std::vector<Entity> renderables;
 };
+} // anonymous namespace
+
 
 static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     if (count <= 0) return;

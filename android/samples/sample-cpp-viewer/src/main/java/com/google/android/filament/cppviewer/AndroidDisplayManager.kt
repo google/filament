@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.utils
+package com.google.android.filament.cppviewer
 
 import android.view.SurfaceView
 
@@ -45,7 +45,7 @@ class AndroidDisplayManager(val surfaceView: SurfaceView) {
 
     companion object {
         init {
-            System.loadLibrary("filament-utils-jni")
+            System.loadLibrary("sample-cpp-viewer-jni")
         }
     }
 }

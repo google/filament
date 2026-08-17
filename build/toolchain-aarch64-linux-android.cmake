@@ -21,7 +21,11 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 
 # android
-set(API_LEVEL 21)
+if (FILAMENT_ENABLE_HWASAN)
+    set(API_LEVEL 29)
+else()
+    set(API_LEVEL 21)
+endif()
 
 # architecture
 set(ARCH aarch64-linux-android)
@@ -80,6 +84,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE -march=armv8-a -mtune=cortex-a78" CACH
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" CACHE STRING "Toolchain CXXFLAGS")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")
+
+if (FILAMENT_ENABLE_HWASAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=hwaddress -fno-omit-frame-pointer" CACHE STRING "Toolchain CFLAGS" FORCE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=hwaddress -fno-omit-frame-pointer" CACHE STRING "Toolchain CXXFLAGS" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=hwaddress" CACHE STRING "Toolchain LDFLAGS" FORCE)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=hwaddress" CACHE STRING "Toolchain LDFLAGS" FORCE)
+endif()
 
 set(ANDROID TRUE)
 set(EGL TRUE)

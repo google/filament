@@ -38,15 +38,18 @@ class Skybox;
 namespace utils {
     class Path;
 }
+namespace filament::app {
+    class AssetLoader;
+}
 
 class IBL {
 public:
     explicit IBL(filament::Engine& engine);
     ~IBL();
 
-    bool loadFromEquirect(const utils::Path& path);
-    bool loadFromDirectory(const utils::Path& path);
-    bool loadFromKtx(const std::string& prefix);
+    bool loadFromEquirect(const utils::Path& path, filament::app::AssetLoader* loader = nullptr);
+    bool loadFromDirectory(const utils::Path& path, filament::app::AssetLoader* loader = nullptr);
+    bool loadFromKtx(const std::string& prefix, filament::app::AssetLoader* loader = nullptr);
 
     filament::IndirectLight* getIndirectLight() const noexcept {
         return mIndirectLight;
@@ -65,14 +68,14 @@ public:
 
 private:
     bool loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
-            size_t level = 0, std::string const& levelPrefix = "") const;
+            filament::app::AssetLoader* loader = nullptr, size_t level = 0, std::string const& levelPrefix = "") const;
 
 
     bool loadCubemapLevel(filament::Texture** texture,
             filament::Texture::PixelBufferDescriptor* outBuffer,
             uint32_t* dim,
             const utils::Path& path,
-            size_t level = 0, std::string const& levelPrefix = "") const;
+            filament::app::AssetLoader* loader = nullptr, size_t level = 0, std::string const& levelPrefix = "") const;
 
     filament::Engine& mEngine;
 

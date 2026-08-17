@@ -51,6 +51,7 @@ using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -64,8 +65,14 @@ struct App {
     Texture* metallic;
     Texture* ao;
 };
+} // anonymous namespace
 
+
+#ifdef __ANDROID__
+static const char* IBL_FOLDER = "lightroom_14b.hdr";
+#else
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+#endif
 
 static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
@@ -79,7 +86,7 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
             .build(*engine);
     Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
             Texture::Format::RGB, Texture::Type::UBYTE,
-            (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
+            [](void* buffer, size_t, void*) { stbi_image_free(buffer); });
     normalMap->setImage(*engine, 0, std::move(buffer));
     normalMap->generateMipmaps(*engine);
     return normalMap;
@@ -135,9 +142,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->materialInstance->setParameter("normal", app->normal, sampler);
         app->materialInstance->setParameter("roughness", app->roughness, sampler);
 
-        auto ibl = app->filamentApp->getIBL()->getIndirectLight();
-        ibl->setIntensity(100000);
-        ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
+        if (app->filamentApp->getIBL()) {
+            auto ibl = app->filamentApp->getIBL()->getIndirectLight();
+            if (ibl) {
+                ibl->setIntensity(100000);
+                ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
+            }
+        }
 
         // Add geometry into the scene.
         app->mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
@@ -150,20 +161,53 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->mesh.renderable);
-        engine->destroy(app->materialInstance);
-        engine->destroy(app->material);
-        engine->destroy(app->albedo);
-        engine->destroy(app->normal);
-        engine->destroy(app->roughness);
-        engine->destroy(app->metallic);
-        engine->destroy(app->ao);
+        if (app->mesh.vertexBuffer) {
+            engine->destroy(app->mesh.vertexBuffer);
+        }
+        if (app->mesh.indexBuffer) {
+            engine->destroy(app->mesh.indexBuffer);
+        }
+        if (app->mesh.renderable) {
+            engine->destroy(app->mesh.renderable);
+            utils::EntityManager::get().destroy(app->mesh.renderable);
+        }
+        if (app->materialInstance) {
+            engine->destroy(app->materialInstance);
+            app->materialInstance = nullptr;
+        }
+        if (app->material) {
+            engine->destroy(app->material);
+            app->material = nullptr;
+        }
+        if (app->albedo) {
+            engine->destroy(app->albedo);
+            app->albedo = nullptr;
+        }
+        if (app->normal) {
+            engine->destroy(app->normal);
+            app->normal = nullptr;
+        }
+        if (app->roughness) {
+            engine->destroy(app->roughness);
+            app->roughness = nullptr;
+        }
+        if (app->metallic) {
+            engine->destroy(app->metallic);
+            app->metallic = nullptr;
+        }
+        if (app->ao) {
+            engine->destroy(app->ao);
+            app->ao = nullptr;
+        }
     };
 
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
+                        .backend(app->config.backend)
+                        .featureLevel(app->config.featureLevel)
+                        .iblDirectory(app->config.iblDirectory.empty() ? utils::CString(IBL_FOLDER) : app->config.iblDirectory)
                         .setup(setup)
                         .cleanup(cleanup)
                         .build();

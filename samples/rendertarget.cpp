@@ -53,6 +53,7 @@ struct Vertex {
     float2 uv;
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     utils::Entity lightEntity;
@@ -86,6 +87,8 @@ struct App {
     float3 quadCenter;
     float3 quadNormal;
 };
+} // anonymous namespace
+
 
 static mat4f reflectionMatrix(float4 plane) {
     mat4f m;

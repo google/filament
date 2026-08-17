@@ -49,26 +49,31 @@ using utils::Path;
 using utils::FixedCapacityVector;
 using namespace filament::math;
 
+namespace {
 struct App {
-    FilamentApp2* filamentApp;
-    VertexBuffer* vbs[10];
+    FilamentApp2* filamentApp = nullptr;
+    VertexBuffer* vbs[10] = {};
     size_t vbCount = 0;
-    IndexBuffer *ib, *ib2;
-    Material* mat;
-    Camera* cam;
+    IndexBuffer* ib = nullptr;
+    IndexBuffer* ib2 = nullptr;
+    Material* mat = nullptr;
+    Camera* cam = nullptr;
     Entity camera;
-    Skybox* skybox;
-    Entity renderables[4];
-    SkinningBuffer *sb, *sb2;
-    MorphTargetBuffer *mt;
-    BufferObject* bos[10];
+    Skybox* skybox = nullptr;
+    Entity renderables[4] = {};
+    SkinningBuffer* sb = nullptr;
+    SkinningBuffer* sb2 = nullptr;
+    MorphTargetBuffer* mt = nullptr;
+    BufferObject* bos[10] = {};
     size_t boCount = 0;
-    size_t bonesPerVertex;
+    size_t bonesPerVertex = 0;
     FixedCapacityVector<FixedCapacityVector<filament::math::float2>>
         boneDataPerPrimitive,
         boneDataPerPrimitiveMulti;
     SampleConfig config;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     float2 position;
@@ -127,7 +132,7 @@ static float2 boneDataArray[48] = {}; //indices and weights for up to 3 vertices
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 },
 TRIANGLE_INDICES_2[6] = { 0, 2, 4, 1, 3, 5 };
 
-mat4f transforms[] = {math::mat4f(1),
+static const mat4f transforms[] = {math::mat4f(1),
                       mat4f::translation(float3(1, 0, 0)),
                       mat4f::translation(float3(1, 1, 0)),
                       mat4f::translation(float3(0, 1, 0)),
@@ -497,12 +502,10 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 .castShadows(false)
                 .enableSkinningBuffers(true)
                 .skinning(app->sb, 9, 0)
-
                 .boneIndicesAndWeights(0, boneDataArray, 3 * app->bonesPerVertex,
                         app->bonesPerVertex)
                 .boneIndicesAndWeights(1, app->boneDataPerPrimitive)
                 .boneIndicesAndWeights(2, app->boneDataPerPrimitive)
-
                 .morphing(app->mt)
                 .morphing(0, 2, 0)
                 .build(*engine, app->renderables[2]);
@@ -530,7 +533,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 .receiveShadows(false)
                 .castShadows(false)
                 .enableSkinningBuffers(true)
-                .skinning(app->sb, 9, 0)
+                .skinning(app->sb2, 9, 0)
                 .boneIndicesAndWeights(1, app->boneDataPerPrimitiveMulti)
                 .boneIndicesAndWeights(2, app->boneDataPerPrimitive)
                 .morphing(app->mt)
@@ -549,30 +552,42 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
         for (auto i = 0; i < 4; i++) {
-            engine->destroy(app->renderables[i]);
+            if (app->renderables[i]) {
+                engine->destroy(app->renderables[i]);
+                EntityManager::get().destroy(app->renderables[i]);
+            }
         }
-        for (auto i = 0; i < app->boCount; i++) {
-            engine->destroy(app->bos[i]);
+        for (size_t i = 0; i < app->boCount; i++) {
+            if (app->bos[i]) {
+                engine->destroy(app->bos[i]);
+            }
         }
-        for (auto i = 0; i < app->vbCount; i++) {
-            engine->destroy(app->vbs[i]);
+        for (size_t i = 0; i < app->vbCount; i++) {
+            if (app->vbs[i]) {
+                engine->destroy(app->vbs[i]);
+            }
         }
-        engine->destroy(app->skybox);
-        engine->destroy(app->mat);
-        engine->destroy(app->ib);
-        engine->destroy(app->ib2);
-        engine->destroy(app->sb);
-        engine->destroy(app->sb2);
-        engine->destroy(app->mt);
-        engine->destroyCameraComponent(app->camera);
-        EntityManager::get().destroy(app->camera);
+        if (app->skybox) engine->destroy(app->skybox);
+        if (app->mat) engine->destroy(app->mat);
+        if (app->ib) engine->destroy(app->ib);
+        if (app->ib2) engine->destroy(app->ib2);
+        if (app->sb) engine->destroy(app->sb);
+        if (app->sb2) engine->destroy(app->sb2);
+        if (app->mt) engine->destroy(app->mt);
+        if (app->cam) {
+            engine->destroyCameraComponent(app->camera);
+            EntityManager::get().destroy(app->camera);
+        }
     };
 
 
     auto fApp =
             FilamentApp2::Builder()
                     .displayManager(dm)
+                    .assetLoader(loader)
                     .title(app->config.title)
+                    .backend(app->config.backend)
+                    .featureLevel(app->config.featureLevel)
                     .setup(setup)
                     .cleanup(cleanup)
                     .animation([app](Engine* engine, View* view, double now) {
@@ -580,8 +595,10 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         const uint32_t w = view->getViewport().width;
                         const uint32_t h = view->getViewport().height;
                         const float aspect = (float) w / h;
-                        app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
-                                aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        if (app->cam) {
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                    aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        }
 
                         auto& rm = engine->getRenderableManager();
 
@@ -609,16 +626,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                         trans[offset] = transA[offset];
                         trans2[offset] = transA[(offset + 3) % 9];
 
-                        app->sb->setBones(*engine, trans, 9, 0);
-                        app->sb2->setBones(*engine, trans2, 9, 0);
+                        if (app->sb) {
+                            app->sb->setBones(*engine, trans, 9, 0);
+                        }
+                        if (app->sb2) {
+                            app->sb2->setBones(*engine, trans2, 9, 0);
+                        }
 
                         // Morph targets (blendshapes) animation
                         float z = (float) (sin(now) / 2.f + 0.5f);
                         float weights[] = { 1 - z, 0, z };
-                        rm.setMorphWeights(rm.getInstance(app->renderables[0]), weights, 3, 0);
-                        rm.setMorphWeights(rm.getInstance(app->renderables[1]), weights, 3, 0);
-                        rm.setMorphWeights(rm.getInstance(app->renderables[2]), weights, 3, 0);
-                        rm.setMorphWeights(rm.getInstance(app->renderables[3]), weights, 3, 0);
+                        for (int i = 0; i < 4; i++) {
+                            if (app->renderables[i]) {
+                                rm.setMorphWeights(rm.getInstance(app->renderables[i]), weights, 3, 0);
+                            }
+                        }
                     })
                     .build();
     app->filamentApp = fApp.get();

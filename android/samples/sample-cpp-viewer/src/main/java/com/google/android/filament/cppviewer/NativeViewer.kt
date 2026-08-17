@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.utils
+package com.google.android.filament.cppviewer
 
 import android.view.MotionEvent
 import android.view.Surface
@@ -28,7 +28,7 @@ import android.view.Surface
 class NativeViewer(val nativeApp: Long = 0L) {
     companion object {
         init {
-            System.loadLibrary("filament-utils-jni")
+            System.loadLibrary("sample-cpp-viewer-jni")
         }
     }
 
@@ -94,9 +94,19 @@ class NativeViewer(val nativeApp: Long = 0L) {
         return true
     }
 
+    /**
+     * Destroys the native FilamentApp2 instance, waiting for it to safely shut down.
+     */
+    fun destroy() {
+        if (nativeApp != 0L) {
+            nDestroy(nativeApp)
+        }
+    }
+
     private external fun nOnSurfaceCreated(nativeApp: Long, surface: Surface)
     private external fun nOnSurfaceChanged(nativeApp: Long, width: Int, height: Int)
     private external fun nOnSurfaceDestroyed(nativeApp: Long)
     private external fun nOnTouchEvent(nativeApp: Long, action: Int, x: Float, y: Float)
     private external fun nDoFrame(nativeApp: Long): Boolean
+    private external fun nDestroy(nativeApp: Long)
 }

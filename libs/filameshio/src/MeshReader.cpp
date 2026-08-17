@@ -24,6 +24,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
+#include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
 #include <meshoptimizer.h>
@@ -471,6 +472,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     }
 
     mesh.renderable = utils::EntityManager::get().create();
+    engine->getTransformManager().create(mesh.renderable);
 
     RenderableManager::Builder builder(header.parts);
     builder.boundingBox(header.aabb);

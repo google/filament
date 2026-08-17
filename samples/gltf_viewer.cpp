@@ -93,6 +93,7 @@ enum MaterialSource {
     UBERSHADER,
 };
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     Engine* engine;
@@ -151,6 +152,8 @@ struct App {
     uint8_t screenshotSeq = 0;
     bool screenshotAsPPM = false;
 };
+} // anonymous namespace
+
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 

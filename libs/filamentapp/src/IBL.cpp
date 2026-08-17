@@ -16,9 +16,23 @@
 
 #include <ktxreader/Ktx1Reader.h>
 
+
+#if defined(__ANDROID__) || defined(IMAGEIO_LITE)
+#include <imageio-lite/ImageDecoder.h>
+namespace image_ns = imageio_lite;
+#else
 #include <imageio/ImageDecoder.h>
+namespace image_ns = image;
+#endif
+
 
 #include <filamentapp/IBL.h>
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
+#include <sstream>
+#include <vector>
+#include <string>
+
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
@@ -57,9 +71,10 @@ IBL::~IBL() {
     mEngine.destroy(mFogTexture);
 }
 
-bool IBL::loadFromEquirect(Path const& path) {
-    if (!path.exists()) {
-        return false;
+bool IBL::loadFromEquirect(const utils::Path& path, filament::app::AssetLoader* loader) {
+    filament::app::DesktopAssetLoader defaultLoader;
+    if (!loader) {
+        loader = &defaultLoader;
     }
 
     int w = 0, h = 0;
@@ -70,9 +85,18 @@ bool IBL::loadFromEquirect(Path const& path) {
     Texture::PixelBufferDescriptor::Callback destroyer{};
 
     if (path.getExtension() == "exr") {
-        std::ifstream in_stream(path.getAbsolutePath().c_str(), std::ios::binary);
+        auto buf = loader->load(path);
+        if (buf.empty()) {
+            return false;
+        }
+        std::istringstream in_stream(std::string(buf.begin(), buf.end()), std::ios::binary);
+        #if defined(__ANDROID__) || defined(IMAGEIO_LITE)
         image::LinearImage* image = new image::LinearImage(
-                image::ImageDecoder::decode(in_stream, path.getAbsolutePath().c_str()));
+                image_ns::ImageDecoder::decode(in_stream, utils::CString(path.getAbsolutePath().c_str())));
+#else
+        image::LinearImage* image = new image::LinearImage(
+                image_ns::ImageDecoder::decode(in_stream, path.getAbsolutePath()));
+#endif
         w = image->getWidth();
         h = image->getHeight();
         n = image->getChannels();
@@ -83,10 +107,12 @@ bool IBL::loadFromEquirect(Path const& path) {
             delete reinterpret_cast<image::LinearImage*>(user);
         };
     } else {
-        stbi_info(path.getAbsolutePath().c_str(), &w, &h, nullptr);
-        // load image as float
-        size = w * h * sizeof(float3);
-        data = (float3*)stbi_loadf(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        auto buf = loader->load(path);
+        if (!buf.empty()) {
+            stbi_info_from_memory(buf.data(), buf.size(), &w, &h, nullptr);
+            size = w * h * sizeof(float3);
+            data = (float3*)stbi_loadf_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
+        }
         destroyer = [](void* data, size_t, void*) {
             stbi_image_free(data);
         };
@@ -146,25 +172,28 @@ bool IBL::loadFromEquirect(Path const& path) {
     return true;
 }
 
-bool IBL::loadFromKtx(const std::string& prefix) {
+bool IBL::loadFromKtx(const std::string& prefix, filament::app::AssetLoader* loader) {
+    filament::app::DesktopAssetLoader defaultLoader;
+    if (!loader) {
+        loader = &defaultLoader;
+    }
     Path iblPath(prefix + "_ibl.ktx");
-    if (!iblPath.exists()) {
-        return false;
-    }
     Path skyPath(prefix + "_skybox.ktx");
-    if (!skyPath.exists()) {
-        return false;
-    }
 
-    auto createKtx = [] (Path path) {
+    auto createKtx = [loader] (Path path) -> image::Ktx1Bundle* {
         using namespace std;
-        ifstream file(path.getPath(), ios::binary);
-        vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
+        auto contents = loader->load(path);
+        if (contents.empty()) return nullptr;
         return new image::Ktx1Bundle(contents.data(), contents.size());
     };
 
     Ktx1Bundle* iblKtx = createKtx(iblPath);
     Ktx1Bundle* skyKtx = createKtx(skyPath);
+    if (!iblKtx || !skyKtx) {
+        delete iblKtx;
+        delete skyKtx;
+        return false;
+    }
 
     mSkyboxTexture = Ktx1Reader::createTexture(&mEngine, skyKtx, false);
     mTexture = Ktx1Reader::createTexture(&mEngine, iblKtx, false);
@@ -193,39 +222,43 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     return true;
 }
 
-bool IBL::loadFromDirectory(const utils::Path& path) {
+bool IBL::loadFromDirectory(const utils::Path& path, filament::app::AssetLoader* loader) {
+    filament::app::DesktopAssetLoader defaultLoader;
+    if (!loader) {
+        loader = &defaultLoader;
+    }
     // First check if KTX files are available.
-    if (loadFromKtx(Path::concat(path, path.getName()))) {
+    if (loadFromKtx(Path::concat(path, path.getName()), loader)) {
         return true;
     }
     // Read spherical harmonics
     Path sh(Path::concat(path, "sh.txt"));
-    if (sh.exists()) {
-        std::ifstream shReader(sh);
-        shReader >> std::skipws;
-
-        std::string line;
-        for (float3& band : mBands) {
-            std::getline(shReader, line);
-            int n = sscanf(line.c_str(), "(%f,%f,%f)", &band.r, &band.g, &band.b); // NOLINT(cert-err34-c)
-            if (n != 3) return false;
-        }
-    } else {
-        return false;
+    std::string shContent;
+    auto buf = loader->load(sh);
+    if (buf.empty()) return false;
+    shContent = std::string(buf.begin(), buf.end());
+    
+    std::istringstream shReader(shContent);
+    shReader >> std::skipws;
+    std::string line;
+    for (float3& band : mBands) {
+        std::getline(shReader, line);
+        int n = sscanf(line.c_str(), "(%f,%f,%f)", &band.r, &band.g, &band.b);
+        if (n != 3) return false;
     }
     mHasSphericalHarmonics = true;
 
     // Read mip-mapped cubemap
     const std::string prefix = "m";
-    if (!loadCubemapLevel(&mTexture, path, 0, prefix + "0_")) return false;
+    if (!loadCubemapLevel(&mTexture, path, loader, 0, prefix + "0_")) return false;
 
     size_t numLevels = mTexture->getLevels();
     for (size_t i = 1; i<numLevels; i++) {
         const std::string levelPrefix = prefix + std::to_string(i) + "_";
-        loadCubemapLevel(&mTexture, path, i, levelPrefix);
+        loadCubemapLevel(&mTexture, path, loader, i, levelPrefix);
     }
 
-    if (!loadCubemapLevel(&mSkyboxTexture, path)) return false;
+    if (!loadCubemapLevel(&mSkyboxTexture, path, loader)) return false;
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
@@ -238,11 +271,11 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     return true;
 }
 
-bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path, size_t level,
+bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path, filament::app::AssetLoader* loader, size_t level,
         std::string const& levelPrefix) const {
     uint32_t dim;
     Texture::PixelBufferDescriptor buffer;
-    if (loadCubemapLevel(texture, &buffer, &dim, path, level, levelPrefix)) {
+    if (loadCubemapLevel(texture, &buffer, &dim, path, loader, level, levelPrefix)) {
         (*texture)->setImage(mEngine, level, 0, 0, 0, dim, dim, 6, std::move(buffer));
         return true;
     }
@@ -253,7 +286,11 @@ bool IBL::loadCubemapLevel(
         filament::Texture** texture,
         Texture::PixelBufferDescriptor* outBuffer,
         uint32_t* dim,
-        const utils::Path& path, size_t level, std::string const& levelPrefix) const {
+        const utils::Path& path, filament::app::AssetLoader* loader, size_t level, std::string const& levelPrefix) const {
+    filament::app::DesktopAssetLoader defaultLoader;
+    if (!loader) {
+        loader = &defaultLoader;
+    }
     static const char* faceSuffix[6] = { "px", "nx", "py", "ny", "pz", "nz" };
 
     size_t size = 0;
@@ -261,13 +298,12 @@ bool IBL::loadCubemapLevel(
 
     { // this is just a scope to avoid variable name hiding below
         int w, h;
+        if (!loader) return false;
         std::string faceName = levelPrefix + faceSuffix[0] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));
-        if (!facePath.exists()) {
-            std::cerr << "The face " << faceName << " does not exist" << std::endl;
-            return false;
-        }
-        stbi_info(facePath.getAbsolutePath().c_str(), &w, &h, nullptr);
+        auto buf = loader->load(facePath);
+        if (buf.empty()) return false;
+        stbi_info_from_memory(buf.data(), buf.size(), &w, &h, nullptr);
         if (w != h) {
             std::cerr << "width != height" << std::endl;
             return false;
@@ -305,14 +341,13 @@ bool IBL::loadCubemapLevel(
     for (size_t j = 0; j < 6; j++) {
         std::string faceName = levelPrefix + faceSuffix[j] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));
-        if (!facePath.exists()) {
-            std::cerr << "The face " << faceName << " does not exist" << std::endl;
-            success = false;
-            break;
-        }
 
         int w, h, n;
-        unsigned char* data = stbi_load(facePath.getAbsolutePath().c_str(), &w, &h, &n, 4);
+        unsigned char* data = nullptr;
+        auto buf = loader->load(facePath);
+        if (!buf.empty()) {
+            data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 4);
+        }
         if (w != h || w != size) {
             std::cerr << "Face " << faceName << "has a wrong size " << w << " x " << h <<
             ", instead of " << size << " x " << size << std::endl;

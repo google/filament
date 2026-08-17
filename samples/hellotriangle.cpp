@@ -45,6 +45,7 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -56,6 +57,8 @@ struct App {
     Skybox* skybox;
     Entity renderable;
 };
+} // anonymous namespace
+
 
 struct Vertex {
     filament::math::float2 position;
@@ -127,6 +130,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto fApp = FilamentApp2::Builder()
                         .displayManager(dm)
+                        .assetLoader(loader)
                         .title(app->config.title)
                         .backend(app->config.backend)
                         .featureLevel(app->config.featureLevel)

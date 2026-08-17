@@ -128,10 +128,13 @@ static SampleConfig g_config;
 static float g_meshScale = 1.0f;
 FilamentApp2* g_filamentApp = nullptr;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp;
 };
+} // anonymous namespace
+
 
 // Prints the usage message to the console.
 // Parses command line arguments and populates the SampleConfig object.

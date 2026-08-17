@@ -29,11 +29,14 @@
 
 using namespace filament;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
     Skybox* skybox;
 };
+} // anonymous namespace
+
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
