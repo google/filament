@@ -53,7 +53,7 @@ namespace utils {
 
 #ifdef __ANDROID__
 
-#if __ANDROID_API__ >= 26
+#if FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 26
 
 // Starting with API 26 (Oreo) we have ASharedMemory
 int ashmem_create_region(const char *name, size_t size) {
@@ -129,7 +129,7 @@ error:
     return ret;
 }
 
-#endif // __ANDROID_API__ >= 26
+#endif // FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 26
 
 #elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 
