@@ -272,12 +272,13 @@ public:
 
         /**
          * Schedules the completion callback with the given status, unless it has already been
-         * scheduled. Can be called from any thread, `scheduleAsyncCallback` is thread-safe.
+         * scheduled. Safe to invoke from whichever thread owns this completion (e.g., worker thread
+         * on completion or calling thread on cancellation), as `scheduleAsyncCallback` is
+         * thread-safe.
          */
         void schedule(AsyncCallStatus const status) {
-            if (mCallback) {
-                mDriver->scheduleAsyncCallback(mHandler, mCallback, mUser, status);
-                mCallback = nullptr;
+            if (auto cb = std::exchange(mCallback, nullptr)) {
+                mDriver->scheduleAsyncCallback(mHandler, cb, mUser, status);
             }
         }
 
