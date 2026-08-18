@@ -2996,6 +2996,8 @@ The command line flags relevant to application development are described in tabl
 **-v**, **--variant-filter**    | [variant]          | Filters out the specified, comma-separated variants
 **-f**, **-output-format**      | blob/header/mat    | Default to blob, when mat is set, returns a `.mat` with `#include`s resolved
 **--include-source-mat**        | N/A                | Embeds the source ASCII material definition if set
+**-A**, **--api-level**         | number             | Overrides the matc API level
+**-i**, **--api-level-info**    | N/A                | Outputs the highest supported material API level
 [Table [matcFlags]: List of `matc` flags]
 
 `matc` offers a few other flags that are irrelevant to application developers and for internal
@@ -3096,6 +3098,17 @@ Specifies the output format:
 Embeds the source ASCII material definition into the compiled material package (blob). The embedded source code has all
 `#include` directives recursively resolved.
 
+### --api-level
+Overrides the API level to compile the material against. If the source material already specifies an `apiLevel` inside
+the `material` block, this command line option overrides it.
+
+The provided value must be a valid API level (e.g. `1` or `2`) and cannot exceed the highest supported unstable API
+level of the compiler.
+
+### --api-level-info
+Prints the compiler's supported API levels (both the current released API level and the next unstable API level under
+development).
+
 # Handling colors
 
 ## Linear colors
@@ -3162,6 +3175,10 @@ runtime on the remote end, material API versioning ensures compatibility across 
 project uses a single Filament instance, but `apiLevel` is still required when opting into features introduced at higher
 API levels features.
 
+!!! TIP: Overriding API level via command-line
+    You can also override or query the API level at compile-time using the `matc` command-line flags
+    [`--api-level`](#--api-level) and [`--api-level-info`](#--api-level-info).
+
 ## Define `apiLevel` in `.mat` files
 When authoring a material, you can specify apiLevel inside the material block. If omitted, it defaults to 1.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
@@ -3175,6 +3192,13 @@ material {
 Check the documentation for specific material features (for example, morphing requires API level 2) or refer to the
 Shader public APIs section above. If no API level is explicitly mentioned for a function or feature, it is available at
 baseline `apiLevel: 1`; otherwise, use the level specified.
+
+### API level mismatch
+If there's a mismatch in apiLevel (for example, the material uses an API that requires API level of 2, but specifies
+`apiLevel: 1` in the material), you will get an error message:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ERROR: {line_number}: {api_name} requires api level N
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Control material behaviors
 System/remote renderers can use `#define`s injected during compilation:
