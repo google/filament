@@ -286,7 +286,6 @@ void ShaderCompilerService::init() noexcept {
         }
 
         mShaderCompilerThreadCount = poolSize;
-        mCompilerThreadPriority = priority;
         mCompilerThreadPool.init(mShaderCompilerThreadCount,
                 [&platform = mDriver.mPlatform, priority] {
                     // give the thread a name
@@ -418,7 +417,7 @@ void ShaderCompilerService::compileProgram(
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
-                        token->priorityOverride.restoreDefaultPriority(mCompilerThreadPriority);
+                        token->priorityOverride.restorePriority();
                         // Updates the token's state. If the token is canceled while this function
                         // executes, this update notifies `tick` that GL resource loading is
                         // complete, allowing `tick` to proceed with resource destruction.
