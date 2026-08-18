@@ -1776,6 +1776,33 @@ using AsyncCallId = uint32_t;
 
 static constexpr AsyncCallId InvalidAsyncCallId = std::numeric_limits<AsyncCallId>::max();
 
+/**
+ * Outcome of an asynchronous operation, reported to its completion callback.
+ *
+ * A completion callback that cannot say why it fired is ambiguous: chaining another operation from
+ * a callback that fired because the operation was canceled would proceed on a resource that was
+ * never populated. The caller cannot reconstruct the answer out of band either, because an
+ * operation can be canceled without anyone asking for it (the driver dropping queued work while
+ * shutting down).
+ *
+ * @see AsyncCallback, cancelAsyncJob
+ */
+enum class AsyncCallStatus : uint8_t {
+    COMPLETED,  //!< The operation ran to completion.
+    CANCELED,   //!< The operation never ran: it was canceled, or dropped because the driver is
+                //!< shutting down.
+};
+
+/**
+ * Completion callback of an asynchronous operation.
+ *
+ * This is deliberately not a CallbackHandler::Callback: that one is shared with readPixels(),
+ * fences, buffer release and others, none of which has a cancellation concept.
+ *
+ * @see AsyncCallStatus
+ */
+using AsyncCallback = void(*)(void* user, AsyncCallStatus status);
+
 using AsynchronousMode = Platform::AsynchronousMode;
 
 } // namespace filament::backend

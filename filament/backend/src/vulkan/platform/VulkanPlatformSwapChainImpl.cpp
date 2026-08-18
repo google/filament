@@ -338,7 +338,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
 
     VkPresentTimesInfoGOOGLE presentTimeInfoGoogle = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_TIMES_INFO_GOOGLE,
-        .swapchainCount = 0,
+        .swapchainCount = 1,
         .pTimes = &presentTime,
     };
 

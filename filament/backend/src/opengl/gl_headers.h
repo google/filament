@@ -93,6 +93,30 @@
 #endif
 
 /*
+ * Calling convention of the GL entry points.
+ *
+ * On 32-bit Windows GL entry points are __stdcall while the default is __cdecl, so pointers to
+ * GL functions must be declared with the right convention (on 64-bit there is only one convention
+ * and the distinction disappears). GLES headers spell it GL_APIENTRYP, desktop GL headers spell
+ * it APIENTRYP.
+ *
+ * Windows is the only platform here with more than one convention, so anywhere else a plain *
+ * is correct no matter what the headers happen to spell. On Windows both paths always define
+ * one of the two (glcorearb.h and the GLES headers do so unconditionally), so getting
+ * this far there means the convention is unknown, and guessing it would silently reintroduce
+ * the mismatch.
+ */
+#if defined(GL_APIENTRYP)
+#   define FILAMENT_GL_APIENTRYP GL_APIENTRYP
+#elif defined(APIENTRYP)
+#   define FILAMENT_GL_APIENTRYP APIENTRYP
+#elif defined(_WIN32)
+#   error "GL headers define neither GL_APIENTRYP nor APIENTRYP"
+#else
+#   define FILAMENT_GL_APIENTRYP *
+#endif
+
+/*
  * GLES extensions
  */
 

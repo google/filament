@@ -1208,6 +1208,8 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
         case Property::SHADOW_STRENGTH:             return "SHADOW_STRENGTH";
         case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
+        case Property::SECOND_ROUGHNESS:            return "SECOND_ROUGHNESS";
+        case Property::SECOND_ROUGHNESS_WEIGHT:     return "SECOND_ROUGHNESS_WEIGHT";
     }
 }
 

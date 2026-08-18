@@ -16,7 +16,9 @@ struct Light {
 struct PixelParams {
     vec3  diffuseColor;
     float perceptualRoughness;
+#if defined(MATERIAL_HAS_REFRACTION)
     float perceptualRoughnessUnclamped;
+#endif
     vec3  f0;
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
     float f90;
@@ -26,6 +28,14 @@ struct PixelParams {
     float roughness;
     vec3  dfg;
     vec3  energyCompensation;
+
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    float secondRoughness;
+    float secondPerceptualRoughness;
+    vec2  secondDfg;
+    vec3  secondEnergyCompensation;
+    float secondRoughnessWeight;
+#endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float clearCoat;
@@ -80,7 +90,6 @@ float computeMicroShadowing(float NoL, float visibility) {
     return microShadow * microShadow;
 }
 
-
 /**
  * Returns the reflected vector at the current shading point. The reflected vector
  * return by this function might be different from shading_reflected:
@@ -89,7 +98,6 @@ float computeMicroShadowing(float NoL, float visibility) {
  * - The reflected vector may be modified to point towards the dominant specular
  *   direction to match reference renderings when the roughness increases
  */
-
 vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;

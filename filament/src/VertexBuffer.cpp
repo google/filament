@@ -49,7 +49,10 @@ backend::AsyncCallId VertexBuffer::setBufferObjectAtAsync(Engine& engine, uint8_
 }
 
 bool VertexBuffer::isCreationComplete() const noexcept {
-    return downcast(this)->isCreationComplete();
+    // Deliberately not FVertexBuffer::isCreationSettled(), which is the internal lifetime
+    // gate and is true even for a canceled creation. Callers of this public method are
+    // asking whether the resource is usable.
+    return downcast(this)->isCreationSuccessful();
 }
 
 } // namespace filament

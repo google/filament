@@ -52,8 +52,9 @@ class UTILS_PUBLIC IndexBuffer : public FilamentAPI {
 
 public:
     using BufferDescriptor = backend::BufferDescriptor;
-    using AsyncCompletionCallback =
-            std::function<void(IndexBuffer* UTILS_NONNULL, void* UTILS_NULLABLE)>;
+    using AsyncCallStatus = backend::AsyncCallStatus;
+    using AsyncCompletionCallback = std::function<void(IndexBuffer* UTILS_NONNULL,
+            void* UTILS_NULLABLE, AsyncCallStatus)>;
     using AsyncCallId = backend::AsyncCallId;
 
     /**
@@ -124,13 +125,17 @@ public:
          * are safe because they are queued and executed in sequence. However, invoking regular
          * methods on the same resource before it's fully ready is unsafe and may cause undefined
          * behavior. Users can call the `isCreationComplete()` method for the resource to confirm
-         * when the resource is ready for regular API calls.
+         * when the resource is ready for regular API calls. It returns false if the asynchronous
+         * creation was canceled, in which case the resource was never populated and must not be
+         * used.
          *
          * To use this method, the engine must be configured for asynchronous operation. Otherwise,
          * calling async method will cause the program to terminate.
          *
          * @param handler Handler to dispatch the callback or nullptr for the default handler
          * @param callback A function to be called upon the completion of an asynchronous creation.
+         *                 Its `AsyncCallStatus` argument reports whether the operation ran
+         *                 (`COMPLETED`) or never ran (`CANCELED`).
          * @param user The custom data that will be passed as the second argument to the `callback`.
          * @return This Builder, for chaining calls.
          */
@@ -185,6 +190,8 @@ public:
      * @param byteOffset Offset in *bytes* into the IndexBuffer. Must be multiple of 4.
      * @param handler   Handler to dispatch the callback or nullptr for the default handler
      * @param callback  A function to be called upon the completion of an asynchronous creation.
+     *                  Its `AsyncCallStatus` argument reports whether the operation ran
+     *                  (`COMPLETED`) or never ran (`CANCELED`).
      * @param user      The custom data that will be passed as the second argument to the `callback`.
      *
      * @return       An ID that the caller can use to cancel the operation.
@@ -200,12 +207,15 @@ public:
     size_t getIndexCount() const noexcept;
 
     /**
-     * This non-blocking method checks if the resource has finished creation. If the resource
-     * creation was initiated asynchronously, it will return true only after all related
-     * asynchronous tasks are complete. If the resource was created normally without using async
-     * method, it will always return true.
+     * This non-blocking method checks if the resource has finished creation *successfully*. If the
+     * resource creation was initiated asynchronously, it will return true only after all related
+     * asynchronous tasks are complete, and only if none of them was canceled. If the resource was
+     * created normally without using async method, it will always return true.
      *
-     * @return Whether the resource is created.
+     * A canceled asynchronous creation never populates the resource, so this method keeps returning
+     * false for it. The object itself remains valid and must still be destroyed as usual.
+     *
+     * @return Whether the resource is created and usable.
      *
      * @see Builder::async()
      */
