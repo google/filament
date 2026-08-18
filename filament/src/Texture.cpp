@@ -84,7 +84,10 @@ void Texture::generateMipmaps(Engine& engine) const {
 }
 
 bool Texture::isCreationComplete() const noexcept {
-    return downcast(this)->isCreationComplete();
+    // Deliberately not FTexture::isCreationSettled(), which is the internal lifetime
+    // gate and is true even for a canceled creation. Callers of this public method are
+    // asking whether the resource is usable.
+    return downcast(this)->isCreationSuccessful();
 }
 
 bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const format) noexcept {

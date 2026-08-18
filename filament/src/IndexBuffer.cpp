@@ -37,7 +37,10 @@ size_t IndexBuffer::getIndexCount() const noexcept {
 }
 
 bool IndexBuffer::isCreationComplete() const noexcept {
-    return downcast(this)->isCreationComplete();
+    // Deliberately not FIndexBuffer::isCreationSettled(), which is the internal lifetime
+    // gate and is true even for a canceled creation. Callers of this public method are
+    // asking whether the resource is usable.
+    return downcast(this)->isCreationSuccessful();
 }
 
 } // namespace filament

@@ -1058,7 +1058,7 @@ void VulkanDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t id,
             std::move(tag));
     // Still fire the callback to avoid deadlocking the frontend's `CountdownCallbackHandler`. In
     // release builds where the assert is compiled out, an unfired callback would leave
-    // mCreationComplete stuck at false, causing deferred destruction to spin forever.
+    // mCreationStatus stuck at CREATING, causing deferred destruction to spin forever.
     scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
 }
 
@@ -2059,9 +2059,10 @@ void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
 
-    getJobQueue()->push([this, vb, bo, index, handler, callback, user]() mutable {
+    getJobQueue()->push([this, vb, bo, index,
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         setVertexBufferObjectCommon(vb, index, bo);
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+        completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -2091,10 +2092,10 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
 
-    getJobQueue()->push([this, ib, p = std::move(p), byteOffset, handler, callback,
-            user]() mutable {
+    getJobQueue()->push([this, ib, p = std::move(p), byteOffset,
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         updateIndexBufferCommon(ib, std::move(p), byteOffset);
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+        completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -2124,10 +2125,10 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
 
-    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset, handler, callback,
-            user]() mutable {
+    getJobQueue()->push([this, bo, bd = std::move(bd), byteOffset,
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         updateBufferObjectCommon(bo, std::move(bd), byteOffset);
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+        completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -2179,10 +2180,11 @@ void VulkanDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
     getJobQueue()->push([this, t, level, xoffset, yoffset, zoffset, width, height, depth,
-            data = std::move(data), handler, callback, user]() mutable {
+            data = std::move(data),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         update3DImageCommon(t, level, xoffset, yoffset, zoffset, width, height, depth,
                 std::move(data));
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+        completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
@@ -3133,11 +3135,12 @@ void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void VulkanDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
         CallbackHandler* handler, AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
-    getJobQueue()->push([this, command = std::move(command), handler, callback, user]() mutable {
+    getJobQueue()->push([command = std::move(command),
+            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
         if (command) {
             command();
         }
-        scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+        completion.schedule(AsyncCallStatus::COMPLETED);
     }, jobId);
 }
 
