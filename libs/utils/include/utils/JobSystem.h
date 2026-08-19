@@ -630,8 +630,8 @@ struct ParallelForJobData {
             uint32_t const totalWorkers, Functor functor) noexcept
             : nextIndex(start),
               endIndex(start + count),
-              activeWorkers(uint16_t(totalWorkers)),
-              chunkSize(uint16_t(chunkSize)),
+              chunkSize(std::max<uint32_t>(1, chunkSize)),
+              activeWorkers(totalWorkers),
               functor(std::move(functor)) {
     }
 
@@ -691,11 +691,11 @@ struct ParallelForJobData {
         that->runRoot(js, root);
     }
 
-    // Packed struct members: total header = 12 bytes (+4 bytes padding for 8-byte aligned Functor)
+    // Packed struct members: total header = 16 bytes (4 x 4-byte fields)
     std::atomic<uint32_t> nextIndex = { 0 };
     uint32_t endIndex = 0;
-    std::atomic<uint16_t> activeWorkers = { 0 };
-    uint16_t chunkSize = 1;
+    uint32_t chunkSize = 1;
+    std::atomic<uint32_t> activeWorkers = { 0 };
     Functor functor;
 };
 

@@ -291,6 +291,42 @@ TEST(JobSystem, JobSystemParallelFor) {
     js.emancipate();
 }
 
+TEST(JobSystem, JobSystemParallelForLargeChunkSize) {
+    JobSystem js;
+    js.adopt();
+
+    constexpr size_t COUNT = 131072;
+    std::vector<uint32_t> data(COUNT, 0);
+
+    // Test with chunkSize = 65536 (exact multiple of 2^16, which would truncate to 0 in uint16_t)
+    JobSystem::Job* job1 = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 1;
+                }
+            }, CountSplitter<65536>());
+    js.runAndWait(job1);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 1u);
+    }
+
+    // Test with chunkSize = 70000 (> 2^16)
+    JobSystem::Job* job2 = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 2;
+                }
+            }, CountSplitter<70000>());
+    js.runAndWait(job2);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 3u);
+    }
+
+    js.emancipate();
+}
+
 TEST(JobSystem, JobSystemDelegates) {
     JobSystem js;
     js.adopt();
