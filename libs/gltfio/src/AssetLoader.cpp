@@ -1353,8 +1353,29 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity, FFilamen
     }
 
     if (light->range == 0.0f) {
-        // Use 10.0f units as a resonable default falloff value.
-        builder.falloff(10.0f);
+        // The spec calls for an infinite range in this case, but it's extremely inefficient
+        // for our clustered forward rendering system. Instead, attempt to compute a reasonable
+        // range that aims fo 0.05 candela at a certain distance.
+        //
+        // The light formula is:
+        //   E = I / distance^2 * saturate(1 - distance^4 / range^4)^2
+        //
+        // Ignoring the windowing function:
+        //   E = I / distance^2
+        //
+        // Solving for a known intensity:
+        //   0.05 = I / distance^2
+        //   distance = sqrt(I / 0.05)
+        //
+        // The resulting range is however way too large so we aggressively tune it down by
+        // using ^(1/4) instead of a square root. This still gives good results and compares
+        // favorably to hand-picked ranges.
+        //
+        // Note: this is a best effort guess since we don't take the camera's exposure into
+        // account. A target of 0.05 candela is ~0.6 lumen for a point light (4pi steradians),
+        // so it's extremely dim.
+        float const range = std::pow(light->intensity / 0.05f, 0.25f);
+        builder.falloff(range);
     } else {
         builder.falloff(light->range);
     }
