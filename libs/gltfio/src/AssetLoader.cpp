@@ -1813,7 +1813,7 @@ void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* sr
 
         // Build a list of transformables for this skin, one for each joint.
         dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
-        for (cgltf_size j = 0, jointsLen = srcSkin.joints_count; i < jointsLen; ++i) {
+        for (cgltf_size j = 0, jointsLen = srcSkin.joints_count; j < jointsLen; ++j) {
             dstSkin.joints[j] = nodeMap[srcSkin.joints[j] - srcAsset->nodes];
         }
     }
