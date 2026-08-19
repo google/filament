@@ -414,7 +414,12 @@ public:
         return mParallelSplitCount;
     }
 
-    size_t getThreadCount() const { return mThreadCount; }
+    size_t getThreadCount() const noexcept { return mThreadCount; }
+
+    // returns the high-water mark of active threads (pool threads + adopted threads)
+    size_t getActiveThreadCount() const noexcept {
+        return mActiveThreadCount.load(std::memory_order_relaxed);
+    }
 
     // returns the current ThreadId, which can be used with run(). This method can only be
     // called from a job's function.
@@ -586,25 +591,32 @@ public:
 
 namespace details {
 
-// Traits helper to detect if a splitter provides a custom getChunkSize() method.
-// If absent, computes an adaptive chunk size targeting ~4 chunks per available worker thread.
+// Traits helper to extract the chunk size from a splitter.
+// Splitters must define getChunkSize() or getChunkSize(count, threadCount).
 template<typename S>
 struct SplitterTraits {
     template<typename T>
-    static auto test(int) -> decltype(std::declval<T>().getChunkSize(), std::true_type{});
+    static auto test_0(int) -> decltype(std::declval<T>().getChunkSize(), std::true_type{});
     template<typename>
-    static auto test(...) -> std::false_type;
+    static auto test_0(...) -> std::false_type;
 
-    static constexpr bool has_chunk_size = decltype(test<S>(0))::value;
+    template<typename T>
+    static auto test_2(int) -> decltype(std::declval<T>().getChunkSize(uint32_t(), uint32_t()), std::true_type{});
+    template<typename>
+    static auto test_2(...) -> std::false_type;
+
+    static constexpr bool has_chunk_size_0 = decltype(test_0<S>(0))::value;
+    static constexpr bool has_chunk_size_2 = decltype(test_2<S>(0))::value;
+
+    static_assert(has_chunk_size_0 || has_chunk_size_2,
+            "Custom splitter must define getChunkSize() or getChunkSize(count, threadCount). "
+            "The old split() method is no longer supported.");
 
     static uint32_t getChunkSize(const S& splitter, uint32_t const totalCount, uint32_t const threadCount) noexcept {
-        if constexpr (has_chunk_size) {
+        if constexpr (has_chunk_size_2) {
+            return uint32_t(std::max<size_t>(1, splitter.getChunkSize(totalCount, threadCount)));
+        } else if constexpr (has_chunk_size_0) {
             return uint32_t(std::max<size_t>(1, splitter.getChunkSize()));
-        } else {
-            // Adaptive chunking: split into 4 chunks per thread to balance load while
-            // keeping atomic fetch_add contention low.
-            uint32_t const targetChunks = std::max<uint32_t>(1, threadCount * 4);
-            return std::max<uint32_t>(1, totalCount / targetChunks);
         }
     }
 };
@@ -751,11 +763,14 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         return js.createJob(parent, [](JobSystem&, JobSystem::Job*) {});
     }
 
-    uint32_t const threadCount = uint32_t(js.getThreadCount());
-    uint32_t const chunkSize = details::SplitterTraits<S>::getChunkSize(splitter, count, threadCount);
+    uint32_t const poolThreads = uint32_t(js.getThreadCount());
+    uint32_t const totalThreads = (poolThreads == 0) ? 0 :
+            std::max(poolThreads, uint32_t(js.getActiveThreadCount()));
+
+    uint32_t const chunkSize = details::SplitterTraits<S>::getChunkSize(splitter, count, totalThreads);
     uint32_t const numChunks = (count + chunkSize - 1) / chunkSize;
-    uint32_t const helperCount = (threadCount > 0 && numChunks > 1) ?
-            std::min<uint32_t>(threadCount, numChunks - 1) : 0;
+    uint32_t const helperCount = (totalThreads > 0 && numChunks > 1) ?
+            std::min<uint32_t>(totalThreads - 1, numChunks - 1) : 0;
     uint32_t const totalWorkers = helperCount + 1;
 
     using JobData = details::ParallelForJobData<S, F>;

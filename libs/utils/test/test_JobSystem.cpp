@@ -344,6 +344,90 @@ TEST(JobSystem, JobSystemParallelForEmptyCount) {
     js.emancipate();
 }
 
+TEST(JobSystem, JobSystemParallelForAdoptedThreads) {
+    JobSystem js(1, 3);
+    js.adopt();
+
+    std::atomic<bool> bgRunning{true};
+    std::atomic<int> bgAdoptedCount{0};
+    std::vector<std::thread> bgThreads;
+    for (int i = 0; i < 2; ++i) {
+        bgThreads.emplace_back([&js, &bgRunning, &bgAdoptedCount]() {
+            js.adopt();
+            bgAdoptedCount.fetch_add(1, std::memory_order_release);
+            while (bgRunning.load(std::memory_order_relaxed)) {
+                std::this_thread::yield();
+            }
+            js.emancipate();
+        });
+    }
+
+    while (bgAdoptedCount.load(std::memory_order_acquire) < 2) {
+        std::this_thread::yield();
+    }
+
+    EXPECT_GE(js.getActiveThreadCount(), 3u);
+
+    constexpr size_t COUNT = 1000;
+    std::vector<uint32_t> data(COUNT, 0);
+    JobSystem::Job* job = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 1;
+                }
+            }, CountSplitter<10>());
+    js.runAndWait(job);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 1u);
+    }
+
+    bgRunning.store(false, std::memory_order_release);
+    for (auto& t : bgThreads) {
+        t.join();
+    }
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemCustomSplitters) {
+    JobSystem js;
+    js.adopt();
+
+    struct CustomFixedSplitter {
+        size_t getChunkSize() const noexcept { return 8; }
+    };
+
+    struct CustomDynamicSplitter {
+        size_t getChunkSize(uint32_t count, uint32_t threadCount) const noexcept {
+            return std::max<uint32_t>(1, count / (threadCount * 2));
+        }
+    };
+
+    constexpr size_t COUNT = 128;
+    std::vector<uint32_t> data1(COUNT, 0);
+    std::vector<uint32_t> data2(COUNT, 0);
+
+    JobSystem::Job* job1 = parallel_for(js, nullptr, data1.data(), data1.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) ptr[i] += 1;
+            }, CustomFixedSplitter{});
+    js.runAndWait(job1);
+
+    JobSystem::Job* job2 = parallel_for(js, nullptr, data2.data(), data2.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) ptr[i] += 2;
+            }, CustomDynamicSplitter{});
+    js.runAndWait(job2);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data1[i], 1u);
+        EXPECT_EQ(data2[i], 2u);
+    }
+
+    js.emancipate();
+}
+
 TEST(JobSystem, JobSystemDelegates) {
     JobSystem js;
     js.adopt();
