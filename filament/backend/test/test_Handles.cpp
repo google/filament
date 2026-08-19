@@ -34,8 +34,12 @@ static constexpr size_t POOL_SIZE_BYTES = 8 * 1024U * 1024U;
 #define HandleAllocatorTest  HandleAllocatorGL
 #elif defined(FILAMENT_SUPPORTS_METAL)
 #define HandleAllocatorTest  HandleAllocatorMTL
+#elif defined(FILAMENT_SUPPORTS_VULKAN)
+#define HandleAllocatorTest  HandleAllocatorVK
+#elif defined(FILAMENT_SUPPORTS_WEBGPU)
+#define HandleAllocatorTest  HandleAllocatorWGPU
 #else
-#error test_Handles requires the OpenGL or Metal backend
+#error test_Handles requires at least one backend
 #endif
 // NOTE: actual count may be lower due to alignment requirements
 constexpr size_t const POOL_HANDLE_COUNT = POOL_SIZE_BYTES / HandleAllocatorTest::bucketSizesSum;

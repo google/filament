@@ -169,7 +169,7 @@ TEST_P(MetalBlitterTest, Blit) {
 TEST_P(MetalBlitterDepthTest, DepthBlit) {
     SKIP_IF_NOT(Backend::METAL, "MetalBlitter only works with the Metal backend");
 
-#if TARGET_OS_SIMULATOR
+#if defined(FILAMENT_IOS_SIMULATOR)
     // fillTexture/verifyTexture need CPU-accessible (shared) textures, but the
     // simulator cannot allocate depth textures with MTLStorageModeShared.
     GTEST_SKIP() << "depth textures cannot use shared storage in the simulator";

@@ -5,6 +5,19 @@ set(TARGET backend)
 set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
+option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
+
+# On iOS-family platforms backend_test is opt-in (INSTALL_BACKEND_TEST): it is only useful
+# embedded in a runner app, and ImageExpectations needs std::filesystem, which requires a 13.0+
+# deployment target (the default iOS device floor is 11.0). backend_test links filamat, which
+# already requires 13.0, so this raises no floor that wasn't already implied. Gated on
+# INSTALL_BACKEND_TEST so that default builds keep the 11.0 floor.
+# Like filamat and glslang, this is included before any target is declared: the deployment
+# target is directory-scoped, so in test-runner builds it applies to `backend` as well.
+if (IOS AND INSTALL_BACKEND_TEST)
+    include(${EXTERNAL}/clang/usage_ios_13.cmake)
+endif()
+
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
@@ -581,8 +594,6 @@ endif()
 # Test
 # ==================================================================================================
 if (FILAMENT_BUILD_TESTING)
-    option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
-
     if (APPLE OR LINUX)
         set(BACKEND_TEST_SRC
             test/BackendTest.cpp
@@ -653,17 +664,6 @@ if (FILAMENT_BUILD_TESTING)
         file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
     endif()
 
-    # On iOS-family platforms the test library is opt-in (INSTALL_BACKEND_TEST): it is only
-    # useful embedded in a runner app, and ImageExpectations needs
-    # std::filesystem, which requires a 13.0+ deployment target (the default
-    # iOS device floor is 11.0). backend_test links filamat, which already
-    # requires 13.0, so this raises no floor that wasn't already implied.
-    # Scoped to INSTALL_BACKEND_TEST builds so default builds keep 11.0.
-    # NOTE: CMAKE_OSX_DEPLOYMENT_TARGET is directory-scoped, so in test-runner
-    # builds this also raises the backend library itself to 13.0.
-    if (IOS AND INSTALL_BACKEND_TEST)
-        include(${EXTERNAL}/clang/usage_ios_13.cmake)
-    endif()
     if (APPLE AND (NOT IOS OR INSTALL_BACKEND_TEST))
         if (NOT IOS)
             # Uses CVPixelBuffer-backed external images; host-only.
