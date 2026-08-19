@@ -45,6 +45,7 @@ using namespace filament::math;
 
 using Backend = Engine::Backend;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -55,7 +56,8 @@ struct App {
     mat4f transform;
 };
 
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -104,11 +106,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         engine->destroy(app->material);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {

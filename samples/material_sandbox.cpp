@@ -63,34 +63,36 @@ using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-static std::vector<Path> g_filenames;
-
-static Scene* g_scene = nullptr;
-
-std::unique_ptr<MeshAssimp> g_meshSet;
-static std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
-static SandboxParameters g_params;
-static ColorGradingOptions g_lastColorGradingOptions;
-static ColorGrading* g_colorGrading = nullptr;
-static SampleConfig g_config;
-FilamentApp2* g_filamentApp = nullptr;
+namespace {
 
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
 };
 
-static bool g_shadowPlane = false;
-static bool g_singleMode = false;
-static float g_meshScale = 1.0f;
-static float g_rangePlot[1024 * 3];
-static float g_curvePlot[1024 * 3];
+std::vector<Path> g_filenames;
 
-constexpr static ImVec2 verticalSliderSize(18.0f, 160.0f);
-constexpr static ImVec2 plotLinesSize(320.0f, 160.0f);
-constexpr static ImVec2 plotLinesWideSize(480.0f, 120.0f);
+Scene* g_scene = nullptr;
 
-static void cleanup(Engine* engine, View*, Scene*) {
+std::unique_ptr<MeshAssimp> g_meshSet;
+std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
+SandboxParameters g_params;
+ColorGradingOptions g_lastColorGradingOptions;
+ColorGrading* g_colorGrading = nullptr;
+SampleConfig g_config;
+FilamentApp2* g_filamentApp = nullptr;
+
+bool g_shadowPlane = false;
+bool g_singleMode = false;
+float g_meshScale = 1.0f;
+float g_rangePlot[1024 * 3];
+float g_curvePlot[1024 * 3];
+
+constexpr ImVec2 verticalSliderSize(18.0f, 160.0f);
+constexpr ImVec2 plotLinesSize(320.0f, 160.0f);
+constexpr ImVec2 plotLinesWideSize(480.0f, 120.0f);
+
+void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
 
     for (const auto& material: g_meshMaterialInstances | std::views::values) {
@@ -114,7 +116,7 @@ static void cleanup(Engine* engine, View*, Scene*) {
     em.destroy(g_params.spotLight);
 }
 
-static void setup(Engine* engine, View*, Scene* scene) {
+void setup(Engine* engine, View*, Scene* scene) {
     g_scene = scene;
 
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
@@ -166,11 +168,11 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 .build(*engine);
         shadowMaterial->setDefaultParameter("strength", 0.7f);
 
-        const static uint32_t indices[] = {
+        constexpr uint32_t indices[] = {
                 0, 1, 2, 2, 3, 0
         };
 
-        static constexpr float3 vertices[] = {
+        constexpr float3 vertices[] = {
                 { -10, 0, -10 },
                 { -10, 0,  10 },
                 {  10, 0,  10 },
@@ -186,7 +188,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
                         }
                 ).xyzw);
 
-        const static short4 normals[] { tbn, tbn, tbn, tbn };
+        const short4 normals[] { tbn, tbn, tbn, tbn };
 
         VertexBuffer* vertexBuffer = VertexBuffer::Builder()
                 .vertexCount(4)
@@ -244,7 +246,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     g_params.bloomOptions.dirt = g_filamentApp->getDirtTexture();
 }
 
-static MaterialInstance* updateInstances(SandboxParameters& params) {
+MaterialInstance* updateInstances(SandboxParameters& params) {
     int material = params.currentMaterialModel;
     if (material == MATERIAL_MODEL_LIT) {
         if (params.currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
@@ -331,7 +333,7 @@ static MaterialInstance* updateInstances(SandboxParameters& params) {
     return materialInstance;
 }
 
-static void computeRangePlot(SandboxParameters &parameters) {
+void computeRangePlot(SandboxParameters& parameters) {
     float4& ranges = parameters.colorGradingOptions.ranges;
     ranges.y = clamp(ranges.y, ranges.x + 1e-5f, ranges.w - 1e-5f); // darks
     ranges.z = clamp(ranges.z, ranges.x + 1e-5f, ranges.w - 1e-5f); // lights
@@ -346,7 +348,7 @@ static void computeRangePlot(SandboxParameters &parameters) {
     }
 }
 
-static void rangePlotSeriesStart(const int series) {
+void rangePlotSeriesStart(const int series) {
     // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
     switch (series) { // NOLINT(*-multiway-paths-covered)
         case 0:
@@ -364,13 +366,13 @@ static void rangePlotSeriesStart(const int series) {
     }
 }
 
-static void rangePlotSeriesEnd(const int series) {
+void rangePlotSeriesEnd(const int series) {
     if (series < 3) {
         ImGui::PopStyleColor();
     }
 }
 
-static float getRangePlotValue(const int series, void* data, const int index) {
+float getRangePlotValue(const int series, void* data, const int index) {
     return static_cast<float*>(data)[series * 1024 + index];
 }
 
@@ -385,7 +387,7 @@ inline float3 curves(float3 v, float3 shadowGamma, float3 midPoint, float3 highl
     };
 }
 
-static void computeCurvePlot(SandboxParameters &parameters) {
+void computeCurvePlot(SandboxParameters& parameters) {
     ColorGradingOptions &colorGrading = parameters.colorGradingOptions;
     for (size_t i = 0; i < 1024; i++) {
         float3 x{static_cast<float>(i) / 1024.0f * 2.0f};
@@ -396,13 +398,13 @@ static void computeCurvePlot(SandboxParameters &parameters) {
     }
 }
 
-static void tooltipFloat(const float value) {
+void tooltipFloat(const float value) {
     if (ImGui::IsItemActive() || ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%.2f", value);
     }
 }
 
-static void pushSliderColors(const float hue) {
+void pushSliderColors(const float hue) {
     ImGui::PushStyleColor(ImGuiCol_FrameBg,
         static_cast<ImVec4>(ImColor::HSV(hue, 0.5f, 0.5f)));
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered,
@@ -413,9 +415,9 @@ static void pushSliderColors(const float hue) {
         static_cast<ImVec4>(ImColor::HSV(hue, 0.9f, 0.9f)));
 }
 
-static void popSliderColors() { ImGui::PopStyleColor(4); }
+void popSliderColors() { ImGui::PopStyleColor(4); }
 
-static void gui(Engine* engine, View*) {
+void gui(Engine* engine, View*) {
     auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
@@ -897,7 +899,7 @@ static void gui(Engine* engine, View*) {
             params.spotLightConeAngle);
 }
 
-static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
+void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setBloomOptions(g_params.bloomOptions);
@@ -955,6 +957,7 @@ static void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     camera.setExposure(g_params.cameraAperture, 1.0f / g_params.cameraSpeed, g_params.cameraISO);
 }
 
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -964,13 +967,10 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     g_params.bloomOptions.enabled = true;
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(config.title)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
-                        .iblDirectory(config.iblDirectory)
                         .preRender(preRender)
                         .build();
     app->filamentApp = fApp.get();

@@ -35,6 +35,8 @@
 
 using namespace filament;
 
+namespace {
+
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -46,12 +48,12 @@ struct App {
     utils::Entity renderable;
 };
 
-static constexpr filament::math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
-static constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };
-static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
-static constexpr float ZOOM = 1.5f;
+constexpr filament::math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
+constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };
+constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
+constexpr float ZOOM = 1.5f;
 
-static void setCameraProjection(App* app, View* view) {
+void setCameraProjection(App* app, View* view) {
     const uint32_t w = view->getViewport().width;
     const uint32_t h = view->getViewport().height;
     const float aspect = (float) w / h;
@@ -59,6 +61,8 @@ static void setCameraProjection(App* app, View* view) {
         -aspect * ZOOM, aspect * ZOOM,
         -ZOOM, ZOOM, 0, 1);
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -118,16 +122,12 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         setCameraProjection(app.get(), view);
     };
 
-    auto fApp =
-            FilamentApp2::Builder()
-                    .displayManager(dm)
-                    .title(app->config.title)
-                    .backend(app->config.backend)
-                    .setup(setup)
-                    .cleanup(cleanup)
-                    .preRender(preRender)
-                    .resize(resize)
-                    .build();
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .preRender(preRender)
+                        .resize(resize)
+                        .build();
     app->filamentApp = fApp.get();
     return fApp;
 }

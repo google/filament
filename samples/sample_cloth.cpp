@@ -55,7 +55,10 @@ using namespace filament;
 using namespace filamesh;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
+
+namespace {
+
+float g_meshScale = 1.0f;
 
 struct App {
     std::vector<Path> filenames;
@@ -67,6 +70,8 @@ struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
 };
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -215,10 +220,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         em.destroy(app->light);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)

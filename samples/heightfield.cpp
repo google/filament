@@ -62,6 +62,8 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
+namespace {
+
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
@@ -102,7 +104,7 @@ struct Params {
     int currentTextureType = -1;
     bool addPadding = false;
 };
-static Params g_params;
+Params g_params;
 
 template<typename T>
 T packFloat(float f);
@@ -193,7 +195,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     texture->setImage(engine, 0, xoffset, yoffset, dimension, dimension, std::move(pixelBuffer));
 }
 
-static void gui(Engine*, View*) {
+void gui(Engine*, View*) {
     auto& params = g_params;
     ImGui::Begin("Parameters");
     {
@@ -214,6 +216,8 @@ static void gui(Engine*, View*) {
     }
     ImGui::End();
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -344,9 +348,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)

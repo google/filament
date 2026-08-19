@@ -54,19 +54,21 @@ using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 using AsyncCallStatus = backend::AsyncCallStatus;
 
+namespace {
+
 struct Vertex {
     filament::math::float2 position;
     filament::math::float2 uv;
 };
 
-static const Vertex QUAD_VERTICES[4] = {
+const Vertex QUAD_VERTICES[4] = {
     {{-1, -1}, {0, 0}},
     {{ 1, -1}, {1, 0}},
     {{-1,  1}, {0, 1}},
     {{ 1,  1}, {1, 1}},
 };
 
-static constexpr uint16_t QUAD_INDICES[6] = {
+constexpr uint16_t QUAD_INDICES[6] = {
     0, 1, 2,
     3, 2, 1,
 };
@@ -387,6 +389,7 @@ struct App {
         scene->addEntity(data->renderable);
     }
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -546,11 +549,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .asynchronousMode(app->config.asynchronousMode)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
