@@ -137,8 +137,10 @@ TEST(ThreadMapTest, MultiThreadedConcurrentAccess) {
 
             for (size_t iter = 0; iter < ITERATIONS; ++iter) {
                 // Register
-                uint32_t const slot = map.emplace(i * 10000 + iter);
-                EXPECT_NE((decltype(map)::INVALID_INDEX), slot);
+                uint32_t slot;
+                do {
+                    slot = map.emplace(i * 10000 + iter);
+                } while (slot == decltype(map)::INVALID_INDEX);
 
                 // Verify self lookup
                 EXPECT_TRUE(map.contains());
@@ -199,8 +201,13 @@ TEST(ThreadMapTest, MultiThreadedStaticSlots) {
 }
 
 struct Payload {
-    uint64_t id = 0;
-    bool valid() const { return id != 0; }
+    uint64_t v[4] = {0, 0, 0, 0};
+    Payload() = default;
+    explicit Payload(uint64_t val) : v{val, val, val, val} {}
+    bool valid() const {
+        return (v[0] == 0 && v[1] == 0 && v[2] == 0 && v[3] == 0) ||
+               (v[0] != 0 && v[0] == v[1] && v[1] == v[2] && v[2] == v[3]);
+    }
 };
 
 TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
@@ -214,7 +221,7 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
             const auto tid = writerTid.load(std::memory_order_relaxed);
             if (tid != std::thread::id{}) {
                 Payload const p = map.get(tid);
-                if (p.id != 0 && !p.valid()) {
+                if (!p.valid()) {
                     failures.fetch_add(1, std::memory_order_relaxed);
                 }
             }
@@ -223,9 +230,8 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
 
     std::thread writer([&]() {
         writerTid.store(std::this_thread::get_id(), std::memory_order_release);
-        for (size_t i = 1; i <= 20000; ++i) {
-            Payload p{i};
-            map.emplace(p);
+        for (size_t i = 1; i <= 50000; ++i) {
+            map.emplace(Payload(i));
             map.erase();
         }
         done.store(true, std::memory_order_release);
@@ -234,7 +240,110 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
     writer.join();
     reader.join();
 
-    EXPECT_EQ(0u, failures.load()) << "Reader observed uninitialized or partially written value in emplace()!";
+    EXPECT_EQ(0u, failures.load()) << "Reader observed torn or uninitialized payload in emplace()!";
+}
+
+TEST(ThreadMapTest, ConcurrentGetAfterSlotReassignment) {
+    ThreadMap<int> map(1);
+    std::atomic<bool> done{false};
+    std::atomic<uint32_t> abaErrors{0};
+
+    std::thread t1([] {});
+    std::thread t2([] {});
+    auto const tid1 = t1.get_id();
+    auto const tid2 = t2.get_id();
+    t1.join();
+    t2.join();
+
+    std::thread reader([&]() {
+        while (!done.load(std::memory_order_relaxed)) {
+            int const val = map.get(tid1);
+            if (val == 200) {
+                abaErrors.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    });
+
+    std::thread mutator([&]() {
+        for (size_t i = 0; i < 500000; ++i) {
+            map.set(0, 100, tid1);
+            map.eraseAt(0);
+            map.set(0, 200, tid2);
+            map.eraseAt(0);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    mutator.join();
+    reader.join();
+
+    EXPECT_EQ(0u, abaErrors.load()) << "get(tid1) returned value belonging to tid2 after slot reuse!";
+}
+
+TEST(ThreadMapTest, ConcurrentSetAndFindIndexDataRace) {
+    ThreadMap<int> map(2);
+    std::atomic<bool> done{false};
+    std::atomic<uint32_t> invalidFinds{0};
+
+    std::thread t1([] {});
+    std::thread t2([] {});
+    auto const tid1 = t1.get_id();
+    auto const tid2 = t2.get_id();
+    t1.join();
+    t2.join();
+
+    std::thread reader([&]() {
+        while (!done.load(std::memory_order_relaxed)) {
+            uint32_t const idx = map.findIndex(tid2);
+            if (idx == 0) {
+                invalidFinds.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    });
+
+    std::thread writer([&]() {
+        for (size_t i = 0; i < 50000; ++i) {
+            map.set(0, 42, tid1);
+            map.eraseAt(0);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    writer.join();
+    reader.join();
+
+    EXPECT_EQ(0u, invalidFinds.load()) << "findIndex(tid2) erroneously returned slot 0 during concurrent set/erase!";
+}
+
+TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
+    ThreadMap<Payload> map(2);
+    std::atomic<bool> done{false};
+    std::atomic<uint32_t> tornReads{0};
+
+    std::thread t1([] {});
+    auto const tid1 = t1.get_id();
+    t1.join();
+
+    std::thread reader([&]() {
+        while (!done.load(std::memory_order_relaxed)) {
+            Payload const p = map.get(tid1);
+            if (!p.valid()) {
+                tornReads.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    });
+
+    std::thread writer([&]() {
+        for (size_t i = 1; i <= 500000; ++i) {
+            map.set(0, Payload(i), tid1);
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    writer.join();
+    reader.join();
+
+    EXPECT_EQ(0u, tornReads.load()) << "Reader observed torn payload in set()!";
 }
 
 TEST(ThreadMapTest, EraseDestroysResource) {

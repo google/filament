@@ -675,12 +675,13 @@ struct ParallelForJobData {
     void runRoot(JobSystem& js, JobSystem::Job* root) noexcept {
         uint32_t const total = activeWorkers.load(std::memory_order_relaxed);
         uint32_t const helperCount = total > 0 ? total - 1 : 0;
+        JobSystem::ThreadId const id = JobSystem::getThreadId(root);
 
         for (uint32_t i = 0; i < helperCount; ++i) {
             JobSystem::Job* helper =
                     js.createJob<ParallelForJobData, &ParallelForJobData::runHelper>(root, this);
             if (UTILS_LIKELY(helper)) {
-                js.run(helper);
+                js.run(helper, id);
             } else {
                 // Failed to allocate a helper job; decrement active workers refcount.
                 finishWorker();

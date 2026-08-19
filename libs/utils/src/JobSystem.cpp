@@ -829,4 +829,6 @@ io::ostream& operator<<(io::ostream& out, JobSystem const& js) {
     return out;
 }
 
+template class ThreadMap<JobSystem::ThreadState*>;
+
 } // namespace utils
