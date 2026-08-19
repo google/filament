@@ -41,22 +41,38 @@ void CubemapUtils::process(
         s = prototype;
     }
 
+    struct FaceContext {
+        STATE* s;
+        Image* image;
+        const CubemapUtils::ScanlineProc<STATE>* proc;
+        uint16_t dim;
+        uint8_t faceIndex;
+    };
+
+    FaceContext faceContexts[6];
+    for (size_t i = 0; i < 6; ++i) {
+        faceContexts[i] = {
+            &states[i],
+            &cm.getImageForFace((Cubemap::Face)i),
+            &proc,
+            uint16_t(dim),
+            uint8_t(i)
+        };
+    }
+
     JobSystem::Job* parent = js.createJob();
     for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
 
-        auto perFaceJob = [faceIndex, &states, &cm, dim, &proc]
+        auto perFaceJob = [faceIndex, &faceContexts, dim]
                 (utils::JobSystem& js, utils::JobSystem::Job* parent) {
-            STATE& s = states[faceIndex];
-            Image& image(cm.getImageForFace((Cubemap::Face)faceIndex));
+            const FaceContext* ctx = &faceContexts[faceIndex];
 
-            // here we must limit how much we capture so we can use this closure
-            // by value.
-            auto parallelJobTask = [&s, &image, &proc, dim = uint16_t(dim),
-                                    faceIndex = uint8_t(faceIndex)](size_t y0, size_t c) {
+            // Capture only 1 pointer (8 bytes) so ParallelForJobData stays within 32 bytes (<= 48 bytes)
+            auto parallelJobTask = [ctx](size_t y0, size_t c) {
                 for (size_t y = y0; y < y0 + c; y++) {
                     Cubemap::Texel* data =
-                            static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
-                    proc(s, y, (Cubemap::Face)faceIndex, data, dim);
+                            static_cast<Cubemap::Texel*>(ctx->image->getPixelRef(0, y));
+                    (*ctx->proc)(*ctx->s, y, (Cubemap::Face)ctx->faceIndex, data, ctx->dim);
                 }
             };
 
@@ -64,7 +80,7 @@ void CubemapUtils::process(
             if (UTILS_LIKELY(isStateLess)) {
                 // create the job, copying it by value
                 auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
-                        parallelJobTask, jobs::CountSplitter<64, 8>());
+                        parallelJobTask, jobs::CountSplitter<64>());
                 // not need to signal here, since we're just scheduling work
                 js.run(job);
             } else {
