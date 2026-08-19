@@ -440,8 +440,10 @@ public:
             // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
             // since compare_exchange_weak() fails. Then this thread will loop with the updated
             // value of currentHead, and try again.
-            // TSAN complains if we don't use a local variable here.
-            Node const node = pStorage[currentHead.offset];
+            // We isolate this speculative read in readNode() with UTILS_NO_SANITIZE_THREAD so
+            // TSAN ignores the benign data race on node.next without disabling TSAN instrumentation
+            // on the acquire/release CAS on mHead below.
+            Node const node = readNode(pStorage, currentHead.offset);
             Node const* const pNext = node.next;
             const HeadPtr newHead{ pNext ? int32_t(pNext - pStorage) : -1, currentHead.tag + 1 };
             // In the rare case that the other thread that raced ahead of us already returned the
@@ -512,6 +514,11 @@ public:
     };
 
 private:
+    UTILS_NO_SANITIZE_THREAD
+    static inline Node readNode(Node const* const storage, int32_t const offset) noexcept {
+        return storage[offset];
+    }
+
     // This struct is using a 32-bit offset into the arena rather than
     // a direct pointer, because together with the 32-bit tag, it needs to 
     // fit into 8 bytes. If it was any larger, it would not be possible to
