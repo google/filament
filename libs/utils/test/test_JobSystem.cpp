@@ -327,6 +327,23 @@ TEST(JobSystem, JobSystemParallelForLargeChunkSize) {
     js.emancipate();
 }
 
+TEST(JobSystem, JobSystemParallelForEmptyCount) {
+    JobSystem js;
+    js.adopt();
+
+    bool called = false;
+    JobSystem::Job* job = parallel_for(js, nullptr, 0, 0,
+            [&called](uint32_t, uint32_t) {
+                called = true;
+            });
+    ASSERT_NE(job, nullptr);
+    js.runAndWait(job);
+
+    EXPECT_FALSE(called);
+
+    js.emancipate();
+}
+
 TEST(JobSystem, JobSystemDelegates) {
     JobSystem js;
     js.adopt();

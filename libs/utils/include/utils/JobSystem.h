@@ -716,13 +716,15 @@ inline constexpr bool IsParallelForInline =
  * The functor is invoked with `(uint32_t start, uint32_t count)` representing contiguous,
  * non-overlapping sub-ranges covering the entire iteration space.
  *
+ * If count is 0, a valid no-op job is returned and functor is not invoked.
+ *
  * If the functor payload fits in Job storage (<= 48 bytes), zero heap allocations are performed.
  * Larger functors automatically fall back to a single shared heap allocation.
  *
  * @param js The JobSystem instance.
  * @param parent Optional parent job.
  * @param start First index of the range.
- * @param count Total number of items to process.
+ * @param count Total number of items to process (if 0, functor is not called).
  * @param functor Callable invoked with `(uint32_t start, uint32_t count)`.
  * @param splitter Chunking policy (default: CountSplitter<16>).
  * @return The root JobSystem::Job* representing this parallel operation.
@@ -768,11 +770,12 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
  * Execute a function in parallel over an array of elements [data, data + count).
  *
  * The functor is invoked with `(T* data, size_t count)` for contiguous sub-slices.
+ * If count is 0, a valid no-op job is returned and functor is not invoked.
  *
  * @param js The JobSystem instance.
  * @param parent Optional parent job.
  * @param data Pointer to the start of the data array.
- * @param count Total number of elements.
+ * @param count Total number of elements (if 0, functor is not called).
  * @param functor Callable invoked with `(T* data, size_t count)`.
  * @param splitter Chunking policy (default: CountSplitter<16>).
  * @return The root JobSystem::Job* representing this parallel operation.
@@ -796,10 +799,11 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
  * Execute a function in parallel over a Slice<T>.
  *
  * The functor is invoked with `(T* data, size_t count)` for contiguous sub-slices.
+ * If slice is empty (size 0), a valid no-op job is returned and functor is not invoked.
  *
  * @param js The JobSystem instance.
  * @param parent Optional parent job.
- * @param slice Slice of elements to process.
+ * @param slice Slice of elements to process (if empty, functor is not called).
  * @param functor Callable invoked with `(T* data, size_t count)`.
  * @param splitter Chunking policy (default: CountSplitter<16>).
  * @return The root JobSystem::Job* representing this parallel operation.
