@@ -73,6 +73,19 @@ namespace utils {
  *
  * // When shutting down or when a thread exits:
  * threadMap.erase(); // unregisters std::this_thread::get_id()
+ *
+ * Thread Safety & ThreadSanitizer (TSAN):
+ * ---------------------------------------
+ * ThreadMap uses an optimistic seqlock protocol. Readers (get(), findIndex()) speculatively read
+ * non-atomic slot payload data (Entry::value) concurrently with mutating operations (set(),
+ * emplace(), eraseAt()). Consistency is validated via the version counter (Entry::version) and
+ * acquire/release memory fences. If a concurrent write occurs during the read, the version
+ * mismatch or odd parity is detected and the speculative payload is discarded.
+ *
+ * In the formal C++ memory model, concurrent non-atomic reads and writes constitute a data race.
+ * Because ThreadSanitizer (TSAN) cannot infer seqlock version validation and would otherwise flag
+ * these benign optimistic reads as fatal data races, seqlock methods are annotated with
+ * UTILS_NO_SANITIZE_THREAD.
  */
 template <typename VALUE>
 class ThreadMap {
@@ -127,6 +140,7 @@ public:
      * @note Thread-safe (wait-free) across distinct slot indices and against concurrent readers.
      *       Concurrent calls to set() with the same slot index are not thread-safe.
      */
+    UTILS_NO_SANITIZE_THREAD
     void set(size_type index, value_type value,
             key_type tid = std::this_thread::get_id()) noexcept;
 
@@ -138,6 +152,7 @@ public:
      * @return The slot index where the thread was registered, or INVALID_INDEX if full.
      * @note Thread-safe (lock-free). Multiple threads may call emplace() concurrently.
      */
+    UTILS_NO_SANITIZE_THREAD
     size_type emplace(value_type value,
             key_type tid = std::this_thread::get_id()) noexcept;
 
@@ -149,6 +164,7 @@ public:
      * @note Thread-safe (wait-free). Dereferencing the returned pointer while another thread
      *       mutates or erases that specific slot is not thread-safe.
      */
+    UTILS_NO_SANITIZE_THREAD
     inline value_type* find(key_type const tid = std::this_thread::get_id()) noexcept {
         size_type const idx = findIndex(tid);
         if (idx != INVALID_INDEX) {
@@ -165,6 +181,7 @@ public:
      * @note Thread-safe (wait-free). Dereferencing the returned pointer while another thread
      *       mutates or erases that specific slot is not thread-safe.
      */
+    UTILS_NO_SANITIZE_THREAD
     inline const value_type* find(key_type const tid = std::this_thread::get_id()) const noexcept {
         size_type const idx = findIndex(tid);
         if (idx != INVALID_INDEX) {
@@ -180,9 +197,15 @@ public:
      * @param tid The thread ID to look up (defaults to current thread).
      * @return The associated value, or value_type{} if not found.
      * @note Thread-safe (wait-free). Safe to call concurrently with all mutating operations
-     *       for pointer or trivially copyable value types.
+     *       for pointer or trivially copyable value types. Uses an optimistic seqlock loop
+     *       with a bounded number of retries (64). If a concurrent writer continuously
+     *       mutates the targeted slot across all retries, get() will return value_type{}
+     *       (spurious miss) rather than blocking.
      */
+    UTILS_NO_SANITIZE_THREAD
     inline value_type get(key_type const tid = std::this_thread::get_id()) const noexcept {
+        static_assert(std::is_trivially_copyable_v<VALUE>,
+                "get() requires VALUE to be trivially copyable for wait-free concurrent read safety");
         if (UTILS_UNLIKELY(tid == key_type{} || mCapacity == 0)) {
             return value_type{};
         }
@@ -193,15 +216,16 @@ public:
                 if (v1 & 1) {
                     continue;
                 }
-                if (entry.state.load(std::memory_order_acquire) != SlotState::VALID) {
+                if (entry.state.load(std::memory_order_relaxed) != SlotState::VALID) {
                     break;
                 }
                 if (entry.tid.load(std::memory_order_relaxed) != tid) {
                     break;
                 }
                 value_type val = entry.value;
-                uint32_t const v2 = entry.version.load(std::memory_order_acquire);
-                if (v1 == v2 && entry.state.load(std::memory_order_acquire) == SlotState::VALID &&
+                std::atomic_thread_fence(std::memory_order_acquire);
+                uint32_t const v2 = entry.version.load(std::memory_order_relaxed);
+                if (v1 == v2 && entry.state.load(std::memory_order_relaxed) == SlotState::VALID &&
                     entry.tid.load(std::memory_order_relaxed) == tid) {
                     return val;
                 }
@@ -215,8 +239,11 @@ public:
      *
      * @param tid The thread ID to look up (defaults to current thread).
      * @return The slot index if found, or INVALID_INDEX if not registered.
-     * @note Thread-safe (wait-free).
+     * @note Thread-safe (wait-free). Uses an optimistic seqlock loop with a bounded number of
+     *       retries (64). If a concurrent writer continuously mutates the targeted slot across
+     *       all retries, findIndex() will return INVALID_INDEX (spurious miss) rather than blocking.
      */
+    UTILS_NO_SANITIZE_THREAD
     inline size_type findIndex(key_type const tid = std::this_thread::get_id()) const noexcept {
         if (UTILS_UNLIKELY(tid == key_type{} || mCapacity == 0)) {
             return INVALID_INDEX;
@@ -228,14 +255,15 @@ public:
                 if (v1 & 1) {
                     continue;
                 }
-                if (entry.state.load(std::memory_order_acquire) != SlotState::VALID) {
+                if (entry.state.load(std::memory_order_relaxed) != SlotState::VALID) {
                     break;
                 }
                 if (entry.tid.load(std::memory_order_relaxed) != tid) {
                     break;
                 }
-                uint32_t const v2 = entry.version.load(std::memory_order_acquire);
-                if (v1 == v2 && entry.state.load(std::memory_order_acquire) == SlotState::VALID &&
+                std::atomic_thread_fence(std::memory_order_acquire);
+                uint32_t const v2 = entry.version.load(std::memory_order_relaxed);
+                if (v1 == v2 && entry.state.load(std::memory_order_relaxed) == SlotState::VALID &&
                     entry.tid.load(std::memory_order_relaxed) == tid) {
                     return i;
                 }
@@ -261,6 +289,7 @@ public:
      * @return true if the thread was found and unregistered, false otherwise.
      * @note Thread-safe (lock-free).
      */
+    UTILS_NO_SANITIZE_THREAD
     bool erase(key_type tid = std::this_thread::get_id()) noexcept;
 
     /**
@@ -270,6 +299,7 @@ public:
      * @return true if the slot was valid and cleared, false otherwise.
      * @note Thread-safe (lock-free).
      */
+    UTILS_NO_SANITIZE_THREAD
     bool eraseAt(size_type index) noexcept;
 
     /**
@@ -332,6 +362,7 @@ typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::getCapacity() const noexc
 }
 
 template <typename VALUE>
+UTILS_NO_SANITIZE_THREAD
 void ThreadMap<VALUE>::set(size_type const index, value_type value, key_type const tid) noexcept {
     assert_invariant(index < mCapacity);
     assert_invariant(tid != key_type{});
@@ -348,6 +379,7 @@ void ThreadMap<VALUE>::set(size_type const index, value_type value, key_type con
 }
 
 template <typename VALUE>
+UTILS_NO_SANITIZE_THREAD
 typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::emplace(value_type value,
         key_type const tid) noexcept {
     assert_invariant(tid != key_type{});
@@ -370,10 +402,15 @@ typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::emplace(value_type value,
             }
             if (expected == SlotState::VALID &&
                 entry.state.load(std::memory_order_acquire) == SlotState::VALID &&
-                entry.tid.load(std::memory_order_relaxed) == tid) {
+                entry.tid.load(std::memory_order_acquire) == tid) {
                 SlotState stateExpected = SlotState::VALID;
                 if (entry.state.compare_exchange_strong(stateExpected, SlotState::WRITING,
                         std::memory_order_acquire, std::memory_order_relaxed)) {
+                    if (entry.tid.load(std::memory_order_relaxed) != tid) {
+                        // ABA: slot was erased and claimed by another thread before our CAS.
+                        entry.state.store(SlotState::VALID, std::memory_order_release);
+                        continue;
+                    }
                     entry.version.fetch_add(1, std::memory_order_acq_rel);
 
                     entry.value = std::move(value);
@@ -396,15 +433,34 @@ typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::emplace(value_type value,
 }
 
 template <typename VALUE>
+UTILS_NO_SANITIZE_THREAD
 bool ThreadMap<VALUE>::erase(key_type const tid) noexcept {
     size_type const idx = findIndex(tid);
     if (idx != INVALID_INDEX) {
-        return eraseAt(idx);
+        Entry& entry = mEntries[idx];
+        SlotState expected = SlotState::VALID;
+        if (entry.state.compare_exchange_strong(expected, SlotState::WRITING,
+                std::memory_order_acquire, std::memory_order_relaxed)) {
+            if (entry.tid.load(std::memory_order_relaxed) != tid) {
+                // ABA: slot was erased and claimed by another thread before our CAS.
+                entry.state.store(SlotState::VALID, std::memory_order_release);
+                return false;
+            }
+            entry.version.fetch_add(1, std::memory_order_acq_rel);
+
+            entry.tid.store(key_type{}, std::memory_order_relaxed);
+            entry.value = value_type{};
+
+            entry.version.fetch_add(1, std::memory_order_release);
+            entry.state.store(SlotState::EMPTY, std::memory_order_release);
+            return true;
+        }
     }
     return false;
 }
 
 template <typename VALUE>
+UTILS_NO_SANITIZE_THREAD
 bool ThreadMap<VALUE>::eraseAt(size_type const index) noexcept {
     assert_invariant(index < mCapacity);
 
@@ -417,8 +473,8 @@ bool ThreadMap<VALUE>::eraseAt(size_type const index) noexcept {
         entry.tid.store(key_type{}, std::memory_order_relaxed);
         entry.value = value_type{};
 
-        entry.state.store(SlotState::EMPTY, std::memory_order_release);
         entry.version.fetch_add(1, std::memory_order_release);
+        entry.state.store(SlotState::EMPTY, std::memory_order_release);
         return true;
     }
     return false;

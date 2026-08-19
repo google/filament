@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -65,7 +66,7 @@ TEST(ThreadMapTest, BasicOperations) {
 }
 
 TEST(ThreadMapTest, EmplaceAndCapacity) {
-    ThreadMap<std::string> map(2);
+    ThreadMap<std::string_view> map(2);
     EXPECT_EQ(2u, map.getCapacity());
 
     // Create unique artificial thread IDs via threads
@@ -214,6 +215,7 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
     ThreadMap<Payload> map(2);
     std::atomic<bool> done{false};
     std::atomic<uint32_t> failures{0};
+    std::atomic<uint32_t> nonZeroReads{0};
     std::atomic<std::thread::id> writerTid{};
 
     std::thread reader([&]() {
@@ -223,6 +225,8 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
                 Payload const p = map.get(tid);
                 if (!p.valid()) {
                     failures.fetch_add(1, std::memory_order_relaxed);
+                } else if (p.v[0] != 0) {
+                    nonZeroReads.fetch_add(1, std::memory_order_relaxed);
                 }
             }
         }
@@ -241,6 +245,7 @@ TEST(ThreadMapTest, ConcurrentEmplaceReaderDataRace) {
     reader.join();
 
     EXPECT_EQ(0u, failures.load()) << "Reader observed torn or uninitialized payload in emplace()!";
+    EXPECT_GT(nonZeroReads.load(), 100u) << "Reader should have observed valid non-zero payloads during emplace!";
 }
 
 TEST(ThreadMapTest, ConcurrentGetAfterSlotReassignment) {
@@ -319,6 +324,7 @@ TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
     ThreadMap<Payload> map(2);
     std::atomic<bool> done{false};
     std::atomic<uint32_t> tornReads{0};
+    std::atomic<uint32_t> validNonZeroReads{0};
 
     std::thread t1([] {});
     auto const tid1 = t1.get_id();
@@ -329,6 +335,8 @@ TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
             Payload const p = map.get(tid1);
             if (!p.valid()) {
                 tornReads.fetch_add(1, std::memory_order_relaxed);
+            } else if (p.v[0] != 0) {
+                validNonZeroReads.fetch_add(1, std::memory_order_relaxed);
             }
         }
     });
@@ -344,6 +352,7 @@ TEST(ThreadMapTest, ConcurrentSetReaderDataRace) {
     reader.join();
 
     EXPECT_EQ(0u, tornReads.load()) << "Reader observed torn payload in set()!";
+    EXPECT_GT(validNonZeroReads.load(), 50u) << "Reader should have observed valid non-zero payloads during set()!";
 }
 
 TEST(ThreadMapTest, EraseDestroysResource) {
@@ -376,5 +385,100 @@ TEST(ThreadMapTest, ReEmplaceUpdatesValueSafely) {
 
     map.erase(tid);
     EXPECT_TRUE(map.empty());
+}
+
+TEST(ThreadMapTest, EraseAbaProtection) {
+    ThreadMap<uint64_t> map(1);
+    std::atomic<bool> done{false};
+    std::atomic<uint32_t> stolenSlots{0};
+
+    std::thread dummyA([] {});
+    std::thread dummyB([] {});
+    auto const tidA = dummyA.get_id();
+    auto const tidB = dummyB.get_id();
+    dummyA.join();
+    dummyB.join();
+
+    std::thread t1([&]() {
+        for (int i = 0; i < 200000 && !done.load(std::memory_order_relaxed); ++i) {
+            if (map.emplace(111, tidA) != decltype(map)::INVALID_INDEX) {
+                map.erase(tidA);
+            }
+            map.erase(tidA);
+        }
+    });
+
+    std::thread t2([&]() {
+        for (int i = 0; i < 200000 && !done.load(std::memory_order_relaxed); ++i) {
+            if (map.emplace(222, tidB) != decltype(map)::INVALID_INDEX) {
+                // If erase(tidA) has an ABA bug, it could erase tidB while t2 is holding it.
+                if (!map.contains(tidB) || map.get(tidB) != 222) {
+                    stolenSlots.fetch_add(1, std::memory_order_relaxed);
+                }
+                map.erase(tidB);
+            }
+        }
+        done.store(true, std::memory_order_release);
+    });
+
+    t1.join();
+    t2.join();
+
+    EXPECT_EQ(0u, stolenSlots.load())
+            << "erase(tidA) suffered from an ABA race and unregistered tidB's slot!";
+}
+
+TEST(ThreadMapTest, ReEmplaceAbaProtection) {
+    ThreadMap<uint64_t> map(1);
+    std::atomic<bool> done{false};
+    std::atomic<uint32_t> corruptedPayloads{0};
+
+    std::thread dummyA([] {});
+    std::thread dummyB([] {});
+    auto const tidA = dummyA.get_id();
+    auto const tidB = dummyB.get_id();
+    dummyA.join();
+    dummyB.join();
+
+    std::vector<std::thread> workers;
+    workers.reserve(8);
+
+    // 4 threads calling emplace/re-emplace on tidA
+    for (int t = 0; t < 4; ++t) {
+        workers.emplace_back([&]() {
+            for (int i = 0; i < 200000 && !done.load(std::memory_order_relaxed); ++i) {
+                map.emplace(111, tidA);
+                map.emplace(999, tidA);
+                map.erase(tidA);
+            }
+        });
+    }
+
+    // 4 threads calling emplace on tidB and asserting payload integrity
+    for (int t = 0; t < 4; ++t) {
+        workers.emplace_back([&]() {
+            for (int i = 0; i < 200000 && !done.load(std::memory_order_relaxed); ++i) {
+                if (map.emplace(222, tidB) != decltype(map)::INVALID_INDEX) {
+                    for (int k = 0; k < 5; ++k) {
+                        uint64_t const v = map.get(tidB);
+                        if (v != 222 && v != 0) {
+                            corruptedPayloads.fetch_add(1, std::memory_order_relaxed);
+                        }
+                    }
+                    map.erase(tidB);
+                }
+            }
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    done.store(true, std::memory_order_release);
+
+    for (auto& w : workers) {
+        w.join();
+    }
+
+    EXPECT_EQ(0u, corruptedPayloads.load())
+            << "emplace(tidA) re-emplace path suffered from an ABA race and corrupted tidB's payload!";
 }
 

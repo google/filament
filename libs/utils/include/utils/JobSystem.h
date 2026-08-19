@@ -614,7 +614,7 @@ struct SplitterTraits {
 
     static uint32_t getChunkSize(const S& splitter, uint32_t const totalCount, uint32_t const threadCount) noexcept {
         if constexpr (has_chunk_size_2) {
-            return uint32_t(std::max<size_t>(1, splitter.getChunkSize(totalCount, threadCount)));
+            return uint32_t(std::max<size_t>(1, splitter.getChunkSize(totalCount, std::max(1u, threadCount))));
         } else if constexpr (has_chunk_size_0) {
             return uint32_t(std::max<size_t>(1, splitter.getChunkSize()));
         }
@@ -767,9 +767,10 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
     uint32_t const poolThreads = uint32_t(js.getThreadCount());
     uint32_t const totalThreads = (poolThreads == 0) ? 0 :
             std::max(poolThreads, uint32_t(js.getActiveThreadCount()));
+    uint32_t const effectiveThreads = std::max(1u, totalThreads);
 
-    uint32_t const chunkSize = details::SplitterTraits<S>::getChunkSize(splitter, count, totalThreads);
-    uint32_t const numChunks = (count + chunkSize - 1) / chunkSize;
+    uint32_t const chunkSize = details::SplitterTraits<S>::getChunkSize(splitter, count, effectiveThreads);
+    uint32_t const numChunks = ((count - 1) / chunkSize) + 1;
     uint32_t const helperCount = (totalThreads > 0 && numChunks > 1) ?
             std::min<uint32_t>(totalThreads - 1, numChunks - 1) : 0;
     uint32_t const totalWorkers = helperCount + 1;

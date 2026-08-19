@@ -597,7 +597,7 @@ void JobSystem::loop(ThreadState* state) {
             // This guarantees that any concurrent producer in put() will observe
             // mSleepingCounts > 0 and call wakeOne() if it publishes work after our check.
             mSleepingCounts.fetch_add(SLEEPING_WORKER_ONE, std::memory_order_seq_cst);
-            while (!exitRequested() && mActiveJobs.load(std::memory_order_seq_cst) == 0) {
+            while (!exitRequested() && mActiveJobs.load(std::memory_order_seq_cst) <= 0) {
                 waitForWork(lock);
             }
             mSleepingCounts.fetch_sub(SLEEPING_WORKER_ONE, std::memory_order_seq_cst);
