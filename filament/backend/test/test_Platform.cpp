@@ -62,7 +62,7 @@ TEST_F(PlatformTest, GetDeviceInfo) {
         // Death tests for Vulkan info on OpenGL platform
 #ifdef __EXCEPTIONS
         EXPECT_THROW(platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DEVICE_NAME, nullptr), utils::PostconditionPanic);
-#elif GTEST_HAS_DEATH_TEST
+#elif defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
         // Death tests are unavailable on iOS-family platforms.
         EXPECT_DEATH(platform->getDeviceInfo(Platform::DeviceInfoType::VULKAN_DEVICE_NAME, nullptr),
                 "Unsupported DeviceInfoType");
@@ -75,7 +75,7 @@ TEST_F(PlatformTest, GetDeviceInfo) {
         // Death tests for OpenGL info on Vulkan platform
 #ifdef __EXCEPTIONS
         EXPECT_THROW(platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, nullptr), utils::PostconditionPanic);
-#elif GTEST_HAS_DEATH_TEST
+#elif defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
         // Death tests are unavailable on iOS-family platforms.
         EXPECT_DEATH(platform->getDeviceInfo(Platform::DeviceInfoType::OPENGL_RENDERER, nullptr),
                 "Unsupported DeviceInfoType");
