@@ -38,10 +38,13 @@ class Skybox;
 namespace utils {
     class Path;
 }
+namespace filament::app {
+class AssetLoader;
+}
 
 class IBL {
 public:
-    explicit IBL(filament::Engine& engine);
+    explicit IBL(filament::Engine& engine, filament::app::AssetLoader* loader = nullptr);
     ~IBL();
 
     bool loadFromEquirect(const utils::Path& path);
@@ -84,6 +87,9 @@ private:
     filament::Texture* mSkyboxTexture = nullptr;
     filament::Texture* mFogTexture = nullptr;
     filament::Skybox* mSkybox = nullptr;
+
+    filament::app::AssetLoader* mAssetLoader = nullptr;
+    bool mAllocatedAssetLoader = false;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_IBL_H

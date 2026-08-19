@@ -66,7 +66,7 @@ class DisplayManager;
 class AssetLoader;
 } // namespace filament::app
 
-class FilamentApp2 {
+class UTILS_PUBLIC FilamentApp2 {
 public:
     using WebGPUBackend = filament::Engine::Backend;
     enum class DisplayManager { SDL, WEB };
