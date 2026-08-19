@@ -313,16 +313,17 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
 
 inline void JobSystem::waitForWork(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
-    mSleepingCounts.fetch_add(SLEEPING_WORKER_ONE, std::memory_order_relaxed);
     mWorkCondition.wait(lock);
-    mSleepingCounts.fetch_sub(SLEEPING_WORKER_ONE, std::memory_order_relaxed);
 }
 
 inline void JobSystem::waitForJob(UniqueLock& lock) noexcept {
     HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
-    mSleepingCounts.fetch_add(SLEEPING_WAITER_ONE, std::memory_order_relaxed);
+    // Sequentially consistent store-load pairing (Dekker pattern):
+    // Announce sleeping waiter count with memory_order_seq_cst so put() observes
+    // sleeping waiters when checking whether to invoke wakeOne().
+    mSleepingCounts.fetch_add(SLEEPING_WAITER_ONE, std::memory_order_seq_cst);
     mJobCondition.wait(lock);
-    mSleepingCounts.fetch_sub(SLEEPING_WAITER_ONE, std::memory_order_relaxed);
+    mSleepingCounts.fetch_sub(SLEEPING_WAITER_ONE, std::memory_order_seq_cst);
 }
 
 inline uint32_t JobSystem::wait(UniqueLock& lock, Job* const job) noexcept {
@@ -403,16 +404,15 @@ void JobSystem::put(ThreadState& state, Job const* job) noexcept {
         state.workQueue.push(prev);
     }
 
-    // Increase our active job count. We MUST use std::memory_order_release here.
-    // If we used relaxed, the compiler or CPU could reorder this increment to happen 
-    // BEFORE nextJob.exchange() or workQueue.push(). If a preemption happened right there,
-    // other threads would see mActiveJobs > 0, enter the steal() loop, fail to find the job,
-    // and spin infinitely, recreating the exact same priority inversion lockup on the push side!
-    mActiveJobs.fetch_add(1, std::memory_order_release);
+    // Sequentially consistent write-read pairing (Dekker pattern):
+    // Producer writes mActiveJobs (W1) before reading mSleepingCounts (R1).
+    // Worker in loop() writes mSleepingCounts (W2) before reading mActiveJobs (R2).
+    // Using memory_order_seq_cst guarantees that if the worker observes mActiveJobs == 0
+    // and prepares to sleep, the producer is guaranteed to observe mSleepingCounts > 0
+    // and invoke wakeOne(), preventing lost wakeups without acquiring mWaiterLock.
+    mActiveJobs.fetch_add(1, std::memory_order_seq_cst);
 
-    // Only wake a sleeping thread if there is at least one thread sleeping (worker or waiter).
-    // If all threads are already awake and running, wakeOne() and its internal mWaiterLock are completely bypassed.
-    if (UTILS_UNLIKELY(mSleepingCounts.load(std::memory_order_relaxed) > 0)) {
+    if (UTILS_UNLIKELY(mSleepingCounts.load(std::memory_order_seq_cst) > 0)) {
         wakeOne();
     }
 }
@@ -573,9 +573,16 @@ void JobSystem::loop(ThreadState* state) {
             // transient contention into priority inversion livelocks. Instead, we proceed to
             // take mWaiterLock and sleep in wait(lock).
             UniqueLock lock(mWaiterLock);
-            while (!exitRequested() && !hasActiveJobs()) {
+            // Sequentially consistent write-read pairing (Dekker pattern):
+            // 1. Announce intent to sleep by incrementing mSleepingCounts (seq_cst).
+            // 2. Check mActiveJobs (seq_cst) before sleeping on mWorkCondition.
+            // This guarantees that any concurrent producer in put() will observe
+            // mSleepingCounts > 0 and call wakeOne() if it publishes work after our check.
+            mSleepingCounts.fetch_add(SLEEPING_WORKER_ONE, std::memory_order_seq_cst);
+            while (!exitRequested() && mActiveJobs.load(std::memory_order_seq_cst) == 0) {
                 waitForWork(lock);
             }
+            mSleepingCounts.fetch_sub(SLEEPING_WORKER_ONE, std::memory_order_seq_cst);
         }
     } while (!exitRequested());
 }

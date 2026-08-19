@@ -809,6 +809,56 @@ TEST(JobSystem, JobSystemStealingWithManyAdoptableSlots) {
     EXPECT_TRUE(finished);
 }
 
+TEST(JobSystem, JobSystemLostWakeupRace) {
+    bool const finished = runWithTimeout([]() {
+        constexpr size_t WORKER_COUNT = 1;
+        constexpr size_t PRODUCER_COUNT = 4;
+        constexpr size_t ITERATIONS = 5000;
 
+        JobSystem js(WORKER_COUNT, PRODUCER_COUNT);
 
+        for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+            std::atomic<uint32_t> completed{0};
+            std::atomic<bool> startFlag{false};
+            std::vector<std::thread> producers;
+            producers.reserve(PRODUCER_COUNT);
+
+            for (size_t p = 0; p < PRODUCER_COUNT; ++p) {
+                producers.emplace_back([&js, &completed, &startFlag]() {
+                    js.adopt();
+                    while (!startFlag.load(std::memory_order_acquire)) {
+                        std::this_thread::yield();
+                    }
+                    JobSystem::Job* job = js.createJob(nullptr, [&completed](JobSystem&, JobSystem::Job*) {
+                        completed.fetch_add(1, std::memory_order_relaxed);
+                    });
+                    js.run(job);
+                    js.emancipate();
+                });
+            }
+
+            // Let worker enter sleep state
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+            // Release all producers simultaneously to race with worker sleep
+            startFlag.store(true, std::memory_order_release);
+
+            for (auto& t : producers) {
+                t.join();
+            }
+
+            auto const start = std::chrono::steady_clock::now();
+            while (completed.load(std::memory_order_relaxed) < PRODUCER_COUNT) {
+                if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(200)) {
+                    FAIL() << "Lost wakeup at iteration " << iter << ": completed "
+                           << completed.load() << " / " << PRODUCER_COUNT << " jobs!";
+                    return;
+                }
+                std::this_thread::yield();
+            }
+        }
+    }, std::chrono::seconds(10));
+
+    EXPECT_TRUE(finished);
+}
 
