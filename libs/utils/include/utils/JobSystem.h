@@ -109,13 +109,28 @@ public:
      * Special value for userThreadCount to configure the JobSystem in single-threaded mode.
      */
     static constexpr uint32_t SINGLE_THREADED = std::numeric_limits<uint32_t>::max();
-
     /**
-     * Create a JobSystem and initializes its thread pool. The pool can have zero threads if SINGLE_THREADED is used
-     * as the userThreadCount, in that case adoptableThreadsCount is forced to 1.
+     * Create a JobSystem and initialize its thread pool.
      *
-     * @param userThreadCount number of threads in the JobSystem thread pool.
-     * @param adoptableThreadsCount number of calling threads outside the thread pool.
+     * Total thread capacity across pool workers and adopted threads is capped at MAX_THREADS (32).
+     *
+     * Parameter constraints & behavior:
+     * - `userThreadCount`: Number of dedicated worker threads to spawn in the pool.
+     *   - `0` (default): Automatically selects `(hardware_concurrency - 1)`.
+     *   - `SINGLE_THREADED`: Configures the JobSystem in single-threaded mode with 0 pool worker
+     *     threads and forces `adoptableThreadsCount` to 1.
+     *   - In multi-threaded mode (any value other than `SINGLE_THREADED`), the thread pool is
+     *     guaranteed to contain at least 1 worker thread (subject to system threading support).
+     * - `adoptableThreadsCount`: Maximum number of external calling threads that can concurrently
+     *   call `adopt()`.
+     *   - Must be between 1 and `MAX_THREADS - 1` (31) in multi-threaded mode to ensure capacity
+     *     for at least 1 pool worker thread.
+     *   - If `adoptableThreadsCount >= MAX_THREADS`, it is clamped to `MAX_THREADS - 1` with an error.
+     *   - If `userThreadCount + adoptableThreadsCount > MAX_THREADS`, `userThreadCount` is clamped to
+     *     `(MAX_THREADS - adoptableThreadsCount)` with a warning.
+     *
+     * @param userThreadCount Number of worker threads in the pool, 0 for auto-detect, or SINGLE_THREADED.
+     * @param adoptableThreadsCount Maximum number of external threads that can be adopted concurrently (max: MAX_THREADS - 1).
      */
     explicit JobSystem(uint32_t userThreadCount = 0, uint32_t adoptableThreadsCount = 1) noexcept;
 

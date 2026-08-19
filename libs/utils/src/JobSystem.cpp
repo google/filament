@@ -203,12 +203,30 @@ JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCo
             // one of the thread will be the user thread
             threadPoolCount = hwThreads - 1;
         }
-        // clamp adoptableThreadsCount so it does not exceed MAX_THREADS
-        adoptableThreadsCount = std::min(adoptableThreadsCount, MAX_THREADS);
+        // Clamp adoptableThreadsCount so it does not exceed MAX_THREADS - 1, ensuring room
+        // for at least one pool worker thread.
+        if (adoptableThreadsCount >= MAX_THREADS) {
+            LOG(ERROR) << "JobSystem: adoptableThreadsCount (" << adoptableThreadsCount
+                       << ") exceeds MAX_THREADS - 1 (" << (MAX_THREADS - 1)
+                       << "), clamping.";
+            adoptableThreadsCount = MAX_THREADS - 1;
+        } else if (adoptableThreadsCount == 0) {
+            adoptableThreadsCount = 1;
+        }
+
+        // make sure we have at least one thread in the thread pool
+        threadPoolCount = std::max(1u, threadPoolCount);
+
         // limit the pool such that threadPoolCount + adoptableThreadsCount <= MAX_THREADS
         const uint32_t maxThreadPoolCount = MAX_THREADS - adoptableThreadsCount;
-        // make sure we have at least one thread in the thread pool if capacity permits
-        threadPoolCount = std::max(maxThreadPoolCount > 0 ? 1u : 0u, threadPoolCount);
+        if (threadPoolCount > maxThreadPoolCount) {
+            LOG(WARNING) << "JobSystem: threadPoolCount (" << threadPoolCount
+                         << ") + adoptableThreadsCount (" << adoptableThreadsCount
+                         << ") exceeds MAX_THREADS (" << MAX_THREADS
+                         << "), clamping pool count to " << maxThreadPoolCount;
+            threadPoolCount = maxThreadPoolCount;
+        }
+
         threadPoolCount = std::min(UTILS_HAS_THREADING ? maxThreadPoolCount : 0u, threadPoolCount);
     } else {
         threadPoolCount = 0;

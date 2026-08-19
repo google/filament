@@ -915,3 +915,16 @@ TEST(JobSystem, JobSystemLostWakeupRace) {
     EXPECT_TRUE(finished);
 }
 
+TEST(JobSystem, JobSystemThreadBudgetClamping) {
+    // 1. Requesting adoptableThreadsCount >= MAX_THREADS (32) must still ensure at least 1 pool worker.
+    JobSystem js1(0, 32);
+    EXPECT_GE(js1.getThreadCount(), 1u);
+
+    // 2. Requesting large userThreadCount and large adoptableThreadsCount must clamp total to MAX_THREADS (32).
+    JobSystem js2(32, 16);
+    EXPECT_EQ(js2.getThreadCount(), 16u);
+
+    // 3. SINGLE_THREADED mode must have 0 pool workers.
+    JobSystem jsSingle(JobSystem::SINGLE_THREADED, 1);
+    EXPECT_EQ(jsSingle.getThreadCount(), 0u);
+}
