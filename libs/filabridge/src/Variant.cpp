@@ -35,16 +35,12 @@ Variant Variant::filterUserVariant(
         variant.key &= ~DIR;
     }
 
-    if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
-        variant.key &= ~DYN;
-    }
-
     if (filterMask & uint32_t(UserVariantFilterBit::SKINNING)) {
         variant.key &= ~SKN;
     }
 
     if (filterMask & uint32_t(UserVariantFilterBit::STE)) {
-        variant.key &= ~(filterMask & STE);
+        variant.key &= ~STE;
     }
 
     if (isValidDepthVariant(variant)) {
@@ -216,10 +212,10 @@ static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 147);
-static_assert(valid_variant_count() == 109);
-static_assert(vertex_variant_count() == 32 - 0 + 8 - 0);   // 40
-static_assert(fragment_variant_count() == 32 - 8 + 4);     // 28
+static_assert(reserved_variant_count() == 67);
+static_assert(valid_variant_count() == 61);
+static_assert(vertex_variant_count() == 16 + 8);              // 24
+static_assert(fragment_variant_count() == 16 + 3 + 1 - 4);    // 16
 
 } // namespace details
 
