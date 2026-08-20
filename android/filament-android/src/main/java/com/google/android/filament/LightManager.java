@@ -310,7 +310,7 @@ public class LightManager {
          * Generally this value shouldn't be changed or at least be small and positive.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        float polygonOffsetConstant = 0.5f;
+        public float polygonOffsetConstant = 0.5f;
 
         /**
          * Bias based on the change in depth in depth-resolution units by which shadows are moved
@@ -319,7 +319,7 @@ public class LightManager {
          * Setting this value correctly is essential for LISPSM shadow-maps.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        float polygonOffsetSlope = 2.0f;
+        public float polygonOffsetSlope = 2.0f;
 
         /**
          * Whether screen-space contact shadows are used. This applies regardless of whether a
