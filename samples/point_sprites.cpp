@@ -182,6 +182,7 @@ void cleanup(std::shared_ptr<App> app, Engine* engine) {
     engine->destroy(app->renderable);
     engine->destroy(app->matInstance);
     engine->destroy(app->mat);
+    engine->destroy(app->tex);
     engine->destroy(app->vb);
     engine->destroy(app->ib);
 
@@ -219,11 +220,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "point_sprites";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

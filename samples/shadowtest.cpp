@@ -62,7 +62,6 @@ struct App {
 };
 
 constexpr const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 constexpr bool ENABLE_SHADOWS = true;
 
@@ -73,19 +72,19 @@ GroundPlane createGroundPlane(Engine* engine) {
                     .build(*engine);
     shadowMaterial->setDefaultParameter("strength", 0.7f);
 
-    constexpr uint32_t indices[]{ 0, 1, 2, 2, 3, 0 };
-    constexpr float3 vertices[]{
+    static constexpr uint32_t indices[]{ 0, 1, 2, 2, 3, 0 };
+    static constexpr float3 vertices[]{
         { -10, 0, -10 },
         { -10, 0,  10 },
         {  10, 0,  10 },
         {  10, 0, -10 },
     };
-    short4 tbn = packSnorm16(
+    short4 const tbn = packSnorm16(
             normalize(positive(mat3f{ float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
                           float3{ 0.0f, 1.0f,
                               0.0f } }.toQuaternion()))
                     .xyzw);
-    const short4 normals[]{ tbn, tbn, tbn, tbn };
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
     VertexBuffer* vertexBuffer =
             VertexBuffer::Builder()
                     .vertexCount(4)
@@ -198,14 +197,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config{
         .title = "shadowtest",
-        .iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str()),
         .splitView = false,
     };
-    samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();
