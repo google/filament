@@ -57,6 +57,8 @@ using namespace filament::viewer;
 using namespace filament::gltfio;
 using namespace utils;
 
+namespace {
+
 enum MaterialSource {
     JITSHADER,
     UBERSHADER,
@@ -80,12 +82,14 @@ struct App {
     std::vector<FilamentInstance*> instances;
 };
 
-static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
+const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-static std::ifstream::pos_type getFileSize(const char* filename) {
+std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
@@ -272,11 +276,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {};
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, appLoader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
@@ -326,10 +326,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto fApp = createSampleApp(config, dm.get(), loader);
     if (fApp) {
         fApp->run();
     }
+    delete loader;
 
     return 0;
 }

@@ -55,11 +55,14 @@ using namespace filament;
 using namespace filamesh;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
 
-static std::vector<Path> g_filenames;
+namespace {
 
-static struct NormalConfig {
+float g_meshScale = 1.0f;
+
+std::vector<Path> g_filenames;
+
+struct NormalConfig {
     std::string normalMap;
     std::string clearCoatNormalMap;
     std::string baseColorMap;
@@ -77,14 +80,31 @@ struct App {
     SampleConfig config;
 };
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->normalMap);
-        engine->destroy(app->clearCoatNormalMap);
+        if (app->baseColorMap) {
+            engine->destroy(app->baseColorMap);
+        }
+        if (app->normalMap) {
+            engine->destroy(app->normalMap);
+        }
+        if (app->clearCoatNormalMap) {
+            engine->destroy(app->clearCoatNormalMap);
+        }
+        EntityManager& em = EntityManager::get();
+        for (auto mesh: app->meshes) {
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
+            engine->destroy(mesh.renderable);
+            em.destroy(mesh.renderable);
+        }
+
         std::vector<filament::MaterialInstance*> materialList(
                 app->materialInstances.numRegistered());
         app->materialInstances.getRegisteredMaterials(materialList.data());
@@ -93,13 +113,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         }
         app->materialInstances.unregisterAll();
         engine->destroy(app->material);
-        EntityManager& em = EntityManager::get();
-        for (auto mesh: app->meshes) {
-            engine->destroy(mesh.vertexBuffer);
-            engine->destroy(mesh.indexBuffer);
-            engine->destroy(mesh.renderable);
-            em.destroy(mesh.renderable);
-        }
+
         engine->destroy(app->light);
         em.destroy(app->light);
     };
@@ -169,9 +183,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         loadNormalMap(engine, &app->clearCoatNormalMap, g_normalConfig.clearCoatNormalMap);
         loadBaseColorMap(engine);
 
-        bool hasNormalMap = app->normalMap != nullptr;
-        bool hasClearCoatNormalMap = app->clearCoatNormalMap != nullptr;
-        bool hasBaseColorMap = app->baseColorMap != nullptr;
+        bool const hasNormalMap = app->normalMap != nullptr;
+        bool const hasClearCoatNormalMap = app->clearCoatNormalMap != nullptr;
+        bool const hasBaseColorMap = app->baseColorMap != nullptr;
 
         std::string shader = R"SHADER(
             void material(inout MaterialInputs material) {
@@ -286,9 +300,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         scene->addEntity(app->light);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)

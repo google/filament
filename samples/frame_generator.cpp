@@ -93,6 +93,13 @@ using namespace filamat;
 using namespace utils;
 using namespace image;
 
+namespace {
+
+struct App {
+    SampleConfig config;
+    FilamentApp2* filamentApp;
+};
+
 struct Param {
     utils::CString name;
     std::vector<float> start;
@@ -101,42 +108,37 @@ struct Param {
 
 constexpr int FRAME_TO_SKIP = 10;
 
-static std::vector<Path> g_filenames;
-static std::vector<char> g_materialBuffer;
-static Path g_materialPath;
-static Path g_paramsPath;
-static bool g_lightOn = false;
-static bool g_skyboxOn = true;
-static Skybox* g_skybox = nullptr;
-static int g_materialVariantCount = 1;
-static int g_currentFrame = 0;
-static std::atomic_int g_savedFrames(0);
-static std::vector<Param> g_parameters;
-static std::vector<Param> g_activeParameters;
-static utils::CString g_prefix;
-static uint32_t g_clearColor = 0x000000;
-static uint32_t g_width = 512;
-static uint32_t g_height = 512;
+std::vector<Path> g_filenames;
+std::vector<char> g_materialBuffer;
+Path g_materialPath;
+Path g_paramsPath;
+bool g_lightOn = false;
+bool g_skyboxOn = true;
+Skybox* g_skybox = nullptr;
+int g_materialVariantCount = 1;
+int g_currentFrame = 0;
+std::atomic_int g_savedFrames(0);
+std::vector<Param> g_parameters;
+std::vector<Param> g_activeParameters;
+utils::CString g_prefix;
+uint32_t g_clearColor = 0x000000;
+uint32_t g_width = 512;
+uint32_t g_height = 512;
 
-static std::unique_ptr<MeshAssimp> g_meshSet;
-static std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
-static const Material* g_material = nullptr;
-static MaterialInstance* g_materialInstance = nullptr;
-static Entity g_light;
+std::unique_ptr<MeshAssimp> g_meshSet;
+std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
+const Material* g_material = nullptr;
+MaterialInstance* g_materialInstance = nullptr;
+Entity g_light;
 
-static SampleConfig g_config;
-static float g_meshScale = 1.0f;
+SampleConfig g_config;
+float g_meshScale = 1.0f;
 FilamentApp2* g_filamentApp = nullptr;
-
-struct App {
-    SampleConfig config;
-    FilamentApp2* filamentApp;
-};
 
 // Prints the usage message to the console.
 // Parses command line arguments and populates the SampleConfig object.
 // Cleans up Filament resources (entities, materials, etc.) before exit.
-static void cleanup(Engine* engine, View*, Scene*) {
+void cleanup(Engine* engine, View*, Scene*) {
     for (auto& renderable: g_meshSet->getRenderables()) {
         if (engine->getRenderableManager().getInstance(renderable)) {
             engine->destroy(renderable);
@@ -162,13 +164,13 @@ static void cleanup(Engine* engine, View*, Scene*) {
 }
 
 // Helper function to get the size of a file.
-static std::ifstream::pos_type getFileSize(const char* filename) {
+std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 
 // Reads the compiled material file and creates a Filament Material instance.
-static void readMaterial(Engine* engine) {
+void readMaterial(Engine* engine) {
     long const fileSize = getFileSize(g_materialPath.c_str());
     if (fileSize <= 0) {
         return;
@@ -186,7 +188,7 @@ static void readMaterial(Engine* engine) {
     }
 }
 
-static std::vector<float> parseFloats(std::istream& stream) {
+std::vector<float> parseFloats(std::istream& stream) {
     std::vector<float> values;
     stream >> std::ws;
     if (stream.peek() == '{') {
@@ -219,7 +221,7 @@ static std::vector<float> parseFloats(std::istream& stream) {
 }
 
 // Reads the parameters file which defines how material properties change over frames.
-static void readParameters() {
+void readParameters() {
     std::ifstream in(g_paramsPath.c_str(), std::ifstream::in);
     if (in.is_open()) {
         std::string line;
@@ -254,7 +256,7 @@ static void readParameters() {
     }
 }
 
-static void setParameter(MaterialInstance* mi, const utils::CString& name,
+void setParameter(MaterialInstance* mi, const utils::CString& name,
         const std::vector<float>& values) {
     if (values.size() == 1) {
         mi->setParameter(name.c_str(), values[0]);
@@ -268,7 +270,7 @@ static void setParameter(MaterialInstance* mi, const utils::CString& name,
 }
 
 // Sets up the scene: loads mesh, material, lights, and camera.
-static void setup(Engine* engine, View*, Scene* scene) {
+void setup(Engine* engine, View*, Scene* scene) {
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
     readMaterial(engine);
@@ -336,7 +338,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 }
 
 // Called every frame to update material parameters based on the current frame index.
-static void render(Engine*, View*, Scene*, Renderer*) {
+void render(Engine*, View*, Scene*, Renderer*) {
     int const frame = g_currentFrame - FRAME_TO_SKIP - 1;
     if (frame >= 0 && frame < g_materialVariantCount) {
         float const t = (g_materialVariantCount > 1) ? (float(frame) / float(g_materialVariantCount - 1)) : 0.0f;
@@ -351,7 +353,7 @@ static void render(Engine*, View*, Scene*, Renderer*) {
 }
 
 // Called after rendering to capture the frame and save it as a PNG file.
-static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
+void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     int frame = g_currentFrame - FRAME_TO_SKIP - 1;
     // Account for the back buffer
     if (frame >= 1 && frame < g_materialVariantCount + 1) {
@@ -408,18 +410,17 @@ static void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
     g_currentFrame++;
 }
 
+} // namespace
+
 // Main entry point: parses args, validates inputs, and runs the Filament application.
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
-
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .size(g_width, g_height)
-                        .headless(app->config.headless)
-                        .displayManager(dm)
+    config.width = g_width;
+    config.height = g_height;
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(render)

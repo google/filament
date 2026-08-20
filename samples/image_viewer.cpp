@@ -63,6 +63,7 @@ using namespace filament::viewer;
 using namespace image;
 using namespace utils;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     Engine* engine;
@@ -88,15 +89,15 @@ struct App {
     ColorGrading* colorGrading = nullptr;
 };
 
-static constexpr float4 sFullScreenTriangleVertices[3] = {
+constexpr float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },
         {  3.0f, -1.0f, 1.0f, 1.0f },
         { -1.0f,  3.0f, 1.0f, 1.0f }
 };
 
-static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
+void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     auto& em = EntityManager::get();
     Material* material = Material::Builder()
             .package(RESOURCES_IMAGE_DATA, RESOURCES_IMAGE_SIZE)
@@ -150,7 +151,7 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.defaultTexture = texture;
 }
 
-static void loadImage(App& app, Engine* engine, const Path& filename) {
+void loadImage(App& app, Engine* engine, const Path& filename) {
     if (app.scene.imageTexture) {
         engine->destroy(app.scene.imageTexture);
         app.scene.imageTexture = nullptr;
@@ -211,6 +212,8 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
     app.scene.imageTexture = texture;
     app.showImage = true;
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -326,11 +329,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->scene.imageMaterial->setDefaultParameter("backgroundColor", RgbType::sRGB,
                 app->backgroundColor);
     };
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .cameraMode(app->config.cameraMode)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)

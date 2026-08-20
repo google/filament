@@ -53,7 +53,8 @@ using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
+namespace {
+float g_meshScale = 1.0f;
 
 struct App {
     FilamentApp2* filamentApp;
@@ -71,6 +72,7 @@ struct App {
     bool shadowPlane = false;
     bool discoBall = false;
 };
+} // namespace
 
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
@@ -295,9 +297,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                             .build(*engine);
             shadowMaterial->setDefaultParameter("strength", 0.7f);
 
-            const static uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
+            constexpr uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
 
-            const static filament::math::float3 vertices[] = {
+            constexpr filament::math::float3 vertices[] = {
                 { -10, 0, -10 },
                 { -10, 0, 10 },
                 { 10, 0, 10 },
@@ -308,7 +310,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     filament::math::mat3f{ float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
                         float3{ 0.0f, 1.0f, 0.0f } }).xyzw);
 
-            const static filament::math::short4 normals[]{ tbn, tbn, tbn, tbn };
+            const filament::math::short4 normals[]{ tbn, tbn, tbn, tbn };
 
             VertexBuffer* vertexBuffer = VertexBuffer::Builder()
                                                  .vertexCount(4)
@@ -374,9 +376,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         };
     }
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)

@@ -24,6 +24,7 @@
 #include "generated/resources/filamentapp.h"
 
 #include <filamentapp/Config.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp2.h>
 
@@ -96,6 +97,9 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mForcedWebGPUBackend(builder.mForcedWebGPUBackend),
           mAsynchronousMode(builder.mAsynchronousMode),
           mDisplayManager(builder.mDisplayManager),
+          mDefaultAssetLoader(
+                  builder.mAssetLoader ? nullptr : std::make_unique<DesktopAssetLoader>()),
+          mAssetLoader(builder.mAssetLoader ? builder.mAssetLoader : mDefaultAssetLoader.get()),
           mSetupCallback(builder.mSetup),
           mCleanupCallback(builder.mCleanup),
           mPreRender(builder.mPreRender),

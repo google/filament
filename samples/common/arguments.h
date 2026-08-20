@@ -19,7 +19,9 @@
 
 #include "SampleConfig.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/DisplayManager.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 
@@ -31,6 +33,9 @@
 #include <vector>
 
 namespace samples {
+
+FilamentApp2::Builder getBuilder(const SampleConfig& config,
+        filament::app::DisplayManager* dm = nullptr, filament::app::AssetLoader* loader = nullptr);
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
 
