@@ -76,15 +76,19 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
     return color;
 }
 
+void FrameGraph::Builder::reserveRenderTargets(size_t const count) noexcept {
+    static_cast<RenderPassNode*>(mPassNode)->reserveRenderTargets(count);
+}
+
 // ------------------------------------------------------------------------------------------------
 
 
 FrameGraph::FrameGraph(
-        LinearAllocatorArena& arena,
+        LinearAllocatorArena& arena, size_t size,
         TextureCacheInterface& resourceAllocator,
         Mode const mode)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", {arena, 384 * 1024}), // real max usage about 260KiB
+          mArena("FrameGraph Arena", {arena, size}),
           mGraph(mArena),
           mMode(mode),
           mResourceSlots(mArena),
@@ -92,10 +96,10 @@ FrameGraph::FrameGraph(
           mResourceNodes(mArena),
           mPassNodes(mArena)
 {
-    mResourceSlots.reserve(256);
-    mResources.reserve(256);
-    mResourceNodes.reserve(256);
-    mPassNodes.reserve(64);
+    mResourceSlots.reserve(512);
+    mResources.reserve(512);
+    mResourceNodes.reserve(512);
+    mPassNodes.reserve(128);
 }
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -168,28 +172,20 @@ FrameGraph& FrameGraph::compile() noexcept {
         first++;
         assert_invariant(!passNode->isCulled());
 
-        { // scope for the temporary allocations
-            utils::ArenaScope const scope(mArena);
-            auto const& reads = dependencyGraph.getIncomingEdges(passNode, mArena);
-            for (auto const& edge : reads) {
-                // all incoming edges should be valid by construction
-                assert_invariant(dependencyGraph.isEdgeValid(edge));
-                auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->from));
-                passNode->registerResource(pNode->resourceHandle);
-            }
-        }
+        dependencyGraph.forEachIncomingEdge(passNode, [&](DependencyGraph::Edge const* edge) {
+            // all incoming edges should be valid by construction
+            assert_invariant(dependencyGraph.isEdgeValid(edge));
+            auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->from));
+            passNode->registerResource(pNode->resourceHandle);
+        });
 
-        { // scope for the temporary allocations
-            utils::ArenaScope const scope(mArena);
-            auto const& writes = dependencyGraph.getOutgoingEdges(passNode, mArena);
-            for (auto const& edge : writes) {
-                // An outgoing edge might be invalid if the node it points to has been culled
-                // but because we are not culled, and we're a pass we add a reference to
-                // the resource we are writing to.
-                auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->to));
-                passNode->registerResource(pNode->resourceHandle);
-            }
-        }
+        dependencyGraph.forEachOutgoingEdge(passNode, [&](DependencyGraph::Edge const* edge) {
+            // An outgoing edge might be invalid if the node it points to has been culled
+            // but because we are not culled, and we're a pass we add a reference to
+            // the resource we are writing to.
+            auto const pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->to));
+            passNode->registerResource(pNode->resourceHandle);
+        });
 
         passNode->resolve();
     }
@@ -204,6 +200,29 @@ FrameGraph& FrameGraph::compile() noexcept {
             if (pFirst && pLast) {
                 assert_invariant(!pFirst->isCulled());
                 assert_invariant(!pLast->isCulled());
+                pFirst->devirtualizeCount++;
+                pLast->destroyCount++;
+            }
+        }
+    }
+
+    for (auto* pPass : mPassNodes) {
+        if (!pPass->isCulled()) {
+            if (pPass->devirtualizeCount) {
+                pPass->devirtualize.reserve(pPass->devirtualize.size() + pPass->devirtualizeCount);
+            }
+            if (pPass->destroyCount) {
+                pPass->destroy.reserve(pPass->destroy.size() + pPass->destroyCount);
+            }
+        }
+    }
+
+    for (auto* pResource : mResources) {
+        VirtualResource* resource = pResource;
+        if (resource->refcount) {
+            PassNode* pFirst = resource->first;
+            PassNode* pLast = resource->last;
+            if (pFirst && pLast) {
                 pFirst->devirtualize.push_back(resource);
                 pLast->destroy.push_back(resource);
             }
@@ -277,6 +296,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
 void FrameGraph::addPresentPass(const std::function<void(Builder&)>& setup) noexcept {
     PresentPassNode* node = mArena.make<PresentPassNode>(*this);
+    assert_invariant(node);
     mPassNodes.push_back(node);
     Builder builder(*this, node);
     setup(builder);
@@ -286,6 +306,7 @@ void FrameGraph::addPresentPass(const std::function<void(Builder&)>& setup) noex
 FrameGraph::Builder FrameGraph::addPassInternal(char const* name, FrameGraphPassBase* base) noexcept {
     // record in our pass list and create the builder
     PassNode* node = mArena.make<RenderPassNode>(*this, name, base);
+    assert_invariant(node);
     base->setNode(node);
     mPassNodes.push_back(node);
     return { *this, node };
@@ -300,6 +321,7 @@ FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle) noexcept 
     slot.version = ++handle.version;    // increase the parent's version
     slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
     ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, parent);
+    assert_invariant(newNode);
     mResourceNodes.push_back(newNode);
     return handle;
 }
@@ -312,6 +334,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
         node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());
+        assert_invariant(node);
         mResourceNodes.push_back(node);
     }
     return node;
@@ -329,6 +352,7 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
     slot.nid = (ResourceSlot::Index)mResourceNodes.size();
     mResources.push_back(resource);
     ResourceNode* pNode = mArena.make<ResourceNode>(*this, handle, parent);
+    assert_invariant(pNode);
     mResourceNodes.push_back(pNode);
     return handle;
 }
@@ -489,6 +513,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
                             .width = desc.viewport.width,
                             .height = desc.viewport.height
                     }, desc, target);
+    assert_invariant(vresource);
     return FrameGraphId<FrameGraphTexture>(addResourceInternal(vresource));
 }
 
@@ -541,32 +566,28 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char* viewName) con
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
-        auto const &readEdges = mGraph.getIncomingEdges(pass, mArena);
-        for (auto const &edge: readEdges) {
+        mGraph.forEachIncomingEdge(pass, [&](DependencyGraph::Edge const* edge) {
             // all incoming edges should be valid by construction
             assert_invariant(mGraph.isEdgeValid(edge));
             auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->from));
             assert_invariant(resourceNode);
-            if (resourceNode->getRefCount() == 0)
-                continue;
-
-            reads.push_back(resourceNode->resourceHandle.index);
-        }
+            if (resourceNode->getRefCount() != 0) {
+                reads.push_back(resourceNode->resourceHandle.index);
+            }
+        });
 
         std::vector<fgviewer::ResourceId> writes;
-        auto const &writeEdges = mGraph.getOutgoingEdges(pass, mArena);
-        for (auto const &edge: writeEdges) {
+        mGraph.forEachOutgoingEdge(pass, [&](DependencyGraph::Edge const* edge) {
             // It is possible that the node we're writing to has been culled.
             // In this case we'd like to ignore the edge.
-            if (!mGraph.isEdgeValid(edge)) {
-                continue;
+            if (mGraph.isEdgeValid(edge)) {
+                auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->to));
+                assert_invariant(resourceNode);
+                if (resourceNode->getRefCount() != 0) {
+                    writes.push_back(resourceNode->resourceHandle.index);
+                }
             }
-            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->to));
-            assert_invariant(resourceNode);
-            if (resourceNode->getRefCount() == 0)
-                continue;
-            writes.push_back(resourceNode->resourceHandle.index);
-        }
+        });
         passes.emplace_back(pass->getId(), utils::CString(pass->getName()),
             std::move(reads), std::move(writes), pass->getRenderTargetInfo());
     }

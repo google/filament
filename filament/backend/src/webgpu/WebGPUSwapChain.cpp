@@ -261,7 +261,7 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
       mNativeWindow{nativeWindow} {
 
     wgpu::SurfaceCapabilities capabilities = {};
-    if (!mSurface.GetCapabilities(adapter, &capabilities)) {
+    if (mSurface.GetCapabilities(adapter, &capabilities) != wgpu::Status::Success) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities";
     } else {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)

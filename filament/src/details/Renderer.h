@@ -75,6 +75,10 @@ class FRenderer : public Renderer {
     static constexpr unsigned MAX_FRAMETIME_HISTORY = 32u;
 
 public:
+    // The FrameGraph arena size only depends on how the FrameGraph is used. Currently, 512 KiB handles the most
+    // complex graph Renderer can produce.
+    static constexpr size_t FRAMEGRAPH_ARENA_SIZE = 512 * 1024;
+
     explicit FRenderer(FEngine& engine);
 
     ~FRenderer() noexcept;

@@ -72,6 +72,8 @@ public:
         return {};
     }
 #endif
+    uint16_t devirtualizeCount = 0;
+    uint16_t destroyCount = 0;
     Vector<VirtualResource*> devirtualize;         // resources we need to create before executing
     Vector<VirtualResource*> destroy;              // resources we need to destroy after executing
 };
@@ -82,16 +84,16 @@ public:
     public:
         static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
         utils::StaticString name{};
-        FrameGraphRenderPass::Descriptor descriptor;
-        bool imported = false;
-        backend::TargetBufferFlags targetBufferFlags = {};
-        FrameGraphId<FrameGraphTexture> attachmentInfo[ATTACHMENT_COUNT] = {};
-        ResourceNode* incoming[ATTACHMENT_COUNT] = {};  // nodes of the incoming attachments
-        ResourceNode* outgoing[ATTACHMENT_COUNT] = {};  // nodes of the outgoing attachments
+        FrameGraphRenderPass::Attachments attachments{};
         struct {
             backend::Handle<backend::HwRenderTarget> target;
             backend::RenderPassParams params;
         } backend;
+        backend::TargetBufferFlags targetBufferFlags = {};
+        backend::TargetBufferFlags clearFlags = {};
+        uint8_t samples = 0;
+        uint8_t layerCount = 1;
+        bool imported = false;
 
         void devirtualize(FrameGraph& fg, TextureCacheInterface& textureCache) noexcept;
         void destroy(TextureCacheInterface& textureCache) const noexcept;
@@ -106,6 +108,7 @@ public:
 
     RenderPassData const* getRenderPassData(uint32_t id) const noexcept;
     size_t getRenderTargetCount() const noexcept { return mRenderTargetData.size(); }
+    void reserveRenderTargets(size_t count) noexcept { mRenderTargetData.reserve(count); }
 
     // virtuals from DependencyGraph::Node
     char const* getName() const noexcept override { return mName; }

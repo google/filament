@@ -42,7 +42,10 @@ struct Deleter {
 using FrameGraphAllocator = utils::Arena<
         utils::LinearAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::DebugAndLeakDetector,
+        utils::TrackingPolicy::Composite<
+            utils::TrackingPolicy::HighWatermark,
+            utils::TrackingPolicy::Debug,
+            utils::TrackingPolicy::LeakDetector>,
         utils::AreaPolicy::ArenaArea<LinearAllocatorArena>>;
 
 #else

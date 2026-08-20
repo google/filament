@@ -86,7 +86,7 @@ struct Texture::BuilderDetails {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
     CallbackHandler* mAsyncCreationHandler = nullptr;
-    std::function<void(Texture* UTILS_NONNULL, void* UTILS_NULLABLE)> mAsyncCreationCallback;
+    Texture::AsyncCompletionCallback mAsyncCreationCallback;
     void* mAsyncCreationUserData = nullptr;
 };
 
@@ -341,7 +341,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         // mHandle and mHandleForSampling will be created in setExternalImage()
         // If this Texture is used for sampling before setExternalImage() is called,
         // we'll lazily create a 1x1 placeholder texture.
-        mCreationComplete.store(true, std::memory_order_relaxed);
+        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
         return;
     }
 
@@ -359,10 +359,15 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
                 /* userCallback */ std::move(copiedCompletionCallback),
                 /* userParam1 */ this,
                 /* userParam2 */ builder->mAsyncCreationUserData,
-                /* onCountdownComplete */ [this]() {
+                /* onCountdownComplete */ [this](backend::AsyncCallStatus const status) {
+                    // Always leaves CREATING, even when canceled: FEngine::destroy waits on that
+                    // to free the object, so one that stays CREATING is deferred forever.
                     // `std::memory_order_relaxed` should be sufficient because no other variables
                     // need to be visible to other threads in a strict sequence.
-                    mCreationComplete.store(true, std::memory_order_relaxed);
+                    mCreationStatus.store(status == backend::AsyncCallStatus::CANCELED
+                                    ? CreationStatus::CANCELED
+                                    : CreationStatus::CREATED,
+                            std::memory_order_relaxed);
                 },
                 /* driver */ &engine.getDriver());
 
@@ -407,7 +412,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         // In regular (non-asynchronous) mode, we know creation is complete as soon as all
         // creation-relevant API calls are recorded into the command stream, because subsequent API
         // calls will always be invoked after that (even including asynchronous version of APIs).
-        mCreationComplete.store(true, std::memory_order_relaxed);
+        mCreationStatus.store(CreationStatus::CREATED, std::memory_order_relaxed);
     }
 
     mHandleForSampling = mHandle;
@@ -551,8 +556,9 @@ void FTexture::setImage(FEngine& engine, size_t const level,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& p) const {
 
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     setImageCommon(engine, level, xoffset, yoffset, zoffset, width, height, depth, p);
 
@@ -569,7 +575,7 @@ AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
         PixelBufferDescriptor&& p, backend::CallbackHandler* handler,
         AsyncCompletionCallback callback, void* user) const {
 
-    // We skip the isCreationComplete() check for asynchronous APIs because they are designed to
+    // We skip the isCreationSuccessful() check for asynchronous APIs because they are designed to
     // function correctly regardless of whether the object's creation process is fully complete.
 
     setImageCommon(engine, level, xoffset, yoffset, zoffset, width, height, depth, p);
@@ -588,8 +594,9 @@ AsyncCallId FTexture::setImageAsync(FEngine& engine, size_t const level,
 
 void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     // The call to setupExternalImage2 is synchronous, and allows the driver to take ownership of the
     // external image on this thread, if necessary.
@@ -610,8 +617,9 @@ void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) {
 
 void FTexture::setExternalImage(FEngine& engine, void* image) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     // The call to setupExternalImage is synchronous, and allows the driver to take ownership of the
     // external image on this thread, if necessary.
@@ -632,8 +640,9 @@ void FTexture::setExternalImage(FEngine& engine, void* image) {
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
     // the external image on this thread, if necessary.
@@ -655,8 +664,9 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     auto& api = engine.getDriverApi();
     auto texture = api.createTexture(
@@ -683,8 +693,9 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) {
 void FTexture::generateMipmaps(FEngine& engine) const {
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Textures are not mipmappable.";
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
     FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_3D)
             << "3D Textures are not mipmappable.";
 
@@ -762,15 +773,17 @@ Handle<HwTexture> FTexture::createPlaceholderTexture(
 }
 
 backend::Handle<backend::HwTexture> FTexture::getHwHandle() const {
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     return mHandle;
 }
 
 Handle<HwTexture> FTexture::getHwHandleForSampling() const {
-    FILAMENT_CHECK_PRECONDITION(isCreationComplete())
-            << "Texture is not created yet. It may be in the process of asynchronous loading";
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "Texture is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
 
     if (UTILS_UNLIKELY(mExternal && !mHandleForSampling)) {
         return setHandleForSampling(createPlaceholderTexture(*mDriver));

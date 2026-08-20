@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include <utils/CallStack.h>
 #include <utils/CString.h>
+#include <utils/CallStack.h>
+#include <utils/api_level.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 
@@ -35,7 +36,7 @@
 #endif
 
 // execinfo.h is available as of Android 33
-#if defined(__ANDROID__) && (__ANDROID_API__ >= 33)
+#if defined(__ANDROID__) && (FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 33)
 #include <execinfo.h>
 #undef HAS_EXECINFO
 #define HAS_EXECINFO 1
