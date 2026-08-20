@@ -333,6 +333,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     // example), we'd run into a GPU crash.
     out << "#define CONFIG_MAX_STEREOSCOPIC_EYES " << (int) CONFIG_MAX_STEREOSCOPIC_EYES << "\n";
 
+    out << "#define CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS "
+        << (int) CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS << "\n";
+
     if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
         // when it's not supported.
@@ -343,12 +346,17 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     bool const isDepthVariant = filament::Variant::isValidDepthVariant(v);
     if (isDepthVariant) {
         out << "const bool RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
     } else {
         bool const litVariants = material.isLit || material.hasShadowMultiplier;
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
                 CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
                         +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING,
                 litVariants);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS + +DynamicSpecializationConstants::
+                        RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS,
+                false);
     }
 
     out << '\n';
@@ -1200,6 +1208,8 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
         case Property::SHADOW_STRENGTH:             return "SHADOW_STRENGTH";
         case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
+        case Property::SECOND_ROUGHNESS:            return "SECOND_ROUGHNESS";
+        case Property::SECOND_ROUGHNESS_WEIGHT:     return "SECOND_ROUGHNESS_WEIGHT";
     }
 }
 

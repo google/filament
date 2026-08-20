@@ -14,16 +14,17 @@
 * limitations under the License.
 */
 
-#include <gtest/gtest.h>
-
-#include "TestMaterialParser.h"
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "MaterialLexer.h"
 #include "MockIncluder.h"
+#include "TestMaterialParser.h"
+
+#include <filament-matp/MaterialParser.h>
 
 #include <filamat/MaterialBuilder.h>
-#include <filament-matp/MaterialParser.h>
+
+#include <gtest/gtest.h>
 
 class MaterialLexer: public ::testing::Test {
 protected:
@@ -359,6 +360,128 @@ TEST_F(MaterialLexer, JsonMaterialParserSingleDoubleQuoteDoesntCrash) {
             singleDoubleQuote.c_str(), singleDoubleQuote.size(), unused);
 
     EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
+}
+
+namespace {
+    class MockConfig : public matp::Config {
+    public:
+        MockConfig() = default;
+        ~MockConfig() override = default;
+
+        matp::Config::Output* getOutput() const noexcept override { return nullptr; }
+        matp::Config::Input* getInput() const noexcept override { return nullptr; }
+        std::string toString() const noexcept override { return ""; }
+        std::string toPIISafeString() const noexcept override { return ""; }
+
+        void setApiLevelOverride(uint32_t level) { mApiLevelOverride = level; }
+    };
+}
+
+TEST_F(MaterialLexer, MaterialParserOverrideApiLevel) {
+    matp::MaterialParser parser;
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+
+    static std::string source(R"(
+        material {
+            name: "test",
+            shadingModel: unlit,
+            apiLevel: 1
+        }
+    )");
+
+    ssize_t size = source.size();
+    auto buffer = std::make_unique<char[]>(size);
+    std::memcpy(buffer.get(), source.data(), size);
+    std::unique_ptr<const char[]> constBuffer(buffer.release());
+
+    MockConfig config;
+    config.setApiLevelOverride(2);
+
+    utils::Status result = parser.parse(builder, config, size, constBuffer);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
+    EXPECT_EQ(builder.getApiLevel(), 2);
+
+    filamat::MaterialBuilder::shutdown();
+}
+
+TEST_F(MaterialLexer, MaterialParserUseApiLevelInMatFile) {
+    matp::MaterialParser parser;
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+
+    static std::string source(R"(
+        material {
+            name: "test",
+            shadingModel: unlit,
+            apiLevel: 2
+        }
+    )");
+
+    ssize_t size = source.size();
+    auto buffer = std::make_unique<char[]>(size);
+    std::memcpy(buffer.get(), source.data(), size);
+    std::unique_ptr<const char[]> constBuffer(buffer.release());
+
+    MockConfig config;
+
+    utils::Status result = parser.parse(builder, config, size, constBuffer);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
+    EXPECT_EQ(builder.getApiLevel(), 2);
+
+    filamat::MaterialBuilder::shutdown();
+}
+
+TEST_F(MaterialLexer, MaterialParserNoApiLevelDefaultsToOne) {
+    matp::MaterialParser parser;
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+
+    static std::string source(R"(
+        material {
+            name: "test",
+            shadingModel: unlit
+        }
+    )");
+
+    ssize_t size = source.size();
+    auto buffer = std::make_unique<char[]>(size);
+    std::memcpy(buffer.get(), source.data(), size);
+    std::unique_ptr<const char[]> constBuffer(buffer.release());
+
+    MockConfig config;
+
+    utils::Status result = parser.parse(builder, config, size, constBuffer);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
+    EXPECT_EQ(builder.getApiLevel(), 1);
+
+    filamat::MaterialBuilder::shutdown();
+}
+
+TEST_F(MaterialLexer, MaterialParserInvalidApiLevelFailsToCompile) {
+    matp::MaterialParser parser;
+    filamat::MaterialBuilder::init();
+    filamat::MaterialBuilder builder;
+
+    static std::string source(R"(
+        material {
+            name: "test",
+            shadingModel: unlit,
+            apiLevel: -1
+        }
+    )");
+
+    ssize_t size = source.size();
+    auto buffer = std::make_unique<char[]>(size);
+    std::memcpy(buffer.get(), source.data(), size);
+    std::unique_ptr<const char[]> constBuffer(buffer.release());
+
+    MockConfig config;
+
+    utils::Status result = parser.parse(builder, config, size, constBuffer);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
+
+    filamat::MaterialBuilder::shutdown();
 }
 
 int main(int argc, char** argv) {

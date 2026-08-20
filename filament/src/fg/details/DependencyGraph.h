@@ -17,9 +17,10 @@
 #ifndef TNT_FILAMENT_FG_DETAILS_DEPENDENCYGRAPH_H
 #define TNT_FILAMENT_FG_DETAILS_DEPENDENCYGRAPH_H
 
+#include "fg/details/Utilities.h"
+
 #include <utils/CString.h>
 #include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/ostream.h>
 
 #include <vector>
@@ -31,7 +32,7 @@ namespace filament {
  */
 class DependencyGraph {
 public:
-    DependencyGraph() noexcept;
+    explicit DependencyGraph(FrameGraphAllocator& arena) noexcept;
     ~DependencyGraph() noexcept;
     DependencyGraph(const DependencyGraph&) noexcept = delete;
     DependencyGraph& operator=(const DependencyGraph&) noexcept = delete;
@@ -127,8 +128,8 @@ public:
         const NodeID mId;           // unique id
     };
 
-    using EdgeContainer = utils::FixedCapacityVector<Edge*, std::allocator<Edge*>, false>;
-    using NodeContainer = utils::FixedCapacityVector<Node*, std::allocator<Node*>, false>;
+    using EdgeContainer = Vector<Edge*>;
+    using NodeContainer = Vector<Node*>;
 
     /**
      * Removes all edges and nodes from the graph.
@@ -147,21 +148,63 @@ public:
      * @param node the node to consider
      * @return A list of incoming edges
      */
-    EdgeContainer getIncomingEdges(Node const* node) const noexcept;
+    EdgeContainer getIncomingEdges(Node const* node, FrameGraphAllocator& arena) const noexcept;
 
     /**
      * Returns the list of outgoing edges to a node
      * @param node the node to consider
      * @return A list of outgoing edges
      */
-    EdgeContainer getOutgoingEdges(Node const* node) const noexcept;
+    EdgeContainer getOutgoingEdges(Node const* node, FrameGraphAllocator& arena) const noexcept;
+
+    template <typename F>
+    void forEachIncomingEdge(Node const* node, F&& fn) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->to == nodeId) {
+                fn(edge);
+            }
+        }
+    }
+
+    template <typename F>
+    void forEachOutgoingEdge(Node const* node, F&& fn) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->from == nodeId) {
+                fn(edge);
+            }
+        }
+    }
+
+    template <typename F>
+    Edge const* findIncomingEdge(Node const* node, F&& predicate) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->to == nodeId && predicate(edge)) {
+                return edge;
+            }
+        }
+        return nullptr;
+    }
+
+    template <typename F>
+    Edge const* findOutgoingEdge(Node const* node, F&& predicate) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->from == nodeId && predicate(edge)) {
+                return edge;
+            }
+        }
+        return nullptr;
+    }
 
     Node const* getNode(NodeID id) const noexcept;
 
     Node* getNode(NodeID id) noexcept;
 
     //! cull unreferenced nodes. Links ARE NOT removed, only reference counts are updated.
-    void cull() noexcept;
+    void cull(FrameGraphAllocator& arena) noexcept;
 
     /**
      * Return whether an edge is valid, that is if both ends are connected to nodes
@@ -171,9 +214,9 @@ public:
     bool isEdgeValid(Edge const* edge) const noexcept;
 
     //! export a graphviz view of the graph
-    void export_graphviz(utils::io::ostream& out, const char* name = nullptr) const noexcept;
+    void export_graphviz(FrameGraphAllocator& arena, utils::io::ostream& out, const char* name = nullptr) const noexcept;
 
-    bool isAcyclic() const noexcept;
+    bool isAcyclic(FrameGraphAllocator& arena) const noexcept;
 
 private:
     // id must be the node key in the NodeContainer

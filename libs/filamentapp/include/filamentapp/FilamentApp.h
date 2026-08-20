@@ -64,11 +64,6 @@ public:
 
     void close();
 
-    void onSurfaceCreated(void* nativeWindow);
-    void onSurfaceChanged(int width, int height);
-    void onSurfaceDestroyed();
-    void onTouchEvent(int action, float x, float y);
-
     void setSidebarWidth(int width);
     void setWindowTitle(const char* title);
     void setCameraFocalLength(float focalLength);
@@ -97,13 +92,14 @@ public:
 private:
     FilamentApp();
 
+    std::unique_ptr<filament::app::DisplayManager> mDisplayManager;
     std::unique_ptr<FilamentApp2> mImpl;
 
     AnimCallback mAnimation;
     ResizeCallback mResize;
     DropCallback mDropHandler;
     int mSidebarWidth = 0;
-    std::string mWindowTitle;
+    utils::CString mWindowTitle;
     float mCameraFocalLength = 0.0f;
     float mCameraNear = 0.0f;
     float mCameraFar = 0.0f;

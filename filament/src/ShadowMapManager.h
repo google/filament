@@ -150,13 +150,13 @@ public:
     FrameGraphId<FrameGraphTexture> gaussianMipmapPass(
             FEngine& engine,
             FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t levelCount,
             math::float4 clearColor) noexcept;
 
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(
             FEngine& engine,
             FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+            FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t levelCount,
             math::float4 clearColor) noexcept;
 
 

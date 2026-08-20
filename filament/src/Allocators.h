@@ -36,7 +36,7 @@ using HeapAllocatorArena = utils::Arena<
 using LinearAllocatorArena = utils::Arena<
         utils::LinearAllocator,
         utils::LockingPolicy::NoLock,
-        utils::TrackingPolicy::DebugAndHighWatermark>;
+        utils::TrackingPolicy::DebugAndLeakDetector>;
 
 #else
 
@@ -53,8 +53,6 @@ using LinearAllocatorArena = utils::Arena<
         utils::LockingPolicy::NoLock>;
 
 #endif
-
-using RootArenaScope = utils::ArenaScope<LinearAllocatorArena>;
 
 } // namespace filament
 

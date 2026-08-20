@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -51,6 +52,7 @@ using utils::EntityManager;
 using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
+using AsyncCallStatus = backend::AsyncCallStatus;
 
 struct Vertex {
     filament::math::float2 position;
@@ -69,53 +71,9 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage("HELLOASYNC creates resources asynchronously\n"
-                      "Usage:\n"
-                      "    HELLOASYNC [options]\n"
-                      "Options:\n"
-                      "   --help, -h\n"
-                      "       Prints this message\n\n"
-                      "API_USAGE");
-    const std::string from("HELLOASYNC");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos;
-            pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArguments(int argc, char* argv[], SampleConfig& config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help", utils::getopt::no_argument, nullptr, 'h' },
-        { "api", utils::getopt::required_argument, nullptr, 'a' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
+    FilamentApp2* filamentApp = nullptr;
     // Global data
     Engine* engine = nullptr;
     Entity camera;
@@ -230,13 +188,13 @@ struct App {
             Path const path =
                     FilamentApp2::getRootAssetsPath() + "textures/Moss_01/Moss_01_Color.png";
             if (!path.exists()) {
-                std::cerr << "The texture " << path << " does not exist" << std::endl;
+                std::cerr << "The texture " << path.c_str() << " does not exist" << std::endl;
                 exit(1);
             }
             imageData.reset(stbi_load(path.c_str(), &imageWidth, &imageHeight,
                     &imageChannels, 4));
             if (!imageData) {
-                std::cerr << "The texture " << path << " could not be loaded" << std::endl;
+                std::cerr << "The texture " << path.c_str() << " could not be loaded" << std::endl;
                 exit(1);
             }
         };
@@ -430,30 +388,26 @@ struct App {
     }
 };
 
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "helloasync";
-    config.asynchronousMode = backend::AsynchronousMode::THREAD_PREFERRED;
-    handleCommandLineArguments(argc, argv, config);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    App app;
-
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.engine = engine;
-        app.scene = scene;
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->engine = engine;
+        app->scene = scene;
 
         // Set up view (Skybox & Camera)
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-        scene->setSkybox(app.skybox);
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+        scene->setSkybox(app->skybox);
 
-        app.camera = EntityManager::get().create();
-        app.cam = engine->createCamera(app.camera);
+        app->camera = EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
         const float zoom = 12.0;
         const float aspect =
                 static_cast<float>(view->getViewport().width) / view->getViewport().height;
-        app.cam->setProjection(Camera::Projection::ORTHO, -zoom, zoom,
-                -zoom, zoom, -1, 1);
-        view->setCamera(app.cam);
+        app->cam->setProjection(Camera::Projection::ORTHO, -zoom, zoom, -zoom, zoom, -1, 1);
+        view->setCamera(app->cam);
         view->setPostProcessingEnabled(false);
 
         // Pre-calculate the layout transform for each object in a centered 2D grid arrangement.
@@ -472,69 +426,97 @@ int main(int argc, char** argv) {
             auto s = math::mat4f::scaling(math::float3(0.4f, 0.4f, 0.4f));
             auto t = math::mat4f::translation(
                     math::float3(-colStart + (col * 1.0f), rowStart - (row * 1.0f), 0.0f));
-            app.objectData[i].baseTransform = t * s;
+            app->objectData[i].baseTransform = t * s;
         }
 
         if (engine->isAsynchronousModeEnabled()) {
             // Build a pipeline for asynchronous operations.
-            app.onLoadImageComplete = [&app](void* user) {
+            // Every completion callback receives an AsyncCallStatus. CANCELED means the operation
+            // never ran, so the resource it was meant to populate is not usable: the chain has to
+            // stop there instead of moving on to a stage that would read an empty resource.
+            app->onLoadImageComplete = [app](void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 // Load this once as it's universal across all objects
-                app.createMaterial();
+                app->createMaterial();
                 // Initiate loading multiple renderables at the same time.
-                app.startLoadingOneRenderable();
-                app.startLoadingOneRenderable();
-                app.startLoadingOneRenderable();
-                app.startLoadingOneRenderable();
-                app.startLoadingOneRenderable();
+                app->startLoadingOneRenderable();
+                app->startLoadingOneRenderable();
+                app->startLoadingOneRenderable();
+                app->startLoadingOneRenderable();
+                app->startLoadingOneRenderable();
             };
-            app.onCreateTextureComplete = [&app](Texture* tex, void* user) {
-                app.updateTexture(user, app.onTextureUpdateComplete);
+            app->onCreateTextureComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->updateTexture(user, app->onTextureUpdateComplete);
             };
-            app.onTextureUpdateComplete = [&app](Texture* tex, void* user) {
-                app.createMaterialInstance(user);
-                app.textureReady(user);
+            app->onTextureUpdateComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->createMaterialInstance(user);
+                app->textureReady(user);
             };
-            app.onCreateVertexBufferComplete = [&app](VertexBuffer* vb, void* user) {
-                app.updateVertexBuffer(user, app.onVertexBufferUpdateComplete);
+            app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->updateVertexBuffer(user, app->onVertexBufferUpdateComplete);
             };
-            app.onVertexBufferUpdateComplete = [&app](VertexBuffer* vb, void* user) {
-                app.vertexBufferReady(user);
+            app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->vertexBufferReady(user);
             };
-            app.onCreateIndexBufferComplete = [&app](IndexBuffer* ib, void* user) {
-                app.updateIndexBuffer(user, app.onIndexBufferUpdateComplete);
+            app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->updateIndexBuffer(user, app->onIndexBufferUpdateComplete);
             };
-            app.onIndexBufferUpdateComplete = [&app](IndexBuffer* ib, void* user) {
-                app.indexBufferReady(user);
+            app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
+                app->indexBufferReady(user);
             };
 
             // Start the chain of asynchronous operations.
-            app.loadImage(app.onLoadImageComplete);
+            app->loadImage(app->onLoadImageComplete);
         } else {
             // Load an image and a material once as they are shared across all objects
-            app.loadImage();
-            app.createMaterial();
+            app->loadImage();
+            app->createMaterial();
             // Load renderables synchronously
             for (int i = 0; i < App::OBJECT_COUNT; ++i) {
-                void* data = &app.objectData[i];
-                app.createTexture(data);
-                app.updateTexture(data);
-                app.createMaterialInstance(data);
-                app.createVertexBuffer(data);
-                app.updateVertexBuffer(data);
-                app.createIndexBuffer(data);
-                app.updateIndexBuffer(data);
-                app.createRenderable(data);
+                void* data = &app->objectData[i];
+                app->createTexture(data);
+                app->updateTexture(data);
+                app->createMaterialInstance(data);
+                app->createVertexBuffer(data);
+                app->updateVertexBuffer(data);
+                app->createIndexBuffer(data);
+                app->updateIndexBuffer(data);
+                app->createRenderable(data);
             }
         }
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
         // We set this flag to guard against accessing resources (textures/buffers) inside
         // completion callbacks after cleanup.
-        app.shuttingDown = true;
+        app->shuttingDown = true;
 
         for (int i = 0; i < App::OBJECT_COUNT; ++i) {
-            auto& data = app.objectData[i];
+            auto& data = app->objectData[i];
             if (data.renderable) {
                 engine->destroy(data.renderable);
             }
@@ -551,40 +533,54 @@ int main(int argc, char** argv) {
                 engine->destroy(data.tex);
             }
         }
-        if (app.mat) {
-            engine->destroy(app.mat);
+        if (app->mat) {
+            engine->destroy(app->mat);
         }
-        if (app.skybox) {
-            engine->destroy(app.skybox);
+        if (app->skybox) {
+            engine->destroy(app->skybox);
         }
-        if (app.camera) {
-            engine->destroyCameraComponent(app.camera);
-            EntityManager::get().destroy(app.camera);
+        if (app->camera) {
+            engine->destroyCameraComponent(app->camera);
+            EntityManager::get().destroy(app->camera);
         }
     };
 
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(config.title)
-                              .backend(config.backend)
-                              .asynchronousMode(config.asynchronousMode)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  auto& tm = engine->getTransformManager();
-                                  for (int i = 0; i < App::OBJECT_COUNT; ++i) {
-                                      auto& data = app.objectData[i];
-                                      if (!data.renderable) {
-                                          continue; // Skip updating transform for renderables that
-                                                    // are not loaded yet.
-                                      }
-                                      auto r = math::mat4f::rotation(now, math::float3(0, 0, 1));
-                                      tm.setTransform(tm.getInstance(data.renderable),
-                                              data.baseTransform * r);
-                                  }
-                              })
-                              .build();
-    app.filamentApp->run();
+    auto fApp = FilamentApp2::Builder()
+                        .displayManager(dm)
+                        .title(app->config.title)
+                        .backend(app->config.backend)
+                        .asynchronousMode(app->config.asynchronousMode)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            auto& tm = engine->getTransformManager();
+                            for (int i = 0; i < App::OBJECT_COUNT; ++i) {
+                                auto& data = app->objectData[i];
+                                if (!data.renderable) {
+                                    continue; // Skip updating transform for renderables that
+                                              // are not loaded yet.
+                                }
+                                auto r = math::mat4f::rotation(now, math::float3(0, 0, 1));
+                                tm.setTransform(tm.getInstance(data.renderable),
+                                        data.baseTransform * r);
+                            }
+                        })
+                        .build();
 
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "helloasync";
+    config.asynchronousMode = backend::AsynchronousMode::THREAD_PREFERRED;
+    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif

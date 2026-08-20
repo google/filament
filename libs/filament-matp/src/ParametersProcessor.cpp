@@ -78,7 +78,13 @@ static Status processName(MaterialBuilder& builder, const JsonishValue& value) {
 }
 
 static Status processApiLevel(MaterialBuilder& builder, const JsonishValue& value) {
-    builder.setApiLevel(value.toJsonNumber()->getFloat());
+    const int apiLevel = value.toJsonNumber()->getFloat();
+    if (apiLevel < 1 || apiLevel > filament::UNSTABLE_MATERIAL_API_LEVEL) {
+        io::sstream errorMessage;
+        errorMessage << "parameters: api level must be between 1 and " << filament::UNSTABLE_MATERIAL_API_LEVEL;
+        return Status::invalidArgument(errorMessage.c_str());
+    }
+    builder.setApiLevel(apiLevel);
     return Status::ok();
 }
 
@@ -1444,7 +1450,8 @@ Status ParametersProcessor::process(MaterialBuilder& builder, const JsonishObjec
 
         auto fPointer = mParameters[key].callback;
         if (Status status = fPointer(builder, *field); !status.isOk()) {
-            std::cerr << "Error while processing material json, key:\"" << key << "\"" << std::endl;
+            std::cerr << "Error while processing material json, key:\"" << key << "\"\n" << "Error message: "
+                    << status.getMessage() << std::endl;
             return status;
         }
     }

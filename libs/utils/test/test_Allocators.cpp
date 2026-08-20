@@ -32,57 +32,88 @@ TEST(AllocatorTest, LinearAllocator) {
     void* q = nullptr;
 
     LinearAllocator la(scratch, scratch+sizeof(scratch));
-    p = la.alloc(1024, 1, 0);
+    p = la.alloc(1024, 1);
 
     // check we can allocate the whole block
     EXPECT_EQ(scratch, p);
 
     // check we can free everything and reallocate the whole block
     la.reset();
-    p = la.alloc(1024, 1, 0);
+    p = la.alloc(1024, 1);
     EXPECT_EQ(scratch, p);
 
     // check we can rewind
     la.rewind(scratch + 512);
-    p = la.alloc(512, 1, 0);
+    p = la.alloc(512, 1);
     EXPECT_EQ(scratch + 512, p);
 
     // check we can't allocate more than the area size
     la.reset();
-    p = la.alloc(1025, 1, 0);
+    p = la.alloc(1025, 1);
     EXPECT_EQ(nullptr, p);
 
     // check that after failure, we can allocate to the area size
-    p = la.alloc(1024, 1, 0);
+    p = la.alloc(1024, 1);
     EXPECT_EQ(scratch, p);
 
     // check small allocations
     la.reset();
-    p = la.alloc(1, 1, 0);
+    p = la.alloc(1, 1);
     EXPECT_EQ(scratch, p);
-    p = la.alloc(7, 1, 0);
+    p = la.alloc(7, 1);
     EXPECT_EQ(scratch+1, p);
-    p = la.alloc(8, 1, 0);
+    p = la.alloc(8, 1);
     EXPECT_EQ(scratch+8, p);
 
     // check alignment
-    la.alloc(1, 1, 0);
-    p = la.alloc(24, 32, 0);
+    la.alloc(1, 1);
+    p = la.alloc(24, 32);
     EXPECT_NE(nullptr, p);
     EXPECT_EQ(0, uintptr_t(p) & 31);
 
     // now check that next allocation doesn't overlap previous one
-    q = la.alloc(1, 1, 0);
+    q = la.alloc(1, 1);
     EXPECT_EQ(uintptr_t(q), uintptr_t(p) + 24);
 
-    // check alignment + offset
-    la.alloc(3, 1, 0);
-    p = la.alloc(sizeof(float)*4, 32, 4);
-    EXPECT_EQ(0, uintptr_t(p) & 31);
+    // check free() of the top allocation
+    la.reset();
+    void* const a0 = la.alloc(64);
+    EXPECT_EQ(scratch, a0);
+    EXPECT_EQ(pointermath::add(scratch, 64), la.getCurrent());
 
-    // now check that next allocation doesn't overlap previous one
-    q = la.alloc(1, 1, 0);
-    EXPECT_EQ(uintptr_t(q), uintptr_t(p) + sizeof(float)*4);
+    // freeing top allocation succeeds and rolls back
+    EXPECT_TRUE(la.free(a0, 64));
+    EXPECT_EQ(scratch, la.getCurrent());
+
+    // reallocating reclaims the exact space
+    void* const a1 = la.alloc(64);
+    EXPECT_EQ(scratch, a1);
+
+    // test top allocation free
+    void* const b0 = la.alloc(128);
+    EXPECT_EQ(pointermath::add(a1, 64 + 128), la.getCurrent());
+
+    // freeing b0 (top) succeeds
+    EXPECT_TRUE(la.free(b0, 128));
+    EXPECT_EQ(pointermath::add(a1, 64), la.getCurrent());
+
+    // reallocate and test freeing non-top (buried) allocation fails
+    void* const b1 = la.alloc(128);
+    void* const c1 = la.alloc(256);
+    EXPECT_FALSE(la.free(b1, 128)); // b1 is buried under c1
+    EXPECT_EQ(pointermath::add(c1, 256), la.getCurrent()); // current unchanged
+
+    // test freeing with mismatched size fails
+    EXPECT_FALSE(la.free(c1, 128)); // c1 is 256 bytes, not 128
+    EXPECT_EQ(pointermath::add(c1, 256), la.getCurrent());
+
+    // freeing c1 (top) succeeds
+    EXPECT_TRUE(la.free(c1, 256));
+    EXPECT_EQ(pointermath::add(b1, 128), la.getCurrent());
+
+    // reset cleans up
+    la.reset();
+    EXPECT_EQ(scratch, la.getCurrent());
 }
 
 
@@ -93,7 +124,7 @@ TEST(AllocatorTest, PoolAllocator) {
     std::bitset<16> used;
 
     // verify buffers have not been clobbered
-    auto check = [](char const* p, int v, size_t s)->bool {
+    auto check = [](char const* p, int const v, size_t const s)->bool {
         for (size_t i = 0; i<s ; ++i) {
             if (p[i] != v) {
                 return false;
@@ -114,7 +145,7 @@ TEST(AllocatorTest, PoolAllocator) {
             EXPECT_NE(nullptr, p);
             EXPECT_EQ(0, uintptr_t(p) & 31);
 
-            size_t j = (uintptr_t(p) - uintptr_t(b)) / 64;
+            size_t const j = (uintptr_t(p) - uintptr_t(b)) / 64;
             //printf("%3d", j);
             memset(p, int(j + 1), 64);
         }
@@ -136,7 +167,7 @@ TEST(AllocatorTest, PoolAllocator) {
         q = b;
         for (size_t i = 0; i < 16; i++) {
             // use gray-coding so we don't free exactly linearly
-            size_t j = ((i^k) >> 1) ^ (i^k);
+            size_t const j = ((i^k) >> 1) ^ (i^k);
             p = pointermath::add(q, j * 64);
             pa.free(p);
             used[j] = false;
@@ -161,8 +192,8 @@ TEST(AllocatorTest, CppAllocator) {
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
-        void onFree(void* p) {
-            auto pos = std::find(allocations.begin(), allocations.end(), p);
+        void onFree(void* p, size_t) {
+            auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
         }
         std::vector<void*> allocations;
@@ -178,16 +209,18 @@ TEST(AllocatorTest, CppAllocator) {
         struct Tag {
             CppArena* arena;
         };
-        static void* operator new(size_t size, CppArena& arena) {
+
+        void* operator new(size_t const size, CppArena& arena) {
             void* p = arena.alloc(size, alignof(Foo), sizeof(Tag));
             Tag* tag = static_cast<Tag*>(p) - 1;
             tag->arena = &arena;
             return p;
         }
-        static void operator delete(void* p, size_t s) {
+
+        void operator delete(void* p, size_t s) {
             // don't do anything
-            Tag* tag = static_cast<Tag*>(p) - 1;
-            tag->arena->free(p);
+            Tag const* tag = static_cast<Tag*>(p) - 1;
+            tag->arena->free(p, s);
         }
         char dummy[8];
     };
@@ -209,79 +242,52 @@ TEST(AllocatorTest, CppAllocator) {
     EXPECT_EQ(2, count);
 }
 
+TEST(AllocatorTest, ArenaScope) {
+    using LinearArena = Arena<LinearAllocator, LockingPolicy::NoLock>;
+    LinearArena arena("ArenaScopeTest", 1024);
 
-TEST(AllocatorTest, ScopedStackArena) {
-    void* p = nullptr;
-
-    struct Foo {
-        explicit Foo(std::function<void(void)> f) : dtor(std::move(f)) { }
-        ~Foo() { dtor(); }
-    private:
-        std::function<void(void)> dtor;
-    };
-
-
-    struct Pod {
-        int a;
-        float b;
-    };
-
-    struct PodWithDtor {
-        int a;
-        float b;
-        ~PodWithDtor() { };
-    };
-
-    int dtorCalled = 0;
-    using Allocator = Arena<LinearAllocator, LockingPolicy::NoLock>;
-    Allocator allocator("ArenaScope", 1024);
+    void* const initial = arena.getAllocator().getCurrent();
 
     {
-        ArenaScope<Allocator> ssa(allocator);
-        Foo* f0 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f0);
+        ArenaScope scope(arena);
+        EXPECT_EQ(&arena, &scope.getArena());
 
-        Foo* f1 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f1);
+        void* const p0 = arena.alloc(128);
+        EXPECT_NE(nullptr, p0);
+        EXPECT_EQ(pointermath::add(initial, 128), arena.getAllocator().getCurrent());
 
-        Foo* f2 = ssa.make<Foo>([&dtorCalled](){ dtorCalled++; });
-        EXPECT_NE(nullptr, f2);
+        {
+            ArenaScope const nestedScope(arena);
+            void* const p1 = arena.alloc(256);
+            EXPECT_NE(nullptr, p1);
+            EXPECT_EQ(pointermath::add(p1, 256), arena.getAllocator().getCurrent());
+        }
 
-        EXPECT_EQ(0, dtorCalled);
+        // After nested scope exits, current should be rewound to p0 + 128
+        EXPECT_EQ(pointermath::add(initial, 128), arena.getAllocator().getCurrent());
+
+        // We can allocate again from that rewind point
+        void* const p2 = arena.alloc(64);
+        EXPECT_NE(nullptr, p2);
+        EXPECT_EQ(pointermath::add(p2, 64), arena.getAllocator().getCurrent());
     }
-    allocator.getAllocator().reset();
 
-    // check dtors have been called
-    EXPECT_EQ(3, dtorCalled);
+    // After outer scope exits, current should be rewound to initial
+    EXPECT_EQ(initial, arena.getAllocator().getCurrent());
+
+    // Check with another arena type that supports rewind, e.g. LinearAllocatorWithFallback
+    using FallbackArena = Arena<LinearAllocatorWithFallback, LockingPolicy::NoLock>;
+    FallbackArena fallbackArena("FallbackArenaScopeTest", 1024);
+    void* const fallbackInitial = fallbackArena.getAllocator().getCurrent();
 
     {
-        ArenaScope<Allocator> ssa(allocator);
-        // check that we can allocate everything at this point
-        p = ssa.allocate(1024);
-        EXPECT_NE(nullptr, p);
+        ArenaScope const fallbackScope(fallbackArena);
+        void* const pf0 = fallbackArena.alloc(256);
+        EXPECT_NE(nullptr, pf0);
+        EXPECT_NE(fallbackInitial, fallbackArena.getAllocator().getCurrent());
     }
-    allocator.getAllocator().reset();
 
-    {
-        ArenaScope<Allocator> ssa(allocator);
-        // check that we fail allocating too much
-        p = ssa.allocate(1025);
-        EXPECT_EQ(nullptr, p);
-    }
-    allocator.getAllocator().reset();
-
-
-    {
-        ArenaScope<Allocator> ssa(allocator);
-        Pod* p0 = ssa.make<Pod>();
-        Pod* p1 = ssa.make<Pod>();
-        EXPECT_EQ(sizeof(Pod), uintptr_t(p1) - uintptr_t(p0));
-
-        PodWithDtor* pd0 = ssa.make<PodWithDtor>();
-        PodWithDtor* pd1 = ssa.make<PodWithDtor>();
-        EXPECT_NE(sizeof(PodWithDtor), uintptr_t(pd1) - uintptr_t(pd0));
-    }
-    allocator.getAllocator().reset();
+    EXPECT_EQ(fallbackInitial, fallbackArena.getAllocator().getCurrent());
 }
 
 TEST(AllocatorTest, STLAllocator) {
@@ -292,15 +298,23 @@ TEST(AllocatorTest, STLAllocator) {
             allocations.push_back(p);
         }
         void onFree(void* p, size_t) {
-            auto pos = std::find(allocations.begin(), allocations.end(), p);
+            auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
             allocations.erase(pos);
         }
+        void onLogicalFree(void* p, size_t size) {
+            onFree(p, size);
+        }
+        void onReset() noexcept { }
+        void onRewind(void const* addr) noexcept { }
+        size_t getActiveAllocationCount() const noexcept { return allocations.size(); }
+        size_t getActiveAllocationBytes() const noexcept { return 0; }
         std::vector<void*> allocations;
     };
 
 
     using Arena = Arena<LinearAllocator, LockingPolicy::NoLock, Tracking>;
+    static_assert(detail::has_logical_free_v<Tracking>, "Tracking must have onLogicalFree");
     Arena arena("arena", 1204);
     Arena arena2("arena2", 1204);
     STLAllocator<int, Arena> allocator(arena);
@@ -329,4 +343,288 @@ TEST(AllocatorTest, STLAllocator) {
     }
 
     EXPECT_EQ(0, arena.getListener().allocations.size());
+}
+
+TEST(AllocatorTest, LeakDetectorNoLeaks) {
+    using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
+    LeakArena arena("LeakArenaNoLeaks", 1024);
+
+    {
+        ArenaScope scope(arena);
+        void* const p0 = arena.alloc(64);
+        EXPECT_NE(nullptr, p0);
+        EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+
+        void* const p1 = arena.alloc(128);
+        EXPECT_NE(nullptr, p1);
+        EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
+
+        arena.free(p1, 128);
+        EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+
+        arena.free(p0, 64);
+        EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+    }
+
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+}
+
+TEST(AllocatorTest, LeakDetectorWithLeaksOnRewind) {
+    using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
+    LeakArena arena("LeakArenaWithLeaks", 1024);
+
+    {
+        ArenaScope scope(arena);
+        void* const p0 = arena.alloc(64);
+        void* const p1 = arena.alloc(128);
+        EXPECT_NE(nullptr, p0);
+        EXPECT_NE(nullptr, p1);
+        EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
+
+        auto const& active = arena.getListener().getActiveAllocations();
+        EXPECT_NE(active.find(p0), active.end());
+        EXPECT_NE(active.find(p1), active.end());
+        EXPECT_EQ(64u, active.find(p0)->second.size);
+        EXPECT_EQ(128u, active.find(p1)->second.size);
+        EXPECT_GT(active.find(p0)->second.callstack.getFrameCount(), 0u);
+    }
+
+    // After ArenaScope exits and rewinds, leaks are logged and cleared
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+}
+
+TEST(AllocatorTest, LeakDetectorNestedScopes) {
+    using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
+    LeakArena arena("LeakArenaNested", 1024);
+
+    void* p0 = nullptr;
+    {
+        ArenaScope outerScope(arena);
+        p0 = arena.alloc(64);
+        EXPECT_NE(nullptr, p0);
+        EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+
+        {
+            ArenaScope const innerScope(arena);
+            void* const p1 = arena.alloc(128);
+            EXPECT_NE(nullptr, p1);
+            EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
+            EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
+            // innerScope exits without freeing p1 -> p1 leaked on inner rewind
+        }
+
+        // After inner scope exits, only p0 remains active
+        EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+        EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+        auto const& active = arena.getListener().getActiveAllocations();
+        EXPECT_NE(active.find(p0), active.end());
+
+        arena.free(p0, 64);
+        EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    }
+
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+}
+
+TEST(AllocatorTest, DebugAndLeakDetector) {
+    using DebugLeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::DebugAndLeakDetector>;
+    DebugLeakArena arena("DebugLeakArena", 1024);
+
+    void* const p = arena.alloc(64);
+    EXPECT_NE(nullptr, p);
+    EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+
+    // Verify debug memory poisoning on alloc (0xeb)
+    uint8_t const* const bytes = static_cast<uint8_t const*>(p);
+    for (size_t i = 0; i < 64; ++i) {
+        EXPECT_EQ(0xeb, bytes[i]);
+    }
+
+    arena.free(p, 64);
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+
+    // Verify debug memory poisoning on free (0xef)
+    for (size_t i = 0; i < 64; ++i) {
+        EXPECT_EQ(0xef, bytes[i]);
+    }
+}
+
+TEST(AllocatorTest, LeakDetectorReset) {
+    using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
+    LeakArena arena("LeakArenaReset", 1024);
+
+    arena.alloc(64);
+    arena.alloc(128);
+    EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
+
+    arena.reset();
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+}
+
+TEST(AllocatorTest, LeakDetectorFreeSizeMismatch) {
+    using LeakArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::LeakDetector>;
+    LeakArena arena("LeakArenaSizeMismatch", 1024);
+
+    void* const p = arena.alloc(64);
+    EXPECT_NE(nullptr, p);
+    EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+
+    // Free with mismatched size (32 bytes instead of 64) - will log warning and still remove
+    arena.free(p, 32);
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+}
+
+TEST(AllocatorTest, HighWatermarkWastedBytes) {
+    using HwArena = Arena<LinearAllocator, LockingPolicy::NoLock, TrackingPolicy::HighWatermark>;
+    HwArena arena("HwArenaWasted", 1024);
+
+    void* const p0 = arena.alloc(64);
+    void* const p1 = arena.alloc(128);
+    EXPECT_EQ(192u, arena.getListener().getHighWatermark());
+    EXPECT_EQ(0u, arena.getListener().getWastedBytes());
+
+    // Free p0 (buried under p1) -> logically freed, cannot be physically reclaimed -> wasted!
+    arena.free(p0, 64);
+    EXPECT_EQ(192u, arena.getListener().getHighWatermark());
+    EXPECT_EQ(64u, arena.getListener().getWastedBytes());
+
+    // Free p1 (at top) -> physically reclaimed -> not wasted
+    arena.free(p1, 128);
+    EXPECT_EQ(192u, arena.getListener().getHighWatermark());
+    EXPECT_EQ(64u, arena.getListener().getWastedBytes());
+
+    // Reset clears both high watermark current and wasted
+    arena.reset();
+    EXPECT_EQ(0u, arena.getListener().getWastedBytes());
+}
+
+TEST(AllocatorTest, CompositeTrackingPolicy) {
+    using CustomComposite = TrackingPolicy::Composite<
+            TrackingPolicy::HighWatermark,
+            TrackingPolicy::Debug,
+            TrackingPolicy::LeakDetector>;
+
+    using CompArena = Arena<LinearAllocator, LockingPolicy::NoLock, CustomComposite>;
+    CompArena arena("CompArena", 1024);
+
+    void* const p0 = arena.alloc(64);
+    EXPECT_NE(nullptr, p0);
+
+    // Verify HighWatermark part
+    EXPECT_EQ(64u, arena.getListener().getHighWatermark());
+    EXPECT_EQ(0u, arena.getListener().getWastedBytes());
+
+    // Verify LeakDetector part
+    EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(64u, arena.getListener().getActiveAllocationBytes());
+
+    // Verify Debug part (memory poisoning)
+    uint8_t const* const bytes0 = static_cast<uint8_t const*>(p0);
+    for (size_t i = 0; i < 64; ++i) {
+        EXPECT_EQ(0xeb, bytes0[i]);
+    }
+
+    void* const p1 = arena.alloc(128);
+    EXPECT_NE(nullptr, p1);
+    EXPECT_EQ(192u, arena.getListener().getHighWatermark());
+    EXPECT_EQ(0u, arena.getListener().getWastedBytes());
+    EXPECT_EQ(2u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(192u, arena.getListener().getActiveAllocationBytes());
+
+    // Free p0 (buried under p1) -> logically freed, not physically freed -> wasted
+    arena.free(p0, 64);
+    EXPECT_EQ(1u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(128u, arena.getListener().getActiveAllocationBytes());
+    EXPECT_EQ(64u, arena.getListener().getWastedBytes());
+    EXPECT_EQ(64u, arena.getListener().get<TrackingPolicy::HighWatermark>().getWastedBytes());
+    for (size_t i = 0; i < 64; ++i) {
+        EXPECT_EQ(0xef, bytes0[i]);
+    }
+
+    // Free p1 (top allocation) -> physically reclaimed -> not added to wasted
+    arena.free(p1, 128);
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationBytes());
+    EXPECT_EQ(64u, arena.getListener().getWastedBytes());
+
+    // Reset clears high watermark and wasted
+    arena.reset();
+    EXPECT_EQ(0u, arena.getListener().getWastedBytes());
+    EXPECT_EQ(0u, arena.getListener().getActiveAllocationCount());
+}
+
+TEST(AllocatorTest, LinearAllocatorWithFallbackFree) {
+    char scratch[256];
+    LinearAllocatorWithFallback allocator(scratch, scratch + sizeof(scratch));
+
+    // Multiple allocations within linear buffer
+    void* const p0 = allocator.alloc(64);
+    void* const p1 = allocator.alloc(128);
+    EXPECT_EQ(scratch, p0);
+    EXPECT_EQ(pointermath::add(scratch, 64), p1);
+    EXPECT_FALSE(allocator.isHeapAllocation(p0));
+    EXPECT_FALSE(allocator.isHeapAllocation(p1));
+    EXPECT_EQ(pointermath::add(scratch, 192), allocator.getCurrent());
+
+    // free() on buried linear allocation returns false
+    EXPECT_FALSE(allocator.free(p0, 64));
+    EXPECT_EQ(pointermath::add(scratch, 192), allocator.getCurrent());
+
+    // Freeing top allocation in linear buffer succeeds
+    EXPECT_TRUE(allocator.free(p1, 128));
+    EXPECT_EQ(pointermath::add(scratch, 64), allocator.getCurrent());
+
+    // Exceed remaining linear capacity (192 bytes remaining, request 200 bytes) -> fallback to heap
+    void* const pHeap = allocator.alloc(200);
+    EXPECT_NE(nullptr, pHeap);
+    EXPECT_TRUE(allocator.isHeapAllocation(pHeap));
+
+    // free() on heap allocation returns false (heap allocations are reclaimed on reset/destruction)
+    EXPECT_FALSE(allocator.free(pHeap, 200));
+
+    // reset() cleans up both heap and linear allocations
+    allocator.reset();
+    EXPECT_EQ(scratch, allocator.getCurrent());
+}
+
+TEST(AllocatorTest, ArenaAreaMoveSemantics) {
+    using ParentArena = Arena<LinearAllocator, LockingPolicy::NoLock>;
+    ParentArena parent("ParentArena", 1024);
+
+    void* const initialCurrent = parent.getAllocator().getCurrent();
+
+    {
+        // Allocate an ArenaArea from the parent arena
+        AreaPolicy::ArenaArea<ParentArena> area1(parent, 256);
+        EXPECT_NE(nullptr, area1.begin());
+        EXPECT_EQ(256u, area1.size());
+        EXPECT_EQ(pointermath::add(initialCurrent, 256), parent.getAllocator().getCurrent());
+
+        // Move construct area2 from area1
+        AreaPolicy::ArenaArea<ParentArena> area2(std::move(area1));
+        EXPECT_EQ(nullptr, area1.begin());
+        EXPECT_EQ(0u, area1.size());
+        EXPECT_NE(nullptr, area2.begin());
+        EXPECT_EQ(256u, area2.size());
+
+        // Parent current should still be at 256
+        EXPECT_EQ(pointermath::add(initialCurrent, 256), parent.getAllocator().getCurrent());
+
+        // Destructing moved-from area1 should be a no-op (verified when area2 is still in scope)
+    }
+
+    // After area2 destructs, parent allocation should be safely freed and current rolled back
+    EXPECT_EQ(initialCurrent, parent.getAllocator().getCurrent());
 }

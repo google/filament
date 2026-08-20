@@ -17,15 +17,39 @@
 #ifndef TNT_SAMPLES_ARGUMENTS_H
 #define TNT_SAMPLES_ARGUMENTS_H
 
+#include "SampleConfig.h"
+
+#include <filamentapp/DisplayManager.h>
+
 #include <filament/Engine.h>
 
-#include <string>
+#include <utils/CString.h>
+#include <utils/getopt.h>
+
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace samples {
 
-filament::Engine::Backend parseArgumentsForBackend(int argc, char* argv[]);
-filament::Engine::Backend parseArgumentsForBackend(const std::string& backend);
-std::string getBackendAPIArgumentsUsage();
+std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
 
+using CustomArgumentHandler = std::function<bool(int opt, const utils::CString& arg)>;
+
+struct CommandLineSpecification {
+    utils::CString sampleDescription;
+    utils::CString positionalArgsDescription;
+    int requiredPositionalArgCount = 0;
+    std::vector<char> requiredFlags;
+    utils::CString customOptionsHelp;
+    CustomArgumentHandler customHandler = nullptr;
+    const char* customOptStr = "";
+    const utils::getopt::option* customOptions = nullptr;
+};
+
+void printUsage(const char* execName, const CommandLineSpecification& spec = {});
+
+int handleCommandLineArguments(int argc, char* argv[], SampleConfig* config,
+        const CommandLineSpecification& spec = {});
 } // namespace samples
 #endif //TNT_SAMPLES_ARGUMENTS_H

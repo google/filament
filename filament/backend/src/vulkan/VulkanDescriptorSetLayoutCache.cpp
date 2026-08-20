@@ -61,13 +61,11 @@ uint32_t appendBindings(VkDescriptorSetLayoutBinding* toBind, VkDescriptorType t
 }
 
 uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
-        fvkutils::SamplerBitmask const& mask, fvkutils::SamplerBitmask const& external,
+        fvkutils::SamplerBitmask const& mask,
         utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> const& immutableSamplers) {
     using Bitmask = fvkutils::SamplerBitmask;
     uint32_t count = 0;
     Bitmask alreadySeen;
-    uint8_t immutableIndex = 0;
-    size_t const immutableSamplerCount = immutableSamplers.size();
     mask.forEachSetBit([&](size_t index) {
         VkShaderStageFlags stages = 0;
         uint32_t binding = 0;
@@ -86,14 +84,22 @@ uint32_t appendSamplerBindings(VkDescriptorSetLayoutBinding* toBind,
         }
 
         if (stages) {
+            auto const immutableSampler = std::find_if(immutableSamplers.begin(),
+                    immutableSamplers.end(), [binding](auto const& entry) {
+                return entry.first == binding;
+            });
+
+            VkSampler const* sampler = nullptr;
+            if (immutableSampler != immutableSamplers.end()) {
+                sampler = &immutableSampler->second;
+            }
+
             toBind[count++] = {
                 .binding = binding,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = 1,
                 .stageFlags = stages,
-                .pImmutableSamplers = external[index] && immutableSamplerCount > immutableIndex
-                                              ? &(immutableSamplers[immutableIndex++].second)
-                                              : nullptr,
+                .pImmutableSamplers = sampler,
             };
         }
     });
@@ -127,7 +133,6 @@ void VulkanDescriptorSetLayoutCache::terminate() noexcept {
 
 VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
         VulkanDescriptorSetLayout::Bitmask const& bitmasks,
-        fvkutils::SamplerBitmask externalSamplers,
         utils::FixedCapacityVector<std::pair<uint64_t, VkSampler>> immutableSamplers) {
     LayoutKey key = {
         .bitmask = bitmasks,
@@ -142,8 +147,7 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             bitmasks.dynamicUbo);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bitmasks.ubo);
-    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, externalSamplers,
-            immutableSamplers);
+    count += appendSamplerBindings(&toBind[count], bitmasks.sampler, immutableSamplers);
     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
             bitmasks.inputAttachment);
 
@@ -163,7 +167,7 @@ fvkmemory::resource_ptr<VulkanDescriptorSetLayout> VulkanDescriptorSetLayoutCach
         Handle<HwDescriptorSetLayout> handle, backend::DescriptorSetLayout&& info) {
     BitmaskGroup maskGroup = VulkanDescriptorSetLayout::Bitmask::fromLayoutDescription(info);
     auto layout = fvkmemory::resource_ptr<VulkanDescriptorSetLayout>::make(mResourceManager, handle,
-            std::move(info), getVkLayout(maskGroup, maskGroup.externalSampler));
+            std::move(info), getVkLayout(maskGroup));
     return layout;
 }
 

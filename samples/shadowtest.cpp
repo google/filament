@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/MeshAssimp.h>
 
@@ -48,13 +49,14 @@ struct GroundPlane {
 };
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     Skybox* skybox;
     utils::Entity light;
-    std::map<std::string, MaterialInstance*> materials;
+    std::map<utils::CString, MaterialInstance*> materials;
     MeshAssimp* meshes;
     mat4f transform;
     GroundPlane plane;
+    SampleConfig config;
 };
 
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
@@ -64,26 +66,28 @@ static constexpr bool ENABLE_SHADOWS = true;
 
 static GroundPlane createGroundPlane(Engine* engine);
 
-static const SampleConfig config{ .title = "shadowtest",
-    .iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER,
-    .scale = 1,
-    .splitView = false };
+static SampleConfig config{
+    .title = "shadowtest",
+    .iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str()),
+    .splitView = false,
+};
 
-int main(int argc, char** argv) {
-    App app;
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
 
         // Add geometry into the scene.
-        app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app.materials);
-        auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
-        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        for (auto renderable : app.meshes->getRenderables()) {
+        app->meshes = new MeshAssimp(*engine);
+        app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
+        auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+        for (auto renderable: app->meshes->getRenderables()) {
             auto instance = rcm.getInstance(renderable);
             if (rcm.hasComponent(renderable)) {
                 rcm.setCastShadows(instance, ENABLE_SHADOWS);
@@ -93,52 +97,62 @@ int main(int argc, char** argv) {
         }
 
         // Add light sources into the scene.
-        app.light = em.create();
+        app->light = em.create();
         LightManager::Builder(LightManager::Type::SUN)
-            .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
-            .intensity(110000)
-            .direction({ 0.7, -1, -0.8 })
-            .sunAngularRadius(1.9f)
-            .castShadows(ENABLE_SHADOWS)
-            .build(*engine, app.light);
-        scene->addEntity(app.light);
+                .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+                .intensity(110000)
+                .direction({ 0.7, -1, -0.8 })
+                .sunAngularRadius(1.9f)
+                .castShadows(ENABLE_SHADOWS)
+                .build(*engine, app->light);
+        scene->addEntity(app->light);
 
         // Hide skybox and add ground plane.
-        app.skybox = Skybox::Builder().color({0.5f,0.75f,1.0f,1.0f}).build(*engine);
-        scene->setSkybox(app.skybox);
-        app.plane = createGroundPlane(engine);
-        scene->addEntity(app.plane.renderable);
+        app->skybox = Skybox::Builder().color({ 0.5f, 0.75f, 1.0f, 1.0f }).build(*engine);
+        scene->setSkybox(app->skybox);
+        app->plane = createGroundPlane(engine);
+        scene->addEntity(app->plane.renderable);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.plane.renderable);
-        engine->destroy(app.plane.mat);
-        engine->destroy(app.plane.vb);
-        engine->destroy(app.plane.ib);
-        engine->destroy(app.light);
-        engine->destroy(app.skybox);
-        for (auto& item : app.materials) {
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->plane.renderable);
+        engine->destroy(app->plane.mat);
+        engine->destroy(app->plane.vb);
+        engine->destroy(app->plane.ib);
+        engine->destroy(app->light);
+        engine->destroy(app->skybox);
+        for (auto& item: app->materials) {
             engine->destroy(item.second);
         }
-        delete app.meshes;
+        delete app->meshes;
     };
 
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .backend(config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  auto& tcm = engine->getTransformManager();
-                                  auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
-                                  tcm.setTransform(ti,
-                                          app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
-                              })
-                              .build();
-    app.filamentApp->run();
+    auto fApp = FilamentApp2::Builder()
+                        .displayManager(dm)
+                        .backend(app->config.backend)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            auto& tcm = engine->getTransformManager();
+                            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+                            tcm.setTransform(ti,
+                                    app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
 
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif
 
 static GroundPlane createGroundPlane(Engine* engine) {
     Material* shadowMaterial = Material::Builder()

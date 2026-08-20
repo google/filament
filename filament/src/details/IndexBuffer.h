@@ -19,11 +19,15 @@
 
 #include "downcast.h"
 
+#include "details/CreationStatus.h"
+
 #include <filament/IndexBuffer.h>
 
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+
+#include <atomic>
 
 namespace filament {
 
@@ -45,17 +49,29 @@ public:
     AsyncCallId setBufferAsync(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset,
             backend::CallbackHandler* handler, AsyncCompletionCallback callback, void* user);
 
-    bool isCreationComplete() const noexcept { return mCreationComplete.load(std::memory_order_relaxed); }
+    // Whether the asynchronous pipeline is done with this object, whether or not it succeeded.
+    // This is a *lifetime* gate: FEngine::destroy detects this method by name and waits on it
+    // before freeing the object, so it must become true even when creation is canceled.
+    // Use isCreationSuccessful() to know whether the resource can be used.
+    bool isCreationSettled() const noexcept {
+        return mCreationStatus.load(std::memory_order_relaxed) != CreationStatus::CREATING;
+    }
+
+    // Whether creation finished *and* actually populated the resource. A canceled creation
+    // finishes without ever running, so the resource is not usable. This is what the public
+    // IndexBuffer::isCreationComplete() reports.
+    bool isCreationSuccessful() const noexcept {
+        return mCreationStatus.load(std::memory_order_relaxed) == CreationStatus::CREATED;
+    }
 
 private:
     friend class IndexBuffer;
     backend::Handle<backend::HwIndexBuffer> mHandle;
     uint32_t mIndexCount;
 
-    // This field is set to true when the creation process is complete. This is especially useful
-    // asynchronous creation. If we can guarantee that this field is only referenced by the main
-    // thread, we don't have to use atomic here.
-    std::atomic_bool mCreationComplete{ false };
+    // Where the creation process is. This is especially useful for asynchronous creation; it only
+    // ever moves out of CREATING once, to one of the two terminal states.
+    std::atomic<CreationStatus> mCreationStatus{ CreationStatus::CREATING };
 };
 
 FILAMENT_DOWNCAST(IndexBuffer)

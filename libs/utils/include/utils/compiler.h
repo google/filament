@@ -17,6 +17,8 @@
 #ifndef TNT_UTILS_COMPILER_H
 #define TNT_UTILS_COMPILER_H
 
+#include <stddef.h>
+
 // compatibility with non-clang compilers...
 #ifndef __has_attribute
 #define __has_attribute(x) 0
@@ -97,6 +99,28 @@
 #if __has_feature(memory_sanitizer)
 #undef UTILS_HAS_SANITIZE_MEMORY
 #define UTILS_HAS_SANITIZE_MEMORY 1
+#endif
+
+#define UTILS_HAS_SANITIZE_ADDRESS 0
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#undef UTILS_HAS_SANITIZE_ADDRESS
+#define UTILS_HAS_SANITIZE_ADDRESS 1
+#endif
+
+#if UTILS_HAS_SANITIZE_ADDRESS
+#ifdef __cplusplus
+extern "C" {
+#endif
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#ifdef __cplusplus
+}
+#endif
+#define UTILS_POISON_MEMORY_REGION(addr, size) __asan_poison_memory_region((addr), (size))
+#define UTILS_UNPOISON_MEMORY_REGION(addr, size) __asan_unpoison_memory_region((addr), (size))
+#else
+#define UTILS_POISON_MEMORY_REGION(addr, size) ((void)0)
+#define UTILS_UNPOISON_MEMORY_REGION(addr, size) ((void)0)
 #endif
 
 /*

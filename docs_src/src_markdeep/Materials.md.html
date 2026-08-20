@@ -62,6 +62,35 @@ Filament materials can use one of the following material models:
 - Unlit
 - Specular glossiness (legacy)
 
+## Layering
+
+The material models described below can be made of one or more layers. Here is the order in which
+Filament stacks those layers (or diffuse/specular lobes), from top (outside) to bottom (inside):
+
+*************************************
+*        .-----------------.        *
+*        |                 |        *
+*        |   Clear coat    |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |      Sheen      |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |   2nd Specular  |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |     Specular    |        *
+*        |                 |        *
+*        +-----------------+        *
+*        |                 |        *
+*        |     Diffuse     |        *
+*        |                 |        *
+*        '-----------------'        *
+*************************************
+
 ## Lit model
 
 The lit model is Filament's standard material model. This physically-based shading model was
@@ -75,65 +104,101 @@ The appearance of a material using the standard model is controlled using the pr
 in table [standardProperties].
 
 
-        Property        |      Definition
------------------------:|:---------------------
-**baseColor**           | Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces
-**roughness**           | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
-**metallic**            | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
-**reflectance**         | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
-**specularFactor**      | Scales the amount of specular reflection for non-metallic surfaces
-**specularColorFactor** | Color of the specular reflection for non-metallic surfaces
-**ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
-**clearCoat**           | Strength of the clear coat layer
-**clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
-**clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
-**anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
-**anisotropyDirection** | Local surface direction in tangent space
-**thickness**           | Thickness of the solid volume of refractive objects
-**sheenColor**          | Strength of the sheen layer
-**sheenRoughness**      | Perceived smoothness or roughness of the sheen layer
-**emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
-**normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
-**postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
-**absorption**          | Absorption factor for refractive objects
-**transmission**        | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
-**ior**                 | Index of refraction, either for refractive objects or as an alternative to reflectance
-**microThickness**      | Thickness of the thin layer of refractive objects
-**dispersion**          | Strength of the dispersion effect for refractive objects, specified as 20/Abbe number
-**bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
-**shadowStrength**      | Strength factor between 0 and 1 for all shadows received by this material
+        Property          |      Definition
+-------------------------:|:---------------------
+**baseColor**             | Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces
+**roughness**             | Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections
+**metallic**              | Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)
+**reflectance**           | Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections
+**anisotropy**            | Amount of anisotropy in either the tangent or bitangent direction
+**anisotropyDirection**   | Local surface direction in tangent space
+**specularFactor**        | Scales the amount of specular reflection for non-metallic surfaces
+**specularColorFactor**   | Color of the specular reflection for non-metallic surfaces
+**secondRoughness**       | Perceived smoothness or roughness of the optional second specular lobe
+**secondRoughnessWeight** | Weight of the mix between the first specular lobe and the second specular lobe
+**sheenColor**            | Strength of the sheen layer
+**sheenRoughness**        | Perceived smoothness or roughness of the sheen layer
+**clearCoat**             | Strength of the clear coat layer
+**clearCoatRoughness**    | Perceived smoothness or roughness of the clear coat layer
+**normal**                | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**bentNormal**            | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
+**clearCoatNormal**       | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
+**ambientOcclusion**      | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
+**emissive**              | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
+**postLightingColor**     | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
+**ior**                   | Index of refraction, either for refractive objects or as an alternative to reflectance
+**transmission**          | Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is
+**absorption**            | Absorption factor for refractive objects
+**microThickness**        | Thickness of the thin layer of refractive objects
+**thickness**             | Thickness of the solid volume of refractive objects
+**dispersion**            | Strength of the dispersion effect for refractive objects, specified as 20/Abbe number
+**shadowStrength**        | Strength factor between 0 and 1 for all shadows received by this material
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
 
-        Property        |   Type   |            Range         |           Note
------------------------:|:--------:|:------------------------:|:-------------------------
-**baseColor**           | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**metallic**            | float    |  [0..1]                  | Should be 0 or 1
-**roughness**           | float    |  [0..1]                  |
-**reflectance**         | float    |  [0..1]                  | Prefer values > 0.35
-**specularFactor**      | float    |  [0..1]                  | Optional, defaults to 1.0
-**specularColorFactor** | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
-**sheenColor**          | float3   |  [0..1]                  | Linear RGB
-**sheenRoughness**      | float    |  [0..1]                  |
-**clearCoat**           | float    |  [0..1]                  | Should be 0 or 1
-**clearCoatRoughness**  | float    |  [0..1]                  |
-**anisotropy**          | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
-**anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**ambientOcclusion**    | float    |  [0..1]                  |
-**normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**bentNormal**          | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
-**emissive**            | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
-**postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
-**ior**                 | float    |  [1..n]                  | Optional, usually deduced from the reflectance
-**transmission**        | float    |  [0..1]                  |
-**absorption**          | float3   |  [0..n]                  |
-**microThickness**      | float    |  [0..n]                  |
-**thickness**           | float    |  [0..n]                  |
-**dispersion**          | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
+        Property          |   Type   |            Range         |           Note
+-------------------------:|:--------:|:------------------------:|:-------------------------
+**baseColor**             | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**roughness**             | float    |  [0..1]                  |
+**metallic**              | float    |  [0..1]                  | Should be 0 or 1
+**reflectance**           | float    |  [0..1]                  | Prefer values > 0.35
+**anisotropy**            | float    |  [-1..1]                 | Anisotropy is in the tangent direction when this value is positive
+**anisotropyDirection**   | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**specularFactor**        | float    |  [0..1]                  | Optional, defaults to 1.0
+**specularColorFactor**   | float3   |  [0..1]                  | Linear RGB, defaults to 1.0
+**secondRoughness**       | float    |  [0..1]                  |
+**secondRoughnessWeight** | float    |  [0..1]                  |
+**sheenColor**            | float3   |  [0..1]                  | Linear RGB
+**sheenRoughness**        | float    |  [0..1]                  |
+**clearCoat**             | float    |  [0..1]                  | Should be 0 or 1
+**clearCoatRoughness**    | float    |  [0..1]                  |
+**normal**                | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**bentNormal**            | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**clearCoatNormal**       | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**ambientOcclusion**      | float    |  [0..1]                  |
+**emissive**              | float4   |  rgb=[0..n], a=[0..1]    | Linear RGB intensity in nits, alpha encodes the exposure weight
+**postLightingColor**     | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**ior**                   | float    |  [1..n]                  | Optional, usually deduced from the reflectance
+**transmission**          | float    |  [0..1]                  |
+**absorption**            | float3   |  [0..n]                  |
+**microThickness**        | float    |  [0..n]                  |
+**thickness**             | float    |  [0..n]                  |
+**dispersion**            | float    |  [0..n]                  | Realistic values are between [0, 1], with the exception of Rutile, which has a value of 2.04
+**shadowStrength**        | float    |  [0..1]                  |
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
+
+        Property          |      API level
+-------------------------:|:---------------------
+**baseColor**             | 1
+**roughness**             | 1
+**metallic**              | 1
+**reflectance**           | 1
+**anisotropy**            | 1
+**anisotropyDirection**   | 1
+**specularFactor**        | 1
+**specularColorFactor**   | 1
+**secondRoughness**       | 2
+**secondRoughnessWeight** | 2
+**sheenColor**            | 1
+**sheenRoughness**        | 1
+**clearCoat**             | 1
+**clearCoatRoughness**    | 1
+**normal**                | 1
+**bentNormal**            | 1
+**clearCoatNormal**       | 1
+**ambientOcclusion**      | 1
+**emissive**              | 1
+**postLightingColor**     | 1
+**ior**                   | 1
+**transmission**          | 1
+**absorption**            | 1
+**microThickness**        | 1
+**thickness**             | 1
+**dispersion**            | 1
+**shadowStrength**        | 1
+[Table [standardPropertiesApiLevel]: API level of each property]
 
 !!! Note: About linear RGB
     Several material model properties expect RGB colors. Filament materials use RGB colors in linear
@@ -321,6 +386,31 @@ The `specularColorFactor` property defines the color of the specular reflection 
 surfaces. This property is often used to implement the `KHR_materials_specular` glTF extension. This
 value scales the Fresnel reflectance at normal incidence (F0), which is also computed from the
 `reflectance` property.
+
+### Second roughness
+
+The `secondRoughness` property works exactly like the `roughness` property. When this property is
+set, a second specular lobe is computed and mixed with the primary specular lobe, according to the
+`secondRoughnessWeight` property.
+
+The ability to layer a second specular lobe is useful to create more complex surface appearances
+such as some metals or composite materials. For instance, when creating a smooth metal surface
+(`roughness` set to 0 or close to 0), adding a `secondRoughness` of 0.3 with a
+`secondRoughnessWeight` of 0.5 can create a layer of patina that improves the realisme of the
+surface.
+
+You can refer to the video [Forgotten Metal Knowledge](https://www.youtube.com/watch?v=uz8PIi3ELJg)
+which explores various examples of when this property can be useful.
+
+The second specular lobe is _always_ isotropic.
+
+### Second roughness weight
+
+Controls the mix between the base specular lobe and the second specular lobe.
+
+When `secondRoughnessWeight` is set to 0, the second specular lobe is not visible. When set to 1,
+only the second specular lobe is visible. Values between 0 and 1 select how much of each lobe should
+be visible.
 
 ### Sheen color
 
@@ -828,7 +918,8 @@ This alternative lighting model exists to comply with legacy standards. Since it
 physically-based formulation, we do not recommend using it except when loading legacy assets.
 
 This model encompasses the parameters previously defined for the standard lit mode except for
-_metallic_, _reflectance_, and _roughness_. It adds parameters for _specularColor_ and _glossiness_.
+_metallic_, _reflectance_, _roughness_, and `secondRoughness/secondRoughnessWeight`.
+It adds parameters for _specularColor_ and _glossiness_.
 
 Parameter             |      Definition
 ---------------------:|:---------------------
@@ -2768,17 +2859,18 @@ type aliases:
 
 ### Matrices
 
-                 Name                     |   Type   |            Description
-:-----------------------------------------|:--------:|:------------------------------------
-**getViewFromWorldMatrix()**              | float4x4 |  Matrix that converts from world space to view/eye space
-**getWorldFromViewMatrix()**              | float4x4 |  Matrix that converts from view/eye space to world space
-**getClipFromViewMatrix()**               | float4x4 |  Matrix that converts from view/eye space to clip (NDC) space
-**getViewFromClipMatrix()**               | float4x4 |  Matrix that converts from clip (NDC) space to view/eye space
-**getEyeFromViewMatrix()**                | float4x4 |  Matrix that converts from view space to eye space
-**getEyeFromViewMatrix(int eyeIndex)**    | float4x4 |  Matrix that converts from view space to eye space for the eye referred to by eyeIndex
-**getClipFromWorldMatrix()**              | float4x4 |  Matrix that converts from world to clip (NDC) space
-**getClipFromWorldMatrix(int eyeIndex)**  | float4x4 |  Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex
-**getWorldFromClipMatrix()**              | float4x4 |  Matrix that converts from clip (NDC) space to world space
+                 Name                     |   Type   | ApiLevel |            Description
+:-----------------------------------------|:--------:|:--------:|:------------------------------------
+**getViewFromWorldMatrix()**              | float4x4 |     1    |  Matrix that converts from world space to view/eye space
+**getWorldFromViewMatrix()**              | float4x4 |     1    |  Matrix that converts from view/eye space to world space
+**getClipFromViewMatrix()**               | float4x4 |     1    |  Matrix that converts from view/eye space to clip (NDC) space
+**getViewFromClipMatrix()**               | float4x4 |     1    |  Matrix that converts from clip (NDC) space to view/eye space
+**getEyeFromViewMatrix()**                | float4x4 |     1    |  Matrix that converts from view space to eye space
+**getEyeFromViewMatrix(int eyeIndex)**    | float4x4 |     1    |  Matrix that converts from view space to eye space for the eye referred to by eyeIndex
+**getClipFromWorldMatrix()**              | float4x4 |     1    |  Matrix that converts from world to clip (NDC) space
+**getClipFromWorldMatrix(int eyeIndex)**  | float4x4 |     1    |  Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex
+**getWorldFromClipMatrix()**              | float4x4 |     1    |  Matrix that converts from clip (NDC) space to world space
+**getWorldRayFromClip(float2 clipXY)**    | float3   |     2    |  Transforms a 2D clip-space position directly into an un-normalized, un-translated world-space ray direction
 
 ### Frame constants
 
@@ -2902,6 +2994,10 @@ The command line flags relevant to application development are described in tabl
 **-S**, **--optimize-size**     | N/A                | Optimize compiled material for size instead of just performance
 **-r**, **--reflect**           | parameters         | Outputs the specified metadata as JSON
 **-v**, **--variant-filter**    | [variant]          | Filters out the specified, comma-separated variants
+**-f**, **-output-format**      | blob/header/mat    | Default to blob, when mat is set, returns a `.mat` with `#include`s resolved
+**--include-source-mat**        | N/A                | Embeds the source ASCII material definition if set
+**-A**, **--api-level**         | number             | Overrides the matc API level
+**-i**, **--api-level-info**    | N/A                | Outputs the highest supported material API level
 [Table [matcFlags]: List of `matc` flags]
 
 `matc` offers a few other flags that are irrelevant to application developers and for internal
@@ -2992,6 +3088,27 @@ in the material itself.
 
 Use this flag with caution, filtering out a variant required at runtime may lead to crashes.
 
+### --output-format
+Specifies the output format:
+- blob (default): Outputs a compiled binary material package file.
+- header: Outputs a C++ header file containing the compiled material package embedded as a static byte array, allowing direct inclusion in C++ source code.
+- mat: Outputs a processed .mat source text file with all #include directives fully resolved into a single standalone source file.
+
+### --include-source-mat
+Embeds the source ASCII material definition into the compiled material package (blob). The embedded source code has all
+`#include` directives recursively resolved.
+
+### --api-level
+Overrides the API level to compile the material against. If the source material already specifies an `apiLevel` inside
+the `material` block, this command line option overrides it.
+
+The provided value must be a valid API level (e.g. `1` or `2`) and cannot exceed the highest supported unstable API
+level of the compiler.
+
+### --api-level-info
+Prints the compiler's supported API levels (both the current released API level and the next unstable API level under
+development).
+
 # Handling colors
 
 ## Linear colors
@@ -3050,6 +3167,81 @@ Finally if `variantFilter` contains the `fog` filter, an extra sampler is made a
 16 samplers are available.
 
 !!! TIP: external samplers
-               Be aware that `external` samplers account for 2 regular samplers.
+    Be aware that `external` samplers account for 2 regular samplers.
+
+# Material API level
+In cases of remote renderers where an app and the system run different Filament instances and materials are compiled at
+runtime on the remote end, material API versioning ensures compatibility across versions. It is less relevant if your
+project uses a single Filament instance, but `apiLevel` is still required when opting into features introduced at higher
+API levels features.
+
+!!! TIP: Overriding API level via command-line
+    You can also override or query the API level at compile-time using the `matc` command-line flags
+    [`--api-level`](#--api-level) and [`--api-level-info`](#--api-level-info).
+
+## Define `apiLevel` in `.mat` files
+When authoring a material, you can specify apiLevel inside the material block. If omitted, it defaults to 1.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+material {
+    name: "MyMaterial",
+    apiLevel: 2, // Client-requested API level
+    // ...
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Check the documentation for specific material features (for example, morphing requires API level 2) or refer to the
+Shader public APIs section above. If no API level is explicitly mentioned for a function or feature, it is available at
+baseline `apiLevel: 1`; otherwise, use the level specified.
+
+### API level mismatch
+If there's a mismatch in apiLevel (for example, the material uses an API that requires API level of 2, but specifies
+`apiLevel: 1` in the material), you will get an error message:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ERROR: {line_number}: {api_name} requires api level N
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## Control material behaviors
+System/remote renderers can use `#define`s injected during compilation:
+- `CLIENT_MATERIAL_API_LEVEL`: The API level requested in the client's `.mat` file (defaults to `1`).
+- `UNSTABLE_MATERIAL_API_LEVEL`: The next API level currently in development. Features at this level have not been officially released.
+
+System renderers can use these defines to introduce features under development, branch shader implementation details,
+or guard new capabilities based on the client's declared API level:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
+// Adding a new feature
+#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+float myNewFeatureUnstable() { /* ... */ }
+#endif
+
+// Branch behaviors
+#if CLIENT_MATERIAL_API_LEVEL >= 2
+// New behavior or feature implementation for API level 2+
+float myFeature() { return 1.0; }
+#else
+// Fallback implementation for clients requesting API level 1
+float myFeature() { return 0.0; }
+#endif
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## API level compatibility
+Note that this system doesn’t allow forward compatibility, meaning that there’s no way for the client to compile the
+material if the API level they provided is higher than the compiler API level:
+- Backward compatibility (client version <= compiler version): Compilation success.
+- Forward compatibility (client version > compiler version): Compilation fails with an error message.
+
+Material compilation should succeed as long as those two conditions are met:
+- The client exclusively uses APIs that are supported at their specified `apiLevel`.
+- The compiler's supported `apiLevel` is equal to or greater than the client's requested `apiLevel`.
+
+Below demonstrates some concrete examples:
+
+| Client api level                                                                | Compiler api level         | Result  | Reason for Success/Failure                                                                                |
+| :-------------------------------------------------------------------------------| :--------------------------| :------ | :---------------------------------------------------------------------------------------------------------|
+| Implicit apiLevel 1 (No apiLevel specified); uses apiLevel 1 features only      | Any apiLevel (apiLevel 1+)  | SUCCESS | Sets apiLevel to 1. Since the material only uses apiLevel 1 features, the material compilation succeeds. |
+| Implicit apiLevel 1 (No apiLevel specified); but **uses apiLevel 2** features   | Any apiLevel (apiLevel 1+)  | FAILURE | Sets apiLevel to 1. The client requests apiLevel 1, but the apiLevel 2 feature is used.                  |
+| Explicit apiLevel 1; uses apiLevel 1 features only                              | Any apiLevel (apiLevel 1+)  | SUCCESS | The requested level is 1. Material only uses apiLevel 1 features. material compilation succeeds.         |
+| Explicit apiLevel 1; but **uses apiLevel 2** features                           | Any apiLevel (apiLevel 1+)  | FAILURE | The client requests apiLevel 1, but the apiLevel 2 feature is used.                                      |
+| Explicit apiLevel 2                                                             | apiLevel 1                  | FAILURE | Client requests apiLevel of 2. Compiler is only capable of apiLevel 1.                                   |
+| Explicit apiLevel 2                                                             | apiLevel 2+                 | SUCCESS | The compiler is capable of apiLevel 2.                                                                   |
 
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="../third_party/markdeep/markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

@@ -34,20 +34,20 @@ using namespace ASTHelpers;
 using namespace filamat;
 using namespace filament::backend;
 
-static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::PropertyList& expected,
+static testing::AssertionResult PropertyListsMatch(const MaterialBuilder::PropertyList& expected,
         const MaterialBuilder::PropertyList& actual) {
     for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
         if (expected[i] != actual[i]) {
             const auto& propString = Enums::toString<Property>(static_cast<Property>(i));
-            return ::testing::AssertionFailure()
+            return testing::AssertionFailure()
                     << "actual[" << propString << "] (" << actual[i]
                     << ") != expected[" << propString << "] (" << expected[i] << ")";
         }
     }
-    return ::testing::AssertionSuccess();
+    return testing::AssertionSuccess();
 }
 
-std::string shaderWithAllProperties(const ShaderStage type,
+static std::string shaderWithAllProperties(const ShaderStage type,
         const std::string& fragmentCode,
         const std::string& vertexCode = "",
         const MaterialBuilder::Shading shadingModel = MaterialBuilder::Shading::LIT,
@@ -70,11 +70,12 @@ std::string shaderWithAllProperties(const ShaderStage type,
 
     // Note: no need to call builder.build as we are only checking the properties.
 
-    return builder.peek(type, {
-                    ShaderModel::MOBILE,
-                    MaterialBuilder::TargetApi::OPENGL,
-                    MaterialBuilder::TargetLanguage::GLSL,
-                    FeatureLevel::FEATURE_LEVEL_1,
+    return builder.peek(type,
+            {
+                .shaderModel = ShaderModel::MOBILE,
+                .targetApi = MaterialBuilder::TargetApi::OPENGL,
+                .targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
+                .featureLevel = FeatureLevel::FEATURE_LEVEL_1,
             },
             allProperties);
 }
@@ -89,7 +90,8 @@ TEST(StaticCodeAnalysisHelper, getFunctionNameNoParenthesis) {
     EXPECT_EQ(name, "main");
 }
 
-class MaterialCompiler : public ::testing::Test {
+namespace {
+class MaterialCompiler : public testing::Test {
 protected:
     MaterialCompiler() = default;
 
@@ -108,6 +110,7 @@ protected:
 
     std::unique_ptr<JobSystem> jobSystem;
 };
+} // namespace
 
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
     const std::string fragmentCode(R"(
@@ -118,10 +121,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected{ false };
+    constexpr MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -131,17 +134,17 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
             prepareMaterial(material);
         }
     )");
-    std::string vertexCode(R"(
+    const std::string vertexCode(R"(
         void materialVertex(inout MaterialVertexInputs material) {
         }
     )");
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::VERTEX, fragmentCode, vertexCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
-    MaterialBuilder::PropertyList expected{ false };
+    constexpr MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -159,10 +162,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected{ false };
+    constexpr MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -176,11 +179,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -190,7 +193,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
             prepareMaterial(material);
         }
     )");
-    std::string vertexCode(R"(
+    const std::string vertexCode(R"(
         void materialVertex(inout MaterialVertexInputs material) {
             material.clipSpaceTransform = mat4(2.0);
         }
@@ -200,11 +203,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
             MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
             MaterialBuilder::VertexDomain::DEVICE);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -214,7 +217,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
             prepareMaterial(material);
         }
     )");
-    std::string vertexCode(R"(
+    const std::string vertexCode(R"(
         void materialVertex(inout MaterialVertexInputs material) {
             material.clipSpacePosition = vec4(2.0);
         }
@@ -224,11 +227,49 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClipSpacePosition) {
             vertexCode, MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::NONE,
             MaterialBuilder::VertexDomain::DEVICE, filament::UNSTABLE_MATERIAL_API_LEVEL);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::CLIP_SPACE_POSITION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLIP_SPACE_POSITION)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSecondRoughness) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.secondRoughness = 0.5;
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::LIT);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::SECOND_ROUGHNESS)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerSecondRoughnessWeight) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.secondRoughnessWeight = 0.5;
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
+            MaterialBuilder::Shading::LIT);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::SECOND_ROUGHNESS_WEIGHT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -242,11 +283,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -265,11 +306,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -288,11 +329,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSw
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -304,8 +345,8 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
             return 1.0;
         }
 
-        void setBaseColor(inout vec4 aliaseBaseColor) {
-            setBaseColorOtherFunction(aliaseBaseColor);
+        void setBaseColor(inout vec4 aliasBaseColor) {
+            setBaseColorOtherFunction(aliasBaseColor);
         }
 
         void material(inout MaterialInputs material) {
@@ -316,11 +357,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -344,11 +385,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -363,11 +404,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -381,11 +422,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::ROUGHNESS)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -399,11 +440,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::METALLIC)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -417,11 +458,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::REFLECTANCE)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -435,11 +476,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -453,11 +494,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLEAR_COAT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -474,13 +515,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::CUBEMAP);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::ABSORPTION)] = true;
-    expected[size_t(MaterialBuilder::Property::TRANSMISSION)] = true;
-    expected[size_t(MaterialBuilder::Property::IOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::IOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -498,14 +539,14 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDispersion) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::LIT, MaterialBuilder::RefractionMode::CUBEMAP);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::ABSORPTION)] = true;
-    expected[size_t(MaterialBuilder::Property::TRANSMISSION)] = true;
-    expected[size_t(MaterialBuilder::Property::IOR)] = true;
-    expected[size_t(MaterialBuilder::Property::DISPERSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::ABSORPTION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::TRANSMISSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::IOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::DISPERSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -519,11 +560,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "");
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -538,12 +579,12 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "");
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
-    expected[size_t(MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLEAR_COAT)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -558,11 +599,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::SUBSURFACE);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::THICKNESS)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -577,11 +618,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::SUBSURFACE);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -596,11 +637,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::SUBSURFACE);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -614,11 +655,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -632,11 +673,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::ANISOTROPY)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::ANISOTROPY)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -651,11 +692,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode, "",
             MaterialBuilder::Shading::CLOTH);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::SHEEN_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::SHEEN_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -669,11 +710,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -687,11 +728,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::NORMAL)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -705,11 +746,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::BENT_NORMAL)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::BENT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -723,11 +764,11 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerShadowStrength) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::SHADOW_STRENGTH)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::SHADOW_STRENGTH)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -742,12 +783,12 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
 
     const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
 
-    GLSLTools glslTools;
+    constexpr GLSLTools glslTools;
     MaterialBuilder::PropertyList properties{ false };
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
-    expected[size_t(MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
-    expected[size_t(MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -875,7 +916,7 @@ TEST_F(MaterialCompiler, ConstantParameter) {
             }
         }
     )");
-    std::string vertexCode(R"(
+    const std::string vertexCode(R"(
         void materialVertex(inout MaterialVertexInputs material) {
             int anInt = materialConstants_myIntConstant;
             bool aBool = materialConstants_myBoolConstant;

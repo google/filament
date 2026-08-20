@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 #define TNT_FILAMENT_SAMPLE_FILAMENTAPP2_H
 
+#include "AppEvent.h"
 #include "Config.h"
 #include "Cube.h"
 #include "Grid.h"
@@ -62,7 +63,6 @@ class WebGPUPlatform;
 
 namespace filament::app {
 class DisplayManager;
-enum class AppKey : uint32_t;
 } // namespace filament::app
 
 class FilamentApp2 {
@@ -81,12 +81,14 @@ public:
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
     using ResizeCallback = std::function<void(filament::Engine*, filament::View*)>;
     using DropCallback = std::function<void(std::string_view)>;
+    using SurfaceCreatedCallback = std::function<void(filament::Engine*)>;
+    using SurfaceDestroyedCallback = std::function<void(filament::Engine*)>;
 
     class Builder {
     public:
         Builder() = default;
 
-        Builder& title(const std::string& title) {
+        Builder& title(const utils::CString& title) {
             mTitle = title;
             return *this;
         }
@@ -95,11 +97,11 @@ public:
             mHeight = height;
             return *this;
         }
-        Builder& iblDirectory(const std::string& iblDirectory) {
+        Builder& iblDirectory(const utils::CString& iblDirectory) {
             mIblDirectory = iblDirectory;
             return *this;
         }
-        Builder& dirt(const std::string& dirt) {
+        Builder& dirt(const utils::CString& dirt) {
             mDirt = dirt;
             return *this;
         }
@@ -139,7 +141,7 @@ public:
             mSamples = samples;
             return *this;
         }
-        Builder& vulkanGPUHint(const std::string& vulkanGPUHint) {
+        Builder& vulkanGPUHint(const utils::CString& vulkanGPUHint) {
             mVulkanGPUHint = vulkanGPUHint;
             return *this;
         }
@@ -253,6 +255,26 @@ public:
         }
 
         /**
+         * Sets the callback invoked when a surface has been created.
+         *
+         * @param callback A callback function invoked upon surface creation.
+         */
+        Builder& onSurfaceCreated(SurfaceCreatedCallback callback) {
+            mSurfaceCreatedCallback = callback;
+            return *this;
+        }
+
+        /**
+         * Sets the callback invoked when a surface has been destroyed.
+         *
+         * @param callback A callback function invoked upon surface destruction.
+         */
+        Builder& onSurfaceDestroyed(SurfaceDestroyedCallback callback) {
+            mSurfaceDestroyedCallback = callback;
+            return *this;
+        }
+
+        /**
          * Creates a FilamentApp2 instance configured with the parameters provided to the Builder.
          *
          * @return A unique_ptr owning the constructed FilamentApp2.
@@ -261,11 +283,11 @@ public:
 
     private:
         friend class FilamentApp2;
-        std::string mTitle;
+        utils::CString mTitle;
         uint32_t mWidth = 1024;
         uint32_t mHeight = 640;
-        std::string mIblDirectory;
-        std::string mDirt;
+        utils::CString mIblDirectory;
+        utils::CString mDirt;
         float mScale = 1.0f;
         bool mSplitView = false;
         filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
@@ -275,7 +297,7 @@ public:
         bool mHeadless = false;
         int mStereoscopicEyeCount = 2;
         uint8_t mSamples = 1;
-        std::string mVulkanGPUHint;
+        utils::CString mVulkanGPUHint;
         WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
         DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
         filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
@@ -288,11 +310,17 @@ public:
         AnimCallback mAnimation;
         ResizeCallback mResize;
         DropCallback mDropHandler;
+        SurfaceCreatedCallback mSurfaceCreatedCallback;
+        SurfaceDestroyedCallback mSurfaceDestroyedCallback;
     };
 
     ~FilamentApp2();
 
+    void init();
     void run();
+    bool doFrame();
+    void shutdown();
+    bool isInitialized() const noexcept { return mInitialized; }
 
     void reconfigureCameras() { mReconfigureCameras = true; }
 
@@ -303,14 +331,15 @@ public:
     IBL* getIBL() const noexcept { return mIBL.get(); }
     filament::Texture* getDirtTexture() const noexcept { return mDirt; }
     filament::View* getGuiView() const noexcept;
-    filament::SwapChain* getPrimarySwapChain() const noexcept { return mPrimarySwapChain; }
+    filament::SwapChain* getPrimarySwapChain() const noexcept { return mSwapChain; }
 
     void close() { mClosed = true; }
 
-    void onSurfaceCreated(void* nativeWindow);
+    void onSurfaceCreated();
     void onSurfaceChanged(int width, int height);
     void onSurfaceDestroyed();
-    void onTouchEvent(int action, float x, float y);
+
+    filament::app::DisplayManager* getDisplayManager() const noexcept { return mDisplayManager; }
 
     void setSidebarWidth(int width) {
         mCameraParams.sidebarWidth = width;
@@ -364,7 +393,7 @@ private:
 
     class CView {
     public:
-        CView(filament::Renderer& renderer, std::string name);
+        CView(filament::Renderer& renderer, utils::CString name);
         virtual ~CView();
 
         void setCameraManipulator(CameraManipulator* cm);
@@ -390,7 +419,7 @@ private:
         filament::Viewport mViewport;
         filament::View* view = nullptr;
         CameraManipulator* mCameraManipulator = nullptr;
-        std::string mName;
+        utils::CString mName;
     };
 
     class GodView : public CView {
@@ -415,70 +444,7 @@ private:
         }
     };
 
-public:
-    class Window {
-        friend class FilamentApp2;
-
-    public:
-        using Handle = void*;
-        virtual ~Window();
-
-    private:
-        Window(FilamentApp2* filamentApp, std::string title,
-                WindowCameraParams const& cameraParams, size_t w, size_t h);
-
-        void mouseDown(int button, ssize_t x, ssize_t y);
-        void mouseUp(ssize_t x, ssize_t y);
-        void mouseMoved(ssize_t x, ssize_t y);
-        void mouseWheel(ssize_t x);
-        void keyDown(filament::app::AppKey scancode);
-        void keyUp(filament::app::AppKey scancode);
-        void resize(WindowCameraParams const& cameraParams);
-
-        filament::Renderer* getRenderer() { return mRenderer; }
-        filament::SwapChain* getSwapChain() { return mSwapChain; }
-
-        void configureCamerasForWindow(WindowCameraParams const& camera);
-        void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
-
-        filament::app::DisplayManager* const mDisplayManager = nullptr;
-        filament::Engine* const mEngine = nullptr;
-        FilamentApp2* const mApp = nullptr;
-
-        Handle mWindow = nullptr;
-        filament::Renderer* mRenderer = nullptr;
-        filament::Engine::Backend mBackend;
-
-        CameraManipulator* mMainCameraMan;
-        CameraManipulator* mDebugCameraMan;
-        filament::SwapChain* mSwapChain = nullptr;
-
-        utils::Entity mCameraEntities[3];
-        filament::Camera* mCameras[3] = { nullptr };
-        filament::Camera* mMainCamera;
-        filament::Camera* mDebugCamera;
-        filament::Camera* mOrthoCamera;
-
-        std::vector<std::unique_ptr<CView>> mViews;
-        CView* mMainView; // well, the main view
-        CView* mUiView;   // the imgui ui
-        CView* mDepthView;
-        GodView* mGodView; // the debug view with "god" camera
-        CView* mOrthoView; // directional shadow map view
-
-        size_t mWidth = 0;
-        size_t mHeight = 0;
-        ssize_t mLastX = 0;
-        ssize_t mLastY = 0;
-
-        CView* mMouseEventTarget = nullptr;
-
-        // Keep track of which view should receive a key's keyUp event.
-        std::unordered_map<filament::app::AppKey, CView*> mKeyEventTarget;
-    };
-
 private:
-    friend class Window;
     friend class Builder;
 
     explicit FilamentApp2(const Builder& builder);
@@ -486,13 +452,21 @@ private:
     void loadIBL();
     void loadDirt();
 
-    bool doFrame();
-    void shutdown();
+    void mouseDown(int button, ssize_t x, ssize_t y);
+    void mouseUp(ssize_t x, ssize_t y);
+    void mouseMoved(ssize_t x, ssize_t y);
+    void mouseWheel(ssize_t x);
+    void keyDown(filament::app::AppKey scancode);
+    void keyUp(filament::app::AppKey scancode);
+    void resize(WindowCameraParams const& cameraParams);
 
+    void configureCamerasForWindow(WindowCameraParams const& camera);
+    void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
+
+    bool mInitialized = false;
     filament::Engine* mEngine = nullptr;
     filament::Scene* mScene = nullptr;
     std::unique_ptr<IBL> mIBL;
-    filament::SwapChain* mPrimarySwapChain = nullptr;
     filament::Texture* mDirt = nullptr;
     bool mClosed = false;
     double mTime = 0;
@@ -502,11 +476,13 @@ private:
     filament::Material const* mDepthMaterial = nullptr;
     filament::MaterialInstance* mDepthMI = nullptr;
     std::unique_ptr<FilamentAppGui> mAppGui;
-    AnimCallback mAnimation;
-    ResizeCallback mResize;
-    DropCallback mDropHandler;
+    AnimCallback const mAnimation;
+    ResizeCallback const mResize;
+    DropCallback const mDropHandler;
+    SurfaceCreatedCallback const mSurfaceCreatedCallback;
+    SurfaceDestroyedCallback const mSurfaceDestroyedCallback;
     size_t mSkippedFrames = 0;
-    std::string mWindowTitle;
+    utils::CString const mWindowTitle;
     std::vector<filament::View*> mOffscreenViews;
     WindowCameraParams mCameraParams{};
     bool mReconfigureCameras = false;
@@ -515,33 +491,59 @@ private:
     uint8_t mDirectionalShadowFrustumEnabled = 0x2;
     uint8_t mCameraFrustumEnabled = 0x2;
 
-    filament::app::DisplayManager* mDisplayManager = nullptr;
+    filament::app::DisplayManager* const mDisplayManager;
 
     filament::backend::Platform* mVulkanPlatform = nullptr;
     filament::backend::Platform* mWebGPUPlatform = nullptr;
 
-    std::unique_ptr<Window> mWindow;
-    uint32_t mWindowWidth = 1024;
-    uint32_t mWindowHeight = 640;
-    std::string mIblDirectory;
-    std::string mDirtPath;
-    float mScale = 1.0f;
+    filament::app::WindowHandle mWindow = nullptr;
+    filament::Renderer* mRenderer = nullptr;
+    filament::SwapChain* mSwapChain = nullptr;
+
+    CameraManipulator* mMainCameraMan = nullptr;
+    CameraManipulator* mDebugCameraMan = nullptr;
+
+    utils::Entity mCameraEntities[3];
+    filament::Camera* mCameras[3] = { nullptr };
+    filament::Camera* mMainCamera = nullptr;
+    filament::Camera* mDebugCamera = nullptr;
+    filament::Camera* mOrthoCamera = nullptr;
+
+    std::vector<std::unique_ptr<CView>> mViews;
+    CView* mMainView = nullptr;
+    CView* mUiView = nullptr;
+    CView* mDepthView = nullptr;
+    GodView* mGodView = nullptr;
+    CView* mOrthoView = nullptr;
+
+    size_t mWidth = 0;
+    size_t mHeight = 0;
+    ssize_t mLastX = 0;
+    ssize_t mLastY = 0;
+
+    CView* mMouseEventTarget = nullptr;
+
+    // Keep track of which view should receive a key's keyUp event.
+    std::unordered_map<filament::app::AppKey, CView*> mKeyEventTarget;
+
+    uint32_t const mInitialWindowWidth = 1024;
+    uint32_t const mInitialWindowHeight = 640;
+    utils::CString const mIblDirectory;
+    utils::CString const mDirtPath;
     filament::Engine::Backend mBackend = filament::Engine::Backend::DEFAULT;
     filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
-    filament::camutils::Mode mCameraMode = filament::camutils::Mode::ORBIT;
-    bool mResizeable = true;
-    bool mHeadless = false;
-    int mStereoscopicEyeCount = 2;
-    uint8_t mSamples = 1;
-    std::string mVulkanGPUHint;
-    WebGPUBackend mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
-    DisplayManager mDisplayManagerConfig = DisplayManager::SDL;
-    filament::backend::AsynchronousMode mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
-    SetupCallback mSetupCallback;
-    CleanupCallback mCleanupCallback;
-    ImGuiCallback mImguiCallback{};
-    PreRenderCallback mPreRender{};
-    PostRenderCallback mPostRender{};
+    filament::camutils::Mode const mCameraMode;
+    bool const mResizeable = true;
+    bool const mHeadless = false;
+    int const mStereoscopicEyeCount = 2;
+    utils::CString const mVulkanGPUHint;
+    WebGPUBackend const mForcedWebGPUBackend = WebGPUBackend::DEFAULT;
+    filament::backend::AsynchronousMode const mAsynchronousMode = filament::backend::AsynchronousMode::NONE;
+    SetupCallback const mSetupCallback;
+    CleanupCallback const mCleanupCallback;
+    ImGuiCallback const mImguiCallback{};
+    PreRenderCallback const mPreRender{};
+    PostRenderCallback const mPostRender{};
     bool mMousePressed[3] = { false };
     bool mIsSplitView = false;
 

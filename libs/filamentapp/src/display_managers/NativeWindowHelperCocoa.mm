@@ -49,6 +49,8 @@ void* setUpMetalLayer(void* nativeView) {
     [view setWantsLayer:YES];
     CAMetalLayer* metalLayer = [CAMetalLayer layer];
     metalLayer.bounds = view.bounds;
+    metalLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    metalLayer.delegate = (id<CALayerDelegate>) view;
 
     // It's important to set the drawableSize to the actual backing pixels. When rendering
     // full-screen, we can skip the macOS compositor if the size matches the display size.
@@ -70,14 +72,35 @@ void* setUpMetalLayer(void* nativeView) {
     return metalLayer;
 }
 
-void* resizeMetalLayer(void* nativeView) {
-    NSView* view = (NSView*) nativeView;
+void* resizeMetalLayerFromView(void* nativeView) {
+    if (!nativeView) {
+        return nullptr;
+    }
+    id obj = (__bridge id) nativeView;
+    if (![obj isKindOfClass:[NSView class]]) {
+        return nullptr;
+    }
+    NSView* view = (NSView*) obj;
     CAMetalLayer* metalLayer = (CAMetalLayer*) view.layer;
-    CGSize viewSize = view.bounds.size;
-    NSSize newDrawableSize = [view convertSizeToBacking:view.bounds.size];
-    metalLayer.drawableSize = newDrawableSize;
-    metalLayer.contentsScale = view.window.backingScaleFactor;
+    if (metalLayer && [metalLayer isKindOfClass:[CAMetalLayer class]]) {
+        metalLayer.bounds = view.bounds;
+        metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+        metalLayer.contentsScale = view.window.backingScaleFactor;
+    }
     return metalLayer;
+}
+
+void* resizeMetalLayer(void* layer) {
+    if (!layer) {
+        return nullptr;
+    }
+    id obj = (__bridge id) layer;
+    if (![obj isKindOfClass:[CAMetalLayer class]]) {
+        return nullptr;
+    }
+    CAMetalLayer* metalLayer = (CAMetalLayer*) obj;
+    NSView* view = (NSView*) metalLayer.delegate;
+    return resizeMetalLayerFromView(view);
 }
 
 // When running in headless/web-server mode, the standard SDL main event pump is bypassed.

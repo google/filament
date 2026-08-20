@@ -14,8 +14,21 @@
  * limitations under the License.
  */
 
+#include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp.h>
+#include <filament/View.h>
+#include <filament/Engine.h>
 #include <filamentapp/FilamentApp2.h>
+
+#if defined(FILAMENTAPP_HAS_WEB_UI)
+#include "filamentapp/HtmlDisplayManager.h"
+#endif // defined(FILAMENTAPP_HAS_WEB_UI)
+
+#ifdef FILAMENTAPP_HAS_SDL
+#include "filamentapp/SDLDisplayManager.h"
+#endif // defined(FILAMENTAPP_HAS_SDL)
+
+#include <utils/Panic.h>
 
 FilamentApp& FilamentApp::get() {
     static FilamentApp app;
@@ -29,6 +42,19 @@ FilamentApp::~FilamentApp() = default;
 void FilamentApp::run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
         ImGuiCallback imgui, PreRenderCallback preRender,
         PostRenderCallback postRender, size_t width, size_t height) {
+
+    if (!mDisplayManager) {
+        if (config.displayManager == Config::DisplayManager::SDL) {
+#ifdef FILAMENTAPP_HAS_SDL
+            mDisplayManager = std::make_unique<filament::app::SDLDisplayManager>(config.backend);
+#endif
+        }
+        if (config.displayManager == Config::DisplayManager::WEB) {
+#if defined(FILAMENTAPP_HAS_WEB_UI)
+            mDisplayManager = std::make_unique<filament::app::HtmlDisplayManager>();
+#endif
+        }
+    }
 
     mImpl = FilamentApp2::Builder()
             .title(mWindowTitle.empty() ? config.title : mWindowTitle)
@@ -44,17 +70,15 @@ void FilamentApp::run(const Config& config, SetupCallback setup, CleanupCallback
             .dropHandler(mDropHandler)
             .iblDirectory(config.iblDirectory)
             .dirt(config.dirt)
-            .scale(config.scale)
             .splitView(config.splitView)
             .featureLevel(config.featureLevel)
             .cameraMode(config.cameraMode)
             .resizeable(config.resizeable)
             .headless(config.headless)
             .stereoscopicEyeCount(config.stereoscopicEyeCount)
-            .samples(config.samples)
             .vulkanGPUHint(config.vulkanGPUHint)
             .forcedWebGPUBackend(static_cast<FilamentApp2::WebGPUBackend>(config.forcedWebGPUBackend))
-            .configDisplayManager(static_cast<FilamentApp2::DisplayManager>(config.displayManager))
+            .displayManager(mDisplayManager.get())
             .asynchronousMode(config.asynchronousMode)
             .build();
 
@@ -98,29 +122,13 @@ void FilamentApp::close() {
     if (mImpl) mImpl->close();
 }
 
-void FilamentApp::onSurfaceCreated(void* nativeWindow) {
-    if (mImpl) mImpl->onSurfaceCreated(nativeWindow);
-}
-
-void FilamentApp::onSurfaceChanged(int width, int height) {
-    if (mImpl) mImpl->onSurfaceChanged(width, height);
-}
-
-void FilamentApp::onSurfaceDestroyed() {
-    if (mImpl) mImpl->onSurfaceDestroyed();
-}
-
-void FilamentApp::onTouchEvent(int action, float x, float y) {
-    if (mImpl) mImpl->onTouchEvent(action, x, y);
-}
-
 void FilamentApp::setSidebarWidth(int width) {
     mSidebarWidth = width;
     if (mImpl) mImpl->setSidebarWidth(width);
 }
 
 void FilamentApp::setWindowTitle(const char* title) {
-    mWindowTitle = title ? title : "";
+    mWindowTitle = utils::CString(title ? title : "");
     // mImpl doesn't have setWindowTitle; we handle it via Builder if called before run.
 }
 

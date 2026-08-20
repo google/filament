@@ -36,12 +36,18 @@ public:
         profiler.stop();
         counters = profiler.readCounters();
         if (profiler.isValid()) {
-            state.counters.insert({
-                    { "C",   { (double)counters.getCpuCycles(),    benchmark::Counter::kAvgIterations }},
-                    { "I",   { (double)counters.getInstructions(), benchmark::Counter::kAvgIterations }},
-                    { "BPU", { (double)counters.getBranchMisses(), benchmark::Counter::kAvgIterations }},
-                    { "CPI", { (double)counters.getCPI(),          benchmark::Counter::kAvgThreads }},
-            });
+            if (counters.getInstructions() > 0) {
+                state.counters.insert({
+                        { "C",   { (double)counters.getCpuCycles(),    benchmark::Counter::kAvgIterations }},
+                        { "I",   { (double)counters.getInstructions(), benchmark::Counter::kAvgIterations }},
+                        { "BPU", { (double)counters.getBranchMisses(), benchmark::Counter::kAvgIterations }},
+                        { "CPI", { (double)counters.getCPI(),          benchmark::Counter::kAvgThreads }},
+                });
+            } else if (counters.getCpuCycles() > 0) {
+                state.counters.insert({
+                        { "C",   { (double)counters.getCpuCycles(),    benchmark::Counter::kAvgIterations }},
+                });
+            }
         }
     }
 };
