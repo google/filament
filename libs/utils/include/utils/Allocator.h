@@ -185,14 +185,18 @@ inline constexpr bool has_wasted_bytes_v = has_wasted_bytes<T>::value;
  * LinearAllocator
  *
  * + Allocates blocks linearly
- * + Cannot free individual blocks
- * + Can free top of memory back up to a specified point
+ * + Can free top allocations in LIFO order (up to STACK_DEPTH levels)
+ * + Can free top of memory back up to a specified point (rewind / reset)
  * + Doesn't call destructors
  * ------------------------------------------------------------------------------------------------
  */
 
 class LinearAllocator {
 public:
+    static constexpr size_t STACK_DEPTH = 8;
+    static constexpr size_t STACK_MASK = STACK_DEPTH - 1;
+    static_assert((STACK_DEPTH & STACK_MASK) == 0, "STACK_DEPTH must be a power of 2");
+
     // use memory area provided
     LinearAllocator(void* begin, void* end) noexcept;
 
@@ -216,16 +220,24 @@ public:
         void* const c = pointermath::add(p, size);
         bool const success = c <= end();
         if (success) {
-            mPrevCur = mCur;
+            mStack[mHead] = mCur;
+            mHead = (mHead + 1) & STACK_MASK;
+            mCount = std::min<uint8_t>(mCount + 1, uint8_t(STACK_DEPTH));
             set_current(c);
         }
         return success ? p : nullptr;
     }
 
     bool free(void* p, size_t const size) noexcept {
-        if (pointermath::add(p, size) == current() && p >= pointermath::add(mBegin, mPrevCur)) {
-            mCur = mPrevCur;
-            return true;
+        if (mCount > 0) {
+            uint8_t const prevIdx = (mHead - 1) & STACK_MASK;
+            uint32_t const prevCur = mStack[prevIdx];
+            if (pointermath::add(p, size) == current() && p >= pointermath::add(mBegin, prevCur)) {
+                mCur = prevCur;
+                mHead = prevIdx;
+                mCount--;
+                return true;
+            }
         }
         return false;
     }
@@ -239,7 +251,8 @@ public:
     void rewind(void* p) UTILS_RESTRICT noexcept {
         assert(p >= mBegin && p < end());
         set_current(p);
-        mPrevCur = mCur;
+        mHead = 0;
+        mCount = 0;
     }
 
     // frees all allocated blocks
@@ -274,7 +287,9 @@ private:
     void* mBegin = nullptr;
     uint32_t mSize = 0;
     uint32_t mCur = 0;
-    uint32_t mPrevCur = 0;
+    uint8_t mHead = 0;
+    uint8_t mCount = 0;
+    uint32_t mStack[STACK_DEPTH] = {};
 };
 
 /* ------------------------------------------------------------------------------------------------
