@@ -500,6 +500,7 @@ struct MetalTimerQuery : public HwTimerQuery {
 
     struct Status {
         std::atomic<bool> available {false};
+        std::atomic<uint64_t> start {0};     // GPUStartTime of the begin command buffer
         std::atomic<uint64_t> elapsed {0};   // only valid if available is true
     };
 
