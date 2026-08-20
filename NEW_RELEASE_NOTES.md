@@ -11,6 +11,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   a completion callback must check it [⚠️ **API Change**]
 - backend: canceling an async call now always invokes its completion callback, with
   `AsyncCallStatus::CANCELED`. Previously the callback was silently dropped
+- engine: fix picking on PowerVR OpenGL ES drivers that mishandle dynamic uniform-buffer indexing
+  in fragment shaders [⚠️ **Recompile Materials**]
 - engine: support multiple directional lights, opt-in via
   `Engine::Config::enableMultipleDirectionalLights`; the dominant one still provides shadows and
   the sun disc, up to 4 additional directional lights are evaluated without shadows [⚠️ **New
