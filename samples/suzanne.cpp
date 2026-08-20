@@ -51,6 +51,8 @@ using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
+namespace {
+
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -65,9 +67,9 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
-static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
+Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
     unsigned char* data = stbi_load_from_memory(normals, nbytes, &w, &h, &n, 3);
     Texture* normalMap = Texture::Builder()
@@ -84,6 +86,8 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
     normalMap->generateMipmaps(*engine);
     return normalMap;
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -160,10 +164,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         engine->destroy(app->ao);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .build();
