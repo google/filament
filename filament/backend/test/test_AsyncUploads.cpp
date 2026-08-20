@@ -51,6 +51,18 @@ static void signalCallback(void* user, AsyncCallStatus const status) {
     *flag = true;
 }
 
+// Records the status instead of asserting on it, so that the assertion happens on the test thread.
+struct AsyncCallResult {
+    bool fired = false;
+    AsyncCallStatus status = AsyncCallStatus::COMPLETED;
+};
+
+static void recordCallback(void* user, AsyncCallStatus const status) {
+    AsyncCallResult* result = static_cast<AsyncCallResult*>(user);
+    result->status = status;
+    result->fired = true;
+}
+
 TEST_F(BackendTest, BasicAsyncFlow) {
     SKIP_IF(Backend::VULKAN, "Vulkan does not support asynchronous resource uploading");
     SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
@@ -210,6 +222,56 @@ TEST_F(BackendTest, BasicAsyncFlow) {
 
         api.commit(swapChain);
     }
+}
+
+TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
+    // The Vulkan backend does implement asynchronous uploading, but BackendTest only enables
+    // asynchronous mode for Metal and OpenGL (BackendTest.cpp), so there is no job queue here.
+    SKIP_IF(Backend::VULKAN, "the test harness does not enable asynchronous mode for Vulkan");
+    SKIP_IF(Backend::WEBGPU, "WebGPU does not support asynchronous resource uploading");
+    // MetalDriver's cancelable jobs still capture the raw handler/callback/user triplet instead of
+    // an AsyncCompletion, so a canceled job is destroyed without notifying anyone. Porting them is
+    // not mechanical: Metal fires the callback from an addCompletedHandler: block, and an
+    // Objective-C block copies a captured C++ object with its copy constructor, which
+    // AsyncCompletion deletes.
+    SKIP_IF(Backend::METAL,
+            "the Metal backend does not invoke the callback of a canceled call yet");
+
+    auto& api = getDriverApi();
+    auto swapChain = addCleanup(createSwapChain());
+    api.makeCurrent(swapChain, swapChain);
+
+    AsyncCallResult result;
+    bool commandRan = false;
+
+    auto waitFor = [&](const bool& flag) {
+        int attempts = 0;
+        while (!flag && attempts < 1000) {
+            api.finish();
+            executeCommands();
+            getDriver().purge();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            attempts++;
+        }
+        EXPECT_TRUE(flag);
+    };
+
+    // Only the first half of an asynchronous call runs here on the test thread, reserving the job
+    // id. The half that queues the actual job runs on the backend thread, when the command buffer
+    // below is executed, so the job is still cancelable at this point.
+    AsyncCallId const id = api.queueCommandAsync([&commandRan]() { commandRan = true; }, nullptr,
+            recordCallback, &result);
+    EXPECT_TRUE(api.cancelAsyncJob(id));
+
+    // A canceled call must still notify the caller, otherwise cancellation is indistinguishable
+    // from a call that is taking a long time, and whatever the callback owns is leaked.
+    waitFor(result.fired);
+    EXPECT_EQ(AsyncCallStatus::CANCELED, result.status)
+            << "a canceled call must report that it was canceled, not that it completed";
+    EXPECT_FALSE(commandRan) << "the canceled command must not have been executed";
+
+    // The job is gone, so canceling it a second time reports that there was nothing to cancel.
+    EXPECT_FALSE(api.cancelAsyncJob(id));
 }
 
 } // namespace test

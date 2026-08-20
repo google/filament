@@ -101,6 +101,11 @@ public:
                 FrameGraphId<FrameGraphTexture> color, uint32_t* index = nullptr);
 
         /**
+         * Reserve space for the specified number of render passes/targets in this pass node.
+         */
+        void reserveRenderTargets(size_t count) noexcept;
+
+        /**
          * Creates a virtual resource of type RESOURCE
          * @tparam RESOURCE Type of the resource to create
          * @param name      A pointer to a null terminated string.
@@ -237,7 +242,7 @@ public:
     };
 
     explicit FrameGraph(
-            LinearAllocatorArena& arena,
+            LinearAllocatorArena& arena, size_t size,
             TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
 
@@ -592,6 +597,7 @@ auto& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
 
     // create the FrameGraph pass
     auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
+    assert_invariant(pass);
 
     Builder builder(addPassInternal(name, pass));
 
@@ -615,6 +621,7 @@ template<typename RESOURCE>
 FrameGraphId<RESOURCE> FrameGraph::create(utils::StaticString name,
         typename RESOURCE::Descriptor const& desc) noexcept {
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(name, desc));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addResourceInternal(vresource));
 }
 
@@ -623,6 +630,7 @@ FrameGraphId<RESOURCE> FrameGraph::createSubresource(FrameGraphId<RESOURCE> pare
         utils::StaticString name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept {
     auto* parentResource = static_cast<Resource<RESOURCE>*>(getResource(parent));
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(parentResource, name, desc));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addSubResourceInternal(parent, vresource));
 }
 
@@ -632,6 +640,7 @@ FrameGraphId<RESOURCE> FrameGraph::import(utils::StaticString name,
         typename RESOURCE::Usage usage,
         RESOURCE const& resource) noexcept {
     VirtualResource* vresource(mArena.make<ImportedResource<RESOURCE>>(name, desc, usage, resource));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addResourceInternal(vresource));
 }
 

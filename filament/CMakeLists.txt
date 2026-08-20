@@ -217,6 +217,7 @@ set(PRIVATE_HDRS
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
+        src/details/CreationStatus.h
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h
