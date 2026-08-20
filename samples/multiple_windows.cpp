@@ -53,179 +53,62 @@
 using namespace filament;
 
 namespace {
-    Engine::Backend kBackend = Engine::Backend::NOOP;
-    static constexpr int kWidth = 640;
-    static constexpr int kHeight = 480;
-    static constexpr double kFieldOfViewDeg = 60.0;
-    static constexpr double kNearPlane = 0.1;
-    static constexpr double kFarPlane = 50.0;
-    static constexpr const char* kIBLFolder = "assets/ibl/lightroom_14b";
-    static constexpr double kRotationDegPerSec = 36.0;
-    static constexpr math::float3 kCameraCenter = {0.0f, 0.0f, 0.0f};
-    static constexpr math::float3 kCameraUp = {0.0f, 1.0f, 0.0f};
-    static constexpr float kCameraDist = 3.0f;
 
-    struct Window {
-        std::function<void(Window&, double)> onNewFrame;
+Engine::Backend kBackend = Engine::Backend::NOOP;
+constexpr int kWidth = 640;
+constexpr int kHeight = 480;
+constexpr double kFieldOfViewDeg = 60.0;
+constexpr double kNearPlane = 0.1;
+constexpr double kFarPlane = 50.0;
+constexpr const char* kIBLFolder = "assets/ibl/lightroom_14b";
+constexpr double kRotationDegPerSec = 36.0;
+constexpr math::float3 kCameraCenter = {0.0f, 0.0f, 0.0f};
+constexpr math::float3 kCameraUp = {0.0f, 1.0f, 0.0f};
+constexpr float kCameraDist = 3.0f;
 
-        SDL_Window* sdl_window = nullptr;
-        Renderer* renderer = nullptr;
-        SwapChain* swapChain = nullptr;
-        utils::Entity cameraEntity;
-        Camera* camera = nullptr;
-        View* view = nullptr;
-        Scene* scene = nullptr;
-        IBL* ibl = nullptr;
-        Material* material = nullptr;
-        MaterialInstance* materialInstance = nullptr;
-        filamesh::MeshReader::Mesh mesh;
+struct Window {
+    std::function<void(Window&, double)> onNewFrame;
 
-        bool needsDraw = true;
-        double time = 0.0;
-        double lastDrawTime = 0.0;
-    };
-}
+    SDL_Window* sdl_window = nullptr;
+    Renderer* renderer = nullptr;
+    SwapChain* swapChain = nullptr;
+    utils::Entity cameraEntity;
+    Camera* camera = nullptr;
+    View* view = nullptr;
+    Scene* scene = nullptr;
+    IBL* ibl = nullptr;
+    Material* material = nullptr;
+    MaterialInstance* materialInstance = nullptr;
+    filamesh::MeshReader::Mesh mesh;
 
-void setup_window(Window& w, Engine* engine);
-void destroy_window(Window& w, Engine* engine);
-void resize_window(Window& w, Engine* engine);
-
-void setup_static_scene(Window& w, Engine* engine);
-void setup_animating_scene(Window& w, Engine* engine);
-void animation_new_frame(Window& w, double dt);
-IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine);
+    bool needsDraw = true;
+    double time = 0.0;
+    double lastDrawTime = 0.0;
+};
 
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
 };
 
-std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
-        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
-    auto app = std::make_shared<App>();
-    app->config = config;
-
-    // ---- initialize ----
-    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
-
-    kBackend = config.backend;
-    std::vector<Window> windows = { Window(), Window() };
-    uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
-                           | SDL_WINDOW_RESIZABLE;
-    int n = 1;
-    int x = 50, y = 50;
-    for (auto &w : windows) {
-        auto title = std::string("Filament - Window ") + std::to_string(n);
-        w.sdl_window = SDL_CreateWindow(title.c_str(), x, y, kWidth, kHeight,
-                                        windowFlags);
-        x += 50;
-        y += 50;
-        n += 1;
+void resize_window(Window& w, Engine* engine) {
+#if defined(__APPLE__)
+    void* nativeWindow = ::getNativeWindowFromSDL(w.sdl_window);
+    if (kBackend == filament::Engine::Backend::METAL ||
+            kBackend == filament::Engine::Backend::VULKAN ||
+            kBackend == filament::Engine::Backend::WEBGPU) {
+        resizeMetalLayerFromView(nativeWindow);
     }
-
-    // Create SDL windows first, so that the Engine's context is current
-    // if we are single-threaded. But we can't create the Filament objects
-    // until after we have created the engine.
-    auto engine = Engine::create(kBackend);
-    kBackend = engine->getBackend();
-
-    for (auto &w : windows) {
-        setup_window(w, engine);
-    }
-    setup_animating_scene(windows[0], engine);
-    setup_static_scene(windows[1], engine);
-
-    // ---- event loop ----
-    size_t nClosed = 0;
-    SDL_Event event;
-    Uint64 lastTime = 0;
-    const Uint64 kCounterFrequency = SDL_GetPerformanceFrequency();
-
-    while (nClosed < windows.size()) {
-        if (!UTILS_HAS_THREADING) {
-            engine->execute();
-        }
-
-        while (SDL_PollEvent(&event) != 0) {
-            switch (event.type) {
-                case SDL_QUIT:
-                    nClosed = windows.size();
-                    break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) {
-                        case SDL_WINDOWEVENT_RESIZED:
-                            for (auto &w : windows) {
-                                if (event.window.windowID == SDL_GetWindowID(w.sdl_window)) {
-                                    resize_window(w, engine);
-                                    break;
-                                }
-                            }
-                            break;
-                        case SDL_WINDOWEVENT_CLOSE:
-                            for (auto &w : windows) {
-                                if (event.window.windowID == SDL_GetWindowID(w.sdl_window)) {
-                                    SDL_HideWindow(w.sdl_window);
-                                    break;
-                                }
-                            }
-                            nClosed++;
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        Uint64 now = SDL_GetPerformanceCounter();
-        const double dt = lastTime > 0 ? (double(now - lastTime) / kCounterFrequency) : (1.0 / 60.0);
-        lastTime = now;
-        for (auto &w : windows) {
-            w.time += dt;
-            if (w.onNewFrame) {
-                w.onNewFrame(w, dt);
-            }
-        }
-
-        for (auto &w : windows) {
-            if (!w.needsDraw) { continue; }
-
-            if (w.renderer->beginFrame(w.swapChain)) {
-                w.renderer->render(w.view);
-                w.renderer->endFrame();
-            }
-            w.needsDraw = false;
-            w.lastDrawTime = w.time;
-        }
-
-        SDL_Delay(16);
-    }
-
-    // ---- cleanup ----
-    for (auto &w : windows) {
-        destroy_window(w, engine);
-    }
-
-    Engine::destroy(&engine);
-
-    SDL_Quit();
-    return nullptr;
-}
-
-#ifndef __ANDROID__
-int main(int argc, char* argv[]) {
-    SampleConfig config;
-    samples::handleCommandLineArguments(argc, argv, &config);
-    auto dm = samples::getDisplayManager(config);
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
-    if (fApp) {
-        fApp->run();
-    }
-    return 0;
-}
 #endif
+
+    int width, height;
+    SDL_GL_GetDrawableSize(w.sdl_window, &width, &height);
+    w.view->setViewport({ 0, 0, uint32_t(width), uint32_t(height) });
+
+    w.camera->setProjection(kFieldOfViewDeg, double(width) / double(height), kNearPlane, kFarPlane);
+
+    w.needsDraw = true;
+}
 
 void setup_window(Window& w, Engine* engine) {
     w.renderer = engine->createRenderer();
@@ -274,22 +157,38 @@ void destroy_window(Window& w, Engine* engine) {
     SDL_DestroyWindow(w.sdl_window);
 }
 
-void resize_window(Window& w, Engine* engine) {
-#if defined(__APPLE__)
-    void* nativeWindow = ::getNativeWindowFromSDL(w.sdl_window);
-    if (kBackend == filament::Engine::Backend::METAL ||
-            kBackend == filament::Engine::Backend::VULKAN ||
-            kBackend == filament::Engine::Backend::WEBGPU) {
-        resizeMetalLayerFromView(nativeWindow);
+IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine) {
+    utils::Path iblPath(iblDirectory);
+
+    if (!iblPath.exists()) {
+        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+        return nullptr;
     }
-#endif
 
-    int width, height;
-    SDL_GL_GetDrawableSize(w.sdl_window, &width, &height);
-    w.view->setViewport({0, 0, uint32_t(width), uint32_t(height)});
+    if (!iblPath.isDirectory()) {
+        std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
+        return nullptr;
+    }
 
-    w.camera->setProjection(kFieldOfViewDeg, double(width) / double(height),
-                            kNearPlane, kFarPlane);
+    IBL* ibl = new IBL(*engine);
+    if (!ibl->loadFromDirectory(iblPath)) {
+        std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+        delete ibl;
+        return nullptr;
+    }
+
+    return ibl;
+}
+
+void animation_new_frame(Window& w, double dt) {
+    // Don't animate every frame or the frames queue up and get very laggy.
+    if ((w.time - w.lastDrawTime) < 0.040) {
+        return;
+    }
+
+    double theta = w.time * kRotationDegPerSec * 3.141592653589793 / 180.0;
+    math::float3 eye = { kCameraDist * std::sin(theta), 0.0f, kCameraDist * std::cos(theta) };
+    w.camera->lookAt(eye, kCameraCenter, kCameraUp);
 
     w.needsDraw = true;
 }
@@ -362,40 +261,132 @@ void setup_animating_scene(Window& w, Engine* engine) {
     w.onNewFrame = animation_new_frame;
 }
 
-void animation_new_frame(Window& w, double dt) {
-    // Don't animate every frame or the frames queue up and get very laggy.
-    if ((w.time - w.lastDrawTime) < 0.040) {
-        return;
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    // ---- initialize ----
+    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
+
+    kBackend = config.backend;
+    std::vector<Window> windows = { Window(), Window() };
+    uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE;
+    int n = 1;
+    int x = 50, y = 50;
+    for (auto& w: windows) {
+        auto title = std::string("Filament - Window ") + std::to_string(n);
+        w.sdl_window = SDL_CreateWindow(title.c_str(), x, y, kWidth, kHeight, windowFlags);
+        x += 50;
+        y += 50;
+        n += 1;
     }
 
-    double theta = w.time * kRotationDegPerSec * 3.141592653589793 / 180.0;
-    math::float3 eye = {kCameraDist * std::sin(theta),
-                        0.0f,
-                        kCameraDist * std::cos(theta)};
-    w.camera->lookAt(eye, kCameraCenter, kCameraUp);
-    
-    w.needsDraw = true;
+    // Create SDL windows first, so that the Engine's context is current
+    // if we are single-threaded. But we can't create the Filament objects
+    // until after we have created the engine.
+    auto engine = Engine::create(kBackend);
+    kBackend = engine->getBackend();
+
+    for (auto& w: windows) {
+        setup_window(w, engine);
+    }
+    setup_animating_scene(windows[0], engine);
+    setup_static_scene(windows[1], engine);
+
+    // ---- event loop ----
+    size_t nClosed = 0;
+    SDL_Event event;
+    Uint64 lastTime = 0;
+    const Uint64 kCounterFrequency = SDL_GetPerformanceFrequency();
+
+    while (nClosed < windows.size()) {
+        if (!UTILS_HAS_THREADING) {
+            engine->execute();
+        }
+
+        while (SDL_PollEvent(&event) != 0) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    nClosed = windows.size();
+                    break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_RESIZED:
+                            for (auto& w: windows) {
+                                if (event.window.windowID == SDL_GetWindowID(w.sdl_window)) {
+                                    resize_window(w, engine);
+                                    break;
+                                }
+                            }
+                            break;
+                        case SDL_WINDOWEVENT_CLOSE:
+                            for (auto& w: windows) {
+                                if (event.window.windowID == SDL_GetWindowID(w.sdl_window)) {
+                                    SDL_HideWindow(w.sdl_window);
+                                    break;
+                                }
+                            }
+                            nClosed++;
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        Uint64 now = SDL_GetPerformanceCounter();
+        const double dt =
+                lastTime > 0 ? (double(now - lastTime) / kCounterFrequency) : (1.0 / 60.0);
+        lastTime = now;
+        for (auto& w: windows) {
+            w.time += dt;
+            if (w.onNewFrame) {
+                w.onNewFrame(w, dt);
+            }
+        }
+
+        for (auto& w: windows) {
+            if (!w.needsDraw) {
+                continue;
+            }
+
+            if (w.renderer->beginFrame(w.swapChain)) {
+                w.renderer->render(w.view);
+                w.renderer->endFrame();
+            }
+            w.needsDraw = false;
+            w.lastDrawTime = w.time;
+        }
+
+        SDL_Delay(16);
+    }
+
+    // ---- cleanup ----
+    for (auto& w: windows) {
+        destroy_window(w, engine);
+    }
+
+    Engine::destroy(&engine);
+
+    SDL_Quit();
+    return nullptr;
 }
 
-IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine) {
-    utils::Path iblPath(iblDirectory);
-
-    if (!iblPath.exists()) {
-        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
-        return nullptr;
+#ifndef __ANDROID__
+int main(int argc, char* argv[]) {
+    SampleConfig config;
+    samples::handleCommandLineArguments(argc, argv, &config);
+    auto dm = samples::getDisplayManager(config);
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    if (fApp) {
+        fApp->run();
     }
-
-    if (!iblPath.isDirectory()) {
-        std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
-        return nullptr;
-    }
-
-    IBL* ibl= new IBL(*engine);
-    if (!ibl->loadFromDirectory(iblPath)) {
-        std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-        delete ibl;
-        return nullptr;
-    }
-
-    return ibl;
+    return 0;
 }
+#endif

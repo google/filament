@@ -49,6 +49,8 @@ using utils::Path;
 using utils::FixedCapacityVector;
 using namespace filament::math;
 
+namespace {
+
 struct App {
     FilamentApp2* filamentApp;
     VertexBuffer* vbs[10];
@@ -75,7 +77,7 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES_1[6] = {
+const Vertex TRIANGLE_VERTICES_1[6] = {
     {{ 1, 0}, 0xff00ff00u},
     {{ cos(M_PI * 1 / 3), sin(M_PI * 1 / 3)}, 0xff330088u},
     {{ cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff880033u},
@@ -84,7 +86,7 @@ static const Vertex TRIANGLE_VERTICES_1[6] = {
     {{ cos(M_PI * 5 / 3), sin(M_PI * 5 / 3)}, 0xff880033u},
 };
 
-static const Vertex TRIANGLE_VERTICES_2[6] = {
+const Vertex TRIANGLE_VERTICES_2[6] = {
     {{ 1, 0}, 0xff0000ffu},
     {{ cos(M_PI * 1 / 3), sin(M_PI * 1 / 3)}, 0xfff055ffu},
     {{ cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff880088u},
@@ -93,7 +95,7 @@ static const Vertex TRIANGLE_VERTICES_2[6] = {
     {{ cos(M_PI * 5 / 3), sin(M_PI * 5 / 3)}, 0xff880088u},
 };
 
-static const Vertex TRIANGLE_VERTICES_3[6] = {
+const Vertex TRIANGLE_VERTICES_3[6] = {
     {{ 1, 0}, 0xfff00f88u},
     {{ cos(M_PI * 1 / 3), sin(M_PI * 1 / 3)}, 0xff00ffaau},
     {{ cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ffffu},
@@ -102,29 +104,28 @@ static const Vertex TRIANGLE_VERTICES_3[6] = {
     {{ cos(M_PI * 5 / 3), sin(M_PI * 5 / 3)}, 0xff00ffffu},
 };
 
-
-static const float3 targets_pos[9] = {
+const float3 targets_pos[9] = {
   { -2, 0, 0},{ 0, 2, 0},{ 1, 0, 0},
   { 1, 1, 0},{ -1, 0, 0},{ -1, 0, 0},
   { 0, 0, 0},{ 0, 0, 0},{ 0, 0, 0}
 };
 
-static const short4 targets_tan[9] = {
+const short4 targets_tan[9] = {
   { 0, 0, 0, 0},{ 0, 0, 0, 0},{ 0, 0, 0, 0},
   { 0, 0, 0, 0},{ 0, 0, 0, 0},{ 0, 0, 0, 0},
   { 0, 0, 0, 0},{ 0, 0, 0, 0},{ 0, 0, 0, 0}};
 
-static const uint16_t skinJoints[] = { 0, 1, 2, 5,
+const uint16_t skinJoints[] = { 0, 1, 2, 5,
                                      0, 2, 3, 5,
                                      0, 3, 1, 5};
 
-static const float skinWeights[] = { 0.5f, 0.0f, 0.0f, 0.5f,
+const float skinWeights[] = { 0.5f, 0.0f, 0.0f, 0.5f,
                                      0.5f, 0.0f, 0.f, 0.5f,
                                      0.5f, 0.0f, 0.f, 0.5f,};
 
-static float2 boneDataArray[48] = {}; //indices and weights for up to 3 vertices with 8 bones
+float2 boneDataArray[48] = {}; // indices and weights for up to 3 vertices with 8 bones
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 },
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 },
 TRIANGLE_INDICES_2[6] = { 0, 2, 4, 1, 3, 5 };
 
 mat4f transforms[] = {math::mat4f(1),
@@ -136,6 +137,8 @@ mat4f transforms[] = {math::mat4f(1),
                       mat4f::translation(float3(-1, -1, 0)),
                       mat4f::translation(float3(0, -1, 0)),
                       mat4f::translation(float3(1, -1, 0))};
+
+} // namespace
 
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
@@ -570,9 +573,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 
     auto fApp =
-            FilamentApp2::Builder()
-                    .displayManager(dm)
-                    .title(app->config.title)
+            samples::getBuilder(config, dm, loader)
                     .setup(setup)
                     .cleanup(cleanup)
                     .animation([app](Engine* engine, View* view, double now) {

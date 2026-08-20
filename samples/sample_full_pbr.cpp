@@ -54,7 +54,10 @@ using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
+
+namespace {
+
+float g_meshScale = 1.0f;
 
 constexpr int MAP_COUNT       = 7;
 constexpr int MAP_COLOR       = 0;
@@ -95,6 +98,8 @@ struct App {
     } pbrConfig;
     FilamentApp2* filamentApp = nullptr;
 };
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -387,10 +392,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 { .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f }, .clear = !app->filamentApp->getIBL() });
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)

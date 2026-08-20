@@ -51,6 +51,7 @@ using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
 
+namespace {
 struct Vertex {
     float3 position;
     float2 uv;
@@ -79,6 +80,7 @@ struct App {
     std::vector<utils::Entity> quadEntities;
     std::vector<MaterialInstance*> quadMatInstances;
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -297,11 +299,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)

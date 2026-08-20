@@ -98,6 +98,33 @@ void printUsage(const char* name, const CommandLineSpecification& spec) {
     }
 }
 
+FilamentApp2::Builder getBuilder(const SampleConfig& config, filament::app::DisplayManager* dm,
+        filament::app::AssetLoader* loader) {
+    auto builder = FilamentApp2::Builder()
+                           .title(config.title)
+                           .size(config.width, config.height)
+                           .iblDirectory(config.iblDirectory)
+                           .dirt(config.dirt)
+                           .splitView(config.splitView)
+                           .backend(config.backend)
+                           .featureLevel(config.featureLevel)
+                           .cameraMode(config.cameraMode)
+                           .resizeable(config.resizeable)
+                           .headless(config.headless)
+                           .stereoscopicEyeCount(config.stereoscopicEyeCount)
+                           .vulkanGPUHint(config.vulkanGPUHint)
+                           .forcedWebGPUBackend(config.forcedWebGPUBackend)
+                           .asynchronousMode(config.asynchronousMode);
+
+    if (dm) {
+        builder.displayManager(dm);
+    }
+    if (loader) {
+        builder.assetLoader(loader);
+    }
+    return builder;
+}
+
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config) {
     if (config.displayManager == SampleConfig::DisplayManager::WEB) {
         return std::make_unique<filament::app::HtmlDisplayManager>();

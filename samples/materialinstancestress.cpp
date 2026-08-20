@@ -50,6 +50,7 @@ using namespace filament::math;
 using namespace utils;
 using namespace filamesh;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
@@ -75,7 +76,7 @@ struct App {
     std::vector<Entity> renderables;
 };
 
-static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
+void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     if (count <= 0) return;
 
     EntityManager& em = EntityManager::get();
@@ -96,11 +97,11 @@ static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = app.renderables.size();
 }
 
-static void clearScene(Engine* engine, Scene* scene, App& app) {
+void clearScene(Engine* engine, Scene* scene, App& app) {
     removeObjects(engine, scene, app, app.currentObjectCount);
 }
 
-static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
+void addObjects(Engine* engine, Scene* scene, App& app, int count) {
     if (count <= 0) return;
 
     TransformManager& tcm = engine->getTransformManager();
@@ -147,10 +148,12 @@ static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = newTotal;
 }
 
-static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
+void createSceneObjects(Engine* engine, Scene* scene, App& app) {
     app.gridDim = static_cast<int>(ceil(sqrt(app.desiredObjectCount)));
     addObjects(engine, scene, app, std::max(0, app.desiredObjectCount - app.currentObjectCount));
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -255,10 +258,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(config.title)
-                        .iblDirectory(config.iblDirectory)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)

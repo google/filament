@@ -48,6 +48,8 @@ using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
 
+namespace {
+
 struct Vertex {
     float3 position;
     float2 uv;
@@ -87,7 +89,7 @@ struct App {
     float3 quadNormal;
 };
 
-static mat4f reflectionMatrix(float4 plane) {
+mat4f reflectionMatrix(float4 plane) {
     mat4f m;
     m[0][0] = -2 * plane.x * plane.x + 1;
     m[0][1] = -2 * plane.x * plane.y;
@@ -108,7 +110,7 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-static void setReflectionMode(App& app, App::ReflectionMode mode) {
+void setReflectionMode(App& app, App::ReflectionMode mode) {
     switch (mode) {
     case App::ReflectionMode::RENDERABLES:
         app.offscreenScene->addEntity(app.reflectedMonkey);
@@ -123,6 +125,8 @@ static void setReflectionMode(App& app, App::ReflectionMode mode) {
     }
     app.mode = mode;
 }
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -301,10 +305,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 
     auto fApp =
-            FilamentApp2::Builder()
-                    .title(app->config.title)
-                    .backend(app->config.backend)
-                    .displayManager(dm)
+            samples::getBuilder(config, dm, loader)
                     .setup(setup)
                     .cleanup(cleanup)
                     .preRender(preRender)

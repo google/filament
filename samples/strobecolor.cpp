@@ -29,11 +29,13 @@
 
 using namespace filament;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
     Skybox* skybox;
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -48,10 +50,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto cleanup = [app](Engine*, View*, Scene*) {};
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine*, View* view, double now) {
