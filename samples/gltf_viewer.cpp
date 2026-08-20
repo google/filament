@@ -488,7 +488,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
-                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 
             // and then, everything else at low priority, except STE, which is very uncommon.

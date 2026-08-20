@@ -1325,7 +1325,6 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
     static const std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum;
         strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
@@ -1350,6 +1349,11 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
+        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
+        if (s == "dynamicLighting") {
+            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored." << std::endl;
+            continue;
+        }
         if (!isStringValidEnum(strToEnum, s)) {
             io::sstream errorMessage;
             errorMessage << "variant_filter: variant " << s << " is not a valid variant";
