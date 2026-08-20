@@ -96,8 +96,8 @@ protected:
     Platform* platform = PlatformFactory::create(&backend);
     CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr, {}), buffer };
     MockResourceAllocator resourceAllocator;
-    LinearAllocatorArena arena{"FrameGraph Test Arena", 512 * 1024};
-    FrameGraph fg{arena, resourceAllocator};
+    LinearAllocatorArena arena{"FrameGraph Test Arena", 1024 * 1024};
+    FrameGraph fg{arena, 1024 * 1024, resourceAllocator};
 };
 
 class DependencyGraphTest : public testing::Test {

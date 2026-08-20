@@ -3179,6 +3179,10 @@ void VulkanDriver::resetState(int) {
 
 void VulkanDriver::endCommandRecording() {
     mCommands.flush();
+    invalidateBoundState();
+}
+
+void VulkanDriver::invalidateBoundState() {
     mPipelineCache.resetBoundPipeline();
     mDescriptorSetCache.resetCachedState();
 }
@@ -3196,6 +3200,12 @@ bool VulkanDriver::acquireNextSwapchainImage() {
     auto const [acquired, backingChanged] = mCurrentSwapChain->acquire();
     if (backingChanged) {
         mFramebufferCache.resetFramebuffers();
+
+        if (mPlatform->getCustomization().flushAndWaitOnWindowResize) {
+            // In this scenario the command buffer was flushed, so we need
+            // to set again the pipeline state and descriptor set state.
+            invalidateBoundState();
+        }
     }
     // Note that ordering this after the above lines is necessary since we set the swapchain image
     // to the render target in bindSwapChain().

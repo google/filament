@@ -47,6 +47,7 @@ class ImportedRenderTarget;
 class ResourceEdgeBase : public DependencyGraph::Edge {
 public:
     using Edge::Edge;
+    ResourceEdgeBase* next = nullptr;
 };
 
 /*
@@ -91,7 +92,7 @@ public:
      * calculate its effective usage flags.
      */
     virtual void resolveUsage(DependencyGraph& graph,
-            ResourceEdgeBase const* const* edges, size_t count,
+            ResourceEdgeBase const* readerHead,
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
@@ -213,13 +214,13 @@ protected:
      */
 
     void resolveUsage(DependencyGraph& graph,
-            ResourceEdgeBase const* const* edges, size_t const count,
+            ResourceEdgeBase const* readerHead,
             ResourceEdgeBase const* writer) noexcept override {
-        for (size_t i = 0; i < count; i++) {
-            if (graph.isEdgeValid(edges[i])) {
+        for (ResourceEdgeBase const* edge = readerHead; edge; edge = edge->next) {
+            if (graph.isEdgeValid(edge)) {
                 // this Edge is guaranteed to be a ResourceEdge<RESOURCE> by construction
-                ResourceEdge const* const edge = static_cast<ResourceEdge const*>(edges[i]);
-                usage |= edge->usage;
+                ResourceEdge const* const resourceEdge = static_cast<ResourceEdge const*>(edge);
+                usage |= resourceEdge->usage;
             }
         }
 

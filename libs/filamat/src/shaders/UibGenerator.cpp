@@ -141,7 +141,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "aoBentNormals",          0, Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
-            // Dynamic Lighting [variant: DYN]
+            // Dynamic Lighting (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "zParams",                0, Type::FLOAT4                  },
             { "fParams",                0, Type::UINT3                   },
