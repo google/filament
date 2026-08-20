@@ -526,7 +526,7 @@ public class LightManager {
               @IntRange(from = 1, to = 4) int cascades, float near, float far, float lambda) {
             if (splitPositions.length < cascades - 1) {
                 throw new ArrayIndexOutOfBoundsException(
-                        "splitPositions array length must be at least %d" + (cascades - 1));
+                        "splitPositions array length must be at least " + (cascades - 1));
             }
             nComputePracticalSplits(splitPositions, cascades, near, far, lambda);
         }
