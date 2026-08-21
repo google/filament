@@ -89,8 +89,12 @@ public:
     // "ServiceThread" in DriverBase. Its primary purpose is to manage the countdown
     // mechanism before the *REAL* user's callback is executed.
     void post(void* user, Callback callback) override {
-        // 2. Calls the static method `countdownCallback(user)` to manage the internal
-        // counter for pending asynchronous operations.
+        // 2. `user` and `callback` are *not* the pair handed to the driver. To carry the
+        // AsyncCallStatus, DriverBase::scheduleAsyncCallback() boxes
+        // (countdownCallback, this, status) into an opaque internal allocation and passes its own
+        // trampoline as `callback`, so `user` must not be cast to CountdownCallbackHandler* here.
+        // Invoking the trampoline unboxes it and calls `countdownCallback(this, status)`, which
+        // manages the internal counter for pending asynchronous operations.
         callback(user);
     }
 
