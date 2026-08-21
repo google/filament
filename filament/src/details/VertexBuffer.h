@@ -50,7 +50,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    VertexBufferHandle getHwHandle() const noexcept { return mHandle; }
+    VertexBufferHandle getHwHandle() const;
 
     VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
 

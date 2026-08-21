@@ -149,6 +149,14 @@ void FIndexBuffer::terminate(FEngine& engine) {
     driver.destroyIndexBuffer(mHandle);
 }
 
+backend::Handle<backend::HwIndexBuffer> FIndexBuffer::getHwHandle() const {
+    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
+            << "IndexBuffer is not usable: its creation is still in progress, or its asynchronous "
+               "creation was canceled";
+
+    return mHandle;
+}
+
 void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t const byteOffset) {
 
     FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)

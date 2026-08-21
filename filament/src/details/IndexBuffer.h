@@ -40,7 +40,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    backend::Handle<backend::HwIndexBuffer> getHwHandle() const noexcept { return mHandle; }
+    backend::Handle<backend::HwIndexBuffer> getHwHandle() const;
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
 

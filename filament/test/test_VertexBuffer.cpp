@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-#include "MockDriver.h"
-#include "details/Engine.h"
 #include "CommandStreamDispatcher.h"
+#include "MockDriver.h"
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-
-#include "private/backend/CommandStream.h"
-#include "private/backend/Driver.h"
+#include "details/Engine.h"
+#include "details/VertexBuffer.h"
 
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>
+
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+
+#include <utils/Panic.h>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <atomic>
 #include <chrono>
@@ -44,8 +49,10 @@ namespace {
 
 class CustomTestDriver : public MockDriver {
 public:
-    explicit CustomTestDriver(std::atomic<uint32_t>* sizeDest, std::mutex* mutex, std::condition_variable* cv)
-            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv) {
+    CustomTestDriver(std::atomic<uint32_t>* sizeDest, std::mutex* mutex,
+            std::condition_variable* cv, std::atomic<AsyncCallStatus>* asyncCreationStatus)
+            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv),
+              mAsyncCreationStatus(asyncCreationStatus) {
         // Set up default nice mock behaviors to pass Engine validation checks
         ON_CALL(*this, getFeatureLevel())
                 .WillByDefault(Return(FeatureLevel::FEATURE_LEVEL_1));
@@ -59,8 +66,39 @@ public:
                 .WillByDefault(Return(true));
         ON_CALL(*this, getMaxTextureSize(_))
                 .WillByDefault(Return(2048));
+        ON_CALL(*this, isAsynchronousModeEnabled())
+                .WillByDefault(Return(true));
     }
     ~CustomTestDriver() override = default;
+
+    // MockDriver drops scheduled callbacks on the floor, which would leak the
+    // CountdownCallbackHandler that tracks an asynchronous creation. Run them instead.
+    void scheduleCallback(CallbackHandler* handler, void* user,
+            CallbackHandler::Callback callback) override {
+        if (handler) {
+            handler->post(user, callback);
+        } else {
+            callback(user);
+        }
+    }
+
+    // The three asynchronous calls FVertexBuffer's creation countdown enrolls. Each reports
+    // whichever status the test asked for: COMPLETED is a job that ran, CANCELED is one that was
+    // canceled or dropped before it could.
+    void createVertexBufferAsyncR(VertexBufferHandle, uint32_t, VertexBufferInfoHandle,
+            CallbackHandler*, AsyncCallback const callback, void* user, utils::ImmutableCString&&) {
+        reportAsyncCreationStatus(callback, user);
+    }
+
+    void createBufferObjectAsyncR(BufferObjectHandle, uint32_t, BufferObjectBinding, BufferUsage,
+            CallbackHandler*, AsyncCallback const callback, void* user, utils::ImmutableCString&&) {
+        reportAsyncCreationStatus(callback, user);
+    }
+
+    void setVertexBufferObjectAsyncR(AsyncCallId, VertexBufferHandle, uint32_t, BufferObjectHandle,
+            CallbackHandler*, AsyncCallback const callback, void* user) {
+        reportAsyncCreationStatus(callback, user);
+    }
 
     // Implement the executed command callback to capture the size (Fake implementation)
     void createBufferObjectR(BufferObjectHandle h, uint32_t byteCount,
@@ -75,9 +113,16 @@ public:
     Dispatcher getDispatcher() const noexcept override;
 
 private:
+    void reportAsyncCreationStatus(AsyncCallback const callback, void* user) const {
+        if (callback) {
+            callback(user, mAsyncCreationStatus->load(std::memory_order_acquire));
+        }
+    }
+
     std::atomic<uint32_t>* mSizeDest;
     std::mutex* mMutex;
     std::condition_variable* mCv;
+    std::atomic<AsyncCallStatus>* mAsyncCreationStatus;
 };
 
 Dispatcher CustomTestDriver::getDispatcher() const noexcept {
@@ -86,8 +131,10 @@ Dispatcher CustomTestDriver::getDispatcher() const noexcept {
 
 class CustomTestPlatform : public Platform {
 public:
-    explicit CustomTestPlatform(std::atomic<uint32_t>* sizeDest, std::mutex* mutex, std::condition_variable* cv)
-            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv) {}
+    CustomTestPlatform(std::atomic<uint32_t>* sizeDest, std::mutex* mutex,
+            std::condition_variable* cv, std::atomic<AsyncCallStatus>* asyncCreationStatus)
+            : mSizeDest(sizeDest), mMutex(mutex), mCv(cv),
+              mAsyncCreationStatus(asyncCreationStatus) {}
     ~CustomTestPlatform() override = default;
 
     int getOSVersion() const noexcept override { return 0; }
@@ -95,20 +142,22 @@ public:
 
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override {
         // Heap-allocate the driver. The Engine takes ownership and deletes it in FEngine destructor.
-        return new ::testing::NiceMock<CustomTestDriver>(mSizeDest, mMutex, mCv);
+        return new ::testing::NiceMock<CustomTestDriver>(mSizeDest, mMutex, mCv,
+                mAsyncCreationStatus);
     }
 
 private:
     std::atomic<uint32_t>* mSizeDest;
     std::mutex* mMutex;
     std::condition_variable* mCv;
+    std::atomic<AsyncCallStatus>* mAsyncCreationStatus;
 };
 
 class VertexBufferTest : public ::testing::Test {
 protected:
     VertexBufferTest()
             : mCapturedSize(0),
-              mCustomPlatform(&mCapturedSize, &mMutex, &mCv) {
+              mCustomPlatform(&mCapturedSize, &mMutex, &mCv, &mAsyncCreationStatus) {
         mEngine = Engine::Builder()
                           .backend(Backend::NOOP)
                           .platform(&mCustomPlatform)
@@ -135,12 +184,75 @@ protected:
         mEngine->destroy(vb);
     }
 
+    // Spins until the asynchronous creation reaches one of its terminal states.
+    static bool waitUntilCreationSettled(VertexBuffer const* vb) {
+        auto const deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (std::chrono::steady_clock::now() < deadline) {
+            if (downcast(vb)->isCreationSettled()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
+    }
+
+    // Builds a VertexBuffer asynchronously, then blocks until the test driver has reported
+    // `status` for every call the creation countdown enrolls.
+    VertexBuffer* buildAsyncVertexBuffer(AsyncCallStatus const status) {
+        mAsyncCreationStatus.store(status, std::memory_order_release);
+
+        VertexBuffer* vb = VertexBuffer::Builder()
+                .name("MyAsyncVertexBuffer")
+                .vertexCount(100)
+                .bufferCount(1)
+                .attribute(VertexAttribute::POSITION, 0, ElementType::FLOAT4, 0, 16)
+                .async(nullptr, nullptr, nullptr)
+                .build(*mEngine);
+
+        // Flush so that the background render thread processes the creation commands.
+        static_cast<FEngine*>(mEngine)->flush();
+
+        return waitUntilCreationSettled(vb) ? vb : nullptr;
+    }
+
     Engine* mEngine = nullptr;
     std::atomic<uint32_t> mCapturedSize;
     std::mutex mMutex;
     std::condition_variable mCv;
+    std::atomic<AsyncCallStatus> mAsyncCreationStatus{ AsyncCallStatus::COMPLETED };
     CustomTestPlatform mCustomPlatform;
 };
+
+TEST_F(VertexBufferTest, CompletedCreationYieldsHwHandle) {
+    // Every asynchronous creation call runs, so the buffer is populated and usable.
+    VertexBuffer* vb = buildAsyncVertexBuffer(AsyncCallStatus::COMPLETED);
+    ASSERT_NE(vb, nullptr);
+
+    EXPECT_TRUE(vb->isCreationComplete());
+    EXPECT_TRUE(downcast(vb)->getHwHandle());
+
+    mEngine->destroy(vb);
+}
+
+TEST_F(VertexBufferTest, CanceledCreationRejectsHwHandle) {
+    // Same buffer, but every asynchronous creation call reports itself canceled, so this one
+    // settles without its backend resources ever being generated.
+    VertexBuffer* vb = buildAsyncVertexBuffer(AsyncCallStatus::CANCELED);
+    ASSERT_NE(vb, nullptr);
+
+    EXPECT_FALSE(vb->isCreationComplete());
+
+    // Handing out the handle anyway would let a render primitive record buffers that were never
+    // generated. How the precondition reports that depends on how the library was built: it throws
+    // when exceptions are enabled, and aborts otherwise.
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(downcast(vb)->getHwHandle(), utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(downcast(vb)->getHwHandle(), "VertexBuffer is not usable");
+#endif
+
+    mEngine->destroy(vb);
+}
 
 TEST_F(VertexBufferTest, InterleavedBufferSize) {
     // Interleaved (array of struct) buffer, no padding at end.
