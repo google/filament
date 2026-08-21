@@ -22,11 +22,9 @@
 namespace filament {
 namespace backend {
 
-MetalTimerQueryInterface::~MetalTimerQueryInterface() = default;
-
-void MetalTimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
-    query->status->start.store(0);
-    query->status->elapsed.store(0);
+void MetalTimerQueryImpl::beginTimeElapsedQuery(MetalTimerQuery* query) {
+    query->status->startNs.store(0);
+    query->status->elapsedNs.store(0);
     query->status->available.store(false);
 
     // Capture the timer query status via a weak_ptr because the MetalTimerQuery could be destroyed
@@ -35,12 +33,12 @@ void MetalTimerQueryFence::beginTimeElapsedQuery(MetalTimerQuery* query) {
     id<MTLCommandBuffer> commandBuffer = getPendingCommandBuffer(&mContext);
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
         if (auto s = status.lock()) {
-            s->start.store((uint64_t) (buffer.GPUStartTime * 1000000000.0));
+            s->startNs.store((uint64_t) (buffer.GPUStartTime * 1000000000.0));
         }
     }];
 }
 
-void MetalTimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
+void MetalTimerQueryImpl::endTimeElapsedQuery(MetalTimerQuery* query) {
     // Capture the timer query status via a weak_ptr because the MetalTimerQuery could be destroyed
     // before the block executes.
     std::weak_ptr<MetalTimerQuery::Status> status = query->status;
@@ -48,27 +46,23 @@ void MetalTimerQueryFence::endTimeElapsedQuery(MetalTimerQuery* query) {
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
         if (auto s = status.lock()) {
             const uint64_t end = (uint64_t) (buffer.GPUEndTime * 1000000000.0);
-            const uint64_t begin = s->start.load();
+            const uint64_t begin = s->startNs.load();
             // A driver that does not fill in the timestamps leaves this at 0, which
             // FrameInfoManager already reads as "no measurement" rather than as zero work.
-            s->elapsed.store(end > begin ? end - begin : 0);
+            s->elapsedNs.store(end > begin ? end - begin : 0);
             s->available.store(true);
         }
     }];
 }
 
-bool MetalTimerQueryFence::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
+bool MetalTimerQueryImpl::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
     if (!query->status->available.load()) {
         return false;
     }
     if (outElapsedTime) {
-        *outElapsedTime = query->status->elapsed;
+        *outElapsedTime = query->status->elapsedNs;
     }
     return true;
-}
-
-bool TimerQueryNoop::getQueryResult(MetalTimerQuery* query, uint64_t* outElapsedTime) {
-    return false;
 }
 
 } // namespace backend

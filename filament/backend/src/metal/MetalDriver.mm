@@ -222,11 +222,7 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             new MetalBumpAllocator(mContext->device, driverConfig.metalUploadBufferSizeBytes);
     mContext->blitter = new MetalBlitter(*mContext);
 
-    if (@available(iOS 12, *)) {
-        mContext->timerQueryImpl = new MetalTimerQueryFence(*mContext);
-    } else {
-        mContext->timerQueryImpl = new TimerQueryNoop();
-    }
+    mContext->timerQueryImpl = new MetalTimerQueryImpl(*mContext);
 
     CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
             nullptr, &mContext->textureCache);
