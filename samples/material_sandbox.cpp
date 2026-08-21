@@ -55,7 +55,6 @@
 #include <iostream>
 #include <map>
 #include <ranges>
-#include <string>
 #include <vector>
 
 using namespace math;
@@ -69,8 +68,6 @@ struct App {
     FilamentApp2* filamentApp = nullptr;
     SampleConfig config;
 };
-
-std::vector<Path> g_filenames;
 
 Scene* g_scene = nullptr;
 
@@ -92,8 +89,31 @@ constexpr ImVec2 verticalSliderSize(18.0f, 160.0f);
 constexpr ImVec2 plotLinesSize(320.0f, 160.0f);
 constexpr ImVec2 plotLinesWideSize(480.0f, 120.0f);
 
+struct GroundPlane {
+    VertexBuffer* vb = nullptr;
+    IndexBuffer* ib = nullptr;
+    Material* mat = nullptr;
+    Entity renderable;
+};
+
+GroundPlane g_groundPlane;
+
 void cleanup(Engine* engine, View*, Scene*) {
     g_meshSet.reset(nullptr);
+
+    if (g_groundPlane.renderable) {
+        engine->destroy(g_groundPlane.renderable);
+        EntityManager::get().destroy(g_groundPlane.renderable);
+    }
+    if (g_groundPlane.mat) {
+        engine->destroy(g_groundPlane.mat);
+    }
+    if (g_groundPlane.vb) {
+        engine->destroy(g_groundPlane.vb);
+    }
+    if (g_groundPlane.ib) {
+        engine->destroy(g_groundPlane.ib);
+    }
 
     for (const auto& material: g_meshMaterialInstances | std::views::values) {
         engine->destroy(material);
@@ -123,14 +143,22 @@ void setup(Engine* engine, View*, Scene* scene) {
 
     createInstances(g_params, *engine);
 
-    for (auto& filename : g_filenames) {
+    for (const auto& fname : g_config.positionalArgs) {
+        Path filename(fname.c_str_safe());
         g_meshSet->addFromFile(filename, g_meshMaterialInstances);
+    }
+    if (g_config.positionalArgs.empty()) {
+        g_meshSet->addFromFile(FilamentApp2::getRootAssetsPath() +
+                                       "assets/models/material_sphere/material_sphere.obj",
+                g_meshMaterialInstances);
     }
 
     auto& tcm = engine->getTransformManager();
-    auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
-    tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } *
-            tcm.getWorldTransform(ei));
+    if (!g_meshSet->getRenderables().empty()) {
+        auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
+        tcm.setTransform(ei,
+                mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -4.0f) } * tcm.getWorldTransform(ei));
+    }
 
     size_t count = 0;
     auto& rcm = engine->getRenderableManager();
@@ -146,7 +174,7 @@ void setup(Engine* engine, View*, Scene* scene) {
                 rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
             }
         } else {
-            ei = tcm.getInstance(renderable);
+            auto ei = tcm.getInstance(renderable);
             tcm.setTransform(ei, mat4f{ mat3f(g_meshScale), float3(0.0f, 0.0f, -3.0f) } *
                     tcm.getWorldTransform(ei));
         }
@@ -168,18 +196,18 @@ void setup(Engine* engine, View*, Scene* scene) {
                 .build(*engine);
         shadowMaterial->setDefaultParameter("strength", 0.7f);
 
-        constexpr uint32_t indices[] = {
+        static constexpr uint32_t indices[] = {
                 0, 1, 2, 2, 3, 0
         };
 
-        constexpr float3 vertices[] = {
+        static constexpr float3 vertices[] = {
                 { -10, 0, -10 },
                 { -10, 0,  10 },
                 {  10, 0,  10 },
                 {  10, 0, -10 },
         };
 
-        short4 tbn = packSnorm16(
+        short4 const tbn = packSnorm16(
                 mat3f::packTangentFrame(
                         mat3f{
                                 float3{ 1.0f, 0.0f, 0.0f },
@@ -188,7 +216,7 @@ void setup(Engine* engine, View*, Scene* scene) {
                         }
                 ).xyzw);
 
-        const short4 normals[] { tbn, tbn, tbn, tbn };
+        static const short4 normals[] { tbn, tbn, tbn, tbn };
 
         VertexBuffer* vertexBuffer = VertexBuffer::Builder()
                 .vertexCount(4)
@@ -226,6 +254,13 @@ void setup(Engine* engine, View*, Scene* scene) {
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
                 mat4f::translation(float3{ 0, -1, -4 }));
+
+        g_groundPlane = {
+            .vb = vertexBuffer,
+            .ib = indexBuffer,
+            .mat = shadowMaterial,
+            .renderable = planeRenderable,
+        };
     }
 
     if (auto* ibl = g_filamentApp->getIBL()) {
@@ -962,8 +997,12 @@ void preRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
-    app->config = config;
     g_config = config;
+    g_shadowPlane = config.getBool("shadow-plane");
+    g_singleMode = config.getBool("single-mode");
+    config.dirt = config.getString("dirt");
+    g_meshScale = config.getFloat("scale", 1.0f);
+    app->config = config;
 
     g_params.bloomOptions.enabled = true;
 
@@ -978,62 +1017,34 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("shadow-plane", 'p', "Enable shadow-receiving ground plane",
+                false),
+        samples::Parameter::makeBool("single-mode", 'n', "Single object mode", false),
+        samples::Parameter::makeString("dirt", 'd', "Path to a dirt texture", ""),
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+    };
+}
+
 #ifndef __ANDROID__
 int main(const int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "pnd:s:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "shadow-plane", utils::getopt::no_argument, nullptr, 'p' },
-        { "single-mode", utils::getopt::no_argument, nullptr, 'n' },
-        { "dirt", utils::getopt::required_argument, nullptr, 'd' },
-        { "scale", utils::getopt::required_argument, nullptr, 's' },
-        { nullptr, 0, nullptr, 0 },
-    };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'p':
-                g_shadowPlane = true;
-                return true;
-            case 'n':
-                g_singleMode = true;
-                return true;
-            case 's':
-                g_meshScale = std::stof(arg.c_str());
-                return true;
-
-            case 'd':
-                config.dirt = arg;
-                return true;
-        }
-        return false;
-    };
     samples::CommandLineSpecification spec = {
         .sampleDescription = "MATERIAL_SANDBOX is a tool for testing Filament materials.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx, .filamesh)>",
-        .requiredPositionalArgCount = 1,
-        .customOptionsHelp = "   --shadow-plane, -p\n"
-                             "       Enable shadow-receiving ground plane\n\n"
-                             "   --single-mode, -n\n"
-                             "       Single object mode\n\n"
-                             "   --dirt=<path>, -d <path>\n"
-                             "       Path to a dirt texture\n"
-                             "   --scale=[number], -s [number]\n"
-                             "       Applies uniform scale\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .positionalArgsDescription = { "mesh files (.obj, .fbx, .filamesh)" },
+        .parameters = createAppParameters(),
     };
 
-    const int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
-    for (int i = optind; i < argc; i++) {
-        Path filename = argv[i];
+    for (const auto& fname : config.positionalArgs) {
+        Path filename(fname.c_str_safe());
         if (!filename.exists()) {
-            std::cerr << "file " << argv[i] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
-        g_filenames.push_back(filename);
     }
 
     config.title = "Material Sandbox";

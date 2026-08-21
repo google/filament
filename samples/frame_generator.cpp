@@ -82,8 +82,6 @@
 #include <map>
 #include <memory>
 #include <sstream>
-#include <stdexcept>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -108,7 +106,6 @@ struct Param {
 
 constexpr int FRAME_TO_SKIP = 10;
 
-std::vector<Path> g_filenames;
 std::vector<char> g_materialBuffer;
 Path g_materialPath;
 Path g_paramsPath;
@@ -224,14 +221,14 @@ std::vector<float> parseFloats(std::istream& stream) {
 void readParameters() {
     std::ifstream in(g_paramsPath.c_str(), std::ifstream::in);
     if (in.is_open()) {
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.empty() || line[0] == '#' || (line.length() > 1 && line[0] == '/' && line[1] == '/')) continue;
+        char line[512];
+        while (in.getline(line, sizeof(line))) {
+            if (line[0] == '\0' || line[0] == '#' || (line[0] == '/' && line[1] == '/')) continue;
             std::istringstream lineStream(line);
             Param param;
-            std::string tempName;
+            char tempName[256];
             lineStream >> tempName;
-            param.name = utils::CString(tempName.c_str());
+            param.name = utils::CString(tempName);
             param.start = parseFloats(lineStream);
             param.end = parseFloats(lineStream);
 
@@ -281,7 +278,8 @@ void setup(Engine* engine, View*, Scene* scene) {
         return;
     }
 
-    for (auto& filename : g_filenames) {
+    for (const auto& fname : g_config.positionalArgs) {
+        Path filename(fname.c_str_safe());
         g_meshSet->addFromFile(filename, g_meshMaterialInstances);
     }
 
@@ -379,17 +377,15 @@ void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
 
                     int const digits = int(log10(double(g_materialVariantCount))) + 1;
 
-                    std::ostringstream stringStream;
-                    stringStream << "./" << g_prefix.c_str_safe();
-                    stringStream << std::setfill('0') << std::setw(digits);
-                    stringStream << std::to_string(state->currentFrame);
-                    stringStream << ".png";
-
-                    std::string const name = stringStream.str();
-                    Path const out(name);
+                    char nameBuf[512];
+                    snprintf(nameBuf, sizeof(nameBuf), "./%s%0*d.png", g_prefix.c_str_safe(),
+                            digits, state->currentFrame);
+                    utils::CString const name(nameBuf);
+                    Path const out(name.c_str());
 
                     std::ofstream outputStream(out, std::ios::binary | std::ios::trunc);
-                    ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "", name);
+                    ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
+                            name.c_str());
 
                     delete[] static_cast<uint8_t*>(buffer);
                     delete state;
@@ -417,7 +413,24 @@ void postRender(Engine*, View* view, Scene*, Renderer* renderer) {
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
+    g_config = config;
     app->config = config;
+    g_meshScale = config.getFloat("scale", 1.0f);
+    utils::CString clearColorStr = config.getString("clear-color");
+    if (!clearColorStr.empty()) {
+        char* end = nullptr;
+        g_clearColor = uint32_t(strtoul(clearColorStr.c_str(), &end, 16));
+    }
+    g_width = uint32_t(config.getInt("size", 512));
+    g_height = g_width;
+    g_materialPath = config.getString("material").c_str();
+    g_paramsPath = config.getString("params").c_str();
+    g_prefix = config.getString("prefix");
+    g_lightOn = config.getBool("light-on");
+    if (config.getBool("skybox-off")) {
+        g_skyboxOn = false;
+    }
+    g_materialVariantCount = config.getInt("count", 1);
     config.width = g_width;
     config.height = g_height;
     auto fApp = samples::getBuilder(config, dm, loader)
@@ -431,81 +444,25 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+        samples::Parameter::makeString("clear-color", 'b',
+                "Clear color for the render target [hex]", ""),
+        samples::Parameter::makeInt("size", 'S', "Size of the square render window", 512, 1),
+        samples::Parameter::makeString("material", 'm',
+                "Path to a compiled material file (see matc)", "", true),
+        samples::Parameter::makeString("params", 'p', "Path to a parameters file", "", true),
+        samples::Parameter::makeString("prefix", 'P', "Prefix for the rendered output frames", ""),
+        samples::Parameter::makeBool("light-on", 'l', "Turn on the directional light", false),
+        samples::Parameter::makeBool("skybox-off", 'Y', "Turn off the skybox", false),
+        samples::Parameter::makeInt("count", 'C', "Number of material variants to render", 1, 1,
+                256),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int const argc, char* argv[]) {
-    static constexpr const char* CUSTOM_OPTSTR = "s:b:S:m:p:x:lyc:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "scale", utils::getopt::required_argument, nullptr, 's' },
-        { "clear-color", utils::getopt::required_argument, nullptr, 'b' },
-        { "size", utils::getopt::required_argument, nullptr, 'S' },
-        { "material", utils::getopt::required_argument, nullptr, 'm' },
-        { "params", utils::getopt::required_argument, nullptr, 'p' },
-        { "prefix", utils::getopt::required_argument, nullptr, 'x' },
-        { "light-on", utils::getopt::no_argument, nullptr, 'l' },
-        { "skybox-off", utils::getopt::no_argument, nullptr, 'y' },
-        { "count", utils::getopt::required_argument, nullptr, 'c' }, { nullptr, 0, nullptr, 0 }
-    };
-
-    auto customHandler = [](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 's':
-                try {
-                    g_meshScale = std::stof(arg.c_str());
-                } catch (std::invalid_argument& e) {
-                    g_meshScale = 1.0f;
-                } catch (std::out_of_range& e) {
-                    g_meshScale = 1.0f;
-                }
-                return true;
-            case 'b':
-                try {
-                    g_clearColor = uint32_t(std::stoul(arg.c_str(), nullptr, 16));
-                } catch (std::invalid_argument& e) {
-                    g_clearColor = {};
-                } catch (std::out_of_range& e) {
-                    g_clearColor = {};
-                }
-                return true;
-            case 'S':
-                try {
-                    g_width = uint32_t(std::stoul(arg.c_str()));
-                    g_height = g_width;
-                } catch (std::invalid_argument& e) {
-                    g_width = 512;
-                    g_height = 512;
-                } catch (std::out_of_range& e) {
-                    g_width = 512;
-                    g_height = 512;
-                }
-                return true;
-            case 'm':
-                g_materialPath = arg.c_str();
-                return true;
-            case 'p':
-                g_paramsPath = arg.c_str();
-                return true;
-            case 'x':
-                g_prefix = arg;
-                return true;
-            case 'l':
-                g_lightOn = true;
-                return true;
-            case 'y':
-                g_skyboxOn = false;
-                return true;
-            case 'c':
-                try {
-                    g_materialVariantCount = std::min(std::max(1, std::stoi(arg.c_str())), 256);
-                } catch (std::invalid_argument& e) {
-                    g_materialVariantCount = 1;
-                } catch (std::out_of_range& e) {
-                    g_materialVariantCount = 1;
-                }
-                return true;
-        }
-        return false;
-    };
-
     samples::CommandLineSpecification spec = {
         .sampleDescription =
                 "SAMPLE_FRAME_GENERATOR tests a material by varying float parameters\n\n"
@@ -520,48 +477,26 @@ int main(int const argc, char* argv[]) {
                 "       metallic   1.0\n"
                 "       # interpolated\n"
                 "       roughness  0.0 1.0",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
+        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
         .requiredPositionalArgCount = 1,
-        .requiredFlags = { 'm', 'p' },
-        .customOptionsHelp = "   --scale=[number], -s [number]\n"
-                             "       Applies uniform scale\n\n"
-                             "   --material=<path>, -m <path>\n"
-                             "       Path to a compiled material file (see matc)\n\n"
-                             "   --params=<path>, -p <path>\n"
-                             "       Path to a parameters file\n"
-                             "       Each line: param_name start end\n\n"
-                             "   --count=[integer > 0 && <= 256], -c [integer > 0 && <= 256]\n"
-                             "       Number of material variants to render\n\n"
-                             "   --light-on, -l\n"
-                             "       Turn on the directional light\n\n"
-                             "   --skybox-off, -y\n"
-                             "       Turn off the skybox\n\n"
-                             "   --prefix=<string>, -x <string>\n"
-                             "       Prefix for the rendered output frames\n\n"
-                             "   --clear-color=[hex], -b [hex]\n"
-                             "       Clear color for the render target\n\n"
-                             "   --size=[uint], -S [uint]\n"
-                             "       Size of the square render window\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .parameters = createAppParameters(),
     };
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &g_config, spec);
-    auto dm = samples::getDisplayManager(g_config);
+    SampleConfig config;
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
 
-    for (int i = optind; i < argc; i++) {
-        Path const filename = argv[i];
+    for (const auto& fname : config.positionalArgs) {
+        Path const filename(fname.c_str_safe());
         if (!filename.exists()) {
-            std::cerr << "file " << argv[i] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
-        g_filenames.push_back(filename);
     }
 
-    g_config.title = "Frame Generator";
-    g_config.headless = true;
-    auto fApp = createSampleApp(g_config, dm.get(), nullptr);
+    config.title = "Frame Generator";
+    config.headless = true;
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
     fApp->run();
 
     return 0;

@@ -79,7 +79,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <random>
-#include <string>
 #include <vector>
 
 #include <math.h>
@@ -521,8 +520,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
-    if (config.customArgs.find("emitters") != config.customArgs.end()) {
-        app->ui.emitterCount = atoi(config.customArgs["emitters"].c_str());
+    if (config.getInt("emitters", 0) > 0) {
+        app->ui.emitterCount = config.getInt("emitters");
     }
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
@@ -619,38 +618,20 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeInt("emitters", 'E', "Number of particle emitters", 1, 1),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Hybrid Instancing";
-    static constexpr const char* CUSTOM_OPTSTR = "e:c:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "emitters", utils::getopt::required_argument, nullptr, 'e' },
-        { "camera", utils::getopt::required_argument, nullptr, 'c' }, { nullptr, 0, nullptr, 0 }
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
     };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'e':
-                config.customArgs["emitters"] = utils::CString(arg.c_str());
-                return true;
-            case 'c':
-                if (arg == "flight") {
-                    config.cameraMode = filament::camutils::Mode::FREE_FLIGHT;
-                } else if (arg == "orbit") {
-                    config.cameraMode = filament::camutils::Mode::ORBIT;
-                } else {
-                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
-                }
-                return true;
-        }
-        return false;
-    };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config,
-            {
-                .customHandler = customHandler,
-                .customOptStr = CUSTOM_OPTSTR,
-                .customOptions = CUSTOM_OPTIONS,
-            });
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();

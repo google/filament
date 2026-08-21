@@ -44,7 +44,6 @@
 
 #include <iostream> // for cerr
 #include <memory>
-#include <string>   // for printing usage/help
 
 using namespace filament;
 using utils::Entity;
@@ -571,12 +570,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "helloasync";
     config.asynchronousMode = backend::AsynchronousMode::THREAD_PREFERRED;
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();
