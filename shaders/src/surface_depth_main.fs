@@ -20,7 +20,9 @@ highp vec4 computeDepthMomentsVSM(const highp float depth);
 
 void main() {
     filament_lodBias = frameUniforms.lodBias;
-
+#if defined(FILAMENT_HAS_FEATURE_INSTANCING)
+    logical_instance_index = instance_index;
+#endif
     initObjectUniforms();
 
 #if defined(MATERIAL_HAS_CUSTOM_DEPTH) || defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))

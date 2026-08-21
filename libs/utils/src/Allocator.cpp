@@ -52,7 +52,9 @@ void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
     std::swap(mBegin, rhs.mBegin);
     std::swap(mSize, rhs.mSize);
     std::swap(mCur, rhs.mCur);
-    std::swap(mPrevCur, rhs.mPrevCur);
+    std::swap(mHead, rhs.mHead);
+    std::swap(mCount, rhs.mCount);
+    std::swap(mStack, rhs.mStack);
 }
 
 
