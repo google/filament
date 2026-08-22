@@ -1415,11 +1415,7 @@ bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool MetalDriver::isFrameTimeSupported() {
-    // Frame time is calculated via hard fences, which are only available on iOS 12 and above.
-    if (@available(iOS 12, *)) {
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool MetalDriver::isAutoDepthResolveSupported() {
