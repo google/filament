@@ -103,7 +103,7 @@ public class RenderableManager {
         private final int mType;
         PrimitiveType(int value) { mType = value; }
 
-        /** @return the primitive type's native value (matching the corresponding OpenGL primitive type). */
+        /** @return the value of this primitive type. */
         public int getValue() { return mType; }
     }
 
