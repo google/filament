@@ -424,14 +424,6 @@ void FVertexBuffer::terminate(FEngine& engine) {
     engine.getVertexBufferInfoFactory().destroy(driver, mVertexBufferInfoHandle);
 }
 
-FVertexBuffer::VertexBufferHandle FVertexBuffer::getHwHandle() const {
-    FILAMENT_CHECK_PRECONDITION(isCreationSuccessful())
-            << "VertexBuffer is not usable: its creation is still in progress, or its asynchronous "
-               "creation was canceled";
-
-    return mHandle;
-}
-
 size_t FVertexBuffer::getVertexCount() const noexcept {
     return mVertexCount;
 }

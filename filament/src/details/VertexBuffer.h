@@ -28,6 +28,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/debug.h>
+
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -50,7 +52,12 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    VertexBufferHandle getHwHandle() const;
+    // Only meaningful once the creation succeeded. A canceled asynchronous creation leaves
+    // mHandle referring to backend resources that were never generated.
+    VertexBufferHandle getHwHandle() const noexcept {
+        assert_invariant(isCreationSuccessful());
+        return mHandle;
+    }
 
     VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
 

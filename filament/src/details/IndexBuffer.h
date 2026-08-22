@@ -26,6 +26,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 
 #include <atomic>
 
@@ -40,7 +41,12 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    backend::Handle<backend::HwIndexBuffer> getHwHandle() const;
+    // Only meaningful once the creation succeeded. A canceled asynchronous creation leaves
+    // mHandle referring to backend resources that were never generated.
+    backend::Handle<backend::HwIndexBuffer> getHwHandle() const noexcept {
+        assert_invariant(isCreationSuccessful());
+        return mHandle;
+    }
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
 

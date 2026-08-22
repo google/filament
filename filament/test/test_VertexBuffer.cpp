@@ -21,6 +21,7 @@
 #include "details/VertexBuffer.h"
 
 #include <filament/Engine.h>
+#include <filament/RenderableManager.h>
 #include <filament/VertexBuffer.h>
 
 #include <private/backend/CommandStream.h>
@@ -29,6 +30,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
 #include <utils/Panic.h>
 
 #include <gmock/gmock.h>
@@ -215,6 +218,16 @@ protected:
         return waitUntilCreationSettled(vb) ? vb : nullptr;
     }
 
+    // Adds a renderable component drawing `vb` to `entity`, the public path that ends up
+    // recording the buffer's backend handle into a render primitive.
+    RenderableManager::Builder::Result buildRenderable(VertexBuffer* vb,
+            utils::Entity const entity) const {
+        return RenderableManager::Builder(1)
+                .boundingBox({{ 0, 0, 0 }, { 1, 1, 1 }})
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb)
+                .build(*mEngine, entity);
+    }
+
     Engine* mEngine = nullptr;
     std::atomic<uint32_t> mCapturedSize;
     std::mutex mMutex;
@@ -223,35 +236,68 @@ protected:
     CustomTestPlatform mCustomPlatform;
 };
 
-TEST_F(VertexBufferTest, CompletedCreationYieldsHwHandle) {
+TEST_F(VertexBufferTest, CompletedCreationBuildsRenderable) {
     // Every asynchronous creation call runs, so the buffer is populated and usable.
     VertexBuffer* vb = buildAsyncVertexBuffer(AsyncCallStatus::COMPLETED);
     ASSERT_NE(vb, nullptr);
-
     EXPECT_TRUE(vb->isCreationComplete());
+
+    utils::Entity const entity = utils::EntityManager::get().create();
+    EXPECT_EQ(buildRenderable(vb, entity), RenderableManager::Builder::Success);
     EXPECT_TRUE(downcast(vb)->getHwHandle());
 
+    mEngine->getRenderableManager().destroy(entity);
+    utils::EntityManager::get().destroy(entity);
     mEngine->destroy(vb);
 }
 
-TEST_F(VertexBufferTest, CanceledCreationRejectsHwHandle) {
+TEST_F(VertexBufferTest, CanceledCreationRejectedByRenderableBuilder) {
     // Same buffer, but every asynchronous creation call reports itself canceled, so this one
-    // settles without its backend resources ever being generated.
+    // settles without its backend resources ever being generated. Drawing it would record buffers
+    // that were never generated, so the builder has to reject it. How the precondition reports
+    // that depends on how the library was built: it throws when exceptions are enabled, and
+    // aborts otherwise.
     VertexBuffer* vb = buildAsyncVertexBuffer(AsyncCallStatus::CANCELED);
     ASSERT_NE(vb, nullptr);
-
     EXPECT_FALSE(vb->isCreationComplete());
 
-    // Handing out the handle anyway would let a render primitive record buffers that were never
-    // generated. How the precondition reports that depends on how the library was built: it throws
-    // when exceptions are enabled, and aborts otherwise.
+    utils::Entity const entity = utils::EntityManager::get().create();
 #if GTEST_HAS_EXCEPTIONS
-    EXPECT_THROW(downcast(vb)->getHwHandle(), utils::PreconditionPanic);
+    EXPECT_THROW(buildRenderable(vb, entity), utils::PreconditionPanic);
 #else
-    EXPECT_DEATH(downcast(vb)->getHwHandle(), "VertexBuffer is not usable");
+    EXPECT_DEATH(buildRenderable(vb, entity), "creation is still in progress or was canceled");
 #endif
 
+    utils::EntityManager::get().destroy(entity);
     mEngine->destroy(vb);
+}
+
+TEST_F(VertexBufferTest, CanceledCreationRejectedBySetGeometryAt) {
+    // A renderable can also be re-pointed at another buffer after it was built, which is the
+    // second way an unusable buffer reaches a render primitive.
+    VertexBuffer* usable = buildAsyncVertexBuffer(AsyncCallStatus::COMPLETED);
+    VertexBuffer* canceled = buildAsyncVertexBuffer(AsyncCallStatus::CANCELED);
+    ASSERT_NE(usable, nullptr);
+    ASSERT_NE(canceled, nullptr);
+
+    utils::Entity const entity = utils::EntityManager::get().create();
+    ASSERT_EQ(buildRenderable(usable, entity), RenderableManager::Builder::Success);
+
+    auto& rcm = mEngine->getRenderableManager();
+    auto const instance = rcm.getInstance(entity);
+    auto const repoint = [&]() {
+        rcm.setGeometryAt(instance, 0, RenderableManager::PrimitiveType::TRIANGLES, canceled, 0, 3);
+    };
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW(repoint(), utils::PreconditionPanic);
+#else
+    EXPECT_DEATH(repoint(), "creation is still in progress or was canceled");
+#endif
+
+    rcm.destroy(entity);
+    utils::EntityManager::get().destroy(entity);
+    mEngine->destroy(canceled);
+    mEngine->destroy(usable);
 }
 
 TEST_F(VertexBufferTest, InterleavedBufferSize) {
