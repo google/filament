@@ -88,7 +88,7 @@ public:
     // 1. This method serves as a custom, intermediate handler that is called by the
     // "ServiceThread" in DriverBase. Its primary purpose is to manage the countdown
     // mechanism before the *REAL* user's callback is executed.
-    void post(void* user, Callback callback) override {
+    void post(void* user, Callback callback) override final {
         // 2. `user` and `callback` are *not* the pair handed to the driver. To carry the
         // AsyncCallStatus, DriverBase::scheduleAsyncCallback() boxes
         // (countdownCallback, this, status) into an opaque internal allocation and passes its own

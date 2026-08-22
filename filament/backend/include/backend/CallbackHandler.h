@@ -67,12 +67,6 @@ public:
      * Schedules the callback to be called onto the appropriate thread.
      * Typically this will be the application's main thead.
      *
-     * `user` is opaque: it is not necessarily the pointer the application passed to the API that
-     * took this handler. Filament may substitute an internal allocation, and does so for async
-     * completion callbacks, which have to carry an AsyncCallStatus alongside the user pointer. A
-     * handler must treat `user` as a token to hand back to `callback`, and must never dereference
-     * it or route on it.
-     *
      * Must be thread-safe.
      */
     virtual void post(void* user, Callback callback) = 0;
