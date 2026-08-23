@@ -2,14 +2,13 @@
 
 #include "Settings_generated.h"
 
-#include "jsonParseUtils.h"
-
 #include <filament/Options.h>
-
 #include <utils/Log.h>
 
-#include <cstring>
 #include <ostream>
+#include <cstring>
+
+#include "jsonParseUtils.h"
 
 using namespace utils;
 
@@ -34,18 +33,6 @@ std::ostream& writeJson(std::ostream& oss, const float* v, int count) {
     return oss;
 }
 
-std::ostream& writeJson(std::ostream& oss, const double* v, int count) {
-    oss << "[";
-    for (int i = 0; i < count; i++) {
-        oss << v[i];
-        if (i < count - 1) {
-            oss << ", ";
-        }
-    }
-    oss << "]";
-    return oss;
-}
-
 std::ostream& operator<<(std::ostream& out, math::float2 v) {
     return writeJson(out, v.v, 2);
 }
@@ -56,6 +43,18 @@ std::ostream& operator<<(std::ostream& out, math::float3 v) {
 
 std::ostream& operator<<(std::ostream& out, math::float4 v) {
     return writeJson(out, v.v, 4);
+}
+
+std::ostream& writeJson(std::ostream& oss, const double* v, int count) {
+    oss << "[";
+    for (int i = 0; i < count; i++) {
+        oss << v[i];
+        if (i < count - 1) {
+            oss << ", ";
+        }
+    }
+    oss << "]";
+    return oss;
 }
 
 std::ostream& operator<<(std::ostream& out, math::double4 v) {
@@ -855,6 +854,16 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->preventFlickering);
         } else if (compare(tok, jsonChunk, "historyReprojection") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->historyReprojection);
+        } else if (compare(tok, jsonChunk, "motionAdaptiveHistory") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionAdaptiveHistory);
+        } else if (compare(tok, jsonChunk, "motionDeltaThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->motionDeltaThreshold);
+        } else if (compare(tok, jsonChunk, "minBoxStrength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minBoxStrength);
+        } else if (compare(tok, jsonChunk, "minAlphaStrength") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->minAlphaStrength);
+        } else if (compare(tok, jsonChunk, "skyDepthThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->skyDepthThreshold);
         } else {
             slog.w << "Invalid TemporalAntiAliasingOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -884,7 +893,12 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"jitterPattern\": " << (in.jitterPattern) << ",\n"
         << "\"varianceGamma\": " << (in.varianceGamma) << ",\n"
         << "\"preventFlickering\": " << to_string(in.preventFlickering) << ",\n"
-        << "\"historyReprojection\": " << to_string(in.historyReprojection) << "\n"
+        << "\"historyReprojection\": " << to_string(in.historyReprojection) << ",\n"
+        << "\"motionAdaptiveHistory\": " << to_string(in.motionAdaptiveHistory) << ",\n"
+        << "\"motionDeltaThreshold\": " << (in.motionDeltaThreshold) << ",\n"
+        << "\"minBoxStrength\": " << (in.minBoxStrength) << ",\n"
+        << "\"minAlphaStrength\": " << (in.minAlphaStrength) << ",\n"
+        << "\"skyDepthThreshold\": " << (in.skyDepthThreshold) << "\n"
         << "}";
 }
 

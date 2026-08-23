@@ -168,6 +168,11 @@ Filament.loadGeneratedExtensions = function() {
             varianceGamma: 1.0,
             preventFlickering: false,
             historyReprojection: true,
+            motionAdaptiveHistory: false,
+            motionDeltaThreshold: 1.0,
+            minBoxStrength: 0.35,
+            minAlphaStrength: 0.5,
+            skyDepthThreshold: 0.001,
         };
         return Object.assign(options, overrides);
     };

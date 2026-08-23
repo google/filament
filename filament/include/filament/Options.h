@@ -630,6 +630,29 @@ struct TemporalAntiAliasingOptions {
     bool preventFlickering = false;
     /** whether to apply history reprojection (debug option) */
     bool historyReprojection = true;
+
+    /** scale down history rejection/feedback when a pixel's reprojection indicates little to no
+     * camera motion, instead of always applying it at full strength. Reduces flickering on
+     * static, spatially-noisy content (e.g. specular highlights on normal-mapped surfaces), at
+     * the cost of slower ghost cleanup on moving objects, which aren't tracked by camera-motion
+     * reprojection alone */
+    bool motionAdaptiveHistory = false;
+    /** reprojection-delta magnitude (in input texels) above which a pixel is considered fully
+     * camera-motion-affected; below this, history rejection/feedback scale down towards their
+     * floors (minBoxStrength, minAlphaStrength) */
+    float motionDeltaThreshold = 1.0f;
+    /** minimum history-clamping box strength retained even at zero measured motion; must stay
+     * above 0 so the box can still catch content changes unrelated to camera motion (lighting,
+     * animated materials, ...) */
+    float minBoxStrength = 0.35f;
+    /** minimum history feedback strength retained even at zero measured motion; must stay above
+     * 0 so history keeps responding to real changes and doesn't accumulate numerical drift */
+    float minAlphaStrength = 0.5f;
+    /** reversed-Z depth (near 0 = far) below which a pixel is treated as sky/very-far, forcing
+     * full history-clamping box/feedback strength regardless of measured motion -- sky is
+     * correctly translation-invariant under reprojection, so the motion signal alone
+     * under-reports disocclusions there */
+    float skyDepthThreshold = 0.001f;
 };
 
 /**

@@ -2974,6 +2974,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "boxType", int32_t(taaOptions.boxType) },
         { "boxClipping", int32_t(taaOptions.boxClipping) },
         { "varianceGamma", taaOptions.varianceGamma },
+        { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
     });
 }
 
@@ -3139,6 +3140,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("historyResolution",
                         float4{ historyDesc.width, historyDesc.height,
                         1.0f / historyDesc.width, 1.0f / historyDesc.height });
+
+                mi->setParameter("motionDeltaThreshold", taaOptions.motionDeltaThreshold);
+                mi->setParameter("minBoxStrength", taaOptions.minBoxStrength);
+                mi->setParameter("minAlphaStrength", taaOptions.minAlphaStrength);
+                mi->setParameter("skyDepthThreshold", taaOptions.skyDepthThreshold);
 
                 mi->commit(driver, getUboManager());
                 mi->use(driver);

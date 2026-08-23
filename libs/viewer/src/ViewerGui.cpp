@@ -848,6 +848,11 @@ void ViewerGui::updateUserInterface() {
         ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
         ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0\0");
         ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.75f, 1.25f);
+        ImGui::Checkbox("Motion-Adaptive History", &mSettings.view.taa.motionAdaptiveHistory);
+        ImGui::SliderFloat("Motion Delta Threshold", &mSettings.view.taa.motionDeltaThreshold, 0.1f, 5.0f);
+        ImGui::SliderFloat("Min Box Strength", &mSettings.view.taa.minBoxStrength, 0.0f, 1.0f);
+        ImGui::SliderFloat("Min Alpha Strength", &mSettings.view.taa.minAlphaStrength, 0.0f, 1.0f);
+        ImGui::SliderFloat("Sky Depth Threshold", &mSettings.view.taa.skyDepthThreshold, 0.0f, 0.01f);
         ImGui::SliderFloat("RCAS", &mSettings.view.taa.sharpness, 0.0f, 1.0f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
         mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;

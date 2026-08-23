@@ -48,6 +48,24 @@ material {
             type : float4,
             name : historyResolution,
             precision: high
+        },
+        {
+            type : float,
+            name : motionDeltaThreshold,
+            precision: high
+        },
+        {
+            type : float,
+            name : minBoxStrength
+        },
+        {
+            type : float,
+            name : minAlphaStrength
+        },
+        {
+            type : float,
+            name : skyDepthThreshold,
+            precision: high
         }
     ],
     constants : [
@@ -100,6 +118,11 @@ material {
             type : float,
             name : varianceGamma,
             default : 1.0
+        },
+        {
+            type : bool,
+            name : motionAdaptiveHistory,
+            default : false
         }
     ],
     variables : [
@@ -139,6 +162,9 @@ fragment {
 #define BOX_CLIPPING_CLAMP      1
 // no clipping (for debugging only)
 #define BOX_CLIPPING_NONE       2
+
+// materialParams.motionDeltaThreshold/minBoxStrength/minAlphaStrength/skyDepthThreshold
+// configure motionAdaptiveHistory -- see Options.h for what each controls.
 
 float rcp(float x) {
     return 1.0 / x;
@@ -219,6 +245,14 @@ vec3 YCoCg_RGB(const vec3 c) {
     float g = Y + Cg;
     float b = Y - Co - Cg;
     return vec3(r, g, b);
+}
+
+// Smooth [0,1] weight expressing how much of this pixel's reprojection is attributable to camera
+// motion, from the reprojection delta (in input texels). 0 near a static camera, ramping up to 1
+// past materialParams.motionDeltaThreshold.
+float motionAmount(const highp vec2 reprojectionDeltaTexels) {
+    highp float d = length(reprojectionDeltaTexels) * (1.0 / materialParams.motionDeltaThreshold);
+    return saturate(d * d);
 }
 
 // clip the (c, h) segment to a box
@@ -343,6 +377,13 @@ void postProcess(inout PostProcessInputs postProcess) {
     // destination uv interpolated to pixel center
     highp vec4 uv = variable_vertex;
 
+    // how much history-box clipping / alpha to apply below; default to "fully apply both"
+    // (today's behavior) whenever motionAdaptiveHistory is off, or we have no reprojection delta
+    // to say otherwise. Floored (materialParams.minBoxStrength/minAlphaStrength) so neither ever
+    // fully disengages.
+    float historyBoxStrength = 1.0;
+    float historyAlphaStrength = 1.0;
+
     if (materialConstants_historyReprojection) {
         // read the depth buffer center sample for reprojection
         highp float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
@@ -351,6 +392,23 @@ void postProcess(inout PostProcessInputs postProcess) {
         highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
         uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
         uv.zw = uvToRenderTargetUV(uv.zw);
+
+        // Scale history-clamping box strength and alpha by the reprojection delta computed just
+        // above: a near-zero delta means the camera didn't move this pixel, so both are relaxed
+        // (down to their floors) and history is trusted to converge via jittered accumulation
+        // instead of being fought every frame.
+        if (materialConstants_motionAdaptiveHistory) {
+            highp vec2 deltaTexels = (uv.zw - uv.xy) * materialParams.colorResolution.xy;
+            float rawMotionAmount = motionAmount(deltaTexels);
+
+            // sky/very-far content: force full strength regardless of the (unreliable, here)
+            // measured delta
+            float farness = 1.0 - smoothstep(0.0, materialParams.skyDepthThreshold, depth);
+            rawMotionAmount = max(rawMotionAmount, farness);
+
+            historyBoxStrength = mix(materialParams.minBoxStrength, 1.0, rawMotionAmount);
+            historyAlphaStrength = mix(materialParams.minAlphaStrength, 1.0, rawMotionAmount);
+        }
     }
 
     // read center color and history samples
@@ -499,12 +557,22 @@ void postProcess(inout PostProcessInputs postProcess) {
                 boxmin = max(boxmin, a0 - materialConstants_varianceGamma * stdDev);
                 boxmax = min(boxmax, a0 + materialConstants_varianceGamma * stdDev);
             }
-            // history clamping
-            history = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
+            // history clamping, scaled by how much this pixel's reprojection looks like camera
+            // motion (see historyBoxStrength above)
+            vec4 clippedHistory = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
+            history = mix(history, clippedHistory, historyBoxStrength);
         }
     }
 
     float alpha = materialParams.alpha * confidence;
+
+    // Also trust history more strongly in the final blend when motion is low (paired with the
+    // box-relaxation above). Relaxing the box stops it from destroying accumulated detail, but
+    // filtered itself is still noisy frame-to-frame at a static pixel (jitter samples different
+    // sub-pixel detail each frame), and that noise still leaks into the output through alpha
+    // even once the box backs off. Floored so this never fully stops the ordinary blend from
+    // responding to real changes (lighting, etc.) that aren't camera motion.
+    alpha *= historyAlphaStrength;
 
     if (materialConstants_preventFlickering) {
         // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
