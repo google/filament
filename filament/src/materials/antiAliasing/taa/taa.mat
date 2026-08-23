@@ -177,6 +177,11 @@ vec3 untonemap(const vec3 c) {
     return c * rcp(max(epsilon, 1.0 - max3(c)));
 }
 
+// tonemap(), gated by the hdr constant -- lets the box operate in tonemapped space (see below)
+vec3 tonemapIfHDR(const vec3 c) {
+    return materialConstants_hdr ? tonemap(c) : c;
+}
+
 // 1-D Lanczos-2 approximation, input is squared and must be [-4, 4]
 float lanczos2_SquaredInputApproximate(highp float x2) {
     highp float wA = x2 - 4.0;
@@ -355,6 +360,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     } else {
         history = textureLod(materialParams_history, uv.zw, 0.0);
     }
+    history.rgb = tonemapIfHDR(history.rgb);
 
     highp vec2 inputSize = materialParams.colorResolution.xy;
     highp vec2 inputPixelSize = materialParams.colorResolution.zw;
@@ -380,6 +386,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec2 dcenter = samplePos - reconstructedFragmentPos;
 
     vec4 filtered = textureLod(materialParams_color, p, 0.0);
+    filtered.rgb = tonemapIfHDR(filtered.rgb);
 
     float confidence = 1.0;
 
@@ -387,15 +394,15 @@ void postProcess(inout PostProcessInputs postProcess) {
             materialConstants_boxClipping != BOX_CLIPPING_NONE) {
 
         vec3 s[9];
-        s[0] = filtered.rgb;
-        s[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 0, -1)).rgb;
-        s[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  0)).rgb;
-        s[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  0)).rgb;
-        s[4] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 0,  1)).rgb;
-        s[5] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1, -1)).rgb;
-        s[6] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1, -1)).rgb;
-        s[7] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  1)).rgb;
-        s[8] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  1)).rgb;
+        s[0] = filtered.rgb; // already tonemapped above
+        s[1] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2( 0, -1)).rgb);
+        s[2] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  0)).rgb);
+        s[3] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  0)).rgb);
+        s[4] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2( 0,  1)).rgb);
+        s[5] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2(-1, -1)).rgb);
+        s[6] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2( 1, -1)).rgb);
+        s[7] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  1)).rgb);
+        s[8] = tonemapIfHDR(textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  1)).rgb);
 
         // the box can be used for deringing or history correction
         vec3 box5min = min(s[0],    min(min(s[1], s[2]), min(s[3], s[4])));
@@ -507,18 +514,13 @@ void postProcess(inout PostProcessInputs postProcess) {
         alpha *= diff * diff;
     }
 
-    // go back to RGB space before tonemapping
+    // go back to RGB space -- filtered/history are already tonemapped, from when each tap was
+    // first sampled above
     if (isColorYCoCg) {
         filtered.rgb = YCoCg_RGB(filtered.rgb);
     }
     if (isHistoryYCoCg) {
         history.rgb = YCoCg_RGB(history.rgb);
-    }
-
-    if (materialConstants_hdr) {
-        // tonemap before mixing
-        filtered.rgb = tonemap(filtered.rgb);
-        history.rgb = tonemap(history.rgb);
     }
 
     // combine history and current frame
