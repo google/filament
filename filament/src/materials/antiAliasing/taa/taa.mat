@@ -224,7 +224,15 @@ vec4 clipToBox(const int quality,
     if (quality == BOX_CLIPPING_ACCURATE) {
         // don't clip if we're already in the box
         if (any(lessThan(h.rgb, boxmin)) || any(greaterThan(h.rgb, boxmax))) {
-            vec4 r = c - h;
+            // The ray-clip below assumes c is inside the box (only h is checked above), so that
+            // the h->c segment is guaranteed to cross into the box at some t in [0,1]. The
+            // caller doesn't guarantee this -- e.g. filtered is deringed against the looser box9
+            // while this function is called with a tighter box5/box9 blend -- so c can land
+            // outside the box, especially at sharp edges. When that happens the unclamped
+            // algorithm can return h completely unmodified (t=0), leaving a bad history sample
+            // uncorrected. Clamp c defensively to restore the algorithm's assumption.
+            vec3 cClamped = clamp(c.rgb, boxmin, boxmax);
+            vec4 r = vec4(cClamped, c.a) - h;
             vec3 ir = 1.0 / (epsilon + r.rgb);
             vec3 rmax = (boxmax - h.rgb) * ir;
             vec3 rmin = (boxmin - h.rgb) * ir;
