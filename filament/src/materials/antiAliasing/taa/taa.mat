@@ -66,6 +66,10 @@ material {
             type : float,
             name : skyDepthThreshold,
             precision: high
+        },
+        {
+            type : float,
+            name : varianceGamma
         }
     ],
     constants : [
@@ -113,11 +117,6 @@ material {
             type : bool,
             name : hdr,
             default : true
-        },
-        {
-            type : float,
-            name : varianceGamma,
-            default : 1.0
         },
         {
             type : bool,
@@ -554,8 +553,8 @@ void postProcess(inout PostProcessInputs postProcess) {
                 highp vec3 stdDev = sqrt(abs(a1 - a0 * a0));
 
                 // intersect both bounding boxes
-                boxmin = max(boxmin, a0 - materialConstants_varianceGamma * stdDev);
-                boxmax = min(boxmax, a0 + materialConstants_varianceGamma * stdDev);
+                boxmin = max(boxmin, a0 - materialParams.varianceGamma * stdDev);
+                boxmax = min(boxmax, a0 + materialParams.varianceGamma * stdDev);
             }
             // history clamping, scaled by how much this pixel's reprojection looks like camera
             // motion (see historyBoxStrength above)

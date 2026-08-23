@@ -2973,7 +2973,6 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "preventFlickering", taaOptions.preventFlickering },
         { "boxType", int32_t(taaOptions.boxType) },
         { "boxClipping", int32_t(taaOptions.boxClipping) },
-        { "varianceGamma", taaOptions.varianceGamma },
         { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
     });
 }
@@ -3145,6 +3144,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("minBoxStrength", taaOptions.minBoxStrength);
                 mi->setParameter("minAlphaStrength", taaOptions.minAlphaStrength);
                 mi->setParameter("skyDepthThreshold", taaOptions.skyDepthThreshold);
+                mi->setParameter("varianceGamma", taaOptions.varianceGamma);
 
                 mi->commit(driver, getUboManager());
                 mi->use(driver);
