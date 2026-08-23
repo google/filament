@@ -143,7 +143,10 @@ public class ToneMapper {
             /**
              * A golden tinted, slightly washed look for BT.1886 displays
              */
-            GOLDEN
+            GOLDEN;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
         }
 
         /**

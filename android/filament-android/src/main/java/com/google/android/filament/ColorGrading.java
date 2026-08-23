@@ -101,7 +101,10 @@ public class ColorGrading {
         LOW,
         MEDIUM,
         HIGH,
-        ULTRA
+        ULTRA;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -109,7 +112,10 @@ public class ColorGrading {
      */
     public enum LutFormat {
         INTEGER,
-        FLOAT
+        FLOAT;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -128,7 +134,10 @@ public class ColorGrading {
         /** Filmic tone mapping, modelled after ACES but applied in sRGB space. */
         FILMIC,
         /** Tone mapping used to validate/debug scene exposure. */
-        DISPLAY_RANGE,
+        DISPLAY_RANGE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     // NOTE: This constructor is public only so that filament-utils can use it.

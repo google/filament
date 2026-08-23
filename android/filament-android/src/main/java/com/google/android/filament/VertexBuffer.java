@@ -73,7 +73,10 @@ public class VertexBuffer {
         CUSTOM4,      // custom or MORPH_TANGENTS_0
         CUSTOM5,      // custom or MORPH_TANGENTS_1
         CUSTOM6,      // custom or MORPH_TANGENTS_2
-        CUSTOM7       // custom or MORPH_TANGENTS_3
+        CUSTOM7;      // custom or MORPH_TANGENTS_3
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum AttributeType {
@@ -102,7 +105,10 @@ public class VertexBuffer {
         HALF,
         HALF2,
         HALF3,
-        HALF4,
+        HALF4;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public static class Builder {

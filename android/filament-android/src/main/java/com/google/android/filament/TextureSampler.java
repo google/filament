@@ -42,7 +42,10 @@ public class TextureSampler {
         /**
          * The texture infinitely repeats and mirrors in the wrap direction.
          */
-        MIRRORED_REPEAT
+        MIRRORED_REPEAT;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum MinFilter {
@@ -69,7 +72,10 @@ public class TextureSampler {
         /**
          * Both interpolated Mip-mapping and linear filtering are used.
          */
-        LINEAR_MIPMAP_LINEAR,
+        LINEAR_MIPMAP_LINEAR;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum MagFilter {
@@ -80,12 +86,18 @@ public class TextureSampler {
         /**
          * Box filtering. Weighted average of 4 neighbors is used.
          */
-        LINEAR
+        LINEAR;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum CompareMode {
         NONE,
-        COMPARE_TO_TEXTURE
+        COMPARE_TO_TEXTURE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -123,7 +135,10 @@ public class TextureSampler {
         /**
          * Never. The depth test always fails.
          */
-        NEVER
+        NEVER;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     long mSampler = 0; // bit field used by native

@@ -145,7 +145,10 @@ public class Engine {
         /**
          * Selects the no-op driver for testing purposes.
          */
-        NOOP,
+        NOOP;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -159,8 +162,11 @@ public class Engine {
         /** OpenGL ES 3.1 features + 16 textures units + cubemap arrays */
         FEATURE_LEVEL_2,
         /** OpenGL ES 3.1 features + 31 textures units + cubemap arrays */
-        FEATURE_LEVEL_3,
-    };
+        FEATURE_LEVEL_3;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
+    }
 
     /**
      * The type of technique for stereoscopic rendering. (Note that the materials used will need to be
@@ -172,8 +178,11 @@ public class Engine {
         /** Stereoscopic rendering is performed using instanced rendering technique. */
         INSTANCED,
         /** Stereoscopic rendering is performed using the multiview feature from the graphics backend. */
-        MULTIVIEW,
-    };
+        MULTIVIEW;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
+    }
 
     /**
      * This controls the priority level for GPU work scheduling, which helps prioritize the
@@ -202,8 +211,11 @@ public class Engine {
          * The highest priority, intended for system-critical, real-time applications where missing
          * deadlines is unacceptable (e.g., VR/AR compositors or other system-critical tasks).
          */
-        REALTIME,
-    };
+        REALTIME;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
+    }
 
     /**
      * Three-state feature state.
@@ -211,7 +223,10 @@ public class Engine {
     public enum FeatureState {
         FALSE,
         TRUE,
-        INDETERMINATE
+        INDETERMINATE;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -539,8 +554,11 @@ public class Engine {
         public enum ShaderLanguage {
             DEFAULT,
             MSL,
-            METAL_LIBRARY,
-        };
+            METAL_LIBRARY;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
+        }
         public ShaderLanguage preferredShaderLanguage = ShaderLanguage.DEFAULT;
 
         /**

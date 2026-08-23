@@ -103,7 +103,10 @@ public class Texture {
         /** External texture sampler */
         SAMPLER_EXTERNAL,
         /** 3D sampler */
-        SAMPLER_3D,
+        SAMPLER_3D;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -272,7 +275,10 @@ public class Texture {
         RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
         RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
         RGBA_BPTC_UNORM,        // BC7
-        SRGB_ALPHA_BPTC_UNORM   // BC7 sRGB
+        SRGB_ALPHA_BPTC_UNORM;  // BC7 sRGB
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -330,7 +336,10 @@ public class Texture {
         RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
         RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
         RGBA_BPTC_UNORM,        // BC7
-        SRGB_ALPHA_BPTC_UNORM   // BC7 sRGB
+        SRGB_ALPHA_BPTC_UNORM;  // BC7 sRGB
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -348,7 +357,10 @@ public class Texture {
         /** +z face */
         POSITIVE_Z,
         /** -z face */
-        NEGATIVE_Z
+        NEGATIVE_Z;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -367,7 +379,10 @@ public class Texture {
         DEPTH_COMPONENT,
         DEPTH_STENCIL,
         STENCIL_INDEX,
-        ALPHA
+        ALPHA;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -395,7 +410,10 @@ public class Texture {
         /** unsigned 5.6 (5.5 for blue) float packed in a 32-bit integer. */
         UINT_10F_11F_11F_REV,
         /** unsigned 5/6 bit integers packed in a 16-bit short. */
-        USHORT_565,
+        USHORT_565;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -407,7 +425,10 @@ public class Texture {
         CHANNEL_0,          //!< specified component taken from channel 0
         CHANNEL_1,          //!< specified component taken from channel 1
         CHANNEL_2,          //!< specified component taken from channel 2
-        CHANNEL_3           //!< specified component taken from channel 3
+        CHANNEL_3;          //!< specified component taken from channel 3
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**

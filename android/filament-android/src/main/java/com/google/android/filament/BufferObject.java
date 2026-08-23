@@ -49,7 +49,10 @@ public class BufferObject {
         private final long mNativeBuilder;
 
         public enum BindingType {
-            VERTEX,
+            VERTEX;
+
+            /** @return the value of this enum constant as used by the native Filament engine. */
+            public int toFilamentNative() { return ordinal(); }
         }
 
         public Builder() {

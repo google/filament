@@ -28,7 +28,10 @@ public class Fence {
 
     public enum Mode {
         FLUSH,
-        DONT_FLUSH
+        DONT_FLUSH;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum FenceStatus {

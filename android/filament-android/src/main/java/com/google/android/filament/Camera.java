@@ -132,7 +132,10 @@ public class Camera {
         /** Perspective projection, objects get smaller as they are farther.  */
         PERSPECTIVE,
         /** Orthonormal projection, preserves distances. */
-        ORTHO
+        ORTHO;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -143,7 +146,10 @@ public class Camera {
         /** The field-of-view angle is defined on the vertical axis. */
         VERTICAL,
         /** The field-of-view angle is defined on the horizontal axis. */
-        HORIZONTAL
+        HORIZONTAL;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     Camera(long nativeCamera, @Entity int entity) {

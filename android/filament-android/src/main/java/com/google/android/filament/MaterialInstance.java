@@ -35,14 +35,20 @@ public class MaterialInstance {
         BOOL,
         BOOL2,
         BOOL3,
-        BOOL4
+        BOOL4;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum IntElement {
         INT,
         INT2,
         INT3,
-        INT4
+        INT4;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum FloatElement {
@@ -51,7 +57,10 @@ public class MaterialInstance {
         FLOAT3,
         FLOAT4,
         MAT3,
-        MAT4
+        MAT4;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     /**
@@ -91,13 +100,19 @@ public class MaterialInstance {
         /**
          * Bitwise inverts the current value.
          */
-        INVERT,
+        INVERT;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
     }
 
     public enum StencilFace {
         FRONT,
         BACK,
-        FRONT_AND_BACK
+        FRONT_AND_BACK;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return sStencilFaceMapping[ordinal()]; }
     }
     // Converts the StencilFace enum ordinal to Filament's equivalent bit field.
     static final int[] sStencilFaceMapping = {0x1, 0x2, 0x3};

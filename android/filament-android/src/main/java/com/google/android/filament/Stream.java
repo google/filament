@@ -97,8 +97,11 @@ public class Stream {
         NATIVE,
 
         /** Synchronized, copy-free, and take a release callback. Good for AR but requires API 26+. */
-        ACQUIRED,
-    };
+        ACQUIRED;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
+    }
 
     Stream(long nativeStream, Engine engine) {
         mNativeObject = nativeStream;
