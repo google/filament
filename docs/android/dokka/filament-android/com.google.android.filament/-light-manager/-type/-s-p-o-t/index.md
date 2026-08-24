@@ -5,4 +5,4 @@
 [main]\
 [SPOT](index.md)
 
-Spot light with coupling of outer cone and illumination disabled.
+Spotlight with coupling of outer cone and illumination disabled.
