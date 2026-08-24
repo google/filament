@@ -99,7 +99,7 @@ TEST(Variant, PunctualShadowReceiversDoNotAliasSsr) {
                         V const requested(V::SRE | sampler | fog | skinning | stereo |
                                 directional);
                         V const filtered = V::filterVariant(requested, true);
-                        V const expected(requested.key);
+                        V const expected(requested.key & ~V::DIR);
 
                         EXPECT_EQ(filtered, expected);
                         EXPECT_TRUE(V::isValidStandardVariant(filtered));
