@@ -63,7 +63,6 @@ public:
     static Driver* create(VulkanPlatform* platform, VulkanContext& context,
             Platform::DriverConfig const& driverConfig);
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // Encapsulates the VK_EXT_debug_utils extension.  In particular, we use
     // vkSetDebugUtilsObjectNameEXT and vkCreateDebugUtilsMessengerEXT
     class DebugUtils {
@@ -85,7 +84,6 @@ public:
 
         friend class VulkanDriver;
     };
-#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 private:
     template<typename D>

@@ -150,10 +150,6 @@ Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .metalDisablePanicOnDrawableFailure =
                 instance->getConfig().metalDisablePanicOnDrawableFailure,
         .gpuContextPriority = instance->getConfig().gpuContextPriority,
-        .vulkanEnableAsyncPipelineCachePrewarming =
-                instance->features.backend.vulkan.enable_pipeline_cache_prewarming,
-        .vulkanEnableStagingBufferBypass =
-                instance->features.backend.vulkan.enable_staging_buffer_bypass,
         .asynchronousMode = instance->features.backend.enable_asynchronous_operation
                                     ? instance->getConfig().asynchronousMode
                                     : AsynchronousMode::NONE,
@@ -346,6 +342,11 @@ FEngine::FEngine(Builder const& builder) :
 
     LOG(INFO) << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
               << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)");
+
+    // Backend debug flags
+    // Must be registered before the driver thread starts.
+    mDebugRegistry.registerProperty("d.vulkan.debug_utils_names",
+            &debug.vulkan.enable_debug_utils_names);
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
