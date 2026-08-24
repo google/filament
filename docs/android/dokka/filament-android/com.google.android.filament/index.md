@@ -19,7 +19,7 @@
 | [Filament](-filament/index.md) | [main]<br>open class [Filament](-filament/index.md) |
 | [IndexBuffer](-index-buffer/index.md) | [main]<br>open class [IndexBuffer](-index-buffer/index.md)<br>A buffer containing vertex indices into a `VertexBuffer`. |
 | [IndirectLight](-indirect-light/index.md) | [main]<br>open class [IndirectLight](-indirect-light/index.md)<br>`IndirectLight` is used to simulate environment lighting, a form of global illumination. |
-| [LightManager](-light-manager/index.md) | [main]<br>open class [LightManager](-light-manager/index.md)<br>LightManager allows you to create a light source in the scene, such as a sun or street lights. |
+| [LightManager](-light-manager/index.md) | [main]<br>open class [LightManager](-light-manager/index.md)<br>LightManager allows you to create a light source in the scene, such as a sun or streetlights. |
 | [Material](-material/index.md) | [main]<br>open class [Material](-material/index.md)<br>A Filament Material defines the visual appearance of an object. |
 | [MaterialInstance](-material-instance/index.md) | [main]<br>open class [MaterialInstance](-material-instance/index.md) |
 | [MathUtils](-math-utils/index.md) | [main]<br>class [MathUtils](-math-utils/index.md) |
