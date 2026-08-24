@@ -371,6 +371,10 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
         if (status != VK_SUCCESS) {
             FVK_LOGE << "Failed to wait for readPixels fence";
+            vkDestroyBuffer(device, stagingBuffer, VKALLOC);
+            vkFreeMemory(device, stagingMemory, VKALLOC);
+            vkDestroyFence(device, fence, VKALLOC);
+            vkFreeCommandBuffers(device, cmdpool, 1, &cmdbuffer);
             return;
         }
 
