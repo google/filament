@@ -51,6 +51,7 @@
 #include <TargetConditionals.h>
 
 #include <algorithm>
+#include <memory>
 
 #ifndef FILAMENT_METAL_DEBUG_LOG
 #define FILAMENT_METAL_DEBUG_LOG 0
@@ -1568,14 +1569,20 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
     auto tag = mHandleAllocator.getHandleTag(ibh.getId());
 
+    // The completion callback fires from the command buffer's completed handler, an Objective-C
+    // block. A block copies what it captures, and AsyncCompletion is move-only because two copies
+    // could each fire the callback, so the job and the block share ownership of one instead. If
+    // the job is canceled or dropped, its reference is the last one and the destructor reports
+    // CANCELED; otherwise the block outlives the job and reports COMPLETED once the GPU is done.
     getJobQueue()->push(
-            [this, cmdBuffer, ib, data = std::move(data), byteOffset, handler, callback, user,
+            [this, cmdBuffer, ib, data = std::move(data), byteOffset,
+                    completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
                 ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+                  completion->schedule(AsyncCallStatus::COMPLETED);
                 }];
 
                 [cmdBuffer commit];
@@ -1613,14 +1620,16 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
     auto* bo = handle_cast<MetalBufferObject>(boh);
     auto tag = mHandleAllocator.getHandleTag(boh.getId());
 
+    // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, bo, data = std::move(data), byteOffset, handler, callback, user,
+            [this, cmdBuffer, bo, data = std::move(data), byteOffset,
+                    completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
                 bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+                  completion->schedule(AsyncCallStatus::COMPLETED);
                 }];
 
                 [cmdBuffer commit];
@@ -1699,15 +1708,17 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
     FILAMENT_CHECK_PRECONDITION(tex->asynchronous)
             << "update3DImageAsyncR must be called with an asynchronous texture.";
 
+    // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
     getJobQueue()->push(
             [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
-                    data = std::move(data), handler, callback, user,
+                    data = std::move(data),
+                    completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
                 tex->loadImage(cmdBuffer, level,
                         MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
 
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+                  completion->schedule(AsyncCallStatus::COMPLETED);
                 }];
 
                 [cmdBuffer commit];
@@ -2752,11 +2763,12 @@ void MetalDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>
         CallbackHandler* handler, AsyncCallback const callback, void* user) {
     assert_invariant(getJobQueue());
     getJobQueue()->push(
-            [this, command = std::move(command), handler, callback, user]() {
+            [command = std::move(command),
+                    completion = AsyncCompletion(this, handler, callback, user)]() mutable {
                 if (command) {
                     command();
                 }
-                scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+                completion.schedule(AsyncCallStatus::COMPLETED);
             },
             jobId);
 }

@@ -170,7 +170,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     };
 
     auto job = jobs::parallel_for(*js, nullptr, 0, dimension * dimension, std::cref(work),
-            jobs::CountSplitter<64, 32>());
+            jobs::CountSplitter<64>());
     js->runAndWait(job);
 
     Texture::PixelBufferDescriptor::PixelDataFormat format {};

@@ -15,13 +15,12 @@
  */
 
 
-#include <ibl/CubemapIBL.h>
+#include "CubemapUtilsImpl.h"
 
 #include <ibl/Cubemap.h>
+#include <ibl/CubemapIBL.h>
 #include <ibl/CubemapUtils.h>
 #include <ibl/utilities.h>
-
-#include "CubemapUtilsImpl.h"
 
 #include <utils/JobSystem.h>
 
@@ -1007,11 +1006,10 @@ void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, float linearRoughness)
 
 void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
     auto dfvFunction = multiscatter ? DFV_Multiscatter : DFV;
-    auto job = jobs::parallel_for<char>(js, nullptr, nullptr, uint32_t(dst.getHeight()),
-            [&dst, dfvFunction, cloth](char const* d, size_t c) {
+    auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(dst.getHeight()),
+            [&dst, dfvFunction, cloth](uint32_t y0, uint32_t c) {
                 const size_t width = dst.getWidth();
                 const size_t height = dst.getHeight();
-                size_t y0 = size_t(d);
                 for (size_t y = y0; y < y0 + c; y++) {
                     Cubemap::Texel* UTILS_RESTRICT data =
                             static_cast<Cubemap::Texel*>(dst.getPixelRef(0, y));
@@ -1032,7 +1030,7 @@ void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
                         *data = r;
                     }
                 }
-            }, jobs::CountSplitter<1, 8>());
+            }, jobs::CountSplitter<8>());
     js.runAndWait(job);
 }
 
