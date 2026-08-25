@@ -1113,7 +1113,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
 
     auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(builder->toneMapper);
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, toneMapper](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, toneMapper, &isLinear](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
