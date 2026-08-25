@@ -1100,10 +1100,11 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
 #if defined(__ARM_NEON)
 
 template <bool isLinear>
-void FColorGrading::generateDefaultLUTNeonImpl(FEngine const& engine, void* data,
+void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    bool const isLinear = (builder->outputColorSpace == Rec709-Linear-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1161,7 +1162,7 @@ void FColorGrading::generateDefaultLUTNeonImpl(FEngine const& engine, void* data
                 cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                 cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                if constexpr (!isLinear) {
+                if (UTILS_LIKELY(!isLinear)) {
                     v_oetf_sRGB(cg_r, cg_g, cg_b);
                 }
 
@@ -1185,19 +1186,10 @@ void FColorGrading::generateDefaultLUTNeonImpl(FEngine const& engine, void* data
 }
 
 UTILS_NOINLINE
-void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
-        Config const& config, Builder const& builder) noexcept {
-    if (builder->outputColorSpace == Rec709-Linear-D65) {
-        generateDefaultLUTNeonImpl<true>(engine, data, config, builder);
-    } else {
-        generateDefaultLUTNeonImpl<false>(engine, data, config, builder);
-    }
-}
-
-template <bool isLinear>
-void FColorGrading::generateMediumLUTNeonImpl(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept {
+void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    bool const isLinear = (builder->outputColorSpace == Rec709-Linear-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1317,7 +1309,7 @@ void FColorGrading::generateMediumLUTNeonImpl(FEngine const& engine, void* data,
                     cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                     cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                    if constexpr (!isLinear) {
+                    if (UTILS_LIKELY(!isLinear)) {
                         v_oetf_sRGB(cg_r, cg_g, cg_b);
                     }
 
@@ -1369,15 +1361,6 @@ void FColorGrading::generateMediumLUTNeonImpl(FEngine const& engine, void* data,
         }
     }
     js.runAndWait(slices);
-}
-
-UTILS_NOINLINE
-void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept {
-    if (builder->outputColorSpace == Rec709-Linear-D65) {
-        generateMediumLUTNeonImpl<true>(engine, data, config, builder);
-    } else {
-        generateMediumLUTNeonImpl<false>(engine, data, config, builder);
-    }
 }
 
 UTILS_ALWAYS_INLINE
