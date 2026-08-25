@@ -1099,7 +1099,6 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
 
 #if defined(__ARM_NEON)
 
-template <bool isLinear>
 void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
@@ -1113,7 +1112,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
 
     auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(builder->toneMapper);
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, toneMapper](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, toneMapper, &isLinear](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
