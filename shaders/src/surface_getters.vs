@@ -2,18 +2,11 @@
 // Uniforms access
 //------------------------------------------------------------------------------
 
-#if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
+#if CLIENT_MATERIAL_API_LEVEL < UNSTABLE_MATERIAL_API_LEVEL
 /** @public-api */
-highp mat4 getWorldFromModelMatrix() {
-    return object_uniforms_worldFromModelMatrix;
-}
-
-/** @public-api */
-highp mat3 getWorldFromModelNormalMatrix() {
-    return object_uniforms_worldFromModelNormalMatrix;
-}
-#else
-/** @public-api */
+// NOTE: getWorldFromModelMatrix is supported under API level 1 in the vertex shader,
+// but requires API level 2 in the fragment shader. Therefore, it is defined here
+// for vertex shaders, but redirected to an error macro in surface_instancing.glsl for fragment shaders.
 mat4 getWorldFromModelMatrix() {
     return object_uniforms_worldFromModelMatrix;
 }
