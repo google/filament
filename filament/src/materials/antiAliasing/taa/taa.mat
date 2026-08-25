@@ -143,6 +143,12 @@ material {
             type : bool,
             name : depthDisocclusion,
             default : false
+        },
+        {
+            // Diagnostic only, not a real rendering mode -- see postProcess() below.
+            type : bool,
+            name : debugVisualizeDisocclusion,
+            default : false
         }
     ],
     variables : [
@@ -766,6 +772,13 @@ void postProcess(inout PostProcessInputs postProcess) {
     // kill the work performed above
     result.a = 1.0;
 #endif
+
+    // Diagnostic only: replaces the real output with the disocclusion rejection mask (white =
+    // history rejected as belonging to a different surface, black = trusted). Toggled via
+    // engine.debug.taa.visualize_disocclusion, not meant to ship.
+    if (materialConstants_debugVisualizeDisocclusion) {
+        result = vec4(vec3(disocclusion), 1.0);
+    }
 
     // store result (which will becomes new history)
     postProcess.color = result;

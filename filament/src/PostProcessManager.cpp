@@ -322,11 +322,13 @@ void PostProcessManager::init() noexcept {
     auto& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
-    //FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     //debugRegistry.registerProperty("d.ssao.sampleCount", &engine.debug.ssao.sampleCount);
     //debugRegistry.registerProperty("d.ssao.spiralTurns", &engine.debug.ssao.spiralTurns);
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
+    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    debugRegistry.registerProperty("d.taa.visualize_disocclusion",
+            &engine.debug.taa.visualize_disocclusion);
 
     mFullScreenQuadRph = engine.getFullScreenRenderPrimitive();
     mFullScreenQuadVbih = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle();
@@ -2975,6 +2977,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "boxClipping", int32_t(taaOptions.boxClipping) },
         { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
         { "depthDisocclusion", taaOptions.depthDisocclusion },
+        { "debugVisualizeDisocclusion", mEngine.debug.taa.visualize_disocclusion },
     });
 }
 

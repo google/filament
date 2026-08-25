@@ -805,6 +805,12 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         struct {
+            // Replaces the TAA output with the depthDisocclusion rejection mask (white where
+            // history is being rejected). Diagnostic only -- see taa.mat's
+            // debugVisualizeDisocclusion constant.
+            bool visualize_disocclusion = false;
+        } taa;
+        struct {
             // When enabled (d.vulkan.debug_utils_names), the Vulkan backend explicitly requests the
             // VK_EXT_debug_utils extension at startup and tracks group markers in the command
             // buffer. It will also name the render passes with the top group marker so they show up
