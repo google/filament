@@ -63,6 +63,10 @@ private:
     bool mIsLDR;
 
 #if defined(__ARM_NEON)
+    template <bool isLinear>
+    static void generateDefaultLUTNeonImpl(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
+    template <bool isLinear>
+    static void generateMediumLUTNeonImpl(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
     static void generateDefaultLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
     static void generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
     static void colorGradingAdjustmentsNeon(
