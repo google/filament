@@ -1243,6 +1243,27 @@ void ViewerGui::updateUserInterface() {
             mSettings.debug.skipFrames = 10;
         }
 
+        ImGui::Checkbox("Frame step", &mSettings.debug.frameStep);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Freezes the image (and animation time) until stepped, so each "
+                              "frame produced by effects like TAA can be inspected on its own.");
+        }
+        if (mSettings.debug.frameStep) {
+            // While stepping, the window keeps showing the last frame that was actually
+            // rendered -- including this UI, which is why the button below stays clickable even
+            // though nothing is being redrawn. ImGui still processes input every iteration; only
+            // presentation is paused.
+            bool step = ImGui::Button("Step one frame");
+            // Space is the convenient way to do it, but must not steal the key from a text field.
+            step = step || (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Space));
+            if (step) {
+                mSettings.debug.frameStepRequested = true;
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled("(or space)");
+            ImGui::SliderFloat("Step size (seconds)",
+                    &mSettings.debug.frameStepDeltaSeconds, 0.0f, 1.0f / 15.0f, "%.4f");
+        }
     }
 
     colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);
