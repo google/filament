@@ -232,7 +232,20 @@ vec4 tonemap(const float w, const vec4 c) {
 
 vec3 untonemap(const vec3 c) {
     const float epsilon = 1.0 / 65504.0;
-    return c * rcp(max(epsilon, 1.0 - max3(c)));
+    // tonemap() maps [0, inf) onto [0, 1), so its inverse is only defined there: it has a pole
+    // at max3(c) == 1 and is meaningless below 0. Callers are meant to hand back a value that
+    // came from tonemap(), but the YCoCg path doesn't: it reconstructs RGB from three
+    // independently-clipped channels and can land outside the gamut (see gamut9min/max below).
+    // Clamping here isn't the fix for that -- it's the guarantee that nothing downstream of
+    // this function can ever see the pole, whatever a caller does.
+    //
+    // Without it, max3(c) slightly over 1 makes 1 - max3(c) negative, the max() floors it at
+    // epsilon, and the reciprocal jumps straight to 65504 -- a pixel of any brightness becomes
+    // a ~65000 firefly, which then overflows the fp16 history buffer to +Inf. The frame after
+    // that, tonemap(Inf) is Inf * rcp(1 + Inf) = Inf * 0 = NaN, and clipToBox()'s "already in
+    // the box" test compares false against NaN, so it returns that history untouched forever.
+    vec3 t = clamp(c, 0.0, 1.0 - epsilon);
+    return t * rcp(max(epsilon, 1.0 - max3(t)));
 }
 
 // tonemap(), gated by the hdr constant -- lets the box operate in tonemapped space (see below)
@@ -608,6 +621,13 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     float confidence = 1.0;
 
+    // The 3x3 neighborhood box in RGB. Every tap is a tonemapped color, so this is guaranteed
+    // to sit inside [0, 1) -- which is what makes it a valid gamut to bring the YCoCg result
+    // back into, further down. Declared out here so it survives the box block, where box9min/
+    // box9max themselves get overwritten with their YCoCg counterparts.
+    vec3 gamut9min = vec3(0.0);
+    vec3 gamut9max = vec3(1.0);
+
     if (materialConstants_filterInput ||
             materialConstants_boxClipping != BOX_CLIPPING_NONE) {
 
@@ -682,6 +702,9 @@ void postProcess(inout PostProcessInputs postProcess) {
         // build the history clamping box
         if (materialConstants_boxClipping != BOX_CLIPPING_NONE) {
             if (materialConstants_useYCoCg) {
+                // remember the RGB box before it's replaced by the YCoCg one
+                gamut9min = box9min;
+                gamut9max = box9max;
                 history.xyz = RGB_YCoCg(history.rgb);
                 filtered.xyz = RGB_YCoCg(filtered.rgb);
                 for (int i = 0; i < 9; i++) {
@@ -765,6 +788,21 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
     if (isHistoryYCoCg) {
         history.rgb = YCoCg_RGB(history.rgb);
+        // The clipping box above is axis-aligned in YCoCg, so its corners are not RGB colors:
+        // clipping can take Y from one tap, Co from another and Cg from a third, and
+        // YCoCg_RGB() then reconstructs a triple outside the gamut every tap was inside of
+        // (r = Y + Co - Cg spans [-1, 2] over a box built from colors in [0, 1]). This is the
+        // same reason deringing is done in RGB above -- but there it only costs a slightly
+        // wrong color, while here the result feeds untonemap(), whose pole at 1 turns an
+        // overshoot of a few percent into a ~65000 firefly. Only strong lights push tonemapped
+        // values close enough to 1 for the overshoot to cross it, which is why this is rare and
+        // erratic rather than a constant, visible offset.
+        //
+        // Clamping to the RGB neighborhood box, rather than to [0, 1), keeps the correction
+        // meaningful instead of merely finite: the box is the same constraint the clipping was
+        // expressing, so no color any tap actually had is rejected, and a pixel that would have
+        // blown up lands on the brightest value present in its own neighborhood.
+        history.rgb = clamp(history.rgb, gamut9min, gamut9max);
     }
 
     // combine history and current frame
