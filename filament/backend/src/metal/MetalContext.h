@@ -58,7 +58,7 @@ class MetalBumpAllocator;
 class MetalRenderTarget;
 class MetalSwapChain;
 class MetalTexture;
-class MetalTimerQueryInterface;
+class MetalTimerQueryImpl;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
 struct MetalVertexBuffer;
@@ -219,11 +219,11 @@ struct MetalContext {
     MTLSharedEventListener* eventListener = nil;
     std::shared_ptr<DriverLifetimeTracker> driverLifetimeTracker;
     // signalId is incremented in the MetalFence constructor, which is called on
-    // both the driver (MetalTimerQueryFence::beginTimeElapsedQuery) and main
+    // both the driver (MetalFence::encode) and main
     // threads (in createFenceS), so an atomic is necessary.
     std::atomic<uint64_t> signalId = 1;
 
-    MetalTimerQueryInterface* timerQueryImpl;
+    MetalTimerQueryImpl* timerQueryImpl;
 
     std::stack<const char*> groupMarkers;
 
