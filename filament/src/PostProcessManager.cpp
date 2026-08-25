@@ -2974,6 +2974,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
         { "boxType", int32_t(taaOptions.boxType) },
         { "boxClipping", int32_t(taaOptions.boxClipping) },
         { "motionAdaptiveHistory", taaOptions.motionAdaptiveHistory },
+        { "depthDisocclusion", taaOptions.depthDisocclusion },
     });
 }
 
@@ -3043,6 +3044,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
     }
 
+    // Same fallback for the depth history: with no history yet, comparing the current depth
+    // against itself (below, in the material) is a no-op disocclusion test, which is what we
+    // want on the first frame (there's nothing to disocclude from).
+    FrameGraphId<FrameGraphTexture> depthHistory = depth;
+    if (UTILS_LIKELY(previous.depth.handle)) {
+        depthHistory = fg.import("TAA depth history", previous.depthDesc,
+                FrameGraphTexture::Usage::SAMPLEABLE, previous.depth);
+    }
+
     mat4 const& historyProjection = previous.color.handle ?
             previous.projection : current.projection;
 
@@ -3050,6 +3060,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> color;
         FrameGraphId<FrameGraphTexture> depth;
         FrameGraphId<FrameGraphTexture> history;
+        FrameGraphId<FrameGraphTexture> depthHistory;
         FrameGraphId<FrameGraphTexture> output;
         FrameGraphId<FrameGraphTexture> tonemappedOutput;
     };
@@ -3063,6 +3074,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
                 data.history = builder.sample(colorHistory);
+                data.depthHistory = builder.sample(depthHistory);
                 data.output = builder.createTexture("TAA output", desc);
                 data.output = builder.write(data.output);
                 if (colorGradingConfig.asSubpass) {
@@ -3095,6 +3107,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 auto const color = resources.getTexture(data.color);
                 auto const depth = resources.getTexture(data.depth);
                 auto const history = resources.getTexture(data.history);
+                auto const depthHistory = resources.getTexture(data.depthHistory);
 
                 auto const& colorDesc = resources.getDescriptor(data.color);
                 auto const& historyDesc = resources.getDescriptor(data.history);
@@ -3113,6 +3126,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+                mi->setParameter("depthHistory", depthHistory, SamplerParams{});  // nearest
                 mi->setParameter("alpha", taaOptions.feedback);
 
                 // jitter is negated here because the material wants the sample jitter offset
@@ -3144,6 +3158,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 mi->setParameter("minBoxStrength", taaOptions.minBoxStrength);
                 mi->setParameter("minAlphaStrength", taaOptions.minAlphaStrength);
                 mi->setParameter("skyDepthThreshold", taaOptions.skyDepthThreshold);
+                mi->setParameter("disocclusionDepthThreshold", taaOptions.disocclusionDepthThreshold);
+                // Same sign convention as "jitter" above. With no depth history yet we compare
+                // the current depth buffer against itself, so the delta must be zero.
+                mi->setParameter("previousJitter",
+                        -(previous.depth.handle ? previous.jitter : current.jitter));
                 mi->setParameter("varianceGamma", taaOptions.varianceGamma);
 
                 mi->commit(driver, getUboManager());
@@ -3185,6 +3204,21 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
             }, [&current](FrameGraphResources const& resources, auto const& data) {
                 resources.detach(data.color, &current.color, &current.desc);
+            });
+
+    // Export this frame's depth the same way, so next frame's disocclusion test (see the taa
+    // material) has something to compare its reprojected depth against. Note this is the
+    // current frame's own depth buffer (the "depth" parameter above, at render resolution),
+    // not the TAA output -- unlike color, there's no post-TAA "depth" to export.
+    struct ExportDepthHistoryData {
+        FrameGraphId<FrameGraphTexture> depth;
+    };
+    fg.addPass<ExportDepthHistoryData>("Export TAA depth history",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                builder.sideEffect();
+                data.depth = builder.sample(depth);
+            }, [&current](FrameGraphResources const& resources, auto const& data) {
+                resources.detach(data.depth, &current.depth, &current.depthDesc);
             });
 
     return input;

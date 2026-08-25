@@ -21,6 +21,12 @@ material {
             name : history
         },
         {
+            type : sampler2d,
+            name : depthHistory,
+            precision: high,
+            filterable: false
+        },
+        {
             type : float,
             name : alpha
         },
@@ -65,6 +71,16 @@ material {
         {
             type : float,
             name : skyDepthThreshold,
+            precision: high
+        },
+        {
+            type : float,
+            name : disocclusionDepthThreshold,
+            precision: high
+        },
+        {
+            type : float2,
+            name : previousJitter,
             precision: high
         },
         {
@@ -122,6 +138,11 @@ material {
             type : bool,
             name : motionAdaptiveHistory,
             default : false
+        },
+        {
+            type : bool,
+            name : depthDisocclusion,
+            default : false
         }
     ],
     variables : [
@@ -163,7 +184,13 @@ fragment {
 #define BOX_CLIPPING_NONE       2
 
 // materialParams.motionDeltaThreshold/minBoxStrength/minAlphaStrength/skyDepthThreshold
-// configure motionAdaptiveHistory -- see Options.h for what each controls.
+// configure motionAdaptiveHistory, and materialParams.disocclusionDepthThreshold configures
+// depthDisocclusion -- see Options.h for what each controls.
+
+// Jitter can move a sample by up to one texel between two frames (+/- half a texel each way),
+// so the depth gradient is scaled by that span to bound how much depth change a jitter-induced
+// coverage flip can explain.
+#define kJitterSpanTexels 2.0
 
 float rcp(float x) {
     return 1.0 / x;
@@ -253,6 +280,7 @@ float motionAmount(const highp vec2 reprojectionDeltaTexels) {
     highp float d = length(reprojectionDeltaTexels) * (1.0 / materialParams.motionDeltaThreshold);
     return saturate(d * d);
 }
+
 
 // clip the (c, h) segment to a box
 vec4 clipToBox(const int quality,
@@ -376,12 +404,18 @@ void postProcess(inout PostProcessInputs postProcess) {
     // destination uv interpolated to pixel center
     highp vec4 uv = variable_vertex;
 
-    // how much history-box clipping / alpha to apply below; default to "fully apply both"
-    // (today's behavior) whenever motionAdaptiveHistory is off, or we have no reprojection delta
-    // to say otherwise. Floored (materialParams.minBoxStrength/minAlphaStrength) so neither ever
-    // fully disengages.
+    // How much history-box clipping / alpha to apply below. 1.0 is the baseline -- full
+    // rejection, the behavior from before either mechanism below existed -- and it stays there
+    // unless motionAdaptiveHistory explicitly relaxes it (floored at
+    // materialParams.minBoxStrength/minAlphaStrength so neither ever fully disengages).
     float historyBoxStrength = 1.0;
     float historyAlphaStrength = 1.0;
+
+    // How confident we are (from the depth-disocclusion check below) that history at this pixel
+    // belongs to a different surface. Also drives a direct correction after box-clipping, since
+    // box-clipping alone can't always reject a stale sample (see where it's used below), and the
+    // debug visualization (engine.debug.taa.visualize_disocclusion).
+    float disocclusion = 0.0;
 
     if (materialConstants_historyReprojection) {
         // read the depth buffer center sample for reprojection
@@ -389,13 +423,15 @@ void postProcess(inout PostProcessInputs postProcess) {
         // reproject history to current frame
         uv.zw = uvToRenderTargetUV(uv.zw);
         highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
-        uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
+        highp float invQW = 1.0 / q.w;
+        uv.zw = (q.xy * invQW) * 0.5 + 0.5;
         uv.zw = uvToRenderTargetUV(uv.zw);
 
-        // Scale history-clamping box strength and alpha by the reprojection delta computed just
-        // above: a near-zero delta means the camera didn't move this pixel, so both are relaxed
-        // (down to their floors) and history is trusted to converge via jittered accumulation
-        // instead of being fought every frame.
+        // motionAdaptiveHistory RELAXES history rejection below full strength when a pixel's
+        // reprojection says the camera didn't move it: a near-zero delta means history is trusted
+        // to converge via jittered accumulation instead of being fought every frame. This is the
+        // only thing allowed to lower either strength below 1.0 -- see the disocclusion block
+        // below, which may only raise them back.
         if (materialConstants_motionAdaptiveHistory) {
             highp vec2 deltaTexels = (uv.zw - uv.xy) * materialParams.colorResolution.xy;
             float rawMotionAmount = motionAmount(deltaTexels);
@@ -407,6 +443,118 @@ void postProcess(inout PostProcessInputs postProcess) {
 
             historyBoxStrength = mix(materialParams.minBoxStrength, 1.0, rawMotionAmount);
             historyAlphaStrength = mix(materialParams.minAlphaStrength, 1.0, rawMotionAmount);
+        }
+
+        if (materialConstants_depthDisocclusion) {
+            // Depth-based history rejection. Catches what the motion delta above can't: a
+            // moving object under a static camera reads as "no motion" to it, but its depth
+            // history stops matching the instant it dis/occludes something.
+            //
+            // Compared in raw reversed-Z space rather than linearized: linear depth blows up
+            // near the far plane (see linearizeDepth()'s preventDiv0 workaround in
+            // depthUtils.fs), while raw depth stays bounded and is already the space
+            // skyDepthThreshold above compares in.
+            //
+            // Compare the current surface, carried into the history frame, against the depth
+            // actually stored there. Both are already in history clip space, so this is a
+            // direct comparison -- no neighborhood, no space conversion, one texture fetch.
+            //
+            // In reversed-Z a LARGER value is closer to the camera, so the sign of the delta
+            // says which of the two cases this is: history holding something nearer (a surface
+            // that was hidden is now visible -- a disocclusion proper), or history holding
+            // something farther (a surface has arrived in front of what used to be here). Both
+            // mean history belongs to a different surface, so the magnitude is what matters --
+            // see below.
+            highp float expectedHistoryDepth = q.z * invQW;
+
+            // The two depth buffers are rasterized with different sub-pixel jitters, so texel c
+            // of each holds a *different* scene sample -- displaced by the inter-frame jitter
+            // delta, which can reach a full texel. The reprojection above is built from the
+            // unjittered projections, which is right for the history COLOR (that is the TAA
+            // output, already resolved to pixel centers) but not for a raw jittered depth
+            // buffer. Left uncorrected, a silhouette straddles the misalignment and reports a
+            // depth change every frame with nothing moving -- flicker on exactly the edges
+            // where a single depth sample is least stable. materialParams.jitter is the sample
+            // offset within a texel, so their difference realigns the two grids. Costs a UV
+            // offset, no extra fetch.
+            highp vec2 jitterCorrection =
+                    (materialParams.jitter - materialParams.previousJitter) *
+                            materialParams.colorResolution.zw;
+            highp vec2 historyDepthUv = uv.zw + jitterCorrection;
+
+            highp float historyDepth = textureLod(materialParams_depthHistory, historyDepthUv, 0.0).r;
+            highp float delta = historyDepth - expectedHistoryDepth;
+
+            // Any depth mismatch counts, not just the strict disocclusion direction (history
+            // holding something nearer, i.e. a surface that was hidden becoming visible). The
+            // opposite case -- a surface arriving in front of what used to be here -- is not a
+            // disocclusion, but its history is just as wrong, and it is what a moving object's
+            // leading edge produces. Reading only the strict direction leaves that edge
+            // uncorrected, and it also fires on just one of the two states a jittered silhouette
+            // alternates between, so it rejects history every other frame and flickers harder
+            // than it fixes.
+            //
+            // At a silhouette a tiny shift of the sample point produces a FULL
+            // surface-to-background jump, so a jitter flip and a real parallax disocclusion have
+            // the same magnitude -- no threshold on magnitude alone can separate them. What
+            // separates them is whether the camera moved: with a static camera a silhouette
+            // mismatch is almost certainly jitter, while under camera motion that history is
+            // genuinely stale and the mismatch is the disocclusion we exist to catch (and edge
+            // flicker is masked by the motion anyway). So the tolerance fades out with camera
+            // motion.
+            //
+            // Note this borrows motionDeltaThreshold, which is documented as a
+            // motionAdaptiveHistory tunable -- it is the same question ("how many texels of
+            // reprojection counts as moving"), but the coupling is worth knowing about.
+            // Depth change over one RENDER texel -- the same units jitter is defined in, which
+            // is what makes it comparable to kJitterSpanTexels.
+            //
+            // Without upscaling the fragment shader runs at render resolution, so the
+            // screen-space derivative is already per render texel and costs nothing. With
+            // upscaling it is not: the shader runs at OUTPUT resolution, so the derivative is
+            // per output pixel, and worse, it aliases -- a 2x2 output quad can sit entirely
+            // inside one render texel, where all four fragments point-sample the same depth and
+            // the derivative collapses to zero. That erases the tolerance exactly at the
+            // silhouettes that need it, in an erratic quad-sized pattern, which is worse than
+            // having no tolerance at all. There the gradient has to be measured against the
+            // depth texture's own texels.
+            highp float depthGradient;
+            if (materialConstants_upscaling) {
+                highp float gl = textureLodOffset(materialParams_depth, uv.xy, 0.0, ivec2(-1,  0)).r;
+                highp float gr = textureLodOffset(materialParams_depth, uv.xy, 0.0, ivec2( 1,  0)).r;
+                highp float gt = textureLodOffset(materialParams_depth, uv.xy, 0.0, ivec2( 0, -1)).r;
+                highp float gb = textureLodOffset(materialParams_depth, uv.xy, 0.0, ivec2( 0,  1)).r;
+                depthGradient = max(max(abs(gr - depth), abs(depth - gl)),
+                                    max(abs(gb - depth), abs(depth - gt)));
+            } else {
+                depthGradient = fwidth(expectedHistoryDepth);
+            }
+
+            highp vec2 reprojectionDeltaTexels =
+                    (uv.zw - uv.xy) * materialParams.colorResolution.xy;
+            highp float jitterExplainable = kJitterSpanTexels * depthGradient *
+                    (1.0 - motionAmount(reprojectionDeltaTexels));
+
+            // Whatever is left after jitter has been accounted for is real evidence that history
+            // belongs to another surface. Subtracted, not used as the smoothstep's upper bound:
+            // it marks where the evidence starts to mean something, not where we are convinced.
+            // (As an upper bound, a silhouette whose delta is half its own gradient still
+            // returned ~0.5 -- half rejection on every flipped edge pixel, every frame.) Ramped
+            // over disocclusionDepthThreshold so the bias toward the current frame stays
+            // proportional to the evidence.
+            highp float evidence = abs(delta) - jitterExplainable;
+            disocclusion = smoothstep(0.0, materialParams.disocclusionDepthThreshold,
+                    max(0.0, evidence));
+
+            // Restore rejection strength toward full where history is disoccluded, but never
+            // reduce it: this signal only ever says "trust history LESS". Folding it into a
+            // shared mix() against the min*Strength floors instead (as this did originally)
+            // silently applied motionAdaptiveHistory's relaxation everywhere disocclusion
+            // reads 0 -- i.e. across almost the whole image -- so merely enabling
+            // depthDisocclusion dropped history rejection to 35% globally and made every
+            // kind of ghosting worse, including cases it has nothing to do with.
+            historyBoxStrength = max(historyBoxStrength, disocclusion);
+            historyAlphaStrength = max(historyAlphaStrength, disocclusion);
         }
     }
 
@@ -556,10 +704,26 @@ void postProcess(inout PostProcessInputs postProcess) {
                 boxmin = max(boxmin, a0 - materialParams.varianceGamma * stdDev);
                 boxmax = min(boxmax, a0 + materialParams.varianceGamma * stdDev);
             }
+
             // history clamping, scaled by how much this pixel's reprojection looks like camera
             // motion (see historyBoxStrength above)
             vec4 clippedHistory = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
             history = mix(history, clippedHistory, historyBoxStrength);
+
+            if (materialConstants_depthDisocclusion) {
+                // clipToBox's ACCURATE mode leaves history untouched whenever it already falls
+                // inside the current frame's local color box (see "don't clip if we're already
+                // in the box" there) -- which is often true right at a moving object's edge: the
+                // box is built from the CURRENT frame's neighborhood, which straddles old
+                // (background) and new (object) color, so a stale background history sample can
+                // look locally plausible even though it's geometrically a different surface.
+                // disocclusion is a geometric signal, independent of color plausibility, so when
+                // it's confident, pull history directly toward this frame's own reconstruction --
+                // otherwise a disoccluded pixel only resolves through the ordinary alpha blend
+                // below (materialParams.alpha, typically ~0.1), fading in over many frames
+                // instead of correcting within one.
+                history = mix(history, filtered, disocclusion);
+            }
         }
     }
 

@@ -2091,6 +2091,25 @@ public class View {
          * correctly translation-invariant under reprojection, so the motion signal alone
          * under-reports disocclusions there */
         public float skyDepthThreshold = 0.001f;
+        /** detect disocclusions -- history that no longer corresponds to the same surface, e.g. an
+         * object uncovering what used to be background -- by reprojecting the current pixel's depth
+         * into the history frame and comparing it against the depth actually stored there last
+         * frame. Catches what motionAdaptiveHistory can't: Filament has no per-object motion
+         * vectors, so a moving object under a static camera reads as "no motion" to that heuristic,
+         * even though its history is instantly wrong the moment it dis/occludes something */
+        public boolean depthDisocclusion = false;
+        /** reversed-Z depth difference, between the current pixel's depth reprojected into the
+         * history frame and the depth actually stored there last frame, above which history is
+         * considered to belong to a different surface and history-clamping box/feedback strength is
+         * scaled back up to full, same as high measured motion */
+        public float disocclusionDepthThreshold = 0.001f;
+        /** how far outside the neighborhood color box (measured in box widths) a history sample may
+         * sit before motionAdaptiveHistory's relaxation is overridden and full rejection strength is
+         * restored. Distinguishes the spatial noise that relaxation exists to preserve (a fraction
+         * of a box width out) from a stale history sample that no longer belongs at this pixel at
+         * all (many box widths out), such as a moving object's silhouette blend left behind on
+         * pixels that are now interior -- which depthDisocclusion cannot catch, since the surface
+         * and its depth are unchanged there. Only has an effect when motionAdaptiveHistory is on */
     }
 
     /**

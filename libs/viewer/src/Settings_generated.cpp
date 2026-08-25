@@ -864,6 +864,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->minAlphaStrength);
         } else if (compare(tok, jsonChunk, "skyDepthThreshold") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->skyDepthThreshold);
+        } else if (compare(tok, jsonChunk, "depthDisocclusion") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->depthDisocclusion);
+        } else if (compare(tok, jsonChunk, "disocclusionDepthThreshold") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->disocclusionDepthThreshold);
         } else {
             slog.w << "Invalid TemporalAntiAliasingOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -898,7 +902,9 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"motionDeltaThreshold\": " << (in.motionDeltaThreshold) << ",\n"
         << "\"minBoxStrength\": " << (in.minBoxStrength) << ",\n"
         << "\"minAlphaStrength\": " << (in.minAlphaStrength) << ",\n"
-        << "\"skyDepthThreshold\": " << (in.skyDepthThreshold) << "\n"
+        << "\"skyDepthThreshold\": " << (in.skyDepthThreshold) << ",\n"
+        << "\"depthDisocclusion\": " << to_string(in.depthDisocclusion) << ",\n"
+        << "\"disocclusionDepthThreshold\": " << (in.disocclusionDepthThreshold) << "\n"
         << "}";
 }
 

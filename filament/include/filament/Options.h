@@ -653,6 +653,19 @@ struct TemporalAntiAliasingOptions {
      * correctly translation-invariant under reprojection, so the motion signal alone
      * under-reports disocclusions there */
     float skyDepthThreshold = 0.001f;
+
+    /** detect disocclusions -- history that no longer corresponds to the same surface, e.g. an
+     * object uncovering what used to be background -- by reprojecting the current pixel's depth
+     * into the history frame and comparing it against the depth actually stored there last
+     * frame. Catches what motionAdaptiveHistory can't: Filament has no per-object motion
+     * vectors, so a moving object under a static camera reads as "no motion" to that heuristic,
+     * even though its history is instantly wrong the moment it dis/occludes something */
+    bool depthDisocclusion = false;
+    /** reversed-Z depth difference, between the current pixel's depth reprojected into the
+     * history frame and the depth actually stored there last frame, above which history is
+     * considered to belong to a different surface and history-clamping box/feedback strength is
+     * scaled back up to full, same as high measured motion */
+    float disocclusionDepthThreshold = 0.001f;
 };
 
 /**

@@ -853,6 +853,8 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderFloat("Min Box Strength", &mSettings.view.taa.minBoxStrength, 0.0f, 1.0f);
         ImGui::SliderFloat("Min Alpha Strength", &mSettings.view.taa.minAlphaStrength, 0.0f, 1.0f);
         ImGui::SliderFloat("Sky Depth Threshold", &mSettings.view.taa.skyDepthThreshold, 0.0f, 0.01f);
+        ImGui::Checkbox("Depth Disocclusion", &mSettings.view.taa.depthDisocclusion);
+        ImGui::SliderFloat("Disocclusion Depth Threshold", &mSettings.view.taa.disocclusionDepthThreshold, 0.0f, 0.01f);
         ImGui::SliderFloat("RCAS", &mSettings.view.taa.sharpness, 0.0f, 1.0f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
         mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;
@@ -1238,6 +1240,7 @@ void ViewerGui::updateUserInterface() {
         if (ImGui::Button("Skip 10 frames")) {
             mSettings.debug.skipFrames = 10;
         }
+
     }
 
     colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);

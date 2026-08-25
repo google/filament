@@ -150,6 +150,8 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("minBoxStrength", &View::TemporalAntiAliasingOptions::minBoxStrength)
     .field("minAlphaStrength", &View::TemporalAntiAliasingOptions::minAlphaStrength)
     .field("skyDepthThreshold", &View::TemporalAntiAliasingOptions::skyDepthThreshold)
+    .field("depthDisocclusion", &View::TemporalAntiAliasingOptions::depthDisocclusion)
+    .field("disocclusionDepthThreshold", &View::TemporalAntiAliasingOptions::disocclusionDepthThreshold)
     ;
 
 value_object<View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOptions")

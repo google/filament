@@ -173,6 +173,8 @@ Filament.loadGeneratedExtensions = function() {
             minBoxStrength: 0.35,
             minAlphaStrength: 0.5,
             skyDepthThreshold: 0.001,
+            depthDisocclusion: false,
+            disocclusionDepthThreshold: 0.001,
         };
         return Object.assign(options, overrides);
     };

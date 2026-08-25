@@ -34,6 +34,8 @@ struct FrameHistoryEntry {
     struct TemporalAA{
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
+        FrameGraphTexture depth;
+        FrameGraphTexture::Descriptor depthDesc;
         math::mat4 projection;     // world space to clip space
         math::float2 jitter{};
         uint32_t frameId = 0;   // used for halton sequence
