@@ -3047,11 +3047,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
     }
 
-    // Same fallback for the depth history: with no history yet, comparing the current depth
+    // Same fallback for the depth history: with no history yet -- either the first frame, or
+    // the first frame after depthDisocclusion was turned on -- comparing the current depth
     // against itself (below, in the material) is a no-op disocclusion test, which is what we
-    // want on the first frame (there's nothing to disocclude from).
+    // want when there's nothing to disocclude from.
+    //
+    // Keeping the depth history is only free when it isn't kept: detaching a texture takes it
+    // out of the frame graph's pool, so it can't be recycled and the depth buffer is
+    // effectively double-buffered for as long as this is on. Skip all of it when the feature
+    // is off, which is the default.
     FrameGraphId<FrameGraphTexture> depthHistory = depth;
-    if (UTILS_LIKELY(previous.depth.handle)) {
+    if (taaOptions.depthDisocclusion && UTILS_LIKELY(previous.depth.handle)) {
         depthHistory = fg.import("TAA depth history", previous.depthDesc,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.depth);
     }
@@ -3213,16 +3219,23 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     // material) has something to compare its reprojected depth against. Note this is the
     // current frame's own depth buffer (the "depth" parameter above, at render resolution),
     // not the TAA output -- unlike color, there's no post-TAA "depth" to export.
-    struct ExportDepthHistoryData {
-        FrameGraphId<FrameGraphTexture> depth;
-    };
-    fg.addPass<ExportDepthHistoryData>("Export TAA depth history",
-            [&](FrameGraph::Builder& builder, auto& data) {
-                builder.sideEffect();
-                data.depth = builder.sample(depth);
-            }, [&current](FrameGraphResources const& resources, auto const& data) {
-                resources.detach(data.depth, &current.depth, &current.depthDesc);
-            });
+    //
+    // Only while depthDisocclusion is on: this pass is a sideEffect() so it can never be
+    // culled, and the detach() below costs a depth buffer's worth of memory that the frame
+    // graph can no longer recycle. When the feature is turned off, current.depth stays null
+    // and the last exported texture is released as it rolls off the history.
+    if (taaOptions.depthDisocclusion) {
+        struct ExportDepthHistoryData {
+            FrameGraphId<FrameGraphTexture> depth;
+        };
+        fg.addPass<ExportDepthHistoryData>("Export TAA depth history",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    builder.sideEffect();
+                    data.depth = builder.sample(depth);
+                }, [&current](FrameGraphResources const& resources, auto const& data) {
+                    resources.detach(data.depth, &current.depth, &current.depthDesc);
+                });
+    }
 
     return input;
 }

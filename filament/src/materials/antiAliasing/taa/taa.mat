@@ -483,6 +483,13 @@ void postProcess(inout PostProcessInputs postProcess) {
             // where a single depth sample is least stable. materialParams.jitter is the sample
             // offset within a texel, so their difference realigns the two grids. Costs a UV
             // offset, no extra fetch.
+            //
+            // colorResolution, NOT historyResolution: jitter is expressed in render-resolution
+            // texels and the depth buffers are at render resolution, while historyResolution is
+            // the history COLOR, which under upscaling is the larger output resolution. uv.zw is
+            // a normalized UV so it addresses either correctly, which is what makes this easy to
+            // get wrong -- substituting historyResolution here still compiles and still looks
+            // right at 1:1, and is off by the upscaling factor everywhere else.
             highp vec2 jitterCorrection =
                     (materialParams.jitter - materialParams.previousJitter) *
                             materialParams.colorResolution.zw;
