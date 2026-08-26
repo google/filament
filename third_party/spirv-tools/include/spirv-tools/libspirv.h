@@ -337,6 +337,9 @@ typedef enum spv_operand_type_t {
   SPV_OPERAND_TYPE_OPTIONAL_CAPABILITY,
   SPV_OPERAND_TYPE_VARIABLE_CAPABILITY,
 
+  // SPV_QCOM_image_processing3
+  SPV_OPERAND_TYPE_GATHER_MODES,
+
   // This is a sentinel value, and does not represent an operand type.
   // It should come last.
   SPV_OPERAND_TYPE_NUM_OPERAND_TYPES,
@@ -361,10 +364,12 @@ typedef enum spv_ext_inst_type_t {
   SPV_EXT_INST_TYPE_DEBUGINFO,
   SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100,
   SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
+  SPV_EXT_INST_TYPE_NONSEMANTIC_GRAPH_DEBUGINFO,
   SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100,
   SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION,
   SPV_EXT_INST_TYPE_TOSA_001000_1,
   SPV_EXT_INST_TYPE_ARM_MOTION_ENGINE_100,
+  SPV_EXT_INST_TYPE_ARM_EXPERIMENTAL_ML_OPERATIONS,
 
   // Multiple distinct extended instruction set types could return this
   // value, if they are prefixed with NonSemantic. and are otherwise
@@ -396,6 +401,11 @@ typedef enum spv_fp_encoding_t {
   SPV_FP_ENCODING_BFLOAT16,
   SPV_FP_ENCODING_FLOAT8_E4M3,
   SPV_FP_ENCODING_FLOAT8_E5M2,
+  SPV_FP_ENCODING_FLOAT6_E2M3,
+  SPV_FP_ENCODING_FLOAT6_E3M2,
+  SPV_FP_ENCODING_FLOAT4_E2M1,
+  SPV_FP_ENCODING_FLOAT8_UNSIGNED_E8M0,
+  SPV_FP_ENCODING_MXINT8,
 } spv_fp_encoding_t;
 
 typedef enum spv_text_to_binary_options_t {
@@ -426,6 +436,9 @@ typedef enum spv_binary_to_text_options_t {
   // Reorder blocks to match the structured control flow of SPIR-V to increase
   // readability.
   SPV_BINARY_TO_TEXT_OPTION_REORDER_BLOCKS = SPV_BIT(9),
+  // Handle unknown opcodes and unknown extended instruction numbers by emitting
+  // them as OpUnknown instructions with raw integer operands.
+  SPV_BINARY_TO_TEXT_OPTION_HANDLE_UNKNOWN_OPCODES = SPV_BIT(10),
   SPV_FORCE_32_BIT_ENUM(spv_binary_to_text_options_t)
 } spv_binary_to_text_options_t;
 
@@ -775,6 +788,24 @@ SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetAllowVulkan32BitBitwise(
 SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetFriendlyNames(
     spv_validator_options options, bool val);
 
+// Sets custom size and alignment for buffer and acceleration structure
+// descriptor heap resources.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetBufferDescriptorLayout(
+    spv_validator_options options, uint32_t size, uint32_t alignment);
+
+// Sets custom size and alignment for image and sampled image descriptor heap
+// resources.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetImageDescriptorLayout(
+    spv_validator_options options, uint32_t size, uint32_t alignment);
+
+// Sets custom size and alignment for sampler descriptor heap resources.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetSamplerDescriptorLayout(
+    spv_validator_options options, uint32_t size, uint32_t alignment);
+
+// Sets custom size and alignment for tensor descriptor heap resources.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetTensorDescriptorLayout(
+    spv_validator_options options, uint32_t size, uint32_t alignment);
+
 // Creates an optimizer options object with default options. Returns a valid
 // options object. The object remains valid until it is passed into
 // |spvOptimizerOptionsDestroy|.
@@ -1004,8 +1035,8 @@ SPIRV_TOOLS_EXPORT spv_result_t spvBinaryParse(
 // The optimizer interface.
 
 // A pointer to a function that accepts a log message from an optimizer.
-typedef void (*spv_message_consumer)(
-    spv_message_level_t, const char*, const spv_position_t*, const char*);
+typedef void (*spv_message_consumer)(spv_message_level_t, const char*,
+                                     const spv_position_t*, const char*);
 
 // Creates and returns an optimizer object.  This object must be passed to
 // optimizer APIs below and is valid until passed to spvOptimizerDestroy.

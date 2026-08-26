@@ -42,7 +42,8 @@ spv_result_t ValidateRayQueryPointer(ValidationState_t& _,
   const auto var_opcode = variable->opcode();
   if (!variable || (var_opcode != spv::Op::OpVariable &&
                     var_opcode != spv::Op::OpFunctionParameter &&
-                    var_opcode != spv::Op::OpAccessChain)) {
+                    var_opcode != spv::Op::OpAccessChain &&
+                    var_opcode != spv::Op::OpInBoundsAccessChain)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Ray Query must be a memory object declaration";
   }
@@ -96,6 +97,13 @@ spv_result_t RayQueryPass(ValidationState_t& _, const Instruction* inst) {
       if (!_.IsIntScalarType(ray_flags, 32)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Ray Flags must be a 32-bit int scalar";
+      }
+
+      if (!_.CheckForceOpacityMicromap2StateKHRCapabilityRequirement(inst, 2)) {
+        return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+               << "The ForceOpacityMicromap2StateKHR flag requires the "
+                  "RayTracingOpacityMicromapKHR and RayQueryKHR or "
+                  "RayTracingKHR capabilities";
       }
 
       const uint32_t cull_mask = _.GetOperandTypeId(inst, 3);
@@ -350,6 +358,26 @@ spv_result_t RayQueryPass(ValidationState_t& _, const Instruction* inst) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "expected Result Type to be Boolean "
                   "scalar type";
+      }
+
+      break;
+    }
+
+    // SPV_KHR_ray_tracing_position_fetch
+    case spv::Op::OpRayQueryGetIntersectionTriangleVertexPositionsKHR: {
+      if (auto error = ValidateRayQueryPointer(_, inst, 2)) return error;
+      if (auto error = ValidateIntersectionId(_, inst, 3)) return error;
+
+      auto result_id = _.FindDef(result_type);
+      if ((result_id->opcode() != spv::Op::OpTypeArray) ||
+          (GetArrayLength(_, result_id) != 3) ||
+          !_.IsFloatVectorType(_.GetComponentType(result_type)) ||
+          _.GetDimension(_.GetComponentType(result_type)) != 3 ||
+          _.GetBitWidth(_.GetComponentType(result_type)) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 3 element array of 32-bit 3 component float point "
+                  "vector as Result Type: "
+               << spvOpcodeString(opcode);
       }
 
       break;

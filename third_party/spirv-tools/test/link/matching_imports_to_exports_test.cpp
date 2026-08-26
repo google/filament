@@ -234,6 +234,39 @@ OpDecorate %1 LinkageAttributes "foo" Export
   }
 }
 
+TEST_F(MatchingImportsToExports, MultipleDefinitionsNoImport) {
+  // Two modules export the same symbol but nothing imports it.
+  // The linker must still reject this as a duplicate strong definition.
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Export
+%2 = OpTypeFloat 32
+%3 = OpConstant %2 42
+%1 = OpVariable %2 Uniform %3
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Export
+%2 = OpTypeFloat 32
+%3 = OpConstant %2 -1
+%1 = OpVariable %2 Uniform %3
+)";
+
+  spvtest::Binary linked_binary;
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+            AssembleAndLink({body1, body2}, &linked_binary))
+      << GetErrorMessage();
+  EXPECT_THAT(GetErrorMessage(),
+              HasSubstr("Too many external references, 2, were found "
+                        "for \"foo\"."));
+}
+
 TEST_F(MatchingImportsToExports, SameNameDifferentTypes) {
   const std::string body1 = R"(
 OpCapability Linkage

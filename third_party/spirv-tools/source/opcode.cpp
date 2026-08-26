@@ -123,6 +123,7 @@ int32_t spvOpcodeIsSpecConstant(const spv::Op opcode) {
     case spv::Op::OpSpecConstantArchitectureINTEL:
     case spv::Op::OpSpecConstantTargetINTEL:
     case spv::Op::OpSpecConstantCapabilitiesINTEL:
+    case spv::Op::OpSpecConstantDataKHR:
       return true;
     default:
       return false;
@@ -154,6 +155,8 @@ int32_t spvOpcodeIsConstant(const spv::Op opcode) {
     case spv::Op::OpSpecConstantTargetINTEL:
     case spv::Op::OpSpecConstantCapabilitiesINTEL:
     case spv::Op::OpConstantSizeOfEXT:
+    case spv::Op::OpConstantDataKHR:
+    case spv::Op::OpSpecConstantDataKHR:
       return true;
     default:
       return false;
@@ -161,18 +164,8 @@ int32_t spvOpcodeIsConstant(const spv::Op opcode) {
 }
 
 bool spvOpcodeIsConstantOrUndef(const spv::Op opcode) {
-  return opcode == spv::Op::OpUndef || spvOpcodeIsConstant(opcode);
-}
-
-bool spvOpcodeIsScalarSpecConstant(const spv::Op opcode) {
-  switch (opcode) {
-    case spv::Op::OpSpecConstantTrue:
-    case spv::Op::OpSpecConstantFalse:
-    case spv::Op::OpSpecConstant:
-      return true;
-    default:
-      return false;
-  }
+  return opcode == spv::Op::OpUndef || opcode == spv::Op::OpPoisonKHR ||
+         spvOpcodeIsConstant(opcode);
 }
 
 int32_t spvOpcodeIsComposite(const spv::Op opcode) {
@@ -400,6 +393,7 @@ bool spvOpcodeIsAbort(spv::Op opcode) {
     case spv::Op::OpTerminateRayKHR:
     case spv::Op::OpIgnoreIntersectionKHR:
     case spv::Op::OpEmitMeshTasksEXT:
+    case spv::Op::OpAbortKHR:
       return true;
     default:
       return false;
