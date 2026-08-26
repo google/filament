@@ -21,6 +21,8 @@
 #include <utils/Log.h>
 
 #include <cstring>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 using namespace utils;
@@ -35,14 +37,24 @@ public:
 };
 
 class MessageReceiver : public CivetWebSocketHandler {
-   public:
-    MessageReceiver(RemoteServer* server) : mServer(server) {}
-    ~MessageReceiver() { delete mReceivedMessage; }
-    bool handleData(CivetServer* server, struct mg_connection*, int, char* , size_t) override;
-   private:
+public:
+    MessageReceiver(RemoteServer* server)
+            : mServer(server) {}
+    ~MessageReceiver();
+    bool handleData(CivetServer* server, struct mg_connection*, int, char*, size_t) override;
+    void handleClose(CivetServer*, const struct mg_connection*) override;
+
+private:
+    struct ConnectionState {
+        std::vector<char> chunk;
+        ReceivedMessage* receivedMessage = nullptr;
+    };
+
+    void discard(ConnectionState& state);
+
     RemoteServer* mServer;
-    std::vector<char> mChunk;
-    ReceivedMessage* mReceivedMessage = nullptr;
+    std::mutex mConnectionsMutex;
+    std::unordered_map<const mg_connection*, ConnectionState> mConnections;
 };
 
 RemoteServer::RemoteServer(int port) {
@@ -76,8 +88,14 @@ RemoteServer::~RemoteServer() {
 }
 
 char const * RemoteServer::peekIncomingLabel() const {
+    static thread_local std::string label;
     std::lock_guard lock(mReceivedMessagesMutex);
-    return mIncomingMessage ? mIncomingMessage->label : nullptr;
+    if (mIncomingMessage == nullptr) {
+        label.clear();
+        return nullptr;
+    }
+    label = mIncomingMessage->label;
+    return label.c_str();
 }
 
 ReceivedMessage const * RemoteServer::peekReceivedMessage() const {
@@ -117,6 +135,13 @@ ReceivedMessage const * RemoteServer::acquireReceivedMessage() {
 void RemoteServer::setIncomingMessage(ReceivedMessage* message) {
     std::lock_guard lock(mReceivedMessagesMutex);
     mIncomingMessage = message;
+}
+
+void RemoteServer::clearIncomingMessage(ReceivedMessage const* message) {
+    std::lock_guard lock(mReceivedMessagesMutex);
+    if (mIncomingMessage == message) {
+        mIncomingMessage = nullptr;
+    }
 }
 
 void RemoteServer::enqueueReceivedMessage(ReceivedMessage* message) {
@@ -166,17 +191,44 @@ void RemoteServer::sendMessage(const char* label, const char* buffer, size_t buf
     mMessageSender->sendMessage(label, buffer, bufsize);
 }
 
-// NOTE: This is invoked off the main thread.
+MessageReceiver::~MessageReceiver() {
+    for (auto& [conn, state]: mConnections) {
+        discard(state);
+    }
+}
+
+void MessageReceiver::discard(ConnectionState& state) {
+    if (state.receivedMessage) {
+        mServer->clearIncomingMessage(state.receivedMessage);
+        mServer->releaseReceivedMessage(state.receivedMessage);
+        state.receivedMessage = nullptr;
+    }
+}
+
+void MessageReceiver::handleClose(CivetServer*, const struct mg_connection* conn) {
+    std::lock_guard lock(mConnectionsMutex);
+    auto iter = mConnections.find(conn);
+    if (iter == mConnections.end()) {
+        return;
+    }
+    discard(iter->second);
+    mConnections.erase(iter);
+}
+
+// NOTE: This is invoked off the main thread and can run concurrently for different connections.
 bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn, int bits,
-                                  char* data, size_t size) {
+        char* data, size_t size) {
     const bool final = bits & 0x80;
     const int opcode = bits & 0xf;
     if (opcode == MG_WEBSOCKET_OPCODE_CONNECTION_CLOSE) {
         return true;
     }
 
+    std::lock_guard lock(mConnectionsMutex);
+    ConnectionState& state = mConnections[conn];
+
     // Append this frame to the aggregated chunk.
-    mChunk.insert(mChunk.end(), data, data + size);
+    state.chunk.insert(state.chunk.end(), data, data + size);
 
     // If this message part still has outstanding frames, return early.
     if (!final) {
@@ -184,25 +236,27 @@ bool MessageReceiver::handleData(CivetServer* server, struct mg_connection* conn
     }
 
     // Part 1 of the message is the label.
-    if (mReceivedMessage == nullptr) {
-        mReceivedMessage = new ReceivedMessage({});
-        mReceivedMessage->label = new char[mChunk.size() + 1]{};
-        memcpy(mReceivedMessage->label, mChunk.data(), mChunk.size());
-        mServer->setIncomingMessage(mReceivedMessage);
-        mChunk.clear();
+    if (state.receivedMessage == nullptr) {
+        state.receivedMessage = new ReceivedMessage({});
+        state.receivedMessage->label = new char[state.chunk.size() + 1]{};
+        memcpy(state.receivedMessage->label, state.chunk.data(), state.chunk.size());
+        mServer->setIncomingMessage(state.receivedMessage);
+        state.chunk.clear();
         return true;
     }
 
     // Part 2 of the message is the buffer.
-    auto message = mReceivedMessage;
-    message->bufferByteCount = mChunk.size();
+    auto message = state.receivedMessage;
+    message->bufferByteCount = state.chunk.size();
     message->buffer = new char[message->bufferByteCount];
-    memcpy(message->buffer, mChunk.data(), message->bufferByteCount);
-    mChunk.clear();
+    if (message->bufferByteCount) {
+        memcpy(message->buffer, state.chunk.data(), message->bufferByteCount);
+    }
+    state.chunk.clear();
 
     // We have all parts, so go ahead and enqueue the incoming message.
-    mServer->enqueueReceivedMessage(mReceivedMessage);
-    mReceivedMessage = nullptr;
+    mServer->enqueueReceivedMessage(message);
+    state.receivedMessage = nullptr;
     return true;
 }
 
