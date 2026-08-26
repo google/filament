@@ -29,10 +29,15 @@
 {% set prefix = Prefix.lower() %}
 #include "dawn/{{prefix}}_proc.h"
 
+#include <algorithm>
+
+#include "dawn/dawn_version.h"
+
 // The sanitizer is disabled for calls to procs.* since those functions may be
 // dynamically loaded.
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Log.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
 
 // A fake wgpuCreateInstance that prints a warning so folks know that they are using dawn_procs and
 // should either use a different target to link against, or call dawnProcSetProcs.
@@ -47,6 +52,7 @@ WGPUInstance CreateInstanceThatWarns(const WGPUInstanceDescriptor* desc) {
 
 constexpr {{Prefix}}ProcTable MakeNullProcTable() {
     {{Prefix}}ProcTable procs = {};
+    std::ranges::copy(dawn::kDawnVersion, procs.version);
     procs.createInstance = CreateInstanceThatWarns;
     return procs;
 }
@@ -56,10 +62,16 @@ static {{Prefix}}ProcTable procs = MakeNullProcTable();
 
 void {{prefix}}ProcSetProcs(const {{Prefix}}ProcTable* procs_) {
     if (procs_) {
+        // Verify that the proc table version matches our version, otherwise crash.
+        DAWN_CHECK(std::ranges::equal(procs_->version, dawn::kDawnVersion));
         procs = *procs_;
     } else {
         procs = kNullProcs;
     }
+}
+
+const uint8_t* {{prefix}}ProcGetVersion() {
+    return dawn::kDawnVersion.data();
 }
 
 {% for function in by_category["function"] %}

@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_BUFFERWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_BUFFERWGPU_H_
 
-#include "dawn/native/Buffer.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
+#include "src/dawn/native/Buffer.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 
@@ -55,13 +55,15 @@ class Buffer final : public BufferBase, public RecordableObject, public ObjectWG
     MaybeError FinalizeMapImpl(BufferState newState) override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointerImpl() override;
+    Span<std::byte> GetMappedRangeImpl(size_t offset, size_t size) override;
     void DestroyImpl(DestroyReason reason) override;
     void SetLabelImpl() override;
 
     MaybeError AddContentToCapture(CaptureContext& captureContext);
 
-    raw_ptr<void> mMappedData = nullptr;
+    // TODO(https://crbug.com/526537224): Use RawSpan.
+    Span<std::byte> mMappedData;
+    size_t mMappedDataOffsetInBuffer = 0u;
     bool mNeedsCapture = true;
 };
 

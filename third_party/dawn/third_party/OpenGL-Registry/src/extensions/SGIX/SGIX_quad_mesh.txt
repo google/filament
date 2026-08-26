@@ -1,0 +1,182 @@
+XXX - Not complete yet!!!
+Name
+
+    SGIX_quad_mesh
+
+Name Strings
+
+    GL_SGIX_quad_mesh
+
+Version
+
+    $Date: 1997/02/21 17:32:24 $ $Revision: 1.2 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    No extensions are required.
+    OpenGL 1.1 and EXT_vertex_array affect the definition of this extension.
+
+Overview
+
+    This extension adds two primitive types, the quadrilateral mesh and the
+    line mesh.
+
+    For datasets representing from manifold surfaces, such as NURBS surfaces
+    and most triangular databases, quadrilateral meshes reduce the number of
+    vertices which must be transferred from the host to the graphics hardware
+    by up to fifty percent.  This also reduces by fifty percent the number of
+    vertices which must be clipped and lit.
+
+    Quad and line meshes also reduce by half the number of vertices which must
+    be transformed and lit.
+
+Issues
+
+    * Kurt: The issue in the past has been the required intermediate storage.
+    Your spec seems to require that implementations be able to store at least
+    512 vertexes.  I wonder how you arrived at this number.
+
+    Matt: I chose this number primary because it is large enough that
+    applications are unlikely to have quad-mesh datasets larger than this
+    size.  I wanted to avoid forcing applications to carve up their quad mesh
+    data in hardware-specific ways, and instead allow the implementation to
+    make the decision about optimal mesh width.
+
+    I was also careful to minimize the amount of state.  Note that a naive
+    implementation that just wants to draw the quad mesh as a bunch of
+    independent quads only needs to amount of state listed in the spec.
+    Every time glVertex is then called, one new quad is drawn.
+    
+    * Kurt: Is it implementable on all current SGI platforms?  
+
+    Matt: If it is implemented as drawing independent quads, then yes.  On
+    platforms where you really want to take advantage of the fact that you can
+    light and xform the shared vertices only once, you may need to carve up
+    the quad mesh into smaller pieces on the host (or ge).  to do that, you
+    will need more implementation-private state.
+
+New Procedures and Functions
+
+    void MeshBreadthSGIX(int breadth);
+
+    void MeshStrideSGIX(int stride);
+
+New Tokens
+
+    Accepted by the <mode> parameter of Begin, and 
+    also accepted by the <mode> parameter of DrawArrays:
+
+	QUAD_MESH_SGIX	     0x????
+	LINE_MESH_SGIX	     0x????
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+  Append to section 2.6.1 (Begin and End Objects):
+
+    Quad meshes and line meshes use an auxilliary function, MeshBreadthSGIX to
+    define GL state which affects the quads and lines drawn by these
+    primitives.  The <breadth> parameter to MeshBreadthSGIX is used in the
+    descriptions of quad meshes and line meshes below.  
+
+    Quadrilateral (quad) meshes:
+
+    Quad meshes efficiently generate a series of quads in a regular grid.
+    Given n input vertices to the quad mesh, the last n mod <breadth> vertices
+    are ignored completely.  Let length = (n - (n mod <breadth>)) / <breadth>,
+    and consider all j = 0,1,2,<breadth>*length-1.  A quad is drawn for four
+    vertices v_j-<breadth>-1, v_j-<breadth>, v_j, v_j-1 for all j such that j
+    mod <breadth> != 0 and j >= <breadth>.  The order in which the quads
+    within a quad mesh are drawn is intentionally left completely undefined.
+
+    Line meshes:
+
+    Line meshes efficiently generate a series of lines in a regular grid.
+    Given n input vertices to the line mesh, the last n mod <breadth> vertices
+    are ignored completely.  Let length = (n - (n mod <breadth>)) / <breadth>,
+    and consider all j = 0,1,2,<breadth>*length-1.  A line is drawn between
+    vertex v_j-1 and v_j for all j such that j mod <breadth> != 0.  A line is
+    drawn between vertex v_j-<breadth> and v_j for all j such that j >=
+    <breadth>.  The order in which the lines within a line mesh are drawn is
+    intentionally left completely undefined.
+
+  Append to section 2.8 (Vertex Arrays) entry for DrawArrays:
+
+    The order in which the quads or lines within a quad mesh or line mesh are
+    drawn is intentionally left completely undefined.  They may be rendered in
+    any order convenient for the implementation.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    XXX - Not figured out yet.
+
+Dependencies on OpenGL 1.1
+Dependencies on EXT_vertex_array
+
+    If neither OpenGL 1.1 nor EXT_vertex_array are present, then the following
+    should be omited:
+	all references to MeshStrideSGIX,
+	all references to DrawArrays.
+
+Errors
+
+    INVALID_VALUE is generated if MeshBreadthSGIX parameter <breadth> is
+    zero or negative.
+
+    INVALID_OPERATION is generated if MeshBreadthSGIX is executed between the
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+  Replace beginning of table 6.4:  GL Internal begin-end state variables (inaccessible)
+
+    Get Value				Get Command	Type	Value	Attrib	Description
+    ---------				-----------	----	-------	------  -----------
+							Z_13	0		When != 0, indicates begin/end object
+
+  Append to table 6.4:  GL Internal begin-end state variables (inaccessible)
+
+    Get Value				Get Command	Type	Value	Attrib	Description
+    ---------				-----------	----	-------	------  -----------
+							513*XV			MAX_MESH_BREADTH + 1 vertices.
+										First entries are from current row.
+										Last entries are from previous row.
+							Z512*	0		Number of vertices accumulated for
+										current row of mesh in the array above.
+							B	0		True if not in first row of quad mesh.
+
+  Append to table 6.5:  Current Values and Associated Data
+
+    Get Value				Get Command	Type	Value	Attrib	Description
+    ---------				-----------	----	-------	------  -----------
+    MESH_BREADTH			glGetIntegerv	Z+	2	current	Breadth of quad and line meshes
+
+New Implementation Dependent State
+
+    Get Value				Get Command	Type	Value	Attrib
+    ---------				-----------	----	-------	------
+    MAX_MESH_BREADTH			glGetIntegerv	Z+	512*

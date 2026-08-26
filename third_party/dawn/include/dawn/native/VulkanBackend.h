@@ -75,8 +75,8 @@ struct ExternalImageExportInfoVk : ExternalImageExportInfo {
   public:
     // See comments in |ExternalImageDescriptorVk|
     // Contains the old/new layouts used in the queue release operation.
-    VkImageLayout releasedOldLayout;
-    VkImageLayout releasedNewLayout;
+    VkImageLayout releasedOldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageLayout releasedNewLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
   protected:
     using ExternalImageExportInfo::ExternalImageExportInfo;
@@ -91,7 +91,7 @@ struct ExternalImageExportInfoVk : ExternalImageExportInfo {
 // caller can assume the FD is always consumed.
 struct DAWN_NATIVE_EXPORT ExternalImageDescriptorFD : ExternalImageDescriptorVk {
   public:
-    int memoryFD;              // A file descriptor from an export of the memory of the image
+    int memoryFD = -1;         // A file descriptor from an export of the memory of the image
     std::vector<int> waitFDs;  // File descriptors of semaphores which will be waited on
 
   protected:
@@ -102,14 +102,14 @@ struct DAWN_NATIVE_EXPORT ExternalImageDescriptorFD : ExternalImageDescriptorVk 
 struct DAWN_NATIVE_EXPORT ExternalImageDescriptorOpaqueFD : ExternalImageDescriptorFD {
     ExternalImageDescriptorOpaqueFD();
 
-    VkDeviceSize allocationSize;  // Must match VkMemoryAllocateInfo from image creation
-    uint32_t memoryTypeIndex;     // Must match VkMemoryAllocateInfo from image creation
+    VkDeviceSize allocationSize = 0;  // Must match VkMemoryAllocateInfo from image creation
+    uint32_t memoryTypeIndex = 0;     // Must match VkMemoryAllocateInfo from image creation
 };
 
 // The plane-wise offset and stride.
 struct DAWN_NATIVE_EXPORT PlaneLayout {
-    uint64_t offset;
-    uint32_t stride;
+    uint64_t offset = 0;
+    uint32_t stride = 0;
 };
 
 // Descriptor for dma-buf file descriptor image import
@@ -117,8 +117,8 @@ struct DAWN_NATIVE_EXPORT ExternalImageDescriptorDmaBuf : ExternalImageDescripto
     ExternalImageDescriptorDmaBuf();
 
     static constexpr uint32_t kMaxPlanes = 3;
-    std::array<PlaneLayout, kMaxPlanes> planeLayouts;
-    uint64_t drmModifier;  // DRM modifier of the buffer
+    std::array<PlaneLayout, kMaxPlanes> planeLayouts = {};
+    uint64_t drmModifier = 0;  // DRM modifier of the buffer
 };
 
 // Info struct that is written to in |ExportVulkanImage|.

@@ -31,11 +31,12 @@
 #include <vector>
 
 #include "dawn/native/D3D11Backend.h"
-#include "dawn/native/d3d11/DeviceD3D11.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/TestUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/d3d11/DeviceD3D11.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -111,7 +112,7 @@ TEST_P(D3D11MultithreadTests, DawnAndDirectD3D11) {
                 context->CopyResource(staging.Get(), buffer.Get());
                 hr = context->Map(staging.Get(), 0, D3D11_MAP_READ_WRITE, 0, &mapped);
                 EXPECT_TRUE(SUCCEEDED(hr));
-                memset(mapped.pData, 0xDA, desc.ByteWidth);
+                DAWN_UNSAFE_TODO(memset(mapped.pData, 0xDA, desc.ByteWidth));
                 context->Unmap(staging.Get(), 0);
 
                 context->CopyResource(buffer.Get(), staging.Get());
@@ -122,7 +123,7 @@ TEST_P(D3D11MultithreadTests, DawnAndDirectD3D11) {
                 EXPECT_TRUE(SUCCEEDED(hr));
                 uint8_t* data = static_cast<uint8_t*>(mapped.pData);
                 for (uint32_t j = 0; j < desc.ByteWidth; ++j) {
-                    EXPECT_EQ(data[j], 0xDA);
+                    EXPECT_EQ(DAWN_UNSAFE_TODO(data[j]), 0xDA);
                 }
                 context->Unmap(staging.Get(), 0);
             }

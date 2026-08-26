@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -94,7 +94,7 @@ void VulkanZeroInitializeWorkgroupMemoryExtensionTest::SetUpPerfTest() {
     csDesc.compute.module = utils::CreateShaderModule(device, ostream.str().c_str());
     mPipeline = device.CreateComputePipeline(&csDesc);
 
-    std::array<float, kWorkgroupArraySize * kNumIterations> data;
+    std::array<float, static_cast<size_t>(kWorkgroupArraySize) * kNumIterations> data{};
     data.fill(1);
     wgpu::Buffer buffer = utils::CreateBufferFromData(
         device, data.data(), sizeof(data), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Storage);

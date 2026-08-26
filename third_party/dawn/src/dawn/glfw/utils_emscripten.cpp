@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#if !defined(EMSCRIPTEN)
-#error "utils_emscripten.cpp: This file requires EMSCRIPTEN to be defined."
-#endif  // !defined(EMSCRIPTEN)
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
+#error "This file is only valid when compiling with Emscripten."
+#endif
 
 #include <memory>
 

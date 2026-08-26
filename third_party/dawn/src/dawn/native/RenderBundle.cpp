@@ -25,15 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/RenderBundle.h"
+#include "src/dawn/native/RenderBundle.h"
 
 #include <utility>
 
 #include "absl/strings/str_format.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/RenderBundleEncoder.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/RenderBundleEncoder.h"
 
 namespace dawn::native {
 
@@ -42,6 +42,7 @@ RenderBundleBase::RenderBundleBase(RenderBundleEncoder* encoder,
                                    Ref<AttachmentState> attachmentState,
                                    bool depthReadOnly,
                                    bool stencilReadOnly,
+                                   bool usesResourceTable,
                                    RenderPassResourceUsage resourceUsage,
                                    IndirectDrawMetadata indirectDrawMetadata)
     : ApiObjectBase(encoder->GetDevice(), kLabelNotImplemented),
@@ -50,6 +51,7 @@ RenderBundleBase::RenderBundleBase(RenderBundleEncoder* encoder,
       mAttachmentState(std::move(attachmentState)),
       mDepthReadOnly(depthReadOnly),
       mStencilReadOnly(stencilReadOnly),
+      mUsesResourceTable(usesResourceTable),
       mDrawCount(encoder->GetDrawCount()),
       mResourceUsage(std::move(resourceUsage)),
       mEncoderLabel(encoder->GetLabel()) {
@@ -104,27 +106,32 @@ CommandIterator* RenderBundleBase::GetCommands() {
 }
 
 const AttachmentState* RenderBundleBase::GetAttachmentState() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mAttachmentState.Get();
 }
 
 bool RenderBundleBase::IsDepthReadOnly() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mDepthReadOnly;
 }
 
 bool RenderBundleBase::IsStencilReadOnly() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mStencilReadOnly;
 }
 
+bool RenderBundleBase::UsesResourceTable() const {
+    DAWN_CHECK(!IsError());
+    return mUsesResourceTable;
+}
+
 uint64_t RenderBundleBase::GetDrawCount() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mDrawCount;
 }
 
 const RenderPassResourceUsage& RenderBundleBase::GetResourceUsage() const {
-    DAWN_ASSERT(!IsError());
+    DAWN_CHECK(!IsError());
     return mResourceUsage;
 }
 

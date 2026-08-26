@@ -25,23 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/external_memory/MemoryService.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryService.h"
 
 #include <utility>
 
-#include "dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
 
 #if DAWN_PLATFORM_IS(LINUX_DESKTOP) || DAWN_PLATFORM_IS(CHROMEOS)
-#include "dawn/native/vulkan/external_memory/MemoryServiceImplementationDmaBuf.h"
-#include "dawn/native/vulkan/external_memory/MemoryServiceImplementationOpaqueFD.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationDmaBuf.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationOpaqueFD.h"
 #endif  // DAWN_PLATFORM_IS(LINUX_DESKTOP) || DAWN_PLATFORM_IS(CHROMEOS)
 
 #if DAWN_PLATFORM_IS(ANDROID)
-#include "dawn/native/vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationAHardwareBuffer.h"
 #endif  // DAWN_PLATFORM_IS(ANDROID)
 
 #if DAWN_PLATFORM_IS(FUCHSIA)
-#include "dawn/native/vulkan/external_memory/MemoryServiceImplementationZirconHandle.h"
+#include "src/dawn/native/vulkan/external_memory/MemoryServiceImplementationZirconHandle.h"
 #endif  // DAWN_PLATFORM_IS(FUCHSIA)
 
 namespace dawn::native::vulkan::external_memory {

@@ -1,0 +1,121 @@
+Name
+
+    SGIX_igloo_interface
+
+
+Name Strings
+
+    GL_SGIX_igloo_interface
+
+Contact
+
+    Jon Leech, ljp 'at' sgi.com
+
+Status
+
+    XXX - Not complete yet!!!
+    (Will probably never be complete, this is a non-public legacy
+    extension).
+
+Version
+
+    Last Modified Date: October 5, 2000
+    $Date$ $Revision$
+
+Number
+
+    219
+
+Dependencies
+
+    None
+
+Overview
+
+    This is an SGI internal (e.g. not documented or intended to be used
+    directly by applications) extension used only to help support
+    emulation of IrisGL through OpenGL.
+
+IP Status
+
+    Unknown.
+
+Issues
+
+    Unlikely to be documented; this is ancient work supported only for
+    legacy applications.
+
+New Procedures and Functions
+
+    void IglooInterfaceSGIX(enum pname, void *param);
+
+New Tokens
+
+    Accepted by the <pname> parameter of IglooInterfaceSGIX:
+
+	IGLOO_FULLSCREEN_SGIX		0x819E
+	IGLOO_VIEWPORT_OFFSET_SGIX	0x819F
+	IGLOO_SWAPTMESH_SGIX		0x81A0
+	IGLOO_COLORNORMAL_SGIX		0x81A1
+	IGLOO_IRISGL_MODE_SGIX		0x81A2
+	IGLOO_LMC_COLOR_SGIX		0x81A3
+	IGLOO_TMESHMODE_SGIX		0x81A4
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev (but only in the MGRAS implementation):
+
+	LIGHT31				0xBEAD
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    TBD
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    TBD
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    TBD
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    TBD
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    TBD
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    TBD
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Errors
+
+    TBD
+
+New State
+
+    TBD
+
+New Implementation Dependent State
+
+    TBD
+
+Revision History
+
+    Initial revision (October 5, 2000) - placeholder spec for the actual
+    IGLOO interface in use on IRIX gfx. The existing specs were merged
+    into a single interface and are both obsolete and AFAIK never
+    implemented.

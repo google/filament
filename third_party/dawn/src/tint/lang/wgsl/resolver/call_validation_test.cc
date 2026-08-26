@@ -145,35 +145,7 @@ TEST_F(ResolverCallValidationTest, PointerArgument_LetIdentExpr) {
     EXPECT_EQ(r()->error(), "12:34 error: cannot take the address of 'let z'");
 }
 
-TEST_F(ResolverCallValidationTest,
-       PointerArgument_AddressOfFunctionMember_WithoutUnrestrictedPointerParameters) {
-    // struct S { m: i32; };
-    // fn foo(p: ptr<function, i32>) {}
-    // fn main() {
-    //   var v : S;
-    //   foo(&v.m);
-    // }
-    auto* S = Structure("S", Vector{
-                                 Member("m", ty.i32()),
-                             });
-    auto* param = Param("p", ty.ptr<function, i32>());
-    Func("foo", Vector{param}, ty.void_(), tint::Empty);
-    Func("main", tint::Empty, ty.void_(),
-         Vector{
-             Decl(Var("v", ty.Of(S))),
-             CallStmt(Call("foo", AddressOf(Source{{12, 34}}, MemberAccessor("v", "m")))),
-         });
-
-    Resolver r{this, wgsl::AllowedFeatures{}};
-
-    EXPECT_FALSE(r.Resolve());
-    EXPECT_EQ(
-        r.error(),
-        R"(12:34 error: arguments of pointer type must not point to a subset of the originating variable)");
-}
-
-TEST_F(ResolverCallValidationTest,
-       PointerArgument_AddressOfFunctionMember_WithUnrestrictedPointerParameters) {
+TEST_F(ResolverCallValidationTest, PointerArgument_AddressOfFunctionMember) {
     // struct S { m: i32; };
     // fn foo(p: ptr<function, i32>) {}
     // fn main() {
@@ -323,36 +295,7 @@ TEST_F(ResolverCallValidationTest, LetPointerPrivate) {
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
-TEST_F(ResolverCallValidationTest, LetPointer_NotWholeVar_WithoutUnrestrictedPointerParameters) {
-    // fn foo(p : ptr<function, i32>) {}
-    // @fragment
-    // fn main() {
-    //   var v: array<i32, 4>;
-    //   let p: ptr<function, i32> = &(v[0]);
-    //   x(p);
-    // }
-    Func("foo",
-         Vector{
-             Param("p", ty.ptr<function, i32>()),
-         },
-         ty.void_(), tint::Empty);
-    Func("main", tint::Empty, ty.void_(),
-         Vector{
-             Decl(Var("v", ty.array<i32, 4>())),
-             Decl(Let("p", ty.ptr<function, i32>(), AddressOf(IndexAccessor("v", 0_a)))),
-             CallStmt(Call("foo", Expr(Source{{12, 34}}, "p"))),
-         },
-         Vector{
-             Stage(ast::PipelineStage::kFragment),
-         });
-    Resolver r(this, wgsl::AllowedFeatures{});
-    EXPECT_FALSE(r.Resolve());
-    EXPECT_EQ(r.error(),
-              "12:34 error: arguments of pointer type must not point to a subset of the "
-              "originating variable");
-}
-
-TEST_F(ResolverCallValidationTest, LetPointer_NotWholeVar_WithUnrestrictedPointerParameters) {
+TEST_F(ResolverCallValidationTest, LetPointer_NotWholeVar) {
     // fn foo(p : ptr<function, i32>) {}
     // @fragment
     // fn main() {
@@ -407,42 +350,7 @@ TEST_F(ResolverCallValidationTest, ComplexPointerChain) {
     EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
-TEST_F(ResolverCallValidationTest,
-       ComplexPointerChain_NotWholeVar_WithoutUnrestrictedPointerParameters) {
-    // fn foo(p : ptr<function, i32>) {}
-    // @fragment
-    // fn main() {
-    //   var v: array<i32, 4>;
-    //   let p1 = &v;
-    //   let p2 = p1;
-    //   let p3 = &(*p2)[0];
-    //   foo(&*p);
-    // }
-    Func("foo",
-         Vector{
-             Param("p", ty.ptr<function, i32>()),
-         },
-         ty.void_(), tint::Empty);
-    Func("main", tint::Empty, ty.void_(),
-         Vector{
-             Decl(Var("v", ty.array<i32, 4>())),
-             Decl(Let("p1", AddressOf("v"))),
-             Decl(Let("p2", Expr("p1"))),
-             Decl(Let("p3", AddressOf(IndexAccessor(Deref("p2"), 0_a)))),
-             CallStmt(Call("foo", AddressOf(Source{{12, 34}}, Deref("p3")))),
-         },
-         Vector{
-             Stage(ast::PipelineStage::kFragment),
-         });
-    Resolver r{this, {}};
-    EXPECT_FALSE(r.Resolve());
-    EXPECT_EQ(r.error(),
-              "12:34 error: arguments of pointer type must not point to a subset of the "
-              "originating variable");
-}
-
-TEST_F(ResolverCallValidationTest,
-       ComplexPointerChain_NotWholeVar_WithUnrestrictedPointerParameters) {
+TEST_F(ResolverCallValidationTest, ComplexPointerChain_NotWholeVar) {
     // fn foo(p : ptr<function, i32>) {}
     // @fragment
     // fn main() {

@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #ifndef SRC_TINT_CMD_COMMON_HELPER_H_
 #define SRC_TINT_CMD_COMMON_HELPER_H_
 
@@ -39,8 +34,11 @@
 #include <string>
 #include <vector>
 
+#if TINT_BUILD_WGSL_READER || TINT_BUILD_WGSL_WRITER
 #include "src/tint/lang/wgsl/inspector/inspector.h"
+#endif
 #include "src/tint/utils/diagnostic/source.h"
+#include "src/utils/compiler.h"
 
 #if TINT_BUILD_SPV_READER
 #include "src/tint/lang/spirv/reader/common/options.h"
@@ -65,6 +63,12 @@ enum class InputFormat {
     kSpirvAsm,
 };
 
+/// The formatting mode for program diagnostics.
+enum class DiagnosticsFormat {
+    kPlain,
+    kJson,
+};
+
 /// Information on a loaded program
 struct ProgramInfo {
     /// The loaded program
@@ -79,6 +83,7 @@ struct ProgramInfo {
 /// @param program the program
 void PrintWGSL(std::ostream& out, const tint::Program& program);
 
+#if TINT_BUILD_WGSL_READER || TINT_BUILD_WGSL_WRITER
 /// Prints inspector data information to stderr
 /// @param inspector the inspector to print.
 void PrintInspectorData(tint::inspector::Inspector& inspector);
@@ -86,13 +91,14 @@ void PrintInspectorData(tint::inspector::Inspector& inspector);
 /// Prints inspector binding information to stderr
 /// @param inspector the inspector to print.
 void PrintInspectorBindings(tint::inspector::Inspector& inspector);
+#endif
 
 /// Options for the LoadProgramInfo call
 struct LoadProgramOptions {
     /// The file to be loaded, might be "-" for stdin
     std::string filename;
     /// The input format. Optional for files, mandatory for stdin
-    InputFormat input_format;
+    InputFormat input_format = InputFormat::kUnknown;
 #if TINT_BUILD_SPV_READER
     /// Spirv-reader options
     tint::spirv::reader::Options spirv_reader_options;
@@ -103,6 +109,8 @@ struct LoadProgramOptions {
 #endif
     /// The text printer to use for output
     StyledTextPrinter* printer = nullptr;
+    /// The diagnostics format to use
+    DiagnosticsFormat diagnostics_format = DiagnosticsFormat::kPlain;
 };
 
 /// Loads the source and program information for the given file.
@@ -110,6 +118,14 @@ struct LoadProgramOptions {
 /// returning.
 /// @param opts the loading options
 ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts);
+
+/// Prints diagnostics to standard error using the specified format.
+/// @param diagnostics the diagnostics to print
+/// @param format the format to use
+/// @param printer the plain text printer (optional, used for plain format)
+void PrintDiagnostics(const tint::diag::List& diagnostics,
+                      DiagnosticsFormat format,
+                      StyledTextPrinter* printer);
 
 /// @param stage the pipeline stage
 /// @returns the string representation
@@ -172,13 +188,16 @@ void SetStdinModeBinary();
 /// @private
 template <typename ContainerT>
 bool WriteStdoutImpl(const ContainerT& buffer) {
-    size_t written =
-        fwrite(buffer.data(), sizeof(typename ContainerT::value_type), buffer.size(), stdout);
+    FILE* out_file = stdout;
+    // SAFETY: The .data() and .size() are both for the same container, so there should be
+    // .size() * sizeof(value_type) of memory to write into.
+    size_t written = DAWN_UNSAFE_BUFFERS(
+        fwrite(buffer.data(), sizeof(typename ContainerT::value_type), buffer.size(), out_file));
     if (buffer.size() != written) {
         std::cerr << "Could not write all output to standard output\n";
         return false;
     }
-    fflush(stdout);
+    fflush(out_file);
     return true;
 }
 
@@ -203,8 +222,10 @@ bool WriteFileImpl(const std::string& output_file,
         return false;
     }
 
-    size_t written =
-        fwrite(buffer.data(), sizeof(typename ContainerT::value_type), buffer.size(), file);
+    // SAFETY: The .data() and .size() are both for the same container, so there should be
+    // .size() * sizeof(value_type) of memory to write into.
+    size_t written = DAWN_UNSAFE_BUFFERS(
+        fwrite(buffer.data(), sizeof(typename ContainerT::value_type), buffer.size(), file));
     if (buffer.size() != written) {
         std::cerr << "Could not write to file " << output_file << "\n";
         fclose(file);
@@ -261,7 +282,9 @@ bool ReadFileImpl(const std::string& input_file, std::vector<T>* buffer) {
     buffer->clear();
     buffer->resize(file_size / sizeof(T));
 
-    size_t bytes_read = fread(buffer->data(), 1, file_size, file);
+    // SAFETY: buffer is resized to file_size / sizeof(T) which corresponds to file_size bytes,
+    // making sure there is enough space to write into.
+    size_t bytes_read = DAWN_UNSAFE_BUFFERS(fread(buffer->data(), 1, file_size, file));
     fclose(file);
     if (bytes_read != file_size) {
         std::cerr << "Failed to read " << input_file << "\n";
@@ -283,10 +306,14 @@ bool ReadStdinImpl(std::vector<T>* buffer) {
     constexpr size_t kItemsPerChunk = 1024;
     constexpr size_t kBytesPerChunk = sizeof(T) * kItemsPerChunk;
     std::vector<T> chunk(kItemsPerChunk);
-    while (!std::feof(stdin)) {
-        size_t bytes_read = std::fread(chunk.data(), 1, kBytesPerChunk, stdin);
+    FILE* in_file = stdin;
+    while (!std::feof(in_file)) {
+        // SAFETY: chunk has a capacity of kItemsPerChunk (which is kBytesPerChunk bytes since
+        // sizeof(T) is divisible and checked). std::fread reads at most kBytesPerChunk.
+        size_t bytes_read =
+            DAWN_UNSAFE_BUFFERS(std::fread(chunk.data(), 1, kBytesPerChunk, in_file));
         if (bytes_read == 0) {
-            if (std::ferror(stdin)) {
+            if (std::ferror(in_file)) {
                 std::perror("Error reading from standard input");
                 return false;
             }

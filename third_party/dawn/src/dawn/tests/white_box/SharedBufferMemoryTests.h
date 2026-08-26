@@ -35,12 +35,14 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn {
 
 class SharedBufferMemoryTestBackend {
   public:
+    virtual ~SharedBufferMemoryTestBackend() = default;
+
     virtual void SetUp() {}
     virtual void TearDown() {}
 

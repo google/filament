@@ -32,11 +32,13 @@
 #include <array>
 #include <bitset>
 
-#include "dawn/common/Constants.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/Pipeline.h"
-#include "dawn/native/PipelineLayout.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -45,12 +47,13 @@ namespace dawn::native {
 template <bool CanInheritBindGroups>
 class BindGroupTrackerBase {
   public:
+    virtual ~BindGroupTrackerBase() = default;
+
     void OnSetBindGroup(BindGroupIndex index,
                         BindGroupBase* bindGroup,
-                        uint32_t dynamicOffsetCount,
-                        uint32_t* dynamicOffsets) {
+                        ityp::span<BindingIndex, const uint32_t> dynamicOffsets) {
         DAWN_ASSERT(index < kMaxBindGroupsTyped);
-        DAWN_ASSERT(dynamicOffsetCount <= kMaxDynamicOffsetsPerBindGroup);
+        DAWN_ASSERT(dynamicOffsets.size() <= kMaxDynamicOffsetsPerBindGroupTyped);
 
         if (mBindGroupLayoutsMask[index]) {
             // It is okay to only dirty bind groups that are used by the current pipeline
@@ -62,25 +65,28 @@ class BindGroupTrackerBase {
                 mDirtyBindGroupsObjectChangedOrIsDynamic.set(index);
             }
 
-            if (dynamicOffsetCount > 0) {
+            if (!dynamicOffsets.empty()) {
                 mDirtyBindGroupsObjectChangedOrIsDynamic.set(index);
             }
         }
 
         mBindGroups[index] = bindGroup;
-        mDynamicOffsets[index].count = BindingIndex(dynamicOffsetCount);
-        std::copy(dynamicOffsets, dynamicOffsets + dynamicOffsetCount,
-                  mDynamicOffsets[index].offsets.begin());
+        mDynamicOffsets[index].count = dynamicOffsets.size();
+        // TODO(https://crbug.com/524406299): Use Span::CopyFrom
+        std::ranges::copy(dynamicOffsets, mDynamicOffsets[index].offsets.begin());
     }
 
-    void OnSetPipeline(PipelineBase* pipeline) { mPipelineLayout = pipeline->GetLayout(); }
+    void OnSetPipeline(PipelineBase* pipeline) { mPipeline = pipeline; }
 
   protected:
-    virtual bool AreLayoutsCompatible() { return mLastAppliedPipelineLayout == mPipelineLayout; }
+    virtual bool AreLayoutsCompatible() {
+        return mLastAppliedPipeline != nullptr &&
+               mLastAppliedPipeline->GetLayout() == mPipeline->GetLayout();
+    }
 
     ityp::span<BindingIndex, uint32_t> GetDynamicOffsets(BindGroupIndex index) {
-        return ityp::span<BindingIndex, uint32_t>(mDynamicOffsets[index].offsets.data(),
-                                                  mDynamicOffsets[index].count);
+        return ityp::span<BindingIndex, uint32_t>(mDynamicOffsets[index].offsets)
+            .first(mDynamicOffsets[index].count);
     }
 
     // The Derived class should call this before it applies bind groups.
@@ -90,14 +96,15 @@ class BindGroupTrackerBase {
         }
 
         // Use the bind group layout mask to avoid marking unused bind groups as dirty.
-        mBindGroupLayoutsMask = mPipelineLayout->GetBindGroupLayoutsMask();
+        PipelineLayoutBase* pipelineLayout = mPipeline->GetLayout();
+        mBindGroupLayoutsMask = pipelineLayout->GetBindGroupLayoutsMask();
 
         // Changing the pipeline layout sets bind groups as dirty. If CanInheritBindGroups,
         // the first |k| matching bind groups may be inherited.
-        if (CanInheritBindGroups && mLastAppliedPipelineLayout != nullptr) {
+        if (CanInheritBindGroups && mLastAppliedPipeline != nullptr) {
             // Dirty bind groups that cannot be inherited.
             BindGroupMask dirtiedGroups =
-                ~mPipelineLayout->InheritedGroupsMask(mLastAppliedPipelineLayout);
+                ~pipelineLayout->InheritedGroupsMask(mLastAppliedPipeline->GetLayout());
 
             mDirtyBindGroups |= dirtiedGroups;
             mDirtyBindGroupsObjectChangedOrIsDynamic |= dirtiedGroups;
@@ -118,10 +125,10 @@ class BindGroupTrackerBase {
         // will be dirtied again by the next pipeline change.
         mDirtyBindGroups.reset();
         mDirtyBindGroupsObjectChangedOrIsDynamic.reset();
-        // Keep track of the last applied pipeline layout. This allows us to avoid computing
+        // Keep track of the last applied pipeline. This allows us to avoid computing
         // the intersection of the dirty bind groups and bind group layout mask in next Draw
         // or Dispatch (which is very hot code) until the layout is changed again.
-        mLastAppliedPipelineLayout = mPipelineLayout;
+        mLastAppliedPipeline = mPipeline;
     }
 
     BindGroupMask mDirtyBindGroups = 0;
@@ -129,14 +136,14 @@ class BindGroupTrackerBase {
     BindGroupMask mBindGroupLayoutsMask = 0;
     PerBindGroup<BindGroupBase*> mBindGroups = {};
 
-    // |mPipelineLayout| is the current pipeline layout set on the command buffer.
-    // |mLastAppliedPipelineLayout| is the last pipeline layout for which we applied changes
+    // |mPipeline| is the current pipeline set on the command buffer.
+    // |mLastAppliedPipeline| is the last pipeline for which we applied changes
     // to the bind group bindings.
     // RAW_PTR_EXCLUSION: These pointers are very hot in command recording code and point at
-    // pipeline layouts referenced by the object graph of the CommandBuffer so they cannot be
+    // pipelines referenced by the object graph of the CommandBuffer so they cannot be
     // freed from underneath this class.
-    RAW_PTR_EXCLUSION PipelineLayoutBase* mPipelineLayout = nullptr;
-    RAW_PTR_EXCLUSION PipelineLayoutBase* mLastAppliedPipelineLayout = nullptr;
+    RAW_PTR_EXCLUSION PipelineBase* mPipeline = nullptr;
+    RAW_PTR_EXCLUSION PipelineBase* mLastAppliedPipeline = nullptr;
 
   private:
     // Max possible dynamic offsets per bind group. Uses the per-pipeline limits because it's
@@ -144,6 +151,8 @@ class BindGroupTrackerBase {
     // group uses none.
     static constexpr uint32_t kMaxDynamicOffsetsPerBindGroup =
         kMaxDynamicUniformBuffersPerPipelineLayout + kMaxDynamicStorageBuffersPerPipelineLayout;
+    static constexpr BindingIndex kMaxDynamicOffsetsPerBindGroupTyped{
+        kMaxDynamicOffsetsPerBindGroup};
 
     struct BindingDynamicOffsets {
         ityp::array<BindingIndex, uint32_t, kMaxDynamicOffsetsPerBindGroup> offsets = {};

@@ -78,13 +78,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> RemoveUniformVectorComponentLoads(core::ir::Module& ir) {
-    core::ir::AssertValid(ir,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowDuplicateBindings,
-                              core::ir::Capability::kAllowNonCoreTypes,
-                              core::ir::Capability::kAllow8BitIntegers,
-                          },
-                          "before core.RemoveUniformVectorComponentLoads");
+    core::ir::AssertValid(ir, "before core.RemoveUniformVectorComponentLoads");
 
     State{ir}.Process();
 

@@ -29,11 +29,11 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -88,6 +88,7 @@ class VertexFormatTest : public DawnTest {
             case wgpu::VertexFormat::Snorm16x2:
             case wgpu::VertexFormat::Snorm16x4:
             case wgpu::VertexFormat::Unorm10_10_10_2:
+            case wgpu::VertexFormat::Snorm10_10_10_2:
                 return true;
             default:
                 return false;
@@ -115,6 +116,8 @@ class VertexFormatTest : public DawnTest {
                 return 32767;
             case wgpu::VertexFormat::Unorm10_10_10_2:
                 return (component == 3) ? 3 : 1023;
+            case wgpu::VertexFormat::Snorm10_10_10_2:
+                return (component == 3) ? 1 : 511;
             default:
                 DAWN_UNREACHABLE();
         }
@@ -192,6 +195,7 @@ class VertexFormatTest : public DawnTest {
             case wgpu::VertexFormat::Float16x2:
             case wgpu::VertexFormat::Float32:
             case wgpu::VertexFormat::Unorm10_10_10_2:
+            case wgpu::VertexFormat::Snorm10_10_10_2:
             case wgpu::VertexFormat::Sint16x2:
             case wgpu::VertexFormat::Sint32:
             case wgpu::VertexFormat::Sint8x4:
@@ -272,6 +276,7 @@ class VertexFormatTest : public DawnTest {
             case wgpu::VertexFormat::Uint32x4:
             case wgpu::VertexFormat::Sint32x4:
             case wgpu::VertexFormat::Unorm10_10_10_2:
+            case wgpu::VertexFormat::Snorm10_10_10_2:
                 return 4;
             default:
                 DAWN_UNREACHABLE();
@@ -504,6 +509,9 @@ class VertexFormatTest : public DawnTest {
 };
 
 TEST_P(VertexFormatTest, Uint8) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<uint8_t> vertexData = {
         std::numeric_limits<uint8_t>::max(),
         0,  // padding three bytes for stride
@@ -571,6 +579,9 @@ TEST_P(VertexFormatTest, Uint8x4) {
 }
 
 TEST_P(VertexFormatTest, Sint8) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<int8_t> vertexData = {
         std::numeric_limits<int8_t>::max(),
         0,  // padding three bytes for stride
@@ -638,6 +649,9 @@ TEST_P(VertexFormatTest, Sint8x4) {
 }
 
 TEST_P(VertexFormatTest, Unorm8) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<uint8_t> vertexData = {
         std::numeric_limits<uint8_t>::max(),
         0,  // padding three bytes for stride
@@ -736,6 +750,9 @@ TEST_P(VertexFormatTest, Unorm8x4BGRA) {
 }
 
 TEST_P(VertexFormatTest, Snorm8) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<int8_t> vertexData = {
         std::numeric_limits<int8_t>::max(),
         0,  // padding three bytes for stride
@@ -806,6 +823,9 @@ TEST_P(VertexFormatTest, Snorm8x4) {
 }
 
 TEST_P(VertexFormatTest, Uint16) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<uint16_t> vertexData = {
         std::numeric_limits<uint16_t>::max(),
         0,  // Padding
@@ -855,6 +875,9 @@ TEST_P(VertexFormatTest, Uint16x4) {
 }
 
 TEST_P(VertexFormatTest, Sint16) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<int16_t> vertexData = {
         std::numeric_limits<int16_t>::max(),
         0,  // Padding
@@ -901,6 +924,9 @@ TEST_P(VertexFormatTest, Sint16x4) {
 }
 
 TEST_P(VertexFormatTest, Unorm16) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<uint16_t> vertexData = {
         std::numeric_limits<uint16_t>::max(),
         0,  // Padding
@@ -948,6 +974,9 @@ TEST_P(VertexFormatTest, Unorm16x4) {
 }
 
 TEST_P(VertexFormatTest, Snorm16) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<int16_t> vertexData = {
         std::numeric_limits<int16_t>::max(),
         0,  // Padding
@@ -1035,6 +1064,9 @@ TEST_P(VertexFormatTest, Float32_Zeros) {
 }
 
 TEST_P(VertexFormatTest, Float32_Plain) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<float> vertexData = {+1.0f, -1.0f, 18.23f};
 
     DoVertexFormatTest(wgpu::VertexFormat::Float32, vertexData, vertexData);
@@ -1071,6 +1103,9 @@ TEST_P(VertexFormatTest, Float32x4) {
 }
 
 TEST_P(VertexFormatTest, Uint32) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     std::vector<uint32_t> vertexData = {std::numeric_limits<uint32_t>::max(),
                                         std::numeric_limits<uint16_t>::max(),
                                         std::numeric_limits<uint8_t>::max()};
@@ -1103,6 +1138,9 @@ TEST_P(VertexFormatTest, Uint32x4) {
 }
 
 TEST_P(VertexFormatTest, Sint32) {
+    // TODO(crbug.com/523211971): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // TODO(42242119): fail on Qualcomm Adreno X1.
     DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
@@ -1187,6 +1225,33 @@ TEST_P(VertexFormatTest, Unorm10_10_10_2) {
     };
 
     DoVertexFormatTest(wgpu::VertexFormat::Unorm10_10_10_2, vertexData, expectedData);
+}
+
+TEST_P(VertexFormatTest, Snorm10_10_10_2) {
+    auto MakeRGB10A2 = [](int32_t r, int32_t g, int32_t b, int32_t a) -> uint32_t {
+        DAWN_ASSERT(r >= -512 && r <= 511);
+        DAWN_ASSERT(g >= -512 && g <= 511);
+        DAWN_ASSERT(b >= -512 && b <= 511);
+        DAWN_ASSERT(a >= -2 && a <= 1);
+        uint32_t ur = static_cast<uint32_t>(r) & 0x3FFu;
+        uint32_t ug = static_cast<uint32_t>(g) & 0x3FFu;
+        uint32_t ub = static_cast<uint32_t>(b) & 0x3FFu;
+        uint32_t ua = static_cast<uint32_t>(a) & 0x3u;
+        return ur | ug << 10u | ub << 20u | ua << 30u;
+    };
+
+    std::vector<uint32_t> vertexData = {
+        MakeRGB10A2(0, 0, 0, 0),
+        MakeRGB10A2(511, 511, 511, 1),
+        MakeRGB10A2(-512, -512, -512, -2),
+        MakeRGB10A2(-128, 256, -384, -1),
+    };
+
+    std::vector<int32_t> expectedData = {
+        0, 0, 0, 0, 511, 511, 511, 1, -512, -512, -512, -2, -128, 256, -384, -1,
+    };
+
+    DoVertexFormatTest(wgpu::VertexFormat::Snorm10_10_10_2, vertexData, expectedData);
 }
 
 DAWN_INSTANTIATE_TEST(VertexFormatTest,

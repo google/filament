@@ -1,12 +1,13 @@
-Copyright 2015-2023 The Khronos Group Inc.
+Copyright 2015-2026 The Khronos Group Inc.
 
 Files in this repository fall under one of these licenses:
 
 - `Apache-2.0`
 - `MIT`
 
-Note: With the exception of `parse_dependency.py` the files using `MIT` license
-also fall under `Apache-2.0`. Example:
+Note: With the exception of `parse_dependency.py`, which is based on an
+external file, files using the `MIT` license also fall under `Apache-2.0`.
+Example:
 
 ```
 SPDX-License-Identifier: Apache-2.0 OR MIT

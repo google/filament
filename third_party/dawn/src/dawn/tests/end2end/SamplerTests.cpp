@@ -29,11 +29,11 @@
 #include <cmath>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Constants.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -89,6 +89,9 @@ class SamplerTest : public DawnTest {
   protected:
     void SetUp() override {
         DawnTest::SetUp();
+        // TODO(crbug.com/523272951): Produces incorrect result on Pixel 10.
+        DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
         mRenderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
         wgpu::TextureDescriptor descriptor;
@@ -104,7 +107,7 @@ class SamplerTest : public DawnTest {
 
         // Create a 2x2 checkerboard texture, with black in the top left and bottom right corners.
         const uint32_t rowPixels = kTextureBytesPerRowAlignment / sizeof(utils::RGBA8);
-        std::array<utils::RGBA8, rowPixels * 2> pixels;
+        std::array<utils::RGBA8, static_cast<size_t>(rowPixels) * 2> pixels;
         pixels[0] = pixels[rowPixels + 1] = utils::RGBA8::kBlack;
         pixels[1] = pixels[rowPixels] = utils::RGBA8::kWhite;
 
@@ -316,6 +319,9 @@ class StaticSamplerTest : public SamplerTest {
 // Test drawing a rect with a checkerboard texture using a static sampler with different address
 // modes.
 TEST_P(StaticSamplerTest, AddressMode) {
+    // TODO(crbug.com/523272955): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     DAWN_SUPPRESS_TEST_IF(IsWARP());
     // TODO(crbug.com/465184301): Fix static sampler feature.
     DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
@@ -340,6 +346,9 @@ TEST_P(StaticSamplerTest, AddressMode) {
 // Test that passing texture and static sampler objects through user-defined functions works
 // correctly.
 TEST_P(StaticSamplerTest, PassThroughUserFunctionParameters) {
+    // TODO(crbug.com/523272955): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     DAWN_SUPPRESS_TEST_IF(IsWARP());
     // TODO(crbug.com/465184301): Fix static sampler feature.
     DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
@@ -359,6 +368,52 @@ TEST_P(StaticSamplerTest, PassThroughUserFunctionParameters) {
             }
         }
     }
+}
+
+// Test that having a visible static sampler or invisible regular samplers doesn't cause OOB in
+// D3D12. D3D12's BindGroupLayout excludes static samplers and invisible samplers from
+// mSamplerDescriptorCount. SamplerHeapCache::GetOrCreate must also exclude them to avoid OOB
+// writes in the descriptor heap.
+TEST_P(StaticSamplerTest, SamplerDiscrepancyOOB) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+    // TODO(crbug.com/465184301): Fix static sampler feature.
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
+    // TODO(crbug.com/459848481): Fails on Win/Snapdragon X Elite w/ D3D12.
+    DAWN_SUPPRESS_TEST_IF(IsWindows() && IsQualcomm() && IsD3D12());
+
+    wgpu::SamplerDescriptor samplerDesc = {};
+    wgpu::Sampler sampler = device.CreateSampler(&samplerDesc);
+
+    wgpu::StaticSamplerBindingLayout staticSamplerBinding = {};
+    staticSamplerBinding.sampler = sampler;
+
+    std::vector<wgpu::BindGroupLayoutEntry> entries;
+    // Binding 0: Regular sampler (visible)
+    entries.push_back({.binding = 0,
+                       .visibility = wgpu::ShaderStage::Fragment,
+                       .sampler = {.type = wgpu::SamplerBindingType::Filtering}});
+    // Binding 1: Static sampler (visible)
+    entries.push_back({
+        .nextInChain = &staticSamplerBinding,
+        .binding = 1,
+        .visibility = wgpu::ShaderStage::Fragment,
+    });
+    // Binding 2: Regular sampler (invisible, None visibility)
+    entries.push_back({.binding = 2,
+                       .visibility = wgpu::ShaderStage::None,
+                       .sampler = {.type = wgpu::SamplerBindingType::Filtering}});
+
+    wgpu::BindGroupLayoutDescriptor bglDesc = {};
+    bglDesc.entryCount = entries.size();
+    bglDesc.entries = entries.data();
+    wgpu::BindGroupLayout bgl = device.CreateBindGroupLayout(&bglDesc);
+
+    // Create bind group. This triggers SamplerHeapCache::GetOrCreate in D3D12.
+    // In D3D12, mSamplerDescriptorCount will be 1 (only binding 0 is regular & visible).
+    // If binding 1 (static) or 2 (invisible) are incorrectly included in the cache population
+    // loop, it will cause an OOB write or hit an assertion.
+    utils::MakeBindGroup(device, bgl, {{0, sampler}, {2, sampler}});
 }
 
 DAWN_INSTANTIATE_TEST(StaticSamplerTest,

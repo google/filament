@@ -33,18 +33,19 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/ContentLessObjectCacheable.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/CachedObject.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/ContentLessObjectCacheable.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/CachedObject.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -57,17 +58,14 @@ struct StageAndDescriptor {
     StageAndDescriptor(SingleShaderStage shaderStage,
                        ShaderModuleBase* module,
                        StringView entryPoint,
-                       size_t constantCount,
-                       ConstantEntry const* constants);
+                       Span<const ConstantEntry> constants);
 
-    SingleShaderStage shaderStage;
-    raw_ptr<ShaderModuleBase> module;
+    SingleShaderStage shaderStage = SingleShaderStage::Vertex;
+    raw_ptr<ShaderModuleBase> module = nullptr;
     std::string entryPoint;
-    size_t constantCount = 0u;
 
-    // TODO(https://crbug.com/chromium/1521372): Investigate why this is assigned a dangling
-    // pointer. Then rewrite it as a raw_ptr<T, AllowPtrArithmetic>.
-    RAW_PTR_EXCLUSION ConstantEntry const* constants = nullptr;
+    // TODO(https://crbug.com/526537224): Use RawSpan.
+    Span<const ConstantEntry> constants;
 };
 
 class PipelineLayoutBase : public ApiObjectBase,

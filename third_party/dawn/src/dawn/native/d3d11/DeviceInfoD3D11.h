@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_DEVICEINFOD3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_DEVICEINFOD3D11_H_
 
-#include "dawn/native/Error.h"
-#include "dawn/native/PerStage.h"
-#include "dawn/native/d3d/d3d_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/d3d/d3d_platform.h"
 
 namespace dawn::native::d3d11 {
 

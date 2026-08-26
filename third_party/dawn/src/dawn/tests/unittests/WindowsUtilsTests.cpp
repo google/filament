@@ -27,7 +27,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dawn/common/WindowsUtils.h"
+#include "src/dawn/common/WindowsUtils.h"
 
 namespace dawn {
 namespace {

@@ -25,19 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d/BackendD3D.h"
+#include "src/dawn/native/d3d/BackendD3D.h"
 
 #include <utility>
 
-#include "dawn/common/HashUtils.h"
-#include "dawn/common/Log.h"
-#include "dawn/native/ChainUtils.h"
 #include "dawn/native/D3DBackend.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/PhysicalDeviceD3D.h"
-#include "dawn/native/d3d/PlatformFunctions.h"
-#include "dawn/native/d3d/UtilsD3D.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/PhysicalDeviceD3D.h"
+#include "src/dawn/native/d3d/PlatformFunctions.h"
+#include "src/dawn/native/d3d/UtilsD3D.h"
+#include "src/utils/log.h"
 
 namespace dawn::native::d3d {
 
@@ -96,7 +96,7 @@ MaybeError Backend::EnsureFXC() {
     return mFunctions.get()->EnsureFXC(GetInstance()->GetRuntimeSearchPaths());
 }
 
-const PlatformFunctions* Backend::GetFunctions() const {
+const PlatformFunctions* Backend::GetFunctionsBase() const {
     return mFunctions.get();
 }
 

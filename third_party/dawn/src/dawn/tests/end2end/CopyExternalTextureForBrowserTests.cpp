@@ -27,10 +27,10 @@
 
 #include <vector>
 
-#include "dawn/common/ExternalTextureParams.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/ExternalTextureParams.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -313,6 +313,9 @@ class CopyExternalTextureForBrowserTests_Basic
 TEST_P(CopyExternalTextureForBrowserTests_Basic, Copy) {
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 
+    // TODO(crbug.com/519266534): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     wgpu::CopyTextureForBrowserOptions options = {};
     options.flipY = GetParam().mFlipY;
 
@@ -429,6 +432,9 @@ class CopyExternalTextureForBrowserTests_Aspect : public CopyExternalTextureForB
 
 TEST_P(CopyExternalTextureForBrowserTests_Aspect, Copy) {
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
+
+    // TODO(crbug.com/519266534): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
 
     wgpu::Origin3D srcOrigin = {};
     wgpu::Origin3D dstOrigin = {};

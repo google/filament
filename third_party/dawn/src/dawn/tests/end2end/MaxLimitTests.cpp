@@ -32,12 +32,12 @@
 #include <string>
 #include <vector>
 
-#include "dawn/common/Math.h"
-#include "dawn/common/Platform.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ref.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/platform.h"
 
 namespace dawn {
 namespace {
@@ -150,7 +150,7 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
                 // TODO(crbug.com/dawn/1160): Usually can't actually allocate a buffer this large
                 // because allocating the buffer for zero-initialization fails.
                 maxBufferBindingSize =
-                    std::min(maxBufferBindingSize, uint64_t(2) * 1024 * 1024 * 1024);
+                    std::min(maxBufferBindingSize, uint64_t{2} * 1024 * 1024 * 1024);
                 // With WARP or on 32-bit platforms, such large buffer allocations often fail.
 #if DAWN_PLATFORM_IS(32_BIT)
                 if (IsWindows()) {
@@ -159,7 +159,7 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
 #endif
                 if (IsWARP()) {
                     maxBufferBindingSize =
-                        std::min(maxBufferBindingSize, uint64_t(512) * 1024 * 1024);
+                        std::min(maxBufferBindingSize, uint64_t{512} * 1024 * 1024);
                 }
                 maxBufferBindingSize = Align(maxBufferBindingSize - 3u, 4);
                 shader = R"(
@@ -187,10 +187,10 @@ TEST_P(MaxLimitTests, MaxBufferBindingSize) {
 
                 // Clamp to not exceed the maximum i32 value for the WGSL @size(x) annotation.
                 maxBufferBindingSize = std::min(maxBufferBindingSize,
-                                                uint64_t(std::numeric_limits<int32_t>::max()) + 8);
+                                                uint64_t{std::numeric_limits<int32_t>::max()} + 8);
                 maxBufferBindingSize = Align(maxBufferBindingSize - 3u, 4);
 
-                const uint64_t kMaxStructMemberU32ArraySize = 65535 * 4;
+                const uint64_t kMaxStructMemberU32ArraySize = 65535ULL * 4;
                 uint64_t paddingNeeded = maxBufferBindingSize - 8;
                 uint64_t numPaddingMembers = (paddingNeeded + kMaxStructMemberU32ArraySize - 1) /
                                              kMaxStructMemberU32ArraySize;

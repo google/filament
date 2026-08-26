@@ -1,0 +1,179 @@
+Name
+
+    ARB_seamless_cubemap_per_texture
+
+Name Strings
+
+    GL_ARB_seamless_cubemap_per_texture
+
+Contributors
+
+    Pierre Boudier
+    Graham Sellers
+    Ahmet Oguz Akyuz
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date:         15/05/2013
+    Author revision:            1
+
+Number
+
+    ARB Extension #155
+
+Dependencies
+
+    OpenGL 3.2 is required.
+
+    This extension is written against the OpenGL 4.3 (Core Profile)
+    Specification.
+
+Overview
+
+    In unextended OpenGL, cube maps are treated as sets of six, independent
+    texture images. Once a face is selected from the set, it is treated exactly
+    as any other two-dimensional texture would be. When sampling linearly from
+    the texture, all of the individual texels that would be used to to create
+    the final, bilinear sample values are taken from the same cube face. The
+    normal, two-dimensional texture coordinate wrapping modes are honored.
+    This sometimes causes seams to appear in cube maps.
+
+    ARB_seamless_cube_map (and subsequently, OpenGL 3.2) addresses this issue
+    by providing a mechanism whereby an implementation could take each of the
+    taps of a bilinear sample from a different face, spanning face boundaries
+    and providing seamless filtering from cube map textures. However, in
+    ARB_seamless_cube_map, this feature was exposed as a global state,
+    affecting all bound cube map textures. It was not possible to mix seamless
+    and per-face cube map sampling modes during sampling. Furthermore, if an
+    application included cube maps that were meant to be sampled seamlessly
+    and non-seamlessly, it would have to track this state and enable or disable
+    seamless cube map sampling as needed.
+
+    This extension addresses this issue and provides an orthogonal method for
+    allowing an implementation to provide a per-texture setting for enabling
+    seamless sampling from cube maps.
+
+IP Status
+
+    None.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <pname> parameter of TexParameter{if},
+    TexParameter{if}v, GetTexParameter{if}v, SamplerParameter{if},
+    SamplerParameter{if}v, and GetSamplerParameter{if}v:
+
+        TEXTURE_CUBE_MAP_SEAMLESS                   0x884F
+
+Additions to Chapter 8 of the OpenGL Core Profile Specification (Textures and
+Samplers)
+
+    Modify the first paragraph of Section 8.13.1, "Seamless Cubemap Filtering"
+    as follows:
+
+        Seamless cubemap filtering is enabled or disabled globally by calling
+    Enable or Disable, respectively, with the symbolic constant
+    TEXTURE_CUBE_MAP_SEAMLESS. It may also be enabled for a specific texture
+    unit by setting the TEXTURE_CUBE_MAP_SEAMLESS sampler parameter to TRUE
+    for the sampler object bound to that texture unit (or for the texture object
+    itself, if no sampler object is bound). The default for both the global
+    and per-sampler seamless filtering state is FALSE. The value of
+    TEXTURE_CUBE_MAP_SEAMLESS is ignored for textures that are note cube maps
+    (TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY).
+
+    Add one bit per sampler object to represent the seamless cubemap filtering
+    state to the required state.
+
+Additions to the GLX Specification
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    Append the following to Table 23.14, Textures (state per texture object):
+
+    Get Value                         Type    Get Command               Initial Value   Description                  Sec.   Attribute
+    ------------------------------    ------  --------------------      --------        --------------------------   ------ ---------
+    TEXTURE_CUBE_MAP_SEAMLESS         n x B   GetTexParameter[if]v      FALSE           Seamless cubemap sampling    8.13.1  texture
+                                                                                        is enabled.
+
+    Append the following to Table 23.18, Textures (State per Sampler Object):
+
+    Get Value                         Type    Get Command               Initial Value   Description                  Sec.
+    ------------------------------    ------  --------------------      --------        --------------------------   ------
+    TEXTURE_CUBE_MAP_SEAMLESS         n x B   GetSamplerParameter[if]v  FALSE           Seamless cubemap sampling    8.13.1
+                                                                                        is enabled.
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1) How does this extension interact with the existing global seamless
+       cubemap feature? Explain, in plain English, how seamless filtering gets
+       enabled.
+
+       RESOLVED: These two features are orthogonal and neither requires the
+       other to function. Seamless filtering is enabled for a cube map texture
+       either when TEXTURE_CUBE_MAP_SEAMLESS is enabled globally or when the
+       value of the individual samper's (or texture's) TEXTURE_CUBE_MAP_SEAMLESS
+       parameter is TRUE. The default for both extensions is to leave cube map
+       sampling as described in unextended OpenGL. Thus, an application may use
+       either extension and its behavior will be the same, regardless of the
+       presence of support for or use of the other.
+
+    2) The original AMD extension disallowed TEXTURE_CUBE_MAP_SEAMLESS with
+       textures that aren't CUBE_MAP{_ARRAY}. How does this work with sampler
+       objects that don't have texture types?
+
+       RESOLVED: Removed the error. State is now stored but ignored for non-
+       cube map textures.
+
+Revision History
+
+    Rev.    Date        Author    Changes
+    ----  --------      --------  -----------------------------------------
+
+     1    15/05/2013    gsellers  Create ARB version from AMD version. Update
+                                  against OpenGL 4.3 core profile
+                                  specification. Changes from AMD version
+                                  include:
+                                    * TEXTURE_CUBE_MAP_SEAMLESS accepted by
+                                      SamplerParameter*
+                                    * TEXTURE_CUBE_MAP_SEAMLESS now legal for
+                                      any texture, but is ignored for
+                                      non-cube maps. This is required because
+                                      samplers don't have a target.

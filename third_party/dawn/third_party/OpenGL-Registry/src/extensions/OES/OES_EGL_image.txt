@@ -1,0 +1,412 @@
+Name
+
+    OES_EGL_image
+
+Name Strings
+
+    GL_OES_EGL_image
+
+Contributors
+
+    Gary King
+    Acorn Pooley
+    Jon Leech
+
+Contacts
+
+    Gary King, NVIDIA Corporation (gking 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2006-2014 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL ES Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Approved by the Khronos OpenKODE Working Group in January, 2007
+    as part of OpenKODE 1.0 Provisional.
+
+Version
+
+    April 23, 2015 (version 8)
+
+Number
+
+    OpenGL ES Extension #23
+
+Dependencies
+
+    Requires OpenGL-ES 1.1 or OpenGL-ES 2.0.
+
+    Requires EGL 1.2 and either the EGL_OES_image or EGL_OES_image_base
+    extensions.
+
+    The EGL_KHR_gl_texture_2D_image, EGL_KHR_gl_texture_cubemap_image,
+    EGL_KHR_gl_texture_3D_image, EGL_KHR_gl_renderbuffer_image, and
+    EGL_KHR_vg_parent_image extensions provide additional functionality
+    layered on EGL_OES_image_base and related to this extension
+
+    OES_framebuffer_object affects the wording of this specification
+
+    This extension is written based on the wording of the OpenGL 2.0
+    Specification and the EXT_framebuffer_object extension.
+
+Overview
+
+    This extension provides a mechanism for creating texture and
+    renderbuffer objects sharing storage with specified EGLImage objects
+    (such objects are referred to as "EGLImage targets").
+
+    The companion EGL_KHR_image_base and EGL_KHR_image extensions
+    provide the definition and rationale for EGLImage objects.
+
+    Other EGL extensions, such as EGL_KHR_gl_texture_2D_image,
+    EGL_KHR_gl_texture_cubemap_image, EGL_KHR_gl_texture_3D_image,
+    EGL_KHR_gl_renderbuffer_image, and EGL_KHR_vg_parent_image, define
+    the related functionality of creating EGLImage objects from
+    "EGLImage sources" such as OpenGL ES texture or renderbuffers or
+    OpenVG VGImage objects.
+
+    EGL extension specifications are located in the EGL Registry at
+
+        http://www.khronos.org/registry/egl/
+
+Glossary
+
+    Please see the EGL_KHR_image specification for a list of terms
+    used by this specification.
+
+New Types
+
+    /*
+     * GLeglImageOES is an opaque handle to an EGLImage
+     */
+    typedef void* GLeglImageOES;
+
+
+New Procedures and Functions
+
+    void EGLImageTargetTexture2DOES(enum target, eglImageOES image)
+
+    void EGLImageTargetRenderbufferStorageOES(enum target,
+                                              eglImageOES image)
+
+New Tokens
+
+     None.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    - (3.8.2, p. 160)  Insert the following text after the end of the
+      first paragraph (before the discussion of {Copy}TexSubImage):
+
+    "Another way of specifying two-dimensional texture images is to
+    reference them from existing EGLImage objects.  Images specified
+    this way will be EGLImage siblings with the original EGLImage
+    source and any other EGLImage targets.
+
+    The command
+
+        void EGLImageTargetTexture2DOES(enum target, eglImageOES image);
+
+    defines an entire two-dimensional texture array.  All properties
+    of the texture images (including width, height, format, border, mipmap
+    levels of detail, and image data) are taken from the specified
+    eglImageOES <image>, rather than from the client or the framebuffer.
+    Any existing image arrays associated with any mipmap levels in the texture
+    object are freed (as if TexImage was called for each, with an image of
+    zero size).  As a result of this referencing operation, all of the pixel
+    data in the <buffer> used as the EGLImage source resource (i.e., the
+    <buffer> parameter passed to the CreateImageOES command that returned
+    <image>) will become undefined.
+
+    Currently, <target> must be TEXTURE_2D.  <image> must be the
+    handle of a valid EGLImage resource, cast into the type eglImageOES.
+    Assuming no errors are generated in EGLImageTargetTexture2DOES, the
+    newly specified texture object will be an EGLImage target of the
+    specified  eglImageOES.  If an application later respecifies any image
+    array in the texture object (through mechanisms such as calls to
+    TexImage2D and/or GenerateMipmapOES, or setting the
+    SGIS_GENERATE_MIPMAP parameter to TRUE), implementations should allocate
+    additional space for all specified (and respecified) image arrays,
+    and copy any existing image data to the newly (re)specified texture
+    object (as if TexImage was called for every level-of-detail in the
+    texture object).  The respecified texture object will not be an
+    EGLImage target.
+
+    If the GL is unable to specify a texture object using the supplied
+    eglImageOES <image> (if, for example, <image> refers to a multisampled
+    eglImageOES), the error INVALID_OPERATION is generated.
+
+    If <image> does not refer to a valid eglImageOES object, the error
+    INVALID_VALUE is generated.
+
+    If <target> is not TEXTURE_2D, the error INVALID_ENUM is generated.
+
+Additions to the EXT_framebuffer_object extension
+
+    - (4.4.2.1) Add the following text at the end of section 4.4.2.1
+      (Renderbuffer Objects)
+
+    The command
+
+        void EGLImageTargetRenderbufferStorageOES(enum target,
+                                                  eglImageOES image)
+
+    establishes the data storage, format, and dimensions of a
+    renderbuffer object's image, using the parameters and storage
+    associated with the eglImageOES <image>.  Assuming no errors
+    are generated in this process, the resulting renderbuffer
+    will be an EGLImage target of the specifed eglImageOES <image>.
+    The renderbuffer will remain an EGLImage target until it is
+    deleted or respecified by a call to
+    {Reference}RenderbufferStorageOES.  As a result of this referencing
+    operation, all of the pixel data in the <buffer> used as the
+    EGLImage source resource (i.e., the <buffer> parameter passed to
+    the CreateImageOES command that returned <image>) will become
+    undefined.
+
+    <target> must be RENDERBUFFER_OES, and <image> must be the
+    handle of a valid EGLImage resource, cast into the type
+    eglImageOES.
+
+    If the GL is unable to create a renderbuffer using the specified
+    eglImageOES, the error INVALID_OPERATION is generated.  If <image>
+    does not refer to a valid eglImageOES object, the error
+    INVALID_VALUE is generated.
+
+Issues
+
+    1.  What happens if an application tries to specify a new mipmap
+        level (or respecify an existing mipmap level) for a texture
+        object that was originally specified using
+        EGLImageTargetTexture2D (e.g., by subsequent calls to
+        {Copy}TexImage, GenerateMipmapOES, and/or setting the
+        texture's GENERATE_MIPMAP_SGIS parameter to TRUE) ?
+
+        RESOLVED:  If the application respecifies any properties of
+        an EGLImage target texture, the GL should allocate additional
+        memory for the respecified object, copying any data from
+        previously-specified levels (including those in the EGLImage
+        source).  The respecified texture object will not be an
+        EGLImage target, potentially orphaning the EGLImage.
+
+    2.  What happens if multiple texture or renderbuffer objects, which
+        are each EGLImage siblings, are attached to multiple attachment
+        points of a framebuffer object?
+
+        RESOLVED:  There are several possibilities for handling this
+        situation, listed below.  The primary goal for any solution
+        should be minimizing the required run-time error checking &
+        validation, since determining that two objects refer to the same
+        parent resource is a complex operation.
+
+         i.   Generate an error if a context share group attempts to create
+              two EGLImage siblings (either source or target) .
+
+              This limits error checking to just EGLImageTargetTexture /
+              EGLImageTargetRenderbufferStorage, which should be infrequent
+              calls, particularly during run-time.  However, some potentially
+              valuable use cases are restricted with this approach, such
+              as referencing 2D texture objects from cube map EGLImage sources
+              in the same context share group.
+
+         ii.  Add a new clause to the framebuffer completeness test that
+              disallows multiple EGLImage siblings being attached to the
+              same framebuffer object.
+
+              This would be in the spirit of the OES_framebuffer_object
+              extension and does not limit any valuable use cases; however,
+              it has the potential to significantly increase runtime
+              overhead, given the complexity of this completeness check
+              and the potential frequency that framebuffer completeness
+              may need to be checked.
+
+         iii. Leave the rendering results undefined, but require that
+              behavior be limited to undefined rendering results (i.e.,
+              the application and/or system may not crash as a result
+              of this operation).
+
+              This solution allows implementations the opportunity to have
+              virtually no additional run-time validation overhead, nor
+              are any valuable use cases restricted.  Implementations
+              may consider framebuffer objects which contain multiple
+              EGLImage siblings as incomplete framebuffers if necessary to
+              ensure application & system stability.
+
+        SUGGESTION:  Solution (iii).  The only reasonable well-defined
+        behavior for this type of API usage is an error; however, given
+        the potential for the error check to noticeably increase validation
+        overhead, leaving this behavior undefined seems like the best
+        choice.
+
+    3.  What about portability problems introduced by allowing implementation-
+        dependent failures?
+
+        UNRESOLVED:  This is the same issue described in Issue 14 of the
+        EGL_KHR_image_base specification. Like the resolution for that
+        issue, this specification should include some minimum
+        requirements, but leave the larger portability problem
+        unresolved at the moment.
+
+    4.  Should EGLImageTargetTexture2DOES and
+        EGLImageTargetRenderBufferStorageOES result in undefined pixel data,
+        as with calls to eglCreateImageOES?
+
+        UNRESOLVED:  One of the problems with allowing the referencing
+        functions to result in undefined pixel data is that the EGLImage
+        source object may be part of a larger image structure (such as
+        an array of mipmap levels-of-detail, or cube map faces).  While we
+        can specify that the pixel data in the EGLImage become undefined
+        quite easily, specifying that the pixel data in other images become
+        undefined is more difficult.  So, with that discussion, the following
+        options were considered:
+
+          i.   Specify that the pixel data in the EGLImage, and other image
+               arrays associated with the EGLImage source, become undefined
+               as a result of referencing.
+
+          ii.  Specify that only the pixel data in the EGLImage becomes
+               undefined; any data in other image arrays associated with the
+               EGLImage source must not be affected by the referencing
+               operation.
+
+          iii. Specify that the pixel data in the EGLImage is unaffected as
+               a result of the referencing operation.
+
+        Option (i) gives the greatest flexibility (and potentially ease-
+        of implementation) to implementers, which should may result in
+        implementations exporting a larger number of compatible configurations
+        than the other, stricter options.  Additionally, for well-behaved
+        applications (i.e., applications which perform all resource creation
+        and referencing prior to use), making the image data undefined will
+        not have any adverse side effects.
+
+        Option (ii) provides option (i)'s benefits if the EGLImage source
+        is a trivial image (i.e., no additional mipmap levels-of-detail,
+        3D texture slices, etc.); however, some implementations may be
+        required to implement potentially-expensive copy operations to support
+        complex EGLImage source images.
+
+        Option (iii) is the strictest, and may significantly impede
+        implementers' ability to expose compatible configurations.
+
+        Weighing the benefits (increased configuration compatibility and ease-
+        / performance- of implementation) versus the costs (specification
+        ugliness), the specification has currently selected option (i),
+        favoring compatibility and performance.
+
+
+    5.  What should the entry point for referencing 2D textures be named?
+
+        UNRESOLVED:  Unfortunately, OpenGL is not particularly consistent
+        with texture naming conventions.  However, most texture function
+        names have followed the convention of using a verb- or adjective-
+        specifier followed by the object type, e.g. : CopyTexImage,
+        CompressedTexImage, DrawPixels, etc.
+
+        Therefore, this issue can be broken into two sub-issues: naming
+        the verb or adjective and naming the object type.
+
+        The following options were considered for the verb or adjective:
+          a1)  Reference / Referenced
+          a2)  EGLImageTarget
+
+        Reference (a1) is the verb for creating EGLImage targets from
+        EGLImages (defined in the EGL_OES_image specification), but
+        "Reference<blah>" might confuse some developers, since the
+        direction of the verb sounds backwards.
+
+        Therefore, option (a2) has been selected, since the newly-
+        specified texture object will be an EGLImage target.
+
+        And the following options were considered for the object type:
+          b1)  TexImage
+          b2)  Texture
+          b3)  TextureObject
+
+        (b1) follows the convention used by other texture specification
+        functions; however, unlike {Copy,Compressed}TexImage, which
+        specify only a single mipmap level-of-detail, the referencing
+        entry point respecifies all image arrays in the texture object.
+
+        (b2) and (b3) address the issues with (b1).  The OpenGL
+        specification interchangeably uses "texture" and "texture object"
+        to refer to the entire collection of image arrays, so either
+        choice seems reasonable.  For brevity, (b2) has been used
+        in this specification.
+
+        Note, though, that eglBindTexImage also respecifies all image
+        arrays in the texture object, but it does not change the
+        TexImage suffix.
+
+        Another option would be to treat the referencing function as an
+        attachment, rather than a specification, in which case a more
+        appropriate name would follow the convention used in the
+        OES_framebuffer_object extension, such as Texture2DeglImageOES.
+
+    6.  What should the entry point for referencing renderbuffers be named?
+
+        UNRESOLVED:  There are far fewer conventions for renderbuffer
+        function names than there are for textures, so the naming for
+        this function should use whichever convention is selected
+        to resolve Issue 5.  Given the current selections in that issue,
+        EGLImageTargetRenderbufferStorage is being used.
+
+Dependencies on EGL_KHR_image, EGL_KHR_image_base, and EGL 1.2
+
+    If EGL 1.2 is not supported, or if neither the EGL_OES_image nor
+    EGL_OES_image_base extensions is supported, all discussion of
+    EGLImages should be ignored, and any calls to either
+    EGLImageTargetTexture2DOES or EGLImageTargetRenderbufferStorageOES
+    should generate the error INVALID_OPERATION.
+
+Dependencies on OES_framebuffer_object
+
+    If the OES_framebuffer_object extension is not supported, all
+    discussion of renderbuffers should be ignored, and all calls to
+    EGLImageTargetRenderbufferStorageOES should generate the error
+    INVALID_OPERATION.
+
+Revision History
+
+    #8 (April 23, 2015, Jon Leech)
+       - Fix typo EGLImageTargetTexImage2DOES -> EGLImageTargetTexture2DOES
+         (Bug 8114).
+
+    #7 (April 17, 2014, Jon Leech)
+       - Add missing error for invalid <image> parameter to
+         EGLImageTargetTexture2DOES (Bug 5164).
+
+    #6 (April 1, 2009, Acorn Pooley, Jon Leech)
+       - Fix dependancy typo. Mention EGL_KHR_image_base. Correct
+         spelling of EGL_KHR_image and refer to alternate
+         EGL_KHR_image_base. Correct dependency on EGL from 1.1 to 1.2.
+         Change filename in the registry to correspond to capitalization
+         of the extension string. Don't update the version number
+         further until all internal edits are completed.
+
+    #5 (April 1, 2009, Jon Leech)
+       - Added more overview pointing to companion EGL extensions.
+
+    #4 (April 22, 2007, Jon Leech)
+       - Added updated 'Status' to reflect OpenKODE 1.0 Provisional.
+
+    #3  (December 14, 2006)
+       - Changed requirement to egl 1.2 to include EGLClientBuffer type.
+
+    #2  (October 20, 2006)
+       - Reworded phrasing describing undefined pixel data as a
+         result of EGLImageTarget* commands
+
+    #1 - Original Release

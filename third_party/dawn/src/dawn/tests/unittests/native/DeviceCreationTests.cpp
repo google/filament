@@ -31,16 +31,17 @@
 #include <vector>
 
 #include "dawn/dawn_proc.h"
-#include "dawn/native/Adapter.h"
 #include "dawn/native/DawnNative.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Toggles.h"
-#include "dawn/native/dawn_platform.h"
-#include "dawn/tests/MockCallback.h"
-#include "dawn/tests/StringViewMatchers.h"
-#include "dawn/utils/SystemUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Toggles.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/dawn/tests/MockCallback.h"
+#include "src/dawn/tests/StringViewMatchers.h"
+#include "src/dawn/utils/SystemUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 namespace {
@@ -125,7 +126,7 @@ TEST_F(DeviceCreationTest, CreateDeviceSuccess) {
 // Test successful call to CreateDevice with allocator descriptor.
 TEST_F(DeviceCreationTest, CreateDeviceWithAllocatorSuccess) {
     wgpu::DawnDeviceAllocatorControl allocationDesc = {};
-    allocationDesc.allocatorHeapBlockSize = 4 * 1024;
+    allocationDesc.allocatorHeapBlockSize = 4ULL * 1024;
 
     wgpu::DeviceDescriptor desc = {};
     wgpu::FeatureName feature = wgpu::FeatureName::DawnDeviceAllocatorControl;
@@ -141,7 +142,7 @@ TEST_F(DeviceCreationTest, CreateDeviceWithAllocatorSuccess) {
 // not have DawnDeviceAllocatorControl feature enabled.
 TEST_F(DeviceCreationTest, CreateDeviceWithAllocatorFailedMissingFeature) {
     wgpu::DawnDeviceAllocatorControl allocationDesc = {};
-    allocationDesc.allocatorHeapBlockSize = 4 * 1024;
+    allocationDesc.allocatorHeapBlockSize = 4ULL * 1024;
 
     wgpu::DeviceDescriptor desc = {};
     desc.nextInChain = &allocationDesc;
@@ -193,7 +194,7 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
     for (size_t i = 0; i < kTotalFeaturesCount; i++) {
         Feature feature = static_cast<Feature>(i);
-        wgpu::FeatureName featureName = ToAPI(feature);
+        wgpu::FeatureName featureName = ToCppAPI(feature);
 
         // Only test experimental features.
         if (kFeatureNameAndInfoList[feature].featureState == FeatureInfo::FeatureState::Stable) {
@@ -229,7 +230,7 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
             bool foundFeatureName = false;
             for (uint32_t fi = 0; fi < supportedFeatures.featureCount; ++fi) {
-                if (featureName == supportedFeatures.features[fi]) {
+                if (featureName == DAWN_UNSAFE_TODO(supportedFeatures.features[fi])) {
                     foundFeatureName = true;
                     break;
                 }
@@ -261,7 +262,7 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
                 bool foundFeatureName = false;
                 for (uint32_t fi = 0; fi < supportedFeatures.featureCount; ++fi) {
-                    if (featureName == supportedFeatures.features[fi]) {
+                    if (featureName == DAWN_UNSAFE_TODO(supportedFeatures.features[fi])) {
                         foundFeatureName = true;
                         break;
                     }
@@ -284,7 +285,7 @@ TEST_F(DeviceCreationTest, CreateDeviceRequiringExperimentalFeatures) {
 
                 bool foundFeatureName = false;
                 for (uint32_t fi = 0; fi < supportedFeatures.featureCount; ++fi) {
-                    if (featureName == supportedFeatures.features[fi]) {
+                    if (featureName == DAWN_UNSAFE_TODO(supportedFeatures.features[fi])) {
                         foundFeatureName = true;
                         break;
                     }

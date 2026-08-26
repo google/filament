@@ -32,13 +32,13 @@
 #include <variant>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/TypedInteger.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/EnumClassBitmasks.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Subresource.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/EnumClassBitmasks.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Subresource.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/typed_integer.h"
 
 // About multi-planar formats.
 //
@@ -95,9 +95,9 @@ enum class SampleTypeBit : uint8_t {
 SampleTypeBit SampleTypeToSampleTypeBit(wgpu::TextureSampleType sampleType);
 
 struct TexelBlockInfo {
-    uint32_t byteSize;
-    uint32_t width;
-    uint32_t height;
+    uint32_t byteSize = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 };
 
 enum class TextureComponentType {

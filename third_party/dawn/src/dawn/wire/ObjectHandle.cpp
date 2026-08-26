@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/wire/ObjectHandle.h"
+#include "src/dawn/wire/ObjectHandle.h"
 
-#include "dawn/common/Assert.h"
+#include "src/utils/assert.h"
 
 namespace dawn::wire {
 
@@ -43,9 +43,19 @@ ObjectHandle& ObjectHandle::operator=(const volatile ObjectHandle& rhs) {
     generation = rhs.generation;
     return *this;
 }
+volatile ObjectHandle& ObjectHandle::operator=(const volatile ObjectHandle& rhs) volatile {
+    id = rhs.id;
+    generation = rhs.generation;
+    return *this;
+}
 
 ObjectHandle::ObjectHandle(const ObjectHandle& rhs) = default;
 ObjectHandle& ObjectHandle::operator=(const ObjectHandle& rhs) = default;
+volatile ObjectHandle& ObjectHandle::operator=(const ObjectHandle& rhs) volatile {
+    id = rhs.id;
+    generation = rhs.generation;
+    return *this;
+}
 
 ObjectHandle::ObjectHandle(const Handle& rhs) : Handle{rhs.id, rhs.generation} {}
 
@@ -55,6 +65,16 @@ ObjectHandle& ObjectHandle::AssignFrom(const ObjectHandle& rhs) {
     return *this;
 }
 ObjectHandle& ObjectHandle::AssignFrom(const volatile ObjectHandle& rhs) {
+    id = rhs.id;
+    generation = rhs.generation;
+    return *this;
+}
+volatile ObjectHandle& ObjectHandle::AssignFrom(const ObjectHandle& rhs) volatile {
+    id = rhs.id;
+    generation = rhs.generation;
+    return *this;
+}
+volatile ObjectHandle& ObjectHandle::AssignFrom(const volatile ObjectHandle& rhs) volatile {
     id = rhs.id;
     generation = rhs.generation;
     return *this;

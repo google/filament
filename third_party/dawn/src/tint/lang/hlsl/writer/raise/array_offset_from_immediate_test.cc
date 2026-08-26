@@ -43,7 +43,10 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 struct IR_ArrayOffsetFromImmediateTest : core::ir::transform::TransformTest {
-    IR_ArrayOffsetFromImmediateTest() { capabilities = kArrayOffsetFromImmediateCapabilities; }
+    IR_ArrayOffsetFromImmediateTest() {
+        mod.properties.Add(core::ir::Property::kAllow16BitFloats,
+                           core::ir::Property::kAllowNonCoreTypes);
+    }
 };
 
 // Test that offset is added to byte_address_buffer.Load
@@ -64,7 +67,7 @@ TEST_F(IR_ArrayOffsetFromImmediateTest, Basic) {
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 6)),
+                                                             ty.array(ty.u32(), 3)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     ASSERT_EQ(immediate_data, Success);
@@ -76,13 +79,13 @@ TEST_F(IR_ArrayOffsetFromImmediateTest, Basic) {
     bindpoint_to_offset_index[{0, 0}] = 2;
 
     auto result =
-        ArrayOffsetFromImmediates(mod, immediate_data.Get(), 0, 6, bindpoint_to_offset_index);
+        ArrayOffsetFromImmediates(mod, immediate_data.Get(), 0, 3, bindpoint_to_offset_index);
     ASSERT_EQ(result, Success);
 
     EXPECT_EQ(str(),
               R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 6> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 3> @offset(0)
 }
 
 $B1: {  # root
@@ -92,9 +95,9 @@ $B1: {  # root
 
 %foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %4:ptr<immediate, array<vec4<u32>, 6>, read> = access %tint_immediate_data, 0u
-    %5:ptr<immediate, vec4<u32>, read> = access %4, 0u
-    %6:u32 = load_vector_element %5, 2u
+    %4:ptr<immediate, array<u32, 3>, read> = access %tint_immediate_data, 0u
+    %5:ptr<immediate, u32, read> = access %4, 2u
+    %6:u32 = load %5
     %7:u32 = add 42u, %6
     %8:u32 = %buffer.Load %7
     ret
@@ -134,8 +137,8 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 1> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 1> @offset(0)
 }
 
 $B1: {  # root
@@ -153,7 +156,7 @@ $B1: {  # root
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 1)),
+                                                             ty.array(ty.u32(), 1)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
@@ -195,8 +198,8 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 6> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 21> @offset(0)
 }
 
 $B1: {  # root
@@ -214,14 +217,14 @@ $B1: {  # root
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 6)),
+                                                             ty.array(ty.u32(), 21)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
     bindpoint_to_offset_index[{0, 1}] = 20;  // Doesn't match binding point
-    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 6u, bindpoint_to_offset_index);
+    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 21u, bindpoint_to_offset_index);
 
     EXPECT_EQ(expect, str());
 }
@@ -258,8 +261,8 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 6> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 21> @offset(0)
 }
 
 $B1: {  # root
@@ -278,14 +281,14 @@ $B1: {  # root
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 6)),
+                                                             ty.array(ty.u32(), 21)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
     bindpoint_to_offset_index[{0, 0}] = 20;
-    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 6u, bindpoint_to_offset_index);
+    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 21u, bindpoint_to_offset_index);
 
     EXPECT_EQ(expect, str());
 }
@@ -349,8 +352,8 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 15> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 58> @offset(0)
 }
 
 $B1: {  # root
@@ -361,44 +364,44 @@ $B1: {  # root
 
 %foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %5:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %6:ptr<immediate, vec4<u32>, read> = access %5, 6u
-    %7:u32 = load_vector_element %6, 2u
+    %5:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %6:ptr<immediate, u32, read> = access %5, 26u
+    %7:u32 = load %6
     %8:u32 = add 42u, %7
     %9:u32 = %buffer.Load %8
-    %10:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %11:ptr<immediate, vec4<u32>, read> = access %10, 6u
-    %12:u32 = load_vector_element %11, 2u
+    %10:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %11:ptr<immediate, u32, read> = access %10, 26u
+    %12:u32 = load %11
     %13:u32 = add 43u, %12
     %14:vec2<u32> = %buffer.Load2 %13
-    %15:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %16:ptr<immediate, vec4<u32>, read> = access %15, 6u
-    %17:u32 = load_vector_element %16, 2u
+    %15:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %16:ptr<immediate, u32, read> = access %15, 26u
+    %17:u32 = load %16
     %18:u32 = add 44u, %17
     %19:vec3<u32> = %buffer.Load3 %18
-    %20:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %21:ptr<immediate, vec4<u32>, read> = access %20, 6u
-    %22:u32 = load_vector_element %21, 2u
+    %20:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %21:ptr<immediate, u32, read> = access %20, 26u
+    %22:u32 = load %21
     %23:u32 = add 45u, %22
     %24:vec4<u32> = %buffer.Load4 %23
-    %25:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %26:ptr<immediate, vec4<u32>, read> = access %25, 14u
-    %27:u32 = load_vector_element %26, 1u
+    %25:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %26:ptr<immediate, u32, read> = access %25, 57u
+    %27:u32 = load %26
     %28:u32 = add 46u, %27
     %29:void = %buffer_1.Store %28, 123u
-    %30:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %31:ptr<immediate, vec4<u32>, read> = access %30, 14u
-    %32:u32 = load_vector_element %31, 1u
+    %30:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %31:ptr<immediate, u32, read> = access %30, 57u
+    %32:u32 = load %31
     %33:u32 = add 47u, %32
     %34:void = %buffer_1.Store2 %33, vec2<u32>(123u, 124u)
-    %35:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %36:ptr<immediate, vec4<u32>, read> = access %35, 14u
-    %37:u32 = load_vector_element %36, 1u
+    %35:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %36:ptr<immediate, u32, read> = access %35, 57u
+    %37:u32 = load %36
     %38:u32 = add 48u, %37
     %39:void = %buffer_1.Store3 %38, vec3<u32>(123u, 124u, 125u)
-    %40:ptr<immediate, array<vec4<u32>, 15>, read> = access %tint_immediate_data, 0u
-    %41:ptr<immediate, vec4<u32>, read> = access %40, 14u
-    %42:u32 = load_vector_element %41, 1u
+    %40:ptr<immediate, array<u32, 58>, read> = access %tint_immediate_data, 0u
+    %41:ptr<immediate, u32, read> = access %40, 57u
+    %42:u32 = load %41
     %43:u32 = add 49u, %42
     %44:void = %buffer_1.Store4 %43, vec4<u32>(123u, 124u, 125u, 126u)
     ret
@@ -408,7 +411,7 @@ $B1: {  # root
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 15)),
+                                                             ty.array(ty.u32(), 58)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
@@ -416,7 +419,7 @@ $B1: {  # root
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
     bindpoint_to_offset_index[{5, 6}] = 26;
     bindpoint_to_offset_index[{7, 8}] = 57;
-    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 15u, bindpoint_to_offset_index);
+    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 58u, bindpoint_to_offset_index);
 
     EXPECT_EQ(expect, str());
 }
@@ -457,14 +460,14 @@ TEST_F(IR_ArrayOffsetFromImmediateTest, AllAtomicOps) {
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 3)),
+                                                             ty.array(ty.u32(), 8)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
     bindpoint_to_offset_index[{0, 0}] = 7;
-    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 3u, bindpoint_to_offset_index);
+    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 8u, bindpoint_to_offset_index);
 
     // Just verify it doesn't crash - detailed output checking would be very long
     EXPECT_NE(str(), "");
@@ -515,8 +518,8 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_immediate_data_struct = struct @align(16), @block {
-  buffer_offsets:array<vec4<u32>, 3> @offset(0)
+tint_immediate_data_struct = struct @align(4), @block {
+  buffer_offsets:array<u32, 10> @offset(0)
 }
 
 $B1: {  # root
@@ -528,19 +531,19 @@ $B1: {  # root
 
 %foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
-    %6:ptr<immediate, array<vec4<u32>, 3>, read> = access %tint_immediate_data, 0u
-    %7:ptr<immediate, vec4<u32>, read> = access %6, 0u
-    %8:u32 = load_vector_element %7, 1u
+    %6:ptr<immediate, array<u32, 10>, read> = access %tint_immediate_data, 0u
+    %7:ptr<immediate, u32, read> = access %6, 1u
+    %8:u32 = load %7
     %9:u32 = add 0u, %8
     %10:u32 = %buffer0.Load %9
-    %11:ptr<immediate, array<vec4<u32>, 3>, read> = access %tint_immediate_data, 0u
-    %12:ptr<immediate, vec4<u32>, read> = access %11, 1u
-    %13:u32 = load_vector_element %12, 1u
+    %11:ptr<immediate, array<u32, 10>, read> = access %tint_immediate_data, 0u
+    %12:ptr<immediate, u32, read> = access %11, 5u
+    %13:u32 = load %12
     %14:u32 = add 0u, %13
     %15:u32 = %buffer1.Load %14
-    %16:ptr<immediate, array<vec4<u32>, 3>, read> = access %tint_immediate_data, 0u
-    %17:ptr<immediate, vec4<u32>, read> = access %16, 2u
-    %18:u32 = load_vector_element %17, 1u
+    %16:ptr<immediate, array<u32, 10>, read> = access %tint_immediate_data, 0u
+    %17:ptr<immediate, u32, read> = access %16, 9u
+    %18:u32 = load %17
     %19:u32 = add 0u, %18
     %20:u32 = %buffer2.Load %19
     ret
@@ -550,16 +553,16 @@ $B1: {  # root
 
     core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     ASSERT_EQ(immediate_data_config.AddInternalImmediateData(0, mod.symbols.New("buffer_offsets"),
-                                                             ty.array(ty.vec4u(), 3)),
+                                                             ty.array(ty.u32(), 10)),
               Success);
     auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
     EXPECT_EQ(immediate_data, Success);
 
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_offset_index;
-    bindpoint_to_offset_index[{0, 0}] = 1;  // vec4[0].y
-    bindpoint_to_offset_index[{0, 1}] = 5;  // vec4[1].y
-    bindpoint_to_offset_index[{0, 2}] = 9;  // vec4[2].y
-    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 3u, bindpoint_to_offset_index);
+    bindpoint_to_offset_index[{0, 0}] = 1;
+    bindpoint_to_offset_index[{0, 1}] = 5;
+    bindpoint_to_offset_index[{0, 2}] = 9;
+    Run(ArrayOffsetFromImmediates, immediate_data.Get(), 0u, 10u, bindpoint_to_offset_index);
 
     EXPECT_EQ(expect, str());
 }

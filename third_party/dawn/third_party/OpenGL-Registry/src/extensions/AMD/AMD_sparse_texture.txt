@@ -1,0 +1,822 @@
+Name
+
+    AMD_sparse_texture
+
+Name Strings
+
+    GL_AMD_sparse_texture
+
+Contributors
+
+    Graham Sellers, AMD
+    Pierre Boudier, AMD
+    Juraj Obert, AMD
+
+Contact
+
+    Graham Sellers, AMD (graham.sellers 'at' amd.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         03/27/2012
+    AMD Revision:               6
+
+Number
+
+    426
+
+Dependencies
+
+    OpenGL 2.0 or ARB_fragment_shader is required.
+
+    This extension is written against the OpenGL 4.2 (Core) Specification.
+
+    This extension is written against the OpenGL Shading Language (GLSL)
+    Specification, version 4.20.
+
+Overview
+
+    Recent advances in application complexity and a desire for higher
+    resolutions have pushed texture sizes up considerably. Often, the amount
+    of physical memory available to a graphics processor is a limiting factor
+    in the performance of texture-heavy applications. Once the available
+    physical memory is exhausted, paging may occur bringing performance down
+    considerably - or worse, the application may fail. Nevertheless, the amount
+    of address space available to the graphics processor has increased to the
+    point where many gigabytes - or even terabytes of address space may be
+    usable even though that amount of physical memory is not present.
+
+    This extension allows the separation of the graphics processor's address
+    space (reservation) from the requirement that all textures must be
+    physically backed (commitment). This exposes a limited form of
+    virtualization for textures. Use cases include sparse (or partially
+    resident) textures, texture paging, on-demand and delayed loading of
+    texture assets and application controlled level of detail.
+
+New Procedures and Functions
+
+        void TexStorageSparseAMD(enum target,
+                                 enum internalFormat,
+                                 sizei width,
+                                 sizei height,
+                                 sizei depth,
+                                 sizei layers,
+                                 bitfield flags);
+
+        void TextureStorageSparseAMD(uint texture,
+                                     enum target,
+                                     enum internalFormat,
+                                     sizei width,
+                                     sizei height,
+                                     sizei depth,
+                                     sizei layers,
+                                     bitfield flags);
+
+New Tokens
+
+    Accepted by the <flags> parameter to TexStorageSparseAMD and TextureStorageSparseAMD:
+
+        TEXTURE_STORAGE_SPARSE_BIT_AMD                  0x00000001
+
+    Accepted by the <pname> parameter to GetInternalformativ:
+
+        VIRTUAL_PAGE_SIZE_X_AMD                         0x9195
+        VIRTUAL_PAGE_SIZE_Y_AMD                         0x9196
+        VIRTUAL_PAGE_SIZE_Z_AMD                         0x9197
+
+    Accepted by the <pname> parameter to GetIntegerv, GetFloatv, GetDoublev,
+    GetInteger64v, and GetBooleanv:
+
+        MAX_SPARSE_TEXTURE_SIZE_AMD                     0x9198
+        MAX_SPARSE_3D_TEXTURE_SIZE_AMD                  0x9199
+        MAX_SPARSE_ARRAY_TEXTURE_LAYERS                 0x919A
+
+    Accepted by the <pname> parameter of GetTexParameter{if}v:
+
+        MIN_SPARSE_LEVEL_AMD                            0x919B
+
+    Accepted by the <pname> parameter of TexParameter{if}{v} and
+    GetTexParameter{if}v:
+
+        MIN_LOD_WARNING_AMD                             0x919C
+
+Additions to Chapter 2 of the OpenGL 4.2 (Core) Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 (Core) Specification (Rasterization)
+
+    Add new Subsection 3.8.3 "Texture Storage Allocation". Renumber
+    subsequent sections.
+
+    3.8.3 Texture Storage Allocation
+
+    The command
+
+        void TexStorageSparseAMD(enum target,
+                                 enum internalFormat,
+                                 sizei width,
+                                 sizei height,
+                                 sizei depth,
+                                 sizei layers,
+                                 bitfield flags);
+
+    is used to specify the storage requirements for a texture object. <target>
+    must be one of TEXTURE_1D, TEXTURE_1D_ARRAY, TEXTURE_2D, TEXTURE_RECTANGLE,
+    TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY or TEXTURE_3D
+    for a one-dimensional texture, one-dimensional array texture,
+    two-dimensional texture, rectangular texture, two-dimensional array texture,
+    cube-map texture, cube-map array texture, or three-dimensional texture,
+    respectively.
+
+    <width>, <height>, and <depth> determine the size of the allocated texture.
+    When <target> is TEXTURE_1D or TEXTURE_1D_ARRAY, <height> and <depth> must
+    be 1. When <target> is TEXTURE_2D, TEXTURE_RECTANGLE or TEXTURE_2D_ARRAY,
+    <depth> must be 1. When <target> is TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY,
+    <width>, <height> and <depth> must be equal. For the non-array targets (TEXTURE_1D,
+    TEXTURE_2D, TEXTURE_CUBE_MAP and TEXTURE_3D), <layers> must be 1, otherwise
+    it specifies the number of layers in the array. <internalFormat> specifies
+    the internal storage format for the texture data and must be one of the
+    sized internal formats listed in Table 3.12.
+
+    <width>, and <height> must be less than or equal to the value of
+    MAX_SPARSE_TEXTURE_SIZE_AMD, and <depth> must be less than or equal to the
+    value of MAX_SPARSE_3D_TEXTURE_SIZE_AMD. <layers> must be less than or
+    equal to the value of MAX_SPARSE_ARRAY_TEXTURE_LAYERS_AMD.
+
+    <flags> contains a bitfield that is used to control the allocation strategy
+    used for the texture.
+
+    If <flags> contains TEXTURE_STORAGE_SPARSE_BIT_AMD, storage is reserved for
+    the texture data, but not committed immediately, otherwise, storage is
+    both reserved and committed at time of specification . If the texture is
+    marked as sparse (and storage is therefore uncommitted), storage for the
+    texture data is committed on later specification through commands such as
+    TexSubImage1D, TexSubImage2D or CopyTexSubImage2D.
+
+    Texture image stores allocated via calls to TextStorageSparseAMD are always
+    considered complete, whether or not physical backing store for all mipmap
+    levels has been allocated.
+
+    The TextureStorageSparseAMD command operates identically to the
+    TexStorageSparseAMD command except, rather than specifying storage requirements
+    for the current bound texture for the texture unit indicated by the current
+    active texture state and the target parameter, this command specifies storage
+    requirements for the texture object named by the initial texture parameter.
+    The error INVALID_VALUE is generated if <texture> is zero.
+
+    Add new Subsection 3.8.6 "Texture Storage Commitment and Decommitment",
+    p.212. Renumber subsequent sections.
+
+    For texture images allocated by calling TexStorageSparseAMD or
+    TextureStorageSparseAMD with a <flags> parameter which contains
+    the TEXTURE_STORAGE_SPARSE_BIT_AMD, physical storage for the underlying
+    texture data may not yet be committed. Commitment is made by calling
+    TexSubImage1D, TexSubImage2D, TexSubImage3D, with <data> containing a value
+    other than NULL. When such a command is encountered, physical storage
+    for the specified region of the texture is committed and the data
+    becomes resident. If <data> is NULL and no buffer is bound to the
+    PIXEL_UNPACK_BUFFER binding, then the data corresponding to
+    the specified region is decommitted and released to the GL. If a buffer is
+    bound to the PIXEL_UNPACK_BUFFER binding point, then <data> is interpreted
+    as normal - that is, if <data> is NULL, then it indicates an offset of
+    zero into that buffer's data store.
+
+    Compressed texture data may be specified by calling CompressedTexSubImage1D,
+    CompressedTexSubImage2D or CompressedTexSubImage3D. Again, physical pages
+    are allocated on demand when <data> is non-NULL and freed when <data> is
+    NULL and no buffer is bound to the PIXEL_UNPACK_BUFFER binding point.
+
+    The origin and size of committed regions must be integer multiples of the
+    virtual page size in each dimension as appropriate for the specified level
+    of the specified texture. The virtual page size for a sparse texture may be
+    determined by calling GetInternalformativ with <pname> set to
+    VIRTUAL_PAGE_SIZE_X_AMD, VIRTUAL_PAGE_SIZE_Y_AMD or VIRTUAL_PAGE_SIZE_Z_AMD
+    to query the X, Y or Z dimension of the page size, respectively. Calling
+    TexSubImage* or CopyTexSubImage* with <width>, <height> (for 2D and 3D
+    textures) or <depth> (for 3D textures) not set to integer multiples of
+    VIRTUAL_PAGE_SIZE_X_AMD, VIRTUAL_PAGE_SIZE_Y_AMD or VIRTUAL_PAGE_SIZE_Z_AMD,
+    respectively, will generate an INVALID_VALUE error. An INVALID_VALUE error
+    is also generated if <xoffset>, <yoffset> (for 2D and 3D textures) or
+    <zoffset> (for 3D textures) is not a multiple of VIRTUAL_PAGE_SIZE_X_AMD,
+    VIRTUAL_PAGE_SIZE_Y_AMD or VIRTUAL_PAGE_SIZE_Z_AMD, respectively.
+
+    Calling TexStorageSparseAMD or TextureStorageSparseAMD on an already
+    committed texture decommits any associated storage and, if <flags>
+    contains TEXTURE_STORAGE_SPARSE_BIT_AMD, returns the image store to
+    fully uncommitted. Likewise, calling one of the TexImage commands
+    reallocates the storage for the texture image data and commits it
+    immediately.
+
+    When storage is committed for texture levels greater than or equal to
+    the value of MIN_SPARSE_LEVEL_AMD for a sparse texture, all levels greater
+    than or equal to that level become committed. The value of
+    MIN_SPARSE_LEVEL_AMD may be retrieved by calling GetTexParameter{if}v with
+    <pname> set to MIN_SPARSE_LEVEL_AMD. Sampling from a committed level of a
+    texture that has not yet had data specified produces undefined results,
+    but will not result in instability or program termination.
+
+    Add new paragraph heading "Effects of Texture Commitment on Completeness"
+    to end of Section 3.8.17 "Texture Completeness", p.237.
+
+    Effects of Texture Commitment on Completeness
+
+    Texture images whose storage was allocated without commitment (by calling
+    TexStorageSparseAMD or TextureStorageSparseAMD with a <flags> parameter
+    containing TEXTURE_STORAGE_SPARSE_BIT_AMD) are always considered complete,
+    regardless of their commitment status. Using such a texture image as
+    the source for rendering operations produces results as described
+    in sections XXX and XXX of the OpenGL Specification and section XXX
+    of the OpenGL Shading Language specification.
+
+    User-Specified LOD Warning Thresholds
+
+    In addition to detecting attempts to read from uncommitted regions of a
+    sparse texture, the GL can also signal to the shader that it required texels
+    that reside at LODs below some user specified threshold. This may be used,
+    for example, to specify a watermark and to provide feedback to an
+    application before it attempts to fetch from uncommitted texture regions.
+    Any attempt to fetch from lower LOD than the user-specified LOD warning
+    level will generate an LOD warning, which may be detected in the shader
+    by calling the sparseTexelMinLodWarning built-in function. When this
+    function returns <true>, the sparseTexelLodWarningFetch function may
+    be called to determine the requested LOD that generated this warning. If
+    the data representing this LOD is resident, the texture read will still
+    return valid texel data.
+
+    To specify the user-defined LOD watermark for a texture, call TexParameteri
+    with <target> set to a valid texture target, and with <pname> set to
+    MIN_LOD_WARNING_AMD. Setting MIN_LOD_WARNING_AMD to zero effectively
+    disables the warning.
+
+Additions to Chapter 4 of the OpenGL 4.2 (Core) Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 (Core) Specification (Special
+Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 (Core) Specification (State and
+State Requests)
+
+    None.
+
+Additions to Chapter 2 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Overview of OpenGL Shading)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Basics)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Variables and Types)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Operators and Expressions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Statement Structure)
+
+    None.
+
+Additions to Chapter 7 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20 (Built-in variables)
+
+    None.
+
+Additions to Chapter 8 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Built-in Functions)
+
+    Add the Subection 8.9.3, "Uncommitted Texture Images", renumber subsequent
+    sections.
+
+    If a standard texture function is used to sample from a region of a texture
+    image where storage is uncommitted, undefined data is returned to the
+    shader (although no instability results). If the application can guarantee
+    that this will not occur (such as when well defined texture coordinates are
+    used with a texture atlas, for example), then standard texturing functions
+    may be used with partially resident textures. If there is a possibility that
+    at the time of use, data in the texture may be non-resident (uncommitted),
+    one of the sparse texture functions may be used to determine the residency
+    status of the data.
+
+    The sparse texture functions return a condition code indicating the success
+    of a texel fetch operation. If texture data is present at the sampled
+    location, the texture data is returned in the <texel> inout parameter and
+    the function returns zero. If texture data is not present at the sampled
+    location, <texel> is unmodified and the function returns a non-zero status
+    code. It is then the responsibility of the shader to determine the
+    appropriate course of action.
+
+    Add the following tables to the end of Section 8.9.3:
+
+    Sparse texture lookup functions:
+
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | Syntax                                                            | Description                               |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTexture(gsampler1D sampler, float P,                    | Behave as in texture(), but with          |
+    |                   inout gvec4 texel [, float bias]);              | data returned in <texel> and a            |
+    |                                                                   | status code produced as the return value  |
+    | int sparseTexture(gsampler2D sampler, vec2 P,                     | of the function.                          |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsampler2DRect sampler, vec2 P,                 |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsampler3D sampler, vec3 P,                     |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsampler1DArray sampler, vec2 P,                |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsampler2DArray sampler, vec3 P,                |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsamplerCube sampler, vec3 P,                   |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    |                                                                   |                                           |
+    | int sparseTexture(gsamplerCubeArray sampler, vec4 P,              |                                           |
+    |                   inout gvec4 texel [, float bias]);              |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProj(gsampler1D sampler,                         | Behave as in textureProj(), but with      |
+    |                       vec2 P,                                     | data returned in <texel> and a            |
+    |                       inout gvec4 texel [, float bias]);          | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProj(gsampler1D sampler,                         |                                           |
+    |                       vec4 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProj(gsampler2D sampler,                         |                                           |
+    |                       vec3 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProj(gsampler2DRect sampler,                     |                                           |
+    |                       vec3 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProj(gsampler2D sampler,                         |                                           |
+    |                       vec4 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProj(gsampler2DRect sampler,                     |                                           |
+    |                       vec4 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProj(gsampler3D sampler,                         |                                           |
+    |                       vec4 P,                                     |                                           |
+    |                       inout gvec4 texel [, float bias]);          |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureLod(gsampler1D sampler,                          | Behave as in textureLod(), but with       |
+    |                      float P, float lod,                          | data returned in <texel> and a            |
+    |                      inout gvec4 texel);                          | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureLod(gsampler2D sampler,                          |                                           |
+    |                      vec2 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLod(gsampler3D sampler,                          |                                           |
+    |                      vec3 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLod(gsampler1DArray sampler,                     |                                           |
+    |                      vec2 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLod(gsampler2DArray sampler,                     |                                           |
+    |                      vec3 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLod(gsamplerCube sampler,                        |                                           |
+    |                      vec3 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLod(gsamplerCubeArray sampler,                   |                                           |
+    |                      vec4 P, float lod,                           |                                           |
+    |                      inout gvec4 texel);                          |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureOffset(gsampler1D sampler,                       | Behave as in textureOffset(), but         |
+    |                         float P, int offset,                      | with data returned in <texel> and a       |
+    |                         inout gvec4 texel [, float bias]);        | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureOffset(gsampler2D sampler,                       |                                           |
+    |                         vec2 P, ivec2 offset,                     |                                           |
+    |                         inout gvec4 texel [, float bias]);        |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureOffset(gsampler3D sampler,                       |                                           |
+    |                         vec3 P, ivec3 offset,                     |                                           |
+    |                         inout gvec4 texel [, float bias]);        |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureOffset(gsampler1DArray sampler,                  |                                           |
+    |                         vec2 P, int offset,                       |                                           |
+    |                         inout gvec4 texel [, float bias]);        |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureOffset(gsampler2DArray sampler,                  |                                           |
+    |                         vec3 P, ivec2 offset,                     |                                           |
+    |                         inout gvec4 texel [, float bias]);        |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProjOffset(gsampler1D sampler,                   | Behave as in textureProjOffset(), but     |
+    |                             vec2 P, int offset,                   | with data returned in <texel> and a       |
+    |                             inout gvec4 texel [, float bias]);    | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProjOffset(gsampler1D sampler,                   |                                           |
+    |                             vec4 P, int offset,                   |                                           |
+    |                             inout gvec4 texel [, float bias]);    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjOffset(gsampler2D sampler,                   |                                           |
+    |                             vec3 P, ivec2 offset,                 |                                           |
+    |                             inout gvec4 texel [, float bias]);    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjOffset(gsampler2D sampler,                   |                                           |
+    |                             vec4 P, ivec2 offset,                 |                                           |
+    |                             inout gvec4 texel [, float bias]);    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjOffset(gsampler3D sampler,                   |                                           |
+    |                             vec4 P, ivec3 offset,                 |                                           |
+    |                             inout gvec4 texel [, float bias]);    |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureLodOffset(gsampler1D sampler,                    | Behave as in textureLodOffset(), but      |
+    |                            float P, float lod, int offset,        | with data returned in <texel> and a       |
+    |                            inout gvec4 texel);                    | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureLodOffset(gsampler2D sampler,                    |                                           |
+    |                            vec2 P, float lod, ivec2 offset,       |                                           |
+    |                            inout gvec4 texel);                    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLodOffset(gsampler3D sampler,                    |                                           |
+    |                            vec3 P, float lod, ivec3 offset,       |                                           |
+    |                            inout gvec4 texel);                    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLodOffset(gsampler1DArray sampler,               |                                           |
+    |                            vec2 P, float lod, int offset,         |                                           |
+    |                            inout gvec4 texel);                    |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureLodOffset(gsampler2DArray sampler,               |                                           |
+    |                            vec3 P, float lod, ivec2 offset,       |                                           |
+    |                            inout gvec4 texel);                    |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProjLod(gsampler1D sampler,                      | Behave as in textureProjLod(), but        |
+    |                          vec2 P, float lod,                       | with data returned in <texel> and a       |
+    |                          inout gvec4 texel);                      | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProjLod(gsampler1D sampler,                      |                                           |
+    |                          vec4 P, float lod,                       |                                           |
+    |                          inout gvec4 texel);                      |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLod(gsampler2D sampler,                      |                                           |
+    |                          vec3 P, float lod,                       |                                           |
+    |                          inout gvec4 texel);                      |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLod(gsampler2D sampler,                      |                                           |
+    |                          vec4 P, float lod,                       |                                           |
+    |                          inout gvec4 texel);                      |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLod(gsampler3D sampler,                      |                                           |
+    |                          vec4 P, float lod,                       |                                           |
+    |                          inout gvec4 texel);                      |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProjLodOffset(gsampler1D sampler,                | Behave as in textureProjLodOffset(), but  |
+    |                                vec2 P, float lod, int offset,     | with data returned in <texel> and a       |
+    |                                inout gvec4 texel);                | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProjLodOffset(gsampler1D sampler,                |                                           |
+    |                                vec4 P, float lod, int offset,     |                                           |
+    |                                inout gvec4 texel);                |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLodOffset(gsampler2D sampler,                |                                           |
+    |                                vec3 P, float lod, ivec2 offset,   |                                           |
+    |                                inout gvec4 texel);                |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLodOffset(gsampler2D sampler,                |                                           |
+    |                                vec4 P, float lod, ivec2 offset,   |                                           |
+    |                                inout gvec4 texel);                |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjLodOffset(gsampler3D sampler,                |                                           |
+    |                                vec4 P, float lod, ivec3 offset,   |                                           |
+    |                                inout gvec4 texel);                |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureGrad(gsampler1D sampler, float P,                | Behave as in textureGrad(), but           |
+    |                       float dPdx, float dPdy,                     | with data returned in <texel> and a       |
+    |                       inout gvec4 texel);                         | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureGrad(gsampler2D sampler, vec2 P,                 |                                           |
+    |                       vec2 dPdx, vec2 dPdy,                       |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGrad(gsampler3D sampler, vec3 P,                 |                                           |
+    |                       vec3 dPdx, vec3 dPdy,                       |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGrad(gsampler1DArray sampler, vec2 P,            |                                           |
+    |                       float dPdx, float dPdy,                     |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGrad(gsampler2DArray sampler, vec3 P,            |                                           |
+    |                       vec2 dPdx, vec2 dPdy,                       |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGrad(gsamplerCube sampler, vec3 P,               |                                           |
+    |                       vec2 dPdx, vec2 dPdy,                       |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGrad(gsamplerCubeArray sampler, vec4 P,          |                                           |
+    |                       vec2 dPdx, vec2 dPdy,                       |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureGradOffset(gsampler1D sampler, float P,          | Behave as in textureGradOffset(), but     |
+    |                             float dPdx, float dPdy, int offset,   | with data returned in <texel> and a       |
+    |                             inout gvec4 texel);                   | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureGradOffset(gsampler2D sampler, vec2 P,           |                                           |
+    |                             vec2 dPdx, vec2 dPdy, ivec2 offset,   |                                           |
+    |                             inout gvec4 texel);                   |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGradOffset(gsampler3D sampler, vec3 P,           |                                           |
+    |                             vec3 dPdx, vec3 dPdy, ivec3 offset,   |                                           |
+    |                             inout gvec4 texel);                   |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGradOffset(gsampler1DArray sampler, vec2 P,      |                                           |
+    |                             float dPdx, float dPdy, int offset,   |                                           |
+    |                             inout gvec4 texel);                   |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureGradOffset(gsampler2DArray sampler, vec3 P,      |                                           |
+    |                             vec2 dPdx, vec2 dPdy, ivec2 offset,   |                                           |
+    |                             inout gvec4 texel);                   |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProjGrad(gsampler1D sampler,                     | Behave as in textureProjGrad(), but       |
+    |                           vec2 P, float dPdx, float dPdy,         | with data returned in <texel> and a       |
+    |                           inout gvec4 texel);                     | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProjGrad(gsampler1D sampler,                     |                                           |
+    |                           vec4 P, float dPdx, float dPdy,         |                                           |
+    |                           inout gvec4 texel);                     |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGrad(gsampler2D sampler,                     |                                           |
+    |                           vec3 P, vec2 dPdx, vec2 dPdy,           |                                           |
+    |                       inout gvec4 texel);                         |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGrad(gsampler2D sampler,                     |                                           |
+    |                           vec4 P, vec2 dPdx, vec2 dPdy,           |                                           |
+    |                           inout gvec4 texel);                     |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGrad(gsampler3D sampler,                     |                                           |
+    |                           vec4 P,                                 |                                           |
+    |                           inout gvec4 texel);                     |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | int sparseTextureProjGradOffset(gsampler1D sampler, vec2 P,       | Behave as in textureProjGradOffset(), but |
+    |                                 float dPdx, float dPdy,           | with data returned in <texel> and a       |
+    |                                 int offset, inout gvec4 texel);   | status code produced as the return value  |
+    |                                                                   | of the function.                          |
+    | int sparseTextureProjGradOffset(gsampler1D sampler, vec4 P,       |                                           |
+    |                                 float dPdx, float dPdy,           |                                           |
+    |                                 int offset, inout gvec4 texel);   |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGradOffset(gsampler2D sampler, vec3 P,       |                                           |
+    |                                 vec2 dPdx, vec2 dPdy,             |                                           |
+    |                                 ivec2 offset, inout gvec4 texel); |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGradOffset(gsampler2D sampler, vec4 P,       |                                           |
+    |                                 vec2 dPdx, vec2 dPdy,             |                                           |
+    |                                 ivec2 offset, inout gvec4 texel); |                                           |
+    |                                                                   |                                           |
+    | int sparseTextureProjGradOffset(gsampler3D sampler, vec4 P,       |                                           |
+    |                                 vec3 dPdx, vec3 dPdy,             |                                           |
+    |                                 ivec3 offset, inout gvec4 texel); |                                           |
+    +-------------------------------------------------------------------+-------------------------------------------+
+
+    Add the following table and description.
+
+    The following functions may be used to interpret the status codes returned
+    by the sparse texture lookup functions.
+
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | Syntax                                                            | Description                               |
+    +-------------------------------------------------------------------+-------------------------------------------+
+    | bool sparseTexelResident(int code);                               | Returns true if the texture read that     |
+    |                                                                   | produced <code> retrieved valid data, and |
+    |                                                                   | false otherwise.                          |
+    |                                                                   |                                           |
+    | bool sparseTexelMinLodWarning(int code);                          | Returns true if the texture read that     |
+    |                                                                   | produced <code> required a texel fetch    |
+    |                                                                   | from any LOD lower than the user          |
+    |                                                                   | specified LOD warning threshold.          |
+    |                                                                   |                                           |
+    | int sparseTexelLodWarningFetch(int code);                         | Returns the LOD calculated by the texture |
+    |                                                                   | read that generated <code> and resulted   |
+    |                                                                   | in a condition that would cause           |
+    |                                                                   | sparseTexelMinLodWarning to return true.  |
+    |                                                                   | If the LOD warning was not encountered,   |
+    |                                                                   | this function returns zero.               |
+    +-------------------------------------------------------------------+-------------------------------------------+
+
+
+Additions to Chapter 9 of the OpenGL Shading Language (GLSL) Specification,
+version 4.20, (Shading Language Grammar)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <target> is not one of the supported
+    texture targets.
+
+    INVALID_ENUM is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <internalFormat> is not one of the
+    accepted internal texture formats.
+
+    INVALID_VALUE is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <height> or <depth> is not 1 and
+    <target> is TEXTURE_1D or TEXTURE_1D_ARRAY.
+
+    INVALID_VALUE is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <height> is not 1 and <target> is
+    TEXTURE_2D, TEXTURE_RECTANGLE or TEXTURE_2D_ARRAY.
+
+    INVALID_VALUE is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <width>, <height> and <depth> are not
+    equal and <target> is TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY.
+
+    INVALID_VALUE is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <layers> is not 1 and <target> is not
+    one of the ARRAY texture targets.
+
+    INVALID_VALUE is generated by TexStorageSparseAMD
+    and TextureStorageSparseAMD if <width> or <height> is greater than the
+    value of MAX_SPARSE_TEXTURE_SIZE_AMD, or if <depth> is greater than
+    the value of MAX_SPARSE_3D_TEXTURE_SIZE_AMD, or if <layers> is greater
+    than the value of MAX_SPARSE_ARRAY_TEXTURE_LAYERS_AMD.
+
+    INVALID_VALUE is generated by TexImage* and CopyTexImage* if the dimensions
+    of the updated region are not integer multiples of VIRTUAL_PAGE_SIZE_X_AMD,
+    VIRTUAL_PAGE_SIZE_Y_AMD (for 2D and 3D textures) and VIRTUAL_PAGE_SIZE_Z_AMD
+    (for 3D textures).
+
+New State
+
+    Append to Table 6.16, "Textures (state per texture object)"
+
+    +-----------------------+-------+-------------------+---------------+-------------------------------------------+-------+
+    | Get Value             | Type  | Get Command       | Initial Value | Description                               | Sec.  |
+    +-----------------------+-------+-------------------+---------------+-------------------------------------------+-------+
+    | MIN_LOD_WARNING_AMD   | Z+    | GetTexParameteriv | 0             | User-specified minimum LOD warning level. | 3.8.6 |
+    +-----------------------+-------+-------------------+---------------+-------------------------------------------+-------+
+
+New Implementation Dependent State
+
+    Append to Table 6.42, "Implementation Dependent Values"
+
+    +-----------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+    | Get Value                         | Type  | Get Command | Minimum Value   | Description                           | Sec.  |
+    +-----------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+    | MAX_SPARSE_TEXTURE_SIZE_AMD       | Z+    | GetIntegerv | 16384           | Maximum 1D/2D/rectangle texture image | 3.8.6 |
+    |                                   |       |             |                 | dimension for a sparse texture.       |       |
+    | MAX_SPARSE_3D_TEXTURE_SIZE_AMD    | Z+    | GetIntegerv | 2048            | Maximum 3D texture image dimension    | 3.8.6 |
+    |                                   |       |             |                 | for a sparse texture.                 |       |
+    | MAX_SPARSE_3D_TEXTURE_SIZE_AMD    | Z+    | GetIntegerv | 2048            | Maximum number of layers in a sparse  | 3.8.6 |
+    |                                   |       |             |                 | array texture.                        |       |
+    +-----------------------------------+-------+-------------+-----------------+---------------------------------------+-------+
+
+Issues
+
+    1) Are all supported texture targets exposed? Are any exposed that are not
+       supported well by hardware?
+
+       RESOLVED: All texture targets are exposed except for multisample, and
+       buffer textures.
+
+    2) Why do we have <depth> and <layers> separate in TexStorageSparseAMD and
+       TextureStorageSparseAMD, whereas in TexImage3D, <depth> specifies the
+       size of the 2D array, for example?
+
+       Because it's easier to validate and because I don't want to hack up my
+       extension if we introduce 3D-array textures.
+
+    3) Does this play nice with the proposed EXT_texture_storage extension
+       (which defines some very similar entry points to TexStorageSparseAMD
+       and TextureStorageSparseAMD)? Can it be made to play nice?
+
+       RESOLVED: Yes, it should interact just fine. Unfortunately,
+       EXT_texture_storage didn't introduce any mechanism to convey flags or
+       allocation strategies and so those entry points could not be used here.
+       Otherwise, textures allocated with TexStorage* APIs should appear as
+       fully resident textures if used with sparse texture sampling functions.
+
+    4) Is it possible to attach a partially resident texture to an FBO and
+       render into it?
+
+       RESOLVED: Yes, this is supported. Keep in mind, though, that data rendered
+       to an attachment in areas that are not resident will be discarded and there
+       is no mechanism to detect this. Also, depth, stencil and multisample
+       formats are not supported by this extension.
+
+    5) What happens if TEXTURE_STORAGE_SPARSE_BIT_AMD is not present in
+       TexStorageSparseAMD or TextureStorageSparseAMD?
+
+       RESOLVED: Texture storage will be both allocated and committed. The
+       texture is still considered immutable and so this is mostly equivalent
+       to calling the TexStorage API.
+
+    6) Does this extension increase the maximum supported texture size?
+
+       RESOLVED: No, not explicitly. The maximum supported texture size is
+       still queryable by retrieving the value of MAX_TEXTURE_SIZE. A new token,
+       MAX_SPARSE_TEXTURE_SIZE_AMD is added to query the maximum sparse texture
+       size, which may be larger than the non-sparse maximum. However, there
+       is no requirement for it to be so.
+
+    7) What if a larger sparse textures are supported than non-sparse textures?
+
+       RESOLVED: Query the maximum sparse texture size by retrieving the value
+       of MAX_SPARSE_TEXTURE_SIZE_AMD.
+
+    8) How do you decommit (free) a region of a sparse texture?
+
+       RESOLVED: Call TexSubImageND with <data> set to NULL and without a
+       pixel unpack buffer bound.
+
+    9) -
+
+    10) Is compression supported for sparse textures?
+
+        RESOLVED: Yes, but be aware that the dimensions of a single tile could
+        be substantially larger when the texture is compressed.
+
+    11) Does this work with non-power-of-two textures?
+
+        RESOLVED: Yes, so long as the texture size is an integer multiple of
+        the texture tile size in all dimensions.
+
+    12) Are multisampled sparse textures supported?
+
+        RESOLVED: No.
+
+    13) What about OUT_OF_MEMORY errors?
+
+        RESOLVED: OUT_OF_MEMORY errors can be reported if there isn't sufficient
+        system memory to allocate internal structures (even a fully uncommitted
+        sparse texture requires some internal resources), or if there isn't
+        sufficient video memory to commit all requested regions.
+
+        The error doesn't have to be reported upon creation of a sparse texture.
+        For example, allocation of two 64 GB sparse textures might succeed, but
+        their simulatenous use in one draw call might result in an OUT_OF_MEMORY
+        error being reported by the GL later.
+
+    14) Does CopyTexSubImage work with sparse textures?
+
+        RESOLVED: Yes.
+
+    15) Does GetTexImage work with sparse texture?
+
+        RESOLVED: Yes in general. However, the call can fail based on
+        implementation-specific limitations.
+
+Revision History
+
+    Rev.    Date      Author    Changes
+    ----  --------    --------  -----------------------------------------
+
+     6    03/27/2012  gsellers  Resolve some issues.
+                                Clarify interactions with PBO.
+     5    03/14/2012  jobert    Rename some tokens.
+                                Assign token values.
+     4    20/04/2011  gsellers  Add min-lod warning.
+                                Add sparse texture fetch return code built-ins.
+                                Add new state tables.
+                                Add 3D sparse texture size limit.
+                                Add support for cube textures and cube texture
+                                arrays.
+                                Add issues 10 and 11, remove issue 9.
+     3    25/03/2011  gsellers  Change required version of GL to 2.0 (or
+                                equivalent extensions).
+                                Add query for virtual page size.
+                                Add restrictions on page size and alignment
+                                during commitment.
+                                Add MAX_SPARSE_TEXTURE_SIZE_AMD.
+                                Add issues 6 through 9.
+                                Add MIN_SPARSE_LEVEL_AMD.
+     2    25/02/2011  jobert    Expanded the Issues section
+     1    11/02/2011  gsellers  Initial Revision

@@ -30,23 +30,24 @@
 
 #include <cstdint>
 #include <ostream>
+#include <span>
 #include <vector>
 
-#include "dawn/native/stream/Sink.h"
+#include "src/dawn/native/stream/Sink.h"
 
 namespace dawn::native::stream {
 
 // Implementation of stream::Sink backed by a byte vector.
-class ByteVectorSink : public std::vector<uint8_t>, public Sink {
+class ByteVectorSink : public std::vector<std::byte>, public Sink {
   public:
-    using std::vector<uint8_t>::vector;
+    using std::vector<std::byte>::vector;
 
     // Implementation of stream::Sink
-    void* GetSpace(size_t bytes) override;
+    std::span<std::byte> GetSpace(size_t bytes) override;
 };
 
 // Stream operator for ByteVectorSink for debugging.
-std::ostream& operator<<(std::ostream& os, const ByteVectorSink& key);
+std::ostream& operator<<(std::ostream& os, const ByteVectorSink& vec);
 
 }  // namespace dawn::native::stream
 

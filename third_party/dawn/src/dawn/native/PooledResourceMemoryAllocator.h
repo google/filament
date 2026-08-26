@@ -31,9 +31,13 @@
 #include <deque>
 #include <memory>
 
-#include "dawn/common/SerialQueue.h"
-#include "dawn/native/ResourceHeapAllocator.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Mutex.h"
+#include "src/dawn/common/RefCounted.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/native/ExecutionQueue.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ResourceHeapAllocator.h"
 
 namespace dawn::native {
 
@@ -60,6 +64,27 @@ class PooledResourceMemoryAllocator : public ResourceHeapAllocator {
     raw_ptr<ResourceHeapAllocator> mHeapAllocator = nullptr;
 
     std::deque<std::unique_ptr<ResourceHeapBase>> mPool;
+};
+
+// Wrapper for tracking the allocation sizes to be decremented up to a completed ExecutionSerial
+// and reporting total allocation/used sizes.
+class AllocationSizeTracker : public ExecutionQueueBase::SerialProcessor {
+  public:
+    // Increment the total size for tracking.
+    void Increment(uint64_t incrementSize);
+    // Track the size to be decremented when the serial completes.
+    void Decrement(ExecutionSerial currentSerial, uint64_t decrementSize);
+
+    uint64_t GetSize() const { return mTotalSize; }
+
+    // SerialProcessor implementation
+    void UpdateCompletedSerialTo(ExecutionSerial completedSerial) override;
+    void AssumeCommandsComplete() override;
+
+  private:
+    Mutex mMutex;
+    SerialQueue<ExecutionSerial, uint64_t> mMemoryToDecrement;
+    uint64_t mTotalSize = 0;
 };
 
 }  // namespace dawn::native

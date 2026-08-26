@@ -156,10 +156,10 @@ struct State {
             });
         }
 
-        // Predicate subgroup matrix loads and stores based on their offset and stride.
+        // Clamp subgroup matrix loads and stores based on their offset and stride.
         for (auto* call : subgroup_matrix_calls) {
             b.InsertBefore(call, [&] {  //
-                PredicateSubgroupMatrixCall(call);
+                ClampSubgroupMatrixCall(call);
             });
         }
 
@@ -415,41 +415,58 @@ struct State {
     /// Clamp the indices and coordinates of a texture builtin call instruction to ensure they are
     /// within the limits of the texture that they are accessing.
     /// @param call the texture builtin call instruction
-    void PredicateSubgroupMatrixCall(ir::CoreBuiltinCall* call) {
+    void ClampSubgroupMatrixCall(ir::CoreBuiltinCall* call) {
         const auto& args = call->Args();
+
+        TINT_IR_ASSERT(ir, (call->Func() == BuiltinFn::kSubgroupMatrixLoad &&
+                            call->ExplicitTemplateParams().Length() == 2) ||
+                               (call->Func() == BuiltinFn::kSubgroupMatrixStore &&
+                                call->ExplicitTemplateParams().Length() == 1));
 
         // Extract the arguments from the call.
         auto* arr = args[0];
         auto* offset = args[1];
-        Value* col_major = nullptr;
+        bool col_major = true;
         Value* stride = nullptr;
         uint32_t stride_index = 0;
         const type::SubgroupMatrix* matrix_ty = nullptr;
         if (call->Func() == BuiltinFn::kSubgroupMatrixLoad) {
-            col_major = args[2];
-            stride = args[3];
-            stride_index = 3;
+            TINT_IR_ASSERT(
+                ir, std::holds_alternative<core::Majorness>(call->ExplicitTemplateParams()[1]));
+            col_major = std::get<core::Majorness>(call->ExplicitTemplateParams()[1]) ==
+                        core::Majorness::kColMajor;
+            stride = args[2];
+            stride_index = 2;
             matrix_ty = call->Result()->Type()->As<type::SubgroupMatrix>();
         } else if (call->Func() == BuiltinFn::kSubgroupMatrixStore) {
             matrix_ty = args[2]->Type()->As<type::SubgroupMatrix>();
-            col_major = args[3];
-            stride = args[4];
-            stride_index = 4;
+            TINT_IR_ASSERT(
+                ir, std::holds_alternative<core::Majorness>(call->ExplicitTemplateParams()[0]));
+            col_major = std::get<core::Majorness>(call->ExplicitTemplateParams()[0]) ==
+                        core::Majorness::kColMajor;
+            stride = args[3];
+            stride_index = 3;
         } else {
             TINT_IR_UNREACHABLE(ir);
         }
+
+        auto* arr_ty = arr->Type()->UnwrapPtr()->As<core::type::Array>();
+        const uint32_t arr_stride = arr_ty->ImplicitStride();
 
         // Determine the minimum valid stride, and the value that we will multiply the stride by to
         // determine the number of elements in memory that will be accessed.
         uint32_t min_stride = 0;
         uint32_t major_dim = 0;
-        if (col_major->As<Constant>()->Value()->ValueAs<bool>()) {
+        if (col_major) {
             min_stride = matrix_ty->Rows();
             major_dim = matrix_ty->Columns();
         } else {
             min_stride = matrix_ty->Columns();
             major_dim = matrix_ty->Rows();
         }
+        // Offset and stride are counted in array stride.
+        // Note: max comes from situations like 8x8 u8 accessed from an array of vec4u.
+        min_stride = std::max(min_stride * matrix_ty->Type()->Size() / arr_stride, 1u);
 
         // Increase the stride so that it is at least `min_stride` if necessary.
         if (auto* const_stride = stride->As<Constant>()) {
@@ -457,39 +474,24 @@ struct State {
                 stride = b.Constant(u32(min_stride));
             }
         } else {
+            stride = b.InsertBitcastIfNeeded(ty.u32(), stride);
             stride = b.Max(stride, u32(min_stride))->Result();
         }
         call->SetArg(stride_index, stride);
 
         // If we are not predicating, then clamping the stride is all we need to do.
-        if (!config.predicate_subgroup_matrix) {
+        if (!config.clamp_subgroup_matrix) {
             return;
         }
 
-        // Some matrix components types are packed together into a single array element.
-        // Take that into account here by scaling the array length to number of components.
-        uint32_t components_per_element = 0;
-        if (matrix_ty->Type()->IsAnyOf<type::I8, type::U8>()) {
-            components_per_element = 4;
-        } else {
-            TINT_IR_ASSERT(
-                ir, (matrix_ty->Type()->IsAnyOf<type::F16, type::F32, type::I32, type::U32>()));
-            components_per_element = 1;
-        }
-
-        // Get the length of the array (in terms of matrix elements).
-        auto* arr_ty = arr->Type()->UnwrapPtr()->As<core::type::Array>();
+        // Get the length of the array.
         TINT_IR_ASSERT(ir, arr_ty);
         Value* array_length = nullptr;
         if (arr_ty->ConstantCount()) {
-            array_length =
-                b.Constant(u32(arr_ty->ConstantCount().value() * components_per_element));
+            array_length = b.Constant(u32(arr_ty->ConstantCount().value()));
         } else {
             TINT_IR_ASSERT(ir, arr_ty->Count()->Is<type::RuntimeArrayCount>());
             array_length = b.Call(ty.u32(), core::BuiltinFn::kArrayLength, arr)->Result(0);
-            if (components_per_element > 1) {
-                array_length = b.Multiply(array_length, u32(components_per_element))->Result();
-            }
         }
 
         // If the array length, offset, and stride are all constants, then we can determine if the
@@ -504,38 +506,77 @@ struct State {
             }
         }
 
-        // Predicate the builtin call depending on whether it is in bounds.
-        auto insertion_point = call->next;
-        call->Remove();
-        b.InsertBefore(insertion_point, [&] {
+        // Binding size is guaranteed to hold enough for `min_stride` matrix. So check if the
+        // array length is sufficient for the given parameters and, if not, use 0 offset and
+        // minimum stride.
+        b.InsertBefore(call, [&] {
             // The beginning of the last row/column is at `offset + (major_dim-1)*stride`.
-            // We then add another `min_stride` elements to get to the end of the accessed memory.
-            auto* last_slice = b.Add(offset, b.Multiply(stride, u32(major_dim - 1)));
+            // We then add another `min_stride` elements to get to the end of the accessed
+            // memory.
+            offset = b.InsertBitcastIfNeeded(ty.u32(), offset);
+            stride = b.InsertBitcastIfNeeded(ty.u32(), stride);
+            auto* last_slice = b.Add(offset, b.Multiply(stride, u32(major_dim - 1)))->Result();
             auto* end = b.Add(last_slice, u32(min_stride));
             auto* in_bounds = b.LessThanEqual(end, array_length);
-            if (call->Func() == BuiltinFn::kSubgroupMatrixLoad) {
-                // Declare a variable to hold the result of the load, or a zero-initialized matrix.
-                auto* result = b.Var(ty.ptr<function>(matrix_ty));
-                auto* load_result = b.InstructionResult(matrix_ty);
-                call->Result()->ReplaceAllUsesWith(load_result);
-
-                auto* if_ = b.If(in_bounds);
-                b.Append(if_->True(), [&] {  //
-                    if_->True()->Append(call);
-                    b.Store(result, call->Result());
-                    b.ExitIf(if_);
-                });
-                b.LoadWithResult(load_result, result);
-            } else if (call->Func() == BuiltinFn::kSubgroupMatrixStore) {
-                auto* if_ = b.If(in_bounds);
-                b.Append(if_->True(), [&] {  //
-                    if_->True()->Append(call);
-                    b.ExitIf(if_);
-                });
-            } else {
-                TINT_IR_UNREACHABLE(ir);
-            }
+            offset = b.Call(ty.u32(), BuiltinFn::kSelect, 0_u, offset, in_bounds)->Result();
+            stride =
+                b.Call(ty.u32(), BuiltinFn::kSelect, u32(min_stride), stride, in_bounds)->Result();
+            call->SetArg(1, offset);
+            call->SetArg(stride_index, stride);
         });
+    }
+
+    uint32_t MaxSubgroupMatrixSizeUse(const CoreBuiltinCall* arrayView) {
+        TINT_IR_ASSERT(ir, arrayView->Func() == BuiltinFn::kBufferArrayView);
+
+        uint32_t size = 0;
+        Vector<Usage, 4> worklist;
+        for (auto& u : arrayView->Result()->UsagesUnsorted()) {
+            worklist.Push(u);
+        }
+
+        while (!worklist.IsEmpty()) {
+            auto use = worklist.Pop();
+
+            // Since we're starting at bufferArrayView call there aren't too many possible uses we
+            // have to consider.
+            tint::Switch(
+                use.instruction,
+                [&](const Let* let) {
+                    for (auto& u : let->Result()->UsagesUnsorted()) {
+                        worklist.Push(u);
+                    }
+                },
+                [&](const UserCall* call) {
+                    auto* target = call->Target();
+                    auto* param = target->Params()[use.operand_index - call->ArgsOperandOffset()];
+                    for (auto& u : param->UsagesUnsorted()) {
+                        worklist.Push(u);
+                    }
+                },
+                [&](const CoreBuiltinCall* call) {
+                    const type::SubgroupMatrix* mat_ty = nullptr;
+                    if (call->Func() == BuiltinFn::kSubgroupMatrixLoad) {
+                        mat_ty = call->Result()->Type()->As<type::SubgroupMatrix>();
+                    }
+                    if (call->Func() == BuiltinFn::kSubgroupMatrixStore) {
+                        mat_ty = call->Args()[2]->Type()->As<type::SubgroupMatrix>();
+                    }
+                    if (mat_ty) {
+                        uint32_t mat_size =
+                            mat_ty->Rows() * mat_ty->Columns() * mat_ty->Type()->Size();
+                        size = std::max(size, mat_size);
+                    }
+                },
+                [&](const Access* access) {
+                    for (auto& u : access->Result()->UsagesUnsorted()) {
+                        worklist.Push(u);
+                    }
+                },
+                [&](Default) {});
+        }
+
+        return size;
     }
 
     void ClampBufferViewArgs(ir::CoreBuiltinCall* call) {
@@ -566,6 +607,15 @@ struct State {
             }
         }
 
+        // The bound buffer is guaranteed to be large enough for any subgroup matrix access, but the
+        // size operand on bufferArrayView might be smaller than necessary. Search forwards for any
+        // subgroup matrix memory access and ensure the minimum size is large enough to accommodate
+        // the maximum needed size.
+        if (call->Func() == core::BuiltinFn::kBufferArrayView) {
+            uint32_t max_subgroup_matrix_size = MaxSubgroupMatrixSizeUse(call);
+            ty_required_size = std::max(ty_required_size, max_subgroup_matrix_size + ty_offset);
+        }
+
         b.InsertBefore(call, [&] {
             uint32_t required_size = 0;
             auto* offset = call->Args()[1];
@@ -585,17 +635,20 @@ struct State {
             bool const_size = false;
             if (auto* offset_cnst = offset->As<Constant>()) {
                 uint32_t offset_val = offset_cnst->Value()->ValueAs<uint32_t>();
-                TINT_IR_ASSERT(ir, offset_val == (offset_val & ~(store_ty->Align() - 1)));
                 required_size += offset_val;
                 const_offset = true;
+                if (!offset->Type()->Is<core::type::U32>()) {
+                    offset = b.Constant(u32(offset_val));
+                }
             }
             if (size) {
                 if (auto* size_cnst = size->As<Constant>()) {
                     auto size_val = size_cnst->Value()->ValueAs<uint32_t>();
-                    // Bad constant values should be caught in the frontend.
-                    TINT_IR_ASSERT(ir, ty_stride == 0 || (size_val - ty_offset) % ty_stride == 0);
                     required_size += size_val;
                     const_size = true;
+                    if (!size->Type()->Is<core::type::U32>()) {
+                        size = b.Constant(u32(size_val));
+                    }
                 }
             } else {
                 required_size += ty_required_size;
@@ -605,33 +658,29 @@ struct State {
                 required_size == 0 ? nullptr : b.Constant(u32(required_size));
             if (!const_offset) {
                 offset = b.InsertBitcastIfNeeded(ty.u32(), offset);
-                // Adjust to correct alignment.
-                offset = b.And(offset, b.Constant(u32(~(store_ty->Align() - 1))))->Result();
                 if (total_required_size) {
-                    total_required_size = b.Add(total_required_size, offset)->Result();
+                    total_required_size =
+                        b.Call(ty.u32(), BuiltinFn::kAddSat, total_required_size, offset)->Result();
                 } else {
+                    TINT_IR_ASSERT(ir, size && !const_size);
                     total_required_size = offset;
                 }
             }
             if (size && !const_size) {
-                size = b.InsertBitcastIfNeeded(ty.u32(), size);
-                if (ty_offset != 0) {
-                    // Remove the non-array size from the struct.
-                    size = b.Subtract(size, b.Constant(u32(ty_offset)))->Result();
-                }
-                if (ty_stride != 0) {
-                    // Round down to a multiple of stride.
-                    size = b.Divide(size, b.Constant(u32(ty_stride)))->Result();
-                    size = b.Multiply(size, b.Constant(u32(ty_stride)))->Result();
-                }
-                if (ty_offset != 0) {
-                    // Now, add back the non-array size after rounding the other part.
-                    size = b.Add(size, b.Constant(u32(ty_offset)))->Result();
-                }
                 // Use the larger of the size arg or the type required size.
+                // PropagateBufferSizes performed a round down on the argument which may have
+                // resulted in a 0 length array.
+                size = b.InsertBitcastIfNeeded(ty.u32(), size);
                 size = b.Call(ty.u32(), BuiltinFn::kMax, size, b.Constant(u32(ty_required_size)))
                            ->Result();
-                total_required_size = b.Add(total_required_size, size)->Result();
+                if (total_required_size) {
+                    total_required_size =
+                        b.Call(ty.u32(), BuiltinFn::kAddSat, total_required_size, size)->Result();
+                } else {
+                    // offset must have been 0.
+                    TINT_IR_ASSERT(ir, offset && const_offset);
+                    total_required_size = size;
+                }
             }
 
             // Now check if length < total_required_size
@@ -690,6 +739,14 @@ struct State {
                             result = var;
                             return nullptr;  // Done
                         },
+                        [&](CoreBuiltinCall* call) {
+                            Value* call_value = nullptr;
+                            if (call->Func() == BuiltinFn::kBufferView ||
+                                call->Func() == BuiltinFn::kBufferArrayView) {
+                                call_value = call->Args()[0];
+                            }
+                            return call_value;
+                        },
                         TINT_ICE_ON_NO_MATCH);
                 },
                 [&](FunctionParam*) {
@@ -717,7 +774,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> Robustness(Module& ir, const RobustnessConfig& config) {
-    AssertValid(ir, kRobustnessCapabilities, "before core.Robustness");
+    AssertValid(ir, "before core.Robustness");
 
     State{config, ir}.Process();
 

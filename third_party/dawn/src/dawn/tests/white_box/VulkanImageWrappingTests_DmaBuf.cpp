@@ -25,33 +25,21 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
+#include "src/dawn/tests/white_box/VulkanImageWrappingTests_DmaBuf.h"
 
-#include <fcntl.h>
 #include <gbm.h>
 #include <gtest/gtest.h>
 #include <unistd.h>
 
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
-#include "dawn/native/vulkan/DeviceVk.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/DRMUtils.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
 
 namespace dawn::native::vulkan {
-
-namespace {
-
-struct GbmDeviceDeleter {
-    void operator()(gbm_device* ptr) { gbm_device_destroy(ptr); }
-};
-struct GbmBoDeleter {
-    void operator()(gbm_bo* ptr) { gbm_bo_destroy(ptr); }
-};
-
-}  // namespace
 
 class ExternalSemaphoreDmaBuf : public VulkanImageWrappingTestBackend::ExternalSemaphore {
   public:
@@ -74,11 +62,11 @@ class ExternalSemaphoreDmaBuf : public VulkanImageWrappingTestBackend::ExternalS
 class ExternalTextureDmaBuf : public VulkanImageWrappingTestBackend::ExternalTexture {
   public:
     ExternalTextureDmaBuf(
-        gbm_bo* bo,
+        OwnedGbmBo bo,
         int fd,
         std::array<PlaneLayout, ExternalImageDescriptorDmaBuf::kMaxPlanes> planeLayouts,
         uint64_t drmModifier)
-        : mGbmBo(bo), mFd(fd), planeLayouts(planeLayouts), drmModifier(drmModifier) {}
+        : mGbmBo(std::move(bo)), mFd(fd), planeLayouts(planeLayouts), drmModifier(drmModifier) {}
 
     ~ExternalTextureDmaBuf() override {
         if (mFd != -1) {
@@ -89,7 +77,7 @@ class ExternalTextureDmaBuf : public VulkanImageWrappingTestBackend::ExternalTex
     int Dup() const { return dup(mFd); }
 
   private:
-    std::unique_ptr<gbm_bo, GbmBoDeleter> mGbmBo;
+    OwnedGbmBo mGbmBo;
     int mFd = -1;
 
   public:
@@ -101,7 +89,16 @@ class VulkanImageWrappingTestBackendDmaBuf : public VulkanImageWrappingTestBacke
   public:
     explicit VulkanImageWrappingTestBackendDmaBuf(const wgpu::Device& device) {
         mDeviceVk = native::vulkan::ToBackend(native::FromAPI(device.Get()));
-        CreateGbmDevice();
+        wgpu::AdapterPropertiesDrm drmProperties;
+        wgpu::AdapterInfo adapterInfo;
+        adapterInfo.nextInChain = &drmProperties;
+        if (device.GetAdapter().GetInfo(&adapterInfo) == wgpu::Status::Success &&
+            drmProperties.hasRender) {
+            mRenderNode = OpenDRMRenderNode(drmProperties.renderMajor, drmProperties.renderMinor);
+            if (mRenderNode.IsValid()) {
+                mGbmDevice.reset(gbm_create_device(mRenderNode.Get()));
+            }
+        }
     }
 
     bool SupportsTestParams(const TestParams& params) const override {
@@ -119,15 +116,17 @@ class VulkanImageWrappingTestBackendDmaBuf : public VulkanImageWrappingTestBacke
                                                    wgpu::TextureUsage usage) override {
         EXPECT_EQ(format, wgpu::TextureFormat::RGBA8Unorm);
 
-        gbm_bo* bo = CreateGbmBo(width, height, true);
+        OwnedGbmBo bo = CreateGbmBo(width, height, true);
 
-        std::array<PlaneLayout, ExternalImageDescriptorDmaBuf::kMaxPlanes> planeLayouts;
-        for (int plane = 0; plane < gbm_bo_get_plane_count(bo); ++plane) {
-            planeLayouts[plane].stride = gbm_bo_get_stride_for_plane(bo, plane);
-            planeLayouts[plane].offset = gbm_bo_get_offset(bo, plane);
+        std::array<PlaneLayout, ExternalImageDescriptorDmaBuf::kMaxPlanes> planeLayouts = {};
+        for (int plane = 0; plane < gbm_bo_get_plane_count(bo.get()); ++plane) {
+            planeLayouts[plane].stride = gbm_bo_get_stride_for_plane(bo.get(), plane);
+            planeLayouts[plane].offset = gbm_bo_get_offset(bo.get(), plane);
         }
-        return std::make_unique<ExternalTextureDmaBuf>(bo, gbm_bo_get_fd(bo), planeLayouts,
-                                                       gbm_bo_get_modifier(bo));
+        int fd = gbm_bo_get_fd(bo.get());
+        uint64_t drmModifier = gbm_bo_get_modifier(bo.get());
+        return std::make_unique<ExternalTextureDmaBuf>(std::move(bo), fd, planeLayouts,
+                                                       drmModifier);
     }
 
     wgpu::Texture WrapImage(const wgpu::Device& device,
@@ -169,49 +168,21 @@ class VulkanImageWrappingTestBackendDmaBuf : public VulkanImageWrappingTestBacke
         return success;
     }
 
-    void CreateGbmDevice() {
-        // Render nodes [1] are the primary interface for communicating with the GPU on
-        // devices that support DRM. The actual filename of the render node is
-        // implementation-specific, so we must scan through all possible filenames to find
-        // one that we can use [2].
-        //
-        // [1] https://dri.freedesktop.org/docs/drm/gpu/drm-uapi.html#render-nodes
-        // [2]
-        // https://cs.chromium.org/chromium/src/ui/ozone/platform/wayland/gpu/drm_render_node_path_finder.cc
-        const uint32_t kRenderNodeStart = 128;
-        const uint32_t kRenderNodeEnd = kRenderNodeStart + 16;
-        const std::string kRenderNodeTemplate = "/dev/dri/renderD";
-
-        int renderNodeFd = -1;
-        for (uint32_t i = kRenderNodeStart; i < kRenderNodeEnd; i++) {
-            std::string renderNode = kRenderNodeTemplate + std::to_string(i);
-            renderNodeFd = open(renderNode.c_str(), O_RDWR);
-            if (renderNodeFd >= 0) {
-                break;
-            }
-        }
-
-        // Failed to get file descriptor for render node and mGbmDevice is nullptr.
-        if (renderNodeFd < 0) {
-            return;
-        }
-
-        // Might be failed to create GBM device and mGbmDevice is nullptr.
-        mGbmDevice.reset(gbm_create_device(renderNodeFd));
-    }
-
   private:
-    gbm_bo* CreateGbmBo(uint32_t width, uint32_t height, bool linear) {
+    OwnedGbmBo CreateGbmBo(uint32_t width, uint32_t height, bool linear) {
         uint32_t flags = GBM_BO_USE_RENDERING;
         if (linear) {
             flags |= GBM_BO_USE_LINEAR;
         }
-        gbm_bo* gbmBo = gbm_bo_create(mGbmDevice.get(), width, height, GBM_FORMAT_XBGR8888, flags);
+        OwnedGbmBo gbmBo(
+            gbm_bo_create(mGbmDevice.get(), width, height, GBM_FORMAT_XBGR8888, flags));
         EXPECT_NE(gbmBo, nullptr) << "Failed to create GBM buffer object";
         return gbmBo;
     }
 
-    std::unique_ptr<gbm_device, GbmDeviceDeleter> mGbmDevice;
+    // Declare first so the render node outlives the GBM device.
+    SystemHandle mRenderNode;
+    OwnedGbmDevice mGbmDevice;
     raw_ptr<native::vulkan::Device> mDeviceVk;
 };
 

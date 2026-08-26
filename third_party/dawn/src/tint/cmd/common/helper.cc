@@ -29,6 +29,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -92,6 +93,7 @@ InputFormat InputFormatFromFilename(const std::string& filename) {
     return input_format;
 }
 
+#if TINT_BUILD_WGSL_READER || TINT_BUILD_WGSL_WRITER
 void PrintBindings(tint::inspector::Inspector& inspector, const std::string& ep_name) {
     auto bindings = inspector.GetResourceBindings(ep_name);
     if (!inspector.error().empty()) {
@@ -107,6 +109,7 @@ void PrintBindings(tint::inspector::Inspector& inspector, const std::string& ep_
                   << "\t\t image_format = " << TexelFormatToString(binding.image_format) << "\n\n";
     }
 }
+#endif
 
 #if TINT_BUILD_SPV_READER
 tint::Program ReadSpirv(const std::vector<uint32_t>& data, const LoadProgramOptions& opts) {
@@ -134,6 +137,97 @@ tint::Program ReadSpirv(const std::vector<uint32_t>& data, const LoadProgramOpti
 }
 #endif  // TINT_BUILD_SPV_READER
 
+std::string EscapeJsonString(std::string_view str) {
+    std::stringstream ss;
+    for (char c : str) {
+        switch (c) {
+            case '"':
+                ss << "\\\"";
+                break;
+            case '\\':
+                ss << "\\\\";
+                break;
+            case '\b':
+                ss << "\\b";
+                break;
+            case '\f':
+                ss << "\\f";
+                break;
+            case '\n':
+                ss << "\\n";
+                break;
+            case '\r':
+                ss << "\\r";
+                break;
+            case '\t':
+                ss << "\\t";
+                break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    char buf[7];
+                    snprintf(buf, sizeof(buf), "\\u%04x", static_cast<unsigned char>(c));
+                    ss << buf;
+                } else {
+                    ss << c;
+                }
+                break;
+        }
+    }
+    return ss.str();
+}
+
+std::string DiagnosticsToJson(const tint::diag::List& diagnostics) {
+    std::stringstream ss;
+    ss << "[\n";
+    bool first = true;
+    for (const auto& diag : diagnostics) {
+        if (!first) {
+            ss << ",\n";
+        }
+        first = false;
+
+        ss << "  {\n";
+        ss << "    \"severity\": ";
+        switch (diag.severity) {
+            case tint::diag::Severity::Note:
+                ss << "\"note\"";
+                break;
+            case tint::diag::Severity::Warning:
+                ss << "\"warning\"";
+                break;
+            case tint::diag::Severity::Error:
+                ss << "\"error\"";
+                break;
+        }
+
+        ss << ",\n    \"message\": \"" << EscapeJsonString(diag.message.Plain()) << "\"";
+
+        if (diag.source.file && !diag.source.file->path.empty()) {
+            ss << ",\n    \"file\": \"" << EscapeJsonString(diag.source.file->path) << "\"";
+        }
+
+        if (diag.source.range.begin.line > 0) {
+            ss << ",\n    \"range\": {\n";
+            ss << "      \"start\": {\n";
+            ss << "        \"line\": " << diag.source.range.begin.line << ",\n";
+            ss << "        \"column\": " << diag.source.range.begin.column << "\n";
+            ss << "      }";
+
+            if (diag.source.range.end.line > 0) {
+                ss << ",\n      \"end\": {\n";
+                ss << "        \"line\": " << diag.source.range.end.line << ",\n";
+                ss << "        \"column\": " << diag.source.range.end.column << "\n";
+                ss << "      }";
+            }
+            ss << "\n    }";
+        }
+
+        ss << "\n  }";
+    }
+    ss << "\n]";
+    return ss.str();
+}
+
 }  // namespace
 
 void PrintWGSL(std::ostream& out, const tint::Program& program) {
@@ -156,7 +250,7 @@ ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts) {
         input_format = InputFormatFromFilename(opts.filename);
     }
     if (input_format == InputFormat::kUnknown && IsStdin(opts.filename)) {
-        std::cerr << "No input format given for data read from stdin";
+        std::cerr << "No input format given for data read from stdin\n";
         exit(1);
     }
 
@@ -243,27 +337,38 @@ ProgramInfo LoadProgramInfo(const LoadProgramOptions& opts) {
     ProgramInfo info = load();
 
     if (info.program.Diagnostics().Count() > 0) {
-        if (!info.program.IsValid() && input_format != InputFormat::kWgsl) {
+        if (!info.program.IsValid() && input_format != InputFormat::kWgsl &&
+            opts.diagnostics_format == DiagnosticsFormat::kPlain) {
             // Invalid program from a non-wgsl source.
             // Print the WGSL, to help understand the diagnostics.
             PrintWGSL(std::cout, info.program);
         }
 
-        tint::diag::Formatter formatter;
-        if (opts.printer) {
-            opts.printer->Print(formatter.Format(info.program.Diagnostics()));
-        } else {
-            tint::StyledTextPrinter::Create(stderr)->Print(
-                formatter.Format(info.program.Diagnostics()));
-        }
-        // Flush any diagnostics written to stderr. We depend on these being emitted to the console
-        // before the program for end-to-end tests.
-        fflush(stderr);
+        PrintDiagnostics(info.program.Diagnostics(), opts.diagnostics_format, opts.printer);
     }
 
     return info;
 }
 
+void PrintDiagnostics(const tint::diag::List& diagnostics,
+                      DiagnosticsFormat format,
+                      StyledTextPrinter* printer) {
+    if (format == DiagnosticsFormat::kJson) {
+        std::cerr << DiagnosticsToJson(diagnostics) << "\n";
+    } else {
+        tint::diag::Formatter formatter;
+        if (printer) {
+            printer->Print(formatter.Format(diagnostics));
+        } else {
+            tint::StyledTextPrinter::Create(stderr)->Print(formatter.Format(diagnostics));
+        }
+    }
+    // Flush any diagnostics written to stderr. We depend on these being emitted to the console
+    // before the program for end-to-end tests.
+    fflush(stderr);
+}
+
+#if TINT_BUILD_WGSL_READER || TINT_BUILD_WGSL_WRITER
 void PrintInspectorData(tint::inspector::Inspector& inspector) {
     auto entry_points = inspector.GetEntryPoints();
     if (!inspector.error().empty()) {
@@ -348,6 +453,7 @@ void PrintInspectorBindings(tint::inspector::Inspector& inspector) {
     }
     std::cout << std::string(80, '-') << "\n";
 }
+#endif
 
 std::string EntryPointStageToString(tint::inspector::PipelineStage stage) {
     switch (stage) {

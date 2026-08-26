@@ -38,6 +38,7 @@
 #include "src/tint/lang/core/type/array_count.h"
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/utils/internal_limits.h"
 #include "src/tint/utils/math/hash.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 #include "src/tint/utils/text/string_stream.h"
@@ -223,6 +224,28 @@ uint32_t Struct::SizeNoPadding() const {
     }
     auto& mem = members_.Back();
     return mem->Offset() + mem->Size();
+}
+
+Result<SuccessType> Struct::PaddingWithinLimit() const {
+    uint32_t cur_offset = 0;
+    for (auto* member : members_) {
+        uint32_t padding = member->Offset() - cur_offset;
+        if (padding >= tint::internal_limits::kMaxStructMemberPadding) {
+            return Failure{"struct member padding (" + std::to_string(padding) +
+                           ") is larger than the maximum (" +
+                           std::to_string(tint::internal_limits::kMaxStructMemberPadding) + ")"};
+        }
+        cur_offset += padding + member->MinimumRequiredSize();
+    }
+
+    uint32_t end_padding = Size() - cur_offset;
+    if (end_padding >= tint::internal_limits::kMaxStructMemberPadding) {
+        return Failure{"struct padding (" + std::to_string(end_padding) +
+                       ") is larger than the maximum (" +
+                       std::to_string(tint::internal_limits::kMaxStructMemberPadding) + ")"};
+    }
+
+    return Success;
 }
 
 Struct* Struct::Clone(CloneContext& ctx) const {

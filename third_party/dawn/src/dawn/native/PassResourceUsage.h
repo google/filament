@@ -31,8 +31,10 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "dawn/native/SubresourceStorage.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/SubresourceStorage.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -74,7 +76,7 @@ struct SyncScopeResourceUsage {
     std::vector<TextureSubresourceSyncInfo> textureSyncInfos;
 
     std::vector<ExternalTextureBase*> externalTextures;
-    std::vector<ResourceTableBase*> usedResourceTables;
+    raw_ptr<ResourceTableBase> resourceTable;
 };
 
 // Contains all the resource usage data for a compute pass.
@@ -101,11 +103,12 @@ struct ComputePassResourceUsage {
 struct RenderPassResourceUsage : public SyncScopeResourceUsage {
     // Storage to track the occlusion queries used during the pass.
     std::vector<QuerySetBase*> querySets;
-    std::vector<std::vector<bool>> queryAvailabilities;
+    std::vector<ityp::vector<QueryIndex, bool>> queryAvailabilities;
+    bool usesFramebufferFetch = false;
 };
 
-using RenderPassUsages = std::vector<RenderPassResourceUsage>;
-using ComputePassUsages = std::vector<ComputePassResourceUsage>;
+using RenderPassUsages = ityp::vector<PassIndex, RenderPassResourceUsage>;
+using ComputePassUsages = ityp::vector<PassIndex, ComputePassResourceUsage>;
 
 // Contains a hierarchy of "ResourceUsage" that mirrors the hierarchy of the CommandBuffer and
 // is used for validation and to produce barriers and lazy clears in the backends.
@@ -118,6 +121,9 @@ struct CommandBufferResourceUsage {
     absl::flat_hash_set<TextureBase*> topLevelTextures;
     absl::flat_hash_set<QuerySetBase*> usedQuerySets;
 };
+
+// Returns a set of writable textures from scope.textures
+absl::flat_hash_set<TextureBase*> GatherWritableTextures(const SyncScopeResourceUsage& scope);
 
 }  // namespace dawn::native
 

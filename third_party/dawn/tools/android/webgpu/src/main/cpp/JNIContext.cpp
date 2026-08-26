@@ -45,10 +45,7 @@ JNIContext::~JNIContext() {
     }
 
     for (auto allocation : mAllocationsToFree) {
-        delete allocation;
-    }
-    for (auto allocation : mArrayAllocationsToFree) {
-        delete[] allocation;
+        allocation.deleter(allocation.ptr);
     }
 }
 

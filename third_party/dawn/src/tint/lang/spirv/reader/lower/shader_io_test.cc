@@ -40,8 +40,10 @@ using namespace tint::core::number_suffixes;  // NOLINT
 class SpirvReader_ShaderIOTest : public core::ir::transform::TransformTest {
   public:
     void SetUp() override {
-        capabilities.Add(core::ir::Capability::kAllowMultipleEntryPoints);
-        capabilities.Add(core::ir::Capability::kAllowLocationForNumericElements);
+        mod.properties.Add(core::ir::Property::kAllowLocationForNumericComposites);
+        mod.properties.Add(core::ir::Property::kAllowMultipleEntryPoints);
+        mod.properties.Add(core::ir::Property::kAllowPointSizeBuiltin);
+        mod.properties.Add(core::ir::Property::kAllowBackendSpecificShaderIO);
     }
 
   protected:

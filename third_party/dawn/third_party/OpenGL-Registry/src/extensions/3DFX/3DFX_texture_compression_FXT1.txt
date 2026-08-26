@@ -1,0 +1,619 @@
+Name
+
+    3DFX_texture_compression_FXT1
+
+Name Strings
+
+    GL_3DFX_texture_compression_FXT1
+
+Contact
+
+    Don Mullis, 3dfx Interactive (dwm 'at' 3dfx.com)
+
+Status
+
+    CANDIDATE FOR FINAL DRAFT -- NOT YET COMPLETE
+
+Version
+
+    Draft 0.4, 12 Apr 2000
+
+Number
+
+    206
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    GL_ARB_texture_compression is required.
+    This extension is written against the OpenGL 1.2.1 Specification.
+
+Overview
+
+    This extension additional texture compression functionality 's FXT1
+    format, specific to 3dfxsubject to all the requirements and
+    limitations described by the extension GL_ARB_texture_compression.
+    The FXT1 texture format supports only 2D and 3D images without
+    borders.
+
+    Because 3dfx expects to make continual improvement to its FXT1
+    compressor implementation, 3dfx recommends that to achieve best
+    visual quality applications adopt the following procedure with
+    respect to reuse of textures compressed by the GL:
+
+	1) Save the RENDERER and VERSION strings along with images
+	   compressed by the GL;
+	2) Before reuse of the textures, compare the stored strings with
+	   strings newly returned from the current GL;
+	3) If out-of-date, repeat the compression and storage steps.
+
+IP Status
+
+    A royalty-free license is available from 3dfx Interactive
+    (http://www.3dfx.com/).
+
+Issues
+
+    (1) Two or only one internalformat tokens:
+	GL_COMPRESSED_RGBA_FXT1_3DFX and GL_COMPRESSED_RGB_FXT1_3DFX, or
+	GL_COMPRESSED_RGBA_FXT1_3DFX only. These names are placeholders,
+	the point in question is whether there should be separate tokens
+	reflecting extrinsic knowledge of whether the image contains any
+	non-unity alpha values. This arises because the FXT1 image
+	format distinguishes non-unity alpha only at the level of an
+	individual 8x4 compression block. If there are two distinct
+	tokens, passing GL_COMPRESSED_RGB_FXT1_3DFX to
+	CompressedTexImage with an image that contained non-unity-alpha
+	blocks would be an error.
+
+	RESOLVED. Two distinct tokens specified. This is largely to
+	follow the usual usage by apps of non-compressed tokens.
+
+    (2) Support for borders.
+
+	RESOLVED.  Not supported.
+
+    (3) Support for TexSubImage at a level more general than that
+	guaranteed by ARB_texture_compression.
+
+	RESOLVED. Not supported; See issue (5) of the
+	GL_ARB_texture_compression spec.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage2D,
+    CopyTexImage2D, TexImage3D, CopyTexImage3D, and by the
+    <internalformat> and <format> parameters of
+    CompressedTexImage2D_ARB, CompressedTexSubImage2D_ARB,
+    CompressedTexImage3D_ARB, CompressedTexSubImage3D_ARB:
+
+	COMPRESSED_RGB_FXT1_3DFX			  0x86B0
+	COMPRESSED_RGBA_FXT1_3DFX			  0x86B1
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Add Table 3.16.1:  Specific Compressed Internal Formats
+
+	Compressed Internal Format	   Base Internal Format
+	==========================	   ====================
+	COMPRESSED_RGB_FXT1_3DFX	   RGB
+	COMPRESSED_RGBA_FXT1_3DFX	   RGBA
+
+    Add to Section 3.8.2, Alternate Image Specification (adding to the
+    end of the CompressedTexImage section introduced by the
+    ARB_texture_compression spec)
+
+    If <internalformat> is COMPRESSED_RGB_FXT1_3DFX,
+    COMPRESSED_RGBA_FXT1_3DFX, the compressed texture is stored using
+    one of several FXT1 compressed texture image formats. FXT1 texture
+    compression supports only 2D images without borders.
+    CompressedTexImage1DARB and CompressedTexImage3DARB produce an
+    INVALID_ENUM error if <internalformat> is an FXT1 format.
+    CompressedTexImage2DARB will produce an INVALID_OPERATION error if
+    <border> is non-zero.
+
+
+    Add to Section 3.8.2, Alternate Image Specification (adding to the
+    end of the CompressedTexSubImage section introduced by the
+    ARB_texture_compression spec)
+
+    If the internal format of the texture image being modified is
+    COMPRESSED_RGB_FXT1_3DFX, COMPRESSED_RGBA_FXT1_3DFX, the texture is
+    stored using one of the several FXT1 compressed texture image
+    formats. Since the FXT1 texture compression algorithm supports only
+    2D images, CompressedTexSubImage1DARB and CompressedTexSubImage3DARB
+    produce an INVALID_ENUM error if <format> is an FXT1 format.
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    INVALID_ENUM is generated by CompressedTexImage1DARB if
+    <internalformat> is GL_COMPRESSED_RGB_FXT1_3DFX or
+    GL_COMPRESSED_RGBA_FXT1_3DFX.
+
+    INVALID_OPERATION is generated by CompressedTexImage2DARB or
+    CompressedTexImage3DARB if <internalformat> is
+    GL_COMPRESSED_RGB_FXT1_3DFX or GL_COMPRESSED_RGBA_FXT1_3DFX and
+    <border> is not equal to zero.
+
+    INVALID_ENUM is generated by CompressedTexSubImage1DARB if <format>
+    is GL_COMPRESSED_RGB_FXT1_3DFX or GL_COMPRESSED_RGBA_FXT1_3DFX.
+
+Appendix
+
+    FXT1 comprises four different compressed texture formats. Each of
+    the formats compress an 8x4 texel blocks into 128 bits. During the
+    compression phase, the encoder selects one of the four formats for
+    each block based on which encoding scheme results in best overall
+    visual quality. Unused pixel locations along the right or bottom
+    edges within a block should contain a repetition of the values in
+    used locations. The total size of an image is ceil(width/8) *
+    ceil(height/4) * 16 bytes.
+
+    In each compression format, the 32 texels of the 8x4 block are
+    partitioned into two 4x4 sub-blocks according to the following
+    diagram:
+
+	 t0  t1  t2  t3   t16 t17 t18 t19
+	 t4  t5  t6  t7   t20 t21 t22 t23
+	 t8  t9 t10 t11   t24 t25 t26 t27
+	t12 t13 t14 t15   t28 t29 t30 t31
+
+    In the following bit-level descriptions, bits of increasing index
+    are stored in bytes at likewise increasing offsets, i.e. the order
+    is "little-endian".
+
+
+    1. FXT1 Compressed Texture Format CC_HI:
+
+    (rgb555) (3-bit/texel)
+    mode[1:0]  color1  color0  texel 31 to 16  texel 15 to 0
+	    2	   15	   15		   48		  48
+
+
+	    [127:126]  mode[1:0]
+	    [125:121]  red of color1
+	    [120:116]  green of color1
+	    [115:111]  blue of color1
+	    [110:106]  red of color0
+	    [105:101]  green of color0
+	     [100:96]  blue of color0
+	      [95:93]  texel 31
+		...
+	      [50:48]  texel 16
+	      [47:45]  texel 15
+		 ...
+		[2:0]  texel 0
+
+    In CC_HI format, mode = 00b, the 15-bit color1 (RGB555 format) and
+    color0 (RGB555 format) colors are converted into 24-bit RGB888
+    colors by duplicating the upper 3 bits for the 3 LSBs. The 24-bit
+    converted color1 and color0 are then used to linearly interpolate 5
+    more levels of color to create seven total levels of colors and 1
+    alpha (transparent) color. The first seven colors always have
+    alpha=ffh (opaque), while the eighth color is defined to be
+    transparent black (r,g,b=00h, alpha=00h).
+
+    These eight 32-bit colors are used as the contents of an 8-entry (3
+    bit index) lookup table. For all 32 texels in the block, each
+    texel's 3-bit index value is used to index the lookup table, the
+    output from the lookup table representing the 32-bit color
+    (ARGB8888) for that texel.
+
+    Generating RGB888 from RGB555:
+
+	    Color1 (red) =   {[125:121], [125:123]}
+	    Color1 (green) = {[120:116], [120:118]}
+	    Color1 (blue) =  {[115:111], [115:113]}
+
+	    Color0 (red) =   {[110:106], [110:108]}
+	    Color0 (green) = {[105:101], [105:103]}
+	    Color0 (blue) =  {[100:96],  [100:98]}
+
+    Creating seven ARGB8888 colors from two RGB888 colors (operations
+    performed individually for each color channel):
+
+	    Color[0] = color0[r,g,b], alpha[0] = ffh
+	    Color[1] = (5*color0[r,g,b] + color1[r,g,b] +3 )/6 alpha[1] = ffh
+	    Color[2] = (4*color0[r,g,b] + 2*color1[r,g,b] +3 )/6 alpha[2] = ffh
+	    Color[3] = (3*color0[r,g,b] + 3*color1[r,g,b] +3 )/6 alpha[3] = ffh
+	    Color[4] = (2*color0[r,g,b] + 4*color1[r,g,b] +3 )/6 alpha[4] = ffh
+	    Color[5] = (color0[r,g,b] + 5*color1[r,g,b] +3 )/6 alpha[5] = ffh
+	    Color[6] = color1[r,g,b], alpha[6] = ffh
+	    Color[7] = where r,g,b = 00h, alpha[7]=00h
+
+    Table Lookup:
+	   3-bit index of   Color for texel 31 to texel 0
+	texel31 to texel0   (ARGB8888)
+
+			0   color[0] => {a[7:0], r[7:0], g[7:0], b[7:0]}
+			1   color[1]
+			2   color[2]
+			3   color[3]
+			4   color[4]
+			5   color[5]
+			6   color[6]
+			7   color[7]
+
+
+    2. FXT1 Compressed Texture Format CC_CHROMA:
+
+    (rgb555) (2-bit/texel)
+    Mode[2:0] unused color3 color2 color1 color0  texel 31 to 16  texel 15 to 0
+	    3	   1	 15	15     15     15	      32	     32
+
+	    [127:125]  mode[2:0]
+		[124]  unused
+	    [123:119]  color3(r5)
+	    [118:114]  color3(g5)
+	    [113:109]  color3(b5)
+	    [108:104]  color2(r5)
+	     [103:99]  color2(g5)
+	      [98:94]  color2(b5)
+	      [93:89]  color1(r5)
+	      [88:84]  color1(g5)
+	      [83:79]  color1(b5)
+	      [78:74]  color0(r5)
+	      [73:69]  color0(g5)
+	      [68:64]  color0(b5)
+	      [63:62]  texel 31
+		 ...
+	      [33:32]  texel 16
+	      [31:30]  texel 15
+		 ...
+		[1:0]  texel 0
+
+    In CC_CHROMA format, mode=010b, the 15-bit colors color[3:0]
+    (RGB555) are converted into 24-bit RGB888 colors exactly the same as
+    in the CC_HI format via bit replication. Color3 to Color0 are used
+    as they are (after conversion to RGB888 format), but without
+    interpolation. The 24-bit converted colors color3, color2, color1,
+    and color0 are used as the contents of a 4-entry (2-bit index)
+    lookup table. The Alpha channel of the output of the lookup table is
+    always opaque(ffh), regardless of the 2-bit index value. The 32-bit
+    (ARGB8888) color value for each texel is obtained by performing
+    table lookup using that texel's 2-bit index.
+
+    Table Lookup:
+
+	    2-bit index of   Color for texel 31 to texel 0
+       texel 31 to texel 0   (ARGB8888)
+
+			 0   color0, alpha = ffh
+			 1   color1, alpha = ffh
+			 2   color2, alpha = ffh
+			 3   color3, alpha = ffh
+
+
+    3. FXT1 Compressed Texture Format CC_MIXED:
+
+    (rgb555) (2-bit/texel)
+    mode[0] glsb[1:0] alpha[0] color3 color2 color1 color0  texel 31to16  texel 15to0
+	  1	    2	     1	   15	  15	 15	15	      32	   32
+
+
+		[127]  mode[0]
+	    [126:125]  glsb[1:0] (lsbs of green for color 1 & color 3)
+		[124]  alpha[0]
+	    [123:119]  color3(r5)
+	    [118:114]  color3(g5)
+	    [113:109]  color3(b5)
+	    [108:104]  color2(r5)
+	     [103:99]  color2(g5)
+	      [98:94]  color2(b5)
+	      [93:89]  color1(r5)
+	      [88:84]  color1(g5)
+	      [83:79]  color1(b5)
+	      [78:74]  color0(r5)
+	      [73:69]  color0(g5)
+	      [68:64]  color0(b5)
+	      [63:62]  texel 31
+		 ...
+	      [33:32]  texel 16
+	      [31:30]  texel 15
+		 ...
+		[1:0]  texel 0
+
+    In CC_MIXED format, mode[0]=1 (only one bit), color2 and color3 are
+    used for texels 31 to 16, and color0 and color1 are used for texels
+    15 to 0. When alpha[0] = 0, the two pairs of colors (colors 0 and 1
+    for texels 15 to 0 and colors 2 and 3 for texels 31 to 16) are
+    interpreted as 16-bit RGB565 colors. For color1 and color3, the LSB
+    (bit 0) of the green channel comes from the glsb bits
+    (color1.green[0] = bit 125, color3.green[0] = bit 126). For color0
+    and color2, the LSB (bit 0) of the green channel comes from the
+    upper select bit for texel 0 and texel 16, respectively
+    (color0.green[0] = bit 1 xor bit 125, color2.green[0] = bit 33 xor
+    bit 126). The two 16-bit colors are then expanded to a 24-bit RGB888
+    format by bit replication (most significant bits replicated in the
+    least significant bits), and are then used to create 2 more levels
+    of color in between the color0/2 and color1/3 values through linear
+    interpolation. A total of 4 colors are therefore available for 2-bit
+    index per texel selection.
+
+    When alpha[0]=1, color0 and color2 are interpreted as 15-bit RGB555
+    colors, and color 1 and color3 are interpreted as RGB565 colors. For
+    color0 and color2, the 15-bit RGB555 colors are expanded to 24-bit
+    RGB888 colors by bit replication. For color1 and color3, the LSB
+    (bit 0) of the green channel comes from the glsb bits
+    (color1.green[0] = bit 125, color3.green[0] = bit 126), and then bit
+    replication is used to convert from the 16-bit RGB565 format to a
+    24-bit RGB888 format. A third color is created by linear
+    interpolation (interpolating between the converted 24-bit RGB888
+    color0 and color1 for texels 15 to 0, and interpolating between the
+    converted 24-bit RGB888 color2 and color3 for texels 31 to 16).
+    Finally, a fourth color (texel index 0x3) is defined to be
+    transparent black (r,g,b=00h, alpha=00h). A total of 4 colors are
+    therefore available for 2-bit index per texel selection. The 32-bit
+    (ARGB8888) color value for all texels is obtained by performing
+    table lookup using each texel's 2-bit index.
+
+    Creating the 24-bit (RGB888) base colors color3 and color2:
+
+	    Color3(red) = {[123:119], [123:121]}
+	    Color3(green) = {[118:114], [126], [118:117]}
+	    Color3(blue) = {[113:109], [113:111]}
+	    Color2(red) = {[108:104], [108:106]}
+	    Color2(green) = (alpha[0]=1) ? {[103:99],[103:101]}
+					 : {[103:99],[33]^[126],[103:102]}
+	    Color2(blue) = {[98:94], [98:96]}
+
+    Creating the 24-bit (RGB888) base colors color1 and color0:
+
+	    Color1(red) = {[93:89], [93:91]}
+	    Color1(green) = {[88:84], [125], [88:87]}
+	    Color1(blue) = {[83:79], [83:81]}
+	    Color0(red) = {[78:74], [78:76]}
+	    Color0(green) = (alpha[0]=1) ? {[73:69, [73:71]}
+					 : {[73:69], [1]^[125], [73:72]}
+	    Color0(blue) = {[68:64], [68:66]}
+
+    When alpha[0]=0, because one of the texel select bits is used to
+    determine a bit of color0 and color2, the software encoder must
+    perform some very tricky operations. The method below describes how
+    to generate color0 and color1 and the associated select bits (the
+    same method applies to determining the lsb of green for color2 and
+    color3):
+
+	    1. Determine the 16-bit RGB565 color values for color0 & color1.
+
+	    2. Determine the select bits for each pixel in the 4x4 sub-block.
+
+	    3. If (pixel[0].select[1] != color0.green[0]^color1.green[0]) then
+	       swap color0 &color1, and invert all the select bits.
+
+    Below is a snippet of psuedo-C code to generate bits 0-31, bits
+    64-93 & bit 125 based on the initial color0, color1 and pixel
+    indices:
+
+    struct RGB565 {Byte red; Byte green; Byte blue};
+
+    struct CSels {Byte index[16]};
+
+    // cc_mixed_right_half derives bits[93:64] of the 128 bit data word of a
+    // CC_MIXED non-alpha compression block and returns them in 'bits_64_to_31'.
+    // Plus, as a bonus, you will receive bit 125, containing the lsb of
+    // the green channel of color1, and bits_0_to_31, containing all of the pixel indices.
+    void
+    cc_mixed_right_half( RGB565 color0, RGB565 color1,
+			 CSels pix,
+			 Dword &bits_0_to_31,
+			 Dword &bits_64_to_93,
+			 Bit &bit125)
+    {
+	RGB565 o_color0;
+	RGB565 o_color1;
+
+	// Determine if we need to switch color0 & color1
+	if (((pix.index[0] >> 1) & 1) != ((color0.green ^ color1.green) & 1)) {
+	    o_color1 = color0;
+	    o_color0 = color1;
+
+	    for (int i=0; i<16; i++)
+		pix.index[i] = ~pix.index[i] & 3;
+	} else {
+	    o_color0 = color0;
+	    o_color1 = color1;
+	}
+
+	// Save lsb of color1.green in bit125
+	bit125 = o_color1.green & 1;
+
+	// Convert color0 & color1 to RGB555, and then munge into bits 64 to 93
+	o_color0.green >>= 1;
+	o_color1.green >>= 1;
+
+	bits_64_to_93 = ( (o_color1.red<<25) | (o_color1.green<<20) | (o_color1.blue<<15)
+			| (o_color0.red<<10) | (o_color0.green<<5) | (o_color0.blue) );
+
+	// Munge the pixel indices into bits 0 to 31
+	bits_0_to_31 = 0;
+
+	for (int i=0; i<16; i++)
+	    bits_0_to_31 |= pix.index[i]<<(i*2);
+    }
+
+
+    Generating the 4-entry lookup table for texels 31 to 16:
+
+	If alpha[0]=0,
+	    Color[0] = color2[r,g,b] , alpha=ffh
+	    Color[1] = (2 * color2[r,g,b] + color3[r,g,b] + 1) / 3, alpha=ffh
+	    Color[2] = (color2[r,g,b] + 2 * color3[r,g,b] +1) / 3, alpha=ffh
+	    Color[3] = color3[r,g,b], alpha=ffh
+
+	If alpha[0]=1,
+	    Color[0] = color2[r,g,b], alpha=ffh
+	    Color[1] = (color2[r,g,b] + color3[r,g,b]) / 2, alpha=ffh
+	    Color[2] = color3[r,g,b], alpha=ffh
+	    Color[3] = [a,r,g,b] = 00h
+
+    Generating the 4-entry lookup table for texels 15 to 0:
+
+	If alpha[0]=0,
+	    Color[0] = color0[r,g,b] , alpha=ffh
+	    Color[1] = (2 * color0[r,g,b] + color1[r,g,b] + 1) / 3, alpha=ffh
+	    Color[2] = (color0[r,g,b] + 2 * color1[r,g,b] + 1) / 3, alpha=ffh
+	    Color[3] = color1[r,g,b], alpha=ffh
+
+	If alpha[0]=1,
+	    Color[0] = color0[r,g,b], alpha=ffh
+	    Color[1] = (color0[r,g,b] + color1[r,g,b]) / 2, alpha=ffh
+	    Color[2] = color1[r,g,b], alpha=ffh
+	    Color[3] = [a,r,g,b] = 00h
+
+    Table Lookup:
+	      2-bit index of   Color for texel 31 to texel 0
+	 texel 31 to texel 0   ARGB8888
+
+			   0   color[0], {a[7:0], r[7:0], g[7:0], b[7:0]}
+			   1   color[1]
+			   2   color[2]
+			   3   color[3]
+
+
+    4. FXT1 Compressed Texture format CC_ALPHA:
+
+    (argb5555) (2-bit/texel)
+    mode[2:0] lerp alpha2 alpha1 alpha0 color2 color1 color0  texel 31 to 16  texel 15 to 0
+	    3	 1	5      5      5     15	   15	  15		  32		 32
+
+	    [127:125]  mode[2:0]
+		[124]  lerp
+	    [123:119]  color2(a5)
+	    [118:114]  color1(a5)
+	    [113:109]  color0(a5)
+	    [108:104]  color2(r5)
+	     [103:99]  color2(g5)
+	      [98:94]  color2(b5)
+	      [93:89]  color1(r5)
+	      [88:84]  color1(g5)
+	      [83:79]  color1(b5)
+	      [78:74]  color0(r5)
+	      [73:69]  color0(g5)
+	      [68:64]  color0(b5)
+	      [63:62]  texel 31
+		 ...
+	      [33:32]  texel 16
+	      [31:30]  texel 15
+		 ...
+		[1:0]  texel 0
+
+    In CC_ALPHA format, mode[2:0]=011b, three 20-bit colors color2,
+    color1 and color0 (ARGB5555) are converted to a 32-bit (ARGB8888)
+    format by duplicating the upper 3-bits for the 3 LSBs (all the color
+    channels and the alpha channel are converted from 5-bit formats to
+    8-bit formats using this bit duplication).
+
+    Creating the 32-bit (RGB8888) base colors color2, color1, and color0:
+
+	    Color2(alpha) = {[123:119], [123:121]}
+	    Color2(red) = {[108:104], [108:106]}
+	    Color2(green) = {[103:99], [103:101]}
+	    Color2(blue) = {[98:94], [98:96]}
+	    Color1(alpha) = {[118:114], [118:116]}
+	    Color1(red) = {[93:89], [93:91]}
+	    Color1(green) = {[88:84], [88:86]}
+	    Color1(blue) = {[83:79], [83:81]}
+	    Color0(alpha) = {[113:109], [113:111]}
+	    Color0(red) = {[78:74], [78:76]}
+	    Color0(green) = {[73:69], [73:71]}
+	    Color0(blue) = {[68:64], [68:66]}
+
+    When lerp = 0 (bit 124 = 0), the converted 32-bit colors color2,
+    color1, and color0 are used directly as the first 3 entries in the
+    4-entry lookup table. The last entry in the 4-entry lookup table,
+    accessed with index=3, is defined to be transparent black (rgb=00h,
+    alpha=00h). A total of 4 colors are therefore available for 2-bit
+    index per texel selection, and the 32-bit (ARGB8888) color value for
+    all texels is obtained by performing table lookup using each texel's
+    2-bit index.
+
+    Table Lookup (when lerp = 0):
+
+	Index of texel 31 to 0	 Color for texel 31 to texel 0
+				 (ARGB8888)
+
+			     0	  Color[0] = color0 alpha = alpha0
+			     1	  Color[1] = color1 alpha = alpha1
+			     2	  Color[2] = color2 alpha = alpha2
+			     3	  Color[3] = 000000h alpha = 00h
+
+    When lerp = 1 (bit 124 = 1), the converted 32-bit colors color2 and
+    color1 are used as the 32-bit base colors for texels 31 to 16, and
+    the converted 32-bit colors color1 and color0 are used as the base
+    colors for texels 15 to 0. The 32-bit base colors are then used to
+    create 2 more levels of color through linear interpolation. A total
+    of 4 colors are therefore available for 2-bit index per texel
+    selection, and the 32-bit (ARGB8888) color value for all texels is
+    obtained by performing table lookup using each texel's 2-bit index.
+
+    Creating the 4 colors used in the 4-entry lookup table from the
+    32-bit base colors (when lerp = 1):
+
+	For texel 31 to texel 16
+	    Color[0] = color2[a,r,g,b]
+	    Color[1] = (2 * color2[a,r,g,b] + color1[a,r,g,b] + 1) / 3
+	    Color[2] = (color2[a,r,g,b] + 2 * color1[a,r,g,b] +1) / 3
+	    Color[3] = color1[a,r,g,b]
+
+	For texel 15 to texel 0
+	    Color[0] = color0[a,r,g,b]
+	    Color[1] = (2 * color0[a,r,g,b] + color1[a,r,g,b] +1) / 3
+	    Color[2] = (color0[a,r,g,b] + 2 * color1[a,r,g,b] +1) / 3
+	    Color[3] = color1[a,r,g,b]
+
+    Table Lookup (when lerp = 1):
+
+	Index of texel 31 to 0	 Color for texel 31 to texel 0
+				 (ARGB8888)
+
+			     0	 color[0]
+			     1	 color[1]
+			     2	 color[2]
+			     3	 color[3]
+
+Revision History
+
+    0.1,  01/12/00 dwm: Initial revision.
+    0.2,  02/09/00 dwm: Respond to feedback from Intel.
+    0.3,  02/23/00 dwm: Respond to feedback from Intel.
+    0.4,  04/12/00 dwm: Updated to reflect final version of the
+			ARB_texture_compression extension.
+
+
+Copyright 1999-2000, 3dfx Interactive, Inc.
+All rights reserved.

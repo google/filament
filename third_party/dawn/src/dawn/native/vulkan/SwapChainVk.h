@@ -30,10 +30,10 @@
 
 #include <vector>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/SwapChain.h"
-#include "dawn/native/vulkan/UniqueVkHandle.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/SwapChain.h"
+#include "src/dawn/native/vulkan/UniqueVkHandle.h"
 
 namespace dawn::native::vulkan {
 

@@ -1,0 +1,125 @@
+// Copyright 2017-2021 The Khronos Group Inc.
+// SPDX-License-Identifier: CC-BY-4.0
+
+= OpenGL-Registry
+
+
+== OpenGL, OpenGL ES, and OpenGL ES-SC API and Extension Registry
+
+This site contains the API and Extension registries for the OpenGL family
+APIs - OpenGL, OpenGL ES, and OpenGL SC. It includes API specifications;
+specifications of Khronos- and vendor-approved extensions; header files
+corresponding to the specifications; the XML API Registry defining each
+API; and related tools and scripts.
+
+It does not contain the OpenGL and OpenGL ES Reference Pages, which are in
+the KhronosGroup/OpenGL-Refpages repository.
+
+If you want to add an extension specification to the Registry, correct an
+existing specification, request allocation of enumerants and other
+controlled resources in the OpenGL / GLX / WGL namespaces, or otherwise
+change the Registry, propose a pull request against the OpenGL-Registry
+repository and adding the appropriate extension specifications, making changes
+to the appropriate XML file, etc. Note that any changes you propose to
+reserved values in the registry are not official until your pull request is
+*accepted* into the main branch.
+
+Feel free to post issues on the repository if it's unclear how to do
+something you need to with extensions, or if you find any problems.
+
+
+== Please Don't File API And GLSL Bugs Here!
+
+The OpenGL-Registry repository isn't the right place to report problems with
+the OpenGL and OpenGL ES API and Shading Language Specifications.
+
+For API (both core and extension) issues, please use the issue tracker in
+the https://github.com/KhronosGroup/OpenGL-API repository.
+
+For Shading Language (both core and extension) issues, please use the issue
+tracker in the https://github.com/KhronosGroup/OpenGL-GLSL repository.
+
+Please tag your issues with +[OpenGL]+ or +[OpenGL ES]+ in the title, if
+they are specific to that API and/or Shading Language.
+
+Reporting problems with the registry *itself*, including missing or badly
+formed extension documents, headers, or XML files, should be done using the
+OpenGL-Registry issue tracker.
+
+
+=== Defining New Extensions
+
+To create a new extension specification, take these steps:
+
+* Request one or more blocks of unused enumerants for GL, GLX, or WGL
+  depending on the needs of your extension, by adding the reservation(s) to
+  the end of gl.xml, glx.xml, and/or wgl.xml.
+* Once the pull request modifying the XML files is accepted into main, you
+  have control of those enumerant blocks.
+* Create an extension specification, following the model of existing vendor
+  specifications under extensions/*vendor*/ .
+* Obtain whatever degree of review, implementation, and signoff you need
+  from affected parties before declaring the extension complete.
+* Add the extension specification under extensions/*vendor*/*extension* .
+* Modify extensions/registry.py to include the extension, using the next
+  free ARB, GL, and/or ES extension numbers (depending on which API the
+  extension is defined for). Execute the python script nextfree.py in the
+  extensions/ directory to find the next free numbers.
+* Once registry.py is updated, 'make' in extensions/ to update the PHP
+  include files which are used to show an index of extensions on the
+  registry website. This requires GNU make and Python 3.
+* Add the extension number(s) to the extension specification in the 'Number'
+  block.
+* Add the extension interfaces and enumerant assignments to xml/gl.xml,
+  glx.xml, and/or wgl.xml following existing examples. Verify that the
+  relevant extension headers are generated with the correct interfaces by
+  running 'make' in xml/. This requires the lxml Python module.
+* Once the pull request adding the extension specification and modifying
+  registry.py is accepted, your extension is registered.
+
+There are some documents under the docs/ directory describing some of the
+processes for making extensions, but they are largely out of date. They may
+be updated or removed over time:
+
+* link:docs/rules.html[How to create extensions]
+* link:docs/enums.html[Enumerant allocation policies]
+* link:docs/template.txt[Extension specification template]
+* link:docs/promoting.html[Extension promotion guidelines]
+* link:docs/reserved.txt[GLX opcode registry (rarely updated)]
+* link:docs/syntaxrules.txt[OpenGL Syntax Rules (updated 2006/12/13)]
+* link:docs/GLSLExtensionRules.txt[OpenGL Shading Language Extension Conventions (updated 2006/12/18)]
+* link:docs/fog_coord.txt[Extension Specification Example]
+
+
+=== Repository Contents
+
+* ABI - OpenGL ABI for Linux
+* api - Header files for all APIs
+** api/ES - Headers for OpenGL ES
+** api/GL - Headers for OpenGL
+** api/SC - Headers for OpenGL SC
+** Note that the OpenGL ES and OpenGL SC headers all depend on the shared
+   https://www.khronos.org/registry/EGL/api/KHR/khrplatform.h[khrplatform.h]
+   This file is maintained in the http://www.khronos.org/registry/EGL/[EGL
+   Registry].
+* docs - Miscellaneous documentation on creating extensions, mostly out of date.
+* extensions - Extension specifications for all APIs
+** extensions/registry.py - combined extension registry for all APIs
+** extensions/makeindex.py - create HTML extension indices from registry.py
+* index_{es,gl,sc}.php - Index files for the website, linking to specifications, headers, and extensions relevant to each API
+* specs - API and Shading Language Specifications for all APIs
+** specs/es - OpenGL ES Specifications
+** specs/gl - OpenGL Specifications
+** specs/sc - OpenGL SC Specifications
+* xml - XML API Registry and related tools
+
+
+=== There Sure Is A Lot Of Stuff In Here!
+
+Yes, there sure is. The specs/ directory contains over 125 MB of PDFs,
+including the latest specs for each version of OpenGL and OpenGL ES. While
+this may be somewhat distressing to people who just want to add a single
+extension, due to the repository download time, the *primary* purpose of
+this repository is to be the backing store for the web registry on
+khronos.org. Fortunately git is very efficient, so once you've done the
+initial repository clone, updates will be small and quick.

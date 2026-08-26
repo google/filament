@@ -1,0 +1,272 @@
+Name
+
+    SGIX_texture_range
+
+Name Strings
+
+    GL_SGIX_texture_range
+
+Version
+
+    $Date: 1999/06/24 02:20:36 $ $Revision: 1.4 $
+
+Number
+
+    181
+
+Dependencies
+
+    OpenGL 1.2 is required.
+    SGI_color_range is required
+    SGIS_texture4D affects the definition of this extension
+
+Overview
+
+    This extension defines new internal formats for the storage of signed
+    texture images, as well as extended range and precision texture images.
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues
+
+    * Should the fact that the numeric type is different create new base
+      formats to better classify this difference?  Also this might make
+      sense if there were more than one internal extended-range component
+      resolutions or types in a given system.
+
+      - Yes.  New base formats added to spec.
+
+    * Don't want to get extended-range when we don't want it
+
+      - With new base formats, the user explicitly requests extended-range
+	or signed internal formats, either sized or not.
+
+    * TLUT clamping (clamped to [0, 1])
+
+      - Since the texture color lookup section says that it acts as in
+	section 3.6.3, for color table lookups, and since that section says
+	that the color is first clamped to [0, 1], then everything should be
+	fine.
+
+    * Do we want to make the fact that there are floating-point formats
+      visible at the API level?
+
+      - Not in this spec.  In any future spec that defines the
+	floating-point formats and their API, we probably should add a query
+	for exp, mant, sign bits per internal format.
+
+    * Since Bali won't have 4D textures, should we take out references to it
+      in this spec?
+
+      - No.
+
+    * OK to add tokens for formats not supported by Bali, for completeness?
+
+      - Moot point, since we have none.  We'll add them as we decide to
+	implement hardware that uses them.
+
+    * Since we're not defining the explicit bit representation of the
+      format, does it still make sense to define sized formats?  Or should
+      we wait until the floating-point formats are defined to put out sized
+      enumerants?
+
+      - Keep the sized formats in this spec.
+
+    * It is often assumed in OpenGL that texture values are in the range
+      [0, 1].  For instance, in the detail texture extension, the filtered
+      detail texture color values are scaled by 2 and then have 1 subtracted
+      to generate a number in the [-1, 1] range.  What should happen when
+      the texture format can support values in the [-1, 1] range, then?
+      Should the GL still do the scale and bias, or should it just pass the
+      texture value through?
+
+      - Still do the scale and bias.  This avoids either a) breaking
+	previous applications by changing their behavior or b) creating
+	hardware that does calculations both with and without the scale and
+	bias.
+
+    * Which of the Section 3.8 alterations should be in this spec, as
+      opposed to the color_range?  Which color clamping operations should be
+      based upon the texture internal format, versus the framebuffer format?
+
+      - The color clampings controlled by this spec should be the:
+	a) Clamping of downloaded texture values.
+	b) Clamping of the result of the texture filter operation.
+
+	Both are clampings based upon the texture internal format.  All
+	other color clamps are based upon the framebuffer format, including
+	incoming and outgoing colors of the texture environment operation.
+
+    * Texture environment clamping is made stickier with multitexturing.
+      Should the environment function clamp its input values?  Its output
+      values?  Should it clamp based upon its associated texture's internal
+      format, or based upon the framebuffer format?
+
+      - See above.  All incoming colors, fragment color, texture color,
+	etc., and the outgoing color, are clamped based upon the framebuffer
+	format.
+
+    * For queries of the min & max component values, what should be returned
+      if the component doesn't exist in the texture, e.g., MIN_RED_SGIS in
+      an intensity texture or MAX_INTENSITY_SGIS in an RGBA texture.  And
+      what about alpha, should it be treated differently since it's implied
+      in non-alpha textures?  Should we have the new INTENSITY and LUMINANCE
+      tokens at all, or should we query the red and/or alpha components' min
+      and max values?
+
+      - If a queried component doesn't exist in the format, both the min and
+	max are returned as 0, and no error condition is set.  Because of
+	this, we need the INTENSITY and LUMINANCE tokens.
+
+    * What about ALPHA, in textures that don't have it, since it ususally
+      is an implied 1, instead of an implied 0?
+
+      - For now, as above, min & max are returned as 0.  Since the user has
+	requested an alpha-free texture format, one would hope they would be
+	smart enought to not then query the available alpha range.  One
+	would hope.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage1D, TexImage2D,
+    TexImage3DEXT, TexImage4DSGIS, CopyTexImage1D, and CopyTexImage2D:
+
+    RGB_SIGNED_SGIX				0x85E0
+    RGBA_SIGNED_SGIX				0x85E1
+    ALPHA_SIGNED_SGIX				0x85E2
+    LUMINANCE_SIGNED_SGIX			0x85E3
+    INTENSITY_SIGNED_SGIX			0x85E4
+    LUMINANCE_ALPHA_SIGNED_SGIX			0x85E5
+    RGB16_SIGNED_SGIX				0x85E6
+    RGBA16_SIGNED_SGIX				0x85E7
+    ALPHA16_SIGNED_SGIX				0x85E8
+    LUMINANCE16_SIGNED_SGIX			0x85E9
+    INTENSITY16_SIGNED_SGIX			0x85EA
+    LUMINANCE16_ALPHA16_SIGNED_SGIX		0x85EB
+    RGB_EXTENDED_RANGE_SGIX			0x85EC
+    RGBA_EXTENDED_RANGE_SGIX			0x85ED
+    ALPHA_EXTENDED_RANGE_SGIX			0x85EE
+    LUMINANCE_EXTENDED_RANGE_SGIX		0x85EF
+    INTENSITY_EXTENDED_RANGE_SGIX		0x85F0
+    LUMINANCE_ALPHA_EXTENDED_RANGE_SGIX		0x85F1
+    RGB16_EXTENDED_RANGE_SGIX			0x85F2
+    RGBA16_EXTENDED_RANGE_SGIX			0x85F3
+    ALPHA16_EXTENDED_RANGE_SGIX			0x85F4
+    LUMINANCE16_EXTENDED_RANGE_SGIX		0x85F5
+    INTENSITY16_EXTENDED_RANGE_SGIX		0x85F6
+    LUMINANCE16_ALPHA16_EXTENDED_RANGE_SGIX	0x85F7
+
+    Accepted by the <value> parameter of of GetTexLevelParameterfv and
+    GetTexLevelParameteriv:
+
+    MIN_LUMINANCE_SGIS				0x85F8
+    MAX_LUMINANCE_SGIS				0x85F9
+    MIN_INTENSITY_SGIS				0x85FA
+    MAX_INTENSITY_SGIS				0x85FB
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    The following is added to Section 3.8.1:
+
+    "... just before final conversion.  Each R, G, B, and A value so
+    generated is clamped to [min, max].  The minimum is implementation-
+    dependent for extended range and precision internal formats, but at most
+    0.	It is -1 for signed internal formats, and is 0 for all other
+    formats.  The maximum is implementation-dependent for extended range and
+    precision formats, but is at least 1, and is 1 for all other formats.
+
+
+    The following is added to Table 3.16:
+
+    Sized				     Base				   R	   G	   B	   A	   L	   I
+    Internal Format			     Internal Format			  Bits	  Bits	  Bits	  Bits	  Bits	  Bits
+    ---------------			     -----------------------------------  ----	  ----	  ----	  ----	  ----	  ----
+    RGB16_SIGNED_SGIX		     RGB_SIGNED_SGIX				   16	   16	   16
+    RGBA16_SIGNED_SGIX		     RGBA_SIGNED_SGIX				   16	   16	   16	   16
+    ALPHA16_SIGNED_SGIX		     ALPHA_SIGNED_SGIX							   16
+    LUMINANCE16_SIGNED_SGIX	     LUMINANCE_SIGNED_SGIX						   16
+    INTENSITY16_SIGNED_SGIX	     INTENSITY_SIGNED_SGIX								   16
+    LUMINANCE16_ALPHA16_SIGNED_SGIX  LUMINANCE_ALPHA_SIGNED_SGIX					   16	   16
+    RGB16_EXTENDED_RANGE_SGIX		     RGB_EXTENDED_RANGE_SGIX		   16	   16	   16
+    RGBA16_EXTENDED_RANGE_SGIX		     RGBA_EXTENDED_RANGE_SGIX		   16	   16	   16	   16
+    ALPHA16_EXTENDED_RANGE_SGIX		     ALPHA_EXTENDED_RANGE_SGIX					   16
+    LUMINANCE16_EXTENDED_RANGE_SGIX	     LUMINANCE_EXTENDED_RANGE_SGIX					   16
+    INTENSITY16_EXTENDED_RANGE_SGIX	     INTENSITY_EXTENDED_RANGE_SGIX						   16
+    LUMINANCE16_ALPHA16_EXTENDED_RANGE_SGIX  LUMINANCE_ALPHA_EXTENDED_RANGE_SGIX			   16	   16
+
+
+    The following is added to Section 3.8.3:
+
+    "... values to floating point.  Each of the four values set by
+    TEXTURE_BORDER_COLOR is clamped to lie in [min, max], where min and max
+    are based upon the internal format of the image in level-of-detail 0, as
+    specified in section 3.8.1"
+
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    The following is added to Section 6.1.3:
+
+    "...when the image array was defined.  Queries of MIN_RED_SGIS,
+    MAX_RED_SGIS, MIN_GREEN_SGIS, MAX_GREEN_SGIS, MIN_BLUE_SGIS,
+    MAX_BLUE_SGIS, MIN_ALPHA_SGIS, MAX_ALPHA_SGIS, MIN_LUMINANCE_SGIS,
+    MAX_LUMINANCE_SGIS, MIN_INTENSITY_SGIS, and MAX_INTENSITY_SGIS
+    return the minimum and maximum expressable values of the internal
+    format of the image.  Queries of TEXTURE_WIDTH ..."
+
+Additions to the GLX Specification
+
+    None
+
+Dependencies on SGIS_texture4D
+
+    If SGIS_texture4D is not supported, all references to TexImage4DSGIS,
+    TexSubImage4DSGIS, and CopyTexSubImage4DSGIS are ignored.
+
+Errors
+
+    None
+
+New State
+
+    Get Value		Get Command	       Type  Initial Value
+    ---------		-----------	       ----  -------------
+    MIN_RED_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_RED_SGIS	GetTexLevelParameterfv	R+	  1.0
+    MIN_GREEN_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_GREEN_SGIS	GetTexLevelParameterfv	R+	  1.0
+    MIN_BLUE_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_BLUE_SGIS	GetTexLevelParameterfv	R+	  1.0
+    MIN_ALPHA_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_ALPHA_SGIS	GetTexLevelParameterfv	R+	  1.0
+    MIN_LUMINANCE_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_LUMINANCE_SGIS	GetTexLevelParameterfv	R+	  1.0
+    MIN_INTENSITY_SGIS	GetTexLevelParameterfv	R	  0.0
+    MAX_INTENSITY_SGIS	GetTexLevelParameterfv	R+	  1.0
+
+New Implementation Dependent State
+
+    Get Value		Get Command	       Type
+    ---------		-----------	       ----
+    TEXTURE_RANGE_SGIX	GetBooleanv		B
+

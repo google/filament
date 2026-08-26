@@ -25,21 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/RenderBundleEncoder.h"
+#include "src/dawn/native/RenderBundleEncoder.h"
 
 #include <string>
 #include <utility>
 
-#include "dawn/native/Adapter.h"
-#include "dawn/native/CommandValidation.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/Device.h"
-#include "dawn/native/Format.h"
 #include "dawn/native/ObjectType_autogen.h"
-#include "dawn/native/RenderPipeline.h"
 #include "dawn/native/ValidationUtils_autogen.h"
 #include "dawn/platform/DawnPlatform.h"
-#include "dawn/platform/tracing/TraceEvent.h"
+#include "src/dawn/common/Enumerator.h"
+#include "src/dawn/native/Adapter.h"
+#include "src/dawn/native/CommandValidation.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/Device.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/RenderPipeline.h"
+#include "src/dawn/platform/tracing/TraceEvent.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native {
 
@@ -65,22 +67,34 @@ MaybeError ValidateDepthStencilAttachmentFormat(const DeviceBase* device,
     return {};
 }
 
-MaybeError ValidateRenderBundleEncoderDescriptor(DeviceBase* device,
-                                                 const RenderBundleEncoderDescriptor* descriptor) {
+ResultOrError<UnpackedPtr<RenderBundleEncoderDescriptor>> ValidateRenderBundleEncoderDescriptor(
+    DeviceBase* device,
+    const RenderBundleEncoderDescriptor* descriptor) {
+    UnpackedPtr<RenderBundleEncoderDescriptor> unpacked;
+    DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(descriptor));
+
+    if (auto* rt = unpacked.Get<RenderBundleEncoderResourceTable>()) {
+        DAWN_INVALID_IF(rt->usesResourceTable &&
+                            !device->HasFeature(Feature::ChromiumExperimentalSamplingResourceTable),
+                        "Resource table used without the %s feature enabled.",
+                        wgpu::FeatureName::ChromiumExperimentalSamplingResourceTable);
+    }
+
     DAWN_INVALID_IF(!IsValidSampleCount(descriptor->sampleCount),
                     "Sample count (%u) is not supported.", descriptor->sampleCount);
 
-    uint32_t maxColorAttachments = device->GetLimits().v1.maxColorAttachments;
-    DAWN_INVALID_IF(descriptor->colorFormatCount > maxColorAttachments,
-                    "Color formats count (%u) exceeds maximum number of color attachments (%u).%s",
-                    descriptor->colorFormatCount, maxColorAttachments,
-                    DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1,
-                                                maxColorAttachments, descriptor->colorFormatCount));
+    auto maxColorAttachments =
+        ColorAttachmentIndex{static_cast<uint8_t>(device->GetLimits().v1.maxColorAttachments)};
+    DAWN_INVALID_IF(
+        descriptor->colorFormats.size() > maxColorAttachments,
+        "Color formats count (%u) exceeds maximum number of color attachments (%u).%s",
+        descriptor->colorFormats.size(), maxColorAttachments,
+        DAWN_INCREASE_LIMIT_MESSAGE(device->GetAdapter()->GetLimits().v1, maxColorAttachments,
+                                    uint8_t{descriptor->colorFormats.size()}));
 
     bool allColorFormatsUndefined = true;
     ColorAttachmentFormats colorAttachmentFormats;
-    for (uint32_t i = 0; i < descriptor->colorFormatCount; ++i) {
-        wgpu::TextureFormat format = descriptor->colorFormats[i];
+    for (auto [i, format] : Enumerate(descriptor->colorFormats)) {
         if (format != wgpu::TextureFormat::Undefined) {
             DAWN_TRY_CONTEXT(ValidateColorAttachmentFormat(device, format),
                              "validating colorFormats[%u]", i);
@@ -102,11 +116,12 @@ MaybeError ValidateRenderBundleEncoderDescriptor(DeviceBase* device,
             "No color or depthStencil attachments specified. At least one is required.");
     }
 
-    return {};
+    return unpacked;
 }
 
-RenderBundleEncoder::RenderBundleEncoder(DeviceBase* device,
-                                         const RenderBundleEncoderDescriptor* descriptor)
+RenderBundleEncoder::RenderBundleEncoder(
+    DeviceBase* device,
+    const UnpackedPtr<RenderBundleEncoderDescriptor>& descriptor)
     : RenderEncoderBase(device,
                         descriptor->label,
                         &mBundleEncodingContext,
@@ -115,6 +130,14 @@ RenderBundleEncoder::RenderBundleEncoder(DeviceBase* device,
                         descriptor->stencilReadOnly),
       mBundleEncodingContext(device, this) {
     GetObjectTrackingList()->Track(this);
+
+    // Gather the resource table information.
+    if (auto* rt = descriptor.Get<RenderBundleEncoderResourceTable>()) {
+        mUsesResourceTable = rt->usesResourceTable;
+        if (mUsesResourceTable) {
+            mCommandBufferState.SetRenderBundleHasResourceTable();
+        }
+    }
 }
 
 RenderBundleEncoder::RenderBundleEncoder(DeviceBase* device, ErrorTag errorTag, StringView label)
@@ -135,7 +158,7 @@ void RenderBundleEncoder::DestroyImpl(DestroyReason reason) {
 // static
 Ref<RenderBundleEncoder> RenderBundleEncoder::Create(
     DeviceBase* device,
-    const RenderBundleEncoderDescriptor* descriptor) {
+    const UnpackedPtr<RenderBundleEncoderDescriptor>& descriptor) {
     return AcquireRef(new RenderBundleEncoder(device, descriptor));
 }
 
@@ -172,6 +195,10 @@ RenderBundleBase* RenderBundleEncoder::APIFinish(const RenderBundleDescriptor* d
     return ReturnToAPI(std::move(result));
 }
 
+bool RenderBundleEncoder::UsesResourceTable() const {
+    return mUsesResourceTable;
+}
+
 ResultOrError<Ref<RenderBundleBase>> RenderBundleEncoder::Finish(
     const RenderBundleDescriptor* descriptor) {
     mCommandBufferState.End();
@@ -190,7 +217,7 @@ ResultOrError<Ref<RenderBundleBase>> RenderBundleEncoder::Finish(
 }
 
 MaybeError RenderBundleEncoder::ValidateFinish(const RenderPassResourceUsage& usages) const {
-    TRACE_EVENT0(GetDevice()->GetPlatform(), Validation, "RenderBundleEncoder::ValidateFinish");
+    TRACE_EVENT(DAWN_TRACE_CATEGORY("validation"), "RenderBundleEncoder::ValidateFinish");
     DAWN_TRY(GetDevice()->ValidateObject(this));
     DAWN_TRY(ValidateProgrammableEncoderEnd());
     DAWN_TRY(ValidateSyncScopeResourceUsage(usages));

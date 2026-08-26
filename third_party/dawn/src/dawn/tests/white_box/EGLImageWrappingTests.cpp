@@ -29,14 +29,15 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/common/egl_platform.h"
-#include "dawn/native/Instance.h"
 #include "dawn/native/OpenGLBackend.h"
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/common/egl_platform.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -46,12 +47,22 @@ class EGLFunctions {
     EGLFunctions() = default;
 
     bool Initialize(const std::vector<std::string>& searchPaths) {
-#if DAWN_PLATFORM_IS(WINDOWS)
-        const char* eglLib = "libEGL.dll";
-#elif DAWN_PLATFORM_IS(MACOS)
-        const char* eglLib = "libEGL.dylib";
-#else
+#ifndef DAWN_ANGLE_LIBS_SUFFIX
+#define DAWN_ANGLE_LIBS_SUFFIX ""
+#endif
+
+        // On Android, load the system libEGL.so to use the native GLES driver (loading the in-tree
+        // ANGLE library tickles driver bugs in tests on older devices). On other platforms, load
+        // ANGLE dynamically with the suffix to support testing ANGLE when the embedder links it
+        // statically.
+#if DAWN_PLATFORM_IS(ANDROID)
         const char* eglLib = "libEGL.so";
+#elif DAWN_PLATFORM_IS(WINDOWS)
+        const char* eglLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".dll";
+#elif DAWN_PLATFORM_IS(MACOS)
+        const char* eglLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".dylib";
+#else
+        const char* eglLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".so";
 #endif
         std::string error;
         if (!mlibEGL.Open(eglLib, searchPaths, &error)) {
@@ -140,7 +151,8 @@ class EGLImageTestBase : public DawnTest {
     }
 
     bool HasExtension(const char* string) {
-        return strstr(egl.QueryString(egl.GetCurrentDisplay(), EGL_EXTENSIONS), string) != nullptr;
+        return DAWN_UNSAFE_TODO(strstr(egl.QueryString(egl.GetCurrentDisplay(), EGL_EXTENSIONS),
+                                       string)) != nullptr;
     }
 
     void SetUp() override {
@@ -365,7 +377,7 @@ class EGLImageUsageTests : public EGLImageTestBase {
                 gl.DeleteFramebuffers(1, &fbo);
                 return {};
             });
-        ASSERT_EQ(0, memcmp(result.data(), data, dataSize));
+        DAWN_UNSAFE_TODO(ASSERT_EQ(0, memcmp(result.data(), data, dataSize)));
     }
 
     template <class T>

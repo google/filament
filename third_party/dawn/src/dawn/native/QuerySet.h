@@ -28,16 +28,18 @@
 #ifndef SRC_DAWN_NATIVE_QUERYSET_H_
 #define SRC_DAWN_NATIVE_QUERYSET_H_
 
-#include <vector>
-
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/ObjectBase.h"
 
 namespace dawn::native {
 
 MaybeError ValidateQuerySetDescriptor(DeviceBase* device, const QuerySetDescriptor* descriptor);
+
+uint32_t ToQueryStorageSize(QueryIndex count);
+inline constexpr uint32_t kSingleQueryStorageSize = 8;  // size of a uint64_t
 
 class QuerySetBase : public ApiObjectBase {
   public:
@@ -46,13 +48,15 @@ class QuerySetBase : public ApiObjectBase {
     ObjectType GetType() const override;
 
     wgpu::QueryType GetQueryType() const;
-    uint32_t GetQueryCount() const;
+    QueryIndex GetQueryCount() const;
 
-    const std::vector<bool>& GetQueryAvailability() const;
-    void SetQueryAvailability(uint32_t index, bool available);
+    bool IsQueryAvailable(QueryIndex index) const;
+    bool AreAllQueriesAvailable(QueryIndex first, QueryIndex count) const;
+    void MarkQueryAvailable(QueryIndex index);
 
     MaybeError ValidateCanUseInSubmitNow() const;
 
+    // Dawn API
     void APIDestroy();
     wgpu::QueryType APIGetType() const;
     uint32_t APIGetCount() const;
@@ -68,15 +72,41 @@ class QuerySetBase : public ApiObjectBase {
     ~QuerySetBase() override;
 
   private:
-    wgpu::QueryType mQueryType;
-    uint32_t mQueryCount;
+    wgpu::QueryType mQueryType = static_cast<wgpu::QueryType>(0);
+    QueryIndex mQueryCount = QueryIndex(0u);
 
     enum class QuerySetState { Unavailable, Available, Destroyed };
     QuerySetState mState = QuerySetState::Unavailable;
 
     // Indicates the available queries on the query set for resolving
-    std::vector<bool> mQueryAvailability;
+    ityp::vector<QueryIndex, bool> mQueryAvailability;
 };
+
+// Helper function to help walk ranges of available queries to do bulk operations on therm.
+// For each range of available queries in [start, start + count) as denoted by the predicate
+// IsQueryAvailable, call DoOnRange(startOfRange, sizeOfRange).
+template <typename IsAvailableT, typename DoOnRangeT>
+void ForEachAvailableQueryRange(QueryIndex start,
+                                QueryIndex count,
+                                IsAvailableT IsAvailable,
+                                DoOnRangeT DoOnRange) {
+    QueryIndex current = start;
+    QueryIndex end = start + count;
+    while (current < end) {
+        if (!IsAvailable(current)) {
+            current++;
+            continue;
+        }
+
+        QueryIndex firstAvailable = current;
+        while (current < end && IsAvailable(current)) {
+            current++;
+        }
+        QueryIndex availableCount = current - firstAvailable;
+
+        DoOnRange(firstAvailable, availableCount);
+    }
+}
 
 }  // namespace dawn::native
 

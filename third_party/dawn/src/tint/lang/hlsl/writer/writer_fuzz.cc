@@ -28,9 +28,10 @@
 #include <iostream>
 
 #include "src/tint/api/helpers/generate_bindings.h"
-#include "src/tint/cmd/fuzz/ir/fuzz.h"
+#include "src/tint/cmd/fuzz/common/ir_fuzzer.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/var.h"
+#include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/hlsl/validate/validate.h"
 #include "src/tint/lang/hlsl/writer/printer/printer.h"
 #include "src/tint/lang/hlsl/writer/writer.h"
@@ -63,6 +64,8 @@ struct FuzzedOptions {
     std::optional<uint32_t> num_workgroups_start_offset;
     std::vector<BindingPoint> ignored_by_robustness_transform;
     SubstituteOverridesConfig substitute_overrides_config;
+    bool d3d12_decompose_workgroup_access;
+    bool collapse_subgroup_min_max;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(FuzzedOptions,
@@ -83,12 +86,19 @@ struct FuzzedOptions {
                  first_instance_offset,
                  num_workgroups_start_offset,
                  ignored_by_robustness_transform,
-                 substitute_overrides_config);
+                 substitute_overrides_config,
+                 d3d12_decompose_workgroup_access,
+                 collapse_subgroup_min_max);
 };
 
 Result<SuccessType> IRFuzzer(core::ir::Module& module,
                              const fuzz::ir::Context& context,
                              FuzzedOptions fuzzed_options) {
+    if (context.options.verbose) {
+        PrintReflected(std::cout, fuzzed_options);
+        std::cout << "\n";
+    }
+
     // TODO(375388101): We cannot run the backend for every entry point in the module unless we
     // clone the whole module each time, so for now we just generate the first entry point.
 
@@ -123,6 +133,9 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     options.workarounds.polyfill_reflect_vec2_f32 = fuzzed_options.polyfill_reflect_vec2_f32;
     options.workarounds.polyfill_subgroup_broadcast_f16 =
         fuzzed_options.polyfill_subgroup_broadcast_f16;
+    options.workarounds.d3d12_decompose_workgroup_access =
+        fuzzed_options.d3d12_decompose_workgroup_access;
+    options.workarounds.collapse_subgroup_min_max = fuzzed_options.collapse_subgroup_min_max;
     options.extensions.polyfill_dot_4x8_packed = fuzzed_options.polyfill_dot_4x8_packed;
     options.extensions.polyfill_pack_unpack_4x8 = fuzzed_options.polyfill_pack_unpack_4x8;
     options.compiler = fuzzed_options.compiler;
@@ -140,6 +153,14 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     std::unordered_set<tint::BindingPoint> storage_bindings;
     for (auto* inst : *module.root_block) {
         auto* var = inst->As<core::ir::Var>();
+        if (!var) {
+            continue;
+        }
+        if (auto* ptr_ty = var->Result()->Type()->As<core::type::Pointer>()) {
+            if (ptr_ty->AddressSpace() != core::AddressSpace::kStorage) {
+                continue;
+            }
+        }
         if (!var->Result()->Type()->UnwrapPtr()->HasFixedFootprint()) {
             if (auto bp = var->BindingPoint()) {
                 if (storage_bindings.insert(bp.value()).second) {
@@ -165,7 +186,7 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     }
     auto dxc = tint::Command::LookPath(dxc_path);
     if (dxc.Found()) {
-        uint32_t hlsl_shader_model = 66;
+        auto hlsl_shader_model = validate::HlslShaderModel::kSM_6_6;
         bool require_16bit_types = true;
         [[maybe_unused]] auto validate_res = validate::ValidateUsingDXC(
             dxc.Path(), output.hlsl, output.entry_point_name, output.pipeline_stage,
@@ -178,6 +199,4 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
 }  // namespace
 }  // namespace tint::hlsl::writer
 
-TINT_IR_MODULE_FUZZER(tint::hlsl::writer::IRFuzzer,
-                      tint::core::ir::Capabilities{},
-                      tint::hlsl::writer::kPrinterCapabilities);
+TINT_IR_MODULE_FUZZER(tint::hlsl::writer::IRFuzzer);

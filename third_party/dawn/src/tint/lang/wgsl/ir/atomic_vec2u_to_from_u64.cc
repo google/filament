@@ -230,6 +230,7 @@ struct State {
                     if (direction == AtomicVec2uU64Direction::kToU64) {
                         auto* vec = atomic->Type()->As<core::type::Vector>();
                         if (vec && vec->Width() == 2 && vec->Type()->Is<core::type::U32>()) {
+                            ir.properties.Add(core::ir::Property::kAllow64BitIntegers);
                             return ty.atomic(ty.u64());
                         }
                         return atomic;
@@ -248,12 +249,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> AtomicVec2uToFromU64(core::ir::Module& ir, AtomicVec2uU64Direction direction) {
-    core::ir::AssertValid(ir,
-                          core::ir::Capabilities{
-                              core::ir::Capability::kAllowMultipleEntryPoints,
-                              core::ir::Capability::kAllowOverrides,
-                          },
-                          "before transform::AtomicVec2uToFromU64");
+    core::ir::AssertValid(ir, "before transform::AtomicVec2uToFromU64");
 
     State{ir, direction}.Process();
 

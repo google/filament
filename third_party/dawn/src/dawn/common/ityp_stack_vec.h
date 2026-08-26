@@ -31,8 +31,8 @@
 #include <limits>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/Assert.h"
-#include "dawn/common/UnderlyingType.h"
+#include "src/utils/numeric.h"
+#include "src/utils/underlying_type.h"
 
 namespace dawn::ityp {
 
@@ -40,38 +40,44 @@ template <typename Index, typename Value, size_t StaticCapacity>
 class stack_vec : private absl::InlinedVector<Value, StaticCapacity> {
     using I = UnderlyingType<Index>;
     using Base = absl::InlinedVector<Value, StaticCapacity>;
+
+    static_assert(HasUnsignedUnderlyingType<Index>, "Index type must be unsigned");
     static_assert(StaticCapacity <= std::numeric_limits<I>::max());
 
   public:
-    stack_vec() : Base() {}
-    explicit stack_vec(Index size) : Base() { Base::resize(static_cast<I>(size)); }
+    constexpr stack_vec() : Base() {}
+    constexpr explicit stack_vec(Index size) : Base() { Base::resize(checked_cast<size_t>(size)); }
+    constexpr explicit stack_vec(Index size, Value value) : Base() {
+        Base::resize(checked_cast<size_t>(size), value);
+    }
 
-    Value& operator[](Index i) {
-#if !defined(ABSL_OPTION_HARDENED) || ABSL_OPTION_HARDENED == 0
+    using Base::begin;
+    using Base::data;
+    using Base::empty;
+    using Base::end;
+
+    constexpr Value& operator[](Index i) {
+#if !defined(ABSL_OPTION_HARDENED) || ABSL_OPTION_HARDENED == 0 || \
+    defined(GOOGLE3_ABSL_HARDENED_BUILD) || defined(GOOGLE3_ABSL_HARDENED_BUILD_FAST)
         // Insert our own bounds check if not already enabled in absl
         DAWN_CHECK(i < size());
 #endif
-        return Base::operator[](static_cast<I>(i));
+        return Base::operator[](checked_cast<size_t>(i));
     }
-
     constexpr const Value& operator[](Index i) const {
-#if !defined(ABSL_OPTION_HARDENED) || ABSL_OPTION_HARDENED == 0
+#if !defined(ABSL_OPTION_HARDENED) || ABSL_OPTION_HARDENED == 0 || \
+    defined(GOOGLE3_ABSL_HARDENED_BUILD) || defined(GOOGLE3_ABSL_HARDENED_BUILD_FAST)
         // Insert our own bounds check if not already enabled in absl
         DAWN_CHECK(i < size());
 #endif
-        return Base::operator[](static_cast<I>(i));
+        return Base::operator[](checked_cast<size_t>(i));
     }
 
-    void resize(Index size) { Base::resize(static_cast<I>(size)); }
+    constexpr void resize(Index size) { Base::resize(checked_cast<size_t>(size)); }
 
-    void reserve(Index size) { Base::reserve(static_cast<I>(size)); }
+    constexpr void reserve(Index size) { Base::reserve(checked_cast<size_t>(size)); }
 
-    Value* data() { return Base::data(); }
-    const Value* data() const { return Base::data(); }
-
-    Index size() const { return Index(static_cast<I>(Base::size())); }
-
-    bool empty() const { return Base::empty(); }
+    constexpr Index size() const { return Index(static_cast<I>(Base::size())); }
 };
 
 }  // namespace dawn::ityp

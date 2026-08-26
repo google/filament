@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/d3d/SwapChainD3D.h"
+#include "src/dawn/native/d3d/SwapChainD3D.h"
 
 #if defined(DAWN_USE_WINDOWS_UI)
 #include <windows.ui.xaml.media.dxinterop.h>
@@ -33,12 +33,12 @@
 
 #include <utility>
 
-#include "dawn/native/BlitTextureToBuffer.h"
-#include "dawn/native/Surface.h"
-#include "dawn/native/d3d/D3DError.h"
-#include "dawn/native/d3d/DeviceD3D.h"
-#include "dawn/native/d3d/Forward.h"
-#include "dawn/native/d3d/UtilsD3D.h"
+#include "src/dawn/native/BlitTextureToBuffer.h"
+#include "src/dawn/native/Surface.h"
+#include "src/dawn/native/d3d/D3DError.h"
+#include "src/dawn/native/d3d/DeviceD3D.h"
+#include "src/dawn/native/d3d/Forward.h"
+#include "src/dawn/native/d3d/UtilsD3D.h"
 
 namespace dawn::native::d3d {
 namespace {
@@ -103,6 +103,12 @@ DXGI_USAGE ToDXGIUsage(DeviceBase* device, wgpu::TextureFormat format, wgpu::Tex
 
 #if defined(DAWN_USE_WINDOWS_UI)
 // Interface from microsoft.ui.xaml.media.dxinterop.h
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+// Classes extended IUnknown are COM interface and guaranteed to be released by Release instead of
+// via delete and destructor. Having a vitural destructor will mess with the vtable.
 MIDL_INTERFACE("63aad0b8-7c24-40ff-85a8-640d944cc325")
 IWinUISwapChainPanelNative : public IUnknown {
   public:
@@ -110,6 +116,9 @@ IWinUISwapChainPanelNative : public IUnknown {
         /* [annotation][in] */
         _In_ IDXGISwapChain * swapChain) = 0;
 };
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 #endif  // defined(DAWN_USE_WINDOWS_UI)
 
 }  // namespace
@@ -283,7 +292,13 @@ MaybeError SwapChain::InitializeSwapChainFromScratch() {
 MaybeError SwapChain::PresentDXGISwapChain() {
     // Do the actual present. DXGI_STATUS_OCCLUDED is a valid return value that's just a
     // message to the application that it could stop rendering.
-    HRESULT presentResult = mDXGISwapChain->Present(PresentModeToSwapInterval(GetPresentMode()), 0);
+
+    UINT presentFlags =
+        (GetPresentMode() == wgpu::PresentMode::Immediate) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+
+    HRESULT presentResult =
+        mDXGISwapChain->Present(PresentModeToSwapInterval(GetPresentMode()), presentFlags);
+
     if (presentResult != DXGI_STATUS_OCCLUDED) {
         DAWN_TRY(CheckHRESULT(presentResult, "IDXGISwapChain::Present"));
     }

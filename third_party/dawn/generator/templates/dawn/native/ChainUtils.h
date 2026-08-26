@@ -35,13 +35,15 @@
 {% set namespace_name = Name(metadata.native_namespace) %}
 {% set native_namespace = namespace_name.namespace_case() %}
 {% set native_dir = impl_dir + namespace_name.Dirs() %}
+{% set include_dir = namespace_name.Dirs() %}
 {% set prefix = metadata.proc_table_prefix.lower() %}
 #include <tuple>
 
 #include "absl/strings/str_format.h"
+#include "{{include_dir}}/{{namespace}}_structs_autogen.h"
+#include "{{include_dir}}/{{namespace}}_structs_defaults_autogen.h"
 #include "{{native_dir}}/{{prefix}}_platform.h"
 #include "{{native_dir}}/Error.h"
-#include "{{native_dir}}/{{namespace}}_structs_autogen.h"
 
 namespace {{native_namespace}} {
 namespace detail {

@@ -25,14 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/Math.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/ErrorData.h"
+#include "src/dawn/common/vulkan_platform.h"
+
+// Must come after vulkan_platform
 #include "dawn/native/VulkanBackend.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/VulkanError.h"
-#include "dawn/tests/DawnTest.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/ErrorData.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/tests/DawnTest.h"
 
 namespace dawn::native::vulkan {
 namespace {

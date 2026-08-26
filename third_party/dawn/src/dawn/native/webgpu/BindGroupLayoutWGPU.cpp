@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/BindGroupLayoutWGPU.h"
+#include "src/dawn/native/webgpu/BindGroupLayoutWGPU.h"
 
 #include <vector>
 
 #include "absl/container/inlined_vector.h"
-#include "dawn/common/MatchVariant.h"
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/ComputePipelineWGPU.h"
-#include "dawn/native/webgpu/DeviceWGPU.h"
-#include "dawn/native/webgpu/Forward.h"
-#include "dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/dawn/common/MatchVariant.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/ComputePipelineWGPU.h"
+#include "src/dawn/native/webgpu/DeviceWGPU.h"
+#include "src/dawn/native/webgpu/Forward.h"
+#include "src/dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::webgpu {
 
@@ -66,7 +67,7 @@ BindGroupLayout::BindGroupLayout(Device* device,
       ObjectWGPU(device->wgpu->bindGroupLayoutRelease),
       mBindGroupAllocator(MakeFrontendBindGroupAllocator<BindGroup>(4096)) {
     // Rebuild the descriptor and resolve internal bindings to regular ones.
-    absl::InlinedVector<WGPUBindGroupLayoutEntry, 8> entries(descriptor->entryCount);
+    absl::InlinedVector<WGPUBindGroupLayoutEntry, 8> entries(descriptor->entries.size());
 
     // Pre-calculate the number of external textures to prevent InlinedVector reallocation.
     size_t externalTextureCount = GetExternalTextureCount();
@@ -99,7 +100,7 @@ BindGroupLayout::BindGroupLayout(Device* device,
     WGPUBindGroupLayoutDescriptor desc = {};
     desc.nextInChain = nullptr;
     desc.label = ToOutputStringView(descriptor->label);
-    desc.entryCount = descriptor->entryCount;
+    desc.entryCount = entries.size();
     desc.entries = entries.data();
 
     mInnerHandle = device->wgpu->deviceCreateBindGroupLayout(device->GetInnerHandle(), &desc);
@@ -141,9 +142,9 @@ MaybeError BindGroupLayout::CaptureCreationParameters(CaptureContext& captureCon
         const auto& bindingInfo = GetAPIBindingInfo(apiBindingIndex);
 
         schema::BindGroupLayoutBinding binding{{
-            .binding = uint32_t(bindingNumber),
+            .binding = uint32_t{bindingNumber},
             .visibility = bindingInfo.visibility,
-            .bindingArraySize = uint32_t(bindingInfo.arraySize),
+            .bindingArraySize = uint32_t{bindingInfo.arraySize},
         }};
 
         DAWN_TRY(MatchVariant(

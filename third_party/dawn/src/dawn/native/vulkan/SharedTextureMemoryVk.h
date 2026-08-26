@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_SHAREDTEXTUREMEMORYVK_H_
 #define SRC_DAWN_NATIVE_VULKAN_SHAREDTEXTUREMEMORYVK_H_
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/SharedTextureMemory.h"
-#include "dawn/native/vulkan/RefCountedVkHandle.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/SharedTextureMemory.h"
+#include "src/dawn/native/vulkan/RefCountedVkHandle.h"
 
 namespace dawn::native::vulkan {
 

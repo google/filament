@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
         }
     } else if (assembler == MARMASM) {
         fprintf(file, "    AREA    loader_structs_details, DATA,READONLY\n");
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
         fprintf(file, "AARCH_64 EQU 1\n");
 #else
         fprintf(file, "AARCH_64 EQU 0\n");

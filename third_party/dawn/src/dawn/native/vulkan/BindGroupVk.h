@@ -30,10 +30,10 @@
 
 #include <vector>
 
-#include "dawn/common/PlacementAllocated.h"
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/BindGroup.h"
-#include "dawn/native/vulkan/DescriptorSetAllocation.h"
+#include "src/dawn/common/PlacementAllocated.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/BindGroup.h"
+#include "src/dawn/native/vulkan/DescriptorSetAllocation.h"
 
 namespace dawn::native::vulkan {
 

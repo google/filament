@@ -72,9 +72,11 @@ using GLGetProcProc = AnyGLProc (KHRONOS_APIENTRY*) (const char*);
 
 {% for block in header_blocks %}
     // {{block.description}}
+    // NOLINTBEGIN(cppcoreguidelines-macro-to-enum)
     {% for enum in block.enums %}
         #define {{enum.name}} {{enum.value}}
     {% endfor %}
+    // NOLINTEND(cppcoreguidelines-macro-to-enum)
 
     {% for proc in block.procs %}
         using {{proc.PFNGLPROCNAME()}} = {{proc.return_type}}(KHRONOS_APIENTRY *)(

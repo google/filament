@@ -36,6 +36,7 @@
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/core/type/void.h"
+#include "src/tint/utils/internal_limits.h"
 #include "src/tint/utils/symbol/symbol.h"
 #include "src/tint/utils/symbol/symbol_table.h"
 
@@ -69,6 +70,51 @@ TEST_F(TypeStructTest, Equals) {
     EXPECT_TRUE(a->Equals(*a));
     EXPECT_FALSE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(Void{}));
+}
+
+TEST_F(TypeStructTest, HasExcessivePadding) {
+    Manager ty;
+    SymbolTable st{};
+
+    auto* s = ty.Get<Struct>(
+        st.New("my_struct"),
+        tint::Vector{
+            ty.Get<StructMember>(st.New("a"), ty.i32(), 0u, 0u, 4u, 4u, core::IOAttributes{}),
+            ty.Get<StructMember>(
+                st.New("b"), ty.i32(), 1u,
+                static_cast<uint32_t>(tint::internal_limits::kMaxStructMemberPadding + 4), 4u, 4u,
+                core::IOAttributes{})},
+        8u /* size */);
+
+    EXPECT_NE(s->PaddingWithinLimit(), Success);
+}
+
+TEST_F(TypeStructTest, HasExcessivePadding_EndPadding) {
+    Manager ty;
+    SymbolTable st{};
+
+    auto* s = ty.Get<Struct>(
+        st.New("my_struct"),
+        tint::Vector{
+            ty.Get<StructMember>(st.New("a"), ty.i32(), 0u, 0u, 4u, 4u, core::IOAttributes{}),
+        },
+        static_cast<uint32_t>(tint::internal_limits::kMaxStructMemberPadding + 8));
+
+    EXPECT_NE(s->PaddingWithinLimit(), Success);
+}
+
+TEST_F(TypeStructTest, HasExcessivePadding_NoExcessive) {
+    Manager ty;
+    SymbolTable st{};
+
+    auto* s = ty.Get<Struct>(
+        st.New("my_struct"),
+        tint::Vector{
+            ty.Get<StructMember>(st.New("a"), ty.i32(), 0u, 0u, 4u, 4u, core::IOAttributes{}),
+        },
+        8u /* size */);
+
+    EXPECT_EQ(s->PaddingWithinLimit(), Success);
 }
 
 TEST_F(TypeStructTest, FriendlyName) {

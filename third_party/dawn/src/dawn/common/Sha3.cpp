@@ -25,18 +25,14 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include "src/dawn/common/Sha3.h"
 
 #include <algorithm>
 #include <bitset>
 #include <cstring>
 
-#include "src/dawn/common/Assert.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 
@@ -68,7 +64,7 @@ Sha3Lane Rotl(Sha3Lane l, size_t offset) {
 // Section 3.2.1: Specification of Theta.
 void Theta(Sha3State& a) {
     // Step 1, compute C, the parity of each column.
-    std::array<Sha3Lane, 5> c;
+    std::array<Sha3Lane, 5> c = {};
     for (size_t x = 0; x < 5; x++) {
         c[x] = a[x + 0] ^ a[x + 5] ^ a[x + 10] ^ a[x + 15] ^ a[x + 20];
     }
@@ -155,7 +151,7 @@ static constexpr std::array<uint8_t, 24> kPiCycleIndices = []() {
     uint32_t x = 1;
     uint32_t y = 0;
     for (size_t i = 0; i < cycleIndices.size(); i++) {
-        cycleIndices[i] = x + 5 * y;
+        cycleIndices[i] = static_cast<uint8_t>(x + 5 * y);
         uint32_t previousX = x;
         uint32_t previousY = y;
         x = nextX[previousX + 5 * previousY];
@@ -180,7 +176,7 @@ void Pi(Sha3State& a) {
 void Chi(Sha3State& a) {
     // Step 1, Xi mixes the bits of each row so we need to copy each plane out before mixing.
     for (uint32_t y = 0; y < 5; y++) {
-        std::array<Sha3Lane, 5> a_y;
+        std::array<Sha3Lane, 5> a_y = {};
         for (uint32_t x = 0; x < 5; x++) {
             a_y[x] = a[x + 5 * y];
         }
@@ -206,7 +202,7 @@ static constexpr std::array<bool, 256> kRoundConstantsBits = []() {
     uint8_t R = 1;
 
     // Step 3
-    for (int i = 1; i < 256; i++) {
+    for (uint32_t i = 1; i < 256; i++) {
         bool R8 = R & (0x80);
         // Step 3a, 3f
         R <<= 1;
@@ -232,7 +228,7 @@ static constexpr std::array<Sha3Lane, kRoundCount> kRoundConstants = []() {
         // Step 3
         for (uint32_t j = 0; j < kLog2LaneBitWidth + 1; j++) {
             if (kRoundConstantsBits[j + 7 * ir]) {
-                RC |= uint64_t(1) << ((1 << j) - 1);
+                RC |= uint64_t{1} << ((1 << j) - 1);
             }
         }
 
@@ -267,8 +263,8 @@ void memxorpy(void* dst, const void* src, size_t n) {
     while (n > 0) {
         *dstChars ^= *srcChars;
         n--;
-        dstChars++;
-        srcChars++;
+        DAWN_UNSAFE_TODO(dstChars++);
+        DAWN_UNSAFE_TODO(srcChars++);
     }
 }
 
@@ -289,9 +285,9 @@ void Sha3<OutputLength>::Update(const void* data, size_t size) {
         DAWN_ASSERT(mOffsetInState < kByteRate);
         size_t toProcess = std::min(size, kByteRate - mOffsetInState);
 
-        memxorpy(stateAsString + mOffsetInState, dataAsBytes, toProcess);
+        memxorpy(DAWN_UNSAFE_TODO(stateAsString + mOffsetInState), dataAsBytes, toProcess);
         size -= toProcess;
-        dataAsBytes += toProcess;
+        DAWN_UNSAFE_TODO(dataAsBytes += toProcess);
         mOffsetInState += toProcess;
 
         if (mOffsetInState == kByteRate) {
@@ -307,11 +303,11 @@ typename Sha3<OutputLength>::Output Sha3<OutputLength>::Finalize() {
     DAWN_ASSERT(mOffsetInState < kByteRate);
 
     // Add in the 01 suffix for SHA3, as well as the first 1 for the padding.
-    uint8_t* suffixByte = stateAsString + mOffsetInState;
+    uint8_t* suffixByte = DAWN_UNSAFE_TODO(stateAsString + mOffsetInState);
     *suffixByte ^= 0b110;
 
     // Add in the last 1 of the multi-rate padding. The byte may be the same byte as suffixByte.
-    uint8_t* endByte = stateAsString + (kByteRate - 1);
+    uint8_t* endByte = DAWN_UNSAFE_TODO(stateAsString + (kByteRate - 1));
     *endByte ^= 0b1000'0000;
 
     // Do the final Keccak for the absorption in the sponge.
@@ -323,15 +319,23 @@ typename Sha3<OutputLength>::Output Sha3<OutputLength>::Finalize() {
     // The squeeze of the hash value can be done in one step.
     static_assert(sizeof(Output) <= kByteRate);
     Output output;
-    memcpy(&output, &mState, sizeof(output));
+    DAWN_UNSAFE_TODO(memcpy(&output, &mState, sizeof(output)));
     return output;
 }
 
 // static
 template <size_t OutputLength>
-typename Sha3<OutputLength>::Output Sha3<OutputLength>::Hash(const void* data, size_t size) {
+Sha3<OutputLength>::Output Sha3<OutputLength>::Hash(const void* data, size_t size) {
     Sha3 sha;
     sha.Update(data, size);
+    return sha.Finalize();
+}
+
+// static
+template <size_t OutputLength>
+Sha3<OutputLength>::Output Sha3<OutputLength>::Hash(std::span<const std::byte> data) {
+    Sha3 sha;
+    sha.Update(data.data(), data.size());
     return sha.Finalize();
 }
 

@@ -25,8 +25,21 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import("//build/config/clang/clang.gni")
 import("//build_overrides/build.gni")
 import("dawn_overrides_with_defaults.gni")
+
+declare_args() {
+  # Sets defaults for other features so that we build as much as possible on the
+  # current host OS.
+  dawn_maximal = false
+}
+
+declare_args() {
+  # Enable building with a warning allowlist (-Weverything -Wno-...).
+  # Default to enabled if using clang and is dawn standalone build.
+  dawn_weverything = is_clang && dawn_standalone
+}
 
 if (build_with_chromium) {
   import("//build/config/ozone.gni")
@@ -38,7 +51,7 @@ if (build_with_chromium) {
   declare_args() {
     # Whether Dawn should enable X11 support.
     dawn_use_x11 = is_linux && !is_chromeos
-    dawn_use_wayland = false
+    dawn_use_wayland = is_linux && !is_chromeos
   }
 }
 
@@ -46,13 +59,18 @@ if (build_with_chromium) {
 dawn_is_winuwp = is_win && target_os == "winuwp"
 dawn_use_windows_ui = is_win
 
+if (is_android || is_ios) {
+  dawn_use_swiftshader = false
+} else {
+  declare_args() {
+    # Enables SwiftShader as the fallback adapter. Requires dawn_swiftshader_dir
+    # to be set to take effect.
+    dawn_use_swiftshader = true
+  }
+}
+
 declare_args() {
   dawn_tests_use_angle = true
-
-  # Enables SwiftShader as the fallback adapter. Requires dawn_swiftshader_dir
-  # to be set to take effect.
-  # TODO(dawn:1536): Enable SwiftShader for Android.
-  dawn_use_swiftshader = !is_android && !is_ios
 
   # Whether we allow building DXC.
   # DXC requires SM6.0+ which is blocklisted on x86.
@@ -63,8 +81,15 @@ declare_args() {
   # system directories instead of local directories.
   dawn_force_system_component_load = false
 
-  # Whether to build Dawn's NodeJS bindings
-  dawn_build_node_bindings = false
+  # Whether to build Dawn's NodeJS bindings. Default to the value from .gclient.
+  dawn_build_node_bindings = dawn_standalone && dawn_node
+
+  # Whether to build Emdawnwebgpu. Default to the value from .gclient, except
+  # don't enable this in Android builds.
+  dawn_build_emdawnwebgpu = dawn_standalone && dawn_wasm && !is_android
+
+  # Whether Dawn uses the Agility SDK.
+  dawn_use_agility_sdk = false
 }
 
 declare_args() {
@@ -95,22 +120,26 @@ declare_args() {
 
   # Enables the compilation of Dawn's OpenGL backend
   # (best effort, non-conformant)
-  dawn_enable_desktop_gl = is_linux && !is_chromeos
+  dawn_enable_desktop_gl = dawn_maximal || (is_linux && !is_chromeos)
 
   # Enables the compilation of Dawn's OpenGLES backend
   # (WebGPU/Compat subset)
   # Disables OpenGLES when compiling for UWP, since UWP only supports d3d
-  dawn_enable_opengles =
-      (is_linux && !is_chromeos) || (is_win && !dawn_is_winuwp) || is_android
+  dawn_enable_opengles = dawn_maximal || (is_linux && !is_chromeos) ||
+                         (is_win && !dawn_is_winuwp) || is_android
 
   # Enables the compilation of Dawn's Vulkan backend
   # Disables vulkan when compiling for UWP, since UWP only supports d3d
-  dawn_enable_vulkan = is_linux || is_chromeos || (is_win && !dawn_is_winuwp) ||
-                       is_fuchsia || is_android || dawn_use_swiftshader
+  dawn_enable_vulkan =
+      dawn_maximal || is_linux || is_chromeos || (is_win && !dawn_is_winuwp) ||
+      is_fuchsia || is_android || dawn_use_swiftshader
 
   # Enables error injection for faking failures to native API calls
   dawn_enable_error_injection =
       is_debug || (build_with_chromium && use_fuzzing_engine)
+
+  dawn_enable_perfetto =
+      (build_with_chromium || is_clang) && defined(dawn_perfetto_dir)
 }
 
 # GN does not allow reading a variable defined in the same declare_args().
@@ -131,7 +160,8 @@ declare_args() {
   dawn_enable_spirv_validation = dawn_enable_vulkan
 }
 
-# UWP only supports CoreWindow for windowing
+# Not enabled for UWP because it only supports CoreWindow for windowing.
+# Not enabled for Emscripten because samples use Emscripten APIs, not GLFW.
 dawn_supports_glfw_for_windowing =
     (is_win && !dawn_is_winuwp) || (is_linux && !is_chromeos) || is_mac
 

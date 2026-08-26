@@ -28,9 +28,9 @@
 #ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_COMPUTEPIPELINEMOCK_H_
 #define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_COMPUTEPIPELINEMOCK_H_
 
-#include "dawn/native/ComputePipeline.h"
-#include "dawn/tests/unittests/native/mocks/DeviceMock.h"
 #include "gmock/gmock.h"
+#include "src/dawn/native/ComputePipeline.h"
+#include "src/dawn/tests/unittests/native/mocks/DeviceMock.h"
 
 namespace dawn::native {
 

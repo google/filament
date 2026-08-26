@@ -137,6 +137,16 @@ TEST_F(IR_FromProgramTest, EntryPoint) {
     ASSERT_EQ(m, Success);
 
     EXPECT_EQ(m->functions[0]->Stage(), core::ir::Function::PipelineStage::kFragment);
+    EXPECT_FALSE(m->properties.Contains(core::ir::Property::kAllowMultipleEntryPoints));
+}
+
+TEST_F(IR_FromProgramTest, MultipleEntryPoints) {
+    Func("ep1", tint::Empty, ty.void_(), tint::Empty, Vector{Stage(ast::PipelineStage::kFragment)});
+    Func("ep2", tint::Empty, ty.void_(), tint::Empty, Vector{Stage(ast::PipelineStage::kFragment)});
+
+    auto m = Build();
+    ASSERT_EQ(m, Success);
+    EXPECT_TRUE(m->properties.Contains(core::ir::Property::kAllowMultipleEntryPoints));
 }
 
 TEST_F(IR_FromProgramTest, IfStatement) {
@@ -1193,6 +1203,8 @@ TEST_F(IR_FromProgramTest, OverrideNoInitializer) {
 }
 
 )");
+
+    EXPECT_TRUE(m.properties.Contains(core::ir::Property::kAllowOverrides));
 }
 
 TEST_F(IR_FromProgramTest, OverrideWithConstantInitializer) {
@@ -1548,6 +1560,43 @@ fn b() {
 %b = func():void {
   $B3: {
     %6:void = call %a, %arr
+    ret
+  }
+}
+)");
+}
+
+TEST_F(IR_FromProgramTest, OverrideSizedBuffer) {
+    auto* src = R"(
+override x = 1;
+
+var<workgroup> b : buffer<x>;
+
+fn foo(p : ptr<workgroup, buffer<x>>) {
+}
+
+fn bar() {
+  foo(&b);
+}
+)";
+
+    auto res = Build(src);
+    ASSERT_EQ(res, Success);
+
+    auto m = res.Move();
+    EXPECT_EQ(Dis(m), R"($B1: {  # root
+  %x:i32 = override 1i @id(0)
+  %b:ptr<workgroup, buffer<%x>, read_write> = var undef
+}
+
+%foo = func(%p:ptr<workgroup, buffer<%x>, read_write>):void {
+  $B2: {
+    ret
+  }
+}
+%bar = func():void {
+  $B3: {
+    %6:void = call %foo, %b
     ret
   }
 }

@@ -1,0 +1,116 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_vector_ops
+
+Name Strings
+
+    GL_SGIX_vector_ops
+
+Version
+
+    $Date: 1997/11/24 09:37:13 $ $Revision: 1.1 $
+
+Number
+
+    XXX
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    SGIX_fragment_light affects the definition of this extension.
+
+Overview
+
+    With the increased use of multi-pass algorithms depending on using
+    more in-the-pipe calculations, it becomes interesting to provide
+    additional support for some of the basic vector operations.
+    This extension adds two new operations, the vector normalization
+    function, and the vector cross-product operation.
+    When enabled, vector normalization or cross-product is in lieu
+    of the normal lighting.  In other words, the resulting vector replaces
+    the lighted fragment color and the X, Y, and Z components comprise
+    the red, green, and blue values of the fragment, respectively.  Alpha
+    is set to zero.
+
+Issues
+
+    *	Should these two vector operations be separated into two
+	independent specifications?
+
+
+New Procedures and Functions
+
+    void VectorOperationSGIX(enum operation);
+    void GetVectorOperationSGIX(enum operation);
+
+New Tokens
+
+    Accepted by the <operation> parameter of VectorOperationSGIX
+    and GetVectorOperationSGIX,
+
+    VECTOR_NORMALIZATION_SGIX		0x????
+    VECTOR_CROSS_PRODUCT_SGIX		0x????
+
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+
+    VECTOR_OPERATIONS_SGIX		0x????
+
+
+Additions to the chapter on per fragment lighting
+
+    When enabled, the vector operations supercede the usual operation
+    of the per-fragment lighting.  Instead of the lighted fragment color,
+    the color components produced by the fragment ligher are the three
+    components of the vector operation specified by VectorOperationSGIX.
+
+    The vector normal operation computes a new unit vector in the direction
+    of the current per-fragment normal vector.	This normal vector is
+    the result of interpolating the per-vertex supplied normal.
+
+    The vector cross-product operation computed a new unit vector in
+    the direction perpendicular to the per-fragment normal and view vectors
+    using the standard cross-product operation.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    TBD
+
+Additions to the GLX Specification
+
+    TBD
+
+Dependencies on SGIX_fragment_light
+
+    If SGIX_fragment_light is not implemented, references to fragment
+    lighting in this document are invalid and should be ignored.
+
+Errors
+
+    GL_INVALID_VALUE is generated if the requested vector operation is not
+    one of VECTOR_NORMALIZATION_SGIX or VECTOR_CROSS_PRODUCT_SGIX.
+
+New State
+
+    Get Value			Get Command		Type	Initial Value	Attribute
+    ---------			-----------		----	-------------	---------
+    VECTOR_OPERATIONS_SGIX	GetVectorOperationfv	?????	?????		lighting
+
+New Implementation Dependent State
+
+    None

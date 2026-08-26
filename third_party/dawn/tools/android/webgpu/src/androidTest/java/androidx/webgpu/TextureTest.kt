@@ -16,11 +16,16 @@
 package androidx.webgpu
 
 import androidx.test.filters.SmallTest
-import androidx.webgpu.DawnException
-import androidx.webgpu.ValidationException
 import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createBitmap
 import androidx.webgpu.helper.createWebGpu
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -31,43 +36,57 @@ import org.junit.Test
 @Suppress("UNUSED_VARIABLE")
 @SmallTest
 class TextureTest {
-  private lateinit var webGpu: WebGpu
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
   private lateinit var device: GPUDevice
+  private lateinit var webGpu: WebGpu
 
   @Before
-  fun setup() = runBlocking {
-    webGpu = createWebGpu()
+  fun setup(): Unit = runBlocking {
+    webGpu = createWebGpu(dispatcher)
     device = webGpu.device
+    testScope.launch {
+      webGpu.processEventsLoop()
+    }
   }
 
   @After
   fun teardown() {
-    runCatching { device.destroy() }
-    webGpu.close()
+    if (::webGpu.isInitialized) {
+      webGpu.close()
+    }
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
   }
 
   @Test
   fun testTextureProperties() {
-    val testTextureDescriptor = GPUTextureDescriptor(
-      size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
-      format = TextureFormat.RGBA8Unorm,
-      usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
-      mipLevelCount = 1,
-      sampleCount = 1,
-      dimension = TextureDimension._2D
-    )
-    val texture = device.createTexture(testTextureDescriptor)
-    try {
-      assertEquals(testTextureDescriptor.size.width, texture.width)
-      assertEquals(testTextureDescriptor.size.height, texture.height)
-      assertEquals(testTextureDescriptor.size.depthOrArrayLayers, texture.depthOrArrayLayers)
-      assertEquals(testTextureDescriptor.format, texture.format)
-      assertEquals(testTextureDescriptor.usage, texture.usage)
-      assertEquals(testTextureDescriptor.mipLevelCount, texture.mipLevelCount)
-      assertEquals(testTextureDescriptor.sampleCount, texture.sampleCount)
-      assertEquals(testTextureDescriptor.dimension, texture.dimension)
-    } finally {
-      texture.destroy()
+    runBlocking {
+      val unused = webGpu.execute {
+        val testTextureDescriptor = GPUTextureDescriptor(
+          size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
+          format = TextureFormat.RGBA8Unorm,
+          usage = TextureUsage.TextureBinding or TextureUsage.CopyDst,
+          mipLevelCount = 1,
+          sampleCount = 1,
+          dimension = TextureDimension._2D
+        )
+        val texture = device.createTexture(testTextureDescriptor)
+        try {
+          assertEquals(testTextureDescriptor.size.width, texture.width)
+          assertEquals(testTextureDescriptor.size.height, texture.height)
+          assertEquals(testTextureDescriptor.size.depthOrArrayLayers, texture.depthOrArrayLayers)
+          assertEquals(testTextureDescriptor.format, texture.format)
+          assertEquals(testTextureDescriptor.usage, texture.usage)
+          assertEquals(testTextureDescriptor.mipLevelCount, texture.mipLevelCount)
+          assertEquals(testTextureDescriptor.sampleCount, texture.sampleCount)
+          assertEquals(testTextureDescriptor.dimension, texture.dimension)
+        } finally {
+          texture.destroy()
+        }
+      }
     }
   }
 
@@ -77,17 +96,21 @@ class TextureTest {
    */
   @Test
   fun createTexture_withInvalidUsageCombination_fails() {
-    // According to the WebGPU specification, a multisampled texture (sampleCount > 1)
-    // cannot have the StorageBinding usage flag. This is a guaranteed validation error.
-    val invalidDescriptor = GPUTextureDescriptor(
-      size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
-      format = TextureFormat.RGBA8Unorm,  // A standard format is fine.
-      sampleCount = 4,  // Multisampled.
-      usage = TextureUsage.RenderAttachment or TextureUsage.StorageBinding // Invalid combination
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        // According to the WebGPU specification, a multisampled texture (sampleCount > 1)
+        // cannot have the StorageBinding usage flag. This is a guaranteed validation error.
+        val invalidDescriptor = GPUTextureDescriptor(
+          size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
+          format = TextureFormat.RGBA8Unorm,  // A standard format is fine.
+          sampleCount = 4,  // Multisampled.
+          usage = TextureUsage.RenderAttachment or TextureUsage.StorageBinding // Invalid combination
+        )
 
-    assertThrows(ValidationException::class.java) {
-      val unusedGPUTexture = device.createTexture(invalidDescriptor)
+        assertThrows(ValidationException::class.java) {
+          val unusedGPUTexture = device.createTexture(invalidDescriptor)
+        }
+      }
     }
   }
 
@@ -97,43 +120,45 @@ class TextureTest {
    */
   @Test
   fun useOfDestroyedTextureView_firesUncapturedError() {
-    val textureDescriptor = GPUTextureDescriptor(
-      size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
-      format = TextureFormat.RGBA8Unorm,
-      usage = TextureUsage.RenderAttachment
-    )
+    runBlocking {
+      val unused = webGpu.execute {
+        val textureDescriptor = GPUTextureDescriptor(
+          size = GPUExtent3D(width = 32, height = 16, depthOrArrayLayers = 1),
+          format = TextureFormat.RGBA8Unorm,
+          usage = TextureUsage.RenderAttachment
+        )
 
-    val texture = device.createTexture(textureDescriptor)
-    texture.destroy()
+        val texture = device.createTexture(textureDescriptor)
+        texture.destroy()
 
-    val invalidView = texture.createView()
+        val invalidView = texture.createView()
 
-    val encoder = device.createCommandEncoder()
-    try {
-      val passEncoder = encoder.beginRenderPass(
-        GPURenderPassDescriptor(
-          colorAttachments = arrayOf(
-            GPURenderPassColorAttachment(
-              view = invalidView,
-              loadOp = LoadOp.Clear,
-              storeOp = StoreOp.Store,
-              clearValue = GPUColor(r = 1.0, g = 0.0, b = 0.0, a = 1.0)
+        val encoder = device.createCommandEncoder()
+        try {
+          val passEncoder = encoder.beginRenderPass(
+            GPURenderPassDescriptor(
+              colorAttachments = arrayOf(
+                GPURenderPassColorAttachment(
+                  view = invalidView,
+                  loadOp = LoadOp.Clear,
+                  storeOp = StoreOp.Store,
+                  clearValue = GPUColor(r = 1.0, g = 0.0, b = 0.0, a = 1.0)
+                )
+              )
             )
           )
-        )
-      )
-      passEncoder.end()
-      val commandBuffer = encoder.finish()
+          passEncoder.end()
+          val commandBuffer = encoder.finish()
 
-      val queue = device.getQueue()
-      assertThrows(ValidationException::class.java) {
-        queue.submit(arrayOf(commandBuffer))
-        runBlocking {
-          val unusedQueueWorkDoneReturn = queue.onSubmittedWorkDone()
+          val queue = device.getQueue()
+          val unusedAssert = assertThrowsSuspend(ValidationException::class.java) {
+            queue.submit(arrayOf(commandBuffer))
+            val unusedQueueWorkDoneReturn = queue.onSubmittedWorkDone()
+          }
+        } finally {
+          encoder.close()
         }
       }
-    } finally {
-      encoder.close()
     }
   }
 
@@ -142,15 +167,17 @@ class TextureTest {
    */
   @Test
   fun createBitmap_withInvalidWidth_fails() {
-    val descriptor = GPUTextureDescriptor(
-      size = GPUExtent3D(width = 65, height = 16, depthOrArrayLayers = 1),
-      format = TextureFormat.RGBA8Unorm,
-      usage = TextureUsage.CopySrc
-    )
-    val texture = device.createTexture(descriptor)
-    assertThrows(DawnException::class.java) {
-      runBlocking {
-        texture.createBitmap(device)
+    runBlocking {
+      val unused = webGpu.execute {
+        val descriptor = GPUTextureDescriptor(
+          size = GPUExtent3D(width = 65, height = 16, depthOrArrayLayers = 1),
+          format = TextureFormat.RGBA8Unorm,
+          usage = TextureUsage.CopySrc
+        )
+        val texture = device.createTexture(descriptor)
+        assertThrowsSuspend(DawnException::class.java) {
+          val unusedBm = texture.createBitmap(device)
+        }
       }
     }
   }

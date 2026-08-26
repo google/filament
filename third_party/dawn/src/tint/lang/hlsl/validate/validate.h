@@ -47,6 +47,21 @@ inline constexpr const char* kDxcDLLName = "libdxcompiler.dylib";
 inline constexpr const char* kDxcDLLName = "Invalid";
 #endif
 
+/// The HLSL Shader Model to validate against.
+/// Note: these must be kept in ascending order
+enum class HlslShaderModel : uint8_t {
+    kSM_6_0,
+    kSM_6_2,
+    kSM_6_4,
+    kSM_6_6,
+    kSM_6_10,
+};
+
+/// HlslShaderModel less-than operator
+inline bool operator<(HlslShaderModel a, HlslShaderModel b) {
+    return static_cast<int>(a) < static_cast<int>(b);
+}
+
 /// The return structure of Validate()
 struct Result {
     /// True if validation passed
@@ -69,7 +84,7 @@ Result ValidateUsingDXC(const std::string& dxc_path,
                         const std::string& entry_point_name,
                         core::ir::Function::PipelineStage pipeline_stage,
                         bool require_16bit_types,
-                        uint32_t hlsl_shader_model);
+                        HlslShaderModel hlsl_shader_model);
 
 #ifdef _WIN32
 /// Hlsl attempts to compile the shader with FXC, verifying that the shader

@@ -30,8 +30,8 @@
 
 #import <Metal/Metal.h>
 
-#include "dawn/common/NSRef.h"
-#include "dawn/native/PhysicalDevice.h"
+#include "src/dawn/common/NSRef.h"
+#include "src/dawn/native/PhysicalDevice.h"
 
 namespace dawn::native::metal {
 

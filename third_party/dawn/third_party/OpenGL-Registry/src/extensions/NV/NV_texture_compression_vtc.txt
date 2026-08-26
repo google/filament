@@ -1,0 +1,294 @@
+Name
+
+    NV_texture_compression_vtc
+
+Name Strings
+
+    GL_NV_texture_compression_vtc
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000, 2001, 2004.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Version
+
+    NVIDIA Date: June 3, 2004
+    Version:     4
+
+Number
+
+    228
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+    ARB_texture_compression is required.
+
+    EXT_texture_compression_s3tc is required.
+
+    ARB_texture_non_power_of_two interacts with this extension.
+
+Overview
+
+    This extension adds support for the VTC 3D texture compression
+    formats, which are analogous to the S3TC texture compression formats,
+    with the addition of some retiling in the Z direction.  VTC has the
+    same compression ratio as S3TC and uses 4x4x1, 4x4x2, (4x4x3 when
+    non-power-of-two textures are supported), or 4x4x4 blocks.
+
+Issues
+
+    *   Should the enumerants' (1) values and (2) names be reused from
+        the S3TC extension?
+
+        RESOLVED: Yes and yes.  There is such a close correspondence
+        between the formats that introducing new values or names would
+        serve no purpose.
+
+    *   Should the block alignment restrictions differ in any way from
+        the block alignment restrictions in the S3TC extension?
+
+        RESOLVED: No, except for the addition of the Z-direction block
+        alignment restriction for CompressedTexSubImage3D, which is
+        analogous to the X and Y restrictions.
+
+    *   Should VTC compression work with the ARB_texture_non_power_of_two
+        functionality?
+
+        RESOLVED: Yes.  The blockIndex computation works for
+        non-power-of-two width, height, and depth dimensions.
+
+        Consider a 31x25x11 3D texture to be stored using VTC.
+        The initial 31x25x8 portion of the volume is bricked up using
+        VTC with 4x4x4 blocks where the 31x25 dimensions are rounded
+        up to 32x28.  Following the expanded 32x28x8 initial volume are
+        the final texels arranged as 32x28x3 with 4x4x3 blocks.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <internalformat> parameter of TexImage3D and
+    CompressedTexImage3DARB and the <format> parameter of
+    CompressedTexSubImage2DARB:
+
+        COMPRESSED_RGB_S3TC_DXT1_EXT                   0x83F0
+        COMPRESSED_RGBA_S3TC_DXT1_EXT                  0x83F1
+        COMPRESSED_RGBA_S3TC_DXT3_EXT                  0x83F2
+        COMPRESSED_RGBA_S3TC_DXT5_EXT                  0x83F3
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    Modify the paragraph added to the end of the TexSubImage discussion
+    (page 123) by EXT_texture_compression_s3tc to say:
+
+    "If the internal format of the texture image being modified is
+    COMPRESSED_RGB_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT3_EXT, or COMPRESSED_RGBA_S3TC_DXT5_EXT, the
+    texture is stored using one of several S3TC or VTC compressed texture
+    image formats.  Such images are easily edited along 4x4 texel
+    boundaries, so the limitations on TexSubImage2D, TexSubImage3D,
+    CopyTexSubImage2D, and CopyTexSubImage3D parameters are relaxed.
+    These commands will result in an INVALID_OPERATION error only if one
+    of the following conditions occurs:
+
+        * <width> is not a multiple of four or equal to TEXTURE_WIDTH.
+        * <height> is not a multiple of four or equal to TEXTURE_HEIGHT.
+        * <xoffset> or <yoffset> is not a multiple of four."
+
+    Modify the paragraph added to Section 3.8.2 "Alternate Image
+    Specification" at the end of the CompressedTexImage section by
+    EXT_texture_compression_s3tc to say:
+
+    "If <internalformat> is COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT, or
+    COMPRESSED_RGBA_S3TC_DXT5_EXT, the compressed texture is stored using
+    one of several S3TC or VTC compressed texture image formats.  The
+    S3TC texture compression algorithm supports only 2D images without
+    borders, while the VTC texture compression algorithm supports only
+    3D images without borders.  CompressedTexImage1DARB produces an
+    INVALID_ENUM error if <internalformat> is an S3TC/VTC format.
+    CompressedTexImage2DARB and CompressedTexImage3DARB will produce an
+    INVALID_OPERATION error if <border> is non-zero."
+
+    Modify the paragraph added to Section 3.8.2 "Alternate Image
+    Specification" at the end of the CompressedTexSubImage section by
+    EXT_texture_compression_s3tc to say:
+
+    "If the internal format of the texture image being modified is
+    COMPRESSED_RGB_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT3_EXT, or COMPRESSED_RGBA_S3TC_DXT5_EXT, the
+    texture is stored using one of several S3TC or VTC compressed texture
+    image formats.  Since these algorithms support only 2D and 3D images,
+    CompressedTexSubImage1DARB produces an INVALID_ENUM error if <format>
+    is an S3TC/VTC format.  Since S3TC/VTC images are easily edited along
+    4x4 and 4x4x4 texel boundaries, the limitations on
+    CompressedTexSubImage2D and CompressedTexSubImage3D are relaxed.
+    CompressedTexSubImage2D and CompressedTexSubImage3D will result in an
+    INVALID_OPERATION error only if one of the following conditions
+    occurs:
+
+        * <width> is not a multiple of four or equal to TEXTURE_WIDTH.
+        * <height> is not a multiple of four or equal to TEXTURE_HEIGHT.
+        * <depth> is not a multiple of four or equal to TEXTURE_DEPTH.
+        * <xoffset>, <yoffset>, or <zoffset> is not a multiple of four."
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.2.1 Specification (Invariance)
+
+    None.
+
+Dependencies on ARB_texture_non_power_of_two
+
+    There are no explicit dependencies on ARB_texture_non_power_of_two
+    but the Appendix language is compatible with non-power-of-two
+    texture sizes.  4x4x3 blocks are not possible if texture sizes are
+    restricted to power-of-two values.
+
+GLX Protocol
+
+    None.
+
+Errors
+
+    The INVALID_ENUM error that was generated by CompressedTexImage3DARB
+    if <internalformat> is COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT, or
+    COMPRESSED_RGBA_S3TC_DXT5_EXT no longer occurs.
+
+    INVALID_OPERATION is generated by CompressedTexImage3DARB if
+    <internalformat> is COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT, or
+    COMPRESSED_RGBA_S3TC_DXT5_EXT and <border> is not equal to zero.
+
+    The INVALID_ENUM error that was generated by
+    CompressedTexSubImage3DARB if <format> is
+    COMPRESSED_RGB_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT3_EXT, or COMPRESSED_RGBA_S3TC_DXT5_EXT no
+    longer occurs.
+
+    INVALID_OPERATION is generated by TexSubImage3D or
+    CopyTexSubImage3D if INTERNAL_FORMAT is COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT, or
+    COMPRESSED_RGBA_S3TC_DXT5_EXT and any of the following apply: <width>
+    is not a multiple of four or equal to TEXTURE_WIDTH; <height> is not
+    a multiple of four or equal to TEXTURE_HEIGHT; <xoffset> or <yoffset>
+    is not a multiple of four.
+
+    INVALID_OPERATION is generated by CompressedTexSubImage3D
+    if INTERNAL_FORMAT is COMPRESSED_RGB_S3TC_DXT1_EXT,
+    COMPRESSED_RGBA_S3TC_DXT1_EXT, COMPRESSED_RGBA_S3TC_DXT3_EXT,
+    or COMPRESSED_RGBA_S3TC_DXT5_EXT and any of the following apply:
+    <width> is not a multiple of four or equal to TEXTURE_WIDTH; <height>
+    is not a multiple of four or equal to TEXTURE_HEIGHT; <depth> is not
+    a multiple of four or equal to TEXTURE_DEPTH; <xoffset> <yoffset>,
+    or <zoffset> is not a multiple of four.
+
+    See also errors in the GL_ARB_texture_compression and
+    GL_EXT_texture_compression_s3tc specifications.
+
+New State
+
+    None.
+
+Appendix
+
+    VTC Compressed Texture Image Formats
+
+    Each VTC compression format is similar to a corresponding S3TC
+    compression format, but where an S3TC block encodes a 4x4 block of
+    texels, a VTC block encodes a 4x4x1, 4x4x2, or 4x4x4 (or 4x4x3 if
+    non-power-of-two textures are supported) block of texels.  If the
+    depth of the image is four or greater, 4x4x4 blocks are used, and
+    if the depth is 1 or 2, 4x4x1 or 4x4x2 blocks are used.
+
+    (If non-power-of-two textures are supported and the depth of the
+    texture is not a multiple 4, the excess texels in depth after 4x4x4
+    blocks are arranged are stored with 4x4x1, 4x4x2, or 4x4x3 blocks
+    as necessary to complete the texture.)
+
+    The size in bytes of a VTC image with dimensions w, h, and d is:
+
+        ceil(w/4) * ceil(h/4) * d * blocksize,
+
+    where blocksize is the size of an analogous 4x4 S3TC block and is
+    either 8 or 16 bytes.
+
+    The block containing a texel at location (x,y,z) starts at an offset
+    inside the image of blockIndex bytes where blockIndex is computed
+    as follows:
+
+    if (z >= 4*floor(d/4)) {
+        blockIndex = blocksize * (ceil(w/4) * ceil(h/4) * 4*floor(d/4) +
+                                  floor(x/4) +
+                                  ceil(w/4) * (floor(y/4) +
+                                               ceil(h/4) * (z-4*floor(d/4)) ));
+    } else {
+        blockIndex = blocksize * 4 * (floor(x/4) +
+                                      ceil(w/4) * (floor(y/4) +
+                                                   ceil(h/4) * floor(z/4)));
+    }
+
+    These two observations about subexpressions in the above computation
+    are useful:
+
+        4*floor(d/4) == d & ~0x3
+
+        when z > 4*floor(d/4) and z < d, z-4*floor(d/4) == z & 0x3
+
+    A 4x4x1 block of each of the four formats is stored in exactly the
+    same way that a 4x4 block of the analogous S3TC format is stored.
+
+    A 4x4x2, 4x4x3, or 4x4x4 block is stored as two, three, or four
+    consecutive 4x4 blocks of the analogous S3TC format, one for each
+    layer inside the block.  For example, a 4x4x2 DXT1 block consists of
+    16 bytes in total.  The first 8 bytes encode the texels at locations
+    (0,0,0) through (3,3,0), and the second 8 bytes encode the texels
+    at locations (0,0,1) through (3,3,1).
+
+    For definitions of the S3TC formats, please refer to the
+    EXT_texture_compression_s3tc specification.
+
+Revision History
+
+    April 20, 2004 - Relax restrictions on depth and zoffset for
+    CopyTexSubImage3D and TexSubImage3D commands.  Previous restrictions
+    required 1) the image level's depth to be 1 for CopyTexSubImage3D to
+    work (making the command useless in practice) and 2) the depth and
+    zoffset for TexSubImage3D to be a multiple 4.  If these restrictions
+    were violated, an INVALID_OPERATION error was documented to be
+    generated.  NVIDIA Release 60 drivers after April 20, 2004 relax
+    these restrictions.  Note the restrictions on CompressedTexSubImage3D
+    that depth and zoffset must be multiples of 4 still exist because the
+    VTC block is a 3D 4x4x4 block (or 4x4x2 and 4x4x1 in the end cases).
+
+    Jun 3, 2004 - Update blockIndex to support non-power-of-two dimensions
+    for VTC storage.

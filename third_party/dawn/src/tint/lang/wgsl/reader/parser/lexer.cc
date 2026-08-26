@@ -25,11 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef UNSAFE_BUFFERS_BUILD
-// TODO(crbug.com/439062058): Remove this and convert code to safer constructs.
-#pragma allow_unsafe_buffers
-#endif
-
 #include "src/tint/lang/wgsl/reader/parser/lexer.h"
 
 #include <algorithm>
@@ -47,8 +42,10 @@
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/number.h"
 #include "src/tint/utils/ice/ice.h"
+#include "src/tint/utils/memory/bitcast.h"
 #include "src/tint/utils/strconv/parse_num.h"
 #include "src/tint/utils/text/unicode.h"
+#include "src/utils/compiler.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
 
@@ -140,11 +137,11 @@ std::vector<Token> Lexer::Lex() {
 }
 
 std::string_view Lexer::line() const {
-    if (file_->content.lines.size() == 0) {
+    if (file_->content.GetLineCount() == 0) {
         static const char* empty_string = "";
         return empty_string;
     }
-    return file_->content.lines[location_.line - 1];
+    return file_->content.GetLine(location_.line - 1);
 }
 
 uint32_t Lexer::pos() const {
@@ -192,7 +189,7 @@ void Lexer::advance_line() {
 }
 
 bool Lexer::is_eof() const {
-    return location_.line >= file_->content.lines.size() && pos() >= length();
+    return location_.line >= file_->content.GetLineCount() && pos() >= length();
 }
 
 bool Lexer::is_eol() const {
@@ -463,7 +460,7 @@ std::optional<Token> Lexer::try_float() {
         return {};
     }
 
-    auto ret = tint::strconv::ParseDouble(std::string_view(&at(start), end - start));
+    auto ret = tint::strconv::ParseDouble(substr(start, end - start));
     double value = ret == Success ? ret.Get() : 0.0;
     bool overflow =
         ret != Success && ret.Failure() == tint::strconv::ParseNumberError::kResultOutOfRange;
@@ -818,8 +815,7 @@ std::optional<Token> Lexer::try_hex_float() {
     result_u64 |= (static_cast<uint64_t>(signed_exponent) & kExponentMask) << kExponentLeftShift;
 
     // Reinterpret as f16 and return
-    double result_f64;
-    std::memcpy(&result_f64, &result_u64, 8);
+    double result_f64 = tint::Bitcast<double>(result_u64);
 
     if (has_f_suffix) {
         // Check value fits in f32
@@ -871,7 +867,7 @@ std::optional<Token> Lexer::try_hex_float() {
         }
         // Check the low 52-valid_mantissa_bits mantissa bits must be 0.
         TINT_ASSERT((0 <= valid_mantissa_bits) && (valid_mantissa_bits <= 23));
-        if (result_u64 & ((uint64_t(1) << (52 - valid_mantissa_bits)) - 1)) {
+        if (result_u64 & ((uint64_t{1} << (52 - valid_mantissa_bits)) - 1)) {
             return Token{Token::Type::kError, source,
                          "value cannot be exactly represented as 'f32'"};
         }
@@ -924,7 +920,7 @@ std::optional<Token> Lexer::try_hex_float() {
         }
         // Check the low 52-valid_mantissa_bits mantissa bits must be 0.
         TINT_ASSERT((0 <= valid_mantissa_bits) && (valid_mantissa_bits <= 10));
-        if (result_u64 & ((uint64_t(1) << (52 - valid_mantissa_bits)) - 1)) {
+        if (result_u64 & ((uint64_t{1} << (52 - valid_mantissa_bits)) - 1)) {
             return Token{Token::Type::kError, source,
                          "value cannot be exactly represented as 'f16'"};
         }

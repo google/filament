@@ -37,6 +37,7 @@
 #include "src/tint/lang/core/type/i32.h"
 #include "src/tint/lang/core/type/i8.h"
 #include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/memory_view.h"
 #include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/core/type/reference.h"
 #include "src/tint/lang/core/type/sampler.h"
@@ -84,6 +85,13 @@ const Type* Type::UnwrapPtrOrRef() const {
         return type;
     }
     return UnwrapRef();
+}
+
+const Type* Type::UnwrapMemoryView() const {
+    if (auto* mv = As<MemoryView>()) {
+        return mv->StoreType();
+    }
+    return this;
 }
 
 uint32_t Type::Size() const {

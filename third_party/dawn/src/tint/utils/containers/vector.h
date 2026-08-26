@@ -32,6 +32,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <iterator>
 #include <new>
@@ -270,6 +271,7 @@ class VectorIterator {
     }
 
     /// @return the element this iterator currently points at
+    // NOLINTNEXTLINE(google-explicit-constructor)
     operator T*() const { return ptr_; }
 
     /// @return the element this iterator currently points at
@@ -431,7 +433,7 @@ class Vector {
     Vector() = default;
 
     /// Constructor
-    Vector(EmptyType) {}  // NOLINT(runtime/explicit)
+    explicit(false) Vector(EmptyType) {}
 
     /// Constructor
     /// @param elements the elements to place into the vector
@@ -453,57 +455,51 @@ class Vector {
     /// Copy constructor (differing N length)
     /// @param other the vector to copy
     template <size_t N2>
-    Vector(const Vector<T, N2>& other) {
+    explicit(false) Vector(const Vector<T, N2>& other) {
         Copy(other.impl_.slice);
     }
 
     /// Move constructor (differing N length)
     /// @param other the vector to move
     template <size_t N2>
-    Vector(Vector<T, N2>&& other) {
+    explicit(false) Vector(Vector<T, N2>&& other) {
         Move(std::move(other));
     }
 
     /// Copy constructor with covariance / const conversion
     /// @param other the vector to copy
     /// @see CanReinterpretSlice for rules about conversion
-    template <typename U,
-              size_t N2,
-              ReinterpretMode MODE,
-              typename = std::enable_if_t<CanReinterpretSlice<MODE, T, U>>>
-    Vector(const Vector<U, N2>& other) {  // NOLINT(runtime/explicit)
+    template <typename U, size_t N2, ReinterpretMode MODE>
+        requires(CanReinterpretSlice<MODE, T, U>)
+    explicit(false) Vector(const Vector<U, N2>& other) {
         Copy(other.impl_.slice);
     }
 
     /// Move constructor with covariance / const conversion
     /// @param other the vector to move
     /// @see CanReinterpretSlice for rules about conversion
-    template <typename U,
-              size_t N2,
-              ReinterpretMode MODE,
-              typename = std::enable_if_t<CanReinterpretSlice<MODE, T, U>>>
-    Vector(Vector<U, N2>&& other) {  // NOLINT(runtime/explicit)
+    template <typename U, size_t N2, ReinterpretMode MODE>
+        requires(CanReinterpretSlice<MODE, T, U>)
+    explicit(false) Vector(Vector<U, N2>&& other) {
         Move(std::move(other));
     }
 
     /// Move constructor from a mutable vector reference
     /// @param other the vector reference to move
-    Vector(VectorRef<T>&& other) { MoveOrCopy(std::move(other)); }  // NOLINT(runtime/explicit)
+    explicit(false) Vector(VectorRef<T>&& other) { MoveOrCopy(std::move(other)); }
 
     /// Copy constructor from an immutable vector reference
     /// @param other the vector reference to copy
-    Vector(const VectorRef<T>& other) { Copy(*other.slice_); }  // NOLINT(runtime/explicit)
+    explicit(false) Vector(const VectorRef<T>& other) { Copy(*other.slice_); }
 
     /// Copy constructor from a span
     /// @param span the span to copy
-    Vector(std::span<T> span) {  // NOLINT(runtime/explicit)
-        Copy(internal::Slice<T>{span, span.size()});
-    }
+    explicit(false) Vector(std::span<T> span) { Copy(internal::Slice<T>{span, span.size()}); }
 
     /// Copy constructor from a span
     /// @param span the span to copy
     template <typename U>
-    Vector(std::span<U> span) {  // NOLINT(runtime/explicit)
+    explicit(false) Vector(std::span<U> span) {
         Copy(internal::Slice<U>{span, span.size()});
     }
 
@@ -1072,7 +1068,7 @@ class Vector {
     TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
     /// The internal structure for the vector with a small array.
     struct ImplWithSmallArray {
-        TStorage small_arr[N];
+        std::array<TStorage, N> small_arr;
         internal::Slice<T> slice = {std::span<T>{&small_arr[0].Get(), N}, 0};
 
         /// Allocates a new vector of `T` either from #small_arr, or from the heap, then assigns the
@@ -1193,44 +1189,42 @@ class VectorRef {
     VectorRef() : slice_(&local_slice_) {}
 
     /// Constructor
-    VectorRef(EmptyType) : slice_(&local_slice_) {}  // NOLINT(runtime/explicit)
+    explicit(false) VectorRef(EmptyType) : slice_(&local_slice_) {}
 
     /// Constructor from a span
     /// @param span the span
-    VectorRef(std::span<T> span)  // NOLINT(runtime/explicit)
-        : local_slice_{span}, slice_(&local_slice_) {}
+    explicit(false) VectorRef(std::span<T> span) : local_slice_{span}, slice_(&local_slice_) {}
 
     // {ptr, size} style span construction will always cause this warning to fire
     TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
     /// Constructor from a span
     /// @param span the span
     template <typename U>
-    VectorRef(std::span<U> span)  // NOLINT(runtime/explicit)
+    explicit(false) VectorRef(std::span<U> span)
         : local_slice_{std::span<T>{Bitcast<T*>(span.data()), span.size()}, span.size()},
           slice_(&local_slice_) {}
     TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
 
     /// Constructor from an internal::Slice
     /// @param slice the internal slice
-    VectorRef(const internal::Slice<T>& slice)  // NOLINT(runtime/explicit)
+    explicit(false) VectorRef(const internal::Slice<T>& slice)
         : local_slice_(slice), slice_(&local_slice_) {}
 
     /// Constructor from a Vector
     /// @param vector the vector to create a reference of
     template <size_t N>
-    VectorRef(Vector<T, N>& vector)  // NOLINT(runtime/explicit)
-        : slice_(&vector.impl_.slice) {}
+    explicit(false) VectorRef(Vector<T, N>& vector) : slice_(&vector.impl_.slice) {}
 
     /// Constructor from a const Vector
     /// @param vector the vector to create a reference of
     template <size_t N>
-    VectorRef(const Vector<T, N>& vector)  // NOLINT(runtime/explicit)
+    explicit(false) VectorRef(const Vector<T, N>& vector)
         : slice_(const_cast<internal::Slice<T>*>(&vector.impl_.slice)) {}
 
     /// Constructor from a moved Vector
     /// @param vector the vector being moved
     template <size_t N>
-    VectorRef(Vector<T, N>&& vector)  // NOLINT(runtime/explicit)
+    explicit(false) VectorRef(Vector<T, N>&& vector)
         : slice_(&vector.impl_.slice), can_move_(vector.impl_.CanMove()) {}
 
     /// Copy constructor
@@ -1252,9 +1246,9 @@ class VectorRef {
     TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
     /// Copy constructor with covariance / const conversion
     /// @param other the other vector reference
-    template <typename U,
-              typename = std::enable_if_t<CanReinterpretSlice<ReinterpretMode::kSafe, T, U>>>
-    VectorRef(const VectorRef<U>& other)  // NOLINT(runtime/explicit)
+    template <typename U>
+        requires(CanReinterpretSlice<ReinterpretMode::kSafe, T, U>)
+    explicit(false) VectorRef(const VectorRef<U>& other)
         : local_slice_{std::span<T>{Bitcast<T*>(other.begin()), other.Capacity()}, other.Length()},
           slice_(other.slice_ == &other.local_slice_ ? &local_slice_
                                                      : Bitcast<internal::Slice<T>*>(other.slice_)) {
@@ -1265,9 +1259,9 @@ class VectorRef {
     TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE_IN_CONTAINER);
     /// Move constructor with covariance / const conversion
     /// @param other the vector reference
-    template <typename U,
-              typename = std::enable_if_t<CanReinterpretSlice<ReinterpretMode::kSafe, T, U>>>
-    VectorRef(VectorRef<U>&& other)  // NOLINT(runtime/explicit)
+    template <typename U>
+        requires(CanReinterpretSlice<ReinterpretMode::kSafe, T, U>)
+    explicit(false) VectorRef(VectorRef<U>&& other)
         : local_slice_{std::span<T>{Bitcast<T*>(other.begin()), other.Capacity()}, other.Length()},
           slice_(other.slice_ == &other.local_slice_ ? &local_slice_
                                                      : Bitcast<internal::Slice<T>*>(other.slice_)),
@@ -1279,20 +1273,18 @@ class VectorRef {
     /// Constructor from a Vector with covariance / const conversion
     /// @param vector the vector to create a reference of
     /// @see CanReinterpretSlice for rules about conversion
-    template <typename U,
-              size_t N,
-              typename = std::enable_if_t<CanReinterpretSlice<ReinterpretMode::kSafe, T, U>>>
-    VectorRef(const Vector<U, N>& vector)  // NOLINT(runtime/explicit)
+    template <typename U, size_t N>
+        requires(CanReinterpretSlice<ReinterpretMode::kSafe, T, U>)
+    explicit(false) VectorRef(const Vector<U, N>& vector)
         : slice_(reinterpret_cast<internal::Slice<T>*>(
               const_cast<internal::Slice<U>*>(&vector.impl_.slice))) {}
 
     /// Constructor from a moved Vector with covariance / const conversion
     /// @param vector the vector to create a reference of
     /// @see CanReinterpretSlice for rules about conversion
-    template <typename U,
-              size_t N,
-              typename = std::enable_if_t<CanReinterpretSlice<ReinterpretMode::kSafe, T, U>>>
-    VectorRef(Vector<U, N>&& vector)  // NOLINT(runtime/explicit)
+    template <typename U, size_t N>
+        requires(CanReinterpretSlice<ReinterpretMode::kSafe, T, U>)
+    explicit(false) VectorRef(Vector<U, N>&& vector)
         : slice_(reinterpret_cast<internal::Slice<T>*>(&vector.impl_.slice)),
           can_move_(vector.impl_.CanMove()) {}
 

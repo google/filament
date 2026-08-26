@@ -30,13 +30,13 @@
 
 #include <vector>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SlabAllocator.h"
-#include "dawn/common/ityp_stack_vec.h"
-#include "dawn/native/BindGroupLayoutInternal.h"
-#include "dawn/native/d3d12/BindGroupD3D12.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
 #include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SlabAllocator.h"
+#include "src/dawn/common/ityp_stack_vec.h"
+#include "src/dawn/native/BindGroupLayoutInternal.h"
+#include "src/dawn/native/d3d12/BindGroupD3D12.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 

@@ -1,0 +1,797 @@
+Name
+
+    APPLE_float_pixels
+
+Name Strings
+
+    GL_APPLE_float_pixels
+
+Contact
+
+    Geoff Stahl, Apple (gstahl 'at' apple.com)
+    Jeremy Sandmel, Apple (jsandmel 'at' apple.com)
+
+Status
+
+    Shipping Mac OS X v10.2.3 (version 1.0)
+
+Version
+
+    1.0
+    
+Number
+
+    368
+
+Dependencies
+
+    Written based on the wording of the OpenGL 2.0 specification.
+    
+    Depends on (but does not require) ARB_texture_float
+
+    Depends on (but does not require) ARB_color_buffer_float
+
+    Depends on (but does not require) ARB_half_float_pixel
+    
+    Interacts with APPLEX_texture_float_16_filter.
+
+    Interacts with APPLEX_color_buffer_float_16_blend.
+
+Overview
+
+    This extensions adds texture types, texture internal formats and
+    color buffers composed of both 32 bit and 16 floating point numbers.
+     16 bit floats (half float) are very similar to the IEEE
+    single-precision floating-point standard, except that it has only 5
+    exponent bits and 10 mantissa bits. All floating point numbers are
+    clamped to the limits of the range representable by their respective
+    format.
+
+    Specifically, APPLE_float_pixels adds four pieces of functionality
+    to OpenGL.  First, it provides an HALF_APPLE texture type allowing
+    clients to pass textures in the half float format.  Second, it adds
+    12 additional sized internal formats to allow OpenGL to process and
+    maintain texture data in the requested format if possible.  Next, it
+    provides the COLOR_FLOAT_APPLE pixel format to allow creation of
+    floating point and half float color buffers. Lastly, it provides an
+    additional query to allow clients to verify that they have a
+    floating point color buffer.
+
+    The HALF_APPLE texture type allows clients to use source textures
+    composed of half float color components.  This constant is use in
+    the type parameter in DrawPixels, ReadPixels and texturing commands
+    with a corresponding GL half data type, which corresponds to a 16
+    bit half float, and has no special interpretation.
+
+    Clients can use the 12 additional (6 floating point and 6 half
+    float) sized internal texture formats to specify the mapping of R,
+    G, B and A values to texture components, as they would with any
+    other sized internal texture format.  Note, as is the standard
+    practice with OpenGL, implementations should map the sized internal
+    texture R, G, B and A values to internal components with memory
+    allocations as close as possible to those specified in the sized
+    internal format.
+
+    Floating point color buffers are created by specifying the
+    appropriate color floating point pixel format attribute for the
+    windowing system API in use by the client.  Both 128 bit and 64 bit
+    floating point color buffers can be supported, the former with full
+    32 bit floating point components and the latter with 16 bit half
+    float components.
+
+    Additionally, clients can query to see if they have a floating point
+    color buffer using GetBooleanv with COLOR_FLOAT_APPLE as the get
+    value.  The number of bits per color buffer component can be
+    determined in the usual manner.
+
+Issues:
+
+    1. How is this extension different from the ARB floating point extensions?
+    
+        Conceptually, this extension can be considered the union of the
+        feature sets from the following extensions:
+
+            ARB_texture_float
+            ARB_color_buffer_float
+            ARB_half_float_pixel
+        
+        with the following EXCEPTIONS:
+        
+            * this extension does not support the the per-component
+              query of TEXTURE_*_TYPE from ARB_texture_float.
+
+            * this extension only supports the half float pixel type
+              from ARB_half_float_pixel for {Draw|Read}|Pixels and
+              Tex{Sub}Image{1D|2D|3D}, and for color buffers as
+              described by ARB_color_buffer_float.  (Note: unlike the
+              ARB_half_float extension, APPLE_float_pixels does not
+              support using 16 bit half float data with the imaging
+              subset routines that accept images, i.e.,
+              ConvolutionFilter{1D|2D}, ColorTable, etc.
+
+            * this extension does not include the ClampColorARB routine
+              from ARB_color_buffer_float.  It does, however, use the
+              default clamping behavior specified in the
+              ARB_color_buffer_float extension.
+              
+              Note that this means the following in this extension:
+
+                - vertex color outputs are always clamped, regardless of
+                  color buffer format
+                - fragment color outputs are clamped when writing to a
+                  fixed point color buffer and unclamped when writing to
+                  a floating point color buffer, and
+                - the read color returned by
+                  ReadPixels/CopyPixels/GetTexImage/etc. is clamped when
+                  reading from a fixed point format and unclamped when
+                  reading from a floating point format.
+
+            * unlike ARB_texture_float, this extension only supports
+              GL_NEAREST filtering for float (and half float) textures.
+
+            * unlike ARB_color_buffer_float, this extension does not
+              support src/dst alpha blending on float (and half float)
+              destination color buffers.
+
+    2. Since this extension is more limited than the ARB floating point
+       extensions, what is the appropriate (and "future-proof") method
+       for an application to use to query for floating point color
+       buffer and texture support?
+       
+        This extension and the related extensions
+        APPLEX_color_buffer_float_16_blend and
+        APPLEX_texture_float_16_filter, should be considered
+        "transitional" in nature. The limited functionality described by
+        these extensions is superseded by the more powerful ARB
+        extensions and as hardware becomes more capable, it is possible
+        that future revisions of OpenGL may deprecate or remove them
+        altogether.
+       
+        As such, to allow for ease of transition to support of the ARB
+        floating point extensions, applications are *strongly*
+        encouraged to use the following algorithm to query for floating
+        point texture and color buffer support:
+        
+            // any Floating Point Support at all?
+            bool supportsFloatColorBuffers = FALSE;
+            bool supportsFloatTextures     = FALSE;
+            
+            // 16 bit/component Floating Point Blend/Filter Support?
+            bool supportsFloat16ColorBufferBlending = FALSE;
+            bool supportsFloat16TextureFiltering    = FALSE;
+
+            // 32 bit/component Floating Point Blend/Filter Support?
+            bool supportsFloat32ColorBufferBlending = FALSE;
+            bool supportsFloat32TextureFiltering    = FALSE;
+        
+            // ===============================================
+            // Check for floating point texture support
+            // 
+            // * First check for full ARB_texture_float
+            //   extension and only then check for more
+            //   limited APPLE and APPLEX texture extensions
+            // ===============================================
+            if (extensionSupported("ARB_texture_float"))
+            {
+                supportsFloatTextures           = TRUE;
+                supportsFloat16TextureFiltering = TRUE;
+                supportsFloat32TextureFiltering = TRUE;            
+            }
+            else if (extensionSupported("APPLE_float_pixels"))
+            {
+                supportsFloatTextures = TRUE;
+
+                if (extensionSupported("APPLEX_texture_float_16_filter"))
+                {
+                    supportsFloat16TextureFiltering = TRUE;
+                }
+            }
+
+            // ===============================================
+            // Check for floating point color buffer support
+            // 
+            // * First check for full ARB_color_buffer_float
+            //   extension and only then check for more
+            //   limited APPLE and APPLEX color buffer extensions
+            // ===============================================
+            if (extensionSupported("ARB_color_buffer_float"))
+            {
+                supportsFloatColorBuffers          = TRUE;
+                supportsFloat16ColorBufferBlending = TRUE;
+                supportsFloat32ColorBufferBlending = TRUE;            
+            }
+            else if (extensionSupported("APPLE_float_pixels"))
+            {
+                supportsFloatColorBuffers = TRUE;
+
+                if (extensionSupported("APPLEX_color_buffer_float_16_blend"))
+                {
+                    supportsFloat16ColorBufferBlending = TRUE;
+                }
+            }
+
+
+    3. Why does this extension (and the related APPLEX_*_float_*
+       extensions) even exist, given the existence of the ARB, ATI, and
+       NVIDIA floating point extensions?
+       
+        A good question.  This extension was developed contemporaneously
+        with the ATI and NVIDIA extensions and support for this
+        extension in Mac OS X's OpenGL implementation predates the
+        definition of the ARB extensions.  In addition, this extension
+        specification attempts to document the behavior of the APPLE
+        extension to support use of floating point features on hardware
+        which may not support the full feature set described by the ARB
+        extensions.  The behavior of the APPLE extension more closely
+        matches the feature set of this class of hardware and can be
+        used by applications to get a more accurate description of
+        native hardware support when falling back to software rendering
+        may not be appropriate.
+
+        It is expected that as hardware renderers becomes more capable
+        the Mac OS X OpenGL implementation will transition to supporting
+        the ARB extensions and may deprecate and/or remove these APPLE
+        extensions from the API.  Please see issue #2 for details on how
+        to query for floating point support in a "future-proof" manner.
+
+
+    4. What will happen when the ARB floating point extensions are
+       supported?
+       
+        The APPLE_float_pixels and the related
+        APPLEX_texture_float_16_filter and
+        APPLEX_color_buffer_float_16_blend extensions are intended as a
+        strict subset of the functionality in ARB_texture_float,
+        ARB_color_buffer_float, and ARB_half_float_pixel.
+
+        Consequently, an implementation could legally support all of
+        these extensions simulataneously, however once the ARB
+        extensions are supported there is no need to export the
+        APPLE{X}_* floating point extensions.
+
+        Consequently, it's possible that implementations may deprecate
+        or remove the APPLE_float_pixels,
+        APPLEX_texture_float_16_filter, and
+        APPLEX_color_buffer_float_16_blend extensions when the
+        corresponding ARB extensions are supported by the underlying
+        hardware.  Applications should pay attention to issue #2 above
+        to prepare for this possibility.
+        
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the  parameters of DrawPixels, ReadPixels, TexImage1D,
+    TexImage2D, TexImage3D, TexSubImage1D, TexSubImage2D, TexSubImage3D, and
+    GetTexImage:
+
+      HALF_APPLE                      0x140B        // Same as HALF_FLOAT_NV/ARB
+
+    Accepted by the GetBooleanv:
+
+      COLOR_FLOAT_APPLE               0x8A0F
+      
+    Accepted by the  parameter of TexImage1D,
+    TexImage2D, and TexImage3D:
+
+      RGBA_FLOAT32_APPLE              0x8814        // Same as RGBA_FLOAT32_ATI/ARB
+      RGB_FLOAT32_APPLE               0x8815        // Same as RGB_FLOAT32_ATI/ARB              
+      ALPHA_FLOAT32_APPLE             0x8816        // Same as ALPHA_FLOAT32_ATI/ARB            
+      INTENSITY_FLOAT32_APPLE         0x8817        // Same as INTENSITY_FLOAT32_ATI/ARB        
+      LUMINANCE_FLOAT32_APPLE         0x8818        // Same as LUMINANCE_FLOAT32_ATI/ARB        
+      LUMINANCE_ALPHA_FLOAT32_APPLE   0x8819        // Same as LUMINANCE_ALPHA_FLOAT32_ATI/ARB  
+      RGBA_FLOAT16_APPLE              0x881A        // Same as RGBA_FLOAT16_ATI/ARB             
+      RGB_FLOAT16_APPLE               0x881B        // Same as RGB_FLOAT16_ATI/ARB              
+      ALPHA_FLOAT16_APPLE             0x881C        // Same as ALPHA_FLOAT16_ATI/ARB            
+      INTENSITY_FLOAT16_APPLE         0x881D        // Same as NTENSITY_FLOAT16_ATI/ARB        
+      LUMINANCE_FLOAT16_APPLE         0x881E        // Same as LUMINANCE_FLOAT16_ATI/ARB        
+      LUMINANCE_ALPHA_FLOAT16_APPLE   0x881F        // Same as LUMINANCE_ALPHA_FLOAT16_ATI/ARB  
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Add a new Section 2.1.2, (p. 6):
+
+    2.1.2  16-Bit Floating-Point Numbers
+
+    A 16-bit floating-point number has a 1-bit sign (S), a 5-bit
+    exponent (E), and a 10-bit mantissa (M).  The value of a 16-bit
+    floating-point number is determined by the following:
+
+        (-1)^S * 0.0,                        if E == 0 and M == 0,
+        (-1)^S * 2^-14 * (M / 2^10),         if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if 0 < E < 31,
+        (-1)^S * INF,                        if E == 31 and M == 0, or
+        NaN,                                 if E == 31 and M != 0,
+
+    where
+
+        S = floor((N mod 65536) / 32768),
+        E = floor((N mod 32768) / 1024), and
+        M = N mod 1024.
+
+    Implementations are also allowed to use any of the following
+    alternative encodings:
+
+        (-1)^S * 0.0,                        if E == 0 and M != 0,
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M == 0, or
+        (-1)^S * 2^(E-15) * (1 + M/2^10),    if E == 31 and M != 0,
+
+    Any representable 16-bit floating-point value is legal as input
+    to a GL command that accepts 16-bit floating-point data.  The
+    result of providing a value that is not a floating-point number
+    (such as infinity or NaN) to such a command is unspecified, but
+    must not lead to GL interruption or termination.  Providing a
+    denormalized number or negative zero to GL must yield predictable
+    results.
+
+    (modify Table 2.2, p. 9) -- add new row
+
+                   Minimum
+       GL Type    Bit Width    Description
+       -------    ---------    -----------------------------------
+       half          16        half-precision floating-point value
+                               encoded in an unsigned scalar
+
+    Modify Section 2.14, (Colors and Coloring), p. 59
+
+    (modify Table 2.9, p. 59)  Add new row to the table:
+
+         GL Type    Conversion
+         -------    ----------
+         half          c
+
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    Modify Section 3.6.4 (Rasterization of Pixel Rectangles), p. 126
+
+    (modify next-to-last paragraph, p.136, "Final Conversion") ... For
+    RGBA components, if fragment color clamping is enabled, each element
+    is clamped to [0,1], and may be converted to fixed-point according
+    to the rules given in section 2.14.9 (Final Color Processing).  If
+    fragment color clamping is disabled, RGBA components are unmodified.
+    For the purposes of this specification, fragment color clamping is
+    enabled implicitly if all enabled color buffers have fixed-point
+    components.
+
+    Modify Section 3.8.1 (Texture Image Specification), p. 150
+
+    (modify second paragraph, p. 151) The selected groups are processed
+    exactly as for DrawPixels, stopping just before final conversion.
+    For R, G, B, and A, if the <internalformat> of the texture is
+    fixed-point, the components are clamped to [0, 1].  Otherwise, the
+    components are not modified.  The depth value so generated is
+    clamped to [0, 1].
+
+    (modify the second paragraph, p. 152) The internal component resolution
+    is the number of bits allocated to each value in a texture image. If
+    <internalformat> is specified as a base internal format, the GL stores
+    the resulting texture with internal component resolutions of its own
+    choosing.  If a sized internal format is specified, the mapping of the
+    R, G, B, A, and depth values to texture components is equivalent to the
+    mapping of the corresponding base internal format's components, as
+    specified in table 3.15, the type (unsigned int, float, etc.) is
+    assigned the same type specified by <internalFormat>, and the memory
+    allocation per texture component is assigned by the GL to match the
+    allocations listed in table 3.16 as closely as possible. (The definition
+    of closely is left up to the implementation.  Implementations are not
+    required to support more than one resolution of each type (unsigned int,
+    float, etc.) for each base internal format.) If a compressed internal
+    format is specified, the mapping of the R, G, B, A, and depth values to
+    texture components is equivalent to the mapping of the corresponding
+    base internal format's components, as specified in table 3.15. The
+    specified image is compressed using a (possibly lossy) compression
+    algorithm chosen by the GL.
+
+    (add the following to table 3.16, p. 154)
+
+      Sized                       Base             R    G    B    A    L    I
+      Internal Format             Internal Format bits bits bits bits bits bits
+      --------------------------- --------------- ---- ---- ---- ---- ---- ----
+      RGBA32F_ARB                 RGBA            f32  f32  f32  f32
+      RGB32F_ARB                  RGB             f32  f32  f32
+      ALPHA32F_ARB                ALPHA                          f32
+      INTENSITY32F_ARB            INTENSITY                                f32
+      LUMINANCE32F_ARB            LUMINANCE                           f32
+      LUMINANCE_ALPHA32F_ARB      LUMINANCE_ALPHA                f32  f32
+      RGBA16F_ARB                 RGBA            f16  f16  f16  f16
+      RGB16F_ARB                  RGB             f16  f16  f16
+      ALPHA16F_ARB                ALPHA                          f16
+      INTENSITY16F_ARB            INTENSITY                                f16
+      LUMINANCE16F_ARB            LUMINANCE                           f16
+      LUMINANCE_ALPHA16F_ARB      LUMINANCE_ALPHA                f16  f16
+
+      Table 3.16: Correspondence of sized internal formats to base
+      internal formats, and desired component resolutions for each
+      sized internal format.  The notation <f16> and <f32> imply
+      16- and 32-bit floating-point, respectively.
+
+    Modify Section 3.8.4 (Texture Parameters), p. 166
+
+    (remove TEXTURE_BORDER_COLOR from end of first paragraph, p. 166)
+
+    ... If the value for TEXTURE_PRIORITY is specified as an integer,
+    the conversion for signed integers from table 2.9 is applied to
+    convert this value to floating-point, followed by clamping the
+    value to lie in [0, 1].
+
+    (modify last paragraph, p. 174) ... If the texture contains color
+    components, the values of TEXTURE BORDER COLOR are interpreted as
+    an RGBA color to match the texture's internal format in a manner
+    consistent with table 3.15.  The border values for texture
+    components stored as fixed-point values are clamped to [0, 1]
+    before they are used.  If the texture contains depth ...
+
+
+    Add a new section, after 3.8.9 and prior to section 3.8.10, p. 177
+
+    3.8.9.5 Floating point formats and texture filters
+    
+    Due to limitations in current render hardware, textures with
+    floating point formats may not support minification or magnification
+    filters that require LINEAR filtering in the manner described above.
+    
+    Specifically, if the texture filter is neither GL_NEAREST nor
+    GL_NEAREST_MIPMAP_NEAREST, and *any* of following conditions are
+    true:
+    
+        * the <internalformat> of the texture is a 32-bit/component
+          floating point format and ARB_texture_float is not supported
+          by the implementation, *or*
+
+        * the <internalformat> of the texture is a 16-bit/component
+          floating point format and APPLEX_texture_float_16_filter
+          extension is not supported by the implementation,
+     
+    then the GL will interpret texture minification and magnification filters
+    according to the table (xxx.1) listed below:
+    
+        specified filter         will behave as:
+        ----------------         --------------
+        LINEAR                   NEAREST
+        NEAREST_MIPMAP_LINEAR    NEAREST_MIPMAP_NEAREST
+        LINEAR_MIPMAP_NEAREST    NEAREST_MIPMAP_NEAREST
+        LINEAR_MIPMAP_LINEAR     NEAREST_MIPMAP_NEAREST
+        ----------------------------------------------------
+        Table xxx.1 - floating point texture filter behavior
+
+    Otherwise, the texture minification and magnfication filters behave
+    as specified earlier in section 3.8.8 and 3.8.9.
+
+
+    Modify Section 3.8.13 (Texture Environments and Functions), p.182
+
+    (modify third paragraph, p. 183, removing clamping language)
+     ...TEXTURE_ENV_COLOR is set to an RGBA color by providing four
+    single-precision floating-point values.  If integers are provided
+    for TEXTURE ENV COLOR, then they are converted to floating-point
+    as specified in table 2.9 for signed integers.
+
+    (replace the sixth paragraph of p. 183) If fragment color clamping
+    is enabled, all of these color values, including the results, are
+    clamped to the range [0,1].  If fragment color clamping is
+    disabled, the values are not clamped.  The texture functions are
+    specified in tables 3.22, 3.23, and 3.24.
+
+    (modify seventh paragraph of p. 183) ... ALPHA_SCALE, respectively.
+    If fragment color clamping is enabled, the arguments and results
+    used in table 3.24 are clamped to [0,1].  Otherwise, the results
+    are unmodified.
+
+    Modify Section 3.9 (Color Sum), p. 191
+
+    (modify second paragraph) ... the A component of c_sec is unused.
+    If color sum is disabled, then c_pri is assigned to c.  The
+    components of c are then clamped to the range [0,1] if and only
+    if fragment color clamping is enabled.
+
+    Modify Section 3.10 (Fog), p. 191
+
+    (modify fourth paragraph, p. 192, removing clamping language) ...If
+    these are not floating-point values, then they are converted to
+    floating-point using the conversion given in table 2.9 for signed
+    integers.  If fragment color clamping is enabled, the components of
+    C_r and C_f and the result C are clamped to the range [0,1] before
+    the fog blend is performed.
+
+    Modify Section 3.11.2 (Shader Execution), p. 194
+
+    (modify Shader Inputs, first paragraph, p. 196) The built-in
+    variables gl_Color and gl_SecondaryColor hold the R, G, B, and A
+    components, respectively, of the fragment color and secondary
+    color. If the primary color or the secondary color components are
+    represented by the GL as fixed-point values, they undergo an
+    implied conversion to floating-point.  This conversion must leave
+    the values 0 and 1 invariant. Floating-point color components
+    (resulting from a disabled vertex color clamp) are unmodified.
+
+    (modify Shader Outputs, first paragraph, p. 196) ... These are
+    gl_FragColor, gl_FragData[n], and gl_FragDepth.  If fragment
+    clamping is enabled, the final fragment color values or the final
+    fragment data values written by a fragment shader are clamped to
+    the range [0, 1] and then may be converted to fixed-point as
+    described in section 2.14.9.  If fragment clamping is disabled,
+    the final fragment color values or the final fragment data values
+    are not modified.  The final fragment depth...
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+
+    Modify Chapter 4 Introduction, (p. 198)
+
+    (modify third paragraph, p. 198)  Color buffers consist of either
+    unsigned integer color indices, R, G, B and optionally A unsigned
+    integer values, or R, G, B, and optionally A floating-point values.
+    The number of bitplanes...
+
+    Modify Section 4.1.3 (Multisample Fragment Operations), p. 200
+
+    (modify last paragraph, p. 200) ...and all 0's corresponding to all
+    alpha values being 0.  The alpha values used to generate a coverage
+    value are clamped to the range [0,1]. It is also intended ...
+
+    Modify Section 4.1.5 (Alpha Test), p. 201
+
+    (modify first paragraph of section, deleting clamping of
+     reference value)  ... The test is controlled with
+
+       void AlphaFunc(enum func, float ref);
+
+    func is a symbolic constant indicating the alpha test function;
+    ref is a reference value.  When performing the alpha test, the GL
+    will convert the reference value to the same representation as the
+    the fragment's alpha value (floating-point or fixed-point).
+    For fixed-point, the reference value is converted according to the
+    rules given for an A component in section 2.14.9 and the fragment's
+    alpha value is rounded to the nearest integer.  The possible ...
+
+    Modify Section 4.1.8 (Blending), p. 205
+
+    (modify first paragraph, p. 206) Source and destination values are
+    combined according to the blend equation, quadruplets of source and
+    destination weighting factors determined by the blend functions, and
+    a constant blend color to obtain a new set of R, G, B, and A values,
+    as described below.
+    
+    If the color buffer is fixed-point, the components of the source
+    and destination values and blend factors are clamped to [0, 1]
+    prior to evaluating the blend equation, the components of the
+    blending result are clamped to [0,1] and converted to fixed-
+    point values in the manner described in section 2.14.9. If the
+    color buffer is floating-point, no clamping occurs.  The
+    resulting four values are sent to the next operation.
+
+    Blending is dependent on the incoming fragment's alpha value and
+    that of the corresponding currently stored pixel. Blending applies
+    only in RGBA mode and only one of the following conditions is true:
+        
+        * the format of the current color buffer is fixed-point, *or*
+
+        * the format of current color buffer(s) is 16 bit floating point
+          and the APPLEX_color_buffer_float_16_blend extension is
+          supported by the implementation, *or*
+
+        * the format of the current color buffer is floating-point and
+          the ARB_color_buffer_float extension is supported by the
+          implementation.
+    
+    Otherwise, the blending stage is bypassed. Blending is enabled or
+    disabled using Enable or Disable with the symbolic constant BLEND.
+    If it is disabled (or bypassed), or if logical operation on color
+    values is enabled (section 4.1.10), proceed to the next operation.
+
+    (modify fifth paragraph, p. 206) Fixed-point destination
+    (framebuffer) components are taken to be fixed-point values
+    represented according to the scheme given in section 2.14.9
+    (Final Color Processing).  Constant color components, floating-
+    point destination components, and source (fragment) components are
+    taken to be floating point values. If source components are
+    represented internally by the GL as either fixed-point values they
+    are also interepreted according to section 2.14.9.
+
+    (modify Blend Color section removing the clamp, p. 209) The
+    constant color C_c to be used in blending is specified with the
+    command
+
+       void BlendColor(float red, float green, float blue, float alpha);
+
+    The constant color can be used in both the source and destination
+    blending functions.
+
+    Replace Section 4.1.9 (Dithering), p. 209
+
+    Dithering selects between two representable color values or indices.
+    A representable value is a value that has an exact representation in
+    the color buffer.  In RGBA mode dithering selects, for each color
+    component, either the most positive representable color value (for
+    that particular color component) that is less than or equal to the
+    incoming color component value, c, or the most negative
+    representable color value that is greater than or equal to c.  The
+    selection may depend on the x_w and y_w coordinates of the pixel, as
+    well as on the exact value of c.  If one of the two values does not
+    exist, then the selection defaults to the other value.
+
+    In color index mode dithering selects either the largest
+    representable index that is less than or equal to the incoming
+    color value, c, or the smallest representable index that is greater
+    than or equal to c.  If one of the two indices does not exist, then
+    the selection defaults to the other value.
+
+    Many dithering selection algorithms are possible, but an individual
+    selection must depend only on the incoming color index or component
+    value and the fragment's x and y window coordinates.  If dithering
+    is disabled, then each incoming color component c is replaced with
+    the most positive representable color value (for that particular
+    component) that is less than or equal to c, or by the most negative
+    representable value, if no representable value is less than or equal
+    to c; a color index is rounded to the nearest representable index
+    value.
+
+    Dithering is enabled with Enable and disabled with Disable using the
+    symbolic constant DITHER.  The state required is thus a single bit.
+    Initially dithering is enabled.
+
+    Section 4.1.10 (Logical Operation), p. 210
+
+    (insert after the first sentence, p. 210)  Logical operation has no
+    effect on a floating-point destination color buffer.  However, if
+    COLOR_LOGIC_OP is enabled, blending is still disabled.
+
+    Modify Section 4.2.3 (Clearing the Buffers), p. 215
+
+    (modify second paragraph, p. 216, removing clamp of clear color)
+
+       void ClearColor(float r, float g, float b, float a);
+
+    sets the clear value for the color buffers in RGBA mode.
+
+    (add to the end of first partial paragraph, p. 217) ... then a
+    Clear directed at that buffer has no effect.  Fixed-point RGBA
+    color buffers are cleared to a color values derived by taking the
+    clear color, clamping to [0,1], and converting to fixed-point
+    according to the rules of section 2.14.9.
+
+    Modify Section 4.2.4 (The Accumulation Buffer), p. 217
+
+    (modify second paragraph in section, p. 217) ... Using ACCUM
+    obtains R, G, B, and A components from the color buffer currently
+    selected for reading (section 4.3.2). If the color buffer is
+    fixed-point, each component is considered as a fixed-point value
+    in [0,1] (see section 2.14.9) and is converted to floating-point.
+    Each result is then multiplied ...
+
+    (modify second paragraph on p. 218) The RETURN operation takes
+    each color value from the accumulation buffer and multiplies each
+    of the R, G, B, and A components by <value>.  If fragment color
+    clamping is enabled, the results are then clamped to the range
+    [0,1]. ...
+
+    Modify Section 4.3.2 (Reading Pixels), p. 219
+
+    (modify paragraph at top of page, p. 222)  ... For a fixed-point
+    color buffer, each element is taken to be a fixed-point value in
+    [0, 1] with m bits, where m is the number of bits in the
+    corresponding color component of the selected buffer (see
+    section 2.14.9).  For floating-point color buffer, the elements
+    are unmodified.
+
+    (modify Final Conversion, p. 222) For an index, if the type is not
+    FLOAT or HALF_FLOAT_ARB, final conversion consists of masking the
+    index with the value given in Table 4.6; if the type is FLOAT or
+    HALF_FLOAT_ARB, then the integer index is converted to a GL float
+    or half data value.
+
+    For an RGBA color, if <type> is not FLOAT or HALF, or the selected
+    color buffer is a fixed-point buffer, each component is first
+    clamped to [0,1].  Then the appropriate conversion...
+
+    (modify Table 4.7, p. 224 -- add new row)
+
+        type Parameter    GL Data Type    Component Conversion Formula
+        --------------    ------------    ----------------------------
+        HALF_APPLE         half                  c = f
+
+
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify Section 6.1.2, Data Conversions, p. 245
+
+    (add new paragraph at the end of the section, p. 245) If fragment
+    color clamping is enabled, querying of the texture border color,
+    texture environment color, fog color, alpha test reference value,
+    blend color, and RGBA clear color will clamp the corresponding
+    state values to [0,1] before returning them.  This behavior
+    provides compatibility with previous versions of the GL that
+    clamped these values when specified.
+
+
+Modifications to the AGL Specification
+
+   Modify the values accepted by aglChoosePixelFormat and aglDescribePixelFormat.
+
+    AGL_COLOR_FLOAT
+        If true, this pixel format supports using floating point
+        color buffers as the destination for rendering.
+
+Modifications to the CGL Specification
+
+   Modify the values accepted by CGLChoosePixelFormat and CGLDescribePixelFormat.
+
+    kCGLPFAColorFloat
+        If true, this pixel format supports using floating point
+        color buffers as the destination for rendering.
+
+Dependencies on ARB_fragment_program
+
+    (modify 2nd paragraph of Section 3.11.4.4 language) If fragment
+    color clamping is enabled, the fragment's color components are first
+    clamped to the range [0,1] and are optionally converted to fixed
+    point as in section 2.14.9.  If the fragment program does not write
+    result.color, the color will be undefined in subsequent stages.
+
+Dependencies on ARB_fragment_shader
+
+    (modify 1st paragraph of Section 3.11.6 language) ... are
+    gl_FragColor and gl_FragDepth.  If fragment color clamping is
+    enabled, the final fragment color values written by a fragment
+    shader are clamped to the range [0,1] and are optionally converted
+    to fixed-point as described in section 2.14.9, Final Color
+    Processing.  ...
+
+Dependencies on APPLEX_texture_float_16_filter
+
+    If APPLEX_texture_float_16_filter is not supported, then all
+    references to APPLEX_texture_float_16_filter should be removed from
+    this extension.  In this case, 16 bit floating point textures will
+    behave as if the GL_MAG_FILTER is GL_NEAREST and as if GL_MIN_FILTER
+    is either GL_NEAREST_MIPMAP_NEAREST (if a mipmap min filter is
+    requested) or GL_NEAREST (if a non-mipmap min filter is requested).
+
+Dependencies on APPLEX_color_buffer_float_16_blend
+
+    If APPLEX_color_buffer_float_16_blend is not supported, then all
+    references to APPLEX_texture_float_16_filter should be removed from
+    this extension.  In this case, rendering to a 16 bit floating point
+    color buffer will behave as if the enable state for GL_BLEND is set
+    to FALSE.
+
+Errors
+
+    None.
+
+New State
+
+(table 6.25, p. 215)
+
+    Get value          Type  Get Cmnd     Minimum Value  Description                  Sec.  Attribute
+    -----------------  ----  -----------  -------------  ---------------------------  ----  ---------
+    COLOR_FLOAT_APPLE   B    GetBooleanv        -        True if color buffers store   2.7      -
+                                                         floating point components   
+
+Revision History
+
+
+    0.1, 2003, gstahl@apple.com
+        * preliminary draft, documents shipping behavior as of 10.2.3
+
+    0.2, 08/16/2005, jsandmel@apple.com
+        * rewritten to account for the fact that APPLE_float_pixels doesn't support:
+            - float 16/32 texture filtering
+            - float 16/32 color buffer blending
+            - controllable color clamping
+            - texture per-component float-versus-int type queries
+            - half float types with imaging subset routines
+        * added interactions with the shader extensions 
+        * added interactions with the APPLEX_*_float_16_* extensions
+        * added updates to AGL and CGL
+        

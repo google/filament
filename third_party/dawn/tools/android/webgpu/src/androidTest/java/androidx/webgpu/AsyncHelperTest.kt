@@ -19,10 +19,16 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.webgpu.helper.WebGpu
 import androidx.webgpu.helper.createWebGpu
+import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
@@ -33,10 +39,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 @SmallTest
 class AsyncHelperTest {
 
-    private lateinit var webGpu: WebGpu
-    private lateinit var device: GPUDevice
+  private val dispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "Test-WebGPU-Thread")
+  }.asCoroutineDispatcher()
+  private val testScope = CoroutineScope(dispatcher)
+  private lateinit var device: GPUDevice
+  private lateinit var webGpu: WebGpu
 
-    private val BASIC_SHADER = """
+  private val BASIC_SHADER = """
         @vertex fn vertexMain(@builtin(vertex_index) i : u32) ->
         @builtin(position) vec4f {
             return vec4f();
@@ -45,113 +55,128 @@ class AsyncHelperTest {
             return vec4f();
         } """
 
-    @Before
-    fun setup() {
-        runBlocking {
-            webGpu = createWebGpu()
-            device = webGpu.device
-        }
+  @Before
+  fun setup(): Unit = runBlocking {
+    webGpu = createWebGpu(dispatcher)
+    device = webGpu.device
+    testScope.launch {
+      webGpu.processEventsLoop()
     }
+  }
 
-    @Test
-    fun asyncMethodTest() {
-        runBlocking {
-            /* Set up a shader module to support the async call. */
-            val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(""))
-            )
-
-            val exception = assertThrows(WebGpuException::class.java) {
-                runBlocking {
-                    /* Call an asynchronous method, converted from a callback pattern by a helper. */
-                    device.createRenderPipelineAndAwait(
-                        GPURenderPipelineDescriptor(vertex = GPUVertexState(module = shaderModule))
-                    )
-                }
-            }
-
-            assertEquals(
-                """Create render pipeline (async) should fail when no shader entry point exists.
-                   The result was: ${exception.status}""",
-                CreatePipelineAsyncStatus.ValidationError,
-                exception.status
-            )
-        }
+  @After
+  fun teardown() {
+    if (::webGpu.isInitialized) {
+      webGpu.close()
     }
+    testScope.cancel()
+    (dispatcher as? ExecutorCoroutineDispatcher)?.close()
+  }
 
-    @Test
-    fun asyncMethodTestValidationPasses() {
-        runBlocking {
-            /* Set up a valid shader module and descriptor */
-            val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BASIC_SHADER))
-            )
-
-            /* Call an asynchronous method, converted from a callback pattern by a helper. */
-            val unused = device.createRenderPipelineAndAwait(
-                GPURenderPipelineDescriptor(
-                    vertex = GPUVertexState(module = shaderModule), fragment = GPUFragmentState(
-                        module = shaderModule,
-                        targets = arrayOf(GPUColorTargetState(format = TextureFormat.RGBA8Unorm))
-                    )
-                )
-            )
-
-          /* Create render pipeline (async) should pass with a simple shader.. */
-        }
-    }
-
-    private fun baseCancellationTest(doCancel: Boolean): Boolean {
-        val hasReturned = AtomicBoolean(false)
-
-        runBlocking {
-            val shaderModule = device.createShaderModule(
-                GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BASIC_SHADER))
-            )
-
-            /* Launch the function in a new coroutine, giving us a job handle we can cancel. */
-            val job = launch {
-                var unused = device.createRenderPipelineAndAwait(
-                    GPURenderPipelineDescriptor(vertex = GPUVertexState(module = shaderModule),
-                        fragment = GPUFragmentState(
-                            module = shaderModule,
-                            targets = arrayOf(GPUColorTargetState(format = TextureFormat.RGBA8Unorm))
-                        )
-                    )
-                )
-                hasReturned.set(true)
-            }
-            assumeFalse("The job completed before we could test it", hasReturned.get())
-
-            if (doCancel) {
-                job.cancel()
-            }
-            job.join()
-        }
-        return hasReturned.get()
-    }
-
-    /**
-     * Test that the async-based job will complete if it's not cancelled.
-     */
-    @Test
-    fun asyncMethodCancellationTestControl() {
-        assertEquals(
-            "The async job should have completed but it failed to do so.",
-            true,
-            baseCancellationTest(false)
+  @Test
+  fun asyncMethodTest() {
+    runBlocking {
+      webGpu.execute {
+        /* Set up a shader module to support the async call. */
+        val shaderModule = device.createShaderModule(
+          GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(""))
         )
-    }
 
-    /**
-     * Test that the async-based job will not complete if it is cancelled.
-     */
-    @Test
-    fun asyncMethodCancellationTest() {
+        val exception = assertThrowsSuspend(WebGpuException::class.java) {
+          /* Call an asynchronous method, converted from a callback pattern by a helper. */
+          val unused = device.createRenderPipelineAndAwait(
+            GPURenderPipelineDescriptor(vertex = GPUVertexState(module = shaderModule))
+          )
+        }
+
         assertEquals(
-            "The async job should have been cancelled but it completed.",
-            false,
-            baseCancellationTest(true)
+          """Create render pipeline (async) should fail when no shader entry point exists.
+                       The result was: ${exception.status}""",
+          CreatePipelineAsyncStatus.ValidationError,
+          exception.status
         )
+      }
     }
+  }
+
+  @Test
+  fun asyncMethodTestValidationPasses() {
+    runBlocking {
+      webGpu.execute {
+        /* Set up a valid shader module and descriptor */
+        val shaderModule = device.createShaderModule(
+          GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BASIC_SHADER))
+        )
+
+        /* Call an asynchronous method, converted from a callback pattern by a helper. */
+        val unused = device.createRenderPipelineAndAwait(
+          GPURenderPipelineDescriptor(
+            vertex = GPUVertexState(module = shaderModule), fragment = GPUFragmentState(
+              module = shaderModule,
+              targets = arrayOf(GPUColorTargetState(format = TextureFormat.RGBA8Unorm))
+            )
+          )
+        )
+
+        /* Create render pipeline (async) should pass with a simple shader.. */
+      }
+    }
+  }
+
+  private fun baseCancellationTest(doCancel: Boolean): Boolean {
+    val hasReturned = AtomicBoolean(false)
+
+    runBlocking {
+      webGpu.execute {
+        val shaderModule = device.createShaderModule(
+          GPUShaderModuleDescriptor(shaderSourceWGSL = GPUShaderSourceWGSL(BASIC_SHADER))
+        )
+
+        /* Launch the function in a new coroutine, giving us a job handle we can cancel. */
+        val job = launch {
+          var unused = device.createRenderPipelineAndAwait(
+            GPURenderPipelineDescriptor(
+              vertex = GPUVertexState(module = shaderModule),
+              fragment = GPUFragmentState(
+                module = shaderModule,
+                targets = arrayOf(GPUColorTargetState(format = TextureFormat.RGBA8Unorm))
+              )
+            )
+          )
+          hasReturned.set(true)
+        }
+        assumeFalse("The job completed before we could test it", hasReturned.get())
+
+        if (doCancel) {
+          job.cancel()
+        }
+        job.join()
+      }
+    }
+    return hasReturned.get()
+  }
+
+  /**
+   * Test that the async-based job will complete if it's not cancelled.
+   */
+  @Test
+  fun asyncMethodCancellationTestControl() {
+    assertEquals(
+      "The async job should have completed but it failed to do so.",
+      true,
+      baseCancellationTest(false)
+    )
+  }
+
+  /**
+   * Test that the async-based job will not complete if it is cancelled.
+   */
+  @Test
+  fun asyncMethodCancellationTest() {
+    assertEquals(
+      "The async job should have been cancelled but it completed.",
+      false,
+      baseCancellationTest(true)
+    )
+  }
 }

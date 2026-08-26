@@ -150,9 +150,6 @@ const core::type::Type* DedupType(const core::type::Type* ty, core::type::Manage
             if (s->IsComparison()) {
                 return types.Get<core::type::Sampler>(core::type::SamplerKind::kSampler);
             }
-            if (s->Filtering() != core::SamplerFiltering::kUndefined) {
-                return types.Get<core::type::Sampler>(core::type::SamplerKind::kSampler);
-            }
             return s;
         },
 
@@ -183,6 +180,12 @@ const core::type::Type* DedupType(const core::type::Type* ty, core::type::Manage
 
         [&](Default) { return ty; });
 }
+
+// The list of properties that are not supported.
+const core::ir::Properties kUnsupportedProperties{
+    core::ir::Property::kAllowMultipleEntryPoints,
+    core::ir::Property::kAllowOverrides,
+};
 
 /// PIMPL class for SPIR-V writer
 class Printer {
@@ -297,7 +300,8 @@ class Printer {
 
     /// Builds the SPIR-V from the IR
     Result<SuccessType> Generate() {
-        AssertValid(ir_, kPrinterCapabilities, "before spirv.Printer");
+        AssertValid(ir_, "before spirv.Printer");
+        AssertNoUnsupportedProperties(ir_, kUnsupportedProperties);
 
         module_.PushCapability(SpvCapabilityShader);
 
@@ -323,11 +327,16 @@ class Printer {
 
         // Emit RelaxedPrecision decorations.
         auto relaxed_precision_decorations = analysis::GetRelaxedPrecisionDecorations(ir_);
+        Hashset<uint32_t, 32> decorated_ids;
         for (const auto& deco : relaxed_precision_decorations) {
-            module_.PushAnnot(spv::Op::OpDecorate, {
-                                                       Value(deco),
-                                                       U32Operand(SpvDecorationRelaxedPrecision),
-                                                   });
+            uint32_t id = Value(deco);
+            if (decorated_ids.Add(id)) {
+                module_.PushAnnot(spv::Op::OpDecorate,
+                                  {
+                                      id,
+                                      U32Operand(SpvDecorationRelaxedPrecision),
+                                  });
+            }
         }
 
         return Success;
@@ -551,6 +560,14 @@ class Printer {
                     module_.PushCapability(SpvCapabilityInt8);
                     module_.PushType(spv::Op::OpTypeInt, {id, 8u, 0u});
                 },
+                [&](const core::type::U16*) {
+                    module_.PushCapability(SpvCapabilityInt16);
+                    module_.PushCapability(SpvCapabilityStorageBuffer16BitAccess);
+                    if (options_.extensions.use_uniform_buffers) {
+                        module_.PushCapability(SpvCapabilityUniformAndStorageBuffer16BitAccess);
+                    }
+                    module_.PushType(spv::Op::OpTypeInt, {id, 16u, 0u});
+                },
                 [&](const core::type::F32*) { module_.PushType(spv::Op::OpTypeFloat, {id, 32u}); },
                 [&](const core::type::F16*) {
                     module_.PushCapability(SpvCapabilityFloat16);
@@ -681,6 +698,17 @@ class Printer {
             [&](const core::ir::Value*) {
                 return values_.GetOrAdd(value, [&] { return module_.NextId(); });
             });
+    }
+
+    /// Maps a value to its folded counterpart. If the value's result ID was already
+    /// pre-allocated, emits an OpCopyObject to copy the folded ID into the pre-allocated ID.
+    /// @param from the original value being folded
+    /// @param to the ID it folds to
+    void FoldTo(const core::ir::Value* from, uint32_t to) {
+        auto res = values_.Add(from, to);
+        if (!res.added) {
+            current_function_.PushInst(spv::Op::OpCopyObject, {Type(from->Type()), res.value, to});
+        }
     }
 
     /// Get the ID of the label for `block`.
@@ -855,6 +883,19 @@ class Printer {
             }
             case core::ir::Function::PipelineStage::kUndefined:
                 TINT_IR_ICE(ir_) << "undefined pipeline stage for entry point";
+        }
+
+        if (options_.extensions.use_maximal_reconvergence) {
+            module_.PushExtension("SPV_KHR_maximal_reconvergence");
+            module_.PushExecutionMode(spv::Op::OpExecutionMode,
+                                      {id, U32Operand(SpvExecutionModeMaximallyReconvergesKHR)});
+        } else if (options_.extensions.use_subgroup_uniform_control_flow &&
+                   (func->Stage() == core::ir::Function::PipelineStage::kCompute ||
+                    func->Stage() == core::ir::Function::PipelineStage::kFragment)) {
+            module_.PushExtension("SPV_KHR_subgroup_uniform_control_flow");
+            module_.PushExecutionMode(
+                spv::Op::OpExecutionMode,
+                {id, U32Operand(SpvExecutionModeSubgroupUniformControlFlowKHR)});
         }
 
         // Use the remapped entry point name if requested, otherwise use the original name.
@@ -1411,7 +1452,7 @@ class Printer {
     void EmitBitcast(core::ir::CoreBuiltinCall* bitcast) {
         auto* ty = bitcast->Result()->Type();
         if (ty == bitcast->Args()[0]->Type()) {
-            values_.Add(bitcast->Result(), Value(bitcast->Args()[0]));
+            FoldTo(bitcast->Result(), Value(bitcast->Args()[0]));
             return;
         }
         current_function_.PushInst(spv::Op::OpBitcast,
@@ -1551,6 +1592,13 @@ class Printer {
                 break;
             case spirv::BuiltinFn::kImageWrite:
                 op = spv::Op::OpImageWrite;
+                break;
+            case spirv::BuiltinFn::kInterpolateAtOffset:
+                // InterpolateAtOffset requires the InterpolationFunction capability.
+                // In Dawn this is only used for the pixel center polyfill which is only
+                // enabled if SampleRateShading is available.
+                module_.PushCapability(SpvCapabilityInterpolationFunction);
+                ext_inst(GLSLstd450InterpolateAtOffset);
                 break;
             case spirv::BuiltinFn::kMatrixTimesMatrix:
                 op = spv::Op::OpMatrixTimesMatrix;
@@ -1783,6 +1831,9 @@ class Printer {
             case BuiltinFn::kSConvert:
                 op = spv::Op::OpSConvert;
                 break;
+            case BuiltinFn::kAddCarry:
+                op = spv::Op::OpIAddCarry;
+                break;
             case spirv::BuiltinFn::kNone:
                 TINT_IR_ICE(ir_) << "undefined spirv ir function";
         }
@@ -1820,14 +1871,14 @@ class Printer {
         if (builtin->Func() == core::BuiltinFn::kAbs &&
             result_ty->IsUnsignedIntegerScalarOrVector()) {
             // abs() is a no-op for unsigned integers.
-            values_.Add(builtin->Result(), Value(builtin->Args()[0]));
+            FoldTo(builtin->Result(), Value(builtin->Args()[0]));
             return;
         }
         if ((builtin->Func() == core::BuiltinFn::kAll ||
              builtin->Func() == core::BuiltinFn::kAny) &&
             builtin->Args()[0]->Type()->Is<core::type::Bool>()) {
             // all() and any() are passthroughs for scalar arguments.
-            values_.Add(builtin->Result(), Value(builtin->Args()[0]));
+            FoldTo(builtin->Result(), Value(builtin->Args()[0]));
             return;
         }
 
@@ -2342,14 +2393,14 @@ class Printer {
         // If there is just a single argument with the same type as the result, this is an identity
         // constructor and we can just pass through the ID of the argument.
         if (construct->Args().size() == 1 && result_ty == construct->Args()[0]->Type()) {
-            values_.Add(construct->Result(), Value(construct->Args()[0]));
+            FoldTo(construct->Result(), Value(construct->Args()[0]));
             return;
         }
 
         // A zero-value constructor may be used for subgroup matrices or when IR is created from a
         // flow that is not the WGSL frontend, so special-case them into OpConstantNull here.
         if (construct->Operands().IsEmpty()) {
-            values_.Add(construct->Result(), ConstantNull(result_ty));
+            FoldTo(construct->Result(), ConstantNull(result_ty));
             return;
         }
 
@@ -2441,26 +2492,47 @@ class Printer {
         current_function_.PushInst(op, std::move(operands));
     }
 
-    SpvMemoryAccessMask MemoryAccessMaskForPointer(const core::type::Pointer* ptr) {
+    bool ExplicitLayoutStorageClass(core::AddressSpace aspace) {
+        switch (aspace) {
+            case core::AddressSpace::kStorage:
+            case core::AddressSpace::kUniform:
+            case core::AddressSpace::kImmediate:
+                return true;
+            default:
+                break;
+        }
+        return false;
+    }
+
+    uint32_t MemoryAccessMaskForPointer(const core::type::Pointer* ptr,
+                                        std::optional<uint32_t> alignment) {
         TINT_IR_ASSERT(ir_, ptr);
 
+        uint32_t mask = static_cast<uint32_t>(SpvMemoryAccessMaskNone);
         if (options_.extensions.use_vulkan_memory_model &&
             (ptr->AddressSpace() == core::AddressSpace::kStorage ||
              ptr->AddressSpace() == core::AddressSpace::kWorkgroup) &&
             ptr->Access() == core::Access::kReadWrite) {
-            return SpvMemoryAccessNonPrivatePointerMask;
+            mask |= static_cast<uint32_t>(SpvMemoryAccessNonPrivatePointerMask);
+        }
+        if (ExplicitLayoutStorageClass(ptr->AddressSpace()) && alignment.has_value()) {
+            mask |= static_cast<uint32_t>(SpvMemoryAccessAlignedMask);
         }
 
-        return SpvMemoryAccessMaskNone;
+        return mask;
     }
 
     /// Emit a load instruction.
     /// @param load the load instruction to emit
     void EmitLoad(core::ir::Load* load) {
-        current_function_.PushInst(spv::Op::OpLoad,
-                                   {Type(load->Result()->Type()), Value(load), Value(load->From()),
-                                    U32Operand(MemoryAccessMaskForPointer(
-                                        load->From()->Type()->As<core::type::Pointer>()))});
+        auto* ptr_ty = load->From()->Type()->As<core::type::Pointer>();
+        auto memory_mask = MemoryAccessMaskForPointer(ptr_ty, load->Alignment());
+        OperandList operands = {Type(load->Result()->Type()), Value(load), Value(load->From()),
+                                U32Operand(memory_mask)};
+        if (ExplicitLayoutStorageClass(ptr_ty->AddressSpace()) && load->Alignment().has_value()) {
+            operands.push_back(U32Operand(load->Alignment().value()));
+        }
+        current_function_.PushInst(spv::Op::OpLoad, operands);
     }
 
     /// Emit a load vector element instruction.
@@ -2473,9 +2545,14 @@ class Printer {
         current_function_.PushInst(spv::Op::OpAccessChain,
                                    {Type(el_ptr_ty), el_ptr_id, Value(load->From()),
                                     GetAccessChainIndexId(load->Index())});
-        current_function_.PushInst(spv::Op::OpLoad,
-                                   {Type(load->Result()->Type()), Value(load), el_ptr_id,
-                                    U32Operand(MemoryAccessMaskForPointer(vec_ptr_ty))});
+        auto memory_mask = MemoryAccessMaskForPointer(vec_ptr_ty, load->Alignment());
+        OperandList operands = {Type(load->Result()->Type()), Value(load), el_ptr_id,
+                                U32Operand(memory_mask)};
+        if (ExplicitLayoutStorageClass(vec_ptr_ty->AddressSpace()) &&
+            load->Alignment().has_value()) {
+            operands.push_back(U32Operand(load->Alignment().value()));
+        }
+        current_function_.PushInst(spv::Op::OpLoad, operands);
     }
 
     /// Emit a loop instruction.
@@ -2597,10 +2674,13 @@ class Printer {
     /// Emit a store instruction.
     /// @param store the store instruction to emit
     void EmitStore(core::ir::Store* store) {
-        current_function_.PushInst(spv::Op::OpStore,
-                                   {Value(store->To()), Value(store->From()),
-                                    U32Operand(MemoryAccessMaskForPointer(
-                                        store->To()->Type()->As<core::type::Pointer>()))});
+        auto* ptr_ty = store->To()->Type()->As<core::type::Pointer>();
+        auto memory_mask = MemoryAccessMaskForPointer(ptr_ty, store->Alignment());
+        OperandList operands = {Value(store->To()), Value(store->From()), U32Operand(memory_mask)};
+        if (ExplicitLayoutStorageClass(ptr_ty->AddressSpace()) && store->Alignment().has_value()) {
+            operands.push_back(U32Operand(store->Alignment().value()));
+        }
+        current_function_.PushInst(spv::Op::OpStore, operands);
     }
 
     /// Emit a store vector element instruction.
@@ -2613,9 +2693,13 @@ class Printer {
         current_function_.PushInst(spv::Op::OpAccessChain,
                                    {Type(el_ptr_ty), el_ptr_id, Value(store->To()),
                                     GetAccessChainIndexId(store->Index())});
-        current_function_.PushInst(
-            spv::Op::OpStore,
-            {el_ptr_id, Value(store->Value()), U32Operand(MemoryAccessMaskForPointer(vec_ptr_ty))});
+        auto memory_mask = MemoryAccessMaskForPointer(vec_ptr_ty, store->Alignment());
+        OperandList operands = {el_ptr_id, Value(store->Value()), U32Operand(memory_mask)};
+        if (ExplicitLayoutStorageClass(vec_ptr_ty->AddressSpace()) &&
+            store->Alignment().has_value()) {
+            operands.push_back(U32Operand(store->Alignment().value()));
+        }
+        current_function_.PushInst(spv::Op::OpStore, operands);
     }
 
     /// Emit a unary instruction.
@@ -2843,7 +2927,7 @@ class Printer {
     /// @param let the let instruction to emit
     void EmitLet(core::ir::Let* let) {
         auto id = Value(let->Value());
-        values_.Add(let->Result(), id);
+        FoldTo(let->Result(), id);
     }
 
     /// Emit the OpPhis for the given flow control instruction.

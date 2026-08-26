@@ -28,21 +28,18 @@
 #include "src/tint/lang/core/ir/transform/resource_table_helper.h"
 
 #include <algorithm>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "src/tint/lang/core/ir/core_builtin_call.h"
+#include "src/tint/lang/core/ir/var.h"
 #include "src/tint/lang/core/type/resource_type.h"
 
 namespace tint::core::ir::transform {
 
-std::optional<ResourceTableConfig> GenerateResourceTableConfig(Module& mod) {
-    ResourceTableConfig cfg{
-        .resource_table_binding = BindingPoint{.group = 43, .binding = 51},
-        .storage_buffer_binding = BindingPoint{.group = 42, .binding = 52},
-        .default_binding_type_order = {},
-    };
-
+std::optional<ResourceTableConfig> GenerateResourceTableConfig(Module& mod,
+                                                               bool treat_samplers_as_filtering) {
     std::vector<ResourceType> default_binding_type_order;
 
     for (auto* inst : mod.Instructions()) {
@@ -57,19 +54,75 @@ std::optional<ResourceTableConfig> GenerateResourceTableConfig(Module& mod) {
         }
         auto exp = call->ExplicitTemplateParams();
         TINT_IR_ASSERT(mod, exp.Length() == 1);
+        TINT_IR_ASSERT(mod, std::holds_alternative<const core::type::Type*>(exp[0]));
 
-        default_binding_type_order.push_back(type::TypeToResourceType(exp[0]));
+        std::vector<ResourceType> converts =
+            ConvertsFrom(std::get<const core::type::Type*>(exp[0]));
+        // The converts from only contains values for the filterable types, for
+        // the others it returns empty so we need to add the ResourceType for
+        // that specific type.
+        if (converts.empty()) {
+            default_binding_type_order.push_back(
+                TypeToResourceType(std::get<const core::type::Type*>(exp[0])));
+        } else {
+            for (ResourceType from : converts) {
+                default_binding_type_order.push_back(from);
+            }
+        }
     }
-    // If we found any resource uses, then we can just return an empty config.
+    // If we didn't find any resource uses, then we can just return an empty config.
     if (default_binding_type_order.empty()) {
         return {};
     }
 
+    std::unordered_map<BindingPoint, ResourceType> binding_to_resource_type;
+    for (auto* inst : *(mod.root_block)) {
+        auto* var = inst->As<core::ir::Var>();
+        if (!var) {
+            continue;
+        }
+
+        const type::Type* ty = var->Result()->Type()->UnwrapPtr();
+        if (!ty->Is<type::Sampler>() && !ty->Is<type::Texture>()) {
+            continue;
+        }
+
+        BindingPoint bp = var->BindingPoint().value();
+
+        if (ty->Is<type::Sampler>() && !ty->As<type::Sampler>()->IsComparison() &&
+            treat_samplers_as_filtering) {
+            // Push both them to defaults because we need to fall back to the non-filtering version
+            default_binding_type_order.push_back(ResourceType::kSampler_filtering);
+            default_binding_type_order.push_back(ResourceType::kSampler_non_filtering);
+
+            binding_to_resource_type.emplace(bp, ResourceType::kSampler_filtering);
+            continue;
+        }
+
+        binding_to_resource_type.emplace(bp, DefaultResourceTypeFor(ty));
+
+        std::vector<ResourceType> converts = ConvertsFrom(ty);
+        // The converts from only contains values for the filterable types, for
+        // the others it returns empty so we need to add the ResourceType for
+        // that specific type.
+        if (converts.empty()) {
+            default_binding_type_order.push_back(TypeToResourceType(ty));
+        } else {
+            for (ResourceType from : converts) {
+                default_binding_type_order.push_back(from);
+            }
+        }
+    }
+
     // Sort so we get stable generated results
     std::sort(default_binding_type_order.begin(), default_binding_type_order.end());
-    cfg.default_binding_type_order = std::move(default_binding_type_order);
 
-    return cfg;
+    return ResourceTableConfig{
+        .resource_table_binding = BindingPoint{.group = 43, .binding = 51},
+        .storage_buffer_binding = BindingPoint{.group = 42, .binding = 52},
+        .default_binding_type_order = std::move(default_binding_type_order),
+        .binding_to_resource_type = std::move(binding_to_resource_type),
+    };
 }
 
 }  // namespace tint::core::ir::transform

@@ -22,5 +22,5 @@ import kotlin.annotation.Target
 @Target(AnnotationTarget.FUNCTION)
 annotation class ApiRequirement(
   val minApi: Int,
-  val onlySkipOnEmulator: Boolean = false
+  val onlySkipOnEmulator: Boolean = false,
 )

@@ -25,16 +25,16 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/SamplerVk.h"
+#include "src/dawn/native/vulkan/SamplerVk.h"
 
 #include <algorithm>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/vulkan/DeviceVk.h"
-#include "dawn/native/vulkan/FencedDeleter.h"
-#include "dawn/native/vulkan/TextureVk.h"
-#include "dawn/native/vulkan/UtilsVulkan.h"
-#include "dawn/native/vulkan/VulkanError.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/vulkan/DeviceVk.h"
+#include "src/dawn/native/vulkan/FencedDeleter.h"
+#include "src/dawn/native/vulkan/TextureVk.h"
+#include "src/dawn/native/vulkan/UtilsVulkan.h"
+#include "src/dawn/native/vulkan/VulkanError.h"
 #include "vulkan/vulkan_core.h"
 
 namespace dawn::native::vulkan {
@@ -144,6 +144,13 @@ MaybeError Sampler::Initialize(const SamplerDescriptor* descriptor) {
         samplerYCbCrInfo.conversion = mSamplerYCbCrConversion;
 
         createInfo.pNext = &samplerYCbCrInfo;
+
+        // VUID-VkSamplerCreateInfo-addressModeU-01646 requires CLAMP_TO_EDGE on every axis and
+        // anisotropy disabled when VkSamplerYcbcrConversionInfo is provided.
+        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.anisotropyEnable = VK_FALSE;
     }
 
     DAWN_TRY(CheckVkSuccess(
@@ -211,7 +218,7 @@ StaticSamplerSpecialization StaticSamplerSpecialization::From(const TextureView*
 // static
 YCbCrVkDescriptor StaticSamplerSpecialization::GetYCbCrForTextureView(
     VkFormat vkFormat,
-    uint32_t androidExternalFormat) {
+    uint64_t androidExternalFormat) {
     YCbCrVkDescriptor yCbCrDesc;
     yCbCrDesc.vkFormat = vkFormat;
     yCbCrDesc.externalFormat = androidExternalFormat;

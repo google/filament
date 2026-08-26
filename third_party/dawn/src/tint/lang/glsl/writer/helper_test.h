@@ -54,22 +54,29 @@ class GlslWriterTestHelperBase : public BASE {
     Version version{};
 
   protected:
+    void SetUp() override { mod.properties.Add(core::ir::Property::kAllow16BitFloats); }
     /// Generated GLSL
     Output output_;
 
     /// Run the writer on the IR module and validate the result.
     /// @param options the writer options
-    /// @param stage the validation stage
     /// @returns the success or failure
-    Result<SuccessType> Generate(
-        Options options = {},
-        core::ir::Function::PipelineStage stage = core::ir::Function::PipelineStage::kCompute) {
+    Result<SuccessType> Generate(Options options = {}) {
         mod.enable_validation_asserts = true;
 
         options.entry_point_name = "main";
         auto result = writer::Generate(mod, options);
         TINT_CHECK_RESULT(result);
         output_ = result.Get();
+
+        core::ir::Function::PipelineStage stage = core::ir::Function::PipelineStage::kUndefined;
+        for (auto* func : mod.functions) {
+            if (func->IsEntryPoint()) {
+                stage = func->Stage();
+                break;
+            }
+        }
+        TINT_ASSERT(stage != core::ir::Function::PipelineStage::kUndefined);
 
         auto validate_res = glsl::validate::Validate(output_.glsl, stage);
         if (validate_res != Success) {

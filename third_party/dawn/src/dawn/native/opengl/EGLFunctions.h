@@ -28,13 +28,13 @@
 #ifndef SRC_DAWN_NATIVE_OPENGL_EGLFUNCTIONS_H_
 #define SRC_DAWN_NATIVE_OPENGL_EGLFUNCTIONS_H_
 
-#include "dawn/common/egl_platform.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/Error.h"
+#include "src/dawn/common/egl_platform.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/Error.h"
 
 namespace dawn::native::opengl {
 
-enum class EGLExt {
+enum class EGLExt : uint32_t {
     // Promoted to EGL 1.5
     ClientExtensions,
     PlatformBase,
@@ -69,6 +69,7 @@ enum class EGLExt {
     ANGLECreateContextBackwardsCompatible,  // EGL_ANGLE_create_context_backwards_compatible
     ANGLECreateContextExtensionsEnabled,    // EGL_ANGLE_create_context_extensions_enabled
     ANGLEContextVirtualization,             // EGL_ANGLE_context_virtualization
+    ANGLECreateContextWebGLCompatibility,   // EGL_ANGLE_create_context_webgl_compatibility
 
     EnumCount,
 };

@@ -58,7 +58,8 @@
                     "computeFullSubgroups": true,
                     "shaderDemoteToHelperInvocation": true,
                     "inlineUniformBlock": true,
-                    "dynamicRendering": true
+                    "dynamicRendering": true,
+                    "privateData": true
                 }
             },
             "properties": {
@@ -125,6 +126,124 @@
                 }
             }
         },
+        "vulkan14requirements": {
+            "features": {
+                "VkPhysicalDeviceFeatures": {
+                    "fullDrawIndexUint32": true,
+                    "imageCubeArray": true,
+                    "independentBlend": true,
+                    "sampleRateShading": true,
+                    "drawIndirectFirstInstance": true,
+                    "depthClamp": true,
+                    "depthBiasClamp": true,
+                    "samplerAnisotropy": true,
+                    "fragmentStoresAndAtomics": true,
+                    "shaderStorageImageExtendedFormats": true,
+                    "shaderUniformBufferArrayDynamicIndexing": true,
+                    "shaderSampledImageArrayDynamicIndexing": true,
+                    "shaderStorageBufferArrayDynamicIndexing": true,
+                    "shaderStorageImageArrayDynamicIndexing": true,
+                    "shaderImageGatherExtended": true,
+                    "shaderInt16": true,
+                    "largePoints": true
+                },
+                "VkPhysicalDeviceVulkan11Features": {
+                    "storageBuffer16BitAccess": true,
+                    "variablePointersStorageBuffer": true,
+                    "variablePointers": true,
+                    "samplerYcbcrConversion": true
+                },
+                "VkPhysicalDeviceVulkan12Features": {
+                    "samplerMirrorClampToEdge": true,
+                    "storageBuffer8BitAccess": true,
+                    "scalarBlockLayout": true,
+                    "shaderInt8": true,
+                    "shaderUniformTexelBufferArrayDynamicIndexing": true,
+                    "shaderStorageTexelBufferArrayDynamicIndexing": true
+                },
+                "VkPhysicalDeviceVulkan14Features": {
+                    "globalPriorityQuery": true,
+                    "shaderSubgroupRotate": true,
+                    "shaderSubgroupRotateClustered": true,
+                    "shaderFloatControls2": true,
+                    "shaderExpectAssume": true,
+                    "bresenhamLines": true,
+                    "vertexAttributeInstanceRateDivisor": true,
+                    "indexTypeUint8": true,
+                    "dynamicRenderingLocalRead": true,
+                    "maintenance5": true,
+                    "maintenance6": true,
+                    "pushDescriptor": true,
+                    "pipelineRobustness": true
+                }
+            },
+            "properties": {
+                "VkPhysicalDeviceProperties": {
+                    "limits": {
+                        "maxImageDimension1D": 8192,
+                        "maxImageDimension2D": 8192,
+                        "maxImageDimension3D": 512,
+                        "maxImageDimensionCube": 8192,
+                        "maxImageArrayLayers": 2048,
+                        "maxUniformBufferRange": 65536,
+                        "maxPushConstantsSize": 256,
+                        "bufferImageGranularity": 4096,
+                        "maxBoundDescriptorSets": 7,
+                        "maxPerStageDescriptorUniformBuffers": 15,
+                        "maxPerStageResources": 200,
+                        "maxDescriptorSetUniformBuffers": 90,
+                        "maxDescriptorSetStorageBuffers": 96,
+                        "maxDescriptorSetStorageImages": 144,
+                        "maxFragmentCombinedOutputResources": 16,
+                        "maxComputeWorkGroupInvocations": 256,
+                        "maxComputeWorkGroupSize": [
+                            256,
+                            256,
+                            64
+                        ],
+                        "subTexelPrecisionBits": 8,
+                        "mipmapPrecisionBits": 6,
+                        "maxSamplerLodBias": 14,
+                        "maxViewportDimensions": [
+                            7680,
+                            7680
+                        ],
+                        "viewportBoundsRange": [
+                            -15360,
+                            15359
+                        ],
+                        "maxFramebufferWidth": 7680,
+                        "maxFramebufferHeight": 7680,
+                        "maxColorAttachments": 8,
+                        "timestampComputeAndGraphics": true,
+                        "pointSizeRange": [
+                            1.0,
+                            256.0
+                        ],
+                        "pointSizeGranularity": 0.125,
+                        "lineWidthGranularity": 0.5,
+                        "standardSampleLocations": true
+                    }
+                },
+                "VkPhysicalDeviceVulkan11Properties": {
+                    "subgroupSupportedOperations": [ "VK_SUBGROUP_FEATURE_BASIC_BIT", "VK_SUBGROUP_FEATURE_CLUSTERED_BIT", "VK_SUBGROUP_FEATURE_ROTATE_CLUSTERED_BIT" ]
+                },                
+                "VkPhysicalDeviceVulkan12Properties": {
+                    "shaderSignedZeroInfNanPreserveFloat16": true,
+                    "shaderSignedZeroInfNanPreserveFloat32": true
+                },
+                "VkPhysicalDeviceVulkan14Properties": {
+                    "maxPushDescriptors": 32
+                }
+            }
+        },
+        "vulkan14dependent": {
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "pipelineProtectedAccess": true
+                }
+            }
+        },
         "vulkan10optionals_roadmap2022": {
             "features": {
                 "VkPhysicalDeviceFeatures": {
@@ -158,7 +277,6 @@
         "vulkan12requirements_roadmap2022": {
             "features": {
                 "VkPhysicalDeviceVulkan12Features": {
-                    "samplerMirrorClampToEdge": true,
                     "descriptorIndexing": true,
                     "shaderUniformTexelBufferArrayDynamicIndexing": true,
                     "shaderStorageTexelBufferArrayDynamicIndexing": true,
@@ -203,12 +321,19 @@
             }
         },
         "vulkan13requirements_roadmap2022": {
+            "features": {
+                "VkPhysicalDeviceVulkan13Features": {
+                    "descriptorBindingInlineUniformBlockUpdateAfterBind": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2022_promoted_vulkan14": {
             "extensions": {
                 "VK_KHR_global_priority": 1
             },
             "features": {
-                "VkPhysicalDeviceVulkan13Features": {
-                    "descriptorBindingInlineUniformBlockUpdateAfterBind": true
+                "VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR": {
+                    "globalPriorityQuery": true
                 }
             }
         },
@@ -273,7 +398,7 @@
                 }
             }
         },
-        "vulkanextensionrequirements_roadmap2024_only": {
+        "vulkanextensionrequirements_roadmap2024_promoted_vulkan14": {
             "extensions": {
                 "VK_KHR_dynamic_rendering": 1,
                 "VK_KHR_shader_subgroup_rotate": 1,
@@ -296,14 +421,6 @@
                 "VkPhysicalDeviceShaderExpectAssumeFeaturesKHR": {
                     "shaderExpectAssume": true
                 },
-                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
-                    "rectangularLines": true,
-                    "bresenhamLines": true,
-                    "smoothLines": true,
-                    "stippledRectangularLines": true,
-                    "stippledBresenhamLines": true,
-                    "stippledSmoothLines": true
-                },
                 "VkPhysicalDeviceVertexAttributeDivisorFeaturesKHR": {
                     "vertexAttributeInstanceRateDivisor": true
                 },
@@ -315,6 +432,66 @@
                 },
                 "VkPhysicalDeviceMaintenance5FeaturesKHR": {
                     "maintenance5": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line0": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "rectangularLines": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line1": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "bresenhamLines": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line2": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "smoothLines": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line3": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "stippledRectangularLines": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line4": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "stippledBresenhamLines": true
+                }
+            }
+        },
+        "vulkanextensionrequirements_roadmap2024_line5": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceLineRasterizationFeaturesKHR": {
+                    "stippledSmoothLines": true
                 }
             }
         },
@@ -349,15 +526,10 @@
         "vulkan14requirements_roadmap2026": {
             "features": {
                 "VkPhysicalDeviceVulkan14Features": {
+                    "globalPriorityQuery": true,
                     "shaderSubgroupRotate": true,
                     "shaderExpectAssume": true,
                     "shaderFloatControls2": true,
-                    "rectangularLines": true,
-                    "bresenhamLines": true,
-                    "smoothLines": true,
-                    "stippledRectangularLines": true,
-                    "stippledBresenhamLines": true,
-                    "stippledSmoothLines": true,
                     "vertexAttributeInstanceRateDivisor": true,
                     "indexTypeUint8": true,
                     "dynamicRenderingLocalRead": true,
@@ -367,13 +539,72 @@
                 }
             }
         },
+        "vulkan14requirements_roadmap2026_line0": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "rectangularLines": true
+                }
+            }
+        },
+        "vulkan14requirements_roadmap2026_line1": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "bresenhamLines": true
+                }
+            }
+        },
+        "vulkan14requirements_roadmap2026_line2": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "smoothLines": true
+                }
+            }
+        },
+        "vulkan14requirements_roadmap2026_line3": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "stippledRectangularLines": true
+                }
+            }
+        },
+        "vulkan14requirements_roadmap2026_line4": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "stippledBresenhamLines": true
+                }
+            }
+        },
+        "vulkan14requirements_roadmap2026_line5": {
+            "extensions": {
+                "VK_KHR_line_rasterization": 1
+            },
+            "features": {
+                "VkPhysicalDeviceVulkan14Features": {
+                    "stippledSmoothLines": true
+                }
+            }
+        },
         "vulkanextensionrequirements_roadmap2026": {
             "extensions": {
                 "VK_KHR_dynamic_rendering": 1,
                 "VK_KHR_shader_subgroup_rotate": 1,
                 "VK_KHR_shader_float_controls2": 1,
                 "VK_KHR_shader_expect_assume": 1,
-                "VK_KHR_line_rasterization": 1,
                 "VK_KHR_vertex_attribute_divisor": 1,
                 "VK_KHR_index_type_uint8": 1,
                 "VK_KHR_maintenance5": 1,
@@ -455,30 +686,56 @@
                 "VkPhysicalDeviceCooperativeMatrixFeaturesKHR": {
                     "cooperativeMatrix": true
                 }
+            },
+            "properties": {
+                "VkPhysicalDeviceMaintenance7PropertiesKHR": {
+                    "maxDescriptorSetTotalUniformBuffersDynamic": 8,
+                    "maxDescriptorSetTotalStorageBuffersDynamic": 4,
+                    "maxDescriptorSetTotalBuffersDynamic": 12,
+                    "maxDescriptorSetUpdateAfterBindTotalUniformBuffersDynamic": 8,
+                    "maxDescriptorSetUpdateAfterBindTotalStorageBuffersDynamic": 4,
+                    "maxDescriptorSetUpdateAfterBindTotalBuffersDynamic": 12
+                }
             }
         }
     },
     "profiles": {
         "VP_KHR_roadmap_2026": {
-            "version": 1,
+            "version": 2,
             "api-version": "1.4.328",
             "label": "Khronos Vulkan Roadmap 2026 profile",
             "description": "This roadmap profile is intended to be supported by newer devices shipping in 2026 across mainstream smartphone, tablet, laptops, console and desktop devices.",
-            "profiles": [
-                "VP_KHR_roadmap_2022"
-            ],
             "capabilities": [
+                "vulkan10requirements",
+                "vulkan11requirements",
+                "vulkan12requirements",
+                "vulkan13requirements",
+                "vulkan10requirements_roadmap2022",
+                "vulkan11requirements_roadmap2022",
+                "vulkan12requirements_roadmap2022",
+                "vulkan13requirements_roadmap2022",
                 "vulkan10requirements_roadmap2024",
                 "vulkan11requirements_roadmap2024",
                 "vulkan12requirements_roadmap2024",
                 "vulkanextensionrequirements_roadmap2024",
                 "vulkan10requirements_roadmap2026",
                 "vulkan14requirements_roadmap2026",
+                [
+                    "vulkan14requirements_roadmap2026_line0",
+                    "vulkan14requirements_roadmap2026_line1",
+                    "vulkan14requirements_roadmap2026_line2",
+                    "vulkan14requirements_roadmap2026_line3",
+                    "vulkan14requirements_roadmap2026_line4",
+                    "vulkan14requirements_roadmap2026_line5"
+                ],
                 "vulkanextensionrequirements_roadmap2026"
+            ],
+            "optionals": [
+                "vulkan14dependent"
             ]
         },
         "VP_KHR_roadmap_2024": {
-            "version": 1,
+            "version": 2,
             "api-version": "1.3.276",
             "label": "Khronos Vulkan Roadmap 2024 profile",
             "description": "This roadmap profile is intended to be supported by newer devices shipping in 2024 across mainstream smartphone, tablet, laptops, console and desktop devices.",
@@ -490,23 +747,32 @@
                 "vulkan11requirements_roadmap2024",
                 "vulkan12requirements_roadmap2024",
                 "vulkanextensionrequirements_roadmap2024",
-                "vulkanextensionrequirements_roadmap2024_only"
+                "vulkanextensionrequirements_roadmap2024_promoted_vulkan14",
+                [
+                    "vulkanextensionrequirements_roadmap2024_line0",
+                    "vulkanextensionrequirements_roadmap2024_line1",
+                    "vulkanextensionrequirements_roadmap2024_line2",
+                    "vulkanextensionrequirements_roadmap2024_line3",
+                    "vulkanextensionrequirements_roadmap2024_line4",
+                    "vulkanextensionrequirements_roadmap2024_line5"
+                ]
             ]
         },
         "VP_KHR_roadmap_2022": {
-            "version": 1,
+            "version": 2,
             "api-version": "1.3.204",
             "label": "Khronos Vulkan Roadmap 2022 profile",
             "description": "This roadmap profile is intended to be supported by newer devices shipping in 2022 across mainstream smartphone, tablet, laptops, console and desktop devices.",
             "capabilities": [
                 "vulkan10requirements",
-                "vulkan10requirements_roadmap2022",
                 "vulkan11requirements",
-                "vulkan11requirements_roadmap2022",
                 "vulkan12requirements",
-                "vulkan12requirements_roadmap2022",
                 "vulkan13requirements",
-                "vulkan13requirements_roadmap2022"
+                "vulkan10requirements_roadmap2022",
+                "vulkan11requirements_roadmap2022",
+                "vulkan12requirements_roadmap2022",
+                "vulkan13requirements_roadmap2022",
+                "vulkanextensionrequirements_roadmap2022_promoted_vulkan14"
             ],
             "optionals": [
                 "vulkan10optionals_roadmap2022"
@@ -526,6 +792,12 @@
         }
     },
     "history": [
+        {
+            "revision": 12,
+            "date": "2026-05-21",
+            "author": "Christophe Riccio",
+            "comment": "Improve profiles file definition to better match spec definition"
+        },
         {
             "revision": 11,
             "date": "2026-01-28",

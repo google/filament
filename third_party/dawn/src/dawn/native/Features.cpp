@@ -25,13 +25,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/Features.h"
+#include "src/dawn/native/Features.h"
 
 #include <array>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/utils/assert.h"
+#include "src/utils/compiler.h"
+#include "src/utils/heap_array.h"
 
 namespace dawn::native {
 namespace {
@@ -47,7 +49,7 @@ struct FeatureEnumAndInfo {
     ManualFeatureInfo info;
 };
 
-static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
+static constexpr auto kFeatureInfo = std::to_array<FeatureEnumAndInfo>({
     {Feature::TextureCompressionBC,
      {"Support Block Compressed (BC) texture formats",
       "https://gpuweb.github.io/gpuweb/#texture-compression-bc",
@@ -171,8 +173,9 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "implicit_device_synchronization.md",
       FeatureInfo::FeatureState::Stable}},
     {Feature::TransientAttachments,
-     {"Support transient attachments that allow render pass operations to stay in tile memory, "
-      "avoiding VRAM traffic and potentially avoiding VRAM allocation for the textures.",
+     {"Presence of this feature on an Adapter is a hint indicating that the TransientAttachment "
+      "usage will be used by the backend. If it's not present, the usage is allowed, but it is a "
+      "no-op. Enabling this feature on a Device doesn't do anything.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "transient_attachments.md",
       FeatureInfo::FeatureState::Stable}},
@@ -304,6 +307,11 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "buffer_map_extended_usages.md",
       FeatureInfo::FeatureState::Experimental}},
+    {Feature::BufferMapWriteExtendedUsages,
+     {"Support creating buffers with MapWrite and any other usage except MapRead.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "buffer_map_write_extended_usages.md",
+      FeatureInfo::FeatureState::Experimental}},
     {Feature::AdapterPropertiesMemoryHeaps,
      {"Support querying memory heap info from the adapter.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
@@ -426,7 +434,7 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "adapter_properties.md",
       FeatureInfo::FeatureState::Experimental}},
-    {Feature::SharedBufferMemoryD3D12SharedMemoryFileMappingHandle,
+    {Feature::SharedBufferMemoryFromWindowsHandle,
      {"Supports importing a shared memory file mapping handle as shared buffer memory.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_buffer.md",
       FeatureInfo::FeatureState::Experimental}},
@@ -436,13 +444,13 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       FeatureInfo::FeatureState::Experimental}},
     {Feature::ChromiumExperimentalSamplingResourceTable,
      {"Experimental support for the bindless sampling resource table",
-      "https://github.com/Kangz/gpuweb/blob/bindless/proposals/bindless.md",
+      "https://github.com/gpuweb/gpuweb/blob/main/proposals/bindless.md",
       FeatureInfo::FeatureState::Experimental}},
-    {Feature::ChromiumExperimentalSubgroupSizeControl,
-     {"Support the \"enable chromium_experimental_subgroup_size_control;\" directive in WGSL.",
+    {Feature::SubgroupSizeControl,
+     {"Support the \"enable subgroup_size_control;\" directive in WGSL.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/tint/extensions/"
-      "chromium_experimental_subgroup_size_control.md",
-      FeatureInfo::FeatureState::Experimental}},
+      "subgroup_size_control.md",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::AtomicVec2uMinMax,
      {"Support the \"enable atomic_vec2u_min_max;\" directive for 64-bit atomics via vec2<u32> "
       "types",
@@ -471,15 +479,19 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "render_pass_render_area.md",
       FeatureInfo::FeatureState::Experimental}},
-    {Feature::DawnNativeSpontaneousQueueEvents,
-     {"Support spontaneous queue event completion in native. When this feature is supported and "
-      "enabled, queue events may complete spontaneously on any thread.",
-      "https://github.com/webgpu-native/webgpu-headers/blob/main/doc/articles/"
-      "Asynchronous%20Operations.md",
+    {Feature::TextureCompressionUnaligned,
+     {"Supports creating compressed texture with partial blocks in level 0",
+      // TODO(https://crbug.com/528245806): point at the WebGPU spec once landed.
+      "https://crbug.com/528245806", FeatureInfo::FeatureState::Experimental}},
+    {Feature::DawnAllowUndefinedLoadStoreOp,
+     {"Allow wgpu::LoadOp::Undefined and wgpu::StoreOp::Undefined to be used for render pass "
+      "attachments.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "dawn_allow_undefined_load_store_op.md",
       FeatureInfo::FeatureState::Stable}},
 
     // Comment to separate the } so it is clearer what to copy-paste to add a feature.
-};
+});
 
 }  // anonymous namespace
 
@@ -489,7 +501,7 @@ void FeaturesSet::EnableFeature(Feature feature) {
 }
 
 void FeaturesSet::EnableFeature(wgpu::FeatureName feature) {
-    EnableFeature(FromAPI(feature));
+    EnableFeature(FromCppAPI(feature));
 }
 
 bool FeaturesSet::IsEnabled(Feature feature) const {
@@ -498,7 +510,7 @@ bool FeaturesSet::IsEnabled(Feature feature) const {
 }
 
 bool FeaturesSet::IsEnabled(wgpu::FeatureName feature) const {
-    Feature f = FromAPI(feature);
+    Feature f = FromCppAPI(feature);
     return f != Feature::InvalidEnum && IsEnabled(f);
 }
 
@@ -508,21 +520,21 @@ void FeaturesSet::ToSupportedFeatures(SupportedFeatures* supportedFeatures) cons
     }
 
     const size_t count = featuresBitSet.count();
-    supportedFeatures->featureCount = count;
-    supportedFeatures->features = nullptr;
 
     if (count == 0) {
+        supportedFeatures->features = {};
         return;
     }
 
     // This will be freed by wgpuSupportedFeaturesFreeMembers.
-    wgpu::FeatureName* features = new wgpu::FeatureName[count];
+    auto features = HeapArray<wgpu::FeatureName>(count);
     uint32_t index = 0;
     for (Feature f : featuresBitSet) {
-        features[index++] = ToAPI(f);
+        features[index++] = ToCppAPI(f);
     }
     DAWN_ASSERT(index == count);
-    supportedFeatures->features = features;
+
+    supportedFeatures->features = std::move(features).MoveToSpan();
 }
 
 }  // namespace dawn::native

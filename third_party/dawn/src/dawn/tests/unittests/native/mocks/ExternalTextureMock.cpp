@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/unittests/native/mocks/ExternalTextureMock.h"
+#include "src/dawn/tests/unittests/native/mocks/ExternalTextureMock.h"
 
 namespace dawn::native {
 

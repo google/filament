@@ -42,6 +42,12 @@
     "module_scheme": "single",
     "script": "//scripts/run_tint_fuzzer_corpus_tests.py",
   },
+  "litert_lm_advanced_main": {
+    "label": "//third_party/litert-lm:litert_lm_advanced_main",
+    "type": "script",
+    "module_scheme": "single",
+    "script": "//scripts/run_litert_lm_benchmark.py",
+  },
   "tint_unittests": {
     "label": "//src/tint/cmd/test:tint_unittests",
     "type": "windowed_test_launcher",

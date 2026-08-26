@@ -30,7 +30,10 @@
 #include <utility>
 
 #include "src/tint/lang/core/ir/builder.h"
+#include "src/tint/lang/core/ir/clone_context.h"
 #include "src/tint/lang/core/ir/module.h"
+#include "src/tint/lang/core/ir/traverse.h"
+#include "src/tint/lang/core/ir/user_call.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/lang/spirv/type/explicit_layout_array.h"
@@ -67,14 +70,84 @@ struct State {
     };
     Hashmap<TypeAndStride, const core::type::Type*, 32> type_map{};
 
+    /// A signature representation for caching specialized function clones.
+    struct FunctionSpec {
+        core::ir::Function* func;
+        Vector<const core::type::Type*, 4> param_types;
+
+        bool operator==(const FunctionSpec& other) const {
+            return func == other.func && param_types == other.param_types;
+        }
+
+        tint::HashCode HashCode() const {
+            auto hash = Hash(func);
+            for (auto* type : param_types) {
+                hash = HashCombine(hash, type);
+            }
+            return hash;
+        }
+    };
+    Hashmap<FunctionSpec, core::ir::Function*, 8> cloned_functions{};
+
     /// A map from rewritten structs to original structs.
     Hashmap<const core::type::Struct*, const core::type::Struct*, 4> struct_to_original{};
 
+    /// Worklist of access instructions that need to be updated.
+    Vector<core::ir::Access*, 32> access_worklist{};
+
+    /// Worklist of construct instructions that need to be updated.
+    Vector<core::ir::Construct*, 32> construct_worklist{};
+
+    /// Worklist of user calls that need to be updated.
+    Vector<core::ir::UserCall*, 32> user_call_worklist{};
+
     /// Process the module.
     void Process() {
-        Vector<core::ir::Access*, 32> access_worklist;
-        Vector<core::ir::Construct*, 32> construct_worklist;
-        for (auto* inst : ir.Instructions()) {
+        if (ir.root_block) {
+            ProcessBlock(ir.root_block);
+        }
+
+        // Update the types of any function parameters and function return types that contain
+        // matrices with non-default strides.
+        size_t processed_functions = 0;
+        while (processed_functions < ir.functions.Length()) {
+            // Process all functions not already processed.
+            // Note that new functions might have been added when processing
+            // user calls. The outer while-loop ensures those functions are
+            // processed as well.
+            for (; processed_functions < ir.functions.Length(); processed_functions++) {
+                auto* func = ir.functions[processed_functions];
+                for (auto* param : func->Params()) {
+                    param->SetType(RewriteType(param->Type()));
+                }
+                func->SetReturnType(RewriteType(func->ReturnType()));
+
+                ProcessBlock(func->Block());
+            }
+
+            // Update any access instructions that produce strided matrices.
+            for (auto* access : access_worklist) {
+                UpdateAccessInstruction(access, /* source_is_strided */ false);
+            }
+            access_worklist.Clear();
+
+            // Convert strided matrix operands for construct instructions.
+            for (auto* construct : construct_worklist) {
+                ConvertConstructOperands(construct);
+            }
+            construct_worklist.Clear();
+
+            // Process user calls. This might append new functions to ir.functions.
+            for (auto* call : user_call_worklist) {
+                ProcessUserCall(call);
+            }
+            user_call_worklist.Clear();
+        }
+    }
+
+    /// Process a block iteratively.
+    void ProcessBlock(core::ir::Block* block) {
+        core::ir::Traverse(block, [&](core::ir::Instruction* inst) {
             // Replace all constant operands where the type will be changed due to it containing a
             // structure that uses a matrix stride attribute.
             for (uint32_t i = 0; i < inst->Operands().Length(); ++i) {
@@ -94,30 +167,77 @@ struct State {
             // Track instructions that may need to be updated later.
             if (auto* access = inst->As<core::ir::Access>()) {
                 access_worklist.Push(access);
-            }
-            if (auto* construct = inst->As<core::ir::Construct>()) {
+            } else if (auto* construct = inst->As<core::ir::Construct>()) {
                 construct_worklist.Push(construct);
+            } else if (auto* call = inst->As<core::ir::UserCall>()) {
+                user_call_worklist.Push(call);
+            }
+        });
+    }
+
+    /// Processes a user call instruction.
+    /// If the types of the arguments passed to the call differ from the parameter types of the
+    /// target function (due to matrix pointer arguments having been rewritten to array pointers),
+    /// this function redirects the call to a specialized clone of the target function that matches
+    /// the new argument types.
+    void ProcessUserCall(core::ir::UserCall* call) {
+        auto* target = call->Target();
+        if (target->Params().IsEmpty()) {
+            return;
+        }
+
+        bool needs_specialization = false;
+        Vector<const core::type::Type*, 4> new_param_types;
+        new_param_types.Reserve(call->Args().size());
+
+        for (size_t i = 0; i < call->Args().size(); ++i) {
+            auto* arg = call->Args()[i];
+            auto* param = target->Params()[i];
+
+            if (arg->Type() != param->Type()) {
+                needs_specialization = true;
+                new_param_types.Push(arg->Type());
+            } else {
+                new_param_types.Push(param->Type());
             }
         }
 
-        // Update the types of any function parameters and function return types that contain
-        // matrices with non-default strides.
-        for (auto func : ir.functions) {
-            for (auto* param : func->Params()) {
-                param->SetType(RewriteType(param->Type()));
+        if (!needs_specialization) {
+            return;
+        }
+
+        auto* specialized_target = GetClonedFunction(target, new_param_types);
+        call->SetTarget(specialized_target);
+    }
+
+    /// Gets or creates a clone of `func` specialized for the parameter types in `new_param_types`.
+    /// This function assumes that the only parameters whose types change are pointers to strided
+    /// matrices, and they are replaced by pointers to their decomposed strided arrays.
+    core::ir::Function* GetClonedFunction(
+        core::ir::Function* func,
+        const Vector<const core::type::Type*, 4>& new_param_types) {
+        FunctionSpec spec{func, new_param_types};
+        return cloned_functions.GetOrAdd(spec, [&] {
+            core::ir::CloneContext ctx(ir);
+
+            // Clone the function and its body using the CloneContext.
+            auto* new_func = func->Clone(ctx);
+
+            ir.functions.Push(new_func);
+
+            for (size_t i = 0; i < func->Params().Length(); ++i) {
+                auto* old_param = func->Params()[i];
+                auto* new_param = new_func->Params()[i];
+                if (old_param->Type() != new_param_types[i]) {
+                    auto* old_ptr = old_param->Type()->As<core::type::Pointer>();
+                    auto* new_ptr = new_param_types[i]->As<core::type::Pointer>();
+                    TINT_ASSERT(old_ptr && new_ptr);
+                    ReplaceMatrixPointerWithArrayPointer(old_ptr, new_ptr->StoreType(), new_param);
+                }
             }
-            func->SetReturnType(RewriteType(func->ReturnType()));
-        }
 
-        // Update any access instructions that produce strided matrices.
-        for (auto* access : access_worklist) {
-            UpdateAccessInstruction(access, /* source_is_strided */ false);
-        }
-
-        // Convert strided matrix operands for construct instructions.
-        for (auto* construct : construct_worklist) {
-            ConvertConstructOperands(construct);
-        }
+            return new_func;
+        });
     }
 
     /// Rewrite a type to replace structure members that have matrix strides.
@@ -280,7 +400,7 @@ struct State {
         }
 
         if (auto* ptr = access->Result()->Type()->As<core::type::Pointer>()) {
-            ReplaceMatrixPointerWithArrayPointer(ptr, current_type, access);
+            ReplaceMatrixPointerWithArrayPointer(ptr, current_type, access->Result());
         } else {
             // We were extracting a strided matrix from a structure, so we need to convert the
             // strided array back to that matrix type.
@@ -293,25 +413,29 @@ struct State {
         }
     }
 
-    /// Change the type of a pointer instruction result that contains a strided matrix, and then
-    /// update any instructions that use that result.
+    /// Change the type of a pointer value that contains a strided matrix, and then
+    /// update any instructions that use that value.
     void ReplaceMatrixPointerWithArrayPointer(const core::type::Pointer* old_ptr,
                                               const core::type::Type* new_store_type,
-                                              core::ir::Instruction* instruction) {
+                                              core::ir::Value* value) {
         auto* old_store_type = old_ptr->StoreType();
         auto* new_ptr = ty.ptr(old_ptr->AddressSpace(), new_store_type, old_ptr->Access());
 
-        Vector<core::ir::Instruction*, 8> worklist{instruction};
+        value->SetType(new_ptr);
+
+        Vector<core::ir::Value*, 8> worklist{value};
         while (!worklist.IsEmpty()) {
-            auto* inst = worklist.Pop();
-            inst->Result()->SetType(new_ptr);
-            inst->Result()->ForEachUseUnsorted([&](const core::ir::Usage& use) {
+            auto* val = worklist.Pop();
+            val->ForEachUseUnsorted([&](const core::ir::Usage& use) {
                 tint::Switch(
                     use.instruction,  //
                     [&](core::ir::Access* access) {
                         UpdateAccessInstruction(access, /* source_is_strided */ true);
                     },
-                    [&](core::ir::Let* let) { worklist.Push(let); },
+                    [&](core::ir::Let* let) {
+                        let->Result()->SetType(new_ptr);
+                        worklist.Push(let->Result());
+                    },
                     [&](core::ir::Load* load) {
                         // Convert the value to the original type.
                         b.InsertAfter(load, [&] {
@@ -326,6 +450,11 @@ struct State {
                         b.InsertBefore(store, [&] {  //
                             store->SetFrom(Convert(new_store_type, store->From()));
                         });
+                    },
+                    [&](core::ir::UserCall*) {
+                        // The argument's type is already updated because it is the value whose type
+                        // we changed. The main traversal will see the type mismatch and clone the
+                        // target function.
                     },
                     TINT_ICE_ON_NO_MATCH);
             });
@@ -362,17 +491,11 @@ struct State {
 }  // namespace
 
 Result<SuccessType> DecomposeStridedMatrix(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllowMultipleEntryPoints,
-                    core::ir::Capability::kAllowStructMatrixDecorations,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                    core::ir::Capability::kAllowOverrides,
-                    core::ir::Capability::kAllowPointerToHandle,
-                },
-                "before spirv.DecomposeStridedMatrix");
+    AssertValid(ir, "before spirv.DecomposeStridedMatrix");
 
     State{ir}.Process();
+
+    ir.properties.Remove(core::ir::Property::kAllowStructMatrixDecorations);
 
     return Success;
 }

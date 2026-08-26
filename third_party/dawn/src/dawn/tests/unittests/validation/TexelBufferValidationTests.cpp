@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -119,7 +119,7 @@ TEST_F(TexelBufferValidationTest, UndefinedLayoutFormat) {
 // BindingInitializationHelper should chain a TexelBufferBindingEntry when initialized
 // with a TexelBufferView.
 TEST_F(TexelBufferValidationTest, BindingHelperChainsTexelBufferBindingEntry) {
-    constexpr uint64_t kSize = 4 * 4;
+    constexpr uint64_t kSize = 4ULL * 4;
     wgpu::Buffer buffer = CreateTexelBuffer(kSize, wgpu::BufferUsage::TexelBuffer);
 
     wgpu::TexelBufferViewDescriptor viewDesc;
@@ -144,7 +144,7 @@ TEST_F(TexelBufferValidationTest, BindingHelperChainsTexelBufferBindingEntry) {
 
 // Creating a bind group without chaining a TexelBufferBindingEntry fails.
 TEST_F(TexelBufferValidationTest, BindGroupMissingTexelBufferBindingEntry) {
-    constexpr uint64_t kSize = 4 * 4;
+    constexpr uint64_t kSize = 4ULL * 4;
     wgpu::Buffer buffer = CreateTexelBuffer(kSize, wgpu::BufferUsage::TexelBuffer);
 
     TexelBufferLayoutDescriptor helper(wgpu::TexelBufferAccess::ReadOnly,
@@ -292,7 +292,7 @@ TEST_F(TexelBufferValidationTest, AdditionalChain) {
         plane0Desc.usage = wgpu::TextureUsage::TextureBinding;
         wgpu::Texture plane0 = device.CreateTexture(&plane0Desc);
 
-        std::array<float, 12> placeholderConstants;
+        std::array<float, 12> placeholderConstants = {};
 
         wgpu::ExternalTextureDescriptor desc;
         desc.yuvToRgbConversionMatrix = placeholderConstants.data();

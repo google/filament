@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-{% from 'art/api_kotlin_types.kt' import kotlin_annotation, kotlin_declaration, kotlin_definition, check_if_doc_present, generate_kdoc, add_kdoc_disclaimer with context %}
+{% from 'art/api_kotlin_types.kt' import kotlin_annotation, kotlin_declaration, kotlin_definition, check_if_doc_present, generate_kdoc, add_kdoc_disclaimer, kotlin_member_optin, kotlin_class_optin, item_requires_optin with context %}
 {{ add_kdoc_disclaimer() }}
 package {{ kotlin_package }}
 
@@ -27,6 +27,11 @@ package {{ kotlin_package }}
 {% set arg_docs_map =  funtion_pointer_info.args if funtion_pointer_info else {} %}
 
 {% set function_pointer_args = function_pointer.arguments | list %}
+{% set experimental = kotlin_class_optin(function_pointer) -%}
+{% if experimental %}
+    //* Requires opt-in if this functional interface (callback) is experimental.
+    {{ experimental }}
+{% endif %}
 public fun interface {{ function_pointer.name.CamelCase() }} {
     {% if check_if_doc_present(main_doc, "", arg_docs_map, function_pointer_args) == 'True' %}
     {{ generate_kdoc(main_doc, return_str, arg_docs_map, function_pointer_args , indent_prefix = "    ",line_wrap_prefix = "\n     * ") }}

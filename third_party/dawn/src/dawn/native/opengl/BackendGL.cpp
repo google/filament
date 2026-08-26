@@ -25,27 +25,37 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/BackendGL.h"
+#include "src/dawn/native/opengl/BackendGL.h"
 
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Instance.h"
 #include "dawn/native/OpenGLBackend.h"
-#include "dawn/native/opengl/DisplayEGL.h"
-#include "dawn/native/opengl/PhysicalDeviceGL.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/opengl/DisplayEGL.h"
+#include "src/dawn/native/opengl/PhysicalDeviceGL.h"
 
 namespace dawn::native::opengl {
 
 namespace {
-#if DAWN_PLATFORM_IS(WINDOWS)
-const char* kEGLLib = "libEGL.dll";
-#elif DAWN_PLATFORM_IS(MACOS)
-const char* kEGLLib = "libEGL.dylib";
-#else
+#ifndef DAWN_ANGLE_LIBS_SUFFIX
+#define DAWN_ANGLE_LIBS_SUFFIX ""
+#endif
+
+// On Android, load the system libEGL.so to use the native GLES driver (loading the in-tree ANGLE
+// library tickles driver bugs in tests on older devices).
+// On other platforms, load ANGLE dynamically with the suffix to support testing ANGLE
+// when the embedder links it statically.
+#if DAWN_PLATFORM_IS(ANDROID)
 const char* kEGLLib = "libEGL.so";
+#elif DAWN_PLATFORM_IS(WINDOWS)
+const char* kEGLLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".dll";
+#elif DAWN_PLATFORM_IS(MACOS)
+const char* kEGLLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".dylib";
+#else
+const char* kEGLLib = "libEGL" DAWN_ANGLE_LIBS_SUFFIX ".so";
 #endif
 
 }  // anonymous namespace

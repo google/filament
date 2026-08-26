@@ -1,0 +1,382 @@
+Name
+
+    APPLE_vertex_array_range
+
+Name Strings
+
+    GL_APPLE_vertex_array_range
+
+Contact
+
+    Geoff Stahl, Apple Computer (gstahl 'at' apple.com)
+
+Status
+
+    Complete
+
+Version
+
+    $Date: 2009/01/07 22:05:21 $ $Revision: 1.13 $
+
+Number
+
+    274
+
+Dependencies
+
+    APPLE_fence can affect this extension.
+
+Overview
+
+    This extension is designed to allow very high vertex processing rates which
+    are facilitated both by relieving the CPU of as much processing burden as
+    possible and by allowing graphics hardware to directly access vertex data.
+    Because this extension is implemented as an addition to the vertex array
+    specification provided by OpenGL 1.1, applications can continue to use
+    existing vertex submission logic while taking advantage of vertex array
+    ranges to more efficiently process those arrays.
+
+    The vertex array coherency model provided by OpenGL 1.1 requires that
+    vertex data specified in vertex arrays be transferred from system memory
+    each time Begin, DrawArrays, or DrawElements is called.  Further, OpenGL
+    1.1 requires that the transfer of data be completed by the time End,
+    DrawArrays, or DrawElements returns.  Both of these requirements are
+    relaxed by the vertex array range extension.  Vertex data may be cached
+    by the GL so there is no guarantee that changes to the vertex data will
+    be reflected in following drawing commands unless it is flushed with
+    FlushVertexArrayRangeAPPLE.  The reading of vertex data may be deferred 
+    by the GL so there is no guarantee that the GL will be finished reading
+    the data until completion is forced by the use of Finish or the APPLE_fence
+    extension.
+
+    Vertex array range can be enabled in two ways.  EnableClientState can be
+    used with the VERTEX_ARRAY_RANGE_APPLE param to enable vertex array range
+    for the client context.  One can also simply set the vertex array storage
+    hint to either STORAGE_CACHED_APPLE or STORAGE_SHARED_APPLE (as discussed
+    below) to enable a particular vertex array range.  Once this is done, use of
+    vertex array range requires the definition of a specific memory range for
+    vertex data through VertexArrayRangeAPPLE.  It is recommended this data be
+    page aligned (4096 byte boundaries) and a multiple of page size in length
+    for maximum efficiency in data handling and internal flushing, but this is
+    not a requirement and any location and length of data can be defined as a
+    vertex array.  This extension provides no memory allocators as any
+    convenient memory allocator can be used.
+
+    Once a data set is established, using VertexArrayRangeAPPLE, it can be can
+    be drawn using standard OpenGL vertex array commands, as one would do
+    without this extension.  Note, if any the data for any enabled array for a
+    given array element index falls outside of the vertex array range, an
+    undefined vertex is generated.  One should also understand removing or
+    replacing all calls to vertex array range functions with no-ops or disabling
+    the vertex array range by disabling the VERTEX_ARRAY_RANGE_APPLE client
+    state should not change the results of an application's OpenGL drawing.
+
+    For static data no additional coherency nor synchronization must be done and
+    the client is free to draw with the specified draw as it sees fit.
+
+    If data is dynamic, thus to be modified, FlushVertexArrayRangeAPPLE should
+    be used.  The command is issued when data has been modified since the last
+    call to VertexArrayRangeAPPLE or FlushVertexArrayRangeAPPLE and prior to
+    drawing with such data. FlushVertexArrayRangeAPPLE only provides memory
+    coherency prior to drawing (such as ensuring CPU caches are flushed or VRAM
+    cached copies are updated) and does not provide any synchronization with
+    previously issued drawing commands. The range flushed can be the specific
+    range modified and does not have to be the entire vertex array range.
+    Additionally, data maybe read immediately after a flush without need for
+    further synchronization, thus overlapping areas of data maybe read, modified
+    and written between two successive flushes and the data will be
+    consistent.
+
+    To synchronize data modification after drawing two methods can be used. A
+    Finish command can be issued which will not return until all previously
+    issued commands are complete, forcing completely synchronous operation.
+    While this guarantees all drawing is complete it may not be the optimal
+    solution for clients which just need to ensure drawing with the vertex array
+    range or a specific range with the array is compete.  The APPLE_fence
+    extension can be used when dynamic data modifications need to be
+    synchronized with drawing commands. Specifically, if data is to be modified,
+    a fence can be set immediately after drawing with the data.  Once it comes
+    time to modify the data, the application must test (or finish) this fence to
+    ensure the drawing command has completed. Failure to do this could result in
+    new data being used by the previously issued drawing commands.  It should be
+    noted that providing the maximum time between the drawing set fence and the
+    modification test/finish fence allows the most asynchronous behavior and
+    will result in the least stalling waiting for drawing completion. Techniques
+    such as double buffering vertex data can be used to help further prevent
+    stalls based on fence completion but are beyond the scope of this extension.
+
+    Once an application is finished with a specific vertex array range or at
+    latest prior to exit, and prior to freeing the memory associated with this
+    vertex array, the client should call VertexArrayRangeAPPLE with a data
+    location and length of 0 to allow the internal memory managers to complete
+    any commitments for the array range.  In this case once
+    VertexArrayRangeAPPLE returns it is safe to de-allocate the memory.
+    
+    Three types of storage hints are available for vertex array ranges; client,
+    shared, and cached.  These hints are set by passing the
+    STORAGE_CLIENT_APPLE, STORAGE_SHARED_APPLE, or STORAGE_CACHED_APPLE param to
+    VertexArrayParameteriAPPLE with VERTEX_ARRAY_STORAGE_HINT_APPLE pname.
+    Client storage, the default OpenGL behavior, occurs when
+    VERTEX_ARRAY_RANGE_APPLE is disabled AND the STORAGE_CLIENT_APPLE hint is
+    set. Note, STORAGE_CLIENT_APPLE is also the default hint setting.  Shared
+    memory usage is normally used for dynamic data that is expected to be
+    modified and is likely mapped to AGP memory space for access by both the
+    graphics hardware and client.  It is set when either
+    VERTEX_ARRAY_RANGE_APPLE is enabled, without the STORAGE_CACHED_APPLE hint
+    being set, or in all cases when the STORAGE_SHARED_APPLE hint is set.
+    Finally, the cached storage is designed to support static data and data which
+    could be cached in VRAM. This provides maximum access bandwidth for the
+    vertex array and occurs when the STORAGE_CACHED_APPLE hint is set. 
+    
+    The following pseudo-code represents the treatment of a vertex array range
+    memory depending on the hint setting and whether vertex array range is
+    enabled for the client context:
+	
+    if (VERTEX_ARRAY_STORAGE_HINT_APPLE == STORAGE_CACHED_APPLE)
+        vertex array is treated as cached
+    else if (VERTEX_ARRAY_STORAGE_HINT_APPLE == STORAGE_SHARED_APPLE)
+    	vertex array is treated as shared
+    else if (VERTEX_ARRAY_RANGE_APPLE enabled)
+    	vertex array is treated as shared
+    else 
+    	vertex array is treated as client
+    	
+    Note, these hints can affect how array flushes are handled and the overhead
+    associated with flushing the array, it is recommended that data be handled
+    as shared unless it really is static and there are no plans to modify it.
+	
+    To summarize the vertex array range extension provides relaxed
+    synchronization rules for handling vertex array data allowing high bandwidth
+    asynchronous data transfer from client memory to graphics hardware.
+    Different flushing and synchronization rules are required to ensure data
+    coherency when modifying data.  Lastly, memory handling hints are provided
+    to allow the tunning of memory storage and access for maximum efficiency.
+
+Issues
+
+	How does one get the current VERTEX_ARRAY_STORAGE_HINT_APPLE (storage hint)
+	for a vertex array range?
+	
+	   RESOLUTION: The current VERTEX_ARRAY_STORAGE_HINT_APPLE can be retrieved
+	   via GetIntegerv with VERTEX_ARRAY_STORAGE_HINT_APPLE as the pname.
+
+    How does this extension interact with the compiled_vertex_array extension?
+
+       RESOLUTION:  They are independent and not interfere with each other.  In
+       practice, if you use APPLE_vertex_array_range, you can surpass the
+       performance of compiled_vertex_array
+
+    Should we give a programmer a sense of how big a vertex array range they can
+    specify?
+
+       RESOLUTION:  Not completely resolved.  There should be a query for
+       determining the maximum safe size of a vertex array range which, we do
+       not have as of yet.  Currently, the vertex array range size plus the
+       command buffers must not exceed available GART space, which in real world
+       terms, means the smallest maximum vertex array range size is about 24 MB
+       on any currently supported hardware on Mac OS X and get's larger normally
+       with more RAM and/or more advanced graphics hardware. Failure modes are
+       likely either failure to speed up the vertex processing or failure to
+       draw all the vertex data.  So clients should plan on single vertex array
+       ranges of less than 24 MB if they intend to run on all Mac OS X hardware.
+
+    Should Flush be the same as FlushVertexArrayRangeAPPLE?
+
+       RESOLUTION:  No.  A Flush is a different concept than
+       FlushVertexArrayRangeAPPLE.  a Flush submits pending OpenGL commands to the
+       OpenGL engine for processing while, a FlushVertexArrayRangeAPPLE just ensures
+       memory coherency for the vertex array range and does not perform a Flush
+       in OpenGL terms.
+
+New Procedures and Functions
+
+    void VertexArrayRangeAPPLE(sizei length, void *pointer);
+    void FlushVertexArrayRangeAPPLE(sizei length, void *pointer);
+    void VertexArrayParameteriAPPLE(enum pname, int param);
+
+New Tokens
+
+    Accepted by the <cap> parameter of EnableClientState, DisableClientState,
+    and IsEnabled:
+
+        VERTEX_ARRAY_RANGE_APPLE              0x851D
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+        VERTEX_ARRAY_RANGE_LENGTH_APPLE       0x851E
+        MAX_VERTEX_ARRAY_RANGE_ELEMENT_APPLE  0x8520
+
+    Accepted by the <pname> parameter of GetPointerv:
+
+        VERTEX_ARRAY_RANGE_POINTER_APPLE      0x8521
+
+    Accepted by the <pname> parameter of VertexArrayParameteriAPPLE,
+	GetBooleanv, GetIntegerv, GetFloatv, and GetDoublev:
+
+        VERTEX_ARRAY_STORAGE_HINT_APPLE       0x851F
+
+    Accepted by the <param> parameter of VertexArrayParameteriAPPLE:
+
+        STORAGE_CLIENT_APPLE                  0x85B4
+        STORAGE_CACHED_APPLE                  0x85BE
+        STORAGE_SHARED_APPLE                  0x85BF
+
+Additions to Chapter 2 of the OpenGL 1.1 Specification (OpenGL Operation)
+
+    After the discussion of vertex arrays (Section 2.8) add a
+    description of the vertex array range:
+
+    "The command 
+
+       void VertexArrayRangeAPPLE(sizei length, void *pointer)
+
+    specifies the current vertex array range.  When the vertex array range is
+    specified and valid, vertex transfers from within the vertex array
+    range are potentially faster.  The vertex array range is a contiguous
+    region of address space for placing vertex arrays.  The "pointer" parameter
+    is a pointer to the base of the vertex array range.  The "length" pointer is
+    the length of the vertex array range in basic machine units (typically
+    unsigned bytes).  Memory associated with a vertex array range should be
+    allocated by the client and the responsibility for maintaining it rests with
+    the client as long as it is being used as a vertex array range.
+
+    The vertex array range address space region extends from "pointer" to
+    "pointer + length - 1" inclusive.  When specified, vertex array vertex
+    transfers from within the vertex array range are potentially faster.
+
+    There is some system burden associated with establishing a vertex array
+    range (typically, the memory range must be locked down). If either the
+    vertex array range pointer or size is set to zero, the previously
+    established vertex array range is released (typically, unlocking the
+    memory).  This should always be done prior to freeing of the memory by the
+    client.
+
+    The vertex array range may not be established for operating system dependent
+    reasons, and therefore, not valid.  Reasons that a vertex array range cannot
+    be established include exceeding the maximum vertex array range size, the
+    memory could not be locked down, etc.
+
+    The vertex array range is considered enabled after VERTEX_ARRAY_RANGE_APPLE
+    client state is enabled and as soon as a valid vertex array range is
+    specified and disabled once the size length and/or pointer is set to zero or
+    VERTEX_ARRAY_RANGE_APPLE client state is disabled.
+
+    When the vertex array range is enabled, ArrayElement commands may generate
+    undefined vertices if and only if any indexed elements of the enabled arrays
+    are not within the vertex array range or if the index is negative or greater
+    or equal to the implementation-dependent value of
+    MAX_VERTEX_ARRAY_RANGE_ELEMENT_APPLE.  If an undefined vertex is generated,
+    an INVALID_OPERATION error may or may not be generated.
+
+    The vertex array coherency model specifies when vertex data must be extracted
+    from the vertex array memory.  When the vertex array range is not valid,
+    (quoting the specification) `Changes made to array data between the
+    execution of Begin and the corresponding execution of End may effect calls
+    to ArrayElement that are made within the same Begin/End period in
+    non-sequential ways.  That is, a call to ArrayElement that precedes a change
+    to array data may access the changed data, and a call that follows a change
+    to array data may access the original data.'
+
+    When the vertex array range is valid, the vertex array coherency model is
+    relaxed so that changes made to array data may affect calls to ArrayElement
+    in non-sequential ways. That is a call to ArrayElement that precedes a
+    change to array data may access the changed data, and a call that follows a
+    change to array data may access original data.  This requires in two points
+    of synchronization to maintain coherency.
+
+    The first point where synchronization must occur to maintain coherency is
+    post data modification, prior to drawing.  FlushVertexArrayRangeAPPLE should
+    be used by the client on all ranges of memory which have been modified since
+    the last call to VertexArrayRangeAPPLE or FlushVertexArrayRangeAPPLE.
+
+    The second point of synchronization is after drawing with a vertex array
+    range and prior to modifying it's data.  In this case either Finish or a
+    fence must be used.  Finish will create a synchronization point for all
+    drawing an may not be the optimal method to ensure drawing completion prior
+    to data modification.  A fence, defined in the APPLE_fence extension, on the
+    other hand allows more selective synchronization. The client can set a fence
+    immediately after drawing with the data in question and test or finish that
+    fence prior to modifying the data.  See the APPLE_fence extension for more
+    details.
+
+    To maintain full coherency, once a vertex array range is enabled, requires
+    the client to both flush the vertex array after data modification, prior to
+    drawing, and synchronize with Finish or a fence after drawing, prior to
+    modifying the data.
+
+    The command 
+
+        void VertexArrayParameteriAPPLE(enum pname, int param)
+
+    allows the client to hint at the expected use of the vertex array range.
+    pname must be VERTEX_ARRAY_STORAGE_HINT_APPLE.  param can either be
+    STORAGE_CACHED_APPLE or STORAGE_SHARED_APPLE and can be used by the system
+    to tune the handling of the vertex array range data. These
+    parameters are just hints and require no specific handling by the system. 
+    The default state is STORAGE_SHARED_APPLE which, indicates that the vertex
+    data is expected to be dynamic and should be handled in a way to optimize
+    modification and flushing of the vertex array range, if possible.
+    STORAGE_CACHED_APPLE indicates the data is expected to static and techniques
+    such as VRAM caching could be employed to optimize memory bandwidth to the
+    vertex array range.  Proper use of FlushVertexArrayRangeAPPLE guarantees
+    memory coherency in all cases and will result in deterministic defined
+    behavior in all cases, whether hints are employed or not.
+
+    The client state required to implement the vertex array range consists of an
+    enable bit, a memory pointer, an integer size, and a valid bit."
+
+Additions to Chapter 5 of the OpenGL 1.1 Specification (Special Functions)
+
+    Add to the end of Section 5.4 "Display Lists"
+
+    "VertexArrayRangeAPPLE and FlushVertexArrayRangeAPPLE are not complied into
+    display lists but are executed immediately.
+
+    If a display list is compiled while VERTEX_ARRAY_RANGE_APPLE is enabled, the
+    commands ArrayElement, DrawArrays, DrawElements, and DrawRangeElements are
+    accumulated into a display list as if VERTEX_ARRAY_RANGE_APPLE is disabled."
+
+Additions to the CGL interface:
+
+    None
+
+Additions to the WGL interface:
+
+    None
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    INVALID_OPERATION is generated if VertexArrayRangeAPPLE or
+    FlushVertexArrayRangeAPPLE is called between the execution of Begin and the
+    corresponding execution of End.
+
+    INVALID_OPERATION may be generated if an undefined vertex is generated.
+
+New State
+
+                                                              Initial
+   Get Value                          Get Command     Type    Value                Attrib
+   ---------                          -----------     ----    -------              ------------
+   VERTEX_ARRAY_RANGE_APPLE           IsEnabled       B       False                vertex-array
+   VERTEX_ARRAY_RANGE_POINTER_APPLE   GetPointerv     Z+      0                    vertex-array
+   VERTEX_ARRAY_RANGE_LENGTH_APPLE    GetIntegerv     Z+      0                    vertex-array
+   VERTEX_ARRAY_STORAGE_HINT_APPLE    GetIntegerv     Z3      STORAGE_CLIENT_APPLE vertex-array
+
+New Implementation Dependent State
+
+    Get Value                              Get Command     Type    Minimum Value
+    ---------                              -----------     -----   -------------
+    MAX_VERTEX_ARRAY_RANGE_ELEMENT_APPLE   GetIntegerv     Z+      65535
+
+Revision History
+
+    None

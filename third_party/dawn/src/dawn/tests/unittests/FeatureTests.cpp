@@ -27,12 +27,14 @@
 
 #include <vector>
 
-#include "dawn/native/Features.h"
-#include "dawn/native/Instance.h"
-#include "dawn/native/Toggles.h"
-#include "dawn/native/null/DeviceNull.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "gtest/gtest.h"
+#include "src/dawn/native/Features.h"
+#include "src/dawn/native/Instance.h"
+#include "src/dawn/native/Toggles.h"
+#include "src/dawn/native/null/DeviceNull.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
 
 namespace dawn {
 namespace {
@@ -45,8 +47,7 @@ class FeatureTests : public testing::Test {
               static constexpr auto kMultipleDevicesPerAdapter =
                   wgpu::InstanceFeatureName::MultipleDevicesPerAdapter;
               dawn::native::InstanceDescriptor instanceDesc = {
-                  .requiredFeatureCount = 1,
-                  .requiredFeatures = &kMultipleDevicesPerAdapter,
+                  .requiredFeatures = SpanFromRef(kMultipleDevicesPerAdapter),
               };
               return dawn::native::APICreateInstance(&instanceDesc);
           }()),
@@ -67,7 +68,7 @@ class FeatureTests : public testing::Test {
     std::vector<wgpu::FeatureName> GetAllFeatureNames() {
         std::vector<wgpu::FeatureName> allFeatureNames(kTotalFeaturesCount);
         for (size_t i = 0; i < kTotalFeaturesCount; ++i) {
-            allFeatureNames[i] = native::ToAPI(static_cast<native::Feature>(i));
+            allFeatureNames[i] = native::ToCppAPI(static_cast<native::Feature>(i));
         }
         return allFeatureNames;
     }
@@ -102,7 +103,7 @@ TEST_F(FeatureTests, AdapterWithRequiredFeatureDisabled) {
             native::Adapter adapterWithoutFeature(&mAdapterBase);
 
             wgpu::DeviceDescriptor deviceDescriptor;
-            wgpu::FeatureName featureName = native::ToAPI(notSupportedFeature);
+            wgpu::FeatureName featureName = native::ToCppAPI(notSupportedFeature);
             deviceDescriptor.requiredFeatures = &featureName;
             deviceDescriptor.requiredFeatureCount = 1;
 
@@ -117,7 +118,7 @@ TEST_F(FeatureTests, AdapterWithRequiredFeatureDisabled) {
             native::Adapter adapterWithoutFeature(&mUnsafeAdapterBase);
 
             wgpu::DeviceDescriptor deviceDescriptor;
-            wgpu::FeatureName featureName = ToAPI(notSupportedFeature);
+            wgpu::FeatureName featureName = native::ToCppAPI(notSupportedFeature);
             deviceDescriptor.requiredFeatures = &featureName;
             deviceDescriptor.requiredFeatureCount = 1;
 
@@ -129,7 +130,7 @@ TEST_F(FeatureTests, AdapterWithRequiredFeatureDisabled) {
 }
 
 bool IsExperimental(wgpu::FeatureName feature) {
-    return native::kFeatureNameAndInfoList[native::FromAPI(feature)].featureState ==
+    return native::kFeatureNameAndInfoList[native::FromCppAPI(feature)].featureState ==
            native::FeatureInfo::FeatureState::Experimental;
 }
 
@@ -142,7 +143,7 @@ TEST_F(FeatureTests, RequireAndGetEnabledFeatures) {
 
     for (size_t i = 0; i < kTotalFeaturesCount; ++i) {
         native::Feature feature = static_cast<native::Feature>(i);
-        wgpu::FeatureName featureName = ToAPI(feature);
+        wgpu::FeatureName featureName = native::ToCppAPI(feature);
 
         // Enable features that are implicitly enabled by other features.
         absl::flat_hash_set<wgpu::FeatureName> requiredFeaturesSet =
@@ -169,9 +170,8 @@ TEST_F(FeatureTests, RequireAndGetEnabledFeatures) {
                     requiredFeaturesSet.contains(wgpu::FeatureName::CoreFeaturesAndLimits);
                 // wgpu::FeatureName::CoreFeaturesAndLimits is required implicitly in core mode
                 ASSERT_EQ(requiredFeaturesSet.size() + (explicitlyRequireCore ? 0 : 1),
-                          enabledFeatures.featureCount);
-                for (uint32_t i = 0; i < enabledFeatures.featureCount; ++i) {
-                    wgpu::FeatureName enabledFeature = enabledFeatures.features[i];
+                          enabledFeatures.features.size());
+                for (wgpu::FeatureName enabledFeature : enabledFeatures.features) {
                     if (!explicitlyRequireCore &&
                         enabledFeature == wgpu::FeatureName::CoreFeaturesAndLimits) {
                         continue;

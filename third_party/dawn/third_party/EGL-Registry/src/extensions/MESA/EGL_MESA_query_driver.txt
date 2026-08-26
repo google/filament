@@ -1,0 +1,95 @@
+Name
+
+    MESA_query_driver
+
+Name Strings
+
+    EGL_MESA_query_driver
+
+Contact
+
+    Rob Clark      <robdclark 'at' gmail.com>
+    Nicolai Hähnle <Nicolai.Haehnle 'at' amd.com>
+
+Contibutors
+
+    Veluri Mithun <velurimithun38 'at' gmail.com>
+
+Status
+
+    Complete
+
+Version
+
+    Version 3, 2019-01-24
+
+Number
+
+    EGL Extension 131
+
+Dependencies
+
+    EGL 1.0 is required.
+
+Overview
+
+    When an application has to query the name of a driver and for
+    obtaining driver's option list (UTF-8 encoded XML) of a driver
+    the below functions are useful.
+
+    XML file formally describes all available options and also
+    includes verbal descriptions in multiple languages. Its main purpose
+    is to be automatically processed by configuration GUIs.
+    The XML shall respect the following DTD:
+
+    <!ELEMENT driinfo      (section*)>
+    <!ELEMENT section      (description+, option+)>
+    <!ELEMENT description  (enum*)>
+    <!ATTLIST description  lang CDATA #REQUIRED
+                           text CDATA #REQUIRED>
+    <!ELEMENT option       (description+)>
+    <!ATTLIST option       name CDATA #REQUIRED
+                           type (bool|enum|int|float) #REQUIRED
+                           default CDATA #REQUIRED
+                           valid CDATA #IMPLIED>
+    <!ELEMENT enum         EMPTY>
+    <!ATTLIST enum         value CDATA #REQUIRED
+                           text CDATA #REQUIRED>
+
+New Procedures and Functions
+
+    char* eglGetDisplayDriverConfig(EGLDisplay dpy);
+    const char* eglGetDisplayDriverName(EGLDisplay dpy);
+
+Description
+
+    By passing EGLDisplay as parameter to `eglGetDisplayDriverName` one can retrieve
+    driverName. Similarly passing EGLDisplay to `eglGetDisplayDriverConfig` we can retrieve
+    driverConfig options of the driver in XML format.
+
+    The string returned by `eglGetDisplayDriverConfig` is heap-allocated and caller
+    is responsible for freeing it.
+
+    EGL_BAD_DISPLAY is generated if `disp` is not an EGL display connection.
+
+    EGL_NOT_INITIALIZED is generated if `disp` has not been initialized.
+
+    If the implementation does not have enough resources to allocate the XML then an
+    EGL_BAD_ALLOC error is generated.
+
+New Tokens
+
+    No new tokens
+
+Issues
+
+    None
+
+
+Revision History
+
+    Version 1, 2018-11-05 - First draft (Veluri Mithun)
+    Version 2, 2019-01-23 - Final version (Veluri Mithun)
+    Version 3, 2019-01-24 - Mark as complete, add Khronos extension
+                            number, fix parameter name in prototypes,
+                            write revision history (Eric Engestrom)

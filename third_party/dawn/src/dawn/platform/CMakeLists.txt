@@ -34,13 +34,11 @@ dawn_add_library(
   PRIVATE_HEADERS
     "WorkerThread.h"
     "metrics/HistogramMacros.h"
-    "tracing/EventTracer.h"
     "tracing/TraceEvent.h"
   SOURCES
     "DawnPlatform.cpp"
     "WorkerThread.cpp"
     "metrics/HistogramMacros.cpp"
-    "tracing/EventTracer.cpp"
   DEPENDS
     dawn::dawn_headers
     dawn::partition_alloc

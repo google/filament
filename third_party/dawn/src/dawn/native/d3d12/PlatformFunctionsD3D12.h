@@ -31,9 +31,9 @@
 #include <span>
 #include <string>
 
-#include "dawn/common/DynamicLib.h"
-#include "dawn/native/d3d/PlatformFunctions.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/native/d3d/PlatformFunctions.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -46,34 +46,46 @@ class PlatformFunctions final : public d3d::PlatformFunctions {
     MaybeError EnsureDXCLibraries(std::span<const std::string> searchPaths);
     bool IsPIXEventRuntimeLoaded() const;
 
+    // Helper methods that route to the Agility SDK interfaces when DAWN_USE_AGILITY_SDK
+    // is defined, or fall back to the loaded d3d12.dll exports otherwise.
+    HRESULT CreateDevice(IUnknown* adapter,
+                         D3D_FEATURE_LEVEL featureLevel,
+                         REFIID riid,
+                         void** ppDevice) const;
+    HRESULT SerializeVersionedRootSignature(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* pDesc,
+                                            ID3DBlob** ppResult,
+                                            ID3DBlob** ppError) const;
+    HRESULT CreateVersionedRootSignatureDeserializer(const void* pBlob,
+                                                     SIZE_T size,
+                                                     REFIID riid,
+                                                     void** ppDeserializer) const;
+
     // Functions from d3d12.dll
-    PFN_D3D12_CREATE_DEVICE d3d12CreateDevice = nullptr;
     PFN_D3D12_GET_DEBUG_INTERFACE d3d12GetDebugInterface = nullptr;
 
     PFN_D3D12_SERIALIZE_ROOT_SIGNATURE d3d12SerializeRootSignature = nullptr;
     PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER d3d12CreateRootSignatureDeserializer = nullptr;
-    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE d3d12SerializeVersionedRootSignature = nullptr;
-    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER
-    d3d12CreateVersionedRootSignatureDeserializer = nullptr;
 
     // Functions from d3d11.dll
     PFN_D3D11ON12_CREATE_DEVICE d3d11on12CreateDevice = nullptr;
 
     // Functions from WinPixEventRuntime.dll
+    //
+    // The only official reference for these function signatures is
+    // https://devblogs.microsoft.com/pix/winpixeventruntime/
+    // however it is incorrect: it says the third argument is a `formatString` like in PIXBeginEvent
+    // (implying it would have varargs, but it doesn't). It appears that PIX in fact treats it as a
+    // plain label, not a format string, so we've renamed it here.
+    using PFN_PIX_BEGIN_EVENT_ON_COMMAND_LIST =
+        HRESULT(WINAPI*)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR label);
     using PFN_PIX_END_EVENT_ON_COMMAND_LIST =
         HRESULT(WINAPI*)(ID3D12GraphicsCommandList* commandList);
-
-    PFN_PIX_END_EVENT_ON_COMMAND_LIST pixEndEventOnCommandList = nullptr;
-
-    using PFN_PIX_BEGIN_EVENT_ON_COMMAND_LIST = HRESULT(
-        WINAPI*)(ID3D12GraphicsCommandList* commandList, UINT64 color, _In_ PCSTR formatString);
-
-    PFN_PIX_BEGIN_EVENT_ON_COMMAND_LIST pixBeginEventOnCommandList = nullptr;
-
     using PFN_SET_MARKER_ON_COMMAND_LIST = HRESULT(WINAPI*)(ID3D12GraphicsCommandList* commandList,
                                                             UINT64 color,
-                                                            _In_ PCSTR formatString);
+                                                            _In_ PCSTR label);
 
+    PFN_PIX_BEGIN_EVENT_ON_COMMAND_LIST pixBeginEventOnCommandList = nullptr;
+    PFN_PIX_END_EVENT_ON_COMMAND_LIST pixEndEventOnCommandList = nullptr;
     PFN_SET_MARKER_ON_COMMAND_LIST pixSetMarkerOnCommandList = nullptr;
 
     // Functions from dxcompiler.dll
@@ -89,11 +101,31 @@ class PlatformFunctions final : public d3d::PlatformFunctions {
     MaybeError LoadD3D11();
     void LoadPIXRuntime(std::span<const std::string> searchPaths);
 
+    // Raw DLL exports — use the public helper methods instead.
+    PFN_D3D12_CREATE_DEVICE d3d12CreateDevice = nullptr;
+    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE d3d12SerializeVersionedRootSignature = nullptr;
+    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER
+    d3d12CreateVersionedRootSignatureDeserializer = nullptr;
+    // Optional; nullptr on older systems without Agility SDK.
+    PFN_D3D12_GET_INTERFACE d3d12GetInterface = nullptr;
+
     DynamicLib mD3D12Lib;
     DynamicLib mD3D11Lib;
     DynamicLib mPIXEventRuntimeLib;
     DynamicLib mDXILLib;
     DynamicLib mDXCompilerLib;
+
+#ifdef DAWN_USE_AGILITY_SDK
+    // Called once by Initialize().
+    void EnsureAgilitySDKDeviceFactory();
+
+    // These interfaces are implemented by D3D12Core.dll. They must be declared after the
+    // DynamicLib members so reverse-order member destruction releases them before unloading their
+    // implementation.
+    // Non-null after a successful EnsureAgilitySDKDeviceFactory() call.
+    ComPtr<ID3D12DeviceFactory> mDeviceFactory;
+    ComPtr<ID3D12DeviceConfiguration> mDeviceConfiguration;
+#endif  // DAWN_USE_AGILITY_SDK
 };
 
 }  // namespace dawn::native::d3d12

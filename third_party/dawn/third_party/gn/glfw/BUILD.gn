@@ -38,6 +38,9 @@ glfw_dir = dawn_glfw_dir
 
 config("glfw_public") {
   include_dirs = [ "${glfw_dir}/include" ]
+
+  # GN doesn't build GLFW's Wayland backend (needs wayland-scanner codegen).
+  defines = [ "DAWN_GLFW_NO_WAYLAND" ]
 }
 
 static_library("glfw") {

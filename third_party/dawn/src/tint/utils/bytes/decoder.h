@@ -39,7 +39,7 @@
 #include <vector>
 
 #include "src/tint/utils/bytes/reader.h"
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 #include "src/tint/utils/result.h"
 
 namespace tint::bytes {
@@ -58,7 +58,8 @@ Result<T> Decode(Reader& reader, ARGS&&... args) {
 
 /// Decoder specialization for integer types
 template <typename T>
-struct Decoder<T, std::enable_if_t<std::is_integral_v<T>>> {
+    requires(std::is_integral_v<T>)
+struct Decoder<T> {
     /// Decode decodes the integer type from @p reader.
     /// @param reader the reader to decode from
     /// @param endianness the endianness of the integer
@@ -70,7 +71,8 @@ struct Decoder<T, std::enable_if_t<std::is_integral_v<T>>> {
 
 /// Decoder specialization for floating point types
 template <typename T>
-struct Decoder<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+    requires(std::is_floating_point_v<T>)
+struct Decoder<T> {
     /// Decode decodes the floating point type from @p reader.
     /// @param reader the reader to decode from
     /// @returns the decoded floating point type, or an error if the stream is too short.

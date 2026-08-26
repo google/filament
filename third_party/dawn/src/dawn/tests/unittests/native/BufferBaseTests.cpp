@@ -29,19 +29,18 @@
 #include <mutex>
 #include <utility>
 
-#include "dawn/common/Log.h"
-#include "dawn/common/Ref.h"
-#include "dawn/native/Error.h"
-#include "dawn/utils/TestUtils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "mocks/BufferMock.h"
-#include "mocks/DawnMockTest.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/tests/unittests/native/mocks/BufferMock.h"
+#include "src/dawn/tests/unittests/native/mocks/DawnMockTest.h"
+#include "src/dawn/utils/TestUtils.h"
+#include "src/utils/log.h"
 #include "webgpu/webgpu_cpp.h"
 
 using testing::_;
 using testing::AnyOf;
-using testing::ByMove;
 using testing::Eq;
 using testing::HasSubstr;
 using testing::Return;

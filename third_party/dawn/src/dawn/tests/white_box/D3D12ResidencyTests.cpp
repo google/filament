@@ -28,13 +28,13 @@
 #include <vector>
 
 #include "dawn/native/D3D12Backend.h"
-#include "dawn/native/d3d12/BufferD3D12.h"
-#include "dawn/native/d3d12/DeviceD3D12.h"
-#include "dawn/native/d3d12/ResidencyManagerD3D12.h"
-#include "dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/native/d3d12/BufferD3D12.h"
+#include "src/dawn/native/d3d12/DeviceD3D12.h"
+#include "src/dawn/native/d3d12/ResidencyManagerD3D12.h"
+#include "src/dawn/native/d3d12/ShaderVisibleDescriptorAllocatorD3D12.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -331,15 +331,16 @@ TEST_P(D3D12ResourceResidencyTests, OvercommitInASingleSubmit) {
 TEST_P(D3D12ResourceResidencyTests, SetExternalReservation) {
     // Set an external reservation of 20% the budget. We should succesfully reserve the amount we
     // request.
+    uint64_t kExternalReservationSize = static_cast<uint64_t>(kRestrictedBudgetSize * .2);
     uint64_t amountReserved = native::d3d12::SetExternalMemoryReservation(
-        device.Get(), kRestrictedBudgetSize * .2, native::d3d12::MemorySegment::Local);
-    EXPECT_EQ(amountReserved, kRestrictedBudgetSize * .2);
+        device.Get(), kExternalReservationSize, native::d3d12::MemorySegment::Local);
+    EXPECT_EQ(amountReserved, kExternalReservationSize);
 
     // If we're on a non-UMA device, we should also check the NON_LOCAL memory segment.
     if (!IsUMA()) {
         amountReserved = native::d3d12::SetExternalMemoryReservation(
-            device.Get(), kRestrictedBudgetSize * .2, native::d3d12::MemorySegment::NonLocal);
-        EXPECT_EQ(amountReserved, kRestrictedBudgetSize * .2);
+            device.Get(), kExternalReservationSize, native::d3d12::MemorySegment::NonLocal);
+        EXPECT_EQ(amountReserved, kExternalReservationSize);
     }
 }
 
@@ -410,7 +411,7 @@ TEST_P(D3D12DescriptorResidencyTests, SwitchedViewHeapResidency) {
 
     // Check the heap serial to ensure the heap has switched.
     EXPECT_EQ(allocator->GetShaderVisibleHeapSerialForTesting(),
-              heapSerial + native::d3d12::HeapVersionID(1));
+              heapSerial + native::d3d12::HeapVersionID(1u));
 
     // Check that currrently bound ShaderVisibleHeap is locked resident.
     EXPECT_TRUE(allocator->IsShaderVisibleHeapLockedResidentForTesting());

@@ -28,15 +28,14 @@
 #include <algorithm>
 
 #include "absl/types/span.h"  // TODO(343500108): Use std::span when we have C++20.
-#include "dawn/common/StringViewUtils.h"
-#include "dawn/wire/SupportedFeatures.h"
-#include "dawn/wire/server/ObjectStorage.h"
-#include "dawn/wire/server/Server.h"
+#include "src/dawn/common/StringViewUtils.h"
+#include "src/dawn/wire/SupportedFeatures.h"
+#include "src/dawn/wire/server/ObjectStorage.h"
+#include "src/dawn/wire/server/Server.h"
 
 namespace dawn::wire::server {
 
 WireResult Server::DoInstanceRequestAdapter(Known<WGPUInstance> instance,
-                                            ObjectHandle eventManager,
                                             WGPUFuture future,
                                             ObjectHandle adapterHandle,
                                             const WGPURequestAdapterOptions* options) {
@@ -44,9 +43,9 @@ WireResult Server::DoInstanceRequestAdapter(Known<WGPUInstance> instance,
     WIRE_TRY(Allocate(&adapter, adapterHandle, AllocationState::Reserved));
 
     auto userdata = MakeUserdata<RequestAdapterUserdata>();
-    userdata->eventManager = eventManager;
+    userdata->instanceId = instance.id;
     userdata->future = future;
-    userdata->adapterObjectId = adapter.id;
+    userdata->adapter = adapter.AsHandle();
 
     mProcs->instanceRequestAdapter(
         instance->handle, options,
@@ -60,7 +59,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
                                       WGPUAdapter adapter,
                                       WGPUStringView message) {
     ReturnInstanceRequestAdapterCallbackCmd cmd = {};
-    cmd.eventManager = data->eventManager;
+    cmd.instanceId = data->instanceId;
     cmd.future = data->future;
     cmd.status = status;
     cmd.message = message;
@@ -72,7 +71,7 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     }
 
     // Assign the handle and allocated status if the adapter is created successfully.
-    if (FillReservation(data->adapterObjectId, adapter) == WireResult::FatalError) {
+    if (FillReservation(data->adapter, adapter) == WireResult::FatalError) {
         cmd.status = WGPURequestAdapterStatus_CallbackCancelled;
         cmd.message = ToOutputStringView("Destroyed before request was fulfilled.");
         SerializeCommand(cmd);
@@ -82,8 +81,9 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     // Query and report the adapter supported features.
     FreeMembers<WGPUSupportedFeatures> supportedFeatures(mProcs);
     mProcs->adapterGetFeatures(adapter, &supportedFeatures);
-    cmd.featuresCount = supportedFeatures.featureCount;
-    cmd.features = supportedFeatures.features;
+    // SAFETY: WebGPU API guarantees that the returned features are valid.
+    cmd.features = DAWN_UNSAFE_BUFFERS(
+        Span<const WGPUFeatureName>(supportedFeatures.features, supportedFeatures.featureCount));
 
     // Query and report the adapter info.
     FreeMembers<WGPUAdapterInfo> info(mProcs);
@@ -126,16 +126,6 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
     powerProperties.chain.sType = WGPUSType_DawnAdapterPropertiesPowerPreference;
     *propertiesChain = &powerProperties.chain;
     propertiesChain = &(*propertiesChain)->next;
-
-    // Query AdapterPropertiesExplicitComputeSubgroupSizeConfigs if the feature is supported.
-    WGPUAdapterPropertiesExplicitComputeSubgroupSizeConfigs explicitComputeSubgroupSizeConfigs = {};
-    explicitComputeSubgroupSizeConfigs.chain.sType =
-        WGPUSType_AdapterPropertiesExplicitComputeSubgroupSizeConfigs;
-    if (mProcs->adapterHasFeature(adapter,
-                                  WGPUFeatureName_ChromiumExperimentalSubgroupSizeControl)) {
-        *propertiesChain = &explicitComputeSubgroupSizeConfigs.chain;
-        propertiesChain = &(*propertiesChain)->next;
-    }
 
     mProcs->adapterGetInfo(adapter, &info);
     cmd.info = &info;

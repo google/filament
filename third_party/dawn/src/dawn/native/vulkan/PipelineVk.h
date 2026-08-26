@@ -34,7 +34,7 @@
 
 #include <utility>
 
-#include "dawn/native/vulkan/PipelineLayoutVk.h"
+#include "src/dawn/native/vulkan/PipelineLayoutVk.h"
 
 namespace dawn::native::vulkan {
 

@@ -83,23 +83,20 @@ struct [[nodiscard]] Result {
 
     /// Constructor
     /// @param success the success result
-    Result(const SUCCESS_TYPE& success)  // NOLINT(runtime/explicit):
-        : value{success} {}
+    explicit(false) Result(const SUCCESS_TYPE& success) : value{success} {}
 
     /// Constructor
     /// @param success the success result
-    Result(SUCCESS_TYPE&& success)  // NOLINT(runtime/explicit):
+    explicit(false) Result(SUCCESS_TYPE&& success)
         : value(std::move(SUCCESS_TYPE(std::move(success)))) {}
 
     /// Constructor
     /// @param failure the failure result
-    Result(const FAILURE_TYPE& failure)  // NOLINT(runtime/explicit):
-        : value{failure} {}
+    explicit(false) Result(const FAILURE_TYPE& failure) : value{failure} {}
 
     /// Constructor
     /// @param failure the failure result
-    Result(FAILURE_TYPE&& failure)  // NOLINT(runtime/explicit):
-        : value{std::move(failure)} {}
+    explicit(false) Result(FAILURE_TYPE&& failure) : value{std::move(failure)} {}
 
     /// Copy constructor with success / failure casting
     /// @param other the Result to copy
@@ -107,7 +104,7 @@ struct [[nodiscard]] Result {
               typename F,
               typename = std::void_t<decltype(SUCCESS_TYPE{std::declval<S>()}),
                                      decltype(FAILURE_TYPE{std::declval<F>()})>>
-    Result(const Result<S, F>& other) {  // NOLINT(runtime/explicit):
+    explicit(false) Result(const Result<S, F>& other) {
         if (other == Success) {
             value = SUCCESS_TYPE{other.Get()};
         } else {

@@ -30,20 +30,24 @@
     {%- set optional = arg.optional and not strip_optional %}
     {%- set default_value = arg.default_value %}
     {%- if type.category == 'kotlin type' -%}
-        {{ type.name.get() }}  {#- The name *is* the type #}
+        {{ type.name.get() }}{{ '?' if optional }}  {#- The name *is* the type #}
     {%- elif arg.type.name.get() == 'string view' -%}
         String{{ '?' if optional }}
     {%- elif type.name.get() == 'void' %}
         {{- assert(arg.length and arg.constant_length != 1) -}}  {# void with length is binary data #}
         java.nio.ByteBuffer
-    {%- elif arg.length and arg.length != 'constant' %}
+    {%- elif arg.length and (arg.length != 'constant' or arg.constant_length != 1) %}
         {# * annotation can mean an array, e.g. an output argument #}
         {%- if type.category in ['callback function', 'callback info', 'function pointer', 'object', 'structure'] -%}
-            Array<{{ kotlin_name(type) }}>
+            Array<{{ kotlin_name(type) }}>{{ '?' if optional }}
         {%- elif type.category in ['bitmask', 'enum'] or type.name.get() in ['int', 'int32_t', 'uint32_t'] -%}
-            IntArray
+            IntArray{{ '?' if optional }}
+        {%- elif type.name.get() == 'float' -%}
+            FloatArray{{ '?' if optional }}
+        {%- elif type.name.get() == 'char' -%}
+            Array<String>{{ '?' if optional }}
         {%- else -%}
-            {{ unreachable_code() }}
+            {{ unreachable_code('Unsupported array type: ' + type.name.get()) }}
         {% endif %}
     {%- elif type.category in ['callback function', 'function pointer', 'object'] %}
         {{- kotlin_name(type) }}
@@ -92,12 +96,121 @@
 
 {% macro kotlin_annotation(arg) -%}
     {%- if arg != None -%}
-        {% set type = arg.type %}
-        {% if type.category in ['bitmask', 'enum'] -%}
-            @{{ type.name.CamelCase() -}}.Type
-        {% endif -%}
-    {% endif -%}
-{% endmacro %}
+        {%- set type = arg.type -%}
+        {%- if type.category in ['bitmask', 'enum'] -%}
+            @{{ type.name.CamelCase() }}.Type
+        {%- endif -%}
+    {%- endif -%}
+{%- endmacro %}
+
+//* Helper macro to recursively scan if an API element or its dependencies are experimental.
+//* In Kotlin, stable types must never expose experimental components in their signatures
+//* without explicit warnings. This macro recursively traverses:
+//* 1. The item's direct tags (e.g. structures, objects, functions).
+//* 2. Members of structures (and their nested types).
+//* 3. Methods of objects (including return types and method arguments).
+//* 4. Constructor or function parameters.
+//* 5. Chained child structures associated with extensible structures.
+{% macro item_requires_optin(item, chain_children=None) -%}
+    {%- set ns = namespace(needs=false) -%}
+    {%- if item -%}
+        {%- if "art_experimental" in item.json_data.get("tags", []) -%}
+            {%- set ns.needs = true -%}
+        {%- endif -%}
+        {%- if not ns.needs and item.type and "art_experimental" in item.type.json_data.get("tags", []) -%}
+            {%- set ns.needs = true -%}
+        {%- endif -%}
+        {%- if not ns.needs and item.members -%}
+            {%- for member in item.members -%}
+                {%- if "art_experimental" in member.json_data.get("tags", []) or "art_experimental" in member.type.json_data.get("tags", []) -%}
+                    {%- set ns.needs = true -%}
+                    {%- break -%}
+                {%- endif -%}
+            {%- endfor -%}
+        {%- endif -%}
+        {%- if not ns.needs and item.methods -%}
+            {%- for method in item.methods -%}
+                {%- if "art_experimental" in method.json_data.get("tags", []) -%}
+                    {%- set ns.needs = true -%}
+                    {%- break -%}
+                {%- endif -%}
+                {%- if method.returns and ("art_experimental" in method.returns.json_data.get("tags", []) or "art_experimental" in method.returns.type.json_data.get("tags", [])) -%}
+                    {%- set ns.needs = true -%}
+                    {%- break -%}
+                {%- endif -%}
+                {%- for arg in method.arguments -%}
+                    {%- if "art_experimental" in arg.type.json_data.get("tags", []) or "art_experimental" in arg.json_data.get("tags", []) -%}
+                        {%- set ns.needs = true -%}
+                        {%- break -%}
+                    {%- endif -%}
+                {%- endfor -%}
+                {%- if ns.needs -%}
+                    {%- break -%}
+                {%- endif -%}
+            {%- endfor -%}
+        {%- endif -%}
+        {%- if not ns.needs and item.arguments -%}
+            {%- for arg in item.arguments -%}
+                {%- if "art_experimental" in arg.json_data.get("tags", []) or "art_experimental" in arg.type.json_data.get("tags", []) -%}
+                    {%- set ns.needs = true -%}
+                    {%- break -%}
+                {%- endif -%}
+            {%- endfor -%}
+        {%- endif -%}
+        {%- if not ns.needs and item.returns -%}
+            {%- if "art_experimental" in item.returns.json_data.get("tags", []) or "art_experimental" in item.returns.type.json_data.get("tags", []) -%}
+                {%- set ns.needs = true -%}
+            {%- endif -%}
+        {%- endif -%}
+        {%- if not ns.needs and chain_children and item.name.get() in chain_children -%}
+            {%- for child in chain_children[item.name.get()] -%}
+                {%- if "art_experimental" in child.json_data.get("tags", []) -%}
+                    {%- set ns.needs = true -%}
+                    {%- break -%}
+                {%- endif -%}
+            {%- endfor -%}
+        {%- endif -%}
+    {%- endif -%}
+    {{- ns.needs -}}
+{%- endmacro %}
+
+//* Helper macro to check if a top-level API element is directly tagged as experimental.
+//* This indicates that the entire WebGPU object or type is considered unstable.
+//* It also checks if any required member is experimental, forcing the class to be experimental
+//* to enable the primary constructor flow and prevent initialization errors.
+{% macro item_is_experimental(item) -%}
+    {%- set ns = namespace(val=false) -%}
+    {%- if item and "art_experimental" in item.json_data.get("tags", []) -%}
+        {%- set ns.val = true -%}
+    {%- elif item and item.members -%}
+        {%- for member in item.members -%}
+            {%- if item_requires_optin(member) == 'True' and kotlin_default(member) is none -%}
+                {%- set ns.val = true -%}
+                {%- break -%}
+            {%- endif -%}
+        {%- endfor -%}
+    {%- endif -%}
+    {{- ns.val -}}
+{%- endmacro %}
+
+//* Injects @ExperimentalWebGpuApi annotation on class declarations.
+//* This requires consumers to opt-in to the entire namespace of an experimental class or enum.
+{% macro kotlin_class_optin(item) -%}
+    {%- if item_is_experimental(item) == 'True' -%}
+        @ExperimentalWebGpuApi
+    {%- endif -%}
+{%- endmacro %}
+
+//* Injects @ExperimentalWebGpuApi annotation on methods, functions, or members.
+//* Ensures consumers are warned when using stable classes that expose experimental operations.
+{% macro kotlin_member_optin(item, parent=None, chain_children=None) -%}
+    {%- if parent and item_is_experimental(parent) == 'True' -%}
+        {# Containing type is already experimental; members inherit this, so skip redundant annotation #}
+    {%- elif item_requires_optin(item, chain_children) == 'True' -%}
+        @ExperimentalWebGpuApi
+    {%- endif -%}
+{%- endmacro %}
+
 
 {% macro do_all_args_have_doc(all_arg_docs, code_args) %}
     //* Ensure inputs are not None
@@ -183,3 +296,47 @@
     {{indent_prefix}} * https://issuetracker.google.com/issues/new?component=1960262
     {{indent_prefix}} */
 {%- endmacro -%}
+
+//* Generates a Kotlin constructor parameter with annotations and default values for a structure member.
+{% macro kotlin_parameter(member, parent, include_default=True) -%}
+    {%- set annotations = [] -%}
+    {%- set annot = kotlin_annotation(member) | trim -%}
+    {%- if annot -%}
+        {%- do annotations.append(annot) -%}
+    {%- endif -%}
+    {%- set annotations_str = annotations | join(' ') -%}
+    {{- annotations_str + ' ' if annotations_str -}}{{- member.name.camelCase() -}}: {{ kotlin_definition(member) if include_default else kotlin_declaration(member) -}}
+{%- endmacro -%}
+
+//* Generates a nullable Kotlin constructor parameter for an extensible chain child structure.
+{% macro kotlin_chain_parameter(child, parent, include_default=True) -%}
+    {{- child.name.camelCase() -}}: {{ kotlin_name(child) }}?{{ ' = null' if include_default else '' }}
+{%- endmacro -%}
+
+//* Generates a public var property declaration for a structure member, handling annotations and opt-ins.
+{% macro kotlin_property(member, parent) -%}
+    {%- set annotations = [] -%}
+    {%- if member.type.name.get() == "bool" -%}
+        {%- do annotations.append('@get:JvmName("is' + member.name.CamelCase() + '")') -%}
+    {%- endif -%}
+    {%- set annot = kotlin_annotation(member) | trim -%}
+    {%- if annot -%}
+        {%- do annotations.append(annot) -%}
+    {%- endif -%}
+    {%- set optin = kotlin_member_optin(member, parent=parent, chain_children=chain_children) | trim -%}
+    {%- if optin -%}
+        {%- do annotations.append(optin) -%}
+    {%- endif -%}
+    {%- set annotations_str = annotations | join(' ') -%}
+    {%- set is_experimental = (item_is_experimental(parent) != 'True') and (item_requires_optin(member) == 'True') -%}
+    {{- annotations_str + ' ' if annotations_str -}}public var {{ member.name.camelCase() -}}: {{ kotlin_definition(member) if is_experimental else kotlin_declaration(member) -}}
+{%- endmacro -%}
+
+//* Generates a public var property declaration for an extensible chain child structure.
+{% macro kotlin_chain_property(child, parent) -%}
+    {%- set optin = kotlin_member_optin(child, parent=parent, chain_children=chain_children) | trim -%}
+    {%- set is_experimental = (item_is_experimental(parent) != 'True') and (item_requires_optin(child) == 'True') -%}
+    {{- optin + ' ' if optin -}}public var {{ child.name.camelCase() }}: {{ kotlin_name(child) }}?{{ ' = null' if is_experimental }}
+{%- endmacro -%}
+
+

@@ -28,44 +28,49 @@
 #ifndef SRC_DAWN_WIRE_CLIENT_INSTANCE_H_
 #define SRC_DAWN_WIRE_CLIENT_INSTANCE_H_
 
+#include <memory>
+
 #include "absl/container/flat_hash_set.h"
-#include "dawn/common/RefCountedWithExternalCount.h"
 #include "dawn/wire/WireClient.h"
 #include "dawn/wire/WireCmd_autogen.h"
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/EventManager.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
 namespace dawn::wire::client {
 
-void APIFreeMembers(WGPUSupportedWGSLLanguageFeatures supportedFeatures);
-void APIFreeMembers(WGPUSupportedInstanceFeatures supportedFeatures);
+void APISupportedWGSLLanguageFeaturesFreeMembers(
+    WGPUSupportedWGSLLanguageFeatures supportedFeatures);
+void APISupportedInstanceFeaturesFreeMembers(WGPUSupportedInstanceFeatures supportedFeatures);
 
-class Instance final : public RefCountedWithExternalCount<ObjectWithEventsBase> {
+class Instance final : public ObjectBase {
   public:
     explicit Instance(const ObjectBaseParams& params);
 
     ObjectType GetObjectType() const override;
 
+    EventManager& GetEventManager() const;
+
     // Validate and initialize the client side state. Note the *actual* native
     // instance is not created via the wire, but gets injected separately.
-    WireResult Initialize(const WGPUInstanceDescriptor* descriptor);
+    WireResult Initialize(const InstanceDescriptor* descriptor);
 
-    WGPUFuture APIRequestAdapter(const WGPURequestAdapterOptions* options,
-                                 const WGPURequestAdapterCallbackInfo& callbackInfo);
+    Future APIRequestAdapter(const RequestAdapterOptions* options,
+                             const WGPURequestAdapterCallbackInfo& callbackInfo);
 
     void APIProcessEvents();
-    WGPUWaitStatus APIWaitAny(size_t count, WGPUFutureWaitInfo* infos, uint64_t timeoutNS);
+    wgpu::WaitStatus APIWaitAny(Span<FutureWaitInfo> infos, uint64_t timeoutNS);
 
-    bool APIHasWGSLLanguageFeature(WGPUWGSLLanguageFeatureName feature) const;
-    void APIGetWGSLLanguageFeatures(WGPUSupportedWGSLLanguageFeatures* features) const;
+    bool APIHasWGSLLanguageFeature(wgpu::WGSLLanguageFeatureName feature) const;
+    void APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const;
 
-    WGPUSurface APICreateSurface(const WGPUSurfaceDescriptor* desc) const;
+    Surface* APICreateSurface(const SurfaceDescriptor* desc) const;
 
   private:
-    void WillDropLastExternalRef() override;
-    void GatherWGSLFeatures(const WGPUDawnWireWGSLControl* wgslControl,
-                            const WGPUDawnWGSLBlocklist* wgslBlocklist);
+    void GatherWGSLFeatures(const DawnWireWGSLControl* wgslControl,
+                            const DawnWGSLBlocklist* wgslBlocklist);
 
-    absl::flat_hash_set<WGPUWGSLLanguageFeatureName> mWGSLFeatures;
+    absl::flat_hash_set<wgpu::WGSLLanguageFeatureName> mWGSLFeatures;
+    std::unique_ptr<EventManager> mEventManager;
 };
 
 }  // namespace dawn::wire::client

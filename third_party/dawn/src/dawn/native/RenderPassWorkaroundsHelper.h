@@ -28,14 +28,14 @@
 #ifndef SRC_DAWN_NATIVE_RENDERPASSWORKAROUNDSHELPER_H_
 #define SRC_DAWN_NATIVE_RENDERPASSWORKAROUNDSHELPER_H_
 
-#include "dawn/common/NonMovable.h"
-#include "dawn/common/Ref.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/RenderPassEncoder.h"
+#include "src/dawn/common/Ref.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/RenderPassEncoder.h"
+#include "src/utils/non_movable.h"
 
 namespace dawn::native {
 struct BeginRenderPassCmd;

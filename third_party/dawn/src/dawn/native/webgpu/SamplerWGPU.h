@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_NATIVE_WEBGPU_SAMPLERWGPU_H_
 #define SRC_DAWN_NATIVE_WEBGPU_SAMPLERWGPU_H_
 
-#include "dawn/native/Sampler.h"
-#include "dawn/native/webgpu/ObjectWGPU.h"
-#include "dawn/native/webgpu/RecordableObject.h"
 #include "dawn/webgpu.h"
+#include "src/dawn/native/Sampler.h"
+#include "src/dawn/native/webgpu/ObjectWGPU.h"
+#include "src/dawn/native/webgpu/RecordableObject.h"
 
 namespace dawn::native::webgpu {
 

@@ -55,7 +55,9 @@ tint_target_add_dependencies(tint_lang_spirv_reader lib
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_type
+  tint_lang_spirv_reader_common
   tint_lang_spirv_reader_lower
+  tint_lang_spirv_reader_parser
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -63,6 +65,7 @@ tint_target_add_dependencies(tint_lang_spirv_reader lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -71,13 +74,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader lib
 tint_target_add_external_dependencies(tint_lang_spirv_reader lib
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_READER)
-  tint_target_add_dependencies(tint_lang_spirv_reader lib
-    tint_lang_spirv_reader_common
-    tint_lang_spirv_reader_parser
-  )
-endif(TINT_BUILD_SPV_READER)
 
 endif(TINT_BUILD_SPV_READER)
 if(TINT_BUILD_SPV_READER)
@@ -97,8 +93,12 @@ tint_target_add_dependencies(tint_lang_spirv_reader_test test
   tint_api_common
   tint_lang_core
   tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_type
+  tint_lang_spirv_reader
+  tint_lang_spirv_reader_common
+  tint_lang_spirv_reader_common_test
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -106,6 +106,7 @@ tint_target_add_dependencies(tint_lang_spirv_reader_test test
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -113,21 +114,8 @@ tint_target_add_dependencies(tint_lang_spirv_reader_test test
 
 tint_target_add_external_dependencies(tint_lang_spirv_reader_test test
   "gtest"
+  "spirv-tools"
   "src_utils"
 )
-
-if(TINT_BUILD_SPV_READER)
-  tint_target_add_dependencies(tint_lang_spirv_reader_test test
-    tint_lang_spirv_reader
-    tint_lang_spirv_reader_common
-    tint_lang_spirv_reader_common_test
-  )
-endif(TINT_BUILD_SPV_READER)
-
-if(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
-  tint_target_add_external_dependencies(tint_lang_spirv_reader_test test
-    "spirv-tools"
-  )
-endif(TINT_BUILD_SPV_READER OR TINT_BUILD_SPV_WRITER)
 
 endif(TINT_BUILD_SPV_READER)

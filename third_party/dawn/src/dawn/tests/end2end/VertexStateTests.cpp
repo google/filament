@@ -27,12 +27,12 @@
 
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 namespace {
@@ -265,6 +265,9 @@ class VertexStateTest : public DawnTest {
 
 // Test compilation and usage of the fixture :)
 TEST_P(VertexStateTest, Basic) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::ComboVertexState vertexState;
     MakeVertexState(
         {{4 * sizeof(float), VertexStepMode::Vertex, {{0, 0, VertexFormat::Float32x4}}}},
@@ -284,6 +287,9 @@ TEST_P(VertexStateTest, Basic) {
 
 // Test a stride of 0 works
 TEST_P(VertexStateTest, ZeroStride) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // This test was failing only on AMD but the OpenGL backend doesn't gather PCI info yet.
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsOpenGL());
 
@@ -303,6 +309,9 @@ TEST_P(VertexStateTest, ZeroStride) {
 
 // Test attributes defaults to (0, 0, 0, 1) if the input state doesn't have all components
 TEST_P(VertexStateTest, AttributeExpanding) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // This test was failing only on AMD but the OpenGL backend doesn't gather PCI info yet.
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsOpenGL());
 
@@ -343,6 +352,9 @@ TEST_P(VertexStateTest, AttributeExpanding) {
 
 // Test a stride larger than the attributes
 TEST_P(VertexStateTest, StrideLargerThanAttributes) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // This test was failing only on AMD but the OpenGL backend doesn't gather PCI info yet.
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsOpenGL());
 
@@ -365,6 +377,9 @@ TEST_P(VertexStateTest, StrideLargerThanAttributes) {
 
 // Test two attributes at an offset, vertex version
 TEST_P(VertexStateTest, TwoAttributesAtAnOffsetVertex) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::ComboVertexState vertexState;
     MakeVertexState(
         {{8 * sizeof(float),
@@ -386,6 +401,9 @@ TEST_P(VertexStateTest, TwoAttributesAtAnOffsetVertex) {
 
 // Test two attributes at an offset, instance version
 TEST_P(VertexStateTest, TwoAttributesAtAnOffsetInstance) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::ComboVertexState vertexState;
     MakeVertexState(
         {{8 * sizeof(float),
@@ -407,6 +425,9 @@ TEST_P(VertexStateTest, TwoAttributesAtAnOffsetInstance) {
 
 // Test a pure-instance input state
 TEST_P(VertexStateTest, PureInstance) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::ComboVertexState vertexState;
     MakeVertexState(
         {{4 * sizeof(float), VertexStepMode::Instance, {{0, 0, VertexFormat::Float32x4}}}},
@@ -428,6 +449,9 @@ TEST_P(VertexStateTest, PureInstance) {
 // Test with mixed everything, vertex vs. instance, different stride and offsets
 // different attribute types
 TEST_P(VertexStateTest, MixedEverything) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     utils::ComboVertexState vertexState;
     MakeVertexState(
         {{12 * sizeof(float),
@@ -463,6 +487,9 @@ TEST_P(VertexStateTest, MixedEverything) {
 
 // Test input state is unaffected by unused vertex slot
 TEST_P(VertexStateTest, UnusedVertexSlot) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Instance input state, using slot 1
     utils::ComboVertexState instanceVertexState;
     MakeVertexState(
@@ -504,6 +531,9 @@ TEST_P(VertexStateTest, UnusedVertexSlot) {
 // was getting the input from the last set pipeline, not the current.
 // SetVertexBuffer should be reapplied when the input state changes.
 TEST_P(VertexStateTest, MultiplePipelinesMixedVertexState) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // Basic input state, using slot 0
     utils::ComboVertexState vertexVertexState;
     MakeVertexState(
@@ -553,6 +583,9 @@ TEST_P(VertexStateTest, MultiplePipelinesMixedVertexState) {
 
 // Checks that using the last vertex buffer doesn't overflow the vertex buffer table in Metal.
 TEST_P(VertexStateTest, LastAllowedVertexBuffer) {
+    // TODO(crbug.com/523261707): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
+
     // TODO(crbug.com/474158751): [Capture] vertex slot 0 not set.
     DAWN_SUPPRESS_TEST_IF(IsCaptureReplayCheckingEnabled());
 
@@ -583,6 +616,9 @@ TEST_P(VertexStateTest, LastAllowedVertexBuffer) {
 
 // Test that overlapping vertex attributes are permitted and load data correctly
 TEST_P(VertexStateTest, OverlappingVertexAttributes) {
+    // Fails on Xclipse with ANGLE Vulkan.
+    DAWN_SUPPRESS_TEST_IF(IsSamsung() && IsOpenGLES() && IsANGLE());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 3, 3);
 
     utils::ComboVertexState vertexState;

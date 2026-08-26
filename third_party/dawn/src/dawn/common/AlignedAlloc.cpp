@@ -25,20 +25,20 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/common/AlignedAlloc.h"
+#include "src/dawn/common/AlignedAlloc.h"
 
 #include <cstdlib>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/Platform.h"
+#include "src/dawn/common/Math.h"
+#include "src/utils/assert.h"
+#include "src/utils/platform.h"
 
 namespace dawn {
 
 void* AlignedAlloc(size_t size, size_t alignment) {
-    DAWN_ASSERT(size > 0);
-    DAWN_ASSERT(IsPowerOfTwo(alignment));
-    DAWN_ASSERT(size % alignment == 0);
+    DAWN_CHECK(size > 0);
+    DAWN_CHECK(IsPowerOfTwo(alignment));
+    DAWN_CHECK(size % alignment == 0);
 
 #if DAWN_PLATFORM_IS(WINDOWS)
     return _aligned_malloc(size, alignment);

@@ -1,0 +1,365 @@
+Name
+
+    ARB_cl_event
+
+Name Strings
+
+    GL_ARB_cl_event
+
+Contributors
+
+    Jon Leech, Khronos
+
+Contact
+
+    Jon Leech (jon 'at' alumni.caltech.edu)
+
+Notice
+
+    Copyright (c) 2010-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 9, 2010.
+    Approved by the Khronos Board of Promoters on July 23, 2010.
+
+Version
+
+    Version 5, May 7, 2013
+
+Number
+
+    ARB Extension #103
+
+Dependencies
+
+    OpenGL 3.2, or an earlier OpenGL version supporting the GL_ARB_sync
+    extension, is required.
+
+    An OpenCL implementation supporting sharing event objects
+    with OpenGL is required.
+
+Overview
+
+    This extension allows creating OpenGL sync objects linked to OpenCL
+    event objects, potentially improving efficiency of sharing images
+    and buffers between the two APIs. The companion cl_khr_gl_event
+    OpenCL extension provides the complementary functionality of
+    creating an OpenCL event object from an OpenGL fence sync object.
+    That extension is located in the OpenCL API Registry.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    sync CreateSyncFromCLeventARB(cl_context context, cl_event event,
+        bitfield flags)
+
+New Tokens
+
+    Returned in <values> for GetSynciv <pname> OBJECT_TYPE:
+
+        SYNC_CL_EVENT_ARB               0x8240
+
+    Returned in <values> for GetSynciv <pname> SYNC_CONDITION:
+
+        SYNC_CL_EVENT_COMPLETE_ARB      0x8241
+
+
+Additions to Chapter 5 of the OpenGL 3.1 Specification (Special Functions)
+
+    Add following the description of fence sync objects in section 5.2
+    (e.g. following the paragraph beginning "If FenceSync fails to
+    create a sync object..."):
+
+   "Sync Objects Linked to OpenCL Events
+    ------------------------------------
+
+    A sync object may also be created which reflects the status of an
+    OpenCL event object. This provides another method of coordinating
+    sharing of buffers and images between OpenGL and OpenCL (see Chapter
+    9 of the OpenCL 1.0 Specification). Waiting on such a sync object is
+    equivalent to waiting for completion of the linked CL event object.
+
+    The command
+
+    sync CreateSyncFromCLeventARB(cl_context context, cl_event event,
+        bitfield flags)
+
+    creates a linked sync object. <context> and <event> must be handles
+    to a valid OpenCL context and a valid event in that context,
+    respectively. <context> must support sharing with GL, and must have
+    been created with respect to the current GL context, or to a share
+    group including the current GL context.
+
+    <flags> must be 0[fn1].
+       [fn1: <flags> is a placeholder for anticipated future extensions
+        of sync object capabilities.]
+
+    The status of such a sync object depends on <event>. When the status
+    of <event> is CL_QUEUED, CL_SUBMITTED, or CL_RUNNING, the status of
+    the linked sync object will be UNSIGNALED. When the status of
+    <event> changes to CL_COMPLETE, the status of the linked sync object
+    will become SIGNALED.
+
+    The initial property values for a sync object created by
+    CreateSyncFromCLeventARB are shown in table 5.clprops. Note that
+    <context> and <event> are not queriable properties of a sync object.
+
+        Property Name   Property Value
+        -------------   --------------
+        OBJECT_TYPE     SYNC_CL_EVENT_ARB
+        SYNC_CONDITION  SYNC_CL_EVENT_COMPLETE_ARB
+        SYNC_STATUS     Depends on status of <event>
+        SYNC_FLAGS      <flags>
+        ----------------------------------------------
+        Table 5.clprops: Initial properties of a sync
+        object created with CreateSyncFromCLeventARB.
+
+    Creating a linked sync object places a reference on the linked
+    OpenCL event object. When the sync object is deleted, the reference
+    will be removed from the event object.
+
+    If CreateSyncFromCLeventARB fails to create a sync object, zero will
+    be returned and a GL error will be generated as described. An
+    INVALID_VALUE error is generated if <context> is not a valid OpenCL
+    context created with respect to the current GL context or the share
+    group containing the current GL context, if <event> is not a valid
+    OpenCL event handle in <context>, or if <flags> is not zero. An
+    INVALID_OPERATION error is generated if <event> is a valid OpenCL
+    event handle but was not returned by a call to
+    clEnqueueReleaseGLObjects.
+
+    However, implementations are not required to validate <context> or
+    <event>, and passing an invalid <context> or <event> handle may
+    result in undefined behavior up to and including program
+    termination."
+
+    Replace the first paragraph describing DeleteSync with:
+
+   "A sync object can be deleted by passing its name to the command
+
+        void DeleteSync(sync sync)
+
+    If the fence command or OpenCL event object corresponding to the
+    specified sync object has completed, or if no ClientWaitSync or
+    WaitSync commands are blocking on <sync>, the object is deleted
+    immediately. Otherwise, <sync> is flagged for deletion and will be
+    deleted when it is no longer associated with any fence command or
+    non-completed OpenCL event object, and is no longer blocking any
+    ClientWaitSync or WaitSync command. In either case, after returning
+    from DeleteSync the <sync> name is invalid and can no longer be used
+    to refer to the sync object."
+
+    Replace the first paragraph of section 5.2.2 "Signaling" with
+
+   "A sync object can be in the signaled state only once the
+    corresponding fence command or OpenCL event object has completed and
+    signaled the sync object."
+
+    Replace the list of sync object state in the last paragraph of
+    section 5.2 with:
+
+   "State must be maintained to indicate which sync object names are
+    currently in use. The state require for each sync object in use is
+    an integer for the specific type, an integer for the condition, an
+    integer for the flags, and a bit indicating whether the object is
+    signaled or unsignaled. Additionally, sync objects linked to OpenCL
+    events require implementation-specific, non-queriable internal state
+    identifying the OpenCL context and event. The initial values of sync
+    object state are defined as specified by FenceSync and
+    CreateSyncFromCLeventARB."
+
+Additions to Chapter 6 of the OpenGL 3.1 Specification (State and State Requests)
+
+    Replace the third paragraph of section 6.1.7 "Sync Object Queries"
+    with:
+
+   "If <pname> is OBJECT_TYPE, a single value representing the specific
+    type of the sync object is placed in <values>. The only types
+    supported are SYNC_FENCE and SYNC_CL_EVENT_ARB."
+
+Additions to Appendix D (Shared Objects and Multiple Contexts)
+
+    Replace section D.2.1 "Sync Object Deletion Behavior" with:
+
+   "Deleting sync objects is similar to other shared object types in
+    that the name of the deleted object immediately becomes invalid but
+    the underlying object will not be deleted until it is no longer in
+    use. Unlike other shared object types, a sync object is determined
+    to be in use if there is a corresponding fence command or linked
+    OpenCL event which has not yet completed (signaling the sync
+    object), or if there are any GL clients and/or servers blocked on
+    the sync object as a result of ClientWaitSync or WaitSync commands.
+    Once any corresponding fence commands or linked OpenCL events have
+    completed, a sync object has been signaled, and all clients and/or
+    servers blocked on that sync object have been unblocked, the object
+    may then be deleted."
+
+Additions to the AGL/EGL/GLX/WGL Specifications:
+
+    None
+
+GLX Protocol
+
+    <TBD>
+
+Errors
+
+    INVALID_VALUE is generated if the <context> parameter of
+    CreateSyncFromCLeventARB is not a valid OpenCL context created with
+    respect to the current GL context or the share group containing the
+    current GL context.
+
+    INVALID_VALUE is generated if <event> is not a valid OpenCL event
+    handle in <context>.
+
+    INVALID_VALUE is generated if <flags> is not zero.
+
+    INVALID_OPERATION is generated if <event> is a valid OpenCL event
+    handle in <context>, but was not generated by a call to
+    clEnqueueReleaseGLObjects.
+
+New State
+
+    Change the "Type" field for OBJECT_TYPE in table 6.X "Sync Objects"
+    from "Z_1" to "Z_2". Change the "Initial Value" fields for
+    OBJECT_TYPE and SYNC_STATUS to "(see sec. 5.2)".
+
+New Implementation Dependent State
+
+    None
+
+Sample Code
+
+    None
+
+Issues
+
+    1) What should the command to create a sync object linked to an
+       OpenCL event look like?
+
+        DISCUSSION: In earlier versions of the ARB_sync extension, a
+        generic constructor taking an attribute list was proposed. This
+        could be used to pass the necessary CL event-specific parameters
+        (CL context and event handle), or a CL event-specific command
+        taking explicit parameters could be used.
+
+        The explicit parameter approach is more typesafe and requires
+        marginally less coding to use, but introduces header file
+        dependency concerns (see issue 2 below). The generic approach
+        eliminates header file concerns and provides the groundwork for
+        new types of GL sync objects in the future.
+
+        RESOLVED: use explicit parameters.
+
+    2) How will the OpenCL header dependencies interact with
+       specifying the API for this extension?
+
+        DISCUSSION: GL extensions are specified in the Khronos-supplied
+        "glext.h" and "gl3ext.h" headers. Normally these headers are
+        self-contained, requiring only that <GL/gl.h> or <GL3/gl3.h> be
+        #included first to define necessary GL types. However,
+        specifying an event interface using the CL cl_context and
+        cl_event data types introduces a dependency on cl.h. Even worse,
+        there may be a dependency loop between CL and GL headers in
+        order to define both the cl_khr_gl_event and the GL_ARB_cl_event
+        extensions.
+
+        RESOLVED: glext.h and gl3.h will use the same incomplete struct
+        pointer types as cl.h does, based on these definitions from the
+        official Khronos headers:
+
+            typedef struct _cl_context *cl_context;
+            typedef struct _cl_event *cl_event;
+
+        If this turns out to be a problem on implementations that use
+        other declarations of these types we will reconsider but there's
+        no obvious reason this won't work.
+
+    3) Should all possible statuses of the CL event be reflected through
+       to the state of the sync object?
+
+        DISCUSSION: CL event objects have four execution statuses:
+        CL_QUEUED, CL_SUBMITTED, CL_RUNNING, and CL_COMPLETE. GL sync
+        objects have only two statuses: UNSIGNALED and SIGNALED. The
+        cl_khr_gl_event extension maps UNSIGNALED into CL_SUBMITTED, and
+        SIGNALED into CL_COMPLETE.
+
+        RESOLVED: Invert the cl_khr_gl_event mapping. CL_QUEUED,
+        CL_SUBMITTED, and CL_RUNNING all map into UNSIGNALED.
+        CL_COMPLETE maps into SIGNALED.
+
+    4) What is the sync type of a sync object linked to a CL event?
+
+        DISCUSSION: The GL sync interface anticipates the creation of
+        many types of sync objects although the only currently defined
+        type is the fence sync. From a functional perspective, a sync
+        created from a CL event is equivalent to a fence sync: it starts
+        in the UNSIGNALED state and can only transition once, to the
+        SIGNALED state. But it may be useful to distinguish between the
+        two types of syncs in the query API.
+
+        RESOLVED: The OBJECT_TYPE of a GL sync object created from a CL
+        event is SYNC_CL_EVENT_ARB.
+
+    5) Are there any restrictions on the use of a sync object linked to
+       a CL event object?
+
+        RESOLVED: No restrictions. The implementation may make different
+        choices depending on the sync object type, however. For example,
+        WaitSync might be able to wait in the GPU for a fence sync
+        object and be forced to wait in the CPU for a sync object linked
+        to a CL event, which may affect performance. But in terms of the
+        public API, there are no restrictions compared to how a fence
+        sync object may be used.
+
+    6) How are sync object lifetimes defined?
+
+        RESOLVED: A sync object linked to a CL event object places a
+        single reference on the event. Deleting the sync object removes
+        that reference.
+
+        DeleteSync has a dependency on the completion of the linked
+        event object, and will not delete the sync object while the
+        event object has not yet completed. This is equivalent to
+        behavior of deleting a fence sync object, where deletion of the
+        object will be deferred until the underlying fence command has
+        completed.
+
+    7) Should all OpenCL events be supported?
+
+        RESOLVED: No. Only events returned by clEnqueueReleaseGLObjects,
+        since that's the only known use case for this extension and
+        since this mirrors a recent restriction in the GL sync -> CL
+        event OpenCL extension which only allows events generated from
+        syncs to be used with clEnqueueAcquireGLObjects.
+
+Revision History
+
+    Version 5, 2013/05/07 (Jon Leech) - some resolved issues were
+    mistakenly still labelled as proposed. Fix labelling.
+
+    Version 4, 2010/07/24 (Jon Leech) - resolve issue 2.
+
+    Version 3, 2010/07/17 (Jon Leech) - fix misordering of command
+    parameters in New Procedures section.
+
+    Version 2, 2010/03/17 (Jon Leech) - restrict the extension to only
+    support OpenCL events generated by clEnqueueReleaseGLObjects.
+    Cleanup Errors section.
+
+    Version 1, 2009/09/15 (Jon Leech) - initial version.

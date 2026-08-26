@@ -45,8 +45,8 @@ from pyparsing import (
     ParseException,
     CaselessKeyword,
     Suppress,
-    delimitedList,
-    infixNotation,
+    DelimitedList,
+    infix_notation,
     Combine,
 )
 import math
@@ -125,8 +125,8 @@ def push_first(toks):
 dependencyIdent = Word(f"{alphanums}_:")
 
 # Infix expression for depends expressions
-dependencyExpr = pp.infixNotation(dependencyIdent,
-    [ (pp.oneOf(', +'), 2, pp.opAssoc.LEFT), ])
+dependencyExpr = pp.infix_notation(dependencyIdent,
+    [ (pp.one_of(', +'), 2, pp.OpAssoc.LEFT), ])
 
 # BNF grammar for depends expressions
 _bnf = None
@@ -144,16 +144,16 @@ def dependencyBNF():
         boolop = and_ | or_
 
         expr = Forward()
-        expr_list = delimitedList(Group(expr))
+        expr_list = DelimitedList(Group(expr))
         atom = (
             boolop[...]
             + (
-                (dependencyIdent).setParseAction(push_first)
+                (dependencyIdent).set_parse_action(push_first)
                 | Group(lpar + expr + rpar)
             )
         )
 
-        expr <<= atom + (boolop + atom).setParseAction(push_first)[...]
+        expr <<= atom + (boolop + atom).set_parse_action(push_first)[...]
         _bnf = expr
     return _bnf
 
@@ -180,11 +180,11 @@ def protectBNF():
         atom = (
             boolop[...]
             + (
-                protectIdent.copy().setParseAction(push_first)
+                protectIdent.copy().set_parse_action(push_first)
                 | Group(lpar + expr + rpar)
             )
         )
-        expr <<= atom + (boolop + atom).setParseAction(push_first)[...]
+        expr <<= atom + (boolop + atom).set_parse_action(push_first)[...]
         _protect_bnf = expr
     return _protect_bnf
 
@@ -225,7 +225,7 @@ def evaluateDependency(dependency, isSupported):
 
     global exprStack
     exprStack = []
-    results = dependencyBNF().parseString(dependency, parseAll=True)
+    results = dependencyBNF().parse_string(dependency, parse_all=True)
     val = evaluateStack(exprStack[:], isSupported)
     return val
 
@@ -273,7 +273,7 @@ def dependencyLanguage(dependency, leafMarkup, opMarkup, parenthesize):
 
     global exprStack
     exprStack = []
-    results = dependencyBNF().parseString(dependency, parseAll=True)
+    results = dependencyBNF().parse_string(dependency, parse_all=True)
     return evalDependencyLanguage(exprStack, leafMarkup, opMarkup, parenthesize, root = True, parent_op = None)
 
 # aka specmacros = False
@@ -314,7 +314,7 @@ def protectLanguageC(protect):
        - protect - the protect expression string"""
     global exprStack
     exprStack = []
-    protectBNF().parseString(protect, parseAll=True)
+    protectBNF().parse_string(protect, parse_all=True)
     return evalDependencyLanguage(exprStack, leafMarkupCProtect, opMarkupC,
                                   parenthesize=True, root=True, parent_op=None)
 
@@ -344,7 +344,7 @@ def dependencyNames(dependency):
 
     global exprStack
     exprStack = []
-    results = dependencyBNF().parseString(dependency, parseAll=True)
+    results = dependencyBNF().parse_string(dependency, parse_all=True)
     # print(f'names(): stack = {exprStack}')
     return evalDependencyNames(exprStack)
 
@@ -386,7 +386,7 @@ def dependencyMarkup(dependency):
 
      - dependency - the expression"""
 
-    parsed = dependencyExpr.parseString(dependency)
+    parsed = dependencyExpr.parse_string(dependency)
     return markupTraverse(parsed)
 
 if __name__ == "__main__":

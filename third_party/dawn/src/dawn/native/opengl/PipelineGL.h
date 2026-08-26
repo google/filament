@@ -32,12 +32,12 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/ityp_vector.h"
-#include "dawn/native/IntegerTypes.h"
-#include "dawn/native/PerStage.h"
-#include "dawn/native/Pipeline.h"
-#include "dawn/native/opengl/IntegerTypes.h"
-#include "dawn/native/opengl/opengl_platform.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PerStage.h"
+#include "src/dawn/native/Pipeline.h"
+#include "src/dawn/native/opengl/IntegerTypes.h"
+#include "src/dawn/native/opengl/opengl_platform.h"
 
 namespace dawn::native {
 struct ProgrammableStage;
@@ -94,7 +94,7 @@ class PipelineGL {
     MaybeError InitializeBase(const OpenGLFunctions& gl,
                               const PipelineLayout* layout,
                               const PerStage<ProgrammableStage>& stages,
-                              ImmediateConstantMask& pipelineImmediateMask,
+                              ImmediateMask& pipelineImmediateMask,
                               VertexAttributeMask bgraSwizzleAttributes,
                               Extent3D* workgroupSize = nullptr);
 

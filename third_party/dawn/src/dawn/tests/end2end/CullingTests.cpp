@@ -25,9 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -118,26 +118,38 @@ class CullingTest : public DawnTest {
 };
 
 TEST_P(CullingTest, CullNoneWhenCCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CCW, wgpu::CullMode::None, false, false);
 }
 
 TEST_P(CullingTest, CullFrontFaceWhenCCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CCW, wgpu::CullMode::Front, true, false);
 }
 
 TEST_P(CullingTest, CullBackFaceWhenCCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CCW, wgpu::CullMode::Back, false, true);
 }
 
 TEST_P(CullingTest, CullNoneWhenCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CW, wgpu::CullMode::None, false, false);
 }
 
 TEST_P(CullingTest, CullFrontFaceWhenCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CW, wgpu::CullMode::Front, false, true);
 }
 
 TEST_P(CullingTest, CullBackFaceWhenCWIsFrontFace) {
+    // TODO(crbug.com/519296889): Produces incorrect result on Pixel 10.
+    DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsImgTec() && IsVulkan());
     DoTest(wgpu::FrontFace::CW, wgpu::CullMode::Back, true, false);
 }
 

@@ -1,0 +1,758 @@
+Syntax Rules for OpenGL Extensions
+
+Based on a version edited by Kurt Akeley on September 10, 2003.
+Updates proposed by Eskil Steenberg, May 2006.
+Revised by Benj Lipchak under the direction of the Ecosystem TSG, December 2006.
+
+
+Reserved terms
+--------------
+
+    ** NOTE **
+    Whereas some of the other rules in subsequent sections of this document
+    are intended to be strictly adhered to, this section is intended as a
+    set of guidelines to assist in name decisions.  The guidelines should
+    be considered, and then accepted or rejected, on a case by case basis.
+    ** NOTE **
+
+    The terms used in OpenGL should have a consistent meaning.  Any time
+    new functionality is introduced it is desired to use terms that are 
+    previously established in GL.  If no term exists that fits with the
+    new functionality, a new term may be used.  Whenever a new term is used,
+    the precise meaning of that term should be specified and added to this
+    text so that future functionality has the option of reusing the term
+    with a consistent meaning.
+
+    A term in GL should encompass more then the meaning of the word found
+    in a dictionary.  It should encompass limitations and usages and give the
+    reader a broader sense of the usage of the word in the context of OpenGL.
+
+    When choosing new words one should always name it for what it does and
+    never name it for its intended usage.  In a general programmable
+    environment the naming should not suggest usage.
+
+    It is desired to keep data and the usage of data separated in the name
+    space.  "image" data can be used for "texturing."  The two should not be 
+    named the same.  This maintains consistency if in some future version 
+    something other than an image can be used for texturing, or if an image 
+    can be used for something other then texturing.  This is why it is 
+    strongly encouraged to name any storage class for what it stores, not the 
+    usage of the data.
+
+    Whenever a procedure sets the state that is directly associated with
+    something that can be found in the language grammar, it is preferred to 
+    use terms from the language like "attribute," "uniform" or "texture."
+
+
+    1: Asking for information
+       
+    "Get" is used as a prefix whenever the procedure returns state from the GL.
+
+
+    2: Storage
+
+    "Create" is used for any procedure that creates an object.  No other
+    creations should be named "create."
+
+    "Delete" is used for any procedure that marks an object for 
+    destruction.  No other destructions should be named "delete."
+
+
+    4: Object content
+
+    TBD: Names must be chosen.
+
+
+    5: Types of state setting
+
+    "Pname" is used to define what a subsequent parameter refers to.  Pname
+    is always followed by a "param."
+
+    "Param" is only used when a generic parameter or array of parameters is 
+    being passed in.
+       
+    "Count" always refers to the length of an array.
+
+    "Size" always refers to size measured in units or number of bytes.
+
+    "Render" refers to the later parts of the pipeline that apply the 
+    resulting data of a computation to a storage container.  (Examples of
+    operations that can be refered to as rendering are sampling, depth test, 
+    blending, and resolve.)
+
+    "Draw" refers to the earlier part of the pipeline when results are
+    being computed.
+
+
+    6: References
+
+    Any time an object is referenced by the context or another object the
+    following words should be used:
+
+    TBD: Names must be chosen.
+
+
+Accepted terms
+--------------
+
+    Notes:
+
+	1.  Abbreviations are required for all usage unless otherwise noted.
+
+	2.  Compound words (e.g. Doublebuffer) must always be used as
+	    compounds.  Embedded words are not capitalized in function
+	    names, and are not separated by underscores in token names.
+	    (e.g. Doublebuffer, not DoubleBuffer.  DOUBLEBUFFER, not
+	    DOUBLE_BUFFER.)
+
+    Exceptions:
+
+    	(1) Abbreviation is used in function names, but not in token names.
+
+	(2) Abbreviation is used in token names, but not in function names.
+
+    	(3) Abbreviation is used for GL and GL extensions, but not for
+	    WGL abbreviations.
+
+	(4) Abbreviation is used only as the last characters of token names
+	    that identify packed data types.
+	    (E.g. GL_UNSIGNED_BYTE_2_3_3_REV)
+
+	(5) Abbreviation is used only in interleaved vertex array token names.
+	    (e.g. GL_T4F_C4F_N3F_V4F)
+
+	(6) Abbreviation is used only for specific operations, such as
+	    logical operations (Logic Op) or stencil operations (Stencil Op).
+	    Abbreviation is not used for generic operations (e.g. Invalid
+	    Operation).
+
+
+
+    Abbrev.	Term or phrase		Specification(s) used in
+    -------	--------------		------------------------
+		Access			28
+    Accum	Accumulation Buffer	GL, 9
+		Active			GL, 15
+		Add			GL, 6, 17
+		Address			2, 26
+		Aliased			GL
+		Alignment		GL
+		All			GL
+		Alpha			GL, 5, 9, 12, 17
+		Always			GL
+		Ambient			GL
+    ASCII	American Standard ...	26, 27
+		And			GL
+		Are			GL
+    ALU		Arithmetic Logic Unit   27
+		Array			GL, 15, 16, 26, 28
+		Attenuation		GL, 14
+    Attrib	Attribute		GL, 9, 20, 26, 27, 28
+    Auto	Automatic		GL
+    Aux		Auxiliary		GL, 9, 20
+		Back			GL, 20
+		Base			GL
+		Begin			GL
+    		Bias			GL
+		Bind			GL, 20, 26, 27, 28
+		Binding			GL, 7, 26, 27, 28
+		Bit			GL, 9
+		Bitfield		GL
+		Bitmap			GL, 9
+		Blend			GL, 15
+		Blue			GL, 9
+    BGR		Blue Green Red		GL
+    BGRA	Blue Green Red Alpha	GL
+		Boolean			GL
+		Border			GL, 13
+		Box			GL
+		Buffer			GL, 4, 5, 9, 11, 28
+		Byte			GL
+		Call			GL
+		Care			GL
+		Choose			9
+		Clamp			GL, 13
+		Clear			GL
+		Client			GL
+    Clip	Clipping		GL
+    CW		Clockwise		GL
+    Coeff	Coefficient		GL
+    C (5)	Color			GL, 3, 9, 17, 26, 28
+    Index	Color Index		GL, 9, 28
+		Combine			GL, 17
+		Compare			GL, 23, 24
+		Compile			GL
+		Component		GL, 22
+		Compressed		GL, 12
+		Compression		GL, 12
+		Constant		GL, 17
+		Control			GL
+		Convolution		GL
+		Context			10
+    Coord	Coordinate		GL, 27
+		Copy			GL, 9, 28
+		Correction		GL
+    CCW		Counter Clockwise	GL
+		Coverage		GL, 5
+		Cube			GL, 7, 20
+		Cube Map		7, 20
+		Cull			GL
+		Current			GL, 10, 15, 16, 26, 27
+		Cutoff			GL
+		Data			28
+		Decal			GL
+    Decr	Decrement		GL
+		Delete			GL, 4, 26, 27, 28
+		Density			GL
+		Depth			GL, 9, 16, 22, 26, 27
+    Dst		Destination		GL
+		Destroy			11
+		Diffuse			GL
+    Dim		Dimension		GL
+		Direction		GL
+		Disable			GL, 26
+    List	Display List
+		Distance		GL, 14
+		Dither			GL
+    Dont	Do Not			GL
+		Domain			GL
+		Dot			19
+		Dot3			GL, 19
+		Double			GL
+		Doublebuffer		GL
+		Draw			GL, 9, 11, 28
+		Dynamic			28
+		Edge			GL, 28
+		Element			GL, 28
+		Emission		GL
+		Enable			GL, 26
+		Enabled			GL
+		End			GL
+    Enum	Enumerant		GL
+    Env		Environment		GL, 26, 27
+		Equal			GL
+		Equation		GL
+    Equiv	Equivalent		GL
+		Error			GL, 10, 26, 27
+    Eval	Evaluate		GL
+    XOR		Exclusive OR		GL
+		Execute			GL
+		Exponent		GL
+    Exp		Exponential		GL
+    Exp2	Exponential Squared	GL
+		Extension		GL, 5
+		Eye			GL
+		Face			GL, 20
+		Factor			GL
+		Fade			GL, 14
+		Fail			GL, 24
+		False			GL
+		Fan			GL
+		Fastest			GL
+		Feedback		GL
+		Fill			GL
+		Filter			GL
+		Finish			GL
+		First			GL
+		Flag			GL
+		Flat			GL
+		Float			GL
+		Flush			GL
+		Fog			GL, 28
+		Format			GL, 9, 12, 20, 26, 27
+		Fragment		GL, 27
+		Framebuffer		(documentation only)
+		Front			GL, 20
+		Frustum			GL
+    Func	Function		GL, 23
+    Gen		Generate		GL, 26, 27, 28
+		Get			GL, 2, 5, 9, 10, 11, 26, 27, 28
+		Granularity		GL
+    GL		Graphics Library	GL
+		Greater			GL
+    Gequal	Greater than or equal to GL
+		Green			GL, 9
+		Grid			GL
+		Half			GL
+		Height			GL, 11
+		Hint			GL, 12
+		Histogram		GL
+		Identity		GL
+		Ignore			GL
+		Image			GL, 12, 20, 27
+    Incr	Increment		GL
+		Index			16
+		Indices			GL
+		Indirection		27
+    Init	Initial			GL
+    Init	Initialize		GL
+		Instruction		26, 27
+    Int (2)	Integer			GL
+		Intensity		GL, 12
+		Interleaved		GL
+		Internal		GL
+		Interpolate		GL, 17
+		Invalid			GL, 10
+		Invert			GL, 5
+		Inverted		GL
+		Is			GL, 26, 27, 28
+		Keep			GL
+    LSB		Least significant bit	GL
+		Left			GL, 20
+		Length			GL, 26, 27
+		Less			GL
+    Lequal	Less than or equal to	GL
+		Level			GL, 20
+    LOD		Level of Detail		GL
+		Light			GL
+    Light Model	Lighting Model
+		Line			GL
+		Linear			GL
+		List			GL
+		Limit			26, 27
+		Load			GL, 3
+		Local			GL, 26, 27
+    Logic Op	Logical Operation	GL
+		Loop			GL
+		Luminance		GL, 12
+    Mag		Magnify			GL
+		Make			10
+		Map			GL, 7, 20, 28
+		Mapped			3, 28
+		Mask			GL
+		Material		GL
+		Matrix, Matrices	GL, 16, 26, 27
+    Max		Maximum			GL, 7, 11, 14, 15, 16, 26, 27
+    		Memory			GL
+		Mesh			GL
+    Win		Microsoft Windows OS	GL
+    Min		Minimum			GL, 14
+    Minmax	Minimum Maximum		GL
+    Min		Minify			GL, 14
+		Minus			GL, 17
+		Mirrored		GL, 21
+		Mode			GL, 22, 23
+		Model			GL
+		Modelview		GL, 3, 15
+		Modulate		GL, 17
+    Mipmap	Multim in parvo map	GL, 20
+    Multi	Multiple		GL
+    Mult	Multiply		GL, 3
+		Multisample		GL, 5
+		Name			GL
+		Native			26, 27
+		Nearest			GL
+    NAND	Negated AND		GL
+    NOR		Negated OR		GL
+		Negative		GL, 7, 20
+		Nesting			GL
+		Never			GL
+		New			GL
+		Nicest			GL
+		No			GL, 9, 28
+    Noop	No Operation		GL
+		None			GL
+    N (5)	Normal			GL, 7, 28
+    		Normalize, Normalized	GL, 26
+		Notequal		GL
+    Num	(3)	Number Of		GL
+		Object			GL
+		Of			GL
+		Offset			GL
+		One			GL, 17
+		Only			28
+		Operand			GL, 17
+    Op (6)	Operation		GL
+		Or			GL
+		Order			GL
+    Ortho	Orthographic		GL
+		Out			GL
+		Overflow		GL
+		Pack			GL
+		Palette			9, 16
+    Param	Parameter		GL, 14, 26, 27, 28
+    Pname	Parameter Name		GL
+		Pass			GL
+		Pattern			GL
+		Perspective		GL
+		Phong			GL
+		Pixel			GL, 9, 10, 11
+    Pbuffer	Pixel Buffer		11, 20
+		Plane			GL
+		Point			GL, 14, 26
+		Pointer			GL, 15, 16, 26, 28
+		Polygon			GL
+    		Pop			GL
+		Position		GL
+    Pos (1)	Position		GL, 25, 26, 27
+		Positive		GL, 7, 20
+		Post			GL
+		Previous		GL, 17
+		Primary			GL, 17
+		Prioritize, Priority	GL
+    Proc        Procedure		2
+		Program			26, 27
+		Projection		GL, 3
+		Proxy			GL, 7
+		Push			GL
+    Quad	Quadrilateral		GL
+		Quadratic		GL
+		Query			11
+		Range			GL
+		Raster			GL
+		Read			GL, 10, 28
+    Rect	Rectangle		GL
+		Red			GL, 9
+    RGB		Red Green Blue		GL, 12, 17, 19, 20
+    RGBA	Red Green Blue Alpha	GL, 9, 12, 19, 20
+		Reduce			GL
+    Ref		Reference		GL
+		Reflection		GL, 7
+		Region			GL, 4
+		Register		26
+		Render			GL
+		Renderer		GL
+		Repeat			GL, 21
+		Replace			GL, 17
+		Replicate		GL
+		Rescale			GL
+		Reset			GL
+		Resident		GL
+		Return			GL
+    Rev	(4)	Reverse			GL
+		Right			GL, 20
+		Rotate, Rotated		GL
+		Row			GL
+		Sample			GL, 5
+		Saturate		GL
+		Scale, Scaled		GL, 17
+		Scissor			GL
+		Secondary		GL, 28
+		Segment			GL
+		Select			GL
+		Selection		GL
+		Separable		GL
+		Separate		GL
+		Set (noun only!)	GL
+		Shade			GL
+    Shade Model	Shading Model
+		Shift			GL, 9
+		Shininess		GL
+		Short			GL
+		Side			GL, 26
+		Signed			GL, 17
+		Single			GL
+		Sink			GL
+		Size			GL, 7, 12, 14, 15, 16, 22, 26, 28
+		Skip			GL
+		Smooth			GL
+    Src		Source			GL, 17
+		Specular		GL
+		Sphere			GL
+		Spot			GL
+		Stack			GL, 16, 26, 27
+		Start			GL
+		State			GL
+		Static			28
+		Stencil			GL, 9
+		Stereo			GL, 9
+		Stipple			GL
+		Store			GL
+		Stream			28
+		Stride			GL, 15, 16, 26
+		String			GL, 5, 26, 27
+		Strip			GL
+		Sub			GL, 12
+		Subtract		17
+		Sub Image		12
+		Subpixel		GL
+		Sub Table		GL
+		Sum			GL, 15, 26
+		Swap			GL, 9
+		Table			GL
+		Target			20
+		Temporary		26, 27
+		Test			GL
+    Tex (1),	Texture			GL, 3, 7, 12, 17, 18, 20, 22, 23,
+    T(5)				24, 27, 28
+		Threshold		GL, 14
+		Through			GL
+		To			GL, 9, 11, 13, 20, 23
+		Token			GL
+		Transfer		GL
+		Transform		GL
+		Translate, Translated	GL
+		Transpose		GL, 3, 26, 27
+		Triangle		GL
+    		True			GL
+		Two			GL, 26
+		Type			GL, 9, 10, 15, 16, 26
+		Under			26, 27
+		Underflow		GL
+		Unit			GL, 15, 27
+		Unity			15
+		Unmap			28
+		Unpack			GL
+		Unsigned		GL
+    Ubyte	Unsigned Byte		GL
+    Uint	Unsigned Int		GL
+    Ushort	Unsigned Short		GL
+		Usage			28
+		Valid			GL
+		Value			GL, 5, 9, 24
+		Vendor			GL
+		Version			GL
+    V (5)	Vertex			GL, 15, 26, 28
+    		Vertices		GL
+		Viewer			GL
+		Viewport		GL
+		Weight			15, 28
+		Width			GL, 11
+		Window			GL, 25
+		Wrap			GL
+		Write			28
+		Writemask		GL
+		Zero			GL
+		Zoom			GL
+
+
+
+Abbreviations specifically not allowed
+--------------------------------------
+    Bgn		Begin
+    Mat		Matrix
+    Pnt		Point
+    Poly	Polygon
+    Tri		Triangle
+
+
+
+Used in WGL specs only (or differently)
+---------------------------------------
+
+    Abbrev.	Term or phrase		Specification(s) used in
+    -------	--------------		------------------------
+		Acceleration		9
+		Create			4, 11
+    DC		???			10
+		Declare			11
+		Device			10
+		Exchange		9
+		Full			9
+		Generic			9
+    GDI		???			9
+		Handle			11
+    HP		???			11
+		Incompatible		10
+		Largest			11
+		Layer			9
+		Lost			11
+		Method			9
+		Need			9
+    Number	Number Of		9
+		OpenGL			9
+		Overlay			9
+		Release			20
+		Restore			4
+		Save			4
+		Share			9
+		Support			9
+		System			9
+		Transparent		9
+		Undefined		9
+		Underlay		9
+
+
+
+Name rules (for all names)
+--------------------------
+
+    Always use the specified abbreviations.  Never abbreviate terms 
+    that are already in the OpenGL API and are not abbreviated.  If you 
+    add terms to your extensions, abbreviate consistently, maintaining 
+    a local version of additions to the list of abbreviations.
+
+        Use Depth, never Z.
+
+    The word "object" should not be used in a function name unless it 
+    operates on all object types.
+
+    Longer descriptive names are desired if they are believed to help
+    developers identify the purpose of a name.  
+
+    The opposite of "create" is "destroy."  "delete" marks an object for
+    later destruction.
+
+    All names should describe what functionality does, never its expected
+    usage.
+
+    Begin each word with a capital letter, except the second word of
+    compound words.
+   
+
+Procedure name rules
+--------------------
+
+    Never use set, as in SetFeedbackBuffer.  Set is implicit, unless
+    otherwise specified.
+
+    Use Verb-noun (DeleteList) and adjective-noun (EdgeFlag) formats.
+
+    Append a corporate-specific suffix to all procedures.  For example:
+    glNewCommandSGI.  All upper case is preferred for this suffix, but 
+    is not required.  The suffix is always last, following OpenGL type 
+    and count suffixes.  (e.g. glNewVertex3iSGI, not glNewVertexSGI3i.)
+
+
+Definition name rules
+---------------------
+
+    Use all capital letters.
+
+    Separate words with underscores, except words within compound words.
+
+    Append simple numeric suffixes directly to the end of definition
+    tokens (LIGHT0).  Begin these sequences with 0.
+
+    Use an underscore to separate complex suffixes from the token body 
+    (MAP_3V).
+
+    Append a corporate-specific suffix to the token, after any other
+    suffixes.  For example: GL_NEW_TOKEN0_SGI.  All upper case is 
+    required.
+
+    All tokens that are used only for a single use should be grouped
+    together using enum types.
+
+
+Parameter name rules
+--------------------
+
+    <target> is reserved for the notion of "which is affected", and for
+    the corresponding "which is returned" get commands.
+
+    <params> is reserved for an array of parameters whose contents are
+    defined by a second enumerated argument, called <pname>.
+
+    Begin number sequences with 1, not 0.  (e.g. u1,u2, not u0,u1)
+
+    Any parameters that contain more then one word should have the
+    second and subsequent words capitalized.
+
+    Long descriptive parameters are encouraged.
+
+
+Parameter order
+---------------
+
+    <X> precedes <Y> precedes <Z> precedes <W>.
+
+    <R> precedes <G> precedes <B> precedes <A>.
+
+    <S> precedes <T> precedes <R> precedes <Q>.
+
+    <U> precedes <V>.
+
+    The array being passed is always the last argument.
+
+    If a passed array has a type, the type specification argument immediately 
+    precedes the array.
+
+    <pname> always precedes <params>.
+
+    <x> and <y> precede <width> and <height>.
+
+    <format> precedes <type>.
+
+    <target> is first.
+
+    <face> is first.
+
+    <object> is first.
+
+    <count> always precedes the thing that it counts.
+
+    Any time the function parameters contain an address of what they
+    operate on, the address is last.
+
+    Arrays are never terminated by NULL or any other termination but are 
+    always specified by length.
+
+    For variable length arrays passed into the GL, the parameter list should 
+    end with: "sizei count, const void* data"  
+
+    For variable length arrays passed back from the GL, the parameter list 
+    should end with: "sizei maxCount, sizei* count, void* data"
+
+
+Parameter types
+---------------
+
+    All integer quantity parameters (widths, heights, array lengths, etc.)
+    should be typed GLsizei, not GLint or GLuint.  Note that GLsizei
+    generates an error only for negative values, so all integer quantity
+    parameters should accept the value zero.
+
+    Handles to specific object types are typed as pointers to the corresponding 
+    abstract structs.  Generic objects are passed around as void pointers.
+
+    Generic masks that do not have explicitly defined bit values (e.g.
+    color index write masks and stencil write masks) should be typed
+    GLuint.  GLuint is also used for unsigned integer components, such as
+    color components and depth components.
+
+    Masks that do have explicitly defined bit values (e.g. attribute mask, 
+    clear mask) should be typed GLbitfield, not GLuint.
+
+    All floating point parameters that are clamped to the range [0,1] when 
+    received should be typed GLclampf or GLclampd, not GLfloat or GLdouble.
+
+
+Extension name rules
+--------------------
+
+    An extension name is prefixed with the same string that suffixes its 
+    procedures and definitions.  The prefix and the individual words are 
+    separated with underscores, the prefix is all upper case, and the other 
+    text is all lower case.  For example, extension ARB_cool_feature, which 
+    specifies glCoolProcedureARB() and defines GL_COOL_DEFINITION_ARB.
+
+
+Suffix codes
+------------
+
+    i       signed 32-bit integer
+    ui      unsigned 32-bit integer
+    s       signed 16-bit integer
+    us      unsigned 16-bit integer
+    b       signed 8-bit integer
+    ub      unsigned 8-bit integer
+    l       signed 64-bit integer
+    ul      unsigned 64-bit integer
+    f       32-bit float
+    d       64-bit float
+    t       token enum
+    v       vector format
+    N       normalize values
+
+    #       number of components (e.g. 3)
+    #x#     matrix dimensions (e.g. 2x4)
+
+
+Shared extensions
+-----------------
+
+    An OpenGL extension may be deemed a shared extension if either:
+
+        1.  Two or more OpenGL licensees agree in good faith to implement
+            and ship the extension, or
+
+        2.  The OpenGL ARB determines that it is in the best interest of
+            the licensees that the extension be shared.
+
+    The procedures and definitions that are defined by a shared extension
+    are suffixed with EXT, rather than by a company-specific suffix.  
+    Likewise, the extension name is prefixed by EXT.  To avoid name 
+    conflicts Silicon Graphics will maintain a registry of EXT extensions, 
+    including all their procedures and definitions, in a location that is 
+    accessible to all licensees.

@@ -31,13 +31,13 @@
 #include <array>
 #include <memory>
 
-#include "dawn/common/MutexProtected.h"
-#include "dawn/common/SerialQueue.h"
-#include "dawn/common/ityp_bitset.h"
-#include "dawn/native/SystemEvent.h"
-#include "dawn/native/d3d/QueueD3D.h"
-#include "dawn/native/d3d12/CommandRecordingContext.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/SerialQueue.h"
+#include "src/dawn/common/ityp_bitset.h"
+#include "src/dawn/native/SystemEvent.h"
+#include "src/dawn/native/d3d/QueueD3D.h"
+#include "src/dawn/native/d3d12/CommandRecordingContext.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -65,7 +65,7 @@ class Queue final : public d3d::Queue {
 
     void DestroyImpl(DestroyReason reason) override;
     MaybeError SubmitPendingCommandsImpl() override;
-    MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
+    MaybeError SubmitImpl(Span<CommandBufferBase* const> commands) override;
     bool HasPendingCommands() const override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;

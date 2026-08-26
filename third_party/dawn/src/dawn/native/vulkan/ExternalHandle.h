@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_VULKAN_EXTERNALHANDLE_H_
 #define SRC_DAWN_NATIVE_VULKAN_EXTERNALHANDLE_H_
 
-#include "dawn/common/vulkan_platform.h"
+#include "src/dawn/common/vulkan_platform.h"
 
 namespace dawn::native::vulkan {
 

@@ -1,0 +1,77 @@
+From: Jon Leech <ljp 'at' sgi.com>
+Date: September 10, 1999
+
+Silicon Graphics extension support (various platforms):
+				IR2	Extreme Impact	Indy	O2
+				---	------- ------	----	--
+GL_EXT_abgr			X	X	X	X	X
+GL_EXT_blend_color		X	X	X	X	X
+GL_EXT_blend_logic_op		X	X	X	X	X
+GL_EXT_blend_minmax		X	X	X	X	X
+GL_EXT_blend_subtract		X	X	X	X	X
+GL_EXT_convolution		X	X	X	X	X
+GL_EXT_copy_texture		X	X	X	X	X
+GL_EXT_histogram		X	X	X	X	X
+GL_EXT_packed_pixels		X	X	X	X	X
+GL_EXT_polygon_offset		X	X	X	X	X
+GL_EXT_subtexture		X	X	X	X	X
+GL_EXT_texture			X	X	X	X	X
+GL_EXT_texture3D		X	X	X	X	X
+GL_EXT_texture_object		X	X	X	X	X
+GL_EXT_vertex_array		X	X	X	X	X
+GL_SGI_color_matrix		X	X	X	X	X
+GL_SGI_color_table		X	X	X	X	X
+GL_SGI_texture_color_table	X	X	X	X	X
+GL_SGIS_detail_texture		X		X
+GL_SGIS_fog_function		X
+GL_SGIS_multisample		X
+GL_SGIS_point_line_texgen	X
+GL_SGIS_point_parameters	X
+GL_SGIS_sharpen_texture		X
+GL_SGIS_texture_border_clamp			X
+GL_SGIS_texture_edge_clamp	X				X
+GL_SGIS_texture_filter4		X	X	X	X
+GL_SGIS_texture_lod		X		X
+GL_SGIS_texture_select		X		X
+GL_SGIX_calligraphic_fragment	X
+GL_SGIX_clipmap			X
+GL_SGIX_fog_offset		X
+GL_SGIX_instruments		X
+GL_SGIX_interlace		X				X
+GL_SGIX_ir_instrument1		X
+GL_SGIX_flush_raster		X
+GL_SGIX_list_priority		X
+GL_SGIX_pixel_texture				X
+GL_SGIX_reference_plane		X
+GL_SGIX_shadow			X
+GL_SGIX_shadow_ambient		X
+GL_SGIX_sprite			X
+GL_SGIX_subdiv_patch		X	X		X
+GL_SGIX_texture_add_env		X
+GL_SGIX_texture_lod_bias	X
+GL_SGIX_texture_multi_buffer			X
+GL_SGIX_texture_scale_bias	X	X		X	X
+GL_SGIX_depth_texture		X
+
+GLX_EXT_import_context		X	X	X	X	X
+GLX_EXT_visual_info		X	X	X	X	X
+GLX_EXT_visual_rating		X	X	X	X	X
+GLX_SGI_make_current_read	X		X		X
+GLX_SGI_swap_control		X	X	X	X	X
+GLX_SGI_video_sync		X	X	X	X	X
+GLX_SGIS_multisample		X
+GLX_SGIX_dm_pbuffer						X
+GLX_SGIX_fbconfig		X	X	X	X	X
+GLX_SGIX_hyperpipe		X
+GLX_SGIX_pbuffer		X		X		X
+GLX_SGIX_swap_barrier		X
+GLX_SGIX_swap_group		X	X	X	X	X
+GLX_SGIX_video_resize		X
+GLX_SGIX_video_source		X
+
+GLU_EXT_abgr			X	X	X	X	X
+GLU_EXT_nurbs_tessellator	X	X	X	X	X
+GLU_EXT_object_space_tess	X	X	X	X	X
+GLU_EXT_packed_pixels		X	X	X	X	X
+GLU_EXT_texture			X	X	X	X	X
+GLU_SGI_filter4_parameters	X	X	X	X	X

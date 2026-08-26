@@ -1,10 +1,10 @@
 Name: GLFW
 Short Name: GLFW
 URL: https://github.com/glfw/glfw
-Update Mechanism: Manual
+Update Mechanism: Autoroll
 Security Critical: no
 Version: N/A
-Revision: DEPS
+Revision: 92dcf4ce74f2e2554a98fea09be7c705c17daa5a
 License: Zlib
 License File: LICENSE
 Shipped: no

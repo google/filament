@@ -1,0 +1,283 @@
+Name
+
+    ARB_vertex_type_10f_11f_11f_rev
+
+Name Strings
+
+    GL_ARB_vertex_type_10f_11f_11f_rev
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Jeff Bolz, NVIDIA
+    Piers Daniel, NVIDIA
+    Members of the ARB working group
+
+Notice
+
+    Copyright (c) 2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by the ARB on June 3, 2013.
+    Ratified by the Khronos Board of Promoters on July 19, 2013.
+
+Version
+
+    Last Modified Date: May 2, 2013
+    Revision: 4
+
+Number
+
+    ARB Extension #151
+
+Dependencies
+
+    OpenGL 3.0 is required.
+
+    This extension depends on ARB_vertex_attrib_binding.
+
+    This extension requires ARB_vertex_type_2_10_10_10_rev.
+
+    This extension is written against the OpenGL 4.3 (Core Profile)
+    Specification (October 18, 2012).
+
+Overview
+
+    This extension adds the following data format:
+
+    A new vertex attribute data format: a packed 11.11.10 unsigned
+    float vertex data format.  This vertex data format can be used
+    to describe a compressed 3 component stream of values that can
+    be represented by 10- or 11-bit unsigned floating point values.
+
+    The UNSIGNED_INT_10F_11F_11F_REV vertex attribute type is
+    equivalent to the R11F_G11F_B10F texture internal format.
+
+IP Status
+
+    No known IP claims.
+
+New Procedures and Functions
+
+    None
+
+New Types
+
+    None
+
+New Tokens
+
+    Accepted by the <type> parameter of VertexAttribP{123}ui,
+    VertexAttribP{123}uiv, VertexAttribFormat and VertexAttribPointer:
+
+        UNSIGNED_INT_10F_11F_11F_REV    0x8C3B  // (reuse core enum)
+
+Additions to Chapter 10 of the OpenGL 4.3 (Core Profile) Specification
+(Vertex Specification and Drawing Commands)
+
+    Modify the 6th paragraph of 10.2.1 (Current Generic Attributes)
+    to read as follows:
+
+    "The VertexAttribP* commands specify up to four attribute component
+    values packed into a single natural type <type> as described in section
+    10.3.7.  <type> must be INT_2_10_10_10_REV, UNSIGNED_INT_2_10_10_10_REV,
+    or UNSIGNED_INT_10F_11F_11F_REV, specifying signed, unsigned, or unsigned
+    floating-point data, respectively.  The first one (x), two (x,y), three
+    (x,y,z), or four (x,y,z,w) components of the packed data are consumed
+    by VertexAttribP1ui, VertexAttribP2ui, VertexAttribP3ui, and
+    VertexAttribP4ui, respectively.  If <normalized> is TRUE, signed or
+    unsigned components are converted to floating-point by normalizing
+    to [-1,1] or [0,1] respectively.  If <normalized> is FALSE, signed
+    and unsigned components are directly cast to floating-point. For
+    floating-point formats, <normalized> is ignored. For VertexAttribP*uiv,
+    <value> contains the address of a single uint containing the packed
+    attribute components.  If <type> is UNSIGNED_INT_10F_11F_11F_REV, calling
+    VertexAttribP4ui and VertexAttribP4uiv results in an INVALID_ENUM error
+    being generated because there are only 3 components present."
+
+    Modify the 3rd paragraph of 10.3.1 (Specifying Arrays for Generic
+    Vertex Attributes) to read as follows:
+
+    "Table 10.2 indicates the allowable values for <size> and <type>.
+    A <type> of BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT,
+    UNSIGNED_INT, FLOAT, HALF_FLOAT, or DOUBLE indicates the corresponding
+    GL data type shown in Table 8.2.
+    A <type> of FIXED indicates the data type "fixed".
+    A <type> of INT_2_10_10_10_REV and UNSIGNED_INT_2_10_10_10_REV indicate
+    respectively, four signed or unsigned elements packed into a single
+    "uint".
+    A <type> of UNSIGNED_INT_10F_11F_11F_REV indicates two unsigned 11-bit
+    floating-point elements and one unsigned 10-bit floating-point elements
+    packed into a single "uint".  The encoding of the unsigned 10- and
+    11-bit floating point values is described in section 2.3.3 (Numerical
+    Representation and Computation).
+    The types INT_2_10_10_10_REV, UNSIGNED_INT_2_10_10_10_REV and
+    UNSIGNED_INT_10F_11F_11F_REV all correspond to the term <packed> in
+    Table 10.2).  The components are packed as shown in Table 8.8
+    (UNSIGNED_INT formats).
+    <packed> is not a GL type, but indicates commands accepting multiple
+    components packed into a single uint."
+
+    Add the following sentence to the end of the paragraph on "Integer
+    Handling" following Table 10.2:
+
+    "The <normalized> flag is ignored for floating-point data types,
+    including fixed, float, half, double, and any packed types that have
+    floating point components."
+
+    Insert another paragraph after Table 10.2:
+
+    "If <type> is UNSIGNED_INT_10F_11F_11F_REV, the vertex array values
+    are never normalized, irrespective of the "normalize" table entry."
+
+    Add to the errors section for the VertexAttrib*Format commands:
+
+    "An INVALID_OPERATION error is generated if <type> is
+    UNSIGNED_INT_10F_11F_11F_REV and <size> is not 3."
+
+    Add the following to the end of section 10.3.7 (Packed Vertex Data
+    Formats)
+
+    "The UNSIGNED_INT_10F_11F_11F_REV vertex data format describes a packed,
+    3-component format that is stored in a single 32-bit word.  The first (x),
+    and second (y) components are represented as 11-bit unsigned
+    floating-point values, and the third (z) component is represented as a
+    10-bit unsigned floating-point value.  Table 10.x describes how these
+    components are laid out in a 32-bit word.
+
+  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+  -----------------------------------------------------------------------------------------------
+ |               z             |               y                |               x                |
+  -----------------------------------------------------------------------------------------------
+    Table 10.x: Packed component layout for the UNSIGNED_INT_10F_11F_11F_REV
+    format.  Bit numbers are indicated for each component."
+
+    [[Compatibility Profile-only]]
+    Add the following to Section 10.3.2 (Specifying Arrays for Fixed-Function
+    Attributes) to the end of the second paragraph:
+
+    "The packed type UNSIGNED_INT_10F_11F_11F_REV is not permitted for any of
+    the above commands. The INVALID_ENUM error is generated if a <type> of
+    UNSIGNED_INT_10F_11F_11F_REV is specified."
+
+Additions to the AGL/EGL/GLX/WGL Specifications
+
+    None
+
+Dependencies on ARB_vertex_attrib_binding and Open GL 4.3
+
+    If ARB_vertex_attrib_binding or OpenGL 4.3 is not supported, then
+    delete all references to VertexAttribFormat.
+
+Dependencies on ARB_vertex_type_2_10_10_10_rev
+
+    ARB_vertex_type_2_10_10_10_rev is required to provide the
+    infrastrucure for handling packed vertex attributes
+    (such as the VertexAttribP* commands, etc).
+
+Dependencies on the compatibility profile
+
+    If the compatibility profile is not supported, ignore any additions
+    marked [[Compatibility Profile-only]].
+
+Errors
+
+    The error INVALID_OPERATION is generated by VertexAttribFormat, or
+    VertexAttribPointer if <type> is UNSIGNED_INT_10F_11F_11F_REV and
+    <size> is not 3.
+
+    The error INVALID_ENUM is generated by VertexAttribIFormat,
+    VertexAttribLFormat, VertexAttribIPointer, VertexAttribLPointer,
+    VertexAttribP4ui, or VertexAttribP4uiv if <type> is
+    UNSIGNED_INT_10F_11F_11F_REV.
+
+    [[Compatibility Profile-only]]
+    The error INVALID_ENUM is generated by VertexPointer, NormalPointer,
+    ColorPointer, SecondaryColorPointer, IndexPointer, EdgeFlagPointer,
+    FogCoordPointer, or TexCoordPointer if <type> is
+    UNSIGNED_INT_10F_11F_11F_REV.
+
+New State
+
+    None.
+
+New Implementation Dependent State
+
+    None.
+
+Sample Code
+
+    TBD
+
+Conformance Tests
+
+    Needed.
+
+Issues
+
+    1. Should <normalized> be supported, ignored, or an error?
+
+    RESOLVED. The <normalized> flag only takes effect when converting
+    from integer to float formats and is ignored otherwise. Since the
+    new type being accepted is a packed floating point format, the
+    <normalized> flag is ignored when specified with it.  The current
+    core specification is not entirely clear on this matter so we
+    will add language to clarify this.
+
+    2. Should we accept this new type in the current generic attribute
+    entry points?
+
+    RESOLVED. Yes. It is sometimes convenient to be able to specify
+    only a single value from a buffer via the VertexAttrib commands
+    for debugging or manual instancing.  This will be accepted by the
+    VertexAttribP commands.
+
+    3. Should the new vertex type be supported by the immediate-mode entry
+    points (such as Vertex{1234}f, TexCoordP*, NormalP3*, etc) in the
+    compatibility profile?
+
+    RESOLVED: No. There is no interest in extending the fixed-function
+    pipeline to handle packed floating point vertex data. This is disallowed
+    by the fact that we have not modified section 10.2.2 to accept the
+    UNSIGNED_INT_10F_11F_11F_REV type in the packed entry points.
+
+    4. Should the new vertex type be supported by the legacy arrayed entry
+    points for fixed-function (such as glVertexPointer, glNormalPointer, etc)
+    in the compatibility profile?
+
+    RESOLVED: No. There is no interest in extending the fixed-function
+    pipeline to handle the packed floating point vertex data format. This is
+    explicitly disallowed by the edits to 10.3.2.
+
+    5. Does the new vertex type work with a component size of BGRA?
+
+    RESOLVED: No. It is specified to only work with a size of 3.
+
+Revision History
+
+    Revision 4, 2013/05/02, dgkoch
+      - finish errors and dependencies sections
+    Revision 3, 2013/04/21, dgkoch
+      - added issue 5.
+      - misc formatting.
+    Revision 2, 2013/03/21, dgkoch
+      - Resolved Issue 1, 2, added 3, 4 and corresponding edits.
+      - Added edits to 10.3.7, support for current generic vertex attribs
+    Revision 1, 2013/01/24, dgkoch
+      - Initial revision

@@ -35,13 +35,14 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/Alloc.h"
-#include "dawn/common/Compiler.h"
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
 #include "dawn/wire/Wire.h"
 #include "dawn/wire/WireCmd_autogen.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/utils/heap_array.h"
+#include "src/utils/span.h"
 
 namespace dawn::wire {
 
@@ -49,7 +50,7 @@ namespace dawn::wire {
 // that is not baked directly into the command already.
 struct CommandExtension {
     size_t size;
-    std::function<void(char*)> serialize;
+    std::function<void(Span<volatile std::byte>)> serialize;
 };
 
 namespace detail {
@@ -62,7 +63,7 @@ template <typename Extension, typename... Extensions>
 WireResult SerializeCommandExtension(SerializeBuffer* serializeBuffer,
                                      Extension&& e,
                                      Extensions&&... es) {
-    char* buffer;
+    Span<volatile std::byte> buffer;
     WIRE_TRY(serializeBuffer->NextN(e.size, &buffer));
     e.serialize(buffer);
 
@@ -122,9 +123,10 @@ class ChunkedCommandSerializer {
         size_t requiredSize = (Align(extensions.size, kWireBufferAlignment) + ... + commandSize);
 
         if (requiredSize <= mMaxAllocationSize) {
-            char* allocatedBuffer = static_cast<char*>(mSerializer->GetCmdSpace(requiredSize));
-            if (allocatedBuffer != nullptr) {
-                SerializeBuffer serializeBuffer(allocatedBuffer, requiredSize);
+            std::optional<std::span<volatile std::byte>> cmdSpace =
+                mSerializer->GetCommandSpace(requiredSize);
+            if (cmdSpace) {
+                SerializeBuffer serializeBuffer(*cmdSpace);
                 WireResult rCmd = SerializeCmd(cmd, requiredSize, &serializeBuffer);
                 WireResult rExts =
                     detail::SerializeCommandExtension(&serializeBuffer, extensions...);
@@ -135,21 +137,21 @@ class ChunkedCommandSerializer {
             return;
         }
 
-        auto cmdSpace = std::unique_ptr<char[]>(AllocNoThrow<char>(requiredSize));
-        if (!cmdSpace) {
-            return;
-        }
-        SerializeBuffer serializeBuffer(cmdSpace.get(), requiredSize);
+        // Allocate as zero-initialized because padding won't get initialized during command
+        // serialization (and this whole buffer is sent raw to the other end of the wire).
+        HeapArray<std::byte> cmdSpace(requiredSize);
+
+        SerializeBuffer serializeBuffer(cmdSpace);
         WireResult rCmd = SerializeCmd(cmd, requiredSize, &serializeBuffer);
         WireResult rExts = detail::SerializeCommandExtension(&serializeBuffer, extensions...);
         if (rCmd != WireResult::Success || rExts != WireResult::Success) [[unlikely]] {
             mSerializer->OnSerializeError();
             return;
         }
-        SerializeChunkedCommand(cmdSpace.get(), requiredSize);
+        SerializeChunkedCommand(cmdSpace);
     }
 
-    void SerializeChunkedCommand(const char* allocatedBuffer, size_t totalSize);
+    void SerializeChunkedCommand(Span<const std::byte> allocatedBuffer);
 
     raw_ptr<CommandSerializer> mSerializer;
     size_t mMaxAllocationSize;

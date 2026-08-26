@@ -17,8 +17,7 @@ See:
 {{- $addr_space_enum := ($I.Sem.Enum "address_space") -}}
 {{- $interpolation_sampling_enum := ($I.Sem.Enum "interpolation_sampling") -}}
 {{- $interpolation_type_enum := ($I.Sem.Enum "interpolation_type") -}}
-{{- $sampler_filtering_enum := ($I.Sem.Enum "sampler_filtering") -}}
-{{- $texture_filterable_enum := ($I.Sem.Enum "texture_filterable") -}}
+{{- $majorness_enum := ($I.Sem.Enum "majorness") -}}
 {{- $subgroup_matrix_kind_enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
 {{- $texel_format_enum := ($I.Sem.Enum "texel_format") -}}
 {{- $builtin_type_enum := ($I.Sem.Enum "builtin_type") -}}
@@ -35,7 +34,7 @@ See:
 
 #include <cstdint>
 
-#include "src/tint/utils/reflection.h"
+#include "src/tint/utils/reflection/reflection.h"
 #include "src/tint/utils/rtti/traits.h"
 
 namespace tint::core {
@@ -61,13 +60,10 @@ inline bool IsHostShareable(AddressSpace address_space) {
 /// The interpolation type.
 {{ Eval "DeclareEnum" $interpolation_type_enum }}
 
-/// The sampler filtering.
-{{ Eval "DeclareEnum" $sampler_filtering_enum }}
+/// The majorness of a matrix.
+{{ Eval "DeclareEnum" $majorness_enum }}
 
-/// The texture filterable.
-{{ Eval "DeclareEnum" $texture_filterable_enum }}
-
-/// Address space of a given pointer.
+/// The kind of subgroup matrix.
 {{ Eval "DeclareEnum" $subgroup_matrix_kind_enum }}
 
 /// Enumerator of texel formats
@@ -91,6 +87,7 @@ enum class ParameterUsage : uint8_t {
 {{- range $I.Sem.UniqueParameterNames  }}
     k{{PascalCase .}},
 {{- end  }}
+    kColMajor,
     kNone,
 };
 

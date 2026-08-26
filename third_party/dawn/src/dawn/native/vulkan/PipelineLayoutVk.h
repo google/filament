@@ -31,11 +31,11 @@
 #include <memory>
 #include <utility>
 
-#include "dawn/common/vulkan_platform.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/vulkan/BindGroupLayoutVk.h"
-#include "dawn/native/vulkan/RefCountedVkHandle.h"
+#include "src/dawn/common/vulkan_platform.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/vulkan/BindGroupLayoutVk.h"
+#include "src/dawn/native/vulkan/RefCountedVkHandle.h"
 
 namespace dawn::native::vulkan {
 
@@ -53,13 +53,14 @@ class PipelineLayout final : public PipelineLayoutBase {
     struct Specialization {
         PerBindGroup<BindGroupLayout::Specialization> bindGroups = {};
         uint32_t pushConstantBytes;
+        uint32_t framebufferFetchAttachmentCount = 0;
 
         template <typename H>
         friend H AbslHashValue(H h, const Specialization& s) {
             for (auto& bg : s.bindGroups) {
                 h = H::combine(std::move(h), bg);
             }
-            return H::combine(std::move(h), s.pushConstantBytes);
+            return H::combine(std::move(h), s.pushConstantBytes, s.framebufferFetchAttachmentCount);
         }
         bool operator==(const Specialization& other) const = default;
     };

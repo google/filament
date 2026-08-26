@@ -41,14 +41,13 @@ set(headers
 
 set(private_headers
     "${DAWN_WIRE_GEN_HEADERS}"
-    "BufferConsumer_impl.h"
     "BufferConsumer.h"
     "ChunkedCommandHandler.h"
     "ChunkedCommandSerializer.h"
+    "InlineSharedMemoryManager.h"
     "client/Adapter.h"
     "client/ApiObjects.h"
     "client/Buffer.h"
-    "client/ComputePassEncoder.h"
     "client/Client.h"
     "client/Device.h"
     "client/EventManager.h"
@@ -58,8 +57,6 @@ set(private_headers
     "client/ObjectStore.h"
     "client/QuerySet.h"
     "client/Queue.h"
-    "client/RenderBundleEncoder.h"
-    "client/RenderPassEncoder.h"
     "client/ResourceTable.h"
     "client/ShaderModule.h"
     "client/Surface.h"
@@ -76,9 +73,9 @@ set(sources
     "${DAWN_WIRE_GEN_SOURCES}"
     "ChunkedCommandHandler.cpp"
     "ChunkedCommandSerializer.cpp"
+    "InlineSharedMemoryManager.cpp"
     "client/Adapter.cpp"
     "client/Buffer.cpp"
-    "client/ComputePassEncoder.cpp"
     "client/Client.cpp"
     "client/ClientDoers.cpp"
     "client/ClientInlineMemoryTransferService.cpp"
@@ -90,8 +87,6 @@ set(sources
     "client/ObjectStore.cpp"
     "client/QuerySet.cpp"
     "client/Queue.cpp"
-    "client/RenderBundleEncoder.cpp"
-    "client/RenderPassEncoder.cpp"
     "client/ResourceTable.cpp"
     "client/ShaderModule.cpp"
     "client/Surface.cpp"
@@ -103,7 +98,6 @@ set(sources
     "server/ServerDevice.cpp"
     "server/ServerInlineMemoryTransferService.cpp"
     "server/ServerInstance.cpp"
-    "server/ServerProgrammableEncoder.cpp"
     "server/ServerQueue.cpp"
     "server/ServerShaderModule.cpp"
     "server/ServerSurface.cpp"
@@ -113,6 +107,10 @@ set(sources
     "WireDeserializeAllocator.cpp"
     "WireServer.cpp"
 )
+
+if (WIN32)
+  list(APPEND sources "InlineSharedMemoryManager_win.cpp")
+endif ()
 
 dawn_add_library(
   dawn_wire

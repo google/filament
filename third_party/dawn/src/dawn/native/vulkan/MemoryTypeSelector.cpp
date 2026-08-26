@@ -25,9 +25,11 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/vulkan/MemoryTypeSelector.h"
+#include "src/dawn/native/vulkan/MemoryTypeSelector.h"
 
 #include <utility>
+
+#include "src/utils/numeric.h"
 
 namespace dawn::native::vulkan {
 namespace {
@@ -67,15 +69,15 @@ MemoryTypeSelector::MemoryTypeSelector(std::vector<VkMemoryType> memoryTypes,
                                        std::vector<VkMemoryHeap> memoryHeaps)
     : mMemoryTypes(std::move(memoryTypes)), mMemoryHeaps(std::move(memoryHeaps)) {}
 
-int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind) {
+uint32_t MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, MemoryKind kind) {
     bool mappable = IsMemoryKindMappable(kind);
     VkMemoryPropertyFlags vkRequiredFlags = GetRequiredMemoryPropertyFlags(kind);
 
     // Find a suitable memory type for this allocation
-    int bestType = -1;
-    for (size_t i = 0; i < mMemoryTypes.size(); ++i) {
+    uint32_t bestType = kInvalidMemoryTypeIndex;
+    for (uint32_t i = 0; i < checked_cast<uint32_t>(mMemoryTypes.size()); ++i) {
         // Resource must support this memory type
-        if ((requirements.memoryTypeBits & (1 << i)) == 0) {
+        if ((requirements.memoryTypeBits & (1u << i)) == 0) {
             continue;
         }
 
@@ -85,8 +87,8 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
         }
 
         // Found the first candidate memory type
-        if (bestType == -1) {
-            bestType = static_cast<int>(i);
+        if (bestType == kInvalidMemoryTypeIndex) {
+            bestType = i;
             continue;
         }
 
@@ -100,7 +102,7 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
         if ((kind == MemoryKind::LazilyAllocated) &&
             (currentLazilyAllocated != bestLazilyAllocated)) {
             if (currentLazilyAllocated) {
-                bestType = static_cast<int>(i);
+                bestType = i;
             }
             continue;
         }
@@ -113,7 +115,7 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
             (mMemoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0u;
         if (!mappable && (currentDeviceLocal != bestDeviceLocal)) {
             if (currentDeviceLocal) {
-                bestType = static_cast<int>(i);
+                bestType = i;
             }
             continue;
         }
@@ -126,7 +128,7 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
             (mMemoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) != 0u;
         if ((kind & MemoryKind::ReadMappable) && currentHostCached != bestHostCached) {
             if (currentHostCached) {
-                bestType = static_cast<int>(i);
+                bestType = i;
             }
             continue;
         }
@@ -139,7 +141,7 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
             (mMemoryTypes[bestType].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0u;
         if ((kind & MemoryKind::WriteMappable) && currentHostCoherent != bestHostCoherent) {
             if (currentHostCoherent) {
-                bestType = static_cast<int>(i);
+                bestType = i;
             }
             continue;
         }
@@ -148,7 +150,7 @@ int MemoryTypeSelector::FindBestTypeIndex(VkMemoryRequirements requirements, Mem
         VkDeviceSize bestTypeHeapSize = mMemoryHeaps[mMemoryTypes[bestType].heapIndex].size;
         VkDeviceSize candidateHeapSize = mMemoryHeaps[mMemoryTypes[i].heapIndex].size;
         if (candidateHeapSize > bestTypeHeapSize) {
-            bestType = static_cast<int>(i);
+            bestType = i;
             continue;
         }
     }

@@ -29,8 +29,8 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/perf_tests/DawnPerfTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/perf_tests/DawnPerfTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -488,14 +488,14 @@ void ShaderRobustnessPerf::SetUpPerfTest() {
     DAWN_TEST_UNSUPPORTED_IF((GetParam().mElemType == ElemType::F16) &&
                              !SupportsFeatures({wgpu::FeatureName::ShaderF16}));
 
-    const size_t dataASize = mDimAOuter * mDimInner;
+    const size_t dataASize = static_cast<size_t>(mDimAOuter) * mDimInner;
     std::vector<float> dataA(dataASize);
     uint64_t byteASize = sizeof(float) * dataA.size();
     // It's ok to use all zeros to do the matrix multiplication for performance test.
     wgpu::Buffer bufA =
         utils::CreateBufferFromData(device, dataA.data(), byteASize, wgpu::BufferUsage::Storage);
 
-    const size_t dataBSize = mDimInner * mDimBOuter;
+    const size_t dataBSize = static_cast<size_t>(mDimInner) * mDimBOuter;
     std::vector<float> dataB(dataBSize);
     uint64_t byteBSize = sizeof(float) * dataB.size();
     wgpu::Buffer bufB =
@@ -570,8 +570,9 @@ void ShaderRobustnessPerf::Step() {
         pass.SetPipeline(mPipeline);
         pass.SetBindGroup(0, mBindGroup);
         for (unsigned int i = 0; i < kNumIterations; ++i) {
-            pass.DispatchWorkgroups(ceil(static_cast<float>(mDimBOuter) / float{kTileSize}),
-                                    ceil(static_cast<float>(mDimAOuter) / float{kTileSize}), 1);
+            pass.DispatchWorkgroups(
+                static_cast<uint32_t>(ceil(static_cast<float>(mDimBOuter) / float{kTileSize})),
+                static_cast<uint32_t>(ceil(static_cast<float>(mDimAOuter) / float{kTileSize})), 1);
         }
         pass.End();
         if (useTimestamps) {

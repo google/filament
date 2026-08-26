@@ -25,18 +25,49 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-load("//src/tint:flags.bzl", "COPTS")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/utils:flags.bzl", "COPTS")
 
 cc_library(
   name = "utils",
   hdrs = [
+    "assert.h",
     "compiler.h",
+    "force_crash.h",
+    "gtest.h",
+    "heap_array.h",
+    "log.h",
+    "non_copyable.h",
+    "non_movable.h",
     "numeric.h",
-  ],
+    "platform.h",
+    "span.h",
+    "typed_integer.h",
+    "underlying_type.h",
+  ] + select({
+    "@platforms//os:windows": [
+      "windows_with_undefs.h",
+    ],
+    "//conditions:default": [],
+  }),
   srcs = [
+    "assert.cc",
+    "log.cc",
     "placeholder.cc",
   ],
   deps = [],
+  copts = COPTS,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = "crash_handler",
+  hdrs = ["crash_handler.h"],
+  srcs = ["crash_handler.cc"],
+  deps = [
+    "@abseil_cpp//absl/debugging:failure_signal_handler",
+    "@abseil_cpp//absl/debugging:symbolize",
+  ],
   copts = COPTS,
   visibility = ["//visibility:public"],
 )

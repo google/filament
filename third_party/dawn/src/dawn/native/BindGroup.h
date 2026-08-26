@@ -33,17 +33,19 @@
 #include <span>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/ityp_span.h"
-#include "dawn/native/BindGroupLayout.h"
-#include "dawn/native/ChainUtils.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/UsageValidationMode.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "partition_alloc/pointers/raw_ptr_exclusion.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/Math.h"
+#include "src/dawn/native/BindGroupLayout.h"
+#include "src/dawn/native/ChainUtils.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/UsageValidationMode.h"
+#include "src/dawn/native/dawn_platform.h"
+#include "src/utils/compiler.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -55,9 +57,12 @@ ResultOrError<UnpackedPtr<BindGroupDescriptor>> ValidateBindGroupDescriptor(
     UsageValidationMode mode);
 
 struct BufferBinding {
-    raw_ptr<BufferBase> buffer;
-    uint64_t offset;
-    uint64_t size;
+    // This pointer is used during BindGroupTracker::Apply, which is hot code called before every
+    // draw call. The underlying buffer should be kept alive by the BindGroup, it's impossible to
+    // UAF.
+    RAW_PTR_EXCLUSION BufferBase* buffer = nullptr;
+    uint64_t offset = 0;
+    uint64_t size = 0;
 };
 
 class BindGroupBase : public ApiObjectBase {
@@ -110,7 +115,7 @@ class BindGroupBase : public ApiObjectBase {
               device,
               descriptor,
               AlignPtr(
-                  reinterpret_cast<char*>(derived) + sizeof(Derived),
+                  DAWN_UNSAFE_TODO(reinterpret_cast<char*>(derived) + sizeof(Derived)),
                   descriptor->layout->GetInternalBindGroupLayout()->GetBindingDataAlignment())) {
         static_assert(std::is_base_of<BindGroupBase, Derived>::value);
     }

@@ -1,0 +1,580 @@
+Name
+
+    AMD_debug_output
+        
+Name Strings
+
+    GL_AMD_debug_output
+
+Contact
+
+    Jaakko Konttinen (jaakko.konttinen 'at' amd.com)
+
+Contributors
+
+    Graham Sellers, AMD
+    Mark Young, AMD
+    Ahmet Oguz Akyuz, AMD
+    
+Status
+    
+    Experimental
+    
+Version
+    
+    Last Modified Date: July 21, 2022
+    Author Revision: 10
+
+Number
+
+    395
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    
+    WGL_ARB_create_context or GLX_ARB_create_context is required.
+    
+    The extension is written against the OpenGL 3.0 specification.
+    
+    This extension trivially interacts with ARB_vertex_program and
+    ARB_fragment_program.
+    
+Overview
+
+    This extension allows the GL to notify applications when various
+    debug events occur in contexts that have been created with the debug
+    flag, as provided by WGL_ARB_create_context and GLX_ARB_create_context.
+    
+    These events are represented in the form of enumerable messages with an
+    included human-readable translation.  Examples of debug events include
+    incorrect use of the GL, warnings of undefined behavior, and performance
+    warnings.
+    
+    A message is uniquely identified by a category and an implementation-
+    dependent ID within that category.  Message categories are general and are
+    used to organize large groups of similar messages together.  Examples of
+    categories include GL errors, performance warnings, and deprecated
+    functionality warnings.  Each message is also assigned a severity level
+    that denotes roughly how "important" that message is in comparison to
+    other messages across all categories.  For example, notification of a GL
+    error would have a higher severity than a performance warning due to
+    redundant state changes.
+    
+    Messages are communicated to the application through an application-defined
+    callback function that is called by the GL implementation on each debug
+    message.  The motivation for the callback routine is to free application
+    developers from actively having to query whether any GL error or other
+    debuggable event has happened after each call to a GL function.  With a
+    callback, developers can keep their code free of debug checks, and only have
+    to react to messages as they occur.  In order to support indirect rendering,
+    a message log is also provided that stores copies of recent messages until
+    they are actively queried.
+
+    To control the volume of debug output, messages can be disabled either
+    individually by ID, or entire groups of messages can be turned off based
+    on category or severity.
+    
+    The only requirement on the minimum quantity and type of messages that
+    implementations of this extension must support is that a message must be
+    sent notifying the application whenever any GL error occurs.  Any further
+    messages are left to the implementation.  Implementations do not have
+    to output messages from all categories listed by this extension
+    in order to support this extension, and new categories can be added by
+    other extensions.
+
+    This extension places no restrictions or requirements on any additional
+    functionality provided by the debug context flag through other extensions. 
+    
+IP Status
+    
+    No known IP claims.
+    
+New Procedures and Functions
+    
+    void DebugMessageEnableAMD(enum category,
+                               enum severity,
+                               sizei count,
+                               const uint* ids,
+                               boolean enabled);
+
+    void DebugMessageInsertAMD(enum category,
+                               enum severity,
+                               uint id,
+                               sizei length, 
+                               const char* buf);
+
+    void DebugMessageCallbackAMD(DEBUGPROCAMD callback,
+                                 void* userParam);
+    
+    uint GetDebugMessageLogAMD(uint count,
+                               sizei bufsize,
+                               enum* categories,
+                               enum* severities,
+                               uint* ids,
+                               sizei* lengths, 
+                               char* message);
+    
+New Types
+    
+    The callback function that applications can define, and
+    is accepted by DebugMessageCallbackAMD, is defined as:
+    
+        typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id,
+                                                GLenum category,
+                                                GLenum severity,
+                                                GLsizei length,
+                                                const GLchar* message,
+                                                GLvoid* userParam);
+
+    Note that this function pointer is defined as having the
+    same calling convention as the GL functions.
+    
+New Tokens
+    
+    Tokens accepted by GetIntegerv:
+    
+        MAX_DEBUG_MESSAGE_LENGTH_AMD                    0x9143
+        MAX_DEBUG_LOGGED_MESSAGES_AMD                   0x9144
+        DEBUG_LOGGED_MESSAGES_AMD                       0x9145        
+
+    Tokens accepted by DebugMessageEnableAMD, GetDebugMessageLogAMD,
+    DebugMessageInsertAMD, and DEBUGPROCAMD callback function
+    for <severity>:
+
+        DEBUG_SEVERITY_HIGH_AMD                         0x9146
+        DEBUG_SEVERITY_MEDIUM_AMD                       0x9147
+        DEBUG_SEVERITY_LOW_AMD                          0x9148
+
+    Tokens accepted by DebugMessageEnableAMD, GetDebugMessageLogAMD,
+    and DEBUGPROCAMD callback function for <category>:
+
+        DEBUG_CATEGORY_API_ERROR_AMD                    0x9149
+        DEBUG_CATEGORY_WINDOW_SYSTEM_AMD                0x914A
+        DEBUG_CATEGORY_DEPRECATION_AMD                  0x914B
+        DEBUG_CATEGORY_UNDEFINED_BEHAVIOR_AMD           0x914C
+        DEBUG_CATEGORY_PERFORMANCE_AMD                  0x914D
+        DEBUG_CATEGORY_SHADER_COMPILER_AMD              0x914E
+        DEBUG_CATEGORY_APPLICATION_AMD                  0x914F
+        DEBUG_CATEGORY_OTHER_AMD                        0x9150
+
+Additions to Chapter 2 of the OpenGL 3.0 Specification (OpenGL Operation)
+
+    In section 2.5 - GL Errors:
+    Add to the end of the section (pg 19): "If an error is generated by a debug
+    GL context (Section 2.20), the context will send a message to the application
+    that a GL error has occurred.  This message may contain more information
+    about the nature of the error."
+    
+    After section 2.19 - Primitive Clipping:
+    Add new section: 2.20 - Debug Contexts
+    
+    Application developers can obtain more information from the GL runtime using
+    a debug-enabled context.  This information can include details about
+    GL errors, undefined behavior, implementation-dependent performance warnings,
+    or other useful hints.  This information is communicated through the
+    generation of debug messages when GL commands are executed.  The application
+    can choose to either actively query for these messages, or allow the GL to
+    call back to the application on each message via a function pointer.
+    
+    2.20.1 - Debug Messages
+    
+    A debug message is uniquely identified by its category and an unsigned
+    integer message ID within that category.  The category must be one of the
+    symbolic constants listed in Table 2.12.  Although every distinct message
+    must have a unique number within a category, there is no enforcement by this
+    extension for how GL implementations assign numbers to specific messages.
+    
+    Each message also has a severity level that roughly describes its
+    significance across all categories.  The severity level of a message is
+    one of the symbolic constants defined in Table 2.13.  Because messages
+    can be disabled across all categories by severity level, this feature can
+    be used to quickly control the volume of debug output by the application.
+
+    Category Token                          Informs about
+    --------------                          -------------
+    DEBUG_CATEGORY_API_ERROR_AMD            GL errors caused by invalid API use
+                                                                        
+    DEBUG_CATEGORY_WINDOW_SYSTEM_AMD        Errors and notices from the
+                                            windowing layer
+                                            
+    DEBUG_CATEGORY_DEPRECATION_AMD          Use of functionality that is either
+                                            deprecated or marked for future
+                                            deprecation
+    
+    DEBUG_CATEGORY_UNDEFINED_BEHAVIOR_AMD   Behavior undefined according to
+                                            specification
+    
+    DEBUG_CATEGORY_PERFORMANCE_AMD          Implementation-dependent performance
+                                            warnings
+    
+    DEBUG_CATEGORY_SHADER_COMPILER_AMD      Information from the GLSL or ARB
+                                            shader compiler and linker
+    
+    DEBUG_CATEGORY_APPLICATION_AMD          Application-generated messages
+    
+    DEBUG_CATEGORY_OTHER_AMD                Messages that do not fit in any of
+                                            the other categories
+    ----------------------------------------------------------------------------
+    Table 2.12: Categories of debug messages.  Each message is associated with
+    one of these categories.
+
+
+    Severity Level Token                  Suggested examples of messages
+    --------------------                  ------------------------------
+    
+    DEBUG_SEVERITY_HIGH_AMD               Any GL error; any undefined behavior;
+                                          any GLSL or ARB shader compiler and
+                                          linker errors;
+                                          
+    DEBUG_SEVERITY_MEDIUM_AMD             Severe performance warnings; GLSL
+                                          or ARB shader compiler and linker
+                                          warnings; use of currently deprecated
+                                          behavior
+    
+    DEBUG_SEVERITY_LOW_AMD                Performance warnings from redundant
+                                          state changes
+    ----------------------------------------------------------------------------
+    Table 2.13: Severity levels of messagse.  Each debug message is associated
+    with one of these severity levels.
+    
+
+    Every message also has a null-terminated string representation that is used
+    to describe the message.  The contents of the string can change slightly 
+    between different instances of the same message (e.g. which parameter value
+    caused a specific GL error to occur).  The formatting of a message string is
+    left as implementation-dependent, although it should give a concise and
+    legible description of the message's purpose.  Messages with different IDs 
+    should also have sufficiently distinguishable string representations to
+    warrant their separation.
+    
+    2.20.2 - Receiving Messages
+    
+    Applications can listen for messages by providing the GL with a callback
+    function pointer by calling:
+    
+        void DebugMessageCallbackAMD(DEBUGPROCAMD callback,
+                                     void* userParam);
+        
+    With <callback> storing the address of the callback function.  This
+    function's signature must follow the type definition of DEBUGPROCAMD, and
+    its calling convention must be the same as the calling convention of GL
+    functions.  Anything else will result in undefined behavior.  Only one 
+    debug callback can be specified for the current context, and further calls
+    overwrite the previous callback.  Specifying zero as the value of <callback>
+    clears the current callback and disables message output through callbacks.
+    Applications can specify user-specified data through the pointer
+    <userParam>.  The context will store this pointer and will include it
+    as one of the parameters of each call to the callback function.  The error
+    INVALID_OPERATION will be generated if this function is called for contexts
+    created without the debug flag.
+
+    If the application has specified a callback function in a debug context,
+    the implementation will call that function whenever any unfiltered message
+    is generated.  The ID, category, and severity of the message are specified
+    by the callback parameters <id>, <category> and <severity>, respectively.
+    The string representation of the message is stored in <message> and its length
+    (excluding the null-terminator) is stored in <length>.  The parameter
+    <userParam> is the user-specified value that was passed when calling
+    DebugMessageCallbackAMD.  The memory for <message> is allocated, owned and
+    released by the implementation, and should only be considered valid for
+    the duration of the callback function call.  While it is allowed to
+    concurrently use multiple debug contexts with the same debug callback function,
+    note that it is the application's responsibility to ensure that any work that
+    occurs inside the debug callback function is thread-safe.  Furthermore,
+    calling any GL or window layer function from within the callback function
+    results in undefined behavior.
+    
+    If no callback is set, then messages are instead stored in an internal 
+    message log up to some maximum number of strings as defined by the 
+    implementation-dependent constant MAX_DEBUG_LOGGED_MESSAGES_AMD.  Each 
+    context stores its own message log and will only store messages generated by
+    commands operating in that context.  If the message log is full, then the
+    oldest messages will be removed from the log to make room for newer ones.
+    The application can query the number of messages currently in the log by
+    obtaining the value of DEBUG_LOGGED_MESSAGES_AMD, and can get the contents
+    of those messages using the command:
+
+        uint GetDebugMessageLogAMD(uint count,
+                                   sizei logSize,
+                                   enum* categories,
+                                   enum* severities,
+                                   uint* ids,
+                                   sizei* lengths,
+                                   char* messageLog);
+
+    This function will fetch as many messages as possible from the message
+    log up to <count> in order from oldest to newest, and will return the
+    number of messages fetched.  Those messages that were fetched will be
+    removed from the log.  The value of <count> must be greater than zero and
+    less than MAX_DEBUG_LOGGED_MESSAGES_AMD or otherwise the error
+    INVALID_VALUE will be generated.  The value of <count> can be larger than
+    the actual number of messages currently in the log.  If <messageLog> is not
+    a null pointer, then the string representations of all fetched messages will
+    be stored in the buffer <messageLog> and will be separated by null-
+    terminators.  The maximum size of the buffer (including all null-
+    terminators) is denoted by <logSize>, and strings of messages within <count>
+    that do not fit in the buffer will not be fetched.  If <logSize> is less
+    than zero, the error INVALID_VALUE will be generated.  If <messageLog>
+    is a null pointer, then the value of <logSize> is ignored.  The
+    categories, severity levels, IDs, and string representation lengths of all
+    (up to <count>) removed messages will be stored in the arrays <categories>,
+    <severities>, <ids>, and <lengths>, respectively.  The counts stored in the
+    array <lengths> include the null-terminator of each string.  Any and all of
+    the output arrays, including <messageLog>, are optional, and no data is returned
+    for those arrays that are specified with a null pointer.  To simply delete up
+    to <count> messages from the message log and ignoring, the application can call
+    the function with null pointers for all output arrays.  The error
+    INVALID_OPERATION will be generated by GetDebugMessageLogAMD if it is
+    called in a non-debug context.
+
+    2.20.3 - Controlling Debug Messages
+    
+    Applications can control which messages are generated by calling
+
+        void DebugMessageEnableAMD(enum category,
+                                   enum severity,
+                                   sizei count,
+                                   const uint* ids,
+                                   boolean enabled);
+
+    This command allows disabling or enabling generation of subsets of
+    messages.  If <enabled> is TRUE, the referenced subset of messages
+    is enabled.  If FALSE, then those messages are disabled.  This
+    command can reference different subsets of messages by
+    varying its parameter values in the following ways:
+    
+        1. To reference all messages, let <category>, <severity>,
+           and <count> all be zero.  The value of <ids> is ignored
+           in this case.
+           
+        2. To reference all messages across all categories with
+           a specific severity level, let <category> and <count>
+           be zero and let <severity> identify the severity level.
+           The value of <ids> is ignored in this case.
+           
+        3. To reference all messages within a single category, let
+           <category> identify the referenced category and let
+           <severity> and <count> be zero.  The value of <ids> is
+           ignored in this case.
+    
+        4. To reference all messages within a single category and
+           at a specific severity level, let <category> identify the
+           category and <severity> identify the severity level,
+           and let <count> be zero.  The value of <ids> is ignored
+           in this case.
+           
+        5. To reference specific messages by ID within a single
+           category, let <category> identify the category, let
+           <severity> be zero, let <count> be greater than zero
+           and let <ids> identify the IDs of <count> messages within
+           the identified category.  Operations on message IDs that
+           are not valid within the category are silently ignored.
+           
+    In all of the above cases, if <category> is non-zero and specifies
+    an invalid category, the error INVALID_ENUM is generated.
+    Similarly if <severity> is non-zero and is an invalid severity level,
+    the error INVALID_ENUM is generated.  If <count> is less than
+    zero, the error INVALID_VALUE is generated.  If the parameters do
+    not fall into one of the cases defined above, the error INVALID_VALUE
+    is generated.  The error INVALID_OPERATION is generated if this
+    command is called in a non-debug context.
+    
+    Although messages are grouped into categories and severities,
+    and entire groups of messages can be turned off with a single
+    call, there is no explicit per-category or per-severity enabled state.
+    Instead the enabled state is stored individually for each message.
+    There is no difference between disabling a category of messages with a
+    single call, and enumerating all messages of that category and individually
+    disabling each of them by their ID.
+    
+    All messages of severity level DEBUG_SEVERITY_MEDIUM_AMD and
+    DEBUG_SEVERITY_HIGH_AMD in all categories are initially enabled, and
+    all messages at DEBUG_SEVERITY_LOW_AMD are initially disabled.
+    
+    2.20.4 - Application Messages
+    
+    To easily support custom application timestamps, applications can inject
+    their own messages to the debug message stream through the command
+    
+        void DebugMessageInsertAMD(enum category,
+                                   enum severity,
+                                   uint id,
+                                   sizei length, 
+                                   const char* buf);
+        
+    The value of <id> specifies the ID for the message and <severity> indicates
+    its severity level as defined by the application.  If <severity> is not a
+    valid severity level, the error INVALID_ENUM will be generated.  The value
+    of <category> must be DEBUG_CATEGORY_APPLICATION_AMD, or the error
+    INVALID_ENUM will be generated.  The string <buf> contains the string
+    representation of the message.  The parameter <length> contains the size of
+    the message's string representation, excluding the null-terminator.  If
+    <length> is zero, then its value is derived from the string-length of <buf>
+    and <buf> must contain a null-terminated string.  The error INVALID_VALUE
+    will be generated if <length> is less than zero or its derived value is
+    larger than or equal to MAX_DEBUG_MESSAGE_LENGTH_AMD.  The error
+    INVALID_OPERATION will be generated if this function is called in a
+    non-debug context.
+    
+Additions to the OpenGL / GLX / GLX Protocol Specifications
+
+    None.
+
+Additions to the WGL Specification
+
+    None.
+    
+Errors
+    
+    The error INVALID_OPERATION will be generated by DebugMessageCallbackAMD if
+    the function is called in a non-debug context.
+
+    The error INVALID_ENUM will be generated by DebugMessageEnableAMD if
+    <category> is non-zero and specifies an invalid category.
+
+    The error INVALID_ENUM will be generated by DebugMessageEnableAMD if
+    <severity> is non-zero and an invalid severity level.
+
+    The error INVALID_VALUE will be generated by DebugMessageEnableAMD if
+    if <count> is less than zero.
+
+    The error INVALID_VALUE will be generated by DebugMessageEnableAMD if
+    if the combination of values for <category>, <severity> and <count> do not
+    fall within one of the accepted combinations for referencing a subset of
+    messages.
+
+    The error INVALID_OPERATION will be generated by GetDebugMessageLogAMD if
+    it is called in a non-debug context.
+
+    The error INVALID_VALUE will be generated by GetDebugMessageLogAMD if the
+    value of <count> is zero or greater than the value of
+    MAX_DEBUG_LOGGED_MESSAGES_AMD.
+
+    The error INVALID_VALUE will be generated by GetDebugMessageLogAMD if
+    <logSize> is less than zero.
+    
+    The error INVALID_ENUM will be generated by DebugMessageInsertAMD if 
+    <severity> is not a valid debug severity level.
+   
+    The error INVALID_ENUM will be generated by DebugMessageInsertAMD if the
+    value of <category> is not DEBUG_CATEGORY_APPLICATION_AMD.
+    
+    The error INVALID_VALUE will be generated by DebugMessageInsertAMD
+    if <length> is less than zero.
+
+    The error INVALID_VALUE will be generated by DebugMessageInsertAMD
+    if <length> or its derived value is larger than
+    MAX_DEBUG_MESSAGE_LENGTH_AMD.
+
+    The error INVALID_OPERATION will be generated by DebugMessageInsertAMD if 
+    this function is called in a non-debug context.
+    
+New State
+                                                                    Initial
+    Get Value                          Type  Get Command            Value     Description                 Sec    Attribute
+    --------------------------         ----  -----------            -----     -------------------------  ------  ---------
+    DEBUG_LOGGED_MESSAGES_AMD          Z+   GetIntegerv              0        The number of messages     2.20.2     -
+                                                                              currently in the debug
+                                                                              message log
+                                                                              
+New Implementation Dependent State
+                                                                       Minimum
+    Get Value                                       Type  Get Command  Value    Description                   Sec     Attribute
+    --------------------------------                --    -----------  -----    -------------------------    ------   ----------
+    MAX_DEBUG_MESSAGE_LENGTH_AMD                    Z+    GetIntegerv  80       The maximum length of a      2.20.2      -
+                                                                                debug message string
+
+    MAX_DEBUG_LOGGED_MESSAGES_AMD                   Z+    GetIntegerv  1        The maximum number of        2.20.2      -
+                                                                                messages stored in the
+                                                                                debug message log
+                                                                                
+Issues
+
+    01) Should we reserve tokens for arbitrary vendor-specific categories (e.g.
+        DEBUG_CATEGORY_VENDOR0)?
+    
+        RESOLVED:  No.  Since this is an AMD extension, there is no
+                   reason to do this now in the current version.
+
+    02) Should we allow explicit controls for printing to stderr or through
+        OutputDebugString instead of the callback?
+
+        RESOLVED:  No.  It is up to the application to setup this
+                   behavior itself using the provided functionality.
+    
+
+    03) How do the different filtering rules interact?  If a category is
+        filtered, but a message in that same category is set to be unfiltered by
+        ID or severity level, should that message still be filtered?  If I 
+        specifically filter a category and then unfilter all messages globally
+        with a later command, should that category still be filtered?
+    
+        RESOLVED:  Message enable state is stored individually for each
+                   message.  There is no explicit group-wise enable state
+                   or different ordered levels of "enabledness" in the
+                   implied hierarchy of messages.  Operations on groups
+                   of messages affect all messages within
+                   that group individually, and overwrite the previous
+                   and individual state of those messages.
+        
+    04) Should applications be allowed to insert their own messages through
+        a custom category?  How would this be done?
+    
+        RESOLVED:  Yes.  A new category will be provided for application-
+                   specific messages and an entry point will be provided to 
+                   write messages  in that category.
+
+
+
+Revision History
+
+    (v10 2022-07-21, jhager)
+        - Changed type of argument "severities" from uint to enum in GetDebugMessageLogAMD.
+
+    (v9, 2010-05-07, jkontti)
+        - Removed inconsistent language from New Tokens category for tokens
+          that are no longer accepted by DebugMessageEnableAMD since
+          revision v5.
+        - Cleaned up some language and formatting issues.
+        
+    (v8, 2010-04-09, jkontti)
+        - Renamed extension string from AMDX to AMD.
+        - Renamed new function, type and token suffixes from AMDX to AMD.
+        - No changes in functionality between AMDX and AMD versions.
+
+    (v7, 2010-01-21, jkontti)
+        - Added user-specifiable parameter to debug message callback function
+
+    (v6, 2010-01-15, jkontti)
+        - Updated contact section
+        - Updated contributor section
+        - Updated status section
+        - Updated enums
+        
+    (v5, 2009-09-17, jkontti)
+        - Message ID namespaces are now contained within categories instead of
+          being in a single global namespace
+        - Reworked DebugMessageEnable to allow disabling/enabling more
+          combinations of messages
+        - Resolved issue 01
+        - Resolved issue 03
+        
+    (v4, 2009-09-16, jkontti)
+        - Added category as a parameter to DebugMessageInsert for
+          future-proofing purposes
+        - Added missing errors to DebugMessageInsert and GetDebugMessageLog
+        - Added missing tokens to New Tokens
+        - Renamed DebugMessageFilter to DebugMessageEnable
+        
+    (v3, 2009-09-15, myoung)
+        - Cleaned up some language
+        - Added values using AMD reserved ranges.  Values do not overlap so can
+          be re-used.
+
+    (v2, 2009-09-15, jkontti)
+        - Application-generated messages
+        - More categories (window system, deprecation, profile, application)
+        
+    (v1, 2009-09-09, jkontti)
+        - Initial revision

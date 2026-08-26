@@ -50,7 +50,7 @@ class IncrementDecrementStatement final : public Castable<IncrementDecrementStat
     const Expression* const lhs;
 
     /// `true` for increment, `false` for decrement.
-    bool increment;
+    bool increment = false;
 };
 
 }  // namespace tint::ast

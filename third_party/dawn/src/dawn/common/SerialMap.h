@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/SerialStorage.h"
+#include "src/dawn/common/SerialStorage.h"
 
 namespace dawn {
 

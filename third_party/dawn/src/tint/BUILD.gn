@@ -37,6 +37,7 @@ if (tint_build_unittests) {
   import("//testing/test.gni")
 }
 
+import("generated_sources.gni")
 import("tint.gni")
 
 ###############################################################################
@@ -204,71 +205,24 @@ config("tint_unittests_config") {
   ]
 
   if (is_win && is_debug) {
-    # TODO(crbug.com/tint/1749): both msvc and clang builds stack overflow on debug builds.
-    # Increase the initial stack size to 4 MB (default is 1MB).
+    # TODO(crbug.com/tint/1749): both msvc and clang builds stack overflow on
+    # debug builds. Increase the initial stack size to 4 MB (default is 1MB).
     ldflags = [ "/STACK:4194304" ]
   }
 }
 
-if (tint_build_unittests) {
-  ###############################################################################
-  # Gtest Gmock - Handle building inside and outside of Chromium.
-  ###############################################################################
-  # When building outside of Chromium we need to define our own targets for GTest
-  # and GMock. However when compiling inside of Chromium we need to reuse the
-  # existing targets, both because Chromium has a special harness for swarming
-  # and because otherwise the "gn check" fails.
+# The Tint build file code generation uses the ":gmock_and_gtest" target from
+# this file, proxy it to the common definition in //src/utils.
+group("gmock_and_gtest") {
+  testonly = true
+  public_deps = [ "${dawn_root}/src/utils:gmock_and_gtest" ]
+}
 
-  if (build_with_chromium) {
-    # When we are in Chromium we reuse its targets, and also add some deps that
-    # are needed to launch the test in swarming mode.
-    group("gmock_and_gtest") {
-      testonly = true
-      public_deps = [
-        "//base",
-        "//base/test:test_support",
-        "//testing/gmock",
-        "//testing/gtest",
-        "//third_party/googletest:gmock",
-      ]
-    }
-  } else {
-    # When we aren't in Chromium we define out own targets based on the location
-    # of the googletest repo.
-    config("gtest_config") {
-      include_dirs = [
-        "${tint_googletest_dir}/googletest",
-        "${tint_googletest_dir}/googletest/include",
-      ]
-    }
-    static_library("gtest") {
-      testonly = true
-      sources = [ "${tint_googletest_dir}/googletest/src/gtest-all.cc" ]
-      public_configs = [ ":gtest_config" ]
-    }
-
-    config("gmock_config") {
-      include_dirs = [
-        "${tint_googletest_dir}/googlemock",
-        "${tint_googletest_dir}/googlemock/include",
-        "${tint_googletest_dir}/googletest/include",
-      ]
-    }
-
-    static_library("gmock") {
-      testonly = true
-      sources = [ "${tint_googletest_dir}/googlemock/src/gmock-all.cc" ]
-      public_configs = [ ":gmock_config" ]
-    }
-
-    group("gmock_and_gtest") {
-      testonly = true
-      public_deps = [
-        ":gmock",
-        ":gtest",
-      ]
-    }
-  }
+action("generate_sources") {
+  script = "${dawn_root}/tools/generate-sources-gn.py"
+  inputs = tint_generation_dependencies
+  outputs = tint_generated_sources
+  args = [ rebase_path(root_gen_dir, root_build_dir) ]
 }
 
 if (tint_build_benchmarks) {
@@ -323,9 +277,6 @@ group("cmds") {
       "${tint_src_dir}/cmd/tint",
     ]
   }
-  if (tint_build_tintd) {
-    deps += [ "${tint_src_dir}/cmd/tintd" ]
-  }
   if (tint_build_ir_binary) {
     if (tint_build_wgsl_reader) {
       deps += [ "${tint_src_dir}/cmd/fuzz/ir/as" ]
@@ -339,33 +290,49 @@ group("cmds") {
 group("fuzzers") {
   testonly = true
   data_deps = []
-  if (tint_build_wgsl_reader) {
-    data_deps += [ "${tint_src_dir}/cmd/fuzz/wgsl" ]
-  }
-  if (tint_build_ir_binary) {
-    data_deps += [ "${tint_src_dir}/cmd/fuzz/ir" ]
+  if (tint_build_fuzzers) {
+    if (tint_build_wgsl_reader) {
+      data_deps += [ "${tint_src_dir}/cmd/fuzz/wgsl" ]
+      if (tint_build_mesa && tint_build_fuzzer_vulkan_support) {
+        data_deps += [ "${tint_src_dir}/cmd/fuzz/wgsl_mesa" ]
+      }
+    }
+    if (tint_build_ir_binary) {
+      data_deps += [ "${tint_src_dir}/cmd/fuzz/ir" ]
+      if (tint_build_mesa && tint_build_fuzzer_vulkan_support &&
+          tint_build_wgsl_reader) {
+        data_deps += [ "${tint_src_dir}/cmd/fuzz/ir_mesa" ]
+      }
+    }
   }
 }
 
 group("fuzzer_corpus_tools") {
   testonly = true
-  data_deps = [ ":fuzzers" ]
-  if (tint_build_ir_binary) {
-    data_deps += [ "${tint_src_dir}/cmd/fuzz/ir/as" ]
+  data_deps = []
+  if (tint_build_fuzzers) {
+    data_deps += [ ":fuzzers" ]
+    if (tint_build_ir_binary) {
+      data_deps += [ "${tint_src_dir}/cmd/fuzz/ir/as" ]
+    }
   }
 }
 
 group("fuzzer_corpus_tests") {
   testonly = true
-  data_deps = [
-    ":fuzzer_corpus_tools",
-    "${dawn_root}/tools:go_tools",
-  ]
-  data = [
-    "${dawn_root}/scripts/run_tint_fuzzer_corpus_tests.py",
-    "${dawn_root}/test/tint/",
-    "${dawn_root}/tools/python/",
-  ]
+  data_deps = []
+  data = []
+  if (tint_build_fuzzers) {
+    data_deps += [
+      ":fuzzer_corpus_tools",
+      "${dawn_root}/tools:go_tools",
+    ]
+    data += [
+      "${dawn_root}/scripts/run_tint_fuzzer_corpus_tests.py",
+      "${dawn_root}/test/tint/",
+      "${dawn_root}/tools/python/",
+    ]
+  }
 }
 
 group("tests") {

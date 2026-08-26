@@ -28,15 +28,15 @@
 #include <cstddef>
 #include <span>
 
+#include "src/tint/cmd/fuzz/common/init.h"
 #include "src/tint/cmd/fuzz/ir/fuzz.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
+#include "src/utils/compiler.h"
 
 #if TINT_BUILD_IR_BINARY
 
 #include "src/tint/lang/core/ir/binary/decode.h"
-#include "src/tint/utils/command/cli.h"
-#include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/macros/defer.h"
 
 TINT_BEGIN_DISABLE_PROTOBUF_WARNINGS();
@@ -49,15 +49,19 @@ namespace {
 
 tint::fuzz::ir::Options options;
 
-}
+}  // namespace
 
 DEFINE_BINARY_PROTO_FUZZER(const tint::cmd::fuzz::ir::pb::Root& pb) {
     /// As the fuzzers are free to mutate the module, we need to deserialize a new module for each
     /// sub-fuzzer. Because the protobuf may error when deserializing and the module may be invalid,
     /// we early deserialize. If this fails, then we do not call Run().
     thread_local std::optional<tint::core::ir::Module> module;
+    tint::core::ir::binary::DecoderOptions decoder_options{
+        .strip_invalid_identifiers = options.strip_invalid_identifiers,
+    };
+
     {
-        auto decoded = tint::core::ir::binary::Decode(pb.module());
+        auto decoded = tint::core::ir::binary::Decode(pb.module(), decoder_options);
         if (decoded != tint::Success) {
             return;  // Failed to decode
         }
@@ -65,7 +69,7 @@ DEFINE_BINARY_PROTO_FUZZER(const tint::cmd::fuzz::ir::pb::Root& pb) {
     }
     auto acquire_module = [&] {
         if (!module) {
-            auto decoded = tint::core::ir::binary::Decode(pb.module());
+            auto decoded = tint::core::ir::binary::Decode(pb.module(), decoder_options);
             TINT_ASSERT(decoded == tint::Success)
                 << "module successfully decoded once, then failed a subsequent time\n"
                 << decoded.Failure();
@@ -78,8 +82,7 @@ DEFINE_BINARY_PROTO_FUZZER(const tint::cmd::fuzz::ir::pb::Root& pb) {
         return out;
     };
 
-    std::span<const std::byte> data(reinterpret_cast<const std::byte*>(pb.data().data()),
-                                    pb.data().length());
+    auto data = std::as_bytes(std::span(pb.data()));
     tint::fuzz::ir::Run(acquire_module, options, data);
 }
 
@@ -87,62 +90,8 @@ DEFINE_BINARY_PROTO_FUZZER(const tint::cmd::fuzz::ir::pb::Root& pb) {
 // the LibFuzzer runtime uses dlsym() instead of calling the function directly.
 extern "C" __attribute__((visibility("default"))) int LLVMFuzzerInitialize(int* argc,
                                                                            char*** argv) {
-    tint::cli::OptionSet opts;
-
-    tint::Vector<std::string_view, 8> arguments;
-    for (int i = 1; i < *argc; i++) {
-        std::string_view arg((*argv)[i]);
-        if (!arg.empty()) {
-            arguments.Push(arg);
-        }
-    }
-
-    auto show_help = [&] {
-        std::cerr << "Custom fuzzer options:" << '\n';
-        opts.ShowHelp(std::cerr);
-        std::cerr << '\n';
-        // Change args to show libfuzzer help
-        std::cerr << "Standard libfuzzer ";  // libfuzzer will print 'Usage:'
-        static char help[] = "-help=1";
-        *argc = 2;
-        (*argv)[1] = help;
-    };
-
-    auto& opt_help = opts.Add<tint::cli::BoolOption>("help", "shows the usage");
-    auto& opt_filter = opts.Add<tint::cli::StringOption>(
-        "filter", "runs only the fuzzers with the given substring");
-    auto& opt_concurrent =
-        opts.Add<tint::cli::BoolOption>("concurrent", "runs the fuzzers concurrently");
-    auto& opt_verbose =
-        opts.Add<tint::cli::BoolOption>("verbose", "prints the name of each fuzzer before running");
-#if TINT_BUILD_FUZZER_VULKAN_SUPPORT
-    auto& opt_vk_icd = opts.Add<tint::cli::StringOption>("vk_icd", "path to Vulkan ICD JSON");
-#endif
-    auto& opt_dump_ir =
-        opts.Add<tint::cli::BoolOption>("dump-ir", "Dump IR at each stage of the compilation flow");
-
-    tint::cli::ParseOptions parse_opts;
-    parse_opts.ignore_unknown = true;
-    if (auto res = opts.Parse(arguments, parse_opts); res != tint::Success) {
-        show_help();
-        std::cerr << res.Failure();
-        return 0;
-    }
-
-    if (opt_help.value.value_or(false)) {
-        show_help();
-        return 0;
-    }
-
-    options.filter = opt_filter.value.value_or("");
-    options.run_concurrently = opt_concurrent.value.value_or(false);
-    options.verbose = opt_verbose.value.value_or(false);
-#if TINT_BUILD_FUZZER_VULKAN_SUPPORT
-    options.vk_icd = opt_vk_icd.value.value_or("");
-#endif
-    options.dump_ir_when_validating = opt_dump_ir.value.value_or(false);
-
-    return 0;
+    return tint::fuzz::common::ParseFuzzerOptions(tint::fuzz::common::FuzzerType::kIR, argc, argv,
+                                                  &options);
 }
 
 #endif

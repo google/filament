@@ -42,6 +42,7 @@
 #include "src/tint/utils/command/cli.h"
 #include "src/tint/utils/containers/transform.h"
 #include "src/tint/utils/macros/defer.h"
+#include "src/tint/utils/text/base64.h"
 #include "src/tint/utils/text/color_mode.h"
 #include "src/tint/utils/text/string.h"
 #include "src/tint/utils/text/styled_text.h"
@@ -237,6 +238,10 @@ bool WriteTestCaseProto(const tint::cmd::fuzz::ir::pb::Root& proto, const Option
 /// @param options the options that ir_fuzz_as was invoked with
 void DumpTestCaseProtoDebug(const tint::cmd::fuzz::ir::pb::Root& proto, const Options& options) {
     options.printer->Print(tint::StyledText{} << proto.module().DebugString());
+    if (!proto.data().empty()) {
+        options.printer->Print(tint::StyledText{} << "sidecar data: " << proto.data().size()
+                                                  << " bytes\n");
+    }
     options.printer->Print(tint::StyledText{} << "\n");
 }
 
@@ -262,9 +267,15 @@ bool ProcessFile(const Options& options) {
         DumpIR(info.program, options);
     }
 
+    auto data = tint::DecodeBase64FromComments(info.source_file->content.data);
+
     auto proto = GenerateFuzzCaseProto(info.program);
     if (proto != tint::Success) {
         return false;
+    }
+
+    if (!data.IsEmpty()) {
+        proto.Get().set_data(data.AsSpan().data(), data.Length());
     }
 
     if (options.dump_proto) {

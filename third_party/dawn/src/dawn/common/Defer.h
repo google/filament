@@ -31,7 +31,7 @@
 #include <functional>
 #include <vector>
 
-#include "dawn/common/NonCopyable.h"
+#include "src/utils/non_copyable.h"
 
 namespace dawn {
 

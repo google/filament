@@ -30,12 +30,12 @@
 
 #include <vector>
 
-#include "dawn/native/Error.h"
-#include "dawn/native/Format.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/ObjectBase.h"
-#include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Format.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/ObjectBase.h"
+#include "src/dawn/native/dawn_platform.h"
 
 namespace dawn::native {
 
@@ -43,7 +43,7 @@ TextureDescriptor GetSwapChainBaseTextureDescriptor(SwapChainBase* swapChain);
 
 struct SwapChainTextureInfo {
     Ref<TextureBase> texture;
-    wgpu::SurfaceGetCurrentTextureStatus status;
+    wgpu::SurfaceGetCurrentTextureStatus status = wgpu::SurfaceGetCurrentTextureStatus::Error;
 };
 
 class SwapChainBase : public RefCounted {
@@ -75,6 +75,8 @@ class SwapChainBase : public RefCounted {
     // This is because losing the last reference to the SwapChain will detach its surface which
     // explicitly destroys the current texture. Explicit destruction of textures is not thread safe
     // yet.
+    // Hot path and intended to be shadowed.
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     void APIRelease() { ReleaseAndLockBeforeDestroy(); }
 
     DeviceBase* GetDevice() const;
@@ -105,15 +107,15 @@ class SwapChainBase : public RefCounted {
     Ref<DeviceBase> mDevice;
 
     bool mAttached = false;
-    uint32_t mWidth;
-    uint32_t mHeight;
-    wgpu::TextureFormat mFormat;
-    wgpu::TextureUsage mUsage;
-    wgpu::PresentMode mPresentMode;
+    uint32_t mWidth = 0;
+    uint32_t mHeight = 0;
+    wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
+    wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
+    wgpu::PresentMode mPresentMode = wgpu::PresentMode::Fifo;
     // This is not stored as a FormatSet so that it can hold the data pointed to by the
     // descriptor returned by GetSwapChainBaseTextureDescriptor():
-    std::vector<wgpu::TextureFormat> mViewFormats;
-    wgpu::CompositeAlphaMode mAlphaMode;
+    std::vector<wgpu::TextureFormat> mViewFormats = {};
+    wgpu::CompositeAlphaMode mAlphaMode = wgpu::CompositeAlphaMode::Auto;
 
     // This is a weak reference to the surface. If the surface is destroyed it will call
     // DetachFromSurface and mSurface will be updated to nullptr.

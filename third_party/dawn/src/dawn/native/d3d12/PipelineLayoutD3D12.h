@@ -28,14 +28,19 @@
 #ifndef SRC_DAWN_NATIVE_D3D12_PIPELINELAYOUTD3D12_H_
 #define SRC_DAWN_NATIVE_D3D12_PIPELINELAYOUTD3D12_H_
 
+#include <optional>
 #include <vector>
 
-#include "dawn/common/Constants.h"
-#include "dawn/common/ityp_array.h"
-#include "dawn/common/ityp_vector.h"
-#include "dawn/native/BindingInfo.h"
-#include "dawn/native/PipelineLayout.h"
-#include "dawn/native/d3d12/d3d12_platform.h"
+#include "absl/container/flat_hash_map.h"
+#include "src/dawn/common/Constants.h"
+#include "src/dawn/common/HashUtils.h"
+#include "src/dawn/common/MutexProtected.h"
+#include "src/dawn/common/ityp_array.h"
+#include "src/dawn/common/ityp_vector.h"
+#include "src/dawn/native/BindingInfo.h"
+#include "src/dawn/native/PipelineLayout.h"
+#include "src/dawn/native/d3d12/PipelineLayoutHandle.h"
+#include "src/dawn/native/d3d12/d3d12_platform.h"
 
 namespace dawn::native::d3d12 {
 
@@ -47,7 +52,8 @@ class PipelineLayout final : public PipelineLayoutBase {
         Device* device,
         const UnpackedPtr<PipelineLayoutDescriptor>& descriptor);
 
-    uint32_t GetResourceTableRootParameterIndex() const;
+    uint32_t GetResourceTableCbvUavSrvRootParameterIndex() const;
+    uint32_t GetResourceTableSamplerRootParameterIndex() const;
     uint32_t GetBaseResourceTableRegisterSpace() const;
 
     uint32_t GetCbvUavSrvRootParameterIndex(BindGroupIndex group) const;
@@ -57,56 +63,32 @@ class PipelineLayout final : public PipelineLayoutBase {
     uint32_t GetDynamicUniformRootParameterIndex(BindGroupIndex group,
                                                  BindingIndex bindingIndex) const;
 
-    uint32_t GetFirstIndexOffsetRegisterSpace() const;
-    uint32_t GetFirstIndexOffsetShaderRegister() const;
-    uint32_t GetFirstIndexOffsetParameterIndex() const;
-
-    uint32_t GetNumWorkgroupsRegisterSpace() const;
-    uint32_t GetNumWorkgroupsShaderRegister() const;
-    uint32_t GetNumWorkgroupsParameterIndex() const;
-
-    uint32_t GetDynamicStorageBufferLengthsRegisterSpace() const;
-    uint32_t GetDynamicStorageBufferLengthsShaderRegister() const;
-    uint32_t GetDynamicStorageBufferLengthsParameterIndex() const;
-
-    uint32_t GetDynamicStorageBufferOffsetsRegisterSpace() const;
-    uint32_t GetDynamicStorageBufferOffsetsShaderRegister() const;
-    uint32_t GetDynamicStorageBufferOffsetsParameterIndex() const;
-
     uint32_t GetImmediatesRegisterSpace() const;
     uint32_t GetImmediatesShaderRegister() const;
-    uint32_t GetImmediatesParameterIndex() const;
 
-    ID3D12RootSignature* GetRootSignature() const;
-
-    ID3DBlob* GetRootSignatureBlob() const;
-
-    ID3D12CommandSignature* GetDispatchIndirectCommandSignatureWithNumWorkgroups();
-
-    ID3D12CommandSignature* GetDrawIndirectCommandSignatureWithInstanceVertexOffsets();
-
-    ID3D12CommandSignature* GetDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets();
+    ResultOrError<Ref<PipelineLayoutHandle>> GetOrCreatePipelineLayoutHandle(
+        const ImmediateMask& pipelineImmediateMask);
 
     struct BindGroupDynamicStorageBufferInfo {
-        // First register offset for a bind group's dynamic storage buffer lengths or offsets.
-        // This is the index into the array of root constants where this bind group's
-        // lengths or offsets start.
-        uint32_t firstRegisterOffset;
+        // First index into the immediate block's length/offset arrays for this bind group's dynamic
+        // storage buffers. This is where the bind group's lengths or offsets start.
+        uint32_t firstImmediateIndex;
 
-        struct BindingAndRegisterOffset {
+        struct BindingAndImmediateIndex {
             BindingNumber binding;
-            uint32_t registerOffset;
+            uint32_t immediateIndex;
         };
-        // Associative list of (BindingNumber,registerOffset) pairs, which is passed into
-        // the shader to map the BindingPoint(thisGroup, BindingNumber) to the registerOffset
-        // into the root constant array which holds the dynamic storage buffer lengths and offsets.
-        std::vector<BindingAndRegisterOffset> bindingAndRegisterOffsets;
+        // Associative list of (BindingNumber,immediateIndex) pairs, which is passed into the shader
+        // to map the BindingPoint(thisGroup, BindingNumber) to the index into the immediate block's
+        // length/offset arrays which hold the dynamic storage buffer lengths and offsets.
+        std::vector<BindingAndImmediateIndex> bindingAndImmediateIndices;
     };
 
-    // Flat map from bind group index to the list of (BindingNumber,Register) pairs.
+    // Flat map from bind group index to the list of (BindingNumber,immediateIndex) pairs.
     using DynamicStorageBufferInfo = PerBindGroup<BindGroupDynamicStorageBufferInfo>;
 
     const DynamicStorageBufferInfo& GetDynamicStorageBufferInfo() const;
+    uint32_t GetDynamicStorageBufferCount() const;
 
   private:
     ~PipelineLayout() override = default;
@@ -114,22 +96,38 @@ class PipelineLayout final : public PipelineLayoutBase {
     MaybeError Initialize();
     void DestroyImpl(DestroyReason reason) override;
 
+    MaybeError BuildBaseRootParameters();
+    ResultOrError<Ref<PipelineLayoutHandle>> CreatePipelineLayoutHandle(
+        const ImmediateMask& pipelineImmediateMask);
+
     PerBindGroup<uint32_t> mCbvUavSrvRootParameterIndices;
     PerBindGroup<uint32_t> mSamplerRootParameterIndices;
     PerBindGroup<ityp::vector<BindingIndex, uint32_t>> mDynamicUniformRootParameterIndices;
     DynamicStorageBufferInfo mDynamicStorageBufferInfo;
-    uint32_t mResourceTableRootParameterIndex;
-    uint32_t mFirstIndexOffsetParameterIndex;
-    uint32_t mNumWorkgroupsParameterIndex;
-    uint32_t mDynamicStorageBufferLengthsParameterIndex;
-    uint32_t mDynamicStorageBufferOffsetsParameterIndex;
-    uint32_t mImmediatesParameterIndex;
-    ComPtr<ID3D12RootSignature> mRootSignature;
-    // Store the root signature blob to put in pipeline cachekey
-    ComPtr<ID3DBlob> mRootSignatureBlob;
-    ComPtr<ID3D12CommandSignature> mDispatchIndirectCommandSignatureWithNumWorkgroups;
-    ComPtr<ID3D12CommandSignature> mDrawIndirectCommandSignatureWithInstanceVertexOffsets;
-    ComPtr<ID3D12CommandSignature> mDrawIndexedIndirectCommandSignatureWithInstanceVertexOffsets;
+    uint32_t mDynamicStorageBufferCount = 0;
+    uint32_t mResourceTableCbvUavSrvRootParameterIndex;
+    uint32_t mResourceTableSamplerRootParameterIndex;
+
+    // Base root parameters shared by every PipelineLayoutHandle, built once in
+    // BuildBaseRootParameters(). rootParameters points into ranges, so both are kept const and
+    // bundled together; std::optional defers the single emplace to Initialize().
+    // TODO(crbug.com/366291600): The C++ way to make immutable types is to make private mutable
+    // data members, use a constructor to initialize them, and provide only const-access members.
+    struct InvariantParams {
+        const std::vector<D3D12_ROOT_PARAMETER1> rootParameters;
+        const std::vector<D3D12_DESCRIPTOR_RANGE1> ranges;
+        const std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
+    };
+    std::optional<InvariantParams> mInvariantParams;
+
+    // Cache of PipelineLayoutHandles keyed by the pipeline's immediate mask. Internal root
+    // constants (firstVertex / firstInstance / num_workgroups) are allocated dynamically and
+    // tracked through the immediate mask, so pipelines that share a layout but use different
+    // immediates get different masks, and a single PipelineLayout may map to multiple
+    // PipelineLayoutHandles. The mask captures every per-pipeline input that shapes the root
+    // signature.
+    MutexProtected<absl::flat_hash_map<ImmediateMask, Ref<PipelineLayoutHandle>>>
+        mPipelineLayoutHandles;
 };
 
 }  // namespace dawn::native::d3d12

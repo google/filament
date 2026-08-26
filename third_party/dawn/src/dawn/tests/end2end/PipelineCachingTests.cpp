@@ -28,10 +28,10 @@
 #include <memory>
 #include <string_view>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/tests/mocks/platform/CachingInterfaceMock.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/tests/mocks/platform/CachingInterfaceMock.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -156,7 +156,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineNoCache) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0), device.CreateComputePipeline(&desc));
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u), device.CreateComputePipeline(&desc));
     }
 
     // Second time should create fine with no cache hits since cache is disabled.
@@ -165,7 +165,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineNoCache) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0), device.CreateComputePipeline(&desc));
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u), device.CreateComputePipeline(&desc));
     }
 }
 
@@ -178,14 +178,14 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineFrontendCache) {
 
     // First creation should create a cache entry.
     wgpu::ComputePipeline pipeline;
-    EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+    EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                        pipeline = device.CreateComputePipeline(&desc));
 
     // Second creation on the same device should just return from frontend cache and should not
     // call out to the blob cache.
     EXPECT_CALL(mMockCache, LoadData).Times(0);
     wgpu::ComputePipeline samePipeline;
-    EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0),
+    EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u),
                        samePipeline = device.CreateComputePipeline(&desc));
     EXPECT_EQ(pipeline.Get() == samePipeline.Get(), !UsesWire());
 }
@@ -200,7 +200,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCache) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 
@@ -210,7 +210,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCache) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(counts.shaderModule + counts.pipeline), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(counts.shaderModule + counts.pipeline), Add(0u),
                            device.CreateComputePipeline(&desc));
     }
 }
@@ -224,7 +224,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheExplictLayout) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 
@@ -235,7 +235,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheExplictLayout) {
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
         desc.layout = utils::MakeBasicPipelineLayout(device, {});
-        EXPECT_CACHE_STATS(mMockCache, Hit(counts.shaderModule + counts.pipeline), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(counts.shaderModule + counts.pipeline), Add(0u),
                            device.CreateComputePipeline(&desc));
     }
 }
@@ -248,7 +248,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheShaderNegativeCases) 
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 
@@ -259,7 +259,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheShaderNegativeCases) 
         desc.compute.module =
             utils::CreateShaderModule(device, kComputeShaderMultipleEntryPoints.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 
@@ -270,7 +270,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheShaderNegativeCases) 
         desc.compute.module =
             utils::CreateShaderModule(device, kComputeShaderMultipleEntryPoints.data());
         desc.compute.entryPoint = "main2";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 }
@@ -284,7 +284,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheIsolationKey) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 
@@ -294,7 +294,7 @@ TEST_P(SinglePipelineCachingTests, ComputePipelineBlobCacheIsolationKey) {
         wgpu::ComputePipelineDescriptor desc;
         desc.compute.module = utils::CreateShaderModule(device, kComputeShaderDefault.data());
         desc.compute.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(counts.shaderModule + counts.pipeline),
                            device.CreateComputePipeline(&desc));
     }
 }
@@ -314,7 +314,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineNoCache) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0), device.CreateRenderPipeline(&desc));
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u), device.CreateRenderPipeline(&desc));
     }
 
     // Second time should create fine with no cache hits since cache is disabled.
@@ -325,7 +325,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineNoCache) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0), device.CreateRenderPipeline(&desc));
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u), device.CreateRenderPipeline(&desc));
     }
 }
 
@@ -340,14 +340,14 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineFrontendCache) {
 
     // First creation should create a cache entry.
     wgpu::RenderPipeline pipeline;
-    EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+    EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                        pipeline = device.CreateRenderPipeline(&desc));
 
     // Second creation on the same device should just return from frontend cache and should not
     // call out to the blob cache.
     EXPECT_CALL(mMockCache, LoadData).Times(0);
     wgpu::RenderPipeline samePipeline;
-    EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(0),
+    EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(0u),
                        samePipeline = device.CreateRenderPipeline(&desc));
     EXPECT_EQ(pipeline.Get() == samePipeline.Get(), !UsesWire());
 }
@@ -364,7 +364,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCache) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -376,7 +376,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCache) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(2 * counts.shaderModule + counts.pipeline), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(2 * counts.shaderModule + counts.pipeline), Add(0u),
                            device.CreateRenderPipeline(&desc));
     }
 }
@@ -392,7 +392,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheExplictLayout) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -405,7 +405,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheExplictLayout) {
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
         desc.layout = utils::MakeBasicPipelineLayout(device, {});
-        EXPECT_CACHE_STATS(mMockCache, Hit(2 * counts.shaderModule + counts.pipeline), Add(0),
+        EXPECT_CACHE_STATS(mMockCache, Hit(2 * counts.shaderModule + counts.pipeline), Add(0u),
                            device.CreateRenderPipeline(&desc));
     }
 }
@@ -421,7 +421,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheDescriptorNegativeCase
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -450,7 +450,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheShaderNegativeCases) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -504,7 +504,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheNegativeCasesFragmentC
         desc.cFragment.module =
             utils::CreateShaderModule(device, kFragmentShaderMultipleOutput.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -568,7 +568,7 @@ TEST_P(SinglePipelineCachingTests, DISABLED_RenderPipelineBlobCacheLayout) {
                                 {0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Uniform},
                             }),
                     });
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -662,7 +662,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheIsolationKey) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 
@@ -674,7 +674,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheIsolationKey) {
         desc.vertex.entryPoint = "main";
         desc.cFragment.module = utils::CreateShaderModule(device, kFragmentShaderDefault.data());
         desc.cFragment.entryPoint = "main";
-        EXPECT_CACHE_STATS(mMockCache, Hit(0), Add(2 * counts.shaderModule + counts.pipeline),
+        EXPECT_CACHE_STATS(mMockCache, Hit(0u), Add(2 * counts.shaderModule + counts.pipeline),
                            device.CreateRenderPipeline(&desc));
     }
 }

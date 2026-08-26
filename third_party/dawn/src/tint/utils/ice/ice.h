@@ -87,7 +87,7 @@ class InternalCompilerError {
 
     /// This operator overload exists so that we can use an InternalCompilerError object on the
     /// right-hand side of a short-circuiting operator, which is how the TINT_ASSERT macro works.
-    operator bool() const { return false; }
+    explicit operator bool() const { return false; }
 
   private:
     InternalCompilerError(const InternalCompilerError&) = delete;

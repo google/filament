@@ -58,8 +58,10 @@ enum class BuiltinFn : uint8_t {
     kAtomicSub,
     kFloatBitsToInt,
     kFloatBitsToUint,
+    kFloat16BitsToUint16,
     kIntBitsToFloat,
     kUintBitsToFloat,
+    kUint16BitsToFloat16,
     kBitCount,
     kBitfieldExtract,
     kBitfieldInsert,
@@ -93,6 +95,7 @@ enum class BuiltinFn : uint8_t {
     kGreaterThanEqual,
     kEqual,
     kNotEqual,
+    kUaddCarry,
     kNone,
 };
 

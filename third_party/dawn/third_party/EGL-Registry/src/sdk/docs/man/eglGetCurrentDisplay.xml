@@ -1,0 +1,57 @@
+<refentry xmlns="http://docbook.org/ns/docbook" version="5.0" xml:base="" xml:id="eglGetCurrentDisplay">
+    <info>
+         <copyright>
+             <year>2003-2018</year>
+             <holder>The Khronos Group Inc.</holder>
+         </copyright>
+    </info>
+    <refmeta>
+        <refentrytitle>eglGetCurrentDisplay</refentrytitle>
+        <manvolnum>3G</manvolnum>
+    </refmeta>
+    <refnamediv>
+        <refname>eglGetCurrentDisplay</refname>
+        <refpurpose>
+            return the display for the current <acronym>EGL</acronym> rendering context
+        </refpurpose>
+    </refnamediv>
+    <refsynopsisdiv>
+        <title>C Specification</title>
+        <funcsynopsis>
+            <funcprototype>
+                <funcdef>EGLDisplay <function>eglGetCurrentDisplay</function></funcdef>
+                <void/>
+            </funcprototype>
+        </funcsynopsis>
+    </refsynopsisdiv>
+    <refsect1 xml:id="description"><title>Description</title>
+        <para>
+            <function>eglGetCurrentDisplay</function> returns the current
+            <acronym>EGL</acronym> display connection for the current
+            <acronym>EGL</acronym> rendering context, as specified by
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>.
+            If no context is current, <constant>EGL_NO_DISPLAY</constant> is returned.
+        </para>
+    </refsect1>
+    <refsect1 xml:id="errors"><title>Errors</title>
+        <para>
+            Passing <constant>EGL_NO_DISPLAY</constant> to any command
+            taking an <type>EGLDisplay</type> parameter will generate either
+            an <constant>EGL_BAD_DISPLAY</constant> error if the EGL
+            implementation validates <type>EGLDisplay</type> handles, or
+            undefined behavior as described at the end of section 3.1 of the
+            EGL 1.5 Specification. The only exception to this rule is that
+            <function>eglQueryString</function> will accept an
+            <type>EGLDisplay</type> parameter of
+            <constant>EGL_NO_DISPLAY</constant> when querying the client
+            extension string (see section 3.3 of the EGL 1.5 Specification).
+        </para>
+    </refsect1>
+    <refsect1 xml:id="seealso"><title>See Also</title>
+        <para>
+            <citerefentry><refentrytitle>eglGetDisplay</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglInitialize</refentrytitle></citerefentry>,
+            <citerefentry><refentrytitle>eglMakeCurrent</refentrytitle></citerefentry>    </para>
+    </refsect1>
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="copyright.xml"/>
+</refentry>

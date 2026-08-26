@@ -33,9 +33,9 @@
 #include <limits>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Math.h"
-#include "dawn/common/UnderlyingType.h"
+#include "src/dawn/common/Math.h"
+#include "src/utils/assert.h"
+#include "src/utils/underlying_type.h"
 
 namespace dawn {
 
@@ -113,8 +113,8 @@ typename BitSetRangeIterator<N, T>::Iterator& BitSetRangeIterator<N, T>::Iterato
 template <size_t N, typename T>
 std::pair<T, size_t> BitSetRangeIterator<N, T>::Iterator::operator*() const {
     using U = UnderlyingType<T>;
-    DAWN_ASSERT(static_cast<U>(mOffset) <= std::numeric_limits<U>::max());
-    DAWN_ASSERT(static_cast<size_t>(mSize) <= std::numeric_limits<size_t>::max());
+    DAWN_RELEASE_ASSUME(static_cast<U>(mOffset) <= std::numeric_limits<U>::max());
+    DAWN_RELEASE_ASSUME(static_cast<size_t>(mSize) <= std::numeric_limits<size_t>::max());
     return std::make_pair(static_cast<T>(static_cast<U>(mOffset)), static_cast<size_t>(mSize));
 }
 
@@ -133,7 +133,7 @@ void BitSetRangeIterator<N, T>::Iterator::Advance() {
     }
 
     // Look for the next 1, shifting mBits as we go and accounting for it in mOffset.
-    // The loop jumps in blocks of 64bit while the rest of the code dose the last sub-64bit count.
+    // The loop jumps in blocks of 64bit while the rest of the code does the last sub-64bit count.
     {
         if constexpr (N > kBitsPerWord) {
             while ((mBits & kBlockMask).to_ullong() == 0) {
@@ -150,8 +150,8 @@ void BitSetRangeIterator<N, T>::Iterator::Advance() {
 
     // Look for the next 0, shifting mBits as we go and accounting for it in mSize. There is a next
     // zero bit because the case with all bits set to 1 is handled in the iterator constructor.
-    // The loop jumps in blocks of 64bit while the rest of the code dose the last sub-64bit count.
-    DAWN_ASSERT(!mBits.all());
+    // The loop jumps in blocks of 64bit while the rest of the code does the last sub-64bit count.
+    DAWN_RELEASE_ASSUME(!mBits.all());
     {
         if constexpr (N > kBitsPerWord) {
             while ((mBits & kBlockMask).to_ullong() == kBlockMask) {

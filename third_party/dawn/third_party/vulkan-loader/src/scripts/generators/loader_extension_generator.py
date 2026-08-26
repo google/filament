@@ -104,6 +104,57 @@ PRE_INSTANCE_FUNCTIONS = ['vkEnumerateInstanceExtensionProperties',
                           'vkEnumerateInstanceLayerProperties',
                           'vkEnumerateInstanceVersion']
 
+def _read_max_loader_string_length_from_c_header() -> int:
+    header_path = os.path.join(os.path.dirname(__file__), '..', '..', 'loader', 'loader_common.h')
+    with open(header_path, 'r', encoding='utf-8') as f:
+        header_text = f.read()
+    match = re.search(r'^\s*static const int MaxLoaderStringLength\s*=\s*(\d+)\s*;', header_text, re.MULTILINE)
+    assert match, (
+        f'Could not find "static const int MaxLoaderStringLength = <N>;" in {header_path}. '
+        'loader_hash_string() below needs this bound to stay in sync with loader/loader_common.h - '
+        'did that declaration get renamed or reformatted?')
+    return int(match.group(1))
+
+# Must match MaxLoaderStringLength in loader/loader_common.h - loader_hash_string() there stops scanning
+# after this many bytes (a name of exactly this length is scanned in full and hashes the same either way;
+# only a name LONGER than this would hash differently in C than in Python below). Parsed directly out of
+# the header (rather than hand-copied) so the two can never silently drift apart.
+MAX_LOADER_STRING_LENGTH = _read_max_loader_string_length_from_c_header()
+
+# 32-bit FNV-1a (https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function). Must stay
+# byte-for-byte identical to loader_hash_string() in loader/loader_common.h - this precomputes the hash
+# constants baked into the generated *_gpa()/dispatch-table-lookup functions below, which the C function
+# then has to reproduce at runtime to hit the right branch. HashString.MatchesGeneratorEmbeddedConstants in
+# tests/loader_hash_string_tests.cpp catches any divergence.
+def loader_hash_string(s: str) -> int:
+    assert len(s) <= MAX_LOADER_STRING_LENGTH, (
+        f'"{s}" is {len(s)} bytes, over MaxLoaderStringLength ({MAX_LOADER_STRING_LENGTH}). '
+        'loader_hash_string() in loader/loader_common.h truncates its scan at that length, so this name '
+        "would hash differently at runtime than the constant this generator is about to embed for it - "
+        'shorten the name or raise MaxLoaderStringLength in both the C and Python copies.')
+    h = 0x811c9dc5
+    for c in s.encode('ascii'):
+        h ^= c
+        h = (h * 0x01000193) & 0xFFFFFFFF
+    return h
+
+# Raises if any two names in `names` share a hash - used as a generation-time tripwire so that if the
+# Vulkan command set ever grows into a collision, it's caught immediately with a clear message instead of
+# failing to compile with an inscrutable "duplicate case value" error naming neither colliding string (each
+# name in `names` becomes its own `case <hash>u:` label in the generated switch - see OutputLoaderLookupFunc
+# and InstExtensionGPA below).
+def check_no_hash_collisions(names, context: str):
+    seen = {}
+    for name in names:
+        h = loader_hash_string(name)
+        if h in seen and seen[h] != name:
+            raise RuntimeError(
+                f'FNV-1a hash collision in {context}: "{seen[h]}" and "{name}" both hash to {h:#010x}. '
+                'Left unaddressed, this would make the generated switch emit two identical case labels and '
+                'fail to compile with a "duplicate case value" error naming neither string - '
+                'loader_hash_string() (C and Python copies) should be revisited (e.g. a different seed/prime).')
+        seen[h] = name
+
 # This class is a container for any source code, data, or other behavior that is necessary to
 # customize the generator script for a specific target API variant (e.g. Vulkan SC). As such,
 # all of these API-specific interfaces and their use in the generator script are part of the
@@ -275,7 +326,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev);
 
 // Extension interception for vkGetInstanceProcAddr function, so we can return
 // the appropriate information for any instance extensions we know about.
-bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *name, void **addr);
+// name_hash must be loader_hash_string(name) - callers that already have it (e.g.
+// trampoline_get_proc_addr) pass it through instead of hashing name a second time.
+bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *name, uint32_t name_hash, void **addr);
 
 struct loader_instance_extension_enable_list; // Forward declaration
 
@@ -704,6 +757,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
                 out.append('    struct loader_device* dev = (struct loader_device *)table;\n')
                 out.append('    const struct loader_instance* inst = dev->phys_dev_term->this_icd_term->this_instance;\n')
                 out.append('    uint32_t api_version = VK_MAKE_API_VERSION(0, inst->app_api_version.major, inst->app_api_version.minor, inst->app_api_version.patch);\n')
+                out.append('    const uint32_t name_hash = loader_hash_string(name);\n')
                 out.append('\n')
             else:
                 cur_type = 'instance'
@@ -718,8 +772,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
                 out.append('\n')
                 out.append('    *found_name = true;\n')
                 out.append('    name += 2;\n')
+                out.append('    const uint32_t name_hash = loader_hash_string(name);\n')
 
+            out.append('    switch (name_hash) {\n')
 
+            base_names_for_collision_check = []
             for command_list in [self.core_commands, self.extension_commands]:
                 commands = command_list
 
@@ -729,12 +786,12 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
                     is_inst_handle_type = command.params[0].type in ['VkInstance', 'VkPhysicalDevice']
                     if ((cur_type == 'instance' and is_inst_handle_type) or (cur_type == 'device' and not is_inst_handle_type)):
 
-                        current_block = self.DescribeBlock(command, current_block, out)
+                        current_block = self.DescribeBlock(command, current_block, out, indent='        ')
                         if len(command.extensions) == 0:
                             if cur_type == 'device':
                                 effective_version_name = APISpecific.getEffectiveVersionName(self.targetApiName, command.version)
                                 api_version = effective_version_name.replace('_VERSION_', '_API_VERSION_')
-                                version_check = f"        if (dev->should_ignore_device_commands_from_newer_version && api_version < {api_version}) return NULL;\n"
+                                version_check = f"                if (dev->should_ignore_device_commands_from_newer_version && api_version < {api_version}) return NULL;\n"
                             else:
                                 version_check = ''
 
@@ -750,22 +807,29 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
                         if command.protect is not None:
                             out.append(f'#if defined({command.protect})\n')
 
-                        out.append(f'    if (!strcmp(name, "{base_name}")) ')
+                        base_names_for_collision_check.append(base_name)
+                        out.append(f'        case {loader_hash_string(base_name):#010x}u:\n')
+                        out.append(f'            if (!strcmp(name, "{base_name}")) ')
                         if command.name in DEVICE_CMDS_MUST_USE_TRAMP:
                             if version_check != '':
-                                out.append(f'{{\n{version_check}        return dev->layer_extensions.{command.extensions[0][3:].lower()}_enabled ? (void *){base_name} : NULL;\n    }}\n')
+                                out.append(f'{{\n{version_check}                return dev->layer_extensions.{command.extensions[0][3:].lower()}_enabled ? (void *){base_name} : NULL;\n            }}\n')
                             else:
                                 out.append(f'return dev->layer_extensions.{command.extensions[0][3:].lower()}_enabled ? (void *){base_name} : NULL;\n')
 
                         else:
                             if version_check != '':
-                                out.append(f'{{\n{version_check}        return (void *)table->{base_name};\n    }}\n')
+                                out.append(f'{{\n{version_check}                return (void *)table->{base_name};\n            }}\n')
                             else:
                                 out.append(f'return (void *)table->{base_name};\n')
+                        out.append('            break;\n')
 
                         if command.protect is not None:
                             out.append(f'#endif // {command.protect}\n')
 
+            check_no_hash_collisions(base_names_for_collision_check, f'loader_lookup_{cur_type}_dispatch_table')
+            out.append('        default:\n')
+            out.append('            break;\n')
+            out.append('    }\n')
             out.append('\n')
             out.append('    *found_name = false;\n')
             out.append('    return NULL;\n')
@@ -1187,9 +1251,12 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
         cur_extension_name = ''
 
         out.append( '// GPA helpers for extensions\n')
-        out.append( 'bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *name, void **addr) {\n')
-        out.append( '    *addr = NULL;\n\n')
+        out.append( '// name_hash must be loader_hash_string(name) - passed in by the caller so it is only computed once per lookup.\n')
+        out.append( 'bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *name, uint32_t name_hash, void **addr) {\n')
+        out.append( '    *addr = NULL;\n')
+        out.append( '    switch (name_hash) {\n')
 
+        full_names_for_collision_check = []
         for command in [x for x in self.vk.commands.values() if x.extensions]:
             if (command.version or
                 command.extensions[0] in WSI_EXT_NAMES or
@@ -1198,7 +1265,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
                 continue
 
             if command.extensions[0] != cur_extension_name:
-                out.append( f'\n    // ---- {command.extensions[0]} extension commands\n')
+                out.append( f'\n        // ---- {command.extensions[0]} extension commands\n')
                 cur_extension_name = command.extensions[0]
 
             if command.protect is not None:
@@ -1207,24 +1274,31 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
             #base_name = command.name[2:]
             base_name = SHARED_ALIASES[command.name] if command.name in SHARED_ALIASES else command.name[2:]
 
+            full_names_for_collision_check.append(command.name)
+            out.append(f'        case {loader_hash_string(command.name):#010x}u:\n')
             if len(command.extensions) > 0 and self.vk.extensions[command.extensions[0]].instance:
-                out.append( f'    if (!strcmp("{command.name}", name)) {{\n')
-                out.append( '        *addr = (ptr_instance->enabled_extensions.')
+                out.append( f'            if (!strcmp("{command.name}", name)) {{\n')
+                out.append( '                *addr = (ptr_instance->enabled_extensions.')
                 out.append( command.extensions[0][3:].lower())
                 out.append( ' == 1)\n')
-                out.append( f'                     ? (void *){base_name}\n')
-                out.append( '                     : NULL;\n')
-                out.append( '        return true;\n')
-                out.append( '    }\n')
+                out.append( f'                             ? (void *){base_name}\n')
+                out.append( '                             : NULL;\n')
+                out.append( '                return true;\n')
+                out.append( '            }\n')
             else:
-                out.append( f'    if (!strcmp("{command.name}", name)) {{\n')
-                out.append( f'        *addr = (void *){base_name};\n')
-                out.append( '        return true;\n')
-                out.append( '    }\n')
+                out.append( f'            if (!strcmp("{command.name}", name)) {{\n')
+                out.append( f'                *addr = (void *){base_name};\n')
+                out.append( '                return true;\n')
+                out.append( '            }\n')
+            out.append('            break;\n')
 
             if command.protect is not None:
                 out.append( f'#endif // {command.protect}\n')
 
+        check_no_hash_collisions(full_names_for_collision_check, 'extension_instance_gpa')
+        out.append( '        default:\n')
+        out.append( '            break;\n')
+        out.append( '    }\n')
         out.append( '    return false;\n')
         out.append( '}\n\n')
 

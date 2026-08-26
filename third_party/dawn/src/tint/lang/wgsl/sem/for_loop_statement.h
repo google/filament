@@ -55,6 +55,7 @@ class ForLoopStatement final : public Castable<ForLoopStatement, CompoundStateme
     ~ForLoopStatement() override;
 
     /// @returns the AST node
+    // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
     const ast::ForLoopStatement* Declaration() const;
 
     /// @returns the for-loop condition expression

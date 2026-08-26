@@ -48,7 +48,7 @@ Finally, --expected-output-files can be used to check the list of generated
 output files.
 """
 
-import argparse, json, os, re, sys
+import argparse, fnmatch, json, os, re, sys
 from collections import namedtuple
 
 # A FileRender represents a single Jinja2 template render operation:
@@ -258,6 +258,12 @@ def _compute_python_dependencies(root_dir=None):
         if not path.startswith(root_dir):
             continue
 
+        # When using hermetic CPython from DEPS (third_party/cpython3), standard
+        # library modules reside inside root_dir. Exclude them so they are not
+        # mistakenly tracked as generator project dependencies.
+        if 'third_party' + os.path.sep + 'cpython3' in path:
+            continue
+
         if (path.endswith('.pyc')
                 or (path.endswith('c') and not os.path.splitext(path)[1])):
             path = path[:-1]
@@ -315,6 +321,11 @@ def run_generator(generator):
         type=str,
         help="File to compare outputs with and fail if it doesn't match")
     parser.add_argument(
+        '--expected-inputs-file',
+        default=None,
+        type=str,
+        help="File to compare inputs with and fail if it doesn't match")
+    parser.add_argument(
         '--root-dir',
         default=None,
         type=str,
@@ -342,26 +353,83 @@ def run_generator(generator):
     output = generator.get_outputs(args)
 
     # Output a list of all dependencies for CMake or the tarball for GN/Ninja.
-    if args.depfile != None or args.print_cmake_dependencies:
-        dependencies = generator.get_dependencies(args)
-        dependencies += [
-            args.template_dir + os.path.sep + render.template
-            for render in output.renders
-        ]
-        dependencies += [
-            args.template_dir + os.path.sep + template
-            for template in output.imported_templates
-        ]
-        dependencies += _compute_python_dependencies(args.root_dir)
+    dependencies = generator.get_dependencies(args)
+    dependencies += [
+        args.template_dir + os.path.sep + render.template
+        for render in output.renders
+    ]
+    dependencies += [
+        args.template_dir + os.path.sep + template
+        for template in output.imported_templates
+    ]
+    dependencies += _compute_python_dependencies(args.root_dir)
 
-        if args.depfile != None:
-            with open(args.depfile, 'w') as f:
-                f.write(args.output_json_tarball + ": " +
-                        " ".join(dependencies))
+    if args.depfile != None:
+        # Siso/Ninja requires relative paths in depfile for relocatability.
+        # Convert all dependencies to be relative to the current working directory (build dir).
+        relative_dependencies = [os.path.relpath(dep) for dep in dependencies]
+        with open(args.depfile, 'w') as f:
+            f.write(args.output_json_tarball + ": " +
+                    " ".join(relative_dependencies))
 
-        if args.print_cmake_dependencies:
-            sys.stdout.write(_cmake_path_list(dependencies))
-            return 0
+    # The caller wants to assert that the inputs are what it expects.
+    # Load the file and compare with our dependencies.
+    if args.expected_inputs_file != None:
+        with open(args.expected_inputs_file) as f:
+            expected_patterns = []
+            absolute_expected_literals = set()
+            for line in f.readlines():
+                path = line.strip()
+                if not path:
+                    continue
+                if '*' in path:
+                    # DO NOT convert to absolute path. Keep the raw pattern (e.g. *third_party/jinja2/*)
+                    # because fnmatch will match it against the standardized actual absolute path.
+                    expected_patterns.append(path)
+                else:
+                    absolute_expected_literals.add(os.path.abspath(path))
+
+        absolute_actual = set([os.path.abspath(dep) for dep in dependencies])
+
+        # Added (Missing from GN): Actual dependencies that are NOT in expected literals
+        # AND do NOT match any of the expected glob patterns.
+        added = set()
+        for dep in absolute_actual:
+            if dep in absolute_expected_literals:
+                continue
+            matched = False
+            # Normalize path separators to forward slashes for robust glob matching.
+            normalized_dep = dep.replace("\\", "/")
+            for pattern in expected_patterns:
+                if fnmatch.fnmatch(normalized_dep, pattern):
+                    matched = True
+                    break
+            if not matched:
+                added.add(dep)
+
+        # Removed (Unexpected in GN): Expected literals that are NOT in actual dependencies.
+        removed = absolute_expected_literals - absolute_actual
+
+        if added or removed:
+            print("Wrong expected inputs, caller expected:")
+            for p in sorted(list(absolute_expected_literals)):
+                print("    " + p)
+            for p in sorted(expected_patterns):
+                print("    " + p + " (pattern)")
+            print("Actual dependencies:")
+            for p in sorted(list(absolute_actual)):
+                print("    " + p)
+            if added:
+                print("Missing from expected inputs (need to be added to GN):")
+                for p in sorted(list(added)):
+                    print("    " + p)
+            if removed:
+                print(
+                    "Unexpected in expected inputs (need to be removed from GN):"
+                )
+                for p in sorted(list(removed)):
+                    print("    " + p)
+            return 1
 
     # The caller wants to assert that the outputs are what it expects.
     # Load the file and compare with our renders.
@@ -376,6 +444,10 @@ def run_generator(generator):
                   repr(sorted(expected)))
             print("Actual output:\n    " + repr(sorted(actual)))
             return 1
+
+    if args.print_cmake_dependencies:
+        sys.stdout.write(_cmake_path_list(dependencies))
+        return 0
 
     # Print the list of all the outputs for cmake.
     if args.print_cmake_outputs:

@@ -25,18 +25,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/webgpu/CommandBufferHelpers.h"
+#include "src/dawn/native/webgpu/CommandBufferHelpers.h"
 
 #include <vector>
 
-#include "dawn/native/CommandAllocator.h"
-#include "dawn/native/Commands.h"
-#include "dawn/native/webgpu/BindGroupWGPU.h"
-#include "dawn/native/webgpu/BufferWGPU.h"
-#include "dawn/native/webgpu/CaptureContext.h"
-#include "dawn/native/webgpu/ComputePipelineWGPU.h"
-#include "dawn/native/webgpu/RenderBundleWGPU.h"
-#include "dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/dawn/native/CommandAllocator.h"
+#include "src/dawn/native/Commands.h"
+#include "src/dawn/native/webgpu/BindGroupWGPU.h"
+#include "src/dawn/native/webgpu/BufferWGPU.h"
+#include "src/dawn/native/webgpu/CaptureContext.h"
+#include "src/dawn/native/webgpu/ComputePipelineWGPU.h"
+#include "src/dawn/native/webgpu/RenderBundleWGPU.h"
+#include "src/dawn/native/webgpu/RenderPipelineWGPU.h"
+#include "src/utils/compiler.h"
 
 namespace dawn::native::webgpu {
 
@@ -44,15 +45,17 @@ void CaptureSharedCommand(CaptureContext& captureContext, CommandIterator& comma
     switch (type) {
         case Command::SetBindGroup: {
             const auto& cmd = *commands.NextCommand<SetBindGroupCmd>();
-            const uint32_t* dynamicOffsetsData =
-                cmd.dynamicOffsetCount > 0 ? commands.NextData<uint32_t>(cmd.dynamicOffsetCount)
-                                           : nullptr;
+            ityp::span<BindingIndex, const uint32_t> dynamicOffsets;
+            if (cmd.dynamicOffsetCount != BindingIndex{0u}) {
+                dynamicOffsets = commands.NextData<uint32_t>(cmd.dynamicOffsetCount);
+            }
+
             schema::CommandBufferCommandSetBindGroupCmd data{{
                 .data = {{
-                    .index = uint32_t(cmd.index),
+                    .index = uint32_t{cmd.index},
                     .bindGroupId = captureContext.GetId(cmd.group),
-                    .dynamicOffsets = std::vector<uint32_t>(
-                        dynamicOffsetsData, dynamicOffsetsData + cmd.dynamicOffsetCount),
+                    .dynamicOffsets =
+                        std::vector<uint32_t>(dynamicOffsets.begin(), dynamicOffsets.end()),
                 }},
             }};
             Serialize(captureContext, data);
@@ -60,11 +63,11 @@ void CaptureSharedCommand(CaptureContext& captureContext, CommandIterator& comma
         }
         case Command::SetImmediates: {
             const auto& cmd = *commands.NextCommand<SetImmediatesCmd>();
-            const uint8_t* values = commands.NextData<uint8_t>(cmd.size);
+            Span<const uint8_t> immediateData = commands.NextData<uint8_t>(cmd.size);
             schema::CommandBufferCommandSetImmediatesCmd data{{
                 .data = {{
                     .offset = cmd.offset,
-                    .data = std::vector<uint8_t>(values, values + cmd.size),
+                    .data = std::vector<uint8_t>(immediateData.begin(), immediateData.end()),
                 }},
             }};
             Serialize(captureContext, data);
@@ -81,10 +84,10 @@ void CaptureDebugCommand(CaptureContext& captureContext, CommandIterator& comman
     switch (type) {
         case Command::PushDebugGroup: {
             const auto& cmd = *commands.NextCommand<PushDebugGroupCmd>();
-            const char* label = commands.NextData<char>(cmd.length + 1);
+            std::string_view label = NextNullTerminatedString(&commands, cmd.length);
             schema::CommandBufferCommandPushDebugGroupCmd data{{
                 .data = {{
-                    .groupLabel = label,
+                    .groupLabel = {label.begin(), label.end()},
                 }},
             }};
             Serialize(captureContext, data);
@@ -97,10 +100,10 @@ void CaptureDebugCommand(CaptureContext& captureContext, CommandIterator& comman
         }
         case Command::InsertDebugMarker: {
             const auto& cmd = *commands.NextCommand<InsertDebugMarkerCmd>();
-            const char* label = commands.NextData<char>(cmd.length + 1);
+            std::string_view label = NextNullTerminatedString(&commands, cmd.length);
             schema::CommandBufferCommandInsertDebugMarkerCmd data{{
                 .data = {{
-                    .markerLabel = label,
+                    .markerLabel = {label.begin(), label.end()},
                 }},
             }};
             Serialize(captureContext, data);
@@ -131,7 +134,7 @@ MaybeError CaptureRenderCommand(CaptureContext& captureContext,
             const auto& cmd = *commands.NextCommand<SetVertexBufferCmd>();
             schema::CommandBufferCommandSetVertexBufferCmd data{{
                 .data = {{
-                    .slot = uint32_t(cmd.slot),
+                    .slot = uint32_t{cmd.slot},
                     .bufferId = captureContext.GetId(cmd.buffer),
                     .offset = cmd.offset,
                     .size = cmd.size,
@@ -231,7 +234,7 @@ MaybeError GatherReferencedResourcesFromRenderCommand(CaptureContext& captureCon
         }
         case Command::SetBindGroup: {
             auto cmd = commands.NextCommand<SetBindGroupCmd>();
-            if (cmd->dynamicOffsetCount > 0) {
+            if (cmd->dynamicOffsetCount > BindingIndex{0u}) {
                 commands.NextData<uint32_t>(cmd->dynamicOffsetCount);
             }
             usedResources.bindGroups.push_back(cmd->group.Get());

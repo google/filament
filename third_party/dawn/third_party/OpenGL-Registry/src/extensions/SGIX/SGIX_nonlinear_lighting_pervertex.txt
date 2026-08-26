@@ -1,0 +1,324 @@
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_nonlinear_lighting_pervertex
+
+Name Strings
+
+    GL_SGIX_nonlinear_lighting_pervertex
+
+Version
+
+    $Date: 1997/09/23 23:20:38 $ $Revision: 1.1 $
+
+Number
+
+    ???
+
+Dependencies
+
+    OpenGL 1.1 is required.
+
+Overview
+
+
+    This extension adds new functionality to the per-vertex lighting
+    model of OpenGL.  It facilitates a nonlinear approximation of
+    reflectance functions of materials.  This extension is based upon
+    research conducted at Cornell University and detailed in the
+    SIGGRAPH 97 proceedings (LaFortune, pp. 117-126).  When active,
+    this reflectance model replaces diffuse and specular (and ambient?)
+    reflection with a single, generalized material description.
+
+    The fundamental equation for nonlinear reflectance can be expressed
+    as the following weighte dot-product:
+
+	Fr(u,v) = Ps*(Cx*ux*vx + Cy*uy*vy + Cz*uz*vz)^n
+
+    Where: u  = light vector at a vertex
+           v  = eye vector at a vertex
+           Ps = maximum albedo (fully-illuminated material color)
+           C  = nonlinear scaling coefficients
+           n  = specular exponent (~shininess)
+
+    The magnitude of the C vector equals (n+2)/2pi and represents the
+    normalization constant.
+
+    A given material will be influenced by a number Ps, C coeffients
+    (analagous to specular, diffuse, ambient components in the basic
+    OpenGL lighting model).  As in the OpenGL 1.1 lighting model, the
+    final color for a point is expressed as a sum of equations of the
+    same format as Fr:
+
+
+	Fr(u,v) = Sum(i,N)(Cx,i*ux*vx + Cy,i*uy*vy + Cz,i*uz*vz)^ni
+
+    Where the reflectance at a point is defined by the sum of N
+    expressions.  Each dot product is characterized by the following
+    coefficients:
+
+	Ci = coefficient vectors with with color absorbed
+        ni = specular exponents
+
+    In the context of OpenGL, it makes sense to make the magnitude of
+    Ci be (ni+2)/2pi and keep the color (RGBA) vector separate.
+
+    This extension will be implemented in the OpenGL pipeline directly
+    in place of the per-vertex specular, diffuse lighting.  
+
+Issues
+
+    *   Should ambient lighting calculations remain active when nonlinear
+        reflectance is enabled?
+
+    *   Should we only allow a single Alpha component to be used, as in
+        the OpenGL 1.1 model?
+
+    *   Because of the potentially large amount of data associated (relative
+        to OpenGL 1.1 materials) with a material, should a "Material Object"
+        extension be considered?
+
+    *	Should Nonlinear Lighting be allowed in Color_Index mode?
+
+    *	Should the vertex colors be clamped positive?  This will inhibit multipassing...
+
+    *	Are there any dependencies on other extensions?
+
+
+New Procedures and Functions
+ 
+    Because of the potentially large number of nonlinear terms, special
+    "Nonlin" versions of Material, Light have been added in this extension.
+    These functions affect lighting state in a manner identical to Material
+    and Light, with a different calling convention.
+
+    void NonlinMaterialfvSGIX(enum face, enum pname, int terms, const float *params);
+    void GetNonlinMaterialfvSGIX(enum face, enum pname, int *terms, const float *data);
+
+    void NonlinLightfvSGIX(enum light, enum pname, int terms, float *params);
+    void GetNonlinLightfvSGIX(enum light, enum pname, int *terms, float *data);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameters of GetBooleanv, GetIntegerv, GetFloatv, and 
+    GetDoublev:
+
+    NONLIN_LIGHTING_SGIX                                 0x????
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    MAX_NONLIN_TERMS_SGIX                                0x????
+    MAX_NONLIN_LIGHTS_SGIX                               0x????+1
+    
+    Accepted by the <pname> parameter of NonlinMaterialv, NonlinLightv:
+
+    COLOR_SGIX                                           0x????
+
+    Accepted by the <pname> parameter of NonlinMaterialv:
+
+    WEIGHT_SGIX                                          0x????
+
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Section 2.13.1 Lighting
+
+    ... <paragraph 2>
+    Lighting may be in one of three states:
+
+    ...
+    2.  Lighting On, Nonlinear Reflectance Disabled.  In this state,
+        a vertex's color is found by computing a value given the
+        current lighting parameters and using the specular/diffuse 
+        reflectance model.
+
+    3.  Lighting On, Nonlinear Reflectance Enabled.  In this state,
+        a vertex's color is found by computing a value given the
+        current lighting parameters and using the nonlinear reflectance
+        model. 
+
+    Lighting is turned either on or off using the generic Enable or
+    Disable commands with the symbolic value LIGHTING.  Nonlinear
+    Reflectance is turned either on or off using the generic Enable or
+    Disable commands with the symbolic value NONLIN_LIGHTING_SGIX.
+    Nonlinear Reflectance has no effect if lighting is off.
+
+    ...<paragraph 3 - Lighting Operation>
+    A lighting parameter is one of seven types: color, position, direction,
+    weight, real, int, or boolean.
+    ...
+    A weight parameter consists of 3 floating-point elements, one for
+    each of Cx, Cy, and Cz, in that order.  There are no restrictions on
+    the allowable values for the weight parameter.
+    ...
+    An int parameter is one integer value.
+
+    ...<table 2.7>
+    Nonlinear Material Parameters
+    wcm,j      weight        (0.0,0.0,0.0)     jth reflectance weight of material
+    srm,j       real              1.0          jth specular exponent of material
+    ccm,j       color      (0.8,0.8,0.8,1.0)   jth color of material
+    tnlm         int               0           Maximum (j+1) of material
+    ...
+    Nonlinear Light Source Parameters
+    ncli,j(i=0) color      (1.0,1.0,1.0,1.0)   jth intensity of light 0
+    ncli,j(i>0) color      (0.0,0.0,0.0,1.0)   jth intensity of light i
+    tnll         int               0           Maximum (j+1) light
+
+    ...<Page 45>
+    If nonlinear reflectance is disabled, the color c produced...
+    ...If nonlinear reflectance is enabled, the color c produced by lighting a
+    vertex is given by
+    
+    c = ecm + acm*acs +
+
+	sum<i=0,n-1>(sum<j=0,min(tnlm, tnll)-1>(acm*acli +
+                     (fi)(nx*hx*wcmx,j + ny*hy*wcmy,j + nz*hz*wcmzj)^srm,j *
+                          ccm,j*ncli,j))
+
+    Section 2.13.2  Lighting Parameter Specification
+
+    ... <paragraph 1.5>
+    ...Material...
+    void NonlinMaterial{f}v( enum face, enum pname, int terms, T params ) ;
+    ...Light...
+    void NonlinLight{f}v( enum light, enum pname, int terms, T params ) ;
+
+    ... <paragraph 2>
+    ... params is a pointer... terms is an integer indicating how many terms
+    of a nonlinear lighting equation are being specified by a function call.
+ 
+    ...For the Material or NonlinMaterial commands, face must be one of...
+
+    ... <table 2.8>
+
+    Nonlinear Material Parameters(NonlinMaterial)
+    wcm,j	WEIGHT		3*terms
+    ccm,j	COLOR		4*terms
+    srm,j	SHININESS       terms
+    tnlm	terms		1
+
+    ...
+
+    Nonlinear Light Source Parameters(NonlinLight)
+    
+    ncli,j	COLOR		4*terms
+    tnll	terms		1
+
+    Section 2.13.3  ColorMaterial
+
+    ... <paragraph 1>
+    ...by calling Enable or Disable with the symbolic value COLOR_MATERIAL.
+    The error INVALID_OPERATION is generated if COLOR_MATERIAL is Enabled
+    while NONLIN_LIGHTING is enabled.
+
+    Section 2.14.4  Lighting State
+
+    ... <paragraph 1>
+    ...The state required...a bit indicating whether or not NONLINEAR_LIGHTING
+    is enabled, and a single...
+
+
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    ... <page 145, list  of functions>
+
+    void GetNonlinLight{f}v( enum light, enum value, int *terms, T *data ) ;
+    void GetNonlinMaterial{f}v( enum face, enum value, int *terms, T *data ) ;
+
+    ... <page 145, new paragraph between GetMaterial and GetTexParameter>
+
+    GetNonlinLight and GetNonlinMaterial are similar to their GetLight
+    and GetMaterial counterparts, except that they return by reference
+    the number of terms (int *terms) and an array of parameters (T *data).
+    The *data pointer passed to GetNonlinMaterial and GetNonlinLight should
+    point to an array large enough to contain MAX_NONLIN_TERMS*components, 
+    where components equals the number of floats comprising a datum.
+
+    ... <table 6.3>
+    W    Weight (floating-point Cx, Cy, Cz values)
+
+Additions to the GLX Specification
+
+    TBD
+
+Dependencies on SGI_extension_name
+
+    None?
+
+Errors
+
+    INVALID_OPERATION is generated if the user attempts to enable both
+    COLOR_MATERIAL and NONLINEAR_LIGHTING, irregardless of order.
+
+    INVALID_ENUM is generated if NonlinLight{f}vSGIX parameter <pname> is not
+    COLOR or <light> is not valid (LIGHT{0..MAX_NONLIN_LIGHTS-1}.
+
+    INVALID_VALUE is generated if NonlinLight{f}vSGIX parameter <terms> is
+    outside the range [0..MAX_NONLIN_TERMS).
+
+    INVALID_OPERATION is generated if the number of terms for an active 
+    light differs from the current material, or if the number of terms
+    for SHININESS, WEIGHTS and COLOR differ.  This error results from
+    primitive specification.
+
+    INVALID_ENUM is generated if NonlinMaterial{T}vSGIX parameter <face> is
+    not FRONT, BACK, or FRONT_AND_BACK.
+
+    INVALID_ENUM is generated if NonlinMaterial{T}vSGIX parameter <pname> is
+    not COLOR, SHININESS, or WEIGHT.
+
+    INVALID_VALUE is generated if NonlinMaterial{T}vSGIX parameter <terms> is
+    outside the range [0..MAX_NONLIN_TERMS).
+
+    INVALID_ENUM is generated if GetNonlinLight{t}vSGIX parameter <light>  
+    is not valid (LIGHT{0..MAX_NONLIN_LIGHTS-1}.
+
+    INVALID_ENUM is generated if GetNonlinLight{t}vSGIX parameter <pname>
+    is not COLOR.
+
+    INVALID_ENUM is generated if GetNonlinMaterial{t}vSGIX parameter <face>
+    is not FRONT, BACK, or FRONT_AND_BACK.
+
+    INVALID_ENUM is generated if GetNonlinMaterial{t}vSGIX parameter <pname>
+    is not COLOR, SHININESS, or WEIGHT.
+
+New State
+									Initial
+    Get Value				Get Command		Type	Value		Attrib
+    ---------				-----------		----	-------		------
+
+    NONLINEAR_LIGHTING_SGIX		IsEnabled		B	False		lighting/enable
+    COLOR_SGIX				GetNonlinLightfvSGIX	1*xC    ()		lighting
+    COLOR_SGIX				GetNonlinMaterialfvSGIX	1*xC	()		lighting
+    WEIGHT_SGIX				GetNonlinMaterialfvSGIX	1*xW	(1.0,1.0,1.0)	lighting
+    SHININESS				GetNonlinMaterialfvSGIX 1*xR	1.0		lighting
+    (material color terms)		GetNonlinMaterialfvSGIX	Z+	0		lighting
+    (light color terms)			GetNonlinLightfvSGIX	Z+	0		lighting
+    (material weight terms)		GetNonlinMaterialfvSGIX	Z+	0		lighting
+    (material shininess terms)		GetNonlinMaterialfvSGIX	Z+	0		lighting
+
+
+New Implementation Dependent State
+										Minimum
+    Get Value				Get Command		Type		Value
+    ---------				-----------		----		-------
+    MAX_NONLIN_LIGHTS_SGIX		GetInteger		Z+              1
+    MAX_NONLIN_TERMS_SGIX		GetIngeger		Z+		12

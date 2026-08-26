@@ -1,0 +1,229 @@
+Name
+
+    NV_stream_socket
+    NV_stream_socket_unix
+    NV_stream_socket_inet
+
+Name Strings
+
+    EGL_NV_stream_socket
+    EGL_NV_stream_socket_unix
+    EGL_NV_stream_socket_inet
+
+Contributors
+
+    Daniel Kartch
+    Bogdan Naodovic
+    James Jones
+    Zander Clucas
+    Tarun Bansal
+
+Contacts
+
+    Daniel Kartch, NVIDIA (dkartch 'at' nvidia.com)
+
+Status
+
+    Draft
+
+Version
+
+    Version 6 - October 27, 2016
+
+Number
+
+    EGL Extension #115
+
+Extension Type
+
+    EGL display extension
+
+Dependencies
+
+    EGL_NV_stream_socket requires EGL_NV_stream_remote.
+
+    EGL_NV_stream_socket_unix requires EGL_NV_stream_socket.
+
+    EGL_NV_stream_socket_inet requires EGL_NV_stream_socket.
+
+Overview
+
+    These extensions build on the framework for remote streams provided
+    in EGL_NV_stream_remote to define a means for two EGLStream objects
+    representing opposite ends of a single stream to establish
+    communication using a socket. The application is expected to create
+    and connnect both ends of the socket before creating the stream
+    objects.
+
+    The base EGL_NV_stream_socket extension defines most of the
+    attributes required to initialize the stream objects. The
+    EGL_NV_stream_socket_unix and EGL_NV_stream_socket_inet extensions
+    indicate support for UNIX domain and internet protocol socket types,
+    respectively. Additional extensions may provide support for other
+    socket types. The type of socket is important, as certain operations
+    are only available with certain types, which may influence how the
+    streams are implemented. For instance, UNIX domain sockets allow
+    file descriptors to be passed between processes, while internet
+    protocol sockets do not. This ability may allow more efficient
+    sharing of resources between the socket endpoints.
+
+    An application using this extension will bear some similarity to the
+    example code from the EGL_KHR_stream_cross_process_fd extension,
+    which also uses sockets to establish the communication between two
+    processes and then create a pair of EGLStream objects. The key
+    difference is that in that case, the sockets are merely a temporary
+    means to an end to pass a file descriptor between the processes.
+    Once that is accomplished, the sockets are discarded.
+
+    The file descriptor used by that extension may represent an
+    underlying object such as shared memory which allows more efficient
+    communication than the sockets themselves. However, there is nothing
+    preventing an implementation of EGL_NV_stream_socket from creating
+    and passing such a file descriptor as well, gaining the same
+    efficiency. Therefore, a protocol based on sockets will work at
+    least as well as one based on file descriptors, with the added
+    benefit of being more portable.
+
+New Types
+
+    None
+
+New Functions
+
+    None
+
+New Tokens for EGL_NV_stream_socket
+
+    Accepted by eglCreateStreamKHR and returned by eglQueryStreamKHR
+    when attribute is EGL_STREAM_PROTOCOL_NV:
+
+        EGL_STREAM_PROTOCOL_SOCKET_NV              0x324B
+
+    Accepted as attribute names by eglCreateStreamKHR and
+    eglQueryStreamKHR functions
+
+        EGL_SOCKET_HANDLE_NV                       0x324C
+        EGL_SOCKET_TYPE_NV                         0x324D
+
+New Tokens for EGL_NV_stream_socket_unix
+
+    Accepted by eglCreateStreamKHR and returned by eglQueryStreamKHR
+    when attribute is EGL_SOCKET_TYPE_NV:
+
+        EGL_SOCKET_TYPE_UNIX_NV                    0x324E
+
+New Tokens for EGL_NV_stream_socket_inet
+
+    Accepted by eglCreateStreamKHR and returned by eglQueryStreamKHR
+    when attribute is EGL_SOCKET_TYPE_NV:
+
+        EGL_SOCKET_TYPE_INET_NV                    0x324F
+
+Add to list of failures in section "3.10.1 Creating an EGLStream" in EGL_KHR stream:
+
+    - EGL_BAD_MATCH is generated if the value of EGL_STREAM_PROTOCOL_NV
+      is EGL_STREAM_PROTOCOL_SOCKET_NV and values are not provided for
+      EGL_SOCKET_HANDLE_NV and EGL_SOCKET_TYPE_NV.
+
+Add to "Table 3.10.4.4 EGLStream Attributes" in EGL_KHR_stream:
+
+        Attribute                   Read/Write   Type        Section
+        --------------------------  ----------   ------      ----------
+        EGL_SOCKET_HANDLE_NV           io        EGLint      3.10.4.y
+        EGL_SOCKET_TYPE_NV             io        EGLint      3.10.4.y+1
+
+In section "3.10.4.x+1 EGL_STREAM_PROTOCOL_NV Attribute" of
+EGL_NV_stream_remote, add EGL_STREAM_PROTOCOL_SOCKET_NV to the list of
+legal values and add
+
+    A value of EGL_STREAM_PROTOCOL_SOCKET_NV indicates that the stream
+    is a remote stream whose communication is established using a socket
+    connection provided by the application. The details of the messages
+    passed through the socket are implementation dependent, and may be
+    influenced by the stream and socket types. This value for the
+    EGL_STREAM_PROTOCOL_NV attribute is compatible with values of
+    EGL_STREAM_CROSS_OBJECT_NV, EGL_STREAM_CROSS_DISPLAY_NV,
+    EGL_STREAM_CROSS_PROCESS_NV, and EGL_STREAM_CROSS_PARTITION_NV for
+    the EGL_STREAM_TYPE_NV attribute.
+
+Add new subsections to the end of section "3.10.4 EGLStream Attributes"
+in EGL_KHR_stream:
+
+    3.10.4.y EGL_SOCKET_HANDLE_NV Attribute
+
+    The EGL_SOCKET_HANDLE_NV attribute may be set when the stream
+    is created, and provides the handle to a blocking socket which will
+    be used to communicate with the other endpoint of the stream. If the
+    value of EGL_STREAM_PROTOCOL_NV is not EGL_STREAM_PROTOCOL_SOCKET_NV,
+    this attribute is ignored.
+
+    The type of this value is operating system dependent, and the
+    default value will be an invalid socket handle for the operating
+    system. In particular, for unix-like operating systems, the value is
+    a socket file descriptor as returned by socket() and related
+    functions, and the default value is -1.
+
+    Prior to creating the EGLStream object, the application may use the
+    socket handle as it wishes. But once the EGLStream object has been
+    successfully created, it assumes full ownership of this socket. If
+    the application subsequently writes to, reads from, or closes the
+    socket, undefined behavior will result. Furthermore, if any data
+    sent over the socket prior to creating the EGLStream object is not
+    consumed before the opposite EGLStream object is created, undefined
+    behavior will result.
+
+    When the EGLStream object is deleted, the socket handle will be
+    closed by the stream.
+
+    3.10.4.y+1 EGL_SOCKET_TYPE_NV Attribute
+
+    The EGL_SOCKET_TYPE_NV attribute may be set when the stream is
+    created, and indicates the type of the socket provided by the
+    EGL_STREAM_SOCKET_HANDLE_NV attribute. If the value of
+    EGL_STREAM_PROTOCOL_NV is not EGL_STREAM_PROTOCOL_SOCKET_NV this
+    attribute is ignored.
+
+    The default value is EGL_NONE.
+
+If EGL_NV_stream_socket_unix is present, add to section "3.10.4.y+1
+EGL_SOCKET_TYPE_NV Attribute" above:
+
+    A value of EGL_SOCKET_TYPE_UNIX_NV indicates that the socket handle
+    represents a Unix domain socket, created with SOCK_STREAM type.
+
+If EGL_NV_stream_socket_inet is present, add to section "3.10.4.y+1
+EGL_SOCKET_TYPE_NV Attribute" above:
+
+    A value of EGL_SOCKET_TYPE_INET_NV indicates that the socket handle
+    represents an internet protocol socket, created with SOCK_STREAM
+    type.
+
+Issues
+
+    None
+
+Revision History
+
+    #6  (October 27, 2016) Daniel Kartch
+        - Indicate that the socket handle provided should represent
+          a blocking socket.
+
+    #5  (June 7, 2016) Daniel Kartch
+        - Add contact and clean up in preparation for publication.
+
+    #4  (September 16, 2015) Zander Clucas
+        - Indicated STREAM_SOCKET_PROTOCOL as compatible with socket
+          type CROSS_PROCESS.
+
+    #3  (December 16, 2014) Daniel Kartch
+        - Refined overview to clarify comparison with
+          EGL_KHR_cross_process_fd.
+        - Indicated SOCK_STREAM as a requirement for the socket types.
+
+    #2  (December 11, 2014) Daniel Kartch
+        - Rewrote as NV draft for earlier release.
+        - Reserved enum values.
+
+    #1  (October 10, 2014) Daniel Kartch
+        - Initial EXT draft
+

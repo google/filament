@@ -44,6 +44,7 @@ class GPUQuerySet final : public interop::GPUQuerySet {
     GPUQuerySet(const wgpu::QuerySetDescriptor& desc, wgpu::QuerySet query_set);
 
     // Implicit cast operator to Dawn GPU object
+    // NOLINTNEXTLINE(google-explicit-constructor)
     inline operator const wgpu::QuerySet&() const { return query_set_; }
 
     // interop::GPUQuerySet interface compliance

@@ -32,6 +32,7 @@
 #include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/hlsl/type/byte_address_buffer.h"
 #include "src/tint/lang/hlsl/type/int8_t4_packed.h"
+#include "src/tint/lang/hlsl/type/matrix_layout.h"
 #include "src/tint/lang/hlsl/type/rasterizer_ordered_texture_2d.h"
 #include "src/tint/lang/hlsl/type/uint8_t4_packed.h"
 
@@ -88,6 +89,18 @@ inline bool MatchUint8T4Packed(core::intrinsic::MatchState&, const core::type::T
 inline const type::Uint8T4Packed* BuildUint8T4Packed(core::intrinsic::MatchState& state,
                                                      const core::type::Type*) {
     return state.types.Get<type::Uint8T4Packed>();
+}
+
+inline bool MatchMatrixLayout(core::intrinsic::MatchState&, const core::type::Type* ty) {
+    if (ty->Is<type::MatrixLayout>()) {
+        return true;
+    }
+    return false;
+}
+
+inline const core::type::Type* BuildMatrixLayout(core::intrinsic::MatchState& state,
+                                                 const core::type::Type*) {
+    return state.types.Get<type::MatrixLayout>();
 }
 
 }  // namespace tint::hlsl::intrinsic

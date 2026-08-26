@@ -28,13 +28,14 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/DynamicLib.h"
 #include "dawn/native/OpenGLBackend.h"
-#include "dawn/native/opengl/DeviceGL.h"
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "partition_alloc/pointers/raw_ptr.h"
+#include "src/dawn/common/DynamicLib.h"
+#include "src/dawn/native/opengl/DeviceGL.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/compiler.h"
 
 namespace dawn {
 namespace {
@@ -297,7 +298,7 @@ class GLTextureUsageTests : public GLTextureTestBase {
         gl.ReadPixels(0, 0, 1, 1, glFormat, glType, result.data());
         gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
         gl.DeleteFramebuffers(1, &fbo);
-        ASSERT_EQ(0, memcmp(result.data(), data, dataSize));
+        DAWN_UNSAFE_TODO(ASSERT_EQ(0, memcmp(result.data(), data, dataSize)));
     }
 
     template <class T>

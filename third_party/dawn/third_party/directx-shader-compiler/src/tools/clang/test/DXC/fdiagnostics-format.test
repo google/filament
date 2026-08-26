@@ -1,0 +1,14 @@
+// RUN: %dxc -T ps_6_0 %s -verify
+// RUN: not %dxc -T ps_6_0 %s 2>&1 | FileCheck %s --check-prefix=CLANG
+// RUN: not %dxc -T ps_6_0 %s -fdiagnostics-format=clang 2>&1 | FileCheck %s --check-prefix=CLANG
+// RUN: not %dxc -T ps_6_0 %s -fdiagnostics-format=msvc 2>&1 | FileCheck %s --check-prefix=MSVC
+// RUN: not %dxc -T ps_6_0 %s -fdiagnostics-format=msvc-fallback 2>&1 | FileCheck %s --check-prefix=MSVC
+// RUN: not %dxc -T ps_6_0 %s -fdiagnostics-format=vi 2>&1 | FileCheck %s --check-prefix=VI
+// RUN: not %dxc -T ps_6_0 %s -fdiagnostics-format=nonsense 2>&1 | FileCheck %s --check-prefixes=NONSENSE,CLANG
+
+main() {} // expected-error{{HLSL requires a type specifier for all declarations}}
+
+// NONSENSE: warning: invalid option nonsense to -fdiagnostics-format: supported values are clang, msvc, msvc-fallback, and vi
+// VI: +9:1: error: HLSL requires a type specifier for all declarations
+// MSVC: (9,1) :  error: HLSL requires a type specifier for all declarations
+// CLANG: :9:1: error: HLSL requires a type specifier for all declarations

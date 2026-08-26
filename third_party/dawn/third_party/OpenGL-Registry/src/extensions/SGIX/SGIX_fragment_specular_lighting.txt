@@ -1,0 +1,507 @@
+XXX - Dead -- couldn't convince the ARB.  Use fragment_lighting &
+XXX   separate_specular_color instead.
+XXX - Not complete yet!!!
+
+Name
+
+    SGIX_fragment_specular_lighting
+
+Name Strings
+
+    GL_SGIX_fragment_specular_lighting
+
+Version
+
+    $Date: 1998/07/06 19:51:38 $ $Revision: 1.2 $
+
+Number
+
+    ??
+
+Dependencies
+
+    OpenGL 1.1 is required.
+    SGIX_color_range affects the definition of this extension.
+
+Overview
+
+    This extension adds a new lighting stage to the OpenGL pipeline.  This
+    stage occurs during fragment processing after the texture environment
+    has been applied and before fog has been applied.  The extension
+    provides a mechanism for computing a post-texture specular lighting term.
+    This extension doesn't eliminate the specular term in vertex lighting, but
+    can be used to augment it.  This extension provides the state framework for a
+    more general lighting model, but only includes the equation for computing
+    the specular contribution.  The more general version is described in
+    SGIX_fragment_lighting.
+
+
+
+                  Ct  Cf
+                  |   |-------------------------------+
+                  |   |                               |
+                ----------                            |
+                |        |                            |
+                | TexEnv |                            |
+                |        |                            |
+                ----------                            |
+                    |                                 |
+                ----------                            |
+                | Clamp  |            Nf  Lf  Hf  Ff  |
+                ----------            |   |   |   |   |
+                    |              -----------------  | FragmentColorMaterial
+                    |              |               |  v
+                    Cf'            | FragmentLight |--o-<- Material {Sm,...}
+                    |              |               |
+                    |              -----------------
+                    |                      |
+                    |                  ---------
+                    |                  | Clamp |
+                    |                  ---------
+                    |       Cl             |
+                    |      +----------------
+                    v      v
+                  ------------
+                  |          |
+                  |   SUM    |
+                  |          |
+                  ------------
+                       |
+                   ---------
+                   | Clamp |
+                   ---------
+                       |
+                       Cf''
+                       |
+                       v
+                    -------
+                    |     |
+                    | Fog |
+                    |     |
+                    -------
+                       |
+                       v
+
+IP Status
+
+    Silicon Graphics has filed for patent protection for some of the
+    techniques described in this extension document.
+
+Issues
+
+    *   does this spec enable a reasonable evolution from a post-texture
+        specular highlight to a full blown per-pixel lighting computation?
+
+    *   can we eliminate some commands and state now and allow the generality
+        to show up later?  It doesn't seem like there is much harm in maintaining
+        extra state for computations that isn't actually used since it can be
+        maintained on the host.  We eliminate the Lighting environment term
+        since it provides extra capability for how the lighting term is combined.
+        It can show up with the fragment_lighting extension.
+
+    *   given the relaxation in the requirements for how the specular term is
+        computed, it is possible to support multiple specular lights but much
+        less likely to be able to support the same number of full blown fragment
+        lights.
+
+
+New Procedures and Functions
+
+    void FragmentLightModeliSGIX(enum pname, int param);
+    void FragmentLightModelfSGIX(enum pname, float param);
+    void FragmentLightModelivSGIX(enum pname, int *params);
+    void FragmentLightModelfvSGIX(enum pname, float *params);
+
+    void FragmentLightiSGIX(enum light, enum pname, int param);
+    void FragmentLightfSGIX(enum light, enum pname, float param);
+    void FragmentLightivSGIX(enum light, enum pname, int *params);
+    void FragmentLightfvSGIX(enum light, enum pname, float *params);
+
+    void GetFragmentLightivSGIX(enum light, enum value, int *data);
+    void GetFragmentLightfvSGIX(enum light, enum value, float *data);
+
+    void FragmentMaterialfSGIX(enum face, enum pname, const float param);
+    void FragmentMaterialiSGIX(enum face, enum pname, const int param);
+    void FragmentMaterialfvSGIX(enum face, enum pname, const float *params);
+    void FragmentMaterialivSGIX(enum face, enum pname, const int *params);
+
+    void FragmentColorMaterialSGIX(enum face, enum mode);
+
+    void GetFragmentMaterialfvSGIX(enum face, enum pname, float *data);
+    void GetFragmentMaterialivSGIX(enum face, enum pname, int *data);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled, by
+    the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+    FRAGMENT_LIGHTING_SGIX                              XXXX
+    FRAGMENT_COLOR_MATERIAL_SGIX                        XXXX
+    FRAGMENT_COLOR_MATERIAL_FACE_SGIX                   XXXX
+    FRAGMENT_COLOR_MATERIAL_PARAMETER_SGIX              XXXX
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    and GetDoublev:
+
+    MAX_FRAGMENT_LIGHTS_SGIX                            XXXX
+    MAX_ACTIVE_LIGHTS_SGIX                              XXXX
+    CURRENT_RASTER_NORMAL_SGIX                          XXXX
+
+    Accepted by the <light> parameter of FragmentLightfSGIX,
+    FragmentLightiSGIX, FragmentLightfvSGIX, and FragmentLightivSGIX, and by
+    the <cap> parameter of Enable, Disable, and IsEnabled, and by the <light>
+    parameter of GetFragmentLightfvSGIX and GetFragmentLightivSGIX:
+
+    FRAGMENT_LIGHT0_SGIX                                XXXX
+    .
+    .
+    .
+    FRAGMENT_LIGHT7_SGIX                                XXXX
+
+    Accepted by the <pname> parameter of FragmentLightModeliSGIX,
+    FragmentLightModelfSGIX, FragmentLightModelivSGIX,
+    FragmentLightModelfvSGIX, GetBooleanv, GetIntegerv, GetFloatv, and
+    GetDoublev:
+
+    FRAGMENT_LIGHT_MODEL_LOCAL_VIEWER_SGIX              XXXX
+    FRAGMENT_LIGHT_MODEL_TWO_SIDE_SGIX                  XXXX
+    FRAGMENT_LIGHT_MODEL_AMBIENT_SGIX                   XXXX
+    FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX      XXXX
+
+Additions to Chapter 2 of the 1.1 Specification (OpenGL Operation)
+
+    Section 2.12 Current Raster Position
+
+    ... <paragraph 2>
+    The current raster position consists of three window coordinates xw, yw,
+    and zw, a clip corrdinate wc value, an eye coordinate distance, a valid
+    bit, and associated data consisting of a color, normal, and texture
+    coordinates. It is set ...
+
+    ... <paragraph 5>
+    The current raster position requires five single-precision floating point
+    values for its xw, yw, and zw window coordinates, its wc clip coordinate,
+    and its eye coordinate distance, a single valid bit, a color (RGBA and color
+    index), normal, and texture coordinates for associated data.  In the initial
+    state, the coordinates and texture coordinates are both (0,0,0,1), the eye
+    coordinate distance is 0, the valid bit is set, the associated RGBA color is
+    (1,1,1,1), the associated color index is 1, and the associated normal is
+    (0,0,1).  In RGBA mode, the associated color index always has its initial
+    value; in color index mode, the RGBA color always maintains its initial
+    value.
+
+    Section 2.13 Colors and Coloring
+
+    ...
+    Next vertex lighting, if enabled produces a color.  If vertex lighting is
+    disabled, the current color is used in further processing. After vertex
+    lighting, RGBA colors are clamped to the range [0,1]. A color index is
+    converted to fixed-point and then its integer portion is masked (see
+    section 2.13.16). After clamping or masking, a primitive may be flatshaded,
+    indicating that all vertices of the primitive are to have the same color
+    (and normal).  Finally, a primitive is clipped, then colors (texture
+    coordinates and normals) must be computed at the vertices introduced or
+    modified by clipping.
+
+Additions to Chapter 3 of the 1.1 Specification (Rasterization)
+
+    Section 3.6.3 Rasterization of Pixel Rectangles
+
+    Conversion to Fragments
+
+    ... <paragraph 2>
+    A fragment arising from a group consisting of color data takes on the color
+    index or color components of the group; the depth, normal and texture
+    coordinates are taken from the current raster position's associated data.
+    A fragment arising from a depth component takes the component's depth
+    value; the color, normal, and texture coordinate are given by those associated
+    with the current raster position.  In both cases texture coordinates s, t,
+    and r are preplaced with s/q, t/q, and r/q, respectively.  If q is less than
+    or equal to zero the results are undefined.  Groups arising from DrawPixels
+    with a <format> of STENCIL_INDEX are treated specially and are described in
+    section 4.3.1.
+
+
+    Before Section 3.9 Fog insert:
+
+    Section 3.9 Fragment Lighting
+
+    If enabled, fragment lighting computes a color for each rasterized fragment
+    by applying an equation defined by a client-specified lighting model to
+    a collection of parameters that can include the fragment coordinates, the
+    coordinates of one or more light sources, the fragment normal, and
+    parameters defining the characteristics of the light source and current
+    fragment material.  Fragment lighting is only defined for RGBA mode, it
+    has no effect in color index mode.
+
+    Fragment lighting may be in one of two states:
+
+    1. Lighting Off.  In this state the color assigned to a fragment is the
+       rasterized fragment's post-texturing color.
+
+    2. Lighting On.  In this state the color assigned to a fragment is the
+       result of summing the rasterized fragment's post-texturing color and
+       a color computed from the current fragment lighting parameters.
+
+    Fragment lighting is turned either on or off using the generic Enable or
+    Disable commands with the symbolic value FRAGMENT_LIGHTING_SGIX.
+
+    3.9.2 Lighting Operation
+
+    The desired general equation for the fragment illumination model is:
+
+    Cl =  Em                    emissive
+       + Am*As                  ambient material*scene ambient color
+       SUM{_i = 0 through Nf-1} {
+       + Atten_i*SpotL_i*{      distance/spot light attenuation
+            + Am*Al_i           ambient material*ambient light
+            + Dm*Dl_i*(N.L_i)   diffuse material*diffuse light
+            + Sm*Sl_i*(N.H_i)^n specular material*specular light
+          }
+        }
+
+        Nf is the number of fragment light sources
+        N is the fragment normal vector
+        L_i is the direction vector from the fragment position to the light source
+        H_i is the half angle vector
+        n is the specular exponent (shininess)
+
+    Subset the equation to the specular term:
+
+    I[i] = Sm*Sl*(N.H_i)^n)
+
+    and
+
+    I' = SUM{i = 0 through Nf-1} I[i]   (3.1)
+
+
+    Equation (3.1) is essentially the same as the specular term of the vertex
+    lighting equation described in section 2.13.1 for a single light source.
+
+    In order to compute the illumination terms for each fragment, the eye
+    coordinates of the fragment can be used to compute the light direction,
+    half angle vector, and attenuation factor in a manner similar to that used
+    in the vertex lighting computations.  It is permissible for an
+    implementation to approximate these by computing these values as well as
+    the normal vector at the vertices and interpolating and renormalizing the
+    results, or by computing the entire equation at the vertices and
+    interpolating the color.
+
+    Fragment material state is maintained which is distinct from the
+    vertex material state.  The fragment material state consists of
+    emission, ambient, diffuse, specular and shininess terms for both
+    the front and back face of a primitive though only the specular and
+    shininess terms are used by this extension.  Unlike vertex lighting, the
+    fragment material state is constant across a primitive since
+    it is resolved during rasterization.  The results of the back face
+    computation described in section 3.5.1 are used to determine whether
+    the front material or back material is used when two sided lighting
+    is enabled.
+
+    There is separate state for each fragment light source.  The
+    fragment light source parameters are the same as the vertex light
+    source parameters described in section 2.13.1.  The minimum number of
+    fragment light sources is 1.  The number of available fragment light
+    sources can be queried by issuing the Get command with the <pname>
+    parameter set to MAX_FRAGMENT_LIGHTS_SGIX.
+
+    Distinct lighting model state is also maintained for vertex lighting and
+    fragment lighting.  The lighting model state is described in section
+    2.13.1.  Fragment lighting model state includes one additional parameter,
+    FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX, which controls how normals
+    are selected for use in the fragment lighting computations for a primitive.
+    If FLAT is selected for the lighting model, the normal from the provoking
+    vertex (as described in Section 2.13.7 Flatshading) of the primitive for all
+    fragment lighting computations for the primitive.  If SMOOTH is specified
+    a normal is computed for each fragment using the normals from all of the
+    vertices of the primitive.
+
+    Fragment lighting differs from vertex lighting in that all components
+    of lighting parameters which are of type color in Table 2.7 are clamped
+    to the range [0,1] when they are specified.
+
+    Equation 3.2 is evaluated for each light source and the resulting
+    colors are summed.  The resulting color components are clamped to the
+    range [0,1] and then passed to the lighting environment computation.
+
+
+    3.9.3 Lighting Parameter Specification
+
+    GetFragmentMaterialfvSGIX and GetFragmentMaterialivSGIX.
+    The fragment material state can be set with the commands
+    FragmentMaterialfSGIX, FragmentMaterialfvSGIX, FragmentMaterialiSGIX,
+    FragmentMaterialivSGIX using the values AMBIENT, DIFFUSE, SPECULAR,
+    SHININESS and EMISSION.  This state can be queried using the commands
+    GetFragmentMaterialfvSGIX and GetFragmentMaterialivSGIX.
+
+    Lighting parameters for fragment light i can be modified by issuing the
+    commands FragmentLightfSGIX, FragmentLightiSGIX, FragmentLightfvSGIX, and
+    FragmentLightivSGIX with the <light> parameter
+    set to FRAGMENT_LIGHTi_SGIX.  The lighting parameters for fragment light i
+    can be queried by issuing the commands GetFragmentLightfvSGIX and
+    GetFragmentLightivSGIX with the <light> parameter set to FRAGMENT_LIGHTi_SGIX.
+
+    Lighting model parameters for fragment lighting can be modified using the
+    commands FragmentLightModel{T}SGIX, FragmentLightModel{T}vSGIX.  The
+    lighting model parameters can be queried by issuing the Get command <pname>
+    parameter set to the appropriate fragment lighting model parameter:
+    FRAGMENT_LIGHT_MODEL_LOCAL_VIEWER_SGIX, FRAGMENT_LIGHT_MODEL_TWO_SIDE_SGIX,
+    FRAGMENT_LIGHT_MODEL_AMBIENT_SGIX or FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX.
+
+
+    3.9.4 FragmentColorMaterial
+
+    It is possible to replace one or more fragment material properties terms in
+    Equation 3.1 with the fragment's pre-texturing color, causing these color
+    values to be used during the lighting computation.  This behavior is enabled
+    and disabled  by calling Enable and Disable with the symbolic value
+    FRAGMENT_COLOR_MATERIAL.
+
+    The command that controls which of these modes is selected is
+
+        void FragmentColorMaterial(enum face, enum mode);
+
+    <face> is one of FRONT, BACK, or FRONT_AND_BACK, indicating whether
+    the front material, back material, or both are affected by the
+    pre-texturing color.  <mode> is one of EMISSION, AMBIENT, DIFFUSE,
+    SPECULAR, or AMBIENT_AND_DIFFUSE and specifies which material property
+    or properties are subsituted with the pre-texturing color.  The substutions
+    do not affect the material state.  When FragmentColorMaterial
+    is disabled the values in the fragment material state are used.
+    GetFragmentMaterial returns the fragment material last specified with
+    FragmentMaterial, regardless of whether FragmentColorMaterial is enabled.
+    Although all of the fragment material parameters may be substituted, only
+    substituting the SPECULAR material property will affect the result of
+    the lighting computation.
+
+    3.9.5 Interactions with Vertex Lighting
+
+    In order to allow implementions to share resources for vertex lighting and
+    fragment lighting, an implementation may limit the maximum number of combined
+    vertex and fragment lights to a number less than the sum of MAX_LIGHTS and
+    MAX_FRAGMENT_LIGHTS_SGIX.  This limit can be queried using the Get command
+    with <pname> parameter MAX_ACTIVE_LIGHTS_SGIX.  State for all
+    fragment and vertex lights is always maintained.  When multiple
+    lights are enabled, priority is given to vertex lights starting with
+    LIGHT0 through LIGHT<n> where <n> is equal to MAX_LIGHTS, followed by
+    FRAGMENT_LIGHT0_SGIX through FRAGMENT_LIGHT<m>_SGIX where <m> is equal
+    to MAX_FRAGMENT_LIGHTS_SGIX.
+
+
+Additions to Chapter 4 of the 1.1 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.1 Specification (State and State Requests)
+
+    TBD
+
+Additions to the GLX Specification
+
+    TBD
+
+Dependencies on SGIX_color_range
+
+    If SGIX_color_range is implemented, then the components of lighting
+    parameters of type color, the result of evaluating the lighting
+    equation and the results of evaluating the lighting environment
+    are clamped to the extended color range rather than [0,1].
+
+
+Errors
+    INVALID_ENUM is generated if FragmentMaterial{T}SGIX,
+    FragmentMaterial{T}vSGIX, or FragmentColorMaterialSGIX, parameter <face> is
+    not FRONT, BACK or FRONT_AND_BACK.
+
+    INVALID_ENUM is generated if FragmentMaterial{T}SGIX or
+    FragmentMaterial{T}vSGIX parameter <pname> is not AMBIENT, DIFFUSE,
+    SPECULAR, EMISSION, SHININESS, or AMBIENT_AND_DIFFUSE.
+
+    INVALID_ENUM is generated if GetFragmentMaterial{T}vSGIX parameter <face>
+    is not FRONT or BACK.
+
+    INVALID_ENUM is generated if GetFragmentMaterial{T}vSGIX parameter <pname>
+    is not AMBIENT, DIFFUSE, SPECULAR, EMISSION, or SHININESS,
+
+    INVALID_ENUM if FragmentColorMaterialSGIX parameter <mode> is not EMISSION,
+    AMBIENT, DIFFUSE, SPECULAR, or AMBIENT_AND_DIFFUSE
+
+    INVALID_ENUM if LightEnviSGIX parameter <pname> is not LIGHT_ENV_MODE_SGIX
+    or if parameter <mode> is not REPLACE, MODULATE, or ADD.
+
+    INVALID_ENUM is generated if FragmentLightModel{T}SGIX <pname> is not
+    FRAGMENT_LIGHT_MODEL_LOCAL_VIEWER_SGIX, FRAGMENT_LIGHT_MODEL_TWO_SIDE_SGIX
+    or FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX or if
+    FragmentLightModel{T}vSGIX, parameter <pname> is not
+    FRAGMENT_LIGHT_MODEL_AMBIENT_SGIX, FRAGMENT_LIGHT_MODEL_LOCAL_VIEWER_SGIX
+    FRAGMENT_LIGHT_MODEL_TWO_SIDE_SGIX or
+    FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX.
+
+    INVALID_ENUM is generated if FragmentLight{T}SGIX, FragmentLight{T}vSGIX,
+    or GetFragmentLight{T}vSGIX parameter <light> is not FRAGMENT_LIGHT0_SGIX
+    ... FRAGMENT_LIGHT<n>_SGIX where n is one minus the number of supported
+    fragment lights, or if FragmentLight{T}SGIX parameter <pname> is not
+    SPOT_EXPONENT, SPOT_CUTOFF, CONSTANT_ATTENUATION, LINEAR_ATTENUATION, or
+    QUADRATIC_ATTENUATION, or if FragmentLight{T}vSGIX or
+    GetFragmentLight{T}vSGIX parameter <pname> is not AMBIENT, DIFFUSE,
+    SPECULAR, POSITION, SPOT_DIRECTION, SPOT_EXPONENT, SPOT_CUTOFF,
+    CONSTANT_ATTENUATION, LINEAR_ATTENUATION, or QUADRATIC_ATTENUATION.
+
+    INVALID_VALUE is generated if FragmentLight{T}SGIX or FragmentLight{T}vSGIX
+    parameter <param> if a spot exponent value is specified outside the range
+    [0,128], or if spot cutoff is specified outside the range [0,90] (except
+    for the special value 180), or if a negative attenuation factor is
+    specified.
+
+    INVALID_OPERATION is generated if FragmentMaterial{T}SGIX,
+    FragmentMaterial{T}vSGIX, FragmentColorMaterialSGIX,
+    GetFragmentMaterial{T}vSGIX, LightEnviSGIX, FragmentLight{T}SGIX,
+    FragmentLight{T}vSGIX, FragmentLightModel{T}SGIX,
+    FragmentLightModel{T}vSGIX or GetFragmentLight{T}vSGIX is executed between
+    execution of Begin and the corresponding execution of End.
+
+New State
+
+    Get Value                                   Get Command                     Type    Initial Value           Attribute
+    ---------                                   -----------                     ----    -------------           ---------
+
+    FRAGMENT_LIGHTING_SGIX                      IsEnabled                       B       False                   lighting/enable
+    FRAGMENT_COLOR_MATERIAL_SGIX                IsEnabled                       B       False                   lighting/enable
+    FRAGMENT_COLOR_MATERIAL_PARAMETER_SGIX      GetIntegerv                     Z5      AMBIENT_AND_DIFFUSE     lighting
+    FRAGMENT_COLOR_MATERIAL_FACE_SGIX           GetIntegerv                     Z3      FRONT_AND_BACK          lighting
+    AMBIENT                                     GetFragmentMaterialfvSGIX       2xC     (0.2,0.2,0.2,1.0)       lighting
+    DIFFUSE                                     GetFragmentMaterialfvSGIX       2xC     (0.8,0.8,0.8,1.0)       lighting
+    SPECULAR                                    GetFragmentMaterialfvSGIX       2xC     (0.0,0.0,0.0,1.0)       lighting
+    EMISSION                                    GetFragmentMaterialfvSGIX       2xC     (0.0,0.0,0.0,1.0)       lighting
+    SHININESS                                   GetFragmentMaterialfvSGIX       2xR     0.0                     lighting
+    FRAGMENT_LIGHT_MODEL_AMBIENT_SGIX           GetFloatv                       C       (0.2,0.2,0.2,0.2)       lighting
+    FRAGMENT_LIGHT_MODEL_LOCAL_VIEWER_SGIX      GetBooleanv                     B       False                   lighting
+    FRAGMENT_LIGHT_MODEL_TWO_SIDE_SGIX          GetBooleanv                     B       False                   lighting
+    FRAGMENT_LIGHT_MODEL_NORMAL_INTERPOLATION_SGIX      GetIntegerv             Z2      SMOOTH                  lighting
+    AMBIENT                                     GetFragmentLightfvSGIX          1*xC    (0.0,0.0,0.0,1.0)       lighting
+    DIFFUSE                                     GetFragmentLightfvSGIX          1*xC    see 3.x                 lighting
+    SPECULAR                                    GetFragmentLightfvSGIX          1*xC    see 3.x                 lighting
+    POSITION                                    GetFragmentLightfvSGIX          1*xP    (0.0,0.0,1.0,0.0)       lighting
+    CONSTANT_ATTENUATION                        GetFragmentLightfvSGIX          1*xR    1.0                     lighting
+    LINEAR_ATTENUATION                          GetFragmentLightfvSGIX          1*xR+   0.0                     lighting
+    QUADRATIC_ATTENUATION                       GetFragmentLightfvSGIX          1*xR+   0.0                     lighting
+    SPOT_DIRECTION                              GetFragmentLightfvSGIX          1*xD    (0.0,0.0,-1.0)          lighting
+    SPOT_EXPONENT                               GetFragmentLightfvSGIX          1*xR+   0.0                     lighting
+    SPOT_CUTOFF                                 GetFragmentLightfvSGIX          1*xR+   180.0                   lighting
+    FRAGMENT_LIGHTi_SGIX                        IsEnabled                       1*xB    False                   lighting/enable
+    LIGHT_ENV_MODE_SGIX                         GetIntegerv                     Z3      REPLACE                 lighting
+
+    CURRENT_RASTER_NORMAL_SGIX                  GetFloatv                       N       (0,0,1)                 current
+
+New Implementation Dependent State
+
+    Get Value                           Get Command                     Type    Minimum Value
+    ---------                           -----------                     ----    -------------
+    MAX_FRAGMENT_LIGHTS_SGIX            GetIntegerv                     Z+      1
+    MAX_ACTIVE_LIGHTS_SGIX              GetIntegerv                     z+      MAX_LIGHTS

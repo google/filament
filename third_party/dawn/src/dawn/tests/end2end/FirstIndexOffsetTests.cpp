@@ -30,9 +30,9 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 enum class CheckIndex : uint32_t {
@@ -87,7 +87,8 @@ class FirstIndexOffsetTests : public DawnTest {
 
   private:
     wgpu::Buffer CreateVertexBuffer(uint32_t firstVertexOffset) {
-        std::vector<float> vertexData(firstVertexOffset * kComponentsPerVertex);
+        std::vector<float> vertexData(static_cast<size_t>(firstVertexOffset) *
+                                      kComponentsPerVertex);
         vertexData.insert(vertexData.end(), {0, 0, 0, 1});
         vertexData.insert(vertexData.end(), {0, 0, 0, 1});
         return utils::CreateBufferFromData(device, vertexData.data(),

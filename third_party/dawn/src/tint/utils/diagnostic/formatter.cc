@@ -143,9 +143,9 @@ void Formatter::Format(const Diagnostic& diag, StyledText& text) const {
         text << style::Plain("\n");
 
         for (size_t line_num = rng.begin.line;
-             (line_num <= rng.end.line) && (line_num <= src.file->content.lines.size());
+             (line_num <= rng.end.line) && (line_num <= src.file->content.GetLineCount());
              line_num++) {
-            auto& line = src.file->content.lines[line_num - 1];
+            auto line = src.file->content.GetLine(line_num - 1);
             auto line_len = line.size();
 
             bool is_ascii = true;

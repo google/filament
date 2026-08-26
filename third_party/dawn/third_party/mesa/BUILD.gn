@@ -29,8 +29,23 @@ import("mesa_overrides_with_defaults.gni")
 
 import("${mesa_meson_dir}/meson_target.gni")
 
-meson_target("mesa") {
+meson_target("mesa_build") {
   source_dir = "src"
   options = mesa_options
+  inputs = [ "${mesa_src_dir}/mesa_options.txt" ]
   outputs = [ "${target_gen_dir}/install" ]
+}
+
+action("copy_mesa_vulkan_icd") {
+  script = "copy_mesa_driver.py"
+  deps = [ ":mesa_build" ]
+  args = [
+    rebase_path("${target_gen_dir}/install", root_build_dir),
+    rebase_path(root_out_dir, root_build_dir),
+  ]
+  outputs = [ "${root_out_dir}/lvp_icd.json" ]
+}
+
+group("mesa") {
+  public_deps = [ ":copy_mesa_vulkan_icd" ]
 }

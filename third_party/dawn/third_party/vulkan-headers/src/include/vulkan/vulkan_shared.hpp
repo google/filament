@@ -1,5 +1,4 @@
 // Copyright 2015-2026 The Khronos Group Inc.
-//
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
 
@@ -823,6 +822,17 @@ VULKAN_HPP_EXPORT namespace VULKAN_HPP_NAMESPACE
   };
 
   using SharedDebugUtilsMessengerEXT = SharedHandle<DebugUtilsMessengerEXT>;
+
+  //=== VK_AMD_gpa_interface ===
+  template <>
+  class SharedHandleTraits<GpaSessionAMD>
+  {
+  public:
+    using DestructorType = Device;
+    using deleter        = detail::ObjectDestroyShared<GpaSessionAMD>;
+  };
+
+  using SharedGpaSessionAMD = SharedHandle<GpaSessionAMD>;
 
   //=== VK_EXT_descriptor_heap ===
   template <>

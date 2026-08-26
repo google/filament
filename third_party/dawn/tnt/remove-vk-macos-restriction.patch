@@ -1,17 +1,132 @@
-diff --git a/third_party/dawn/src/dawn/native/vulkan/BackendVk.cpp b/src/dawn/native/vulkan/BackendVk.cpp
-index c34bd5769..f0b71ec32 100644
+diff --git a/third_party/dawn/src/dawn/native/vulkan/BackendVk.cpp b/third_party/dawn/src/dawn/native/vulkan/BackendVk.cpp
+index f0b71ec321a..b967a2fc4e0 100644
 --- a/third_party/dawn/src/dawn/native/vulkan/BackendVk.cpp
 +++ b/third_party/dawn/src/dawn/native/vulkan/BackendVk.cpp
-@@ -575,12 +575,6 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
-     };
+@@ -25,23 +25,24 @@
+ // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  
-     for (ICD icd : kICDs) {
--#if DAWN_PLATFORM_IS(MACOS)
--        // On Mac, we don't expect non-Swiftshader Vulkan to be available.
--        if (icd == ICD::None) {
--            continue;
--        }
--#endif  // DAWN_PLATFORM_IS(MACOS)
-         // We always search for fallback adapters first, so if we already found one, don't bother
-         // looking for more.
-         if (options->forceFallbackAdapter && !physicalDevices.empty()) {
+-#include "dawn/native/vulkan/BackendVk.h"
++#include "src/dawn/native/vulkan/BackendVk.h"
+ 
+ #include <algorithm>
+ #include <string>
+ #include <utility>
+ 
+-#include "dawn/common/Assert.h"
+-#include "dawn/common/GPUInfo.h"
+-#include "dawn/common/Log.h"
+-#include "dawn/common/SystemUtils.h"
+-#include "dawn/native/ChainUtils.h"
+-#include "dawn/native/Instance.h"
+ #include "dawn/native/VulkanBackend.h"
+-#include "dawn/native/vulkan/DeviceVk.h"
+-#include "dawn/native/vulkan/PhysicalDeviceVk.h"
+-#include "dawn/native/vulkan/UtilsVulkan.h"
+-#include "dawn/native/vulkan/VulkanError.h"
++#include "src/dawn/common/GPUInfo.h"
++#include "src/dawn/common/SystemUtils.h"
++#include "src/dawn/native/ChainUtils.h"
++#include "src/dawn/native/Instance.h"
++#include "src/dawn/native/vulkan/DeviceVk.h"
++#include "src/dawn/native/vulkan/PhysicalDeviceVk.h"
++#include "src/dawn/native/vulkan/UtilsVulkan.h"
++#include "src/dawn/native/vulkan/VulkanError.h"
++#include "src/utils/assert.h"
++#include "src/utils/compiler.h"
++#include "src/utils/log.h"
+ 
+ // TODO(crbug.com/dawn/283): Link against the Vulkan Loader and remove this.
+ #if defined(DAWN_ENABLE_SWIFTSHADER)
+@@ -203,31 +204,33 @@ static constexpr ICD kICDs[] = {
+ };
+ 
+ // Suppress validation errors that are known. Returns false in that case.
+-bool ShouldReportDebugMessage(const char* messageId, const char* message) {
+-    // If a driver gives us a NULL pMessage (which would be a violation of the Vulkan spec)
++bool ShouldReportDebugMessage(const char* cMessageId, const char* cMessage) {
++    // If a driver gives us a nullptr pMessage (which would be a violation of the Vulkan spec)
+     // then ignore this message.
+-    if (message == nullptr) {
++    if (cMessage == nullptr) {
+         return false;
+     }
++    std::string_view message = cMessage;
+ 
+     // Some Vulkan drivers send "error" messages of "VK_SUCCESS" when zero devices are
+     // available; seen in crbug.com/1464122. This is not a real error that we care about.
+     // The messageId is ignored because drivers may report
+     // __FILE__: __LINE__ info here.
+-    // https://github.com/Mesa3D/mesa/blob/22.2/src/amd/vulkan/radv_device.c#L1201
+-    if (strcmp(message, "VK_SUCCESS") == 0) {
++    // https://gitlab.freedesktop.org/mesa/mesa/-/blob/22.2/src/amd/vulkan/radv_device.c#L1201
++    if (message == "VK_SUCCESS") {
+         return false;
+     }
+ 
+-    // The Vulkan spec does allow pMessageIdName to be NULL, but it may still contain a valid
++    // The Vulkan spec does allow pMessageIdName to be nullptr, but it may still contain a valid
+     // message. Since we can't compare it with our skipped message list allow it through.
+-    if (messageId == nullptr) {
++    if (cMessageId == nullptr) {
+         return true;
+     }
++    std::string_view messageId = cMessageId;
+ 
+     for (const SkippedMessage& msg : kSkippedMessages) {
+-        if (strstr(messageId, msg.messageId) != nullptr &&
+-            strstr(message, msg.messageContents) != nullptr) {
++        if (messageId.find(msg.messageId) != std::string_view::npos &&
++            message.find(msg.messageContents) != std::string_view::npos) {
+             return false;
+         }
+     }
+@@ -238,8 +241,8 @@ void LogCallbackData(LogSeverity severity,
+                      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData) {
+     LogMessage log = LogMessage(severity);
+ 
+-    // pMessageIdName may be NULL, according to the Vulkan spec. Passing NULL into an ostream is
+-    // undefined behavior, so we'll handle that scenario separately.
++    // pMessageIdName may be nullptr, according to the Vulkan spec. Passing nullptr into an ostream
++    // is undefined behavior, so we'll handle that scenario separately.
+     if (pCallbackData->pMessageIdName != nullptr) {
+         log << pCallbackData->pMessageIdName;
+     } else {
+@@ -271,8 +274,10 @@ OnDebugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+     // Look through all the object labels attached to the debug message and try to parse
+     // a device debug prefix out of one of them. If a debug prefix is found and matches
+     // a registered device, forward the message on to it.
+-    for (uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
+-        const VkDebugUtilsObjectNameInfoEXT& object = pCallbackData->pObjects[i];
++    Span<const VkDebugUtilsObjectNameInfoEXT> objects =
++        // SAFETY: pObjects is defined as a pointer to objectCount VkDebugUtilsObjectNameInfoEXTs.
++        DAWN_UNSAFE_BUFFERS({pCallbackData->pObjects, pCallbackData->objectCount});
++    for (const auto& object : objects) {
+         std::string deviceDebugPrefix = GetDeviceDebugPrefixFromDebugName(object.pObjectName);
+         if (deviceDebugPrefix.empty()) {
+             continue;
+@@ -406,14 +411,22 @@ MaybeError VulkanInstance::Initialize(const InstanceBase* instance, ICD icd) {
+ 
+     VulkanGlobalKnobs usedGlobalKnobs = {};
+     DAWN_TRY_ASSIGN(usedGlobalKnobs, CreateVkInstance(instance));
+-    *static_cast<VulkanGlobalKnobs*>(&mGlobalInfo) = usedGlobalKnobs;
+ 
+     DAWN_TRY(mFunctions.LoadInstanceProcs(mInstance, mGlobalInfo));
+ 
+     if (usedGlobalKnobs.HasExt(InstanceExt::DebugUtils)) {
+-        DAWN_TRY(RegisterDebugUtils());
++        // Workaround for buggy drivers/loaders (e.g. Adreno 610/619 on Android) that advertise
++        // VK_EXT_debug_utils in vkEnumerateInstanceExtensionProperties but return nullptr for
++        // some entrypoints in vkGetInstanceProcAddr.
++        if (mFunctions.TryLoadEXTDebugUtils(mInstance)) {
++            DAWN_TRY(RegisterDebugUtils());
++        } else {
++            usedGlobalKnobs.extensions.set(InstanceExt::DebugUtils, false);
++        }
+     }
+ 
++    *static_cast<VulkanGlobalKnobs*>(&mGlobalInfo) = usedGlobalKnobs;
++
+     DAWN_TRY_ASSIGN(mVkPhysicalDevices, GatherPhysicalDevices(mInstance, mFunctions));
+ 
+     return {};

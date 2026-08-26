@@ -31,8 +31,8 @@
 #include <mutex>
 #include <utility>
 
-#include "dawn/common/RefBase.h"
-#include "dawn/common/RefCounted.h"
+#include "src/dawn/common/RefBase.h"
+#include "src/dawn/common/RefCounted.h"
 
 namespace dawn {
 

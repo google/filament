@@ -1,0 +1,306 @@
+
+%dx.types.Handle = type { i8* }
+%dx.types.ResRet.i32 = type { i32, i32, i32, i32, i32 }
+%dx.types.u32 = type { i32 }
+
+define void @main() {
+entry:
+  %0 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 0, i1 false)
+  %1 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 1, i1 false)
+  %2 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %3 = call float @dx.op.loadInput.f32(i32 4, i32 1, i32 0, i8 0, i32 undef)
+  %4 = fptoui float %2 to i32
+  %5 = fptoui float %3 to i32
+  %6 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %4, i32 undef)
+  %7 = extractvalue %dx.types.ResRet.i32 %6, 0
+  %8 = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 0, i8 0, i32 undef)
+  %9 = fadd fast float %8, 1.000000e+00
+  %10 = fadd fast float %8, 2.000000e+00
+  %11 = fadd fast float %8, 3.000000e+00
+  %12 = fptoui float %9 to i32
+  %13 = fptoui float %10 to i32
+  %14 = fptoui float %11 to i32
+  %15 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %12, i32 undef)
+  %16 = extractvalue %dx.types.ResRet.i32 %15, 0
+  %17 = extractvalue %dx.types.ResRet.i32 %15, 1
+  %18 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %13, i32 undef)
+  %19 = extractvalue %dx.types.ResRet.i32 %18, 0
+  %20 = extractvalue %dx.types.ResRet.i32 %18, 1
+  %21 = extractvalue %dx.types.ResRet.i32 %18, 2
+  %22 = uitofp i32 %19 to float
+  %23 = uitofp i32 %20 to float
+  %24 = uitofp i32 %21 to float
+  %25 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %14, i32 undef)
+  %26 = extractvalue %dx.types.ResRet.i32 %25, 0
+  %27 = extractvalue %dx.types.ResRet.i32 %25, 1
+  %28 = extractvalue %dx.types.ResRet.i32 %25, 2
+  %29 = extractvalue %dx.types.ResRet.i32 %25, 3
+  %30 = uitofp i32 %26 to float
+  %31 = uitofp i32 %27 to float
+  %32 = uitofp i32 %28 to float
+  %33 = uitofp i32 %29 to float
+  %34 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %4, i32 undef)
+  %35 = extractvalue %dx.types.ResRet.i32 %34, 0
+  %36 = extractvalue %dx.types.ResRet.i32 %34, 4
+  %37 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %12, i32 undef)
+  %38 = extractvalue %dx.types.ResRet.i32 %37, 0
+  %39 = extractvalue %dx.types.ResRet.i32 %37, 4
+  %40 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %13, i32 undef)
+  %41 = extractvalue %dx.types.ResRet.i32 %40, 0
+  %42 = extractvalue %dx.types.ResRet.i32 %40, 4
+  %43 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %1, i32 %14, i32 undef)
+  %44 = extractvalue %dx.types.ResRet.i32 %43, 0
+  %45 = extractvalue %dx.types.ResRet.i32 %43, 4
+  %46 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %4, i32 undef)
+  %47 = extractvalue %dx.types.ResRet.i32 %46, 0
+  %48 = uitofp i32 %47 to float
+  %49 = fptrunc float %48 to half
+  %50 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %12, i32 undef)
+  %51 = extractvalue %dx.types.ResRet.i32 %50, 0
+  %52 = extractvalue %dx.types.ResRet.i32 %50, 1
+  %53 = uitofp i32 %16 to float
+  %54 = uitofp i32 %17 to float
+  %55 = uitofp i32 %51 to float
+  %56 = uitofp i32 %52 to float
+  %57 = fpext half %49 to float
+  %58 = fadd fast float %55, %57
+  %59 = fadd fast float %56, %57
+  %60 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %13, i32 undef)
+  %61 = extractvalue %dx.types.ResRet.i32 %60, 0
+  %62 = extractvalue %dx.types.ResRet.i32 %60, 1
+  %63 = extractvalue %dx.types.ResRet.i32 %60, 2
+  %64 = uitofp i32 %61 to float
+  %65 = uitofp i32 %62 to float
+  %66 = uitofp i32 %63 to float
+  %67 = fadd fast float %58, %64
+  %68 = fadd fast float %59, %65
+  %69 = fpext half %49 to float
+  %70 = fadd fast float %66, %69
+  %71 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %14, i32 undef)
+  %72 = extractvalue %dx.types.ResRet.i32 %71, 0
+  %73 = extractvalue %dx.types.ResRet.i32 %71, 1
+  %74 = extractvalue %dx.types.ResRet.i32 %71, 2
+  %75 = extractvalue %dx.types.ResRet.i32 %71, 3
+  %76 = uitofp i32 %72 to float
+  %77 = uitofp i32 %73 to float
+  %78 = uitofp i32 %74 to float
+  %79 = uitofp i32 %75 to float
+  %80 = fadd fast float %67, %76
+  %81 = fadd fast float %68, %77
+  %82 = fadd fast float %70, %78
+  %83 = fpext half %49 to float
+  %84 = fadd fast float %83, %79
+  %85 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %4, i32 undef)
+  %86 = extractvalue %dx.types.ResRet.i32 %85, 0
+  %87 = extractvalue %dx.types.ResRet.i32 %85, 4
+  %88 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %87)
+  %89 = sext i1 %88 to i32
+  %90 = uitofp i32 %86 to float
+  %91 = uitofp i32 %7 to float
+  %92 = uitofp i32 %89 to float
+  %93 = fadd fast float %90, %80
+  %94 = fadd fast float %90, %81
+  %95 = fadd fast float %90, %82
+  %96 = fadd fast float %90, %84
+  %97 = fadd fast float %92, %93
+  %98 = fadd fast float %92, %94
+  %99 = fadd fast float %92, %95
+  %100 = fadd fast float %92, %96
+  %101 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %12, i32 undef)
+  %102 = extractvalue %dx.types.ResRet.i32 %101, 0
+  %103 = extractvalue %dx.types.ResRet.i32 %101, 4
+  %104 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %103)
+  %105 = sext i1 %104 to i32
+  %106 = uitofp i32 %102 to float
+  %107 = uitofp i32 %105 to float
+  %108 = fadd fast float %106, %97
+  %109 = fadd fast float %106, %98
+  %110 = fadd fast float %107, %108
+  %111 = fadd fast float %107, %109
+  %112 = fadd fast float %107, %99
+  %113 = fadd fast float %107, %100
+  %114 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %13, i32 undef)
+  %115 = extractvalue %dx.types.ResRet.i32 %114, 0
+  %116 = extractvalue %dx.types.ResRet.i32 %114, 4
+  %117 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %0, i32 %14, i32 undef)
+  %118 = extractvalue %dx.types.ResRet.i32 %117, 0
+  %119 = extractvalue %dx.types.ResRet.i32 %117, 4
+  %120 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %116)
+  %121 = sext i1 %120 to i32
+  %122 = uitofp i32 %115 to float
+  %123 = uitofp i32 %121 to float
+  %124 = fadd fast float %122, %110
+  %125 = fadd fast float %122, %111
+  %126 = fadd fast float %122, %112
+  %127 = fadd fast float %123, %124
+  %128 = fadd fast float %123, %125
+  %129 = fadd fast float %123, %126
+  %130 = fadd fast float %123, %113
+  %131 = uitofp i32 %118 to float
+  %132 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %119)
+  %133 = sext i1 %132 to i32
+  %134 = uitofp i32 %133 to float
+  %135 = fadd fast float %131, %127
+  %136 = fadd fast float %131, %128
+  %137 = fadd fast float %131, %129
+  %138 = fadd fast float %131, %130
+  %139 = fadd fast float %134, %135
+  %140 = fadd fast float %134, %136
+  %141 = fadd fast float %134, %137
+  %142 = fadd fast float %134, %138
+  %143 = fadd fast float %91, %139
+  %144 = fadd fast float %91, %140
+  %145 = fadd fast float %91, %141
+  %146 = fadd fast float %91, %142
+  %147 = fadd fast float %53, %143
+  %148 = fadd fast float %54, %144
+  %149 = fadd fast float %22, %147
+  %150 = fadd fast float %23, %148
+  %151 = fadd fast float %24, %145
+  %152 = fadd fast float %30, %149
+  %153 = fadd fast float %31, %150
+  %154 = fadd fast float %32, %151
+  %155 = fadd fast float %33, %146
+  %156 = uitofp i32 %35 to float
+  %157 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %36)
+  %158 = sext i1 %157 to i32
+  %159 = uitofp i32 %158 to float
+  %160 = fadd fast float %156, %152
+  %161 = fadd fast float %156, %153
+  %162 = fadd fast float %156, %154
+  %163 = fadd fast float %156, %155
+  %164 = fadd fast float %159, %160
+  %165 = fadd fast float %159, %161
+  %166 = fadd fast float %159, %162
+  %167 = fadd fast float %159, %163
+  %168 = uitofp i32 %38 to float
+  %169 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %39)
+  %170 = sext i1 %169 to i32
+  %171 = uitofp i32 %170 to float
+  %172 = fadd fast float %168, %164
+  %173 = fadd fast float %168, %165
+  %174 = fadd fast float %171, %172
+  %175 = fadd fast float %171, %173
+  %176 = fadd fast float %171, %166
+  %177 = fadd fast float %171, %167
+  %178 = uitofp i32 %41 to float
+  %179 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %42)
+  %180 = sext i1 %179 to i32
+  %181 = uitofp i32 %180 to float
+  %182 = fadd fast float %178, %174
+  %183 = fadd fast float %178, %175
+  %184 = fadd fast float %178, %176
+  %185 = fadd fast float %181, %182
+  %186 = fadd fast float %181, %183
+  %187 = fadd fast float %181, %184
+  %188 = fadd fast float %181, %177
+  %189 = uitofp i32 %44 to float
+  %190 = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 %45)
+  %191 = sext i1 %190 to i32
+  %192 = uitofp i32 %191 to float
+  %193 = fadd fast float %189, %185
+  %194 = fadd fast float %189, %186
+  %195 = fadd fast float %189, %187
+  %196 = fadd fast float %189, %188
+  %197 = fadd fast float %192, %193
+  %198 = fadd fast float %192, %194
+  %199 = fadd fast float %192, %195
+  %200 = fadd fast float %192, %196
+  %201 = fptoui float %200 to i32
+  %202 = fptoui float %200 to i32
+  %203 = fptoui float %199 to i32
+  call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle %1, i32 %5, i32 undef, i32 %201, i32 undef, i32 undef, i32 undef, i8 1)
+  %204 = call float @dx.op.loadInput.f32(i32 4, i32 1, i32 0, i8 0, i32 undef)
+  %205 = fadd fast float %204, 1.000000e+00
+  %206 = fadd fast float %204, 2.000000e+00
+  %207 = fadd fast float %204, 3.000000e+00
+  %208 = fptoui float %205 to i32
+  %209 = fptoui float %206 to i32
+  %210 = fptoui float %207 to i32
+  call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle %1, i32 %208, i32 undef, i32 %202, i32 %203, i32 undef, i32 undef, i8 3)
+  %211 = fptoui float %200 to i32
+  %212 = fptoui float %199 to i32
+  %213 = fptoui float %198 to i32
+  call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle %1, i32 %209, i32 undef, i32 %211, i32 %212, i32 %213, i32 undef, i8 7)
+  %214 = fptoui float %200 to i32
+  %215 = fptoui float %199 to i32
+  %216 = fptoui float %198 to i32
+  %217 = fptoui float %197 to i32
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 0, float %197)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 1, float %198)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 2, float %199)
+  call void @dx.op.storeOutput.f32(i32 5, i32 0, i32 0, i8 3, float %200)
+  call void @dx.op.bufferStore.i32(i32 69, %dx.types.Handle %1, i32 %210, i32 undef, i32 %214, i32 %215, i32 %216, i32 %217, i8 15)
+  ret void
+}
+
+; Function Attrs: nounwind readonly
+declare %dx.types.Handle @dx.op.createHandle(i32, i8, i32, i32, i1) #0
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.loadInput.f32(i32, i32, i32, i8, i32) #1
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.i32(i32, i32, i32) #2
+
+; Function Attrs: nounwind readonly
+declare i32 @dx.op.tempRegLoad.i32(i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32, %dx.types.Handle, i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f32(i32, i32, float) #2
+
+; Function Attrs: nounwind readonly
+declare float @dx.op.tempRegLoad.f32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.tempRegStore.f16(i32, i32, half) #2
+
+; Function Attrs: nounwind readonly
+declare half @dx.op.tempRegLoad.f16(i32, i32) #0
+
+; Function Attrs: nounwind readonly
+declare i1 @dx.op.checkAccessFullyMapped.i32(i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @dx.op.bufferStore.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32, i32, i8) #2
+
+; Function Attrs: nounwind
+declare void @dx.op.storeOutput.f32(i32, i32, i32, i8, float) #2
+
+; Function Attrs: nounwind readnone
+declare float @dx.op.bitcastI32toF32(i32, i32) #1
+
+; Function Attrs: nounwind readnone
+declare i32 @dx.op.bitcastF32toI32(i32, float) #1
+
+attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind }
+
+!dx.version = !{!0}
+!dx.valver = !{!0}
+!dx.shaderModel = !{!1}
+!dx.resources = !{!2}
+!dx.entryPoints = !{!7}
+!llvm.ident = !{!16}
+
+!0 = !{i32 1, i32 0}
+!1 = !{!"ps", i32 6, i32 0}
+!2 = !{!3, !5, null, null}
+!3 = !{!4}
+!4 = !{i32 0, %dx.types.u32 addrspace(1)* undef, !"T0", i32 0, i32 0, i32 1, i32 11, i32 0, null}
+!5 = !{!6}
+!6 = !{i32 0, %dx.types.u32 addrspace(1)* undef, !"U0", i32 0, i32 1, i32 1, i32 11, i1 false, i1 false, i1 false, null}
+!7 = !{void ()* @main, !"main", !8, !2, !15}
+!8 = !{!9, !13, null}
+!9 = !{!10, !12}
+!10 = !{i32 0, !"A", i8 9, i8 0, !11, i8 2, i32 1, i8 1, i32 0, i8 0, null}
+!11 = !{i32 0}
+!12 = !{i32 1, !"B", i8 9, i8 0, !11, i8 2, i32 1, i8 1, i32 0, i8 1, null}
+!13 = !{!14}
+!14 = !{i32 0, !"SV_Target", i8 9, i8 16, !11, i8 0, i32 1, i8 4, i32 0, i8 0, null}
+!15 = !{i32 0, i64 288}
+!16 = !{!"dxbc2dxil 1.2"}

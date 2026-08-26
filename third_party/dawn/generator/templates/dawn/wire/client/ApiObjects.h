@@ -29,7 +29,7 @@
 #define DAWNWIRE_CLIENT_APIOBJECTS_AUTOGEN_H_
 
 #include "dawn/wire/ObjectType_autogen.h"
-#include "dawn/wire/client/ObjectBase.h"
+#include "src/dawn/wire/client/ObjectBase.h"
 
 namespace dawn::wire::client {
 
@@ -49,13 +49,6 @@ namespace dawn::wire::client {
                 }
             };
         {% endif %}
-
-        inline {{Type}}* FromAPI(WGPU{{Type}} obj) {
-            return reinterpret_cast<{{Type}}*>(obj);
-        }
-        inline WGPU{{Type}} ToAPI({{Type}}* obj) {
-            return reinterpret_cast<WGPU{{Type}}>(obj);
-        }
 
         template <>
         inline constexpr ObjectType ObjectTypeToTypeEnum<{{Type}}> = ObjectType::{{Type}};

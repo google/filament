@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/hlsl/writer/raise/binary_polyfill.h"
 
+#include <vector>
+
 #include "src/tint/lang/core/fluent_types.h"  // IWYU pragma: export
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
@@ -54,50 +56,39 @@ struct State {
     /// Process the module.
     void Process() {
         // Find the bitcasts that need replacing.
-        Vector<core::ir::Binary*, 4> binary_worklist;
+        std::vector<std::function<void()>> worklist;
+        worklist.reserve(128);
+
         for (auto* inst : ir.Instructions()) {
-            if (auto* binary = inst->As<core::ir::Binary>()) {
-                switch (binary->Op()) {
-                    case core::BinaryOp::kModulo: {
-                        if (binary->LHS()->Type()->IsFloatScalarOrVector()) {
-                            binary_worklist.Push(binary);
-                        }
-                        break;
-                    }
-                    case core::BinaryOp::kMultiply: {
-                        auto* lhs_ty = binary->LHS()->Type();
-                        auto* rhs_ty = binary->RHS()->Type();
-
-                        if ((lhs_ty->Is<core::type::Vector>() &&
-                             rhs_ty->Is<core::type::Matrix>()) ||
-                            (lhs_ty->Is<core::type::Matrix>() &&
-                             rhs_ty->Is<core::type::Vector>()) ||
-                            (lhs_ty->Is<core::type::Matrix>() &&
-                             rhs_ty->Is<core::type::Matrix>())) {
-                            binary_worklist.Push(binary);
-                        }
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
+            core::ir::Binary* binary = inst->As<core::ir::Binary>();
+            if (binary == nullptr) {
                 continue;
             }
-        }
-
-        // Replace the binary calls
-        for (auto* binary : binary_worklist) {
             switch (binary->Op()) {
-                case core::BinaryOp::kModulo:
-                    PreciseFloatMod(binary);
+                case core::BinaryOp::kModulo: {
+                    if (binary->LHS()->Type()->IsFloatScalarOrVector()) {
+                        worklist.push_back([this, binary] { PreciseFloatMod(binary); });
+                    }
                     break;
-                case core::BinaryOp::kMultiply:
-                    Mul(binary);
+                }
+                case core::BinaryOp::kMultiply: {
+                    auto* lhs_ty = binary->LHS()->Type();
+                    auto* rhs_ty = binary->RHS()->Type();
+
+                    if ((lhs_ty->Is<core::type::Vector>() && rhs_ty->Is<core::type::Matrix>()) ||
+                        (lhs_ty->Is<core::type::Matrix>() && rhs_ty->Is<core::type::Vector>()) ||
+                        (lhs_ty->Is<core::type::Matrix>() && rhs_ty->Is<core::type::Matrix>())) {
+                        worklist.push_back([this, binary] { Mul(binary); });
+                    }
                     break;
+                }
+
                 default:
-                    TINT_IR_UNIMPLEMENTED(ir);
+                    break;
             }
+        }
+        for (auto& cb : worklist) {
+            cb();
         }
     }
 
@@ -137,14 +128,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(core::ir::Module& ir) {
-    AssertValid(ir,
-                core::ir::Capabilities{
-                    core::ir::Capability::kAllow16BitIntegers,
-                    core::ir::Capability::kAllowClipDistancesOnF32ScalarAndVector,
-                    core::ir::Capability::kAllowDuplicateBindings,
-                    core::ir::Capability::kAllowNonCoreTypes,
-                },
-                "before hlsl.BinaryPolyfill");
+    AssertValid(ir, "before hlsl.BinaryPolyfill");
 
     State{ir}.Process();
 

@@ -30,18 +30,33 @@
 #include <string>
 #include <vector>
 
-#include "dawn/tests/DawnTest.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/DawnTest.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
 
 class PolyfillBuiltinSimpleTests : public DawnTest {
   public:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        std::vector<wgpu::FeatureName> features;
+        if (SupportsFeatures({wgpu::FeatureName::ShaderF16})) {
+            features.push_back(wgpu::FeatureName::ShaderF16);
+        }
+        return features;
+    }
+
     wgpu::Buffer CreateBuffer(const std::vector<uint32_t>& data,
                               wgpu::BufferUsage usage = wgpu::BufferUsage::Storage |
                                                         wgpu::BufferUsage::CopySrc) {
         uint64_t bufferSize = static_cast<uint64_t>(data.size() * sizeof(uint32_t));
+        return utils::CreateBufferFromData(device, data.data(), bufferSize, usage);
+    }
+
+    wgpu::Buffer CreateBuffer(const std::vector<float>& data,
+                              wgpu::BufferUsage usage = wgpu::BufferUsage::Storage |
+                                                        wgpu::BufferUsage::CopySrc) {
+        uint64_t bufferSize = static_cast<uint64_t>(data.size() * sizeof(float));
         return utils::CreateBufferFromData(device, data.data(), bufferSize, usage);
     }
 
@@ -373,6 +388,126 @@ TEST_P(PolyfillBuiltinSimpleTests, CaseSwitchToIfComplex) {
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), output, 0, expected.size());
 }
 
+// Some versions of AMD Mesa (prior to 25.3) have a front-end optimizer bug where unary negation
+// and abs operations on floating point values (f32 and f16) are incorrectly optimized or
+// handled, leading to incorrect results.
+// See crbug.com/448294721 and crbug.com/500099471.
+TEST_P(PolyfillBuiltinSimpleTests, PolyfillFloatUnary) {
+    bool hasF16 = device.HasFeature(wgpu::FeatureName::ShaderF16);
+
+    std::string shader = R"(
+        @group(0) @binding(0) var<storage, read> in_f32 : array<f32, 4>;
+        @group(0) @binding(1) var<storage, read_write> out_f32 : array<f32, 8>;
+
+        @compute @workgroup_size(1)
+        fn main() {
+            out_f32[0] = abs(in_f32[0]);
+            out_f32[1] = -in_f32[1];
+            out_f32[2] = length(in_f32[2]);
+            out_f32[3] = distance(in_f32[3], 2.0);
+    )";
+
+    if (hasF16) {
+        shader = "enable f16;\n" + shader;
+        shader += R"(
+            out_f32[4] = f32(abs(f16(in_f32[0])));
+            out_f32[5] = f32(-f16(in_f32[1]));
+            out_f32[6] = f32(length(f16(in_f32[2])));
+            out_f32[7] = f32(distance(f16(in_f32[3]), 2.0h));
+        )";
+    }
+
+    shader += R"(
+        }
+    )";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(shader);
+
+    std::vector<float> input_data = {-1.5f, 2.0f, -2.5f, 1.0f};
+    wgpu::Buffer input = CreateBuffer(input_data, wgpu::BufferUsage::Storage);
+    wgpu::Buffer output = CreateBuffer(8, 0);
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {
+                                                         {0, input},
+                                                         {1, output},
+                                                     });
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(1);
+        pass.End();
+        commands = encoder.Finish();
+    }
+
+    queue.Submit(1, &commands);
+
+    std::vector<float> expected = {1.5f, -2.0f, 2.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    if (hasF16) {
+        expected[4] = 1.5f;
+        expected[5] = -2.0f;
+        expected[6] = 2.5f;
+        expected[7] = 1.0f;
+    }
+
+    EXPECT_BUFFER_FLOAT_RANGE_EQ(expected.data(), output, 0, expected.size());
+}
+
+// Test dynamic indexing into a boolean vector. This is a minimal reproducer for a suspected driver
+// bug on Intel Mac (crbug.com/540789158).
+TEST_P(PolyfillBuiltinSimpleTests, BoolVectorDynamicIndexStore) {
+    // Initial v is <true, true, true>.
+    std::string shader = R"(
+        struct Input {
+            index : i32,
+            value : u32,
+        }
+
+        @group(0) @binding(0) var<storage, read> input : Input;
+        @group(0) @binding(1) var<storage, read_write> output : array<u32, 3>;
+
+        @compute @workgroup_size(1) fn main() {
+            var v = vec3<bool>(true, true, true);
+            v[input.index] = (input.value == 0u);
+
+            // Store result to output buffer as uints.
+            output[0] = select(0u, 1u, v.x);
+            output[1] = select(0u, 1u, v.y);
+            output[2] = select(0u, 1u, v.z);
+        }
+    )";
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(shader.c_str(), "main");
+
+    // Write false (indicated by non-zero value) to index 2, so v should be <true, true, false>.
+    std::vector<uint32_t> inputData = {2, 1u};
+    wgpu::Buffer inputBuffer = CreateBuffer(inputData, wgpu::BufferUsage::Storage);
+
+    wgpu::Buffer outputBuffer = CreateBuffer(3);
+
+    wgpu::BindGroup bindGroup = utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0),
+                                                     {{0, inputBuffer}, {1, outputBuffer}});
+
+    wgpu::CommandBuffer commands;
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline);
+        pass.SetBindGroup(0, bindGroup);
+        pass.DispatchWorkgroups(1);
+        pass.End();
+        commands = encoder.Finish();
+    }
+    queue.Submit(1, &commands);
+
+    // Expected final v is <true, true, false> which is stored as <1, 1, 0>.
+    std::vector<uint32_t> expected = {1u, 1u, 0u};
+    EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), outputBuffer, 0, 3);
+}
+
 DAWN_INSTANTIATE_TEST(PolyfillBuiltinSimpleTests,
                       D3D12Backend(),
                       D3D11Backend(),
@@ -381,8 +516,10 @@ DAWN_INSTANTIATE_TEST(PolyfillBuiltinSimpleTests,
                       WebGPUBackend(),
                       D3D12Backend({"scalarize_max_min_clamp"}),
                       MetalBackend({"scalarize_max_min_clamp"}),
+                      MetalBackend({"metal_polyfill_bool_vec_dynamic_store"}),
                       VulkanBackend({"scalarize_max_min_clamp"}),
                       VulkanBackend({"vulkan_polyfill_switch_with_if"}),
+                      VulkanBackend({"spirv_polyfill_float_negation", "spirv_polyfill_float_abs"}),
                       D3D11Backend({"scalarize_max_min_clamp"}),
                       OpenGLESBackend());
 

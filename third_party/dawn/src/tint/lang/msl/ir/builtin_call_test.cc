@@ -64,7 +64,7 @@ TEST_F(IR_MslBuiltinCallTest, Clone) {
 
 TEST_F(IR_MslBuiltinCallTest, CloneWithExplicitParams) {
     auto* builtin = b.Call<BuiltinCall>(mod.Types().void_(), BuiltinFn::kThreadgroupBarrier, 0_u);
-    builtin->SetExplicitTemplateParams(Vector{mod.Types().i32()});
+    builtin->SetExplicitTemplateParams(Vector<core::ir::TemplateParameter, 1>{mod.Types().i32()});
 
     auto* new_b = clone_ctx.Clone(builtin);
     EXPECT_NE(builtin->Result(), new_b->Result());

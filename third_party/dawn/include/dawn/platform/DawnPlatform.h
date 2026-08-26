@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 
 #include "dawn/platform/dawn_platform_export.h"
 
@@ -50,19 +51,16 @@ class DAWN_PLATFORM_EXPORT CachingInterface {
     CachingInterface();
     virtual ~CachingInterface();
 
-    // LoadData has two modes. The first mode is used to get a value which
-    // corresponds to the |key|. The |valueOut| is a caller provided buffer
-    // allocated to the size |valueSize| which is loaded with data of the
-    // size returned. The second mode is used to query for the existence of
-    // the |key| where |valueOut| is nullptr and |valueSize| must be 0.
-    // The return size is non-zero if the |key| exists.
-    virtual size_t LoadData(const void* key, size_t keySize, void* valueOut, size_t valueSize) = 0;
+    // Returns zero if there does not exist a cached entry for |key|, otherwise returns a non-zero
+    // size indicating the size of cached data
+    virtual size_t FindKey(std::span<const std::byte> key) = 0;
 
-    // StoreData puts a |value| in the cache which corresponds to the |key|.
-    virtual void StoreData(const void* key,
-                           size_t keySize,
-                           const void* value,
-                           size_t valueSize) = 0;
+    // Returns zero if unable to load cached entry for |key| into |dest|, otherwise returns number
+    // of bytes written to |dest|.
+    virtual size_t LoadData(std::span<const std::byte> key, std::span<std::byte> dest) = 0;
+
+    // Stores the data in |src| at the entry specified by |key|.
+    virtual void StoreData(std::span<const std::byte> key, std::span<const std::byte> src) = 0;
 
   private:
     CachingInterface(const CachingInterface&) = delete;
@@ -122,6 +120,10 @@ class DAWN_PLATFORM_EXPORT WorkerTaskPool {
     WorkerTaskPool(const WorkerTaskPool&) = delete;
     WorkerTaskPool& operator=(const WorkerTaskPool&) = delete;
 
+    // Creates Dawn's default worker task pool with at most |maxThreadCount| task handling threads.
+    // Platform implementations may use this when overriding Platform::CreateWorkerTaskPool().
+    static std::unique_ptr<WorkerTaskPool> CreateDawnDefault(uint32_t maxThreadCount);
+
     virtual std::unique_ptr<WaitableEvent> PostWorkerTask(PostWorkerTaskCallback,
                                                           void* userdata) = 0;
 
@@ -138,6 +140,8 @@ enum class Features {
     kWebGPUEnableRangeAnalysisForRobustness,
     kWebGPUUseSpirv14,
     kWebGPUDecomposeUniformBuffers,
+    kWebGPUUseHLSL2021,
+    kWebGPUUseSpirvReconvergenceMode,
 };
 
 class DAWN_PLATFORM_EXPORT Platform {
@@ -192,6 +196,10 @@ class DAWN_PLATFORM_EXPORT Platform {
 
     // Hook for querying if a Finch feature is enabled.
     virtual bool IsFeatureEnabled(Features feature);
+
+    // Report GPU process progress so that the watchdog thread won't think that a long function is
+    // stuck.
+    virtual void ReportProgress();
 
   private:
     Platform(const Platform&) = delete;

@@ -29,11 +29,12 @@
 {% set namespace_name = Name(metadata.native_namespace) %}
 {% set native_namespace = namespace_name.namespace_case() %}
 {% set native_dir = impl_dir + namespace_name.Dirs() %}
+{% set include_dir = namespace_name.Dirs() %}
 {% set api = metadata.api.lower() %}
-#include "{{native_dir}}/{{api}}_absl_format_autogen.h"
+#include "{{include_dir}}/{{api}}_absl_format_autogen.h"
 
+#include "{{include_dir}}/ObjectType_autogen.h"
 #include "{{native_dir}}/ChainUtils.h"
-#include "{{native_dir}}/ObjectType_autogen.h"
 #include "{{native_dir}}/webgpu_absl_format.h"
 
 namespace {{native_namespace}} {
@@ -96,7 +97,7 @@ namespace {{namespace}} {
                 break;
             }
         }
-        s->Append(absl::StrFormat("%u", static_cast<{{as_cType(type.name)}}>(value)));
+        s->Append(absl::StrFormat("%u", static_cast<uint32_t>(value)));
         return {true};
     }
     {% endfor %}
@@ -143,14 +144,14 @@ namespace {{namespace}} {
                 if (!first) {
                     s->Append("|");
                 }
-                s->Append(absl::StrFormat("{{as_cppType(type.name)}}::%x", static_cast<typename std::underlying_type<{{as_cppType(type.name)}}>::type>(value)));
+                s->Append(absl::StrFormat("{{as_cppType(type.name)}}::%x", static_cast<std::underlying_type<{{as_cppType(type.name)}}>::type>(value)));
             }
 
             if (moreThanOneBit) {
                 s->Append(")");
             }
         } else {
-            s->Append(absl::StrFormat("%u", static_cast<typename std::underlying_type<{{as_cppType(type.name)}}>::type>(value)));
+            s->Append(absl::StrFormat("%u", static_cast<std::underlying_type<{{as_cppType(type.name)}}>::type>(value)));
         }
         return {true};
     }

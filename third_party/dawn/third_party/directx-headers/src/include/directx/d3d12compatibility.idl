@@ -1,0 +1,88 @@
+/*-------------------------------------------------------------------------------------
+ *
+ * Copyright (c) Microsoft Corporation
+ * Licensed under the MIT license
+ *
+ *-------------------------------------------------------------------------------------*/
+import "OAIdl.idl";
+import "OCIdl.idl";
+
+import "d3d11on12.idl";
+
+cpp_quote("#include <winapifamily.h>")
+
+#pragma region Desktop Family
+cpp_quote("#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES)")
+
+typedef enum D3D12_COMPATIBILITY_SHARED_FLAGS
+{
+    D3D12_COMPATIBILITY_SHARED_FLAG_NONE          = 0,
+    D3D12_COMPATIBILITY_SHARED_FLAG_NON_NT_HANDLE = 0x1,
+    D3D12_COMPATIBILITY_SHARED_FLAG_KEYED_MUTEX = 0x2,
+    D3D12_COMPATIBILITY_SHARED_FLAG_9_ON_12 = 0x4,
+
+} D3D12_COMPATIBILITY_SHARED_FLAGS;
+cpp_quote( "DEFINE_ENUM_FLAG_OPERATORS( D3D12_COMPATIBILITY_SHARED_FLAGS );" )
+
+typedef enum D3D12_REFLECT_SHARED_PROPERTY
+{
+    D3D12_REFLECT_SHARED_PROPERTY_D3D11_RESOURCE_FLAGS,       // D3D11_RESOURCE_FLAGS
+    D3D12_REFELCT_SHARED_PROPERTY_COMPATIBILITY_SHARED_FLAGS, // D3D12_COMPATIBILITY_SHARED_FLAGS
+    D3D12_REFLECT_SHARED_PROPERTY_NON_NT_SHARED_HANDLE,       // HANDLE
+} D3D12_REFLECT_SHARED_PROPERTY;
+
+[ uuid( 8f1c0e3c-fae3-4a82-b098-bfe1708207ff ), object, local, pointer_default( unique ) ]
+interface ID3D12CompatibilityDevice
+    : IUnknown
+{
+    HRESULT CreateSharedResource(
+        [annotation("_In_")] const D3D12_HEAP_PROPERTIES* pHeapProperties,
+        D3D12_HEAP_FLAGS HeapFlags,
+        [annotation("_In_")] const D3D12_RESOURCE_DESC* pDesc,
+        D3D12_RESOURCE_STATES InitialResourceState,
+        [annotation("_In_opt_")] const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+        [annotation("_In_opt_")] const D3D11_RESOURCE_FLAGS* pFlags11,
+        D3D12_COMPATIBILITY_SHARED_FLAGS CompatibilityFlags,
+        [annotation("_In_opt_")] ID3D12LifetimeTracker* pLifetimeTracker,
+        [annotation("_In_opt_")] ID3D12SwapChainAssistant* pOwningSwapchain,
+        REFIID riid,
+        [out, iid_is(riid), annotation("_COM_Outptr_opt_")] void** ppResource);
+
+    HRESULT CreateSharedHeap(
+        [annotation("_In_")] const D3D12_HEAP_DESC* pHeapDesc,
+        D3D12_COMPATIBILITY_SHARED_FLAGS CompatibilityFlags,
+        REFIID riid,
+        [out, iid_is(riid), annotation("_COM_Outptr_opt_")] void** ppHeap);
+
+    HRESULT ReflectSharedProperties(
+        [annotation("_In_")] ID3D12Object* pHeapOrResource,
+        D3D12_REFLECT_SHARED_PROPERTY ReflectType,
+        [annotation("_Out_writes_bytes_(DataSize)")] void* pData,
+        UINT DataSize);
+}
+
+[uuid(edbf5678-2960-4e81-8429-99d4b2630c4e), object, local, pointer_default(unique)]
+interface D3D11On12CreatorID : IUnknown { };
+
+[uuid(fffcbb7f-15d3-42a2-841e-9d8d32f37ddd), object, local, pointer_default(unique)]
+interface D3D9On12CreatorID : IUnknown { };
+
+[uuid(6bb3cd34-0d19-45ab-97ed-d720ba3dfc80), object, local, pointer_default(unique)]
+interface OpenGLOn12CreatorID : IUnknown { };
+
+[uuid(3f76bb74-91b5-4a88-b126-20ca0331cd60), object, local, pointer_default(unique)]
+interface OpenCLOn12CreatorID : IUnknown { };
+
+[uuid(cb7490ac-8a0f-44ec-9b7b-6f4cafe8e9ab), object, local, pointer_default(unique)]
+interface DirectMLTensorFlowCreatorID : IUnknown { };
+
+
+cpp_quote("#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES) */")
+#pragma endregion
+
+cpp_quote( "DEFINE_GUID(IID_ID3D12CompatibilityDevice,0x8f1c0e3c,0xfae3,0x4a82,0xb0,0x98,0xbf,0xe1,0x70,0x82,0x07,0xff);" )
+cpp_quote( "DEFINE_GUID(IID_D3D11On12CreatorID,0xedbf5678,0x2960,0x4e81,0x84,0x29,0x99,0xd4,0xb2,0x63,0x0c,0x4e);" )
+cpp_quote( "DEFINE_GUID(IID_D3D9On12CreatorID,0xfffcbb7f,0x15d3,0x42a2,0x84,0x1e,0x9d,0x8d,0x32,0xf3,0x7d,0xdd);" )
+cpp_quote( "DEFINE_GUID(IID_OpenGLOn12CreatorID,0x6bb3cd34,0x0d19,0x45ab,0x97,0xed,0xd7,0x20,0xba,0x3d,0xfc,0x80);" )
+cpp_quote( "DEFINE_GUID(IID_OpenCLOn12CreatorID,0x3f76bb74,0x91b5,0x4a88,0xb1,0x26,0x20,0xca,0x03,0x31,0xcd,0x60);" )
+cpp_quote( "DEFINE_GUID(IID_DirectMLTensorFlowCreatorID,0xcb7490ac,0x8a0f,0x44ec,0x9b,0x7b,0x6f,0x4c,0xaf,0xe8,0xe9,0xab);" )

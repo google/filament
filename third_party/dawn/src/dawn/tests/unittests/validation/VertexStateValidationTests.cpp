@@ -28,9 +28,9 @@
 #include <limits>
 #include <string>
 
-#include "dawn/tests/unittests/validation/ValidationTest.h"
-#include "dawn/utils/ComboRenderPipelineDescriptor.h"
-#include "dawn/utils/WGPUHelpers.h"
+#include "src/dawn/tests/unittests/validation/ValidationTest.h"
+#include "src/dawn/utils/ComboRenderPipelineDescriptor.h"
+#include "src/dawn/utils/WGPUHelpers.h"
 
 namespace dawn {
 namespace {
@@ -361,6 +361,12 @@ TEST_F(VertexStateTest, SetOffsetNotAligned) {
     state.cAttributes[0].format = wgpu::VertexFormat::Sint32x4;
     state.cAttributes[0].offset = 4;
     CreatePipeline(true, state, kPlaceholderVertexShader);
+
+    state.cAttributes[0].format = wgpu::VertexFormat::Snorm10_10_10_2;
+    state.cAttributes[0].offset = 4;
+    CreatePipeline(true, state, kPlaceholderVertexShader);
+    state.cAttributes[0].offset = 2;
+    CreatePipeline(false, state, kPlaceholderVertexShader);
 }
 
 // Check attribute offset overflow
@@ -423,6 +429,11 @@ TEST_F(VertexStateTest, BaseTypeMatching) {
     DoTest(wgpu::VertexFormat::Snorm16x4, "f32", true);
     DoTest(wgpu::VertexFormat::Snorm16x4, "i32", false);
     DoTest(wgpu::VertexFormat::Snorm16x4, "u32", false);
+
+    // Test that snorm10-10-10-2 format is compatible only with f32.
+    DoTest(wgpu::VertexFormat::Snorm10_10_10_2, "f32", true);
+    DoTest(wgpu::VertexFormat::Snorm10_10_10_2, "i32", false);
+    DoTest(wgpu::VertexFormat::Snorm10_10_10_2, "u32", false);
 
     // Test that an uint format is compatible only with u32.
     DoTest(wgpu::VertexFormat::Uint32x3, "f32", false);

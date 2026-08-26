@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/samples/SampleUtils.h"
+#include "src/dawn/samples/SampleUtils.h"
 
 #include <algorithm>
 #include <cstring>
@@ -36,32 +36,35 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Log.h"
-#include "dawn/common/Platform.h"
-#include "dawn/common/SystemUtils.h"
-#include "dawn/utils/CommandLineParser.h"
-#include "dawn/utils/SystemUtils.h"
-#include "dawn/utils/WGPUHelpers.h"
 #include "dawn/webgpu_cpp_print.h"
+#include "src/dawn/common/SystemUtils.h"
+#include "src/dawn/utils/CommandLineParser.h"
+#include "src/dawn/utils/SystemUtils.h"
+#include "src/dawn/utils/WGPUHelpers.h"
+#include "src/utils/assert.h"
+#include "src/utils/log.h"
+#include "src/utils/platform.h"
 
-#ifndef __EMSCRIPTEN__
-#include "GLFW/glfw3.h"
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 #include "dawn/dawn_proc.h"  // nogncheck
 #include "dawn/native/DawnNative.h"
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
+
+#if defined(DAWN_SUPPORTS_GLFW_FOR_WINDOWING)
+#include "GLFW/glfw3.h"
 #include "webgpu/webgpu_glfw.h"
-#else
+#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
 #include <emscripten/emscripten.h>
-#endif  // __EMSCRIPTEN__
+#endif
 
 // Parsed options.
 static wgpu::BackendType backendType = wgpu::BackendType::Undefined;
 static wgpu::AdapterType adapterType = wgpu::AdapterType::Unknown;
 static std::vector<std::string> enableToggles;
 static std::vector<std::string> disableToggles;
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
 static dawn::native::BackendValidationLevel backendValidationLevel;
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
 // Small helper to insert an extension struct into the extension chain.
 template <typename T>
@@ -99,7 +102,7 @@ bool InitSample(int argc, const char** argv) {
                                    "adapter-type", "The type of adapter to request")
                                .ShortName('a')
                                .Default(wgpu::AdapterType::Unknown);
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     auto& backendValidationLevelOpt =
         opts.AddEnum<dawn::native::BackendValidationLevel>(
                 {
@@ -109,7 +112,7 @@ bool InitSample(int argc, const char** argv) {
                 },
                 "enable-backend-validation", "Backend validation layer level")
             .Default(dawn::native::BackendValidationLevel::Disabled);
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
     auto result = opts.Parse(argc, argv);
     if (!result.success) {
@@ -127,9 +130,9 @@ bool InitSample(int argc, const char** argv) {
     adapterType = adapterTypeOpt.GetValue();
     enableToggles = enableTogglesOpt.GetOwnedValue();
     disableToggles = disableTogglesOpt.GetOwnedValue();
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     backendValidationLevel = backendValidationLevelOpt.GetValue();
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
     return true;
 }
 
@@ -149,7 +152,7 @@ int SampleBase::Run(unsigned int delay) {
     // Early setup stuff
     //
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
     dawn::ScopedEnvironmentVar angleDefaultPlatform;
     if (dawn::GetEnvironmentVar("ANGLE_DEFAULT_PLATFORM").first.empty()) {
         angleDefaultPlatform.Set("ANGLE_DEFAULT_PLATFORM", "swiftshader");
@@ -171,7 +174,7 @@ int SampleBase::Run(unsigned int delay) {
     dawnTogglesDesc.enabledToggleCount = enableToggleNames.size();
     dawnTogglesDesc.disabledToggles = disabledToggleNames.data();
     dawnTogglesDesc.disabledToggleCount = disabledToggleNames.size();
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
     //
     // Create an instance
@@ -184,7 +187,7 @@ int SampleBase::Run(unsigned int delay) {
         instanceDescriptor.requiredFeatureCount = 1;
         instanceDescriptor.requiredFeatures = &kTimedWaitAny;
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
         // Add Dawn Toggles
         InsertExtensionStruct(&instanceDescriptor, &dawnTogglesDesc);
 
@@ -193,7 +196,7 @@ int SampleBase::Run(unsigned int delay) {
         InsertExtensionStruct(&instanceDescriptor, &dawnInstanceDesc);
         dawnInstanceDesc.backendValidationLevel = backendValidationLevel;
         // (Note Dawn has a default instance logging callback so we don't need to set one here.)
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
         sample->instance = wgpu::CreateInstance(&instanceDescriptor);
     }
@@ -226,10 +229,10 @@ int SampleBase::Run(unsigned int delay) {
                 break;
         }
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
         // Add Dawn Toggles
         InsertExtensionStruct(&adapterOptions, &dawnTogglesDesc);
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
         // Synchronously create the adapter
         sample->instance.WaitAny(
@@ -308,10 +311,10 @@ int SampleBase::Run(unsigned int delay) {
                 dawn::ErrorLog() << errorTypeName << " error: " << message;
             });
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
         // Add Dawn Toggles
         InsertExtensionStruct(&deviceDesc, &dawnTogglesDesc);
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
         // Synchronously create the device
         sample->instance.WaitAny(
@@ -324,11 +327,11 @@ int SampleBase::Run(unsigned int delay) {
                         return;
                     }
 
-#ifndef __EMSCRIPTEN__
+#if !DAWN_PLATFORM_IS(EMSCRIPTEN)
                     device.SetLoggingCallback([](wgpu::LoggingType type, wgpu::StringView message) {
                         std::cerr << "Device log (" << type << "): " << message << std::endl;
                     });
-#endif  // __EMSCRIPTEN__
+#endif  // !DAWN_PLATFORM_IS(EMSCRIPTEN)
 
                     sample->device = std::move(device);
                     sample->queue = sample->device.GetQueue();
@@ -343,7 +346,7 @@ int SampleBase::Run(unsigned int delay) {
     // Set up and run the sample
     //
 
-#ifndef __EMSCRIPTEN__
+#if defined(DAWN_SUPPORTS_GLFW_FOR_WINDOWING)
     if (!sample->Setup()) {
         dawn::ErrorLog() << "Failed to perform sample setup";
         return 1;
@@ -358,19 +361,19 @@ int SampleBase::Run(unsigned int delay) {
             dawn::utils::USleep(delay);
         }
     }
-#else
+#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
     if (sample->Setup()) {
         emscripten_set_main_loop([]() { sample->FrameImpl(); }, 0, false);
     } else {
         dawn::ErrorLog() << "Failed to setup sample";
     }
-#endif  // __EMSCRIPTEN__
+#endif
 
     return 0;
 }
 
 bool SampleBase::Setup() {
-#ifndef __EMSCRIPTEN__
+#if defined(DAWN_SUPPORTS_GLFW_FOR_WINDOWING)
     glfwSetErrorCallback([](int code, const char* message) {
         dawn::ErrorLog() << "GLFW error: " << code << " - " << message;
     });
@@ -381,14 +384,15 @@ bool SampleBase::Setup() {
 
     // Create the test window with no client API.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window = glfwCreateWindow(width, height, "Dawn window", nullptr, nullptr);
+    window = glfwCreateWindow(static_cast<int32_t>(width), static_cast<int32_t>(height),
+                              "Dawn window", nullptr, nullptr);
     if (!window) {
         return false;
     }
 
     // Create the surface.
     surface = wgpu::glfw::CreateSurfaceForWindow(instance, window);
-#else
+#elif DAWN_PLATFORM_IS(EMSCRIPTEN)
     // Create the surface.
     wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvasDesc{};
     canvasDesc.selector = "#canvas";

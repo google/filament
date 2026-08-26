@@ -1,0 +1,84 @@
+Name
+
+    EXT_shader_realtime_clock
+
+Name Strings
+
+    GL_EXT_shader_realtime_clock
+
+Contact
+
+    Ashley Smith, Collabora <ashley.smith@collabora.com>
+
+Contributors
+
+    Ashley Smith, Collabora
+
+    and contributors to the EXT_shader_clock spec,
+    which provided the basis for this spec.
+
+Notice
+
+    Copyright (c) 2025 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Draft
+
+Version
+
+    Version 0.1, 2025/10/20
+
+Number
+
+    OpenGL Extension #???
+    OpenGL ES Extension #???
+
+Dependencies
+
+    This extension is written against Revision 8 of the version 4.40 of the
+    OpenGL Shading Language Specification, dated June 16, 2014.
+
+    This extension requires the EXT_shader_realtime_clock GLSL extension.
+
+    This extension requires OpenGL 4.4 or OpenGL ES 3.1.
+
+Overview
+
+    This extension enables EXT_shader_realtime_clock. For the complete
+    overview of this extension, refer to the "Overview" section of
+    the EXT_shader_realtime_clock GLSL document.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    None.
+
+IP Status
+
+    None.
+
+Modifications to the OpenGL Shading Language Specification, Version 4.60
+
+    See the separate EXT_shader_realtime_clock GLSL document.
+    https://github.com/KhronosGroup/GLSL/blob/main/extensions/ext/GL_EXT_shader_realtime_clock.txt
+
+Additions to Chapter 8 of the OpenGL Shading Language Specification
+(Built-in Functions)
+
+    See the separate EXT_shader_realtime_clock GLSL document.
+    https://github.com/KhronosGroup/GLSL/blob/main/extensions/ext/GL_EXT_shader_realtime_clock.txt
+
+Issues
+
+    Also, please refer to issues in the GLSL extension specification.
+
+Revision History
+
+    Rev  Date        Author           Changes
+    ---  ----------  --------------   ------------------------------------------
+      1  2025/10/20  ashleysmithcol   Initial revision based on EXT_shader_clock

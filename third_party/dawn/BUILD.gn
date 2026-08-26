@@ -57,6 +57,9 @@ if (dawn_standalone) {
     ]
     if (dawn_build_node_bindings) {
       assert(
+          dawn_node,
+          "dawn_build_node_bindings requires dawn_node to be set in .gclient")
+      assert(
           !defined(use_libfuzzer) || !use_libfuzzer,
           "Building dawn node bindings with use_libfuzzer currently not supported")
       deps += [ "src/dawn/node:dawn_node" ]
@@ -69,7 +72,7 @@ if (dawn_standalone) {
       "src/dawn/tests",
       "src/tint:tests",
     ]
-    if (dawn_wasm) {
+    if (dawn_build_emdawnwebgpu) {
       deps += [ ":emdawnwebgpu_tests" ]
     }
     if (dawn_build_node_bindings) {
@@ -87,7 +90,7 @@ if (dawn_standalone) {
 
   group("samples") {
     deps = [ "src/dawn/samples" ]
-    if (dawn_wasm) {
+    if (dawn_build_emdawnwebgpu) {
       deps += [ ":emdawnwebgpu_samples" ]
     }
     if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
@@ -100,8 +103,15 @@ if (dawn_standalone) {
     deps = [ "tools/android" ]
   }
 
-  if (dawn_wasm) {
+  group("litert_lm") {
+    testonly = true
+    deps = [ "third_party/litert-lm:litert_lm_advanced_main" ]
+  }
+
+  if (dawn_build_emdawnwebgpu) {
     # These targets are only valid when the Wasm toolchain is available.
+    assert(dawn_wasm,
+           "dawn_build_emdawnwebgpu requires dawn_wasm to be set in .gclient")
 
     group("emdawnwebgpu") {
       deps = [ "src/emdawnwebgpu(//build/toolchain/wasm:wasm)" ]
@@ -120,7 +130,7 @@ if (dawn_standalone) {
   group("emdawnwebgpu_all") {
     testonly = true
     deps = []
-    if (dawn_wasm) {
+    if (dawn_build_emdawnwebgpu) {
       deps += [
         ":emdawnwebgpu",
         ":emdawnwebgpu_samples",
@@ -143,32 +153,12 @@ if (dawn_standalone) {
     ]
   }
 
-  # This target is built when no specific target is specified on the command line.
+  # This target is built when no specific target is specified on the command
+  # line.
   group("default") {
     testonly = true
     deps = [ ":all" ]
   }
-}
-
-config("abseil_config") {
-  if (is_clang) {
-    cflags = [
-      # Allow the use of enable_if()
-      "-Wno-gcc-compat",
-      "-Wno-unreachable-code-break",
-
-      # Allows use of _Nullable, _Nonnull & _Null_unspecified
-      "-Wno-nullability-extension",
-
-      # vlog has some shadowing, which Windows Clang doesn't like
-      "-Wno-shadow",
-    ]
-  }
-}
-
-group("abseil") {
-  public_deps = [ "${dawn_abseil_dir}:absl" ]
-  public_configs = [ ":abseil_config" ]
 }
 
 # GN evaluates each .gn file once per toolchain, so restricting to default

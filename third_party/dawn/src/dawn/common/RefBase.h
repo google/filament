@@ -32,8 +32,8 @@
 #include <cstddef>
 #include <utility>
 
-#include "dawn/common/Assert.h"
-#include "dawn/common/Compiler.h"
+#include "src/dawn/common/Compiler.h"
+#include "src/utils/assert.h"
 
 namespace dawn {
 
@@ -52,13 +52,15 @@ template <typename T, typename Traits>
 class RefBase {
   public:
     // Default constructor and destructor.
-    RefBase() : mValue(Traits::kNullValue) {}
+    RefBase() : mValue(Traits::kNullValue) {
+        static_assert(sizeof(RefBase<T, Traits>) == sizeof(T));
+        static_assert(alignof(RefBase<T, Traits>) == alignof(T));
+    }
 
     ~RefBase() { Release(mValue); }
 
     // Constructors from nullptr.
-    // NOLINTNEXTLINE(runtime/explicit)
-    constexpr RefBase(std::nullptr_t) : RefBase() {}
+    explicit(false) constexpr RefBase(std::nullptr_t) : RefBase() {}
 
     RefBase<T, Traits>& operator=(std::nullptr_t) {
         Set(Traits::kNullValue);
@@ -66,8 +68,7 @@ class RefBase {
     }
 
     // Constructors from a value T.
-    // NOLINTNEXTLINE(runtime/explicit)
-    RefBase(T value) : mValue(value) { AddRef(value); }
+    explicit(false) RefBase(T value) : mValue(value) { AddRef(value); }
 
     RefBase<T, Traits>& operator=(const T& value) {
         Set(value);
@@ -97,7 +98,7 @@ class RefBase {
     // operators defined with `other` == RefBase<T, Traits>.
     template <typename U, typename UTraits>
         requires std::convertible_to<U, T>
-    RefBase(const RefBase<U, UTraits>& other) : mValue(other.mValue) {
+    explicit(false) RefBase(const RefBase<U, UTraits>& other) : mValue(other.mValue) {
         AddRef(other.mValue);
     }
 
@@ -110,7 +111,7 @@ class RefBase {
 
     template <typename U, typename UTraits>
         requires std::convertible_to<U, T>
-    RefBase(RefBase<U, UTraits>&& other) {
+    explicit(false) RefBase(RefBase<U, UTraits>&& other) {
         mValue = other.Detach();
     }
 

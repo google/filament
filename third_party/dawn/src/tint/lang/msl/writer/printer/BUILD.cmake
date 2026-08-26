@@ -56,6 +56,7 @@ tint_target_add_dependencies(tint_lang_msl_writer_printer lib
   tint_lang_msl_intrinsic
   tint_lang_msl_ir
   tint_lang_msl_type
+  tint_lang_msl_writer_common
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -63,6 +64,7 @@ tint_target_add_dependencies(tint_lang_msl_writer_printer lib
   tint_utils_macros
   tint_utils_math
   tint_utils_memory
+  tint_utils_reflection
   tint_utils_rtti
   tint_utils_symbol
   tint_utils_text
@@ -72,11 +74,5 @@ tint_target_add_dependencies(tint_lang_msl_writer_printer lib
 tint_target_add_external_dependencies(tint_lang_msl_writer_printer lib
   "src_utils"
 )
-
-if(TINT_BUILD_MSL_WRITER)
-  tint_target_add_dependencies(tint_lang_msl_writer_printer lib
-    tint_lang_msl_writer_common
-  )
-endif(TINT_BUILD_MSL_WRITER)
 
 endif(TINT_BUILD_MSL_WRITER)

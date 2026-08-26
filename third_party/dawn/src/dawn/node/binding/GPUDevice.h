@@ -112,6 +112,9 @@ class GPUDevice final : public interop::GPUDevice, EventTarget {
     interop::Interface<interop::GPURenderBundleEncoder> createRenderBundleEncoder(
         Napi::Env,
         interop::GPURenderBundleEncoderDescriptor descriptor) override;
+    interop::Interface<interop::GPUResourceTable> createResourceTable(
+        Napi::Env,
+        interop::GPUResourceTableDescriptor descriptor) override;
     interop::Interface<interop::GPUQuerySet> createQuerySet(
         Napi::Env,
         interop::GPUQuerySetDescriptor descriptor) override;

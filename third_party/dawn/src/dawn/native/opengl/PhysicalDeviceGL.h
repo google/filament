@@ -30,10 +30,10 @@
 
 #include <memory>
 
-#include "dawn/native/Forward.h"
-#include "dawn/native/PhysicalDevice.h"
-#include "dawn/native/opengl/EGLFunctions.h"
-#include "dawn/native/opengl/OpenGLFunctions.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/PhysicalDevice.h"
+#include "src/dawn/native/opengl/EGLFunctions.h"
+#include "src/dawn/native/opengl/OpenGLFunctions.h"
 
 namespace dawn::native::opengl {
 

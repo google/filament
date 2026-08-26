@@ -31,11 +31,13 @@
 #include <utility>
 #include <vector>
 
-#include "dawn/native/CommandBufferStateTracker.h"
-#include "dawn/native/Error.h"
-#include "dawn/native/Forward.h"
-#include "dawn/native/PassResourceUsageTracker.h"
-#include "dawn/native/ProgrammableEncoder.h"
+#include "src/dawn/native/CommandBufferStateTracker.h"
+#include "src/dawn/native/Error.h"
+#include "src/dawn/native/Forward.h"
+#include "src/dawn/native/IntegerTypes.h"
+#include "src/dawn/native/PassResourceUsageTracker.h"
+#include "src/dawn/native/ProgrammableEncoder.h"
+#include "src/utils/span.h"
 
 namespace dawn::native {
 
@@ -68,10 +70,9 @@ class ComputePassEncoder final : public ProgrammableEncoder {
 
     void APISetBindGroup(uint32_t groupIndex,
                          BindGroupBase* group,
-                         uint32_t dynamicOffsetCount = 0,
-                         const uint32_t* dynamicOffsets = nullptr);
+                         ityp::span<BindingIndex, const uint32_t> dynamicOffsets = {});
 
-    void APISetImmediates(uint32_t offset, const void* data, size_t size);
+    void APISetImmediates(uint32_t offset, Span<const std::byte> data);
 
     void APIWriteTimestamp(QuerySetBase* querySet, uint32_t queryIndex);
 
