@@ -15,6 +15,12 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/resources.h"
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -22,24 +28,18 @@
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/SkinningBuffer.h>
 #include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
-#include <filament/SkinningBuffer.h>
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
 #include <utils/getopt.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <utils/Path.h>
 
 #include <cmath>
 #include <iostream>
-
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using utils::Entity;
@@ -47,7 +47,10 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
+namespace {
 struct App {
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     VertexBuffer *vb1, *vb2;
     IndexBuffer *ib1, *ib2;
     Material* mat;
@@ -63,13 +66,13 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
+const Vertex TRIANGLE_VERTICES[3] = {
     {{1, 0}, 0xffff0000u},
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[] = { 0, 1, 2, 3 };
+constexpr uint16_t TRIANGLE_INDICES[] = { 0, 1, 2, 3 };
 
 mat4f transforms[] = {math::mat4f(1.f),
                       mat4f::translation(float3(1, 0, 0)),
@@ -81,61 +84,13 @@ mat4f transforms[] = {math::mat4f(1.f),
                       mat4f::translation(float3(0, -1, 0)),
                       mat4f::translation(float3(1, -1, 0))};
 
-
 utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimitive(3);
+} // namespace
 
-static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
-    std::string usage(
-            "SAMPLE is a command-line tool for testing Filament skinning buffers.\n"
-            "Usage:\n"
-            "    SAMPLE [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
-    const std::string from("SAMPLE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help",         utils::getopt::no_argument,       nullptr, 'h' },
-            { "api",          utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg != nullptr ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config->backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-
-    return utils::getopt::optind;
-}
-
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "skinning buffer common for two renderables";
-
-    handleCommandLineArgments(argc, argv, &config);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
     size_t boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(9);
@@ -148,158 +103,177 @@ int main(int argc, char** argv) {
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
 
-    App app;
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
 
-        scene->setSkybox(app.skybox);
+        scene->setSkybox(app->skybox);
         view->setPostProcessingEnabled(false);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
-        app.vb1 = VertexBuffer::Builder()
-                .vertexCount(3)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
-                .advancedSkinning(true)
-                .build(*engine);
-        app.vb1->setBufferAt(*engine, 0,
+        app->vb1 = VertexBuffer::Builder()
+                           .vertexCount(3)
+                           .bufferCount(1)
+                           .attribute(VertexAttribute::POSITION, 0,
+                                   VertexBuffer::AttributeType::FLOAT2, 0, 12)
+                           .attribute(VertexAttribute::COLOR, 0,
+                                   VertexBuffer::AttributeType::UBYTE4, 8, 12)
+                           .normalized(VertexAttribute::COLOR)
+                           .advancedSkinning(true)
+                           .build(*engine);
+        app->vb1->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-        app.vb2 = VertexBuffer::Builder()
-                .vertexCount(3)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
-                .advancedSkinning(true)
-                .build(*engine);
-        app.vb2->setBufferAt(*engine, 0,
+        app->vb2 = VertexBuffer::Builder()
+                           .vertexCount(3)
+                           .bufferCount(1)
+                           .attribute(VertexAttribute::POSITION, 0,
+                                   VertexBuffer::AttributeType::FLOAT2, 0, 12)
+                           .attribute(VertexAttribute::COLOR, 0,
+                                   VertexBuffer::AttributeType::UBYTE4, 8, 12)
+                           .normalized(VertexAttribute::COLOR)
+                           .advancedSkinning(true)
+                           .build(*engine);
+        app->vb2->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
 
-        app.ib1 = IndexBuffer::Builder()
-                .indexCount(3)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib2 = IndexBuffer::Builder()
-                .indexCount(3)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib1->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.ib2->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.mat = Material::Builder()
-                .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
-                .build(*engine);
+        app->ib1 = IndexBuffer::Builder()
+                           .indexCount(3)
+                           .bufferType(IndexBuffer::IndexType::USHORT)
+                           .build(*engine);
+        app->ib2 = IndexBuffer::Builder()
+                           .indexCount(3)
+                           .bufferType(IndexBuffer::IndexType::USHORT)
+                           .build(*engine);
+        app->ib1->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+        app->ib2->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+        app->mat = Material::Builder()
+                           .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+                           .build(*engine);
 
-        app.sb = SkinningBuffer::Builder()
-            .boneCount(256)
-            .initialize()
-            .build(*engine);
-        app.sb->setBones(*engine, transforms,9,0);
+        app->sb = SkinningBuffer::Builder().boneCount(256).initialize().build(*engine);
+        app->sb->setBones(*engine, transforms, 9, 0);
 
-        app.renderable1 = EntityManager::get().create();
-        app.renderable2 = EntityManager::get().create();
+        app->renderable1 = EntityManager::get().create();
+        app->renderable2 = EntityManager::get().create();
 
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb1, app.ib1, 0, 3)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb1, app->ib1, 0, 3)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
                 .enableSkinningBuffers(true)
-                .skinning(app.sb, 9, 0)
+                .skinning(app->sb, 9, 0)
                 // Set bone indices and weight for 3 vertices, 9 bones per vertx
                 .boneIndicesAndWeights(0, boneDataPerPrimitive)
-                .build(*engine, app.renderable1);
+                .build(*engine, app->renderable1);
 
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb2, app.ib2, 0, 3)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb2, app->ib2, 0, 3)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
                 .enableSkinningBuffers(true)
-                .skinning(app.sb, 9, 0)
+                .skinning(app->sb, 9, 0)
                 // Set bone indices and weight for 3 vertices, 9 bones per vertx
                 .boneIndicesAndWeights(0, boneDataPerPrimitive)
-                .build(*engine, app.renderable2);
+                .build(*engine, app->renderable2);
 
-        scene->addEntity(app.renderable1);
-        scene->addEntity(app.renderable2);
-        app.camera = utils::EntityManager::get().create();
-        app.cam = engine->createCamera(app.camera);
-        view->setCamera(app.cam);
+        scene->addEntity(app->renderable1);
+        scene->addEntity(app->renderable2);
+        app->camera = utils::EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
+        view->setCamera(app->cam);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.skybox);
-        engine->destroy(app.renderable1);
-        engine->destroy(app.renderable2);
-        engine->destroy(app.mat);
-        engine->destroy(app.vb1);
-        engine->destroy(app.ib1);
-        engine->destroy(app.vb2);
-        engine->destroy(app.ib2);
-        engine->destroy(app.sb);
-        engine->destroyCameraComponent(app.camera);
-        utils::EntityManager::get().destroy(app.camera);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->renderable1);
+        engine->destroy(app->renderable2);
+        engine->destroy(app->mat);
+        engine->destroy(app->vb1);
+        engine->destroy(app->ib1);
+        engine->destroy(app->vb2);
+        engine->destroy(app->ib2);
+        engine->destroy(app->sb);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        constexpr float ZOOM = 1.5f;
-        const uint32_t w = view->getViewport().width;
-        const uint32_t h = view->getViewport().height;
-        const float aspect = (float) w / h;
-        app.cam->setProjection(Camera::Projection::ORTHO,
-            -aspect * ZOOM, aspect * ZOOM,
-            -ZOOM, ZOOM, 0, 1);
-        auto& tcm = engine->getTransformManager();
 
-        // Transformation of both renderables
-        tcm.setTransform(tcm.getInstance(app.renderable1),
-                filament::math::mat4f::translation(filament::math::float3{ 0.5, 0, 0 }));
-        tcm.setTransform(tcm.getInstance(app.renderable2),
-                filament::math::mat4f::translation(filament::math::float3{ 0, 0.5, 0 }));
+    auto fApp =
+            samples::getBuilder(config, dm, loader)
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .animation([app](Engine* engine, View* view, double now) {
+                        constexpr float ZOOM = 1.5f;
+                        const uint32_t w = view->getViewport().width;
+                        const uint32_t h = view->getViewport().height;
+                        const float aspect = (float) w / h;
+                        app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                        auto& tcm = engine->getTransformManager();
 
-        auto& rm = engine->getRenderableManager();
+                        // Transformation of both renderables
+                        tcm.setTransform(tcm.getInstance(app->renderable1),
+                                filament::math::mat4f::translation(
+                                        filament::math::float3{ 0.5, 0, 0 }));
+                        tcm.setTransform(tcm.getInstance(app->renderable2),
+                                filament::math::mat4f::translation(
+                                        filament::math::float3{ 0, 0.5, 0 }));
 
-        // Bone skinning animation
-        float t = (float)(now - (int)now);
-        float s = sin(t * f::PI * 2.f);
-        float c = cos(t * f::PI * 2.f);
+                        auto& rm = engine->getRenderableManager();
 
-        mat4f translate[] = {mat4f::translation(float3(s, c, 0))};
+                        // Bone skinning animation
+                        float t = (float) (now - (int) now);
+                        float s = sin(t * f::PI * 2.f);
+                        float c = cos(t * f::PI * 2.f);
 
-        mat4f trans[9] = {};
-        for (size_t i = 0; i < 9; i++) {
-            trans[i] = filament::math::mat4f(1);
-        }
-        s *= 8;
-        mat4f transA[] = {
-            mat4f::translation(float3(s, 0, 0)),
-            mat4f::translation(float3(s, s, 0)),
-            mat4f::translation(float3(0, s, 0)),
-            mat4f::translation(float3(-s, s, 0)),
-            mat4f::translation(float3(-s, 0, 0)),
-            mat4f::translation(float3(-s, -s, 0)),
-            mat4f::translation(float3(0, -s, 0)),
-            mat4f::translation(float3(s, -s, 0)),
-            filament::math::mat4f(1)};
-        size_t offset = ((size_t)now) % 8;
-        trans[offset] = transA[offset];
+                        mat4f translate[] = { mat4f::translation(float3(s, c, 0)) };
 
-        // Set transformation of the first bone
-        app.sb->setBones(*engine, translate, 1, 0);
+                        mat4f trans[9] = {};
+                        for (size_t i = 0; i < 9; i++) {
+                            trans[i] = filament::math::mat4f(1);
+                        }
+                        s *= 8;
+                        mat4f transA[] = { mat4f::translation(float3(s, 0, 0)),
+                            mat4f::translation(float3(s, s, 0)),
+                            mat4f::translation(float3(0, s, 0)),
+                            mat4f::translation(float3(-s, s, 0)),
+                            mat4f::translation(float3(-s, 0, 0)),
+                            mat4f::translation(float3(-s, -s, 0)),
+                            mat4f::translation(float3(0, -s, 0)),
+                            mat4f::translation(float3(s, -s, 0)), filament::math::mat4f(1) };
+                        size_t offset = ((size_t) now) % 8;
+                        trans[offset] = transA[offset];
 
-        // Set transformation of the others bones
-        app.sb->setBones(*engine,trans, 8, 1);
+                        // Set transformation of the first bone
+                        app->sb->setBones(*engine, translate, 1, 0);
 
-    });
+                        // Set transformation of the others bones
+                        app->sb->setBones(*engine, trans, 8, 1);
+                    })
+                    .build();
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "skinning buffer common for two renderables";
+
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
 
     return 0;
 }
+#endif

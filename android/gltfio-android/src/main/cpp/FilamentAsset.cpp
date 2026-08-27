@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <jni.h>
-
 #include <gltfio/FilamentAsset.h>
+
+#include <jni.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -228,7 +228,10 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetResourceUris(JNIEnv* e
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     auto resourceUris = asset->getResourceUris();
     for (int i = 0; i < asset->getResourceUriCount(); ++i) {
-        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(resourceUris[i]));
+        jstring uri = env->NewStringUTF(resourceUris[i]);
+        if (uri == nullptr) return;
+        env->SetObjectArrayElement(result, (jsize) i, uri);
+        env->DeleteLocalRef(uri);
     }
 }
 
@@ -245,9 +248,11 @@ Java_com_google_android_filament_gltfio_FilamentAsset_nGetMorphTargetNames(JNIEn
         jlong nativeAsset, jint entityId, jobjectArray result) {
     FilamentAsset* asset = (FilamentAsset*) nativeAsset;
     Entity entity = Entity::import(entityId);
-    for (int i = 0, n = asset->getMorphTargetCountAt(entity); i < n; ++i) {
-        const char* name = asset->getMorphTargetNameAt(entity, i);
-        env->SetObjectArrayElement(result, (jsize) i, env->NewStringUTF(name));
+    for (size_t i = 0, n = asset->getMorphTargetCountAt(entity); i < n; ++i) {
+        jstring name = env->NewStringUTF(asset->getMorphTargetNameAt(entity, i));
+        if (name == nullptr) return;
+        env->SetObjectArrayElement(result, (jsize) i, name);
+        env->DeleteLocalRef(name);
     }
 }
 

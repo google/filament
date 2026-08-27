@@ -198,11 +198,21 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     float perceptualRoughness = material.roughness;
 #endif
 
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    float secondPerceptualRoughness = material.secondRoughness;
+#endif
+
+#if defined(MATERIAL_HAS_REFRACTION)
     // This is used by the refraction code and must be saved before we apply specular AA
     pixel.perceptualRoughnessUnclamped = perceptualRoughness;
+#endif
 
 #if defined(GEOMETRIC_SPECULAR_AA)
     perceptualRoughness = normalFiltering(perceptualRoughness, getWorldGeometricNormalVector());
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    secondPerceptualRoughness =
+            normalFiltering(secondPerceptualRoughness, getWorldGeometricNormalVector());
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
@@ -211,12 +221,24 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     // top layer
     float basePerceptualRoughness = max(perceptualRoughness, pixel.clearCoatPerceptualRoughness);
     perceptualRoughness = mix(perceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    basePerceptualRoughness = max(secondPerceptualRoughness, pixel.clearCoatPerceptualRoughness);
+    secondPerceptualRoughness =
+            mix(secondPerceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
+#endif
 #endif
 
     // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
     pixel.perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
     pixel.roughness = perceptualRoughnessToRoughness(pixel.perceptualRoughness);
+
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    pixel.secondPerceptualRoughness =
+            clamp(secondPerceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
+    pixel.secondRoughness = perceptualRoughnessToRoughness(pixel.secondPerceptualRoughness);
+    pixel.secondRoughnessWeight = material.secondRoughnessWeight;
+#endif
 }
 
 void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams pixel) {
@@ -244,6 +266,11 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     pixel.sheenDFG = prefilteredDFG(pixel.sheenPerceptualRoughness, shading_NoV).z;
     pixel.sheenScaling = 1.0 - max3(pixel.sheenColor) * pixel.sheenDFG;
 #endif
+#endif
+
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+    pixel.secondDfg = prefilteredDFG(pixel.secondPerceptualRoughness, shading_NoV).xy;
+    pixel.secondEnergyCompensation = 1.0 + pixel.f0 * (1.0 / pixel.secondDfg.y - 1.0);
 #endif
 }
 
@@ -292,6 +319,7 @@ vec4 evaluateLights(const MaterialInputs material) {
 #if defined(MATERIAL_HAS_LIGHTING)
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
     evaluateDirectionalLight(material, pixel, color);
+    evaluateExtraDirectionalLights(material, pixel, color);
 #endif
 
     if (RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING) {

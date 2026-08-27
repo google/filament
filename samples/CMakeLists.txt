@@ -225,11 +225,14 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 add_library(samples-common STATIC
     common/arguments.cpp
+    common/arguments.h
+    common/Parameter.h
+    common/SampleConfig.h
 )
 
 target_include_directories(samples-common PRIVATE
 )
-target_link_libraries(samples-common filament)
+target_link_libraries(samples-common filament filamentapp)
 
 set_target_properties(samples-common PROPERTIES FOLDER Samples/Common)
 
@@ -251,7 +254,7 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp samples-common)
+    target_link_libraries(${NAME} PRIVATE sample-resources samples-common)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 
@@ -304,13 +307,13 @@ if (NOT ANDROID)
     add_demo(viewtest)
 
     # Sample app specific
-    target_link_libraries(frame_generator PRIVATE imageio)
+
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
-    target_link_libraries(image_viewer PRIVATE viewer imageio)
-    target_link_libraries(materialinstancestress PRIVATE geometry filameshio suzanne-resources)
+    target_link_libraries(image_viewer PRIVATE viewer)
+    target_link_libraries(materialinstancestress PRIVATE filameshio suzanne-resources)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)

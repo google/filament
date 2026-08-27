@@ -89,6 +89,10 @@ UibGenerator::Binding UibGenerator::getBinding(UibGenerator::Ubo ubo) noexcept {
 static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
         "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");
 
+static_assert(CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS == 4,
+        "Changing CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS affects PerView size and breaks materials. "
+        "It must also be kept in sync with surface_light_directional.fs.");
+
 BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     using Type = BufferInterfaceBlock::Type;
 
@@ -104,6 +108,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
                                            Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "worldRayFromClipMatrix", 0, Type::MAT3,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipTransform",          0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
@@ -136,7 +141,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "aoBentNormals",          0, Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
-            // Dynamic Lighting [variant: DYN]
+            // Dynamic Lighting (controlled via dynamic specialization constants)
             // ------------------------------------------------------------------------------------
             { "zParams",                0, Type::FLOAT4                  },
             { "fParams",                0, Type::UINT3                   },
@@ -202,7 +207,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
+            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
             // ------------------------------------------------------------------------------------
             { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH },
             { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH },
@@ -223,6 +228,18 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "es2Reserved0",            0, Type::FLOAT                  },
             { "es2Reserved1",            0, Type::FLOAT                  },
             { "es2Reserved2",            0, Type::FLOAT                  },
+
+            // ------------------------------------------------------------------------------------
+            // Extra directional lights [variant: DIR]
+            // ------------------------------------------------------------------------------------
+            { "extraLightDirection",      CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS,
+                                             Type::FLOAT4, Precision::HIGH },
+            { "extraLightColorIntensity", CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS,
+                                             Type::FLOAT4, Precision::DEFAULT },
+            { "extraLightCount",          0, Type::INT                     },
+            { "extraDirReserved0",        0, Type::INT                     },
+            { "extraDirReserved1",        0, Type::INT                     },
+            { "extraDirReserved2",        0, Type::INT                     },
 
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }

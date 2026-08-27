@@ -274,7 +274,8 @@ public class Engine {
                     config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
                     config.gpuContextPriority.ordinal(),
-                    config.sharedUboInitialSizeInBytes);
+                    config.sharedUboInitialSizeInBytes,
+                    config.enableMultipleDirectionalLights);
             return this;
         }
 
@@ -370,6 +371,11 @@ public class Engine {
         private static final long FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB = 1;
         private static final long FILAMENT_COMMAND_BUFFER_SIZE_IN_MB =
                 FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3;
+
+        /**
+         * Special value for jobSystemThreadCount, forcing the JobSystem to be single-threaded.
+         */
+        public static final long SINGLE_THREADED = 0xFFFFFFFFL;
 
         /**
          * Size in MiB of the low-level command buffer arena.
@@ -484,6 +490,17 @@ public class Engine {
          * @see Engine#getMaxStereoscopicEyes
          */
         public long stereoscopicEyeCount = 2;
+
+        /**
+         * Whether a scene can contain more than one directional light.
+         *
+         * By default, only the dominant directional light (the one with the highest intensity)
+         * of a scene is evaluated. When this is enabled, up to four additional directional
+         * lights contribute lighting; they don't cast shadows and don't draw a sun's disk.
+         *
+         * @see LightManager
+         */
+        public boolean enableMultipleDirectionalLights = false;
 
         /**
          * @Deprecated This value is no longer used.
@@ -1623,7 +1640,8 @@ public class Engine {
             int preferredShaderLanguage,
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
             int gpuContextPriority,
-            long sharedUboInitialSizeInBytes);
+            long sharedUboInitialSizeInBytes,
+            boolean enableMultipleDirectionalLights);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);

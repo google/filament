@@ -3,6 +3,7 @@ material {
     shadingModel : lit,
     refractionType : thin,
     refractionMode : cubemap,
+    apiLevel : 2,
     parameters : [
         {
             type : float,
@@ -19,6 +20,14 @@ material {
         {
             type : float,
             name : metallic
+        },
+        {
+            type : float,
+            name : secondRoughness
+        },
+        {
+            type : float,
+            name : secondRoughnessWeight
         },
         {
             type : float3,
@@ -71,6 +80,8 @@ fragment {
         material.baseColor.a = materialParams.alpha;
         material.roughness = materialParams.roughness;
         material.metallic = materialParams.metallic;
+        material.secondRoughness = materialParams.secondRoughness;
+        material.secondRoughnessWeight = materialParams.secondRoughnessWeight;
         material.sheenColor = materialParams.sheenColor;
         material.sheenRoughness = materialParams.sheenRoughness;
         material.clearCoat = materialParams.clearCoat;

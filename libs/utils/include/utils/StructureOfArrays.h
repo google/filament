@@ -275,7 +275,7 @@ public:
 
     ~StructureOfArraysBase() {
         destroy_each(0, mSize);
-        mAllocator.free(std::get<0>(mArrays));
+        mAllocator.free(std::get<0>(mArrays), getNeededSize(mCapacity));
     }
 
     // --------------------------------------------------------------------------------------------
@@ -309,7 +309,7 @@ public:
             move_each(buffer, capacity);
 
             // free the old buffer
-            mAllocator.free(oldBuffer);
+            mAllocator.free(oldBuffer, getNeededSize(mCapacity));
 
             // and make sure to update the capacity
             mCapacity = capacity;

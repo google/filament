@@ -63,7 +63,6 @@ public:
     static Driver* create(VulkanPlatform* platform, VulkanContext& context,
             Platform::DriverConfig const& driverConfig);
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // Encapsulates the VK_EXT_debug_utils extension.  In particular, we use
     // vkSetDebugUtilsObjectNameEXT and vkCreateDebugUtilsMessengerEXT
     class DebugUtils {
@@ -85,7 +84,6 @@ public:
 
         friend class VulkanDriver;
     };
-#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 private:
     template<typename D>
@@ -161,8 +159,13 @@ private:
     // binding (for external samplers) and commits descriptor sets.
     void prepareDraw();
 
-    // Flush the current command buffer and reset the pipeline state.
+    // Flushes the current command buffer and resets the states whose scope is at the command
+    // buffer level.
     void endCommandRecording();
+
+    // Invalidates all the states whose scope is at the command buffer level
+    // (pipeline, descriptor sets, etc..).
+    void invalidateBoundState();
 
     // Returns whether the acquire was successful
     bool acquireNextSwapchainImage();

@@ -103,16 +103,16 @@ buildscript {
     }
 
     ext.versions = [
-        'jdk': 17,
+        'jdk': 21,
         'minSdk': 21,
-        'targetSdk': 34,
-        'compileSdk': 34,
-        'kotlin': '2.0.21',
-        'kotlin_coroutines': '1.9.0',
-        'buildTools': '35.0.0',
+        'targetSdk': 37,
+        'compileSdk': 37,
+        'kotlin': '2.4.0',
+        'kotlin_coroutines': '1.11.0',
+        'buildTools': '36.0.0',
         'ndk': '29.0.14206865',
-        'androidx_core': '1.13.1',
-        'androidx_annotations': '1.9.0'
+        'androidx_core': '1.19.0',
+        'androidx_annotations': '1.10.0'
     ]
 
     ext.deps = [
@@ -128,7 +128,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.1'
+        classpath 'com.android.tools.build:gradle:9.3.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
@@ -179,7 +179,7 @@ buildscript {
 }
 
 plugins {
-    id "io.github.gradle-nexus.publish-plugin" version "1.3.0"
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
 }
 
 // See https://github.com/gradle-nexus/publish-plugin
@@ -226,6 +226,10 @@ subprojects {
                 ndk {
                     //noinspection ChromeOsAbiSupport
                     abiFilters(*rootProject.ext.abis)
+                }
+
+                buildFeatures {
+                    buildConfig true
                 }
 
                 consumerProguardFiles '../proguard-rules.pro'

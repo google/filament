@@ -15,6 +15,15 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -31,22 +40,15 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
 #include <utils/getopt.h>
 
 #include <iostream>
 
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
-
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
+
+namespace {
 
 struct Vertex {
     float3 position;
@@ -54,6 +56,7 @@ struct Vertex {
 };
 
 struct App {
+    FilamentApp2* filamentApp = nullptr;
     utils::Entity lightEntity;
     Material* meshMaterial;
     MaterialInstance* meshMatInstance;
@@ -74,7 +77,7 @@ struct App {
     };
 
     ReflectionMode mode = ReflectionMode::CAMERA;
-    Config config;
+    SampleConfig config;
 
     utils::Entity quadEntity;
     VertexBuffer* quadVb = nullptr;
@@ -86,7 +89,7 @@ struct App {
     float3 quadNormal;
 };
 
-static mat4f reflectionMatrix(float4 plane) {
+mat4f reflectionMatrix(float4 plane) {
     mat4f m;
     m[0][0] = -2 * plane.x * plane.x + 1;
     m[0][1] = -2 * plane.x * plane.y;
@@ -107,7 +110,7 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-static void setReflectionMode(App& app, App::ReflectionMode mode) {
+void setReflectionMode(App& app, App::ReflectionMode mode) {
     switch (mode) {
     case App::ReflectionMode::RENDERABLES:
         app.offscreenScene->addEntity(app.reflectedMonkey);
@@ -123,103 +126,58 @@ static void setReflectionMode(App& app, App::ReflectionMode mode) {
     app.mode = mode;
 }
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-        "SHOWCASE renders suzanne with planar reflection\n"
-        "Usage:\n"
-        "    SHOWCASE [options]\n"
-        "Options:\n"
-        "   --help, -h\n"
-        "       Prints this message\n\n"
-        "API_USAGE"
-        "   --mode, -m\n"
-        "       Specify the reflection mode: camera (default), or renderables\n\n"
-    );
-    const std::string from("SHOWCASE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
+} // namespace
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:m:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help", utils::getopt::no_argument,       nullptr, 'h' },
-        { "api",  utils::getopt::required_argument, nullptr, 'a' },
-        { "mode", utils::getopt::required_argument, nullptr, 'm' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-            case 'm':
-                if (arg == "camera") {
-                    app->mode = App::ReflectionMode::CAMERA;
-                } else if (arg == "renderables") {
-                    app->mode = App::ReflectionMode::RENDERABLES;
-                } else {
-                    std::cerr << "Unrecognized mode. Must be 'camera'|'renderables'.\n";
-                    exit(1);
-                }
-                break;
-        }
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    if (config.getString("mode") == "renderables") {
+        app->mode = App::ReflectionMode::RENDERABLES;
     }
-    return utils::getopt::optind;
-}
 
-int main(int argc, char** argv) {
-    App app{};
-    app.config.title = "rendertarget";
-    handleCommandLineArguments(argc, argv, &app);
-
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
         auto vp = view->getViewport();
 
         // Instantiate offscreen render target.
-        app.offscreenView = engine->createView();
-        app.offscreenScene = engine->createScene();
-        app.offscreenView->setScene(app.offscreenScene);
-        app.offscreenView->setPostProcessingEnabled(false);
-        app.offscreenColorTexture = Texture::Builder()
-            .width(vp.width).height(vp.height).levels(1)
-            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-            .format(Texture::InternalFormat::RGBA8).build(*engine);
-        app.offscreenDepthTexture = Texture::Builder()
-            .width(vp.width).height(vp.height).levels(1)
-            .usage(Texture::Usage::DEPTH_ATTACHMENT)
-            .format(Texture::InternalFormat::DEPTH32F).build(*engine);
-        app.offscreenRenderTarget = RenderTarget::Builder()
-            .texture(RenderTarget::AttachmentPoint::COLOR, app.offscreenColorTexture)
-            .texture(RenderTarget::AttachmentPoint::DEPTH, app.offscreenDepthTexture)
-            .build(*engine);
-        app.offscreenView->setRenderTarget(app.offscreenRenderTarget);
-        app.offscreenView->setViewport({0, 0, vp.width, vp.height});
-        app.offscreenCamera = engine->createCamera(em.create());
-        app.offscreenView->setCamera(app.offscreenCamera);
-        FilamentApp::get().addOffscreenView(app.offscreenView);
+        app->offscreenView = engine->createView();
+        app->offscreenScene = engine->createScene();
+        app->offscreenView->setScene(app->offscreenScene);
+        app->offscreenView->setPostProcessingEnabled(false);
+        app->offscreenColorTexture =
+                Texture::Builder()
+                        .width(vp.width)
+                        .height(vp.height)
+                        .levels(1)
+                        .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
+                        .format(Texture::InternalFormat::RGBA8)
+                        .build(*engine);
+        app->offscreenDepthTexture = Texture::Builder()
+                                             .width(vp.width)
+                                             .height(vp.height)
+                                             .levels(1)
+                                             .usage(Texture::Usage::DEPTH_ATTACHMENT)
+                                             .format(Texture::InternalFormat::DEPTH32F)
+                                             .build(*engine);
+        app->offscreenRenderTarget =
+                RenderTarget::Builder()
+                        .texture(RenderTarget::AttachmentPoint::COLOR, app->offscreenColorTexture)
+                        .texture(RenderTarget::AttachmentPoint::DEPTH, app->offscreenDepthTexture)
+                        .build(*engine);
+        app->offscreenView->setRenderTarget(app->offscreenRenderTarget);
+        app->offscreenView->setViewport({ 0, 0, vp.width, vp.height });
+        app->offscreenCamera = engine->createCamera(em.create());
+        app->offscreenView->setCamera(app->offscreenCamera);
+        app->filamentApp->addOffscreenView(app->offscreenView);
 
         // Position and orient the mirror in an interesting way.
-        float3 c = app.quadCenter = {-2, 0, -5};
-        float3 n = app.quadNormal = normalize(float3 {1, 0, 2});
-        float3 u = normalize(cross(app.quadNormal, float3(0, 1, 0)));
+        float3 c = app->quadCenter = { -2, 0, -5 };
+        float3 n = app->quadNormal = normalize(float3{ 1, 0, 2 });
+        float3 u = normalize(cross(app->quadNormal, float3(0, 1, 0)));
         float3 v = cross(n, u);
         u = 1.5 * u;
         v = 1.5 * v;
@@ -231,145 +189,184 @@ int main(int argc, char** argv) {
 
         // Create quad vertex buffer.
         static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
-        app.quadVb = VertexBuffer::Builder()
-                .vertexCount(4)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, 20)
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 12, 20)
-                .build(*engine);
-        app.quadVb->setBufferAt(*engine, 0,
+        app->quadVb = VertexBuffer::Builder()
+                              .vertexCount(4)
+                              .bufferCount(1)
+                              .attribute(VertexAttribute::POSITION, 0,
+                                      VertexBuffer::AttributeType::FLOAT3, 0, 20)
+                              .attribute(VertexAttribute::UV0, 0,
+                                      VertexBuffer::AttributeType::FLOAT2, 12, 20)
+                              .build(*engine);
+        app->quadVb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(kQuadVertices, 80, nullptr));
 
         // Create quad index buffer.
         static constexpr uint16_t kQuadIndices[6] = { 0, 1, 2, 3, 2, 1 };
-        app.quadIb = IndexBuffer::Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.quadIb->setBuffer(*engine, IndexBuffer::BufferDescriptor(kQuadIndices, 12, nullptr));
+        app->quadIb = IndexBuffer::Builder()
+                              .indexCount(6)
+                              .bufferType(IndexBuffer::IndexType::USHORT)
+                              .build(*engine);
+        app->quadIb->setBuffer(*engine, IndexBuffer::BufferDescriptor(kQuadIndices, 12, nullptr));
 
         // Create quad material and renderable.
-        app.quadMaterial = Material::Builder()
-                .package(RESOURCES_MIRROR_DATA, RESOURCES_MIRROR_SIZE)
-                .build(*engine);
-        app.quadMatInstance = app.quadMaterial->createInstance();
+        app->quadMaterial = Material::Builder()
+                                    .package(RESOURCES_MIRROR_DATA, RESOURCES_MIRROR_SIZE)
+                                    .build(*engine);
+        app->quadMatInstance = app->quadMaterial->createInstance();
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
-        app.quadMatInstance->setParameter("albedo", app.offscreenColorTexture, sampler);
-        app.quadEntity = em.create();
+        app->quadMatInstance->setParameter("albedo", app->offscreenColorTexture, sampler);
+        app->quadEntity = em.create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.quadMatInstance)
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.quadVb, app.quadIb, 0, 6)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->quadMatInstance)
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->quadVb, app->quadIb,
+                        0, 6)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .build(*engine, app.quadEntity);
-        scene->addEntity(app.quadEntity);
+                .build(*engine, app->quadEntity);
+        scene->addEntity(app->quadEntity);
 
         // Instantiate mesh material.
-        app.meshMaterial = Material::Builder()
-            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE).build(*engine);
-        auto mi = app.meshMatInstance = app.meshMaterial->createInstance();
+        app->meshMaterial =
+                Material::Builder()
+                        .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                        .build(*engine);
+        auto mi = app->meshMatInstance = app->meshMaterial->createInstance();
         mi->setParameter("baseColor", RgbType::LINEAR, {0.8, 1.0, 1.0});
         mi->setParameter("metallic", 0.0f);
         mi->setParameter("roughness", 0.4f);
         mi->setParameter("reflectance", 0.5f);
 
         // Add monkey into the scene.
-        app.monkeyMesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
-        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
-        scene->addEntity(app.monkeyMesh.renderable);
+        app->monkeyMesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
+                MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
+        auto ti = tcm.getInstance(app->monkeyMesh.renderable);
+        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+        rcm.setCastShadows(rcm.getInstance(app->monkeyMesh.renderable), false);
+        scene->addEntity(app->monkeyMesh.renderable);
 
         // Create a reflected monkey, which is used only for App::ReflectionMode::RENDERABLES.
-        app.reflectedMonkey = em.create();
+        app->reflectedMonkey = em.create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
+                .boundingBox({ { -2, -2, -2 }, { 2, 2, 2 } })
                 .material(0, mi)
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.monkeyMesh.vertexBuffer, app.monkeyMesh.indexBuffer)
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                        app->monkeyMesh.vertexBuffer, app->monkeyMesh.indexBuffer)
                 .receiveShadows(true)
                 .castShadows(false)
-                .build(*engine, app.reflectedMonkey);
-        setReflectionMode(app, app.mode);
+                .build(*engine, app->reflectedMonkey);
+        setReflectionMode(*app, app->mode);
 
         // Add light source to both scenes.
         // NOTE: this is slightly wrong when the reflection mode is RENDERABLES.
-        app.lightEntity = em.create();
+        app->lightEntity = em.create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(110000)
                 .direction({ 0.7, -1, -0.8 })
                 .sunAngularRadius(1.9f)
                 .castShadows(false)
-                .build(*engine, app.lightEntity);
-        scene->addEntity(app.lightEntity);
-        app.offscreenScene->addEntity(app.lightEntity);
+                .build(*engine, app->lightEntity);
+        scene->addEntity(app->lightEntity);
+        app->offscreenScene->addEntity(app->lightEntity);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
         auto& em = utils::EntityManager::get();
-        auto camera = app.offscreenCamera->getEntity();
+        auto camera = app->offscreenCamera->getEntity();
         engine->destroyCameraComponent(camera);
         em.destroy(camera);
 
-        engine->destroy(app.reflectedMonkey);
-        engine->destroy(app.lightEntity);
-        engine->destroy(app.quadEntity);
-        engine->destroy(app.monkeyMesh.renderable);
-        engine->destroy(app.monkeyMesh.vertexBuffer);
-        engine->destroy(app.monkeyMesh.indexBuffer);
-        engine->destroy(app.meshMatInstance);
-        engine->destroy(app.meshMaterial);
-        engine->destroy(app.offscreenColorTexture);
-        engine->destroy(app.offscreenDepthTexture);
-        engine->destroy(app.offscreenRenderTarget);
-        engine->destroy(app.offscreenScene);
-        engine->destroy(app.offscreenView);
-        engine->destroy(app.quadVb);
-        engine->destroy(app.quadIb);
-        engine->destroy(app.quadMatInstance);
-        engine->destroy(app.quadMaterial);
+        engine->destroy(app->reflectedMonkey);
+        engine->destroy(app->lightEntity);
+        engine->destroy(app->quadEntity);
+        engine->destroy(app->monkeyMesh.renderable);
+        engine->destroy(app->monkeyMesh.vertexBuffer);
+        engine->destroy(app->monkeyMesh.indexBuffer);
+        engine->destroy(app->meshMatInstance);
+        engine->destroy(app->meshMaterial);
+        engine->destroy(app->offscreenColorTexture);
+        engine->destroy(app->offscreenDepthTexture);
+        engine->destroy(app->offscreenRenderTarget);
+        engine->destroy(app->offscreenScene);
+        engine->destroy(app->offscreenView);
+        engine->destroy(app->quadVb);
+        engine->destroy(app->quadIb);
+        engine->destroy(app->quadMatInstance);
+        engine->destroy(app->quadMaterial);
     };
 
-    auto preRender = [&app](Engine*, View*, Scene*, Renderer* renderer) {
+    auto preRender = [app](Engine*, View*, Scene*, Renderer* renderer) {
         renderer->setClearOptions({.clearColor = {0.1,0.2,0.4,1.0}, .clear = true});
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
-        auto& tcm = engine->getTransformManager();
 
-        // Animate the monkey by spinning and sliding back and forth along Z.
-        auto ti = tcm.getInstance(app.monkeyMesh.renderable);
-        mat4f xlate = mat4f::translation(float3(0, 0, 0.5 + sin(now)));
-        mat4f xform =  app.transform * xlate * mat4f::rotation(now, float3{ 0, 1, 0 });
-        tcm.setTransform(ti, xform);
+    auto fApp =
+            samples::getBuilder(config, dm, loader)
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .preRender(preRender)
+                    .animation([app](Engine* engine, View* view, double now) {
+                        auto& tcm = engine->getTransformManager();
 
-        // Generate a reflection matrix from the plane equation Ax + By + Cz + D = 0.
-        const float3 planeNormal = app.quadNormal;
-        const float4 planeEquation(planeNormal, -dot(planeNormal, app.quadCenter));
-        const mat4f reflection = reflectionMatrix(planeEquation);
+                        // Animate the monkey by spinning and sliding back and forth along Z.
+                        auto ti = tcm.getInstance(app->monkeyMesh.renderable);
+                        mat4f xlate = mat4f::translation(float3(0, 0, 0.5 + sin(now)));
+                        mat4f xform =
+                                app->transform * xlate * mat4f::rotation(now, float3{ 0, 1, 0 });
+                        tcm.setTransform(ti, xform);
 
-        // Apply the reflection matrix to either the renderable or the camera, depending on mode.
-        Camera const& camera = view->getCamera();
-        const auto model = camera.getModelMatrix();
-        const auto renderingProjection = camera.getProjectionMatrix();
-        const auto cullingProjection = camera.getCullingProjectionMatrix();
-        app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection,
-                camera.getNear(), camera.getCullingFar());
-        switch (app.mode) {
-            case App::ReflectionMode::RENDERABLES:
-                tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
-                app.offscreenCamera->setModelMatrix(model);
-                break;
-            case App::ReflectionMode::CAMERA:
-                app.offscreenCamera->setModelMatrix(reflection * model);
-                break;
-        }
-    });
+                        // Generate a reflection matrix from the plane equation Ax + By + Cz + D =
+                        // 0.
+                        const float3 planeNormal = app->quadNormal;
+                        const float4 planeEquation(planeNormal, -dot(planeNormal, app->quadCenter));
+                        const mat4f reflection = reflectionMatrix(planeEquation);
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
+                        // Apply the reflection matrix to either the renderable or the camera,
+                        // depending on mode.
+                        Camera const& camera = view->getCamera();
+                        const auto model = camera.getModelMatrix();
+                        const auto renderingProjection = camera.getProjectionMatrix();
+                        const auto cullingProjection = camera.getCullingProjectionMatrix();
+                        app->offscreenCamera->setCustomProjection(renderingProjection,
+                                cullingProjection, camera.getNear(), camera.getCullingFar());
+                        switch (app->mode) {
+                            case App::ReflectionMode::RENDERABLES:
+                                tcm.setTransform(tcm.getInstance(app->reflectedMonkey),
+                                        reflection * xform);
+                                app->offscreenCamera->setModelMatrix(model);
+                                break;
+                            case App::ReflectionMode::CAMERA:
+                                app->offscreenCamera->setModelMatrix(reflection * model);
+                                break;
+                        }
+                    })
+                    .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeEnum("mode", 'm', "Set reflection mode", "camera",
+                { "camera", "renderables" }),
+    };
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "rendertarget";
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
+    };
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
 
     return 0;
 }
+#endif

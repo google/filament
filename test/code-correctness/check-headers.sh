@@ -42,6 +42,44 @@ else
     FILES=("$@")
 fi
 
+if [ -n "$COMMIT_MESSAGE" ]; then
+    # Bypass logic based on the commit message.
+    # Look for "SKIP_HEADER_CHECK" on its own line to skip the check entirely.
+    # Look for "SKIP_HEADER_CHECK=file_name" on its own line to exclude specific files.
+    TAG="SKIP_HEADER_CHECK"
+    while IFS= read -r line; do
+        line="${line%$'\r'}"
+        line="${line%"${line##*[![:space:]]}"}"
+        if [ "$line" = "$TAG" ]; then
+            echo -e "\033[32m✔ Bypassing header organization check due to $TAG in commit message.\033[0m"
+            exit 0
+        fi
+    done <<< "$COMMIT_MESSAGE"
+
+    NEW_FILES=()
+    for file in "${FILES[@]}"; do
+        skip=0
+        while IFS= read -r line; do
+            line="${line%$'\r'}"
+            line="${line%"${line##*[![:space:]]}"}"
+            if [ "$line" = "$TAG=$file" ]; then
+                skip=1
+                break
+            fi
+        done <<< "$COMMIT_MESSAGE"
+        if [ "$skip" -eq 1 ]; then
+            echo -e "\033[33m⚠ Skipping header organization check for $file\033[0m"
+        else
+            NEW_FILES+=("$file")
+        fi
+    done
+    FILES=("${NEW_FILES[@]}")
+    if [ ${#FILES[@]} -eq 0 ]; then
+        echo -e "\033[32m✔ No files to check after bypass filters.\033[0m"
+        exit 0
+    fi
+fi
+
 FAILED=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REORG_SCRIPT="$SCRIPT_DIR/../../tools/reorganize-headers/run.py"
@@ -85,6 +123,7 @@ done
 
 if [ "$FAILED" -eq 1 ]; then
     echo -e "\n\033[31mPlease run tools/reorganize-headers/run.py on the above files to fix the issues.\033[0m"
+    echo -e "\033[33mTo bypass this check, add 'SKIP_HEADER_CHECK' or 'SKIP_HEADER_CHECK=<file_name>' to your commit message.\033[0m"
     exit 1
 else
     echo -e "\033[32m✔ All checked headers are correctly organized.\033[0m"

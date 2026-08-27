@@ -47,6 +47,7 @@ class ImportedRenderTarget;
 class ResourceEdgeBase : public DependencyGraph::Edge {
 public:
     using Edge::Edge;
+    ResourceEdgeBase* next = nullptr;
 };
 
 /*
@@ -91,7 +92,7 @@ public:
      * calculate its effective usage flags.
      */
     virtual void resolveUsage(DependencyGraph& graph,
-            ResourceEdgeBase const* const* edges, size_t count,
+            ResourceEdgeBase const* readerHead,
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
@@ -109,6 +110,8 @@ public:
 
     // this is to work around our lack of RTTI -- otherwise we could use dynamic_cast
     virtual ImportedRenderTarget* asImportedRenderTarget() noexcept { return nullptr; }
+
+    virtual size_t getSize() const = 0;
 
 protected:
     void addOutgoingEdge(ResourceNode* node, ResourceEdgeBase* edge) noexcept;
@@ -203,19 +206,21 @@ public:
         return true;
     }
 
+    size_t getSize() const override { return sizeof(Resource); }
+
 protected:
     /*
      * The virtual below must be in a header file as RESOURCE is only known at compile time
      */
 
     void resolveUsage(DependencyGraph& graph,
-            ResourceEdgeBase const* const* edges, size_t const count,
+            ResourceEdgeBase const* readerHead,
             ResourceEdgeBase const* writer) noexcept override {
-        for (size_t i = 0; i < count; i++) {
-            if (graph.isEdgeValid(edges[i])) {
+        for (ResourceEdgeBase const* edge = readerHead; edge; edge = edge->next) {
+            if (graph.isEdgeValid(edge)) {
                 // this Edge is guaranteed to be a ResourceEdge<RESOURCE> by construction
-                ResourceEdge const* const edge = static_cast<ResourceEdge const*>(edges[i]);
-                usage |= edge->usage;
+                ResourceEdge const* const resourceEdge = static_cast<ResourceEdge const*>(edge);
+                usage |= resourceEdge->usage;
             }
         }
 
@@ -278,6 +283,8 @@ public:
         this->usage = usage;
     }
 
+    size_t getSize() const override { return sizeof(ImportedResource); }
+
 protected:
     void devirtualize(ResourceCreationContext const&) noexcept override {
         // imported resources don't need to devirtualize
@@ -325,6 +332,8 @@ public:
             backend::Handle<backend::HwRenderTarget> target);
 
     ~ImportedRenderTarget() noexcept override;
+
+    size_t getSize() const override { return sizeof(ImportedRenderTarget); }
 
 protected:
     UTILS_NOINLINE

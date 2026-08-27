@@ -56,6 +56,8 @@ highp int getInstanceIndex() {
 
 #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
 /** @public-api */
+// NOTE: Under API level 2, these functions are available with highp precision in both
+// vertex and fragment shaders.
 highp mat4 getWorldFromModelMatrix() {
     return object_uniforms_worldFromModelMatrix;
 }
@@ -64,4 +66,11 @@ highp mat4 getWorldFromModelMatrix() {
 highp mat3 getWorldFromModelNormalMatrix() {
     return object_uniforms_worldFromModelNormalMatrix;
 }
+#elif defined(GL_FRAGMENT_SHADER)
+// NOTE: getWorldFromModelMatrix requires API level 2 in the fragment shader.
+// (It's available at API level 1 for vertex shader, see surface_getters.vs)
+// We define redirect macros here (only during fragment shader compilation) to trigger
+// a custom compiler error if a material compiled with API level 1 attempts to call them.
+#define getWorldFromModelMatrix ERROR_getWorldFromModelMatrix_api_level_2_END
+#define getWorldFromModelNormalMatrix ERROR_getWorldFromModelNormalMatrix_api_level_2_END
 #endif

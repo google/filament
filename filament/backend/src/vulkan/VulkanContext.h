@@ -156,9 +156,9 @@ public:
         return mDebugMarkersSupported;
     }
 
-    inline bool isDebugUtilsSupported() const noexcept {
-        return mDebugUtilsSupported;
-    }
+    inline bool isDebugUtilsEnabled() const noexcept { return mDebugUtilsEnabled; }
+
+    inline bool isDebugUtilsNamesEnabled() const noexcept { return mDebugUtilsNamesEnabled; }
 
     inline bool isDynamicRenderingSupported() const noexcept {
         return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
@@ -221,6 +221,10 @@ public:
 
     inline bool isDriverPropertiesSupported() const noexcept { return mDriverPropertiesSupported; }
 
+    inline bool isGoogleDisplayTimingEnabled() const noexcept {
+        return mGoogleDisplayTimingEnabled;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -251,7 +255,8 @@ private:
     // These are options that are either supported or not supported in the current
     // device and instance.
     bool mDebugMarkersSupported = false;
-    bool mDebugUtilsSupported = false;
+    bool mDebugUtilsEnabled = false;
+    bool mDebugUtilsNamesEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
@@ -259,6 +264,9 @@ private:
     bool mVertexInputDynamicStateSupported = false;
     bool mGlobalPrioritySupported = false;
     bool mDriverPropertiesSupported = false;
+
+    // VK_GOOGLE_display_timing device extension
+    bool mGoogleDisplayTimingEnabled = false;
 
     // These are options that can be enabled or disabled at an application level.
     bool mAsyncPipelineCachePrewarmingEnabled = false;

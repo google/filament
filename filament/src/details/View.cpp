@@ -261,6 +261,11 @@ void FView::terminate(FEngine& engine) {
 #endif
 }
 
+void FView::finish(LinearAllocatorArena& arena) {
+    arena.free(mDistancesBuffer.data(), mDistancesBuffer.sizeInBytes());
+    mDistancesBuffer.clear();
+}
+
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
     // catch the cases were user had an underflow and didn't catch it.
     assert(int32_t(viewport.width) > 0);
@@ -559,6 +564,15 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     FLightManager::Instance const directionalLight = engine.getLightManager().getInstance(entity);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
+
+    /*
+     * Extra directional lights (evaluated without shadows)
+     */
+
+    getColorPassDescriptorSet().prepareExtraDirectionalLights(engine, exposure,
+            mSceneCache->extraDirectionalLightCount,
+            mSceneCache->extraDirectionalLightDirections.data(),
+            mSceneCache->extraDirectionalLightInstances.data());
 }
 
 /*
@@ -700,7 +714,7 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
     return { *camera, mat4{ rotation } * mat4::translation(translation) };
 }
 
-void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootArenaScope,
+void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& arena,
         filament::Viewport const viewport, CameraInfo cameraInfo,
         float4 const& userTime, bool const needsAlphaChannel) noexcept {
 
@@ -737,7 +751,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(js, rootArenaScope,
+    scene->prepare(js, arena,
             cameraInfo.worldTransform,
             hasVSM() || hasPCSS(), *mSceneCache);
 
@@ -754,13 +768,13 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // allocate a scratch buffer for distances outside the job below, so we don't need
         // to use a locked allocator; the downside is that we need to account for the worst case.
         size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
-        float* const distances = rootArenaScope.allocate<float>(
-                (positionalLightCount + 3u) & ~3u, CACHELINE_SIZE);
+        size_t const positionalLightCountRoundedUp = (positionalLightCount + 3u) & ~3u;
+        float* const distances = arena.alloc<float>(positionalLightCountRoundedUp, CACHELINE_SIZE);
+        mDistancesBuffer = { distances, positionalLightCountRoundedUp };
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
-                 &lightData = mSceneCache->lightData]
-                        (JobSystem&, JobSystem::Job*) {
+                 &lightData = mSceneCache->lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
                             viewMatrix, cullingFrustum, lightData);
@@ -802,6 +816,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
         mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
 
+        // we also know if we have extra directional lights
+        mHasExtraDirectionalLights = mSceneCache->extraDirectionalLightCount > 0;
+
         // we also know if we have a directional light
         FLightManager::Instance const directionalLight =
                 engine.getLightManager().getInstance(lightData.elementAt<FScene::LIGHT_ENTITY>(0));
@@ -810,7 +827,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
             auto& froxelizer = mFroxelizer;
-            if (froxelizer.prepare(driver, rootArenaScope, viewport,
+            if (froxelizer.prepare(driver, arena, viewport,
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf,
                     cameraInfo.clipTransform)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
@@ -1318,9 +1335,9 @@ void FView::commitDescriptorSet(DriverApi& driver) const noexcept {
     getColorPassDescriptorSet().commit(driver);
 }
 
-void FView::commitFroxels(DriverApi& driverApi) const noexcept {
+void FView::commitFroxels(DriverApi& driverApi, LinearAllocatorArena& arena) const noexcept {
     if (mHasDynamicLighting) {
-        mFroxelizer.commit(driverApi);
+        mFroxelizer.commit(driverApi, arena);
     }
 }
 
@@ -1340,18 +1357,23 @@ void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
-    float3 const* worldAABBExtent = renderableData.data<FScene::WORLD_AABB_EXTENT>();
+    float const* cx = renderableData.data<FScene::WORLD_AABB_CENTER_X>();
+    float const* cy = renderableData.data<FScene::WORLD_AABB_CENTER_Y>();
+    float const* cz = renderableData.data<FScene::WORLD_AABB_CENTER_Z>();
+    float const* ex = renderableData.data<FScene::WORLD_AABB_EXTENT_X>();
+    float const* ey = renderableData.data<FScene::WORLD_AABB_EXTENT_Y>();
+    float const* ez = renderableData.data<FScene::WORLD_AABB_EXTENT_Z>();
     FScene::VisibleMaskType* visibleArray = renderableData.data<FScene::VISIBLE_MASK>();
 
     // culling job (this runs on multiple threads)
-    auto functor = [&frustum, worldAABBCenter, worldAABBExtent, visibleArray, bit]
+    auto functor = [&frustum, cx, cy, cz, ex, ey, ez, visibleArray, bit]
             (uint32_t const index, uint32_t const c) {
         Culler::intersects(
                 visibleArray + index,
                 frustum,
-                worldAABBCenter + index,
-                worldAABBExtent + index, c, bit);
+                cx + index, cy + index, cz + index,
+                ex + index, ey + index, ez + index,
+                c, bit);
     };
 
     // Note: we can't use jobs::parallel_for() here because Culler::intersects() must process
@@ -1369,12 +1391,15 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT);
 
-    auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
+    auto const* UTILS_RESTRICT cx              = lightData.data<FScene::POSITION_X>();
+    auto const* UTILS_RESTRICT cy              = lightData.data<FScene::POSITION_Y>();
+    auto const* UTILS_RESTRICT cz              = lightData.data<FScene::POSITION_Z>();
+    auto const* UTILS_RESTRICT r               = lightData.data<FScene::RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT entityArray   = lightData.data<FScene::LIGHT_ENTITY>();
+    auto const* UTILS_RESTRICT entityArray     = lightData.data<FScene::LIGHT_ENTITY>();
     auto      * UTILS_RESTRICT visibleArray    = lightData.data<FScene::VISIBILITY>();
 
-    Culler::intersects(visibleArray, frustum, sphereArray, lightData.size());
+    Culler::intersects(visibleArray, frustum, cx, cy, cz, r, lightData.size());
 
     const float4* const UTILS_RESTRICT planes = frustum.getNormalizedPlanes();
     // the directional light is considered visible
@@ -1393,7 +1418,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
             }
             // cull spotlights that cannot possibly intersect the view frustum
             if (lcm.isSpotLight(li)) {
-                const float3 position = sphereArray[i].xyz;
+                const float3 position = { cx[i], cy[i], cz[i] };
                 const float3 axis = directions[i];
                 const float cosSqr = lcm.getCosOuterSquared(li);
                 bool invisible = false;

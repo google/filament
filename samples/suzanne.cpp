@@ -15,6 +15,18 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <ktxreader/Ktx2Reader.h>
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
+#include <filamentapp/IBL.h>
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
@@ -27,32 +39,23 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Log.h>
-
-#include <filameshio/MeshReader.h>
-
-#include <ktxreader/Ktx2Reader.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-#include <filamentapp/IBL.h>
-
 #include <utils/getopt.h>
-
+#include <utils/Log.h>
 #include <utils/Path.h>
 
 #include <stb_image.h>
 
 #include <iostream>
 
-#include "generated/resources/resources.h"
-#include "generated/resources/monkey.h"
-
 using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
+namespace {
+
 struct App {
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     Material* material;
     MaterialInstance* materialInstance;
     filamesh::MeshReader::Mesh mesh;
@@ -64,55 +67,9 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-            "SHOWCASE renders a Suzanne model with compressed textures.\n"
-            "Usage:\n"
-            "    SHOWCASE [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
-    const std::string from("SHOWCASE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help",         utils::getopt::no_argument,       nullptr, 'h' },
-            { "api",          utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config->backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
+Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
     unsigned char* data = stbi_load_from_memory(normals, nbytes, &w, &h, &n, 3);
     Texture* normalMap = Texture::Builder()
@@ -130,15 +87,18 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
     return normalMap;
 }
 
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "suzanne";
-    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+} // namespace
 
-    handleCommandLineArguments(argc, argv, &config);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+    }
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    App app;
-    auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -155,59 +115,85 @@ int main(int argc, char** argv) {
         constexpr auto sRGB = Ktx2Reader::TransferFunction::sRGB;
         constexpr auto LINEAR = Ktx2Reader::TransferFunction::LINEAR;
 
-        app.albedo = reader.load(MONKEY_ALBEDO_DATA, MONKEY_ALBEDO_SIZE, sRGB);
-        app.ao = reader.load(MONKEY_AO_DATA, MONKEY_AO_SIZE, LINEAR);
-        app.metallic = reader.load(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE, LINEAR);
-        app.roughness = reader.load(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE, LINEAR);
+        app->albedo = reader.load(MONKEY_ALBEDO_DATA, MONKEY_ALBEDO_SIZE, sRGB);
+        app->ao = reader.load(MONKEY_AO_DATA, MONKEY_AO_SIZE, LINEAR);
+        app->metallic = reader.load(MONKEY_METALLIC_DATA, MONKEY_METALLIC_SIZE, LINEAR);
+        app->roughness = reader.load(MONKEY_ROUGHNESS_DATA, MONKEY_ROUGHNESS_SIZE, LINEAR);
 
 #if !defined(NDEBUG)
         using namespace utils;
-        slog.i << "Resolved format for albedo: " << app.albedo->getFormat() << io::endl;
-        slog.i << "Resolved format for ambient occlusion: " << app.ao->getFormat() << io::endl;
-        slog.i << "Resolved format for metallic: " << app.metallic->getFormat() << io::endl;
-        slog.i << "Resolved format for roughness: " << app.roughness->getFormat() << io::endl;
+        slog.i << "Resolved format for albedo: " << app->albedo->getFormat() << io::endl;
+        slog.i << "Resolved format for ambient occlusion: " << app->ao->getFormat() << io::endl;
+        slog.i << "Resolved format for metallic: " << app->metallic->getFormat() << io::endl;
+        slog.i << "Resolved format for roughness: " << app->roughness->getFormat() << io::endl;
 #endif
 
-        app.normal = loadNormalMap(engine, MONKEY_NORMAL_DATA, MONKEY_NORMAL_SIZE);
+        app->normal = loadNormalMap(engine, MONKEY_NORMAL_DATA, MONKEY_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);
 
         // Instantiate material.
-        app.material = Material::Builder()
-                .package(RESOURCES_TEXTUREDLIT_DATA, RESOURCES_TEXTUREDLIT_SIZE).build(*engine);
-        app.materialInstance = app.material->createInstance();
-        app.materialInstance->setParameter("albedo", app.albedo, sampler);
-        app.materialInstance->setParameter("ao", app.ao, sampler);
-        app.materialInstance->setParameter("metallic", app.metallic, sampler);
-        app.materialInstance->setParameter("normal", app.normal, sampler);
-        app.materialInstance->setParameter("roughness", app.roughness, sampler);
+        app->material = Material::Builder()
+                                .package(RESOURCES_TEXTUREDLIT_DATA, RESOURCES_TEXTUREDLIT_SIZE)
+                                .build(*engine);
+        app->materialInstance = app->material->createInstance();
+        app->materialInstance->setParameter("albedo", app->albedo, sampler);
+        app->materialInstance->setParameter("ao", app->ao, sampler);
+        app->materialInstance->setParameter("metallic", app->metallic, sampler);
+        app->materialInstance->setParameter("normal", app->normal, sampler);
+        app->materialInstance->setParameter("roughness", app->roughness, sampler);
 
-        auto ibl = FilamentApp::get().getIBL()->getIndirectLight();
+        auto ibl = app->filamentApp->getIBL()->getIndirectLight();
         ibl->setIntensity(100000);
         ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
         // Add geometry into the scene.
-        app.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr,
-                nullptr, app.materialInstance);
-        auto ti = tcm.getInstance(app.mesh.renderable);
-        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);
-        scene->addEntity(app.mesh.renderable);
-        tcm.setTransform(ti, app.transform);
+        app->mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
+                MONKEY_SUZANNE_SIZE, nullptr, nullptr, app->materialInstance);
+        auto ti = tcm.getInstance(app->mesh.renderable);
+        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+        rcm.setCastShadows(rcm.getInstance(app->mesh.renderable), false);
+        scene->addEntity(app->mesh.renderable);
+        tcm.setTransform(ti, app->transform);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.mesh.renderable);
-        engine->destroy(app.materialInstance);
-        engine->destroy(app.material);
-        engine->destroy(app.albedo);
-        engine->destroy(app.normal);
-        engine->destroy(app.roughness);
-        engine->destroy(app.metallic);
-        engine->destroy(app.ao);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->mesh.renderable);
+        engine->destroy(app->mesh.vertexBuffer);
+        engine->destroy(app->mesh.indexBuffer);
+        engine->destroy(app->materialInstance);
+        engine->destroy(app->material);
+        engine->destroy(app->albedo);
+        engine->destroy(app->normal);
+        engine->destroy(app->roughness);
+        engine->destroy(app->metallic);
+        engine->destroy(app->ao);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .build();
+
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "suzanne";
+    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
 
     return 0;
 }
+#endif

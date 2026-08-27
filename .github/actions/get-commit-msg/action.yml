@@ -16,11 +16,11 @@ runs:
       shell: bash
       env:
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
+        AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+        TSTAMP: ${{ github.event.head_commit.timestamp }}
+        HASH: ${{ github.event.head_commit.id }}
       run: |
-        AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
-        AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
-        TSTAMP="${{ github.event.head_commit.timestamp }}"
-        HASH="${{ github.event.head_commit.id }}"
         echo "commit $HASH" >> /tmp/commit_msg.txt
         echo "Author: ${AUTHOR_NAME}<${AUTHOR_EMAIL}>" >> /tmp/commit_msg.txt
         echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
@@ -31,12 +31,13 @@ runs:
     - name: Find commit message (PR)
       shell: bash
       if: github.event_name == 'pull_request'
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: |
-        PR_NUMBER="${{ github.event.pull_request.number }}"
         # Fetch the head of the PR explicitly to handle forks. Depth 50 ensures we can traverse past recent merge commits.
         git fetch --depth=50 origin "pull/$PR_NUMBER/head:pr-head"
 
-        BASE_REF="${{ github.event.pull_request.base.ref }}"
         git fetch origin "$BASE_REF"
 
         COMMIT_HASH=$(git log -1 --no-merges pr-head --format=%H)

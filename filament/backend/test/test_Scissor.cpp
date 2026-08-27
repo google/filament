@@ -126,7 +126,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.endRenderPass();
 
         EXPECT_IMAGE(rt,
-                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 3838877373u));
 
         api.commit(swapChain);
         api.endFrame(0);

@@ -175,6 +175,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${TARGET} PRIVATE -Wthread-safety)
 endif()
 
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    target_link_libraries(${TARGET} PUBLIC absl::log)
+endif()
+
 # ==================================================================================================
 # Installation
 # ==================================================================================================
@@ -225,6 +229,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_BinaryTreeArray.cpp
             test/test_Status.cpp
             test/test_Mutex.cpp
+            test/test_ThreadMap.cpp
     )
 
     if (WASM_PTHREADS)

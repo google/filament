@@ -19,6 +19,13 @@
 
 #include <utils/compiler.h>
 
+#if defined(__ANDROID__)
+#include <android/api-level.h>
+#ifndef FILAMENT_ANDROID_PLATFORM_API_LEVEL
+#define FILAMENT_ANDROID_PLATFORM_API_LEVEL __ANDROID_API__
+#endif
+#endif
+
 namespace utils {
 
 /**

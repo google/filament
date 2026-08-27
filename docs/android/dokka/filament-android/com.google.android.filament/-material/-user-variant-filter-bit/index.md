@@ -17,7 +17,7 @@ open class [UserVariantFilterBit](index.md)
 |---|---|
 | [ALL](-a-l-l.md) | [main]<br>open var [ALL](-a-l-l.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) |
 | [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md) | [main]<br>open var [DIRECTIONAL_LIGHTING](-d-i-r-e-c-t-i-o-n-a-l_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Directional lighting |
-| [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md) | [main]<br>open var [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Dynamic lighting |
+| [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md) | [main]<br>open var [DYNAMIC_LIGHTING](-d-y-n-a-m-i-c_-l-i-g-h-t-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Dynamic lighting Since dynamic lighting was migrated to specialization constants, filtering this bit no longer affects the size of offline compiled materials (.filamat). |
 | [FOG](-f-o-g.md) | [main]<br>open var [FOG](-f-o-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Fog |
 | [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md) | [main]<br>open var [SHADOW_RECEIVER](-s-h-a-d-o-w_-r-e-c-e-i-v-e-r.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Shadow receiver |
 | [SKINNING](-s-k-i-n-n-i-n-g.md) | [main]<br>open var [SKINNING](-s-k-i-n-n-i-n-g.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html)<br>Skinning |

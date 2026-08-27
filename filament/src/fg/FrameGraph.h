@@ -101,6 +101,11 @@ public:
                 FrameGraphId<FrameGraphTexture> color, uint32_t* index = nullptr);
 
         /**
+         * Reserve space for the specified number of render passes/targets in this pass node.
+         */
+        void reserveRenderTargets(size_t count) noexcept;
+
+        /**
          * Creates a virtual resource of type RESOURCE
          * @tparam RESOURCE Type of the resource to create
          * @param name      A pointer to a null terminated string.
@@ -236,7 +241,9 @@ public:
         PROTECTED,
     };
 
-    explicit FrameGraph(TextureCacheInterface& resourceAllocator,
+    explicit FrameGraph(
+            LinearAllocatorArena& arena, size_t size,
+            TextureCacheInterface& resourceAllocator,
             Mode mode = Mode::UNPROTECTED);
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -486,7 +493,7 @@ private:
     friend class RenderPassNode;
     friend struct ResourceCreationContext;
 
-    LinearAllocatorArena& getArena() noexcept { return mArena; }
+    FrameGraphAllocator& getArena() noexcept { return mArena; }
     DependencyGraph& getGraph() noexcept { return mGraph; }
     TextureCacheInterface& getTextureCache() noexcept { return mResourceAllocator; }
 
@@ -531,9 +538,9 @@ private:
             FrameGraphId<RESOURCE> input, typename RESOURCE::Usage usage);
 
     ResourceSlot& getResourceSlot(FrameGraphHandle const handle) noexcept {
-        assert_invariant((size_t)handle.index < mResourceSlots.size());
-        assert_invariant((size_t)mResourceSlots[handle.index].rid < mResources.size());
-        assert_invariant((size_t)mResourceSlots[handle.index].nid < mResourceNodes.size());
+        assert_invariant(size_t(handle.index) < mResourceSlots.size());
+        assert_invariant(size_t(mResourceSlots[handle.index].rid) < mResources.size());
+        assert_invariant(size_t(mResourceSlots[handle.index].nid) < mResourceNodes.size());
         return mResourceSlots[handle.index];
     }
 
@@ -544,14 +551,14 @@ private:
     VirtualResource* getResource(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle.isInitialized());
         ResourceSlot const& slot = getResourceSlot(handle);
-        assert_invariant((size_t)slot.rid < mResources.size());
+        assert_invariant(size_t(slot.rid) < mResources.size());
         return mResources[slot.rid];
     }
 
     ResourceNode* getActiveResourceNode(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle);
         ResourceSlot const& slot = getResourceSlot(handle);
-        assert_invariant((size_t)slot.nid < mResourceNodes.size());
+        assert_invariant(size_t(slot.nid) < mResourceNodes.size());
         return mResourceNodes[slot.nid];
     }
 
@@ -567,7 +574,7 @@ private:
 
     Blackboard mBlackboard;
     TextureCacheInterface& mResourceAllocator;
-    LinearAllocatorArena mArena;
+    mutable FrameGraphAllocator mArena;
     DependencyGraph mGraph;
     const Mode mMode;
 
@@ -575,6 +582,7 @@ private:
     Vector<VirtualResource*> mResources;
     Vector<ResourceNode*> mResourceNodes;
     Vector<PassNode*> mPassNodes;
+
     Vector<PassNode*>::iterator mActivePassNodesEnd;
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -589,6 +597,7 @@ auto& FrameGraph::addPass(char const* name, Setup setup, Execute&& execute) {
 
     // create the FrameGraph pass
     auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
+    assert_invariant(pass);
 
     Builder builder(addPassInternal(name, pass));
 
@@ -612,6 +621,7 @@ template<typename RESOURCE>
 FrameGraphId<RESOURCE> FrameGraph::create(utils::StaticString name,
         typename RESOURCE::Descriptor const& desc) noexcept {
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(name, desc));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addResourceInternal(vresource));
 }
 
@@ -620,6 +630,7 @@ FrameGraphId<RESOURCE> FrameGraph::createSubresource(FrameGraphId<RESOURCE> pare
         utils::StaticString name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept {
     auto* parentResource = static_cast<Resource<RESOURCE>*>(getResource(parent));
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(parentResource, name, desc));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addSubResourceInternal(parent, vresource));
 }
 
@@ -629,6 +640,7 @@ FrameGraphId<RESOURCE> FrameGraph::import(utils::StaticString name,
         typename RESOURCE::Usage usage,
         RESOURCE const& resource) noexcept {
     VirtualResource* vresource(mArena.make<ImportedResource<RESOURCE>>(name, desc, usage, resource));
+    assert_invariant(vresource);
     return FrameGraphId<RESOURCE>(addResourceInternal(vresource));
 }
 

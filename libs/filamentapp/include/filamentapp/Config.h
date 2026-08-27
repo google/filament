@@ -23,14 +23,17 @@
 
 #include <string>
 
-struct Config {
-    std::string title;
-    std::string iblDirectory;
-    std::string dirt;
+struct [[deprecated("Use FilamentApp2::Builder methods instead. Deadline: 2027/07/20")]] Config {
+    utils::CString title;
+    uint32_t width = 1024;
+    uint32_t height = 640;
+    utils::CString iblDirectory;
+    utils::CString dirt;
     float scale = 1.0f;
     bool splitView = false;
     mutable filament::Engine::Backend backend = filament::Engine::Backend::DEFAULT;
-    mutable filament::backend::FeatureLevel featureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+    mutable filament::backend::FeatureLevel featureLevel =
+            filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
     bool headless = false;
@@ -38,7 +41,7 @@ struct Config {
     uint8_t samples = 1;
 
     // Indicate GPU preference for vulkan
-    std::string vulkanGPUHint;
+    utils::CString vulkanGPUHint;
 
 
     // Note that WebGPU has its own enums for backends, but to avoid leaking webgpu headers to
@@ -51,7 +54,8 @@ struct Config {
     DisplayManager displayManager = DisplayManager::SDL;
 
     // Asynchronous mode for Engine
-    filament::backend::AsynchronousMode asynchronousMode = filament::backend::AsynchronousMode::NONE;
+    filament::backend::AsynchronousMode asynchronousMode =
+            filament::backend::AsynchronousMode::NONE;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_CONFIG_H

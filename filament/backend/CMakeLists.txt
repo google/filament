@@ -5,6 +5,19 @@ set(TARGET backend)
 set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
+option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
+
+# On iOS-family platforms backend_test is opt-in (INSTALL_BACKEND_TEST): it is only useful
+# embedded in a runner app, and ImageExpectations needs std::filesystem, which requires a 13.0+
+# deployment target (the default iOS device floor is 11.0). backend_test links filamat, which
+# already requires 13.0, so this raises no floor that wasn't already implied. Gated on
+# INSTALL_BACKEND_TEST so that default builds keep the 11.0 floor.
+# Like filamat and glslang, this is included before any target is declared: the deployment
+# target is directory-scoped, so in test-runner builds it applies to `backend` as well.
+if (IOS AND INSTALL_BACKEND_TEST)
+    include(${EXTERNAL}/clang/usage_ios_13.cmake)
+endif()
+
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
@@ -43,6 +56,7 @@ set(SRCS
         src/Platform.cpp
         src/PlatformFactory.cpp
         src/Program.cpp
+        src/ThreadPriorityOverride.cpp
 )
 
 set(PRIVATE_HDRS
@@ -61,6 +75,7 @@ set(PRIVATE_HDRS
         src/DataReshaper.h
         src/DriverBase.h
         src/JobQueue.h
+        src/ThreadPriorityOverride.h
 )
 
 # ==================================================================================================
@@ -579,8 +594,6 @@ endif()
 # Test
 # ==================================================================================================
 if (FILAMENT_BUILD_TESTING)
-    option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
-
     if (APPLE OR LINUX)
         set(BACKEND_TEST_SRC
             test/BackendTest.cpp
@@ -600,6 +613,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ReadPixels.cpp
             test/test_ReadTexture.cpp
             test/test_BufferUpdates.cpp
+            test/test_AsyncCompletion.cpp
             test/test_Callbacks.cpp
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp
@@ -615,6 +629,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_Template.cpp
+            test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
         )
@@ -633,24 +648,38 @@ if (FILAMENT_BUILD_TESTING)
             absl::str_format
             backend
             gtest
-            imageio
             filamat
             SPIRV
             spirv-cross-glsl)
+        # imageio drives the golden-image comparison and is only built for host
+        # platforms (see the IS_HOST_PLATFORM block in the root CMakeLists).
+        # NOTE: this must not be `if (TARGET imageio)` — imageio is added after
+        # filament/backend, so the target does not exist yet at this point.
+        if (IS_HOST_PLATFORM)
+            list(APPEND BACKEND_TEST_LIBS imageio)
+        endif()
         # Create input/output directories for test result images.
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
         file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
     endif()
 
-    # TODO: Disabling IOS test due to breakage wrt glslang update
-    if (APPLE AND NOT IOS)
-        # TODO: we should expand this test to Linux and other platforms.
-        list(APPEND BACKEND_TEST_SRC
-            test/test_RenderExternalImage.cpp)
+    if (APPLE AND (NOT IOS OR INSTALL_BACKEND_TEST))
+        if (NOT IOS)
+            # Uses CVPixelBuffer-backed external images; host-only.
+            # TODO: we should expand this test to Linux and other platforms.
+            list(APPEND BACKEND_TEST_SRC
+                test/test_RenderExternalImage.cpp)
+        endif()
         add_library(backend_test STATIC ${BACKEND_TEST_SRC})
         target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
         target_compile_options(backend_test PRIVATE "-fobjc-arc")
+        if (IOS)
+            # Match the backend target: without this, ObjC++ files define __EXCEPTIONS
+            # (via ObjC exceptions) while C++ exceptions are disabled, which breaks
+            # headers like robin-map that key their throw usage off __EXCEPTIONS.
+            target_compile_options(backend_test PRIVATE "-fno-objc-exceptions")
+        endif()
 
         set(BACKEND_TEST_DEPS
                 OSDependent
@@ -707,6 +736,15 @@ if (FILAMENT_BUILD_TESTING)
         if (FILAMENT_SUPPORTS_WEBGPU)
             target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
         endif()
+    endif()
+
+    if (ANDROID)
+        add_executable(test_ThreadPriorityOverride
+                test/test_ThreadPriorityOverride.cpp
+                ${LIBRARIES}/utils/test/test_utils_main.cpp)
+        target_link_libraries(test_ThreadPriorityOverride PRIVATE backend gtest utils android log)
+        target_include_directories(test_ThreadPriorityOverride PRIVATE ${FILAMENT}/filament/backend/src)
+        set_target_properties(test_ThreadPriorityOverride PROPERTIES FOLDER Tests)
     endif()
 
     # ==================================================================================================

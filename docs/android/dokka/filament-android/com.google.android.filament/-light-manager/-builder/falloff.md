@@ -5,7 +5,7 @@
 [main]\
 open fun [falloff](falloff.md)(radius: [Float](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-float/index.html)): [LightManager.Builder](index.md)
 
-Set the falloff distance for point lights and spot lights. 
+Set the falloff distance for point lights and spotlights. 
 
  At the falloff distance, the light has no more effect on objects. 
 

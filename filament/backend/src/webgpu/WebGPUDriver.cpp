@@ -555,7 +555,7 @@ void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle
 
 void WebGPUDriver::createVertexBufferAsyncR(Handle<HwVertexBuffer> vertexBufferHandle,
         const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
     // TODO: implement this.
 }
@@ -571,7 +571,7 @@ void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
 
 void WebGPUDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> indexBufferHandle,
         const ElementType elementType, const uint32_t indexCount, const BufferUsage usage,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
     // TODO: implement this.
 }
@@ -586,7 +586,7 @@ void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> bufferObjectHandle
 
 void WebGPUDriver::createBufferObjectAsyncR(Handle<HwBufferObject> bufferObjectHandle,
         const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+        CallbackHandler* handler, AsyncCallback callback, void* user,
         utils::ImmutableCString&& tag) {
     // TODO: implement this.
 }
@@ -604,7 +604,7 @@ void WebGPUDriver::createTextureR(Handle<HwTexture> textureHandle, const Sampler
 void WebGPUDriver::createTextureAsyncR(Handle<HwTexture> textureHandle, const SamplerType target,
         const uint8_t levels, const TextureFormat format, const uint8_t samples,
         const uint32_t width, const uint32_t height, const uint32_t depth,
-        const TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        const TextureUsage usage, CallbackHandler* handler, AsyncCallback callback,
         void* user, utils::ImmutableCString&& tag) {
     // TODO: implement this.
     FWGPU_SYSTRACE_SCOPE();
@@ -651,7 +651,7 @@ void WebGPUDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> textureHandl
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
+        AsyncCallback const callback, void* user, utils::ImmutableCString&& tag) {
     // TODO: implement this.
 }
 
@@ -687,7 +687,7 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> textureHandle, const intptr_
 void WebGPUDriver::importTextureAsyncR(Handle<HwTexture> textureHandle, const intptr_t id,
         const SamplerType target, const uint8_t levels, const TextureFormat format,
         const uint8_t samples, const uint32_t width, const uint32_t height, const uint32_t depth,
-        const TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+        const TextureUsage usage, CallbackHandler* handler, AsyncCallback callback,
         void* user, utils::ImmutableCString&& tag) {
     PANIC_POSTCONDITION("Import WebGPU Texture is not supported");
     // TODO: implement this.
@@ -1050,7 +1050,7 @@ void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
 void WebGPUDriver::updateIndexBufferAsyncR(AsyncCallId jobId,
         Handle<HwIndexBuffer> indexBufferHandle, BufferDescriptor&& bufferDescriptor,
         const uint32_t byteOffset, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     // TODO: implement this.
 }
 
@@ -1063,7 +1063,7 @@ void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
 
 void WebGPUDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> bufferObjectHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     // TODO: implement this.
 }
 
@@ -1090,7 +1090,7 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vertexBufferHand
 void WebGPUDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId,
         Handle<HwVertexBuffer> vertexBufferHandle, const uint32_t index,
         Handle<HwBufferObject> bufferObjectHandle, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     // TODO: implement this.
 }
 
@@ -1243,7 +1243,7 @@ void WebGPUDriver::update3DImageAsyncR(AsyncCallId jobId,
         const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
         const uint32_t width, const uint32_t height, const uint32_t depth,
         PixelBufferDescriptor&& pixelBufferDescriptor, CallbackHandler* handler,
-        CallbackHandler::Callback const callback, void* user) {
+        AsyncCallback const callback, void* user) {
     // TODO: implement this.
 }
 
@@ -1352,6 +1352,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             mSwapChainView = mSwapChain->isHeadless() ?
                 mSwapChain->getNextTextureView() :
                 mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
+
+            // We need to set the extent for the render target for use in scissor()
+            renderTarget->width = mSwapChain->getWidth();
+            renderTarget->height = mSwapChain->getHeight();
         }
         defaultColorView  = mSwapChainView;
         defaultDepthStencilView = mSwapChain->getDepthTextureView();
@@ -2132,13 +2136,20 @@ void WebGPUDriver::scissor(Viewport scissor) {
     assert_invariant(mRenderPassEncoder);
     assert_invariant(mCurrentRenderTarget);
 
-    uint32_t rtHeight = mCurrentRenderTarget->height;
-    uint32_t rtWidth = mCurrentRenderTarget->width;
-    uint32_t left = std::max(0, scissor.left);
-    uint32_t bottom = std::max(0, scissor.bottom);
-    uint32_t top = rtHeight > (bottom + scissor.height) ? rtHeight - bottom - scissor.height : 0;
-    uint32_t width = std::min((uint32_t)scissor.width, rtWidth - left);
-    uint32_t height = std::min((uint32_t)scissor.height, rtHeight - top);
+    uint32_t const rtWidth = mCurrentRenderTarget->width;
+    uint32_t const rtHeight = mCurrentRenderTarget->height;
+
+    uint32_t const left = std::clamp(scissor.left, 0, int32_t(rtWidth));
+    uint32_t const right = std::clamp(scissor.left + int32_t(scissor.width), 0, int32_t(rtWidth));
+
+    // Filament gives us bottom-left-origin coordinates, we need to convert it to WebGPU's top-left
+    // coordinates.
+    uint32_t const bottom = rtHeight - std::clamp(scissor.bottom, 0, int32_t(rtHeight));
+    uint32_t const top =
+            rtHeight - std::clamp(scissor.bottom + int32_t(scissor.height), 0, int32_t(rtHeight));
+
+    uint32_t const width = right - left;
+    uint32_t const height = bottom - top;
 
     mRenderPassEncoder.SetScissorRect(left, top, width, height);
 }
@@ -2380,7 +2391,7 @@ void WebGPUDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_
 }
 
 void WebGPUDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
-        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
+        CallbackHandler* handler, AsyncCallback const callback, void* user) {
     // TODO: implement this.
 }
 

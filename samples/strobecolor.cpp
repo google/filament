@@ -15,43 +15,72 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
-#include <filament/View.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
+#include <filament/View.h>
 
 #include <cmath>
 
 using namespace filament;
 
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "strobecolor";
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+namespace {
+struct App {
+    FilamentApp2* filamentApp;
+    SampleConfig config;
     Skybox* skybox;
+};
+} // namespace
 
-    auto setup = [&skybox](Engine* engine, View* view, Scene* scene) {
-        skybox = Skybox::Builder().color({ 0.0, 0.25, 0.5, 1.0 }).build(*engine);
-        scene->setSkybox(skybox);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->skybox = Skybox::Builder().color({ 0.0, 0.25, 0.5, 1.0 }).build(*engine);
+        scene->setSkybox(app->skybox);
         view->setPostProcessingEnabled(false);
     };
 
-    auto cleanup = [](Engine*, View*, Scene*) {
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
     };
 
-    FilamentApp::get().animate([&skybox](Engine*, View* view, double now) {
-        constexpr float SPEED = 4;
-        float r = 0.5f + 0.5f * std::sin(SPEED * now);
-        float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
-        float b = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 4 / 3);
-        skybox->setColor({r, g, b, 1.0});
-    });
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine*, View* view, double now) {
+                            constexpr float SPEED = 4;
+                            float r = 0.5f + 0.5f * std::sin(SPEED * now);
+                            float g = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 2 / 3);
+                            float b = 0.5f + 0.5f * std::sin(SPEED * now + M_PI * 4 / 3);
+                            app->skybox->setColor({ r, g, b, 1.0 });
+                        })
+                        .build();
 
-    FilamentApp::get().run(config, setup, cleanup);
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "strobecolor";
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+
+    auto dm = samples::getDisplayManager(config);
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
 
     return 0;
 }
+#endif

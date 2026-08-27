@@ -1,0 +1,1083 @@
+/*
+ * Copyright (C) 2026 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#if defined(WIN32)
+#include <utils/unwindows.h>
+#endif
+
+#include "FilamentAppGui.h"
+#include "PlatformHelper.h"
+
+#include "generated/resources/filamentapp.h"
+
+#include <filamentapp/Config.h>
+#include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/DisplayManager.h>
+#include <filamentapp/FilamentApp2.h>
+
+#include <filament/Camera.h>
+#ifndef NDEBUG
+#include <filament/DebugRegistry.h>
+#endif
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
+#include <filament/Scene.h>
+#include <filament/Skybox.h>
+#include <filament/SwapChain.h>
+#include <filament/View.h>
+
+#include <backend/Platform.h>
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <backend/platforms/VulkanPlatform.h>
+#endif
+
+#include <utils/EntityManager.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/Path.h>
+
+#include <stb_image.h>
+
+#include <algorithm>
+#include <cstdlib>
+#ifdef __EXCEPTIONS
+#include <exception>
+#endif
+#include <iostream>
+#include <memory>
+#include <thread>
+#include <vector>
+
+#include <stdint.h>
+
+using namespace filament;
+
+using namespace filament::math;
+using namespace utils;
+using namespace filament::app;
+
+namespace {
+
+using namespace filament::backend;
+}
+
+std::unique_ptr<FilamentApp2> FilamentApp2::Builder::build() {
+    FILAMENT_CHECK_PRECONDITION(this->mDisplayManager) << "Must provide a DisplayManager";
+    return std::unique_ptr<FilamentApp2>(new FilamentApp2(*this));
+}
+
+FilamentApp2::FilamentApp2(const Builder& builder)
+        : mWindowTitle(builder.mTitle),
+          mInitialWindowWidth(builder.mWidth),
+          mInitialWindowHeight(builder.mHeight),
+          mIblDirectory(builder.mIblDirectory),
+          mDirtPath(builder.mDirt),
+          mBackend(builder.mBackend),
+          mFeatureLevel(builder.mFeatureLevel),
+          mCameraMode(builder.mCameraMode),
+          mResizeable(builder.mResizeable),
+          mHeadless(builder.mHeadless),
+          mStereoscopicEyeCount(builder.mStereoscopicEyeCount),
+          mVulkanGPUHint(builder.mVulkanGPUHint),
+          mForcedWebGPUBackend(builder.mForcedWebGPUBackend),
+          mAsynchronousMode(builder.mAsynchronousMode),
+          mDisplayManager(builder.mDisplayManager),
+          mDefaultAssetLoader(
+                  builder.mAssetLoader ? nullptr : std::make_unique<DesktopAssetLoader>()),
+          mAssetLoader(builder.mAssetLoader ? builder.mAssetLoader : mDefaultAssetLoader.get()),
+          mSetupCallback(builder.mSetup),
+          mCleanupCallback(builder.mCleanup),
+          mPreRender(builder.mPreRender),
+          mPostRender(builder.mPostRender),
+          mImguiCallback(builder.mImgui),
+          mAnimation(builder.mAnimation),
+          mResize(builder.mResize),
+          mDropHandler(builder.mDropHandler),
+          mSurfaceCreatedCallback(builder.mSurfaceCreatedCallback),
+          mSurfaceDestroyedCallback(builder.mSurfaceDestroyedCallback),
+          mWidth(builder.mWidth),
+          mHeight(builder.mHeight) {}
+
+FilamentApp2::~FilamentApp2() {
+    shutdown();
+}
+
+void FilamentApp2::init() {
+    if (mInitialized) {
+        return;
+    }
+
+    // Note that we need to determine the backend in order to build custom platforms.
+    Engine::Backend backend = mBackend;
+
+    backend::Platform* platform = nullptr;
+    if (backend == Engine::Backend::VULKAN) {
+        platform = mVulkanPlatform = filament::app::createVulkanPlatform(mVulkanGPUHint.c_str());
+    } else if (backend == Engine::Backend::WEBGPU) {
+        platform = mWebGPUPlatform = filament::app::createWebGPUPlatform(mForcedWebGPUBackend);
+    }
+
+    Engine::Config engineConfig = {
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+        .stereoscopicType = Engine::StereoscopicType::INSTANCED,
+#elif defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        .stereoscopicType = Engine::StereoscopicType::MULTIVIEW,
+#else
+        .stereoscopicType = Engine::StereoscopicType::NONE,
+#endif
+        .stereoscopicEyeCount = (uint8_t) mStereoscopicEyeCount,
+        .asynchronousMode = mAsynchronousMode,
+    };
+
+    // "backend.enable_asynchronous_operation" is forcibly enabled here, inheriting the setting
+    // from the Engine, purely to demonstrate the object's asynchronous behavior within
+    // Filament. Users should manage this flag at their discretion.
+    mEngine = Engine::Builder()
+                      .backend(backend)
+                      .featureLevel(mFeatureLevel)
+                      .feature("backend.enable_asynchronous_operation",
+                              engineConfig.asynchronousMode != AsynchronousMode::NONE)
+                      .platform(platform)
+                      .config(&engineConfig)
+                      .build();
+
+    assert_invariant(mEngine->getBackend() == backend);
+
+    mBackend = backend;
+
+    mWidth = mInitialWindowWidth;
+    mHeight = mInitialWindowHeight;
+
+    // Write back the active feature level.
+    mFeatureLevel = mEngine->getActiveFeatureLevel();
+
+    mRenderer = mEngine->createRenderer();
+
+    // create cameras
+    utils::EntityManager& em = utils::EntityManager::get();
+    em.create(3, mCameraEntities);
+    mCameras[0] = mMainCamera = mEngine->createCamera(mCameraEntities[0]);
+    mCameras[1] = mDebugCamera = mEngine->createCamera(mCameraEntities[1]);
+    mCameras[2] = mOrthoCamera = mEngine->createCamera(mCameraEntities[2]);
+
+    // set exposure
+    for (auto camera: mCameras) {
+        camera->setExposure(16.0f, 1 / 125.0f, 100.0f);
+    }
+
+    // create views
+    mViews.emplace_back(mMainView = new CView(*mRenderer, "Main View"));
+    if (mIsSplitView) {
+        mViews.emplace_back(mDepthView = new CView(*mRenderer, "Depth View"));
+        mViews.emplace_back(mGodView = new GodView(*mRenderer, "God View"));
+        mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Shadow View"));
+    }
+    mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
+
+    // set-up the camera manipulators
+    mMainCameraMan =
+            CameraManipulator::Builder().targetPosition(0, 0, -4).flightMoveDamping(15.0).build(
+                    mCameraMode);
+    mDebugCameraMan =
+            CameraManipulator::Builder().targetPosition(0, 0, -4).flightMoveDamping(15.0).build(
+                    mCameraMode);
+
+    mMainView->setCamera(mMainCamera);
+    mMainView->setCameraManipulator(mMainCameraMan);
+    if (mIsSplitView) {
+        // Depth view always uses the main camera
+        mDepthView->setCamera(mMainCamera);
+        mDepthView->setCameraManipulator(mMainCameraMan);
+
+        // The god view uses the main camera for culling, but the debug camera for viewing
+        mGodView->setCamera(mMainCamera);
+        mGodView->setGodCamera(mDebugCamera);
+        mGodView->setCameraManipulator(mDebugCameraMan);
+    }
+
+    // configure the cameras
+    configureCamerasForWindow(mCameraParams);
+
+    mMainCamera->lookAt({ 4, 0, -4 }, { 0, 0, -4 }, { 0, 1, 0 });
+
+    mDepthMaterial =
+            Material::Builder()
+                    .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
+                    .build(*mEngine);
+
+    mDepthMI = mDepthMaterial->createInstance();
+
+    mDefaultMaterial =
+            Material::Builder()
+                    .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
+                    .build(*mEngine);
+
+    mTransparentMaterial =
+            Material::Builder()
+                    .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
+                    .build(*mEngine);
+
+    mCameraCube.reset(new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }));
+    mCameraGrid.reset(new Grid(*mEngine, mTransparentMaterial, { 1, 1, 0 }));
+
+    // we can't cull the light-frustum because it's not applied a rigid transform
+    // and currently, filament assumes that for culling
+    mLightmapCubes.reserve(4);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 1, 0 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 0, 1 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 1, 0 }, false);
+    mLightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 0, 0 }, false);
+
+    mScene = mEngine->createScene();
+
+    mMainView->getView()->setVisibleLayers(0x4, 0x4);
+    mMainView->getView()->setFroxelVizEnabled(true);
+
+    if (mIsSplitView) {
+        mScene->addEntity(mCameraCube->getSolidRenderable());
+        mScene->addEntity(mCameraCube->getWireFrameRenderable());
+        for (auto&& cube: mLightmapCubes) {
+            mScene->addEntity(cube.getSolidRenderable());
+            mScene->addEntity(cube.getWireFrameRenderable());
+        }
+
+        mDepthView->getView()->setVisibleLayers(0x4, 0x4);
+        mGodView->getView()->setVisibleLayers(0x6, 0x6);
+        mOrthoView->getView()->setVisibleLayers(0x6, 0x6);
+
+        // only preserve the color buffer for additional views; depth and stencil can be discarded.
+        mDepthView->getView()->setShadowingEnabled(false);
+        mGodView->getView()->setShadowingEnabled(false);
+        mOrthoView->getView()->setShadowingEnabled(false);
+    }
+
+    // froxel debug grid always added (but hidden)
+    mScene->addEntity(mCameraGrid->getWireFrameRenderable());
+
+    loadDirt();
+    loadIBL();
+
+    for (auto& view: mViews) {
+        if (view.get() != mUiView) {
+            view->getView()->setScene(mScene);
+        }
+    }
+
+    if (mSetupCallback) {
+        mSetupCallback(mEngine, mMainView->getView(), mScene);
+    }
+
+    if (mImguiCallback) {
+        mAppGui = std::make_unique<FilamentAppGui>(mEngine, mUiView->getView(),
+                getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
+    }
+
+    mInitialized = true;
+}
+
+void FilamentApp2::run() {
+    init();
+
+    mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth, mInitialWindowHeight,
+            mResizeable, mHeadless);
+
+    onSurfaceCreated();
+    onSurfaceChanged((int) mInitialWindowWidth, (int) mInitialWindowHeight);
+
+    while (!doFrame()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    }
+
+    shutdown();
+}
+
+void FilamentApp2::onSurfaceCreated() {
+    if (!mInitialized) {
+        init();
+    }
+
+    void* nativeWindow = mDisplayManager ? mDisplayManager->getNativeWindow(mWindow) : nullptr;
+
+    if (mSwapChain) {
+        mEngine->destroy(mSwapChain);
+        mSwapChain = nullptr;
+    }
+
+    if (mHeadless) {
+        mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
+    } else if (nativeWindow) {
+        mSwapChain = mEngine->createSwapChain(nativeWindow,
+                filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+    }
+
+    if (mSurfaceCreatedCallback && mEngine) {
+        mSurfaceCreatedCallback(mEngine);
+    }
+}
+
+void FilamentApp2::onSurfaceChanged(int width, int height) {
+    mWidth = width;
+    mHeight = height;
+
+    if (mDisplayManager && mWindow) {
+        mDisplayManager->onWindowResized(mWindow);
+    }
+
+    configureCamerasForWindow(mCameraParams);
+
+    if (mHeadless && mSwapChain && mEngine) {
+        mEngine->destroy(mSwapChain);
+        mSwapChain = mEngine->createSwapChain((uint32_t) mWidth, (uint32_t) mHeight);
+    }
+
+    if (mResize && mEngine && mMainView) {
+        mResize(mEngine, mMainView->getView());
+    }
+}
+
+void FilamentApp2::onSurfaceDestroyed() {
+    if (mSurfaceDestroyedCallback && mEngine) {
+        mSurfaceDestroyedCallback(mEngine);
+    }
+
+    if (mSwapChain && mEngine) {
+        mEngine->destroy(mSwapChain);
+        mEngine->flushAndWait();
+        mSwapChain = nullptr;
+    }
+}
+
+View* FilamentApp2::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
+
+bool FilamentApp2::doFrame() {
+#ifdef __EXCEPTIONS
+    try {
+#endif
+        if (mClosed) {
+            shutdown();
+            return true;
+        }
+
+        if (!mInitialized || !mSwapChain || !mRenderer) {
+            return false;
+        }
+
+        if (!UTILS_HAS_THREADING) {
+            mEngine->execute();
+        }
+
+        // Allow the app to animate the scene if desired.
+        if (mAnimation) {
+            double time = mDisplayManager ? mDisplayManager->getTime() : 0.0;
+            mAnimation(mEngine, mMainView->getView(), time);
+        }
+
+        // Loop over fresh events twice: first stash them and let ImGui process them, then allow
+        // the app to process the stashed events. This is done because ImGui might wish to block
+        // certain events from the app (e.g., when dragging the mouse over an obscuring window).
+        std::vector<filament::app::AppEvent> events;
+        if (mDisplayManager) {
+            mDisplayManager->pollEvents(events);
+        }
+
+        if (mAppGui) {
+            mAppGui->processAppEvents(events);
+        }
+
+        // Now, loop over the events a second time for app-side processing.
+        for (const auto& event: events) {
+            if (mClosed) {
+                break;
+            }
+            bool wantCaptureMouse = mAppGui ? mAppGui->wantCaptureMouse() : false;
+            switch (event.type) {
+                case AppEvent::Type::QUIT:
+                    mClosed = true;
+                    break;
+                case AppEvent::Type::KEYDOWN:
+                    if (event.key.code == AppKey::ESCAPE) {
+                        mClosed = true;
+                    }
+#if !defined(NDEBUG) && !defined(__ANDROID__)
+                    if (event.key.code == AppKey::PRINT_SCREEN) {
+                        DebugRegistry& debug = mEngine->getDebugRegistry();
+                        if (bool* captureFrame = debug.getPropertyAddress<bool>(
+                                    "d.renderer.doFrameCapture")) {
+                            *captureFrame = true;
+                        }
+                    }
+#endif
+                    keyDown(event.key.code);
+                    break;
+                case AppEvent::Type::KEYUP:
+                    keyUp(event.key.code);
+                    break;
+                case AppEvent::Type::MOUSE_WHEEL:
+                    if (!wantCaptureMouse) mouseWheel(event.mouseWheel.delta);
+                    break;
+                case AppEvent::Type::MOUSE_BUTTON_DOWN:
+                    if (!wantCaptureMouse)
+                        mouseDown(event.mouseButton.button, event.mouseButton.x,
+                                event.mouseButton.y);
+                    break;
+                case AppEvent::Type::MOUSE_BUTTON_UP:
+                    if (!wantCaptureMouse)
+                        mouseUp(event.mouseButton.x, event.mouseButton.y);
+                    break;
+                case AppEvent::Type::MOUSE_MOVE:
+                    if (!wantCaptureMouse) mouseMoved(event.mouseMove.x, event.mouseMove.y);
+                    break;
+                case AppEvent::Type::DROP_FILE:
+                    if (mDropHandler) {
+                        mDropHandler(event.dropFile.path);
+                    }
+                    break;
+                case AppEvent::Type::RESIZED:
+                    resize(mCameraParams);
+                    // Call the resize callback, if this FilamentApp2 has one. This must be done
+                    // after configureCamerasForWindow, so the viewports are correct.
+                    if (mResize) {
+                        mResize(mEngine, mMainView->getView());
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Note that shutdown() does not destroy the DisplayManager, but the destructor does. The
+        // return here will go back to the caller, which is a DisplayManager.
+        if (mClosed) {
+            shutdown();
+            return true;
+        }
+
+        // Calculate the time step.
+        static double lastTime = 0;
+        double now = mDisplayManager ? mDisplayManager->getTime() : 0.0;
+        const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
+        lastTime = now;
+
+        // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
+        // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
+        if (mAppGui) {
+            mAppGui->render(timeStep, mDisplayManager, mWindow, mImguiCallback,
+                    mMousePressed);
+        }
+
+        // Update the camera manipulators for each view.
+        for (auto const& view: mViews) {
+            auto* cm = view->getCameraManipulator();
+            if (cm) {
+                cm->update(timeStep);
+            }
+        }
+
+        // Update the position and orientation of the two cameras.
+        filament::math::float3 eye, center, up;
+        mMainCameraMan->getLookAt(&eye, &center, &up);
+        mMainCamera->lookAt(eye, center, up);
+
+        mDebugCameraMan->getLookAt(&eye, &center, &up);
+        mDebugCamera->lookAt(eye, center, up);
+        mDebugCamera->setExposure(mMainCamera->getAperture(),
+                mMainCamera->getShutterSpeed(), mMainCamera->getSensitivity());
+
+        mOrthoCamera->setExposure(mMainCamera->getAperture(),
+                mMainCamera->getShutterSpeed(), mMainCamera->getSensitivity());
+
+        auto const fci = mMainView->getView()->getFroxelConfigurationInfo();
+        if (UTILS_UNLIKELY(fci.age != mFroxelInfoAge)) {
+            mFroxelInfoAge = fci.age;
+            auto width = fci.info.width;
+            auto height = fci.info.height;
+            auto depth = fci.info.depth;
+            auto froxelDimension = fci.info.froxelDimension;
+            auto viewportWidth = fci.info.viewportWidth;
+            auto viewportHeight = fci.info.viewportHeight;
+            auto zLightFar = fci.info.zLightFar;
+            auto linearizer = fci.info.linearizer;
+            auto p = fci.info.p;
+            auto ct = fci.info.clipTransform;
+            mCameraGrid->update(
+                    width, height, depth,
+                    [=](int const i) {
+                        float x = float(2 * i * froxelDimension.x) / float(viewportWidth) - 1.0f;
+                        x = (x - ct.z) / ct.x;
+                        return x;
+                    },
+                    [=](int const j) {
+                        float y = float(2 * j * froxelDimension.y) / float(viewportHeight) - 1.0f;
+                        y = (y - ct.w) / ct.y;
+                        return y;
+                    },
+                    [=](int const k) {
+                        float const z_view = -zLightFar * std::exp2(float(k - depth) * linearizer);
+                        auto c = p * float4{ 0, 0, z_view, 1 };
+                        float const z_clip_dx = k == 0 ? 1.0f : c.z / c.w;
+                        float const z_clip_gl = (1 - z_clip_dx) * 2.0f - 1.0f;
+                        return z_clip_gl;
+                    });
+        }
+
+        auto& rcm = mEngine->getRenderableManager();
+        if (mIsSplitView) {
+            rcm.setLayerMask(rcm.getInstance(mCameraCube->getSolidRenderable()), 0x3,
+                    mCameraFrustumEnabled);
+            rcm.setLayerMask(rcm.getInstance(mCameraCube->getWireFrameRenderable()), 0x3,
+                    mCameraFrustumEnabled);
+        }
+        rcm.setLayerMask(rcm.getInstance(mCameraGrid->getWireFrameRenderable()), 0x3,
+                mFroxelGridEnabled);
+
+        // Update the cube distortion matrix used for frustum visualization.
+        auto const csm = mMainView->getView()->getDirectionalShadowCameras();
+        // show/hide the cascades
+        for (size_t i = 0; i < 4; i++) {
+            rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
+            rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
+        }
+
+        if (!csm.empty()) {
+            for (size_t i = 0, c = csm.size(); i < c; i++) {
+                if (csm[i]) {
+                    mLightmapCubes[i].mapFrustum(*mEngine, csm[i]);
+                }
+                uint8_t const layer = csm[i] ? mDirectionalShadowFrustumEnabled : 0x0;
+                rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getSolidRenderable()), 0x3,
+                        layer);
+                rcm.setLayerMask(rcm.getInstance(mLightmapCubes[i].getWireFrameRenderable()), 0x3,
+                        layer);
+            }
+        }
+
+        mCameraCube->mapFrustum(*mEngine, mMainCamera);
+        mCameraGrid->mapFrustum(*mEngine, mMainCamera);
+
+        if (mPreRender) {
+            mPreRender(mEngine, mViews[0]->getView(), mScene, mRenderer);
+        }
+
+        if (mReconfigureCameras) {
+            configureCamerasForWindow(mCameraParams);
+            mReconfigureCameras = false;
+        }
+
+        if (mIsSplitView) {
+            if (!mOrthoView->getView()->hasCamera()) {
+                auto const csm = mMainView->getView()->getDirectionalShadowCameras();
+                if (!csm.empty()) {
+                    // here we could choose the cascade
+                    Camera const* debugDirectionalShadowCamera = csm[0];
+                    if (debugDirectionalShadowCamera) {
+                        mOrthoView->setCamera(
+                                const_cast<Camera*>(debugDirectionalShadowCamera));
+                    }
+                }
+            }
+        }
+
+        if (mRenderer->beginFrame(mSwapChain)) {
+            for (filament::View* offscreenView: mOffscreenViews) {
+                mRenderer->render(offscreenView);
+            }
+            for (auto const& view: mViews) {
+                mRenderer->render(view->getView());
+            }
+
+            if (mDisplayManager) {
+                mDisplayManager->onFrameFinished(mWindow, mEngine, mRenderer);
+            }
+
+            if (mPostRender) {
+                mPostRender(mEngine, mViews[0]->getView(), mScene, mRenderer);
+            }
+            mRenderer->endFrame();
+        } else {
+            ++mSkippedFrames;
+        }
+
+#ifdef __EXCEPTIONS
+    } catch (Panic const& e) {
+        LOG(ERROR) << "Filament exception (terminate cleanly): " << e.what();
+        LOG(ERROR) << e.getCallStack();
+    } catch (std::exception const& e) {
+        LOG(ERROR) << "System exception (terminate cleanly): " << e.what();
+    } catch (...) {
+        LOG(ERROR) << "Unknown exception! (terminate cleanly)";
+    }
+#endif
+    return false;
+}
+
+void FilamentApp2::shutdown() {
+    if (!mInitialized) {
+        return;
+    }
+
+    if (mAppGui) {
+        mAppGui.reset();
+    }
+
+    if (mCleanupCallback) {
+        mCleanupCallback(mEngine, mMainView ? mMainView->getView() : nullptr, mScene);
+    }
+
+    mCameraCube.reset();
+    mCameraGrid.reset();
+    mLightmapCubes.clear();
+
+    mViews.clear();
+    if (mEngine) {
+        utils::EntityManager& em = utils::EntityManager::get();
+        for (auto e: mCameraEntities) {
+            mEngine->destroyCameraComponent(e);
+            em.destroy(e);
+        }
+        if (mRenderer) {
+            mEngine->destroy(mRenderer);
+            mRenderer = nullptr;
+        }
+        if (mSwapChain) {
+            mEngine->destroy(mSwapChain);
+            mSwapChain = nullptr;
+        }
+    }
+
+    if (mDisplayManager && mWindow) {
+        mDisplayManager->destroyWindow(mWindow);
+        mWindow = nullptr;
+    }
+
+    delete mMainCameraMan;
+    mMainCameraMan = nullptr;
+    delete mDebugCameraMan;
+    mDebugCameraMan = nullptr;
+
+    mIBL.reset();
+    if (mEngine) {
+        mEngine->destroy(mDepthMI);
+        mEngine->destroy(mDepthMaterial);
+        mEngine->destroy(mDefaultMaterial);
+        mEngine->destroy(mTransparentMaterial);
+        mEngine->destroy(mScene);
+        Engine::destroy(&mEngine);
+        mEngine = nullptr;
+    }
+
+    if (mVulkanPlatform) {
+        filament::app::destroyVulkanPlatform(mVulkanPlatform);
+        mVulkanPlatform = nullptr;
+    }
+    if (mWebGPUPlatform) {
+        filament::app::destroyWebGPUPlatform(mWebGPUPlatform);
+        mWebGPUPlatform = nullptr;
+    }
+
+    mInitialized = false;
+}
+
+// RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
+// generators, like Visual Studio or Xcode.
+#ifndef RELATIVE_ASSET_PATH
+#define RELATIVE_ASSET_PATH "."
+#endif
+
+const utils::Path& FilamentApp2::getRootAssetsPath() {
+    static const utils::Path root =
+            utils::Path::getCurrentExecutable().getParent() + RELATIVE_ASSET_PATH;
+    return root;
+}
+
+void FilamentApp2::loadIBL(std::string_view path) {
+    Path iblPath(path);
+    if (!iblPath.exists()) {
+        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+        return;
+    }
+
+    // Note that IBL holds a skybox, and Scene also holds a reference.  We cannot release IBL's
+    // skybox until after new skybox has been set in the scene.
+    std::unique_ptr<IBL> oldIBL = std::move(mIBL);
+    mIBL = std::make_unique<IBL>(*mEngine);
+
+    if (!iblPath.isDirectory()) {
+        if (!mIBL->loadFromEquirect(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
+            return;
+        }
+    } else {
+        if (!mIBL->loadFromDirectory(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
+            return;
+        }
+    }
+
+    if (mIBL != nullptr) {
+        mIBL->getSkybox()->setLayerMask(0x7, 0x4);
+        mScene->setSkybox(mIBL->getSkybox());
+        mScene->setIndirectLight(mIBL->getIndirectLight());
+    }
+}
+
+void FilamentApp2::loadIBL() {
+    if (mIblDirectory.empty()) {
+        return;
+    }
+    loadIBL(mIblDirectory);
+}
+
+void FilamentApp2::loadDirt() {
+    if (!mDirtPath.empty()) {
+        Path dirtPath(mDirtPath);
+
+        if (!dirtPath.exists()) {
+            std::cerr << "The specified dirt file does not exist: " << dirtPath << std::endl;
+            return;
+        }
+
+        if (!dirtPath.isFile()) {
+            std::cerr << "The specified dirt path is not a file: " << dirtPath << std::endl;
+            return;
+        }
+
+        int w, h, n;
+
+        unsigned char* data = stbi_load(dirtPath.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        assert(n == 3);
+
+        mDirt = Texture::Builder()
+                        .width(w)
+                        .height(h)
+                        .format(Texture::InternalFormat::RGB8)
+                        .build(*mEngine);
+
+        mDirt->setImage(*mEngine, 0,
+                { data, size_t(w * h * 3), Texture::Format::RGB, Texture::Type::UBYTE,
+                    (Texture::PixelBufferDescriptor::Callback) &stbi_image_free });
+    }
+}
+
+void FilamentApp2::setCameraFrustumEnabled(bool enabled) noexcept {
+    mCameraFrustumEnabled = enabled ? 0x2 : 0x0;
+}
+
+void FilamentApp2::setDirectionalShadowFrustumEnabled(bool enabled) noexcept {
+    mDirectionalShadowFrustumEnabled = enabled ? 0x2 : 0x0;
+}
+
+void FilamentApp2::setFroxelGridEnabled(bool enabled) noexcept {
+    mFroxelGridEnabled = enabled ? 0x3 : 0x0;
+}
+
+bool FilamentApp2::isCameraFrustumEnabled() const noexcept { return !!mCameraFrustumEnabled; }
+
+bool FilamentApp2::isDirectionalShadowFrustumEnabled() const noexcept {
+    return !!mDirectionalShadowFrustumEnabled;
+}
+
+bool FilamentApp2::isFroxelGridEnabled() const noexcept { return !!mFroxelGridEnabled; }
+
+// ------------------------------------------------------------------------------------------------
+
+void FilamentApp2::mouseDown(int button, ssize_t x, ssize_t y) {
+    fixupMouseCoordinatesForHdpi(x, y);
+    y = mHeight - y;
+    for (auto const& view: mViews) {
+        if (view->intersects(x, y)) {
+            mMouseEventTarget = view.get();
+            view->mouseDown(button, x, y);
+            break;
+        }
+    }
+}
+
+void FilamentApp2::mouseWheel(ssize_t x) {
+    if (mMouseEventTarget) {
+        mMouseEventTarget->mouseWheel(x);
+    } else {
+        for (auto const& view: mViews) {
+            if (view->intersects(mLastX, mLastY)) {
+                view->mouseWheel(x);
+                break;
+            }
+        }
+    }
+}
+
+void FilamentApp2::mouseUp(ssize_t x, ssize_t y) {
+    fixupMouseCoordinatesForHdpi(x, y);
+    if (mMouseEventTarget) {
+        y = mHeight - y;
+        mMouseEventTarget->mouseUp(x, y);
+        mMouseEventTarget = nullptr;
+    }
+}
+
+void FilamentApp2::mouseMoved(ssize_t x, ssize_t y) {
+    fixupMouseCoordinatesForHdpi(x, y);
+    y = mHeight - y;
+    if (mMouseEventTarget) {
+        mMouseEventTarget->mouseMoved(x, y);
+    }
+    mLastX = x;
+    mLastY = y;
+}
+
+void FilamentApp2::keyDown(AppKey key) {
+    auto& eventTarget = mKeyEventTarget[key];
+
+    // keyDown events can be sent multiple times per key (for key repeat)
+    // If this key is already down, do nothing.
+    if (eventTarget) {
+        return;
+    }
+
+    // Decide which view will get this key's corresponding keyUp event.
+    // If we're currently in a mouse grab session, it should be the mouse grab's target view.
+    // Otherwise, it should be whichever view we're currently hovering over.
+    CView* targetView = nullptr;
+    if (mMouseEventTarget) {
+        targetView = mMouseEventTarget;
+    } else {
+        for (auto const& view: mViews) {
+            if (view->intersects(mLastX, mLastY)) {
+                targetView = view.get();
+                break;
+            }
+        }
+    }
+
+    if (targetView) {
+        targetView->keyDown(key);
+        eventTarget = targetView;
+    }
+}
+
+void FilamentApp2::keyUp(AppKey key) {
+    auto& eventTarget = mKeyEventTarget[key];
+    if (!eventTarget) {
+        return;
+    }
+    eventTarget->keyUp(key);
+    eventTarget = nullptr;
+}
+
+void FilamentApp2::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const {
+    if (!mDisplayManager || !mWindow) {
+        return;
+    }
+    uint32_t dw = 0, dh = 0, ww = 0, wh = 0;
+    mDisplayManager->getDrawableSize(mWindow, &dw, &dh);
+    mDisplayManager->getWindowSize(mWindow, &ww, &wh);
+    if (ww > 0 && wh > 0) {
+        x = x * (ssize_t) dw / (ssize_t) ww;
+        y = y * (ssize_t) dh / (ssize_t) wh;
+    }
+}
+
+void FilamentApp2::resize(WindowCameraParams const& cameraParams) {
+    if (mDisplayManager && mWindow) {
+        mDisplayManager->onWindowResized(mWindow);
+    }
+    configureCamerasForWindow(cameraParams);
+}
+
+void FilamentApp2::configureCamerasForWindow(WindowCameraParams const& cameraParams) {
+    float dpiScaleX = 1.0f;
+    float dpiScaleY = 1.0f;
+
+    // If the app is not headless, query the window for its physical & virtual sizes.
+    if (!mHeadless) {
+        if (mDisplayManager && mWindow) {
+            uint32_t width = 0, height = 0;
+            mDisplayManager->getDrawableSize(mWindow, &width, &height);
+            mWidth = (size_t) width;
+            mHeight = (size_t) height;
+
+            uint32_t virtualWidth = 0, virtualHeight = 0;
+            mDisplayManager->getWindowSize(mWindow, &virtualWidth, &virtualHeight);
+            if (virtualWidth > 0 && virtualHeight > 0) {
+                dpiScaleX = (float) width / virtualWidth;
+                dpiScaleY = (float) height / virtualHeight;
+            }
+        }
+    } else {
+        if (mDisplayManager && mWindow) {
+            uint32_t width = 0, height = 0;
+            mDisplayManager->getWindowSize(mWindow, &width, &height);
+            if (width != mWidth || height != mHeight) {
+                mWidth = width;
+                mHeight = height;
+                if (mSwapChain && mEngine) {
+                    mEngine->destroy(mSwapChain);
+                }
+                if (mEngine) {
+                    mSwapChain = mEngine->createSwapChain((uint32_t) width, (uint32_t) height);
+                }
+            }
+        }
+    }
+
+    const uint32_t width = mWidth;
+    const uint32_t height = mHeight;
+    if (width == 0 || height == 0) {
+        return;
+    }
+
+    const float3 at(0, 0, -4);
+    const double ratio = double(height) / double(width);
+    const int sidebar = cameraParams.sidebarWidth * dpiScaleX;
+
+    const bool splitview = mViews.size() > 2;
+
+    const uint32_t mainWidth = std::max(2, (int) width - sidebar);
+
+    double near = cameraParams.near;
+    double far = cameraParams.far;
+    auto aspectRatio = double(mainWidth) / height;
+    if (mMainView->getView()->getStereoscopicOptions().enabled) {
+        const int ec = mStereoscopicEyeCount;
+        aspectRatio = double(mainWidth) / ec / height;
+
+        mat4 projections[4];
+        projections[0] = Camera::projection(cameraParams.focalLength, aspectRatio, near, far);
+        projections[1] = projections[0];
+        // simulate foveated rendering
+        projections[2] = Camera::projection(cameraParams.focalLength * 2.0, aspectRatio, near, far);
+        projections[3] = projections[2];
+        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
+    } else {
+        mMainCamera->setLensProjection(cameraParams.focalLength, aspectRatio, near, far);
+    }
+    mDebugCamera->setProjection(45.0, aspectRatio, 0.0625, 4096, Camera::Fov::VERTICAL);
+
+    // We're in split view when there are more views than just the Main and UI views.
+    if (splitview) {
+        uint32_t const vpw = mainWidth / 2;
+        uint32_t const vph = height / 2;
+        mMainView->setViewport({ sidebar + 0, 0, vpw, vph });
+        mDepthView->setViewport({ sidebar + int32_t(vpw), 0, vpw, vph });
+        mGodView->setViewport({ sidebar + int32_t(vpw), int32_t(vph), vpw, vph });
+        mOrthoView->setViewport({ sidebar + 0, int32_t(vph), vpw, vph });
+    } else {
+        mMainView->setViewport({ sidebar, 0, mainWidth, height });
+    }
+    mUiView->setViewport({ 0, 0, width, height });
+}
+
+// ------------------------------------------------------------------------------------------------
+
+FilamentApp2::CView::CView(Renderer& renderer, utils::CString name)
+        : engine(*renderer.getEngine()),
+          mName(name) {
+    view = engine.createView();
+    view->setName(name.c_str());
+}
+
+FilamentApp2::CView::~CView() { engine.destroy(view); }
+
+void FilamentApp2::CView::setViewport(filament::Viewport const& viewport) {
+    mViewport = viewport;
+    view->setViewport(viewport);
+    if (mCameraManipulator) {
+        mCameraManipulator->setViewport(viewport.width, viewport.height);
+    }
+}
+
+void FilamentApp2::CView::mouseDown(int button, ssize_t x, ssize_t y) {
+    if (mCameraManipulator) {
+        mCameraManipulator->grabBegin(x, y, button == 3);
+    }
+}
+
+void FilamentApp2::CView::mouseUp(ssize_t x, ssize_t y) {
+    if (mCameraManipulator) {
+        mCameraManipulator->grabEnd();
+    }
+}
+
+void FilamentApp2::CView::mouseMoved(ssize_t x, ssize_t y) {
+    if (mCameraManipulator) {
+        mCameraManipulator->grabUpdate(x, y);
+    }
+}
+
+void FilamentApp2::CView::mouseWheel(ssize_t x) {
+    if (mCameraManipulator) {
+        mCameraManipulator->scroll(0, 0, x);
+    }
+}
+
+bool FilamentApp2::manipulatorKeyFromKeycode(AppKey scancode, CameraManipulator::Key& key) {
+    switch (scancode) {
+        case AppKey::W:
+            key = CameraManipulator::Key::FORWARD;
+            return true;
+        case AppKey::A:
+            key = CameraManipulator::Key::LEFT;
+            return true;
+        case AppKey::S:
+            key = CameraManipulator::Key::BACKWARD;
+            return true;
+        case AppKey::D:
+            key = CameraManipulator::Key::RIGHT;
+            return true;
+        case AppKey::E:
+            key = CameraManipulator::Key::UP;
+            return true;
+        case AppKey::Q:
+            key = CameraManipulator::Key::DOWN;
+            return true;
+        default:
+            return false;
+    }
+}
+
+void FilamentApp2::CView::keyUp(AppKey scancode) {
+    if (mCameraManipulator) {
+        CameraManipulator::Key key;
+        if (manipulatorKeyFromKeycode(scancode, key)) {
+            mCameraManipulator->keyUp(key);
+        }
+    }
+}
+
+void FilamentApp2::CView::keyDown(AppKey scancode) {
+    if (mCameraManipulator) {
+        CameraManipulator::Key key;
+        if (manipulatorKeyFromKeycode(scancode, key)) {
+            mCameraManipulator->keyDown(key);
+        }
+    }
+}
+
+bool FilamentApp2::CView::intersects(ssize_t x, ssize_t y) {
+    if (x >= mViewport.left && x < mViewport.left + mViewport.width)
+        if (y >= mViewport.bottom && y < mViewport.bottom + mViewport.height) return true;
+
+    return false;
+}
+
+void FilamentApp2::CView::setCameraManipulator(CameraManipulator* cm) { mCameraManipulator = cm; }
+
+void FilamentApp2::CView::setCamera(Camera* camera) { view->setCamera(camera); }
+
+void FilamentApp2::GodView::setGodCamera(Camera* camera) { getView()->setDebugCamera(camera); }

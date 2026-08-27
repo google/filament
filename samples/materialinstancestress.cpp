@@ -15,6 +15,15 @@
  */
 
 #include "common/arguments.h"
+#include "common/SampleConfig.h"
+
+#include "generated/resources/monkey.h"
+#include "generated/resources/resources.h"
+
+#include <filameshio/MeshReader.h>
+
+#include <filamentapp/AssetLoader.h>
+#include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -26,31 +35,24 @@
 #include <filament/View.h>
 
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <filamentapp/Config.h>
-#include <filamentapp/FilamentApp.h>
-
-#include <filameshio/MeshReader.h>
-
 #include <utils/getopt.h>
+#include <utils/Path.h>
 
 #include <imgui.h>
 
 #include <iostream>
 #include <random>
-#include <string>
 #include <vector>
-
-#include "generated/resources/monkey.h"
-#include "generated/resources/resources.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
 using namespace filamesh;
 
+namespace {
 struct App {
+    FilamentApp2* filamentApp = nullptr;
+    SampleConfig config;
     struct UiState {
         int objectCountSlider = 100;
         float updateRatio = 0.5f;
@@ -73,53 +75,7 @@ struct App {
     std::vector<Entity> renderables;
 };
 
-static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
-    std::string usage(
-            "MATERIALINSTANCESTRESS renders a lot of suzanne models and changes their material "
-            "properties periodically.\n"
-            "Usage:\n"
-            "    MATERIALINSTANCESTRESS [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE");
-    const std::string from("MATERIALINSTANCESTRESS");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help", utils::getopt::no_argument, nullptr, 'h' },
-            { "api",  utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config->backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
+void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     if (count <= 0) return;
 
     EntityManager& em = EntityManager::get();
@@ -140,11 +96,11 @@ static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = app.renderables.size();
 }
 
-static void clearScene(Engine* engine, Scene* scene, App& app) {
+void clearScene(Engine* engine, Scene* scene, App& app) {
     removeObjects(engine, scene, app, app.currentObjectCount);
 }
 
-static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
+void addObjects(Engine* engine, Scene* scene, App& app, int count) {
     if (count <= 0) return;
 
     TransformManager& tcm = engine->getTransformManager();
@@ -191,107 +147,111 @@ static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
     app.currentObjectCount = newTotal;
 }
 
-static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
+void createSceneObjects(Engine* engine, Scene* scene, App& app) {
     app.gridDim = static_cast<int>(ceil(sqrt(app.desiredObjectCount)));
     addObjects(engine, scene, app, std::max(0, app.desiredObjectCount - app.currentObjectCount));
 }
 
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "Material Instances Stress Test";
-    config.iblDirectory = FilamentApp::getRootAssetsPath() + "assets/ibl/lightroom_14b";
-    handleCommandLineArguments(argc, argv, &config);
+} // namespace
 
-    App app;
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(
+                (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
+    }
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.desiredObjectCount = app.ui.objectCountSlider;
-        app.suzanneTemplate = MeshReader::loadMeshFromBuffer(engine,
-                MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, nullptr);
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->desiredObjectCount = app->ui.objectCountSlider;
+        app->suzanneTemplate = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA,
+                MONKEY_SUZANNE_SIZE, nullptr, nullptr, nullptr);
 
-        app.litMaterial = Material::Builder()
-                .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
-                .build(*engine);
+        app->litMaterial =
+                Material::Builder()
+                        .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                        .build(*engine);
 
-        app.light = EntityManager::get().create();
+        app->light = EntityManager::get().create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(110000)
-                .direction({0.7, -1, -0.8})
+                .direction({ 0.7, -1, -0.8 })
                 .sunAngularRadius(1.9f)
                 .castShadows(false)
-                .build(*engine, app.light);
-        scene->addEntity(app.light);
+                .build(*engine, app->light);
+        scene->addEntity(app->light);
     };
 
-    auto cleanup = [&app](Engine* engine, View* view, Scene* scene) {
-        clearScene(engine, scene, app);
+    auto cleanup = [app](Engine* engine, View* view, Scene* scene) {
+        clearScene(engine, scene, *app);
 
-        engine->destroy(app.light);
+        engine->destroy(app->light);
         EntityManager& em = EntityManager::get();
-        em.destroy(app.light);
+        em.destroy(app->light);
 
-        engine->destroy(app.litMaterial);
-        engine->destroy(app.suzanneTemplate.renderable);
-        engine->destroy(app.suzanneTemplate.vertexBuffer);
-        engine->destroy(app.suzanneTemplate.indexBuffer);
+        engine->destroy(app->litMaterial);
+        engine->destroy(app->suzanneTemplate.renderable);
+        engine->destroy(app->suzanneTemplate.vertexBuffer);
+        engine->destroy(app->suzanneTemplate.indexBuffer);
     };
 
-    auto gui = [&app](Engine* engine, View* view) {
+    auto gui = [app](Engine* engine, View* view) {
         ImGui::Begin("Material Instance Stress Test Controls");
-        ImGui::Text("Objects: %d", app.currentObjectCount);
-        ImGui::SliderInt("Object Count", &app.ui.objectCountSlider, 1, 1000);
+        ImGui::Text("Objects: %d", app->currentObjectCount);
+        ImGui::SliderInt("Object Count", &app->ui.objectCountSlider, 1, 1000);
 
         if (ImGui::Button("Apply")) {
-            app.desiredObjectCount = app.ui.objectCountSlider;
+            app->desiredObjectCount = app->ui.objectCountSlider;
         }
 
         ImGui::Separator();
-        ImGui::InputInt("Delta Count", &app.ui.deltaCount);
+        ImGui::InputInt("Delta Count", &app->ui.deltaCount);
         if (ImGui::Button("Add Objects")) {
-            app.desiredObjectCount += app.ui.deltaCount;
+            app->desiredObjectCount += app->ui.deltaCount;
         }
         ImGui::SameLine();
         if (ImGui::Button("Remove Objects")) {
-            app.desiredObjectCount = std::max(0, app.desiredObjectCount - app.ui.deltaCount);
+            app->desiredObjectCount = std::max(0, app->desiredObjectCount - app->ui.deltaCount);
         }
         ImGui::Separator();
 
-        ImGui::SliderFloat("Update Ratio / Frame", &app.ui.updateRatio, 0.0f, 1.0f);
-        ImGui::Checkbox("Animate", &app.ui.animate);
+        ImGui::SliderFloat("Update Ratio / Frame", &app->ui.updateRatio, 0.0f, 1.0f);
+        ImGui::Checkbox("Animate", &app->ui.animate);
         ImGui::End();
     };
 
-    auto animate = [&app](Engine* engine, View* view, double now) {
-        if (app.currentObjectCount != app.desiredObjectCount) {
-            if (app.desiredObjectCount == app.ui.objectCountSlider) {
-                clearScene(engine, view->getScene(), app);
+    auto animate = [app](Engine* engine, View* view, double now) {
+        if (app->currentObjectCount != app->desiredObjectCount) {
+            if (app->desiredObjectCount == app->ui.objectCountSlider) {
+                clearScene(engine, view->getScene(), *app);
                 engine->flushAndWait();
-                createSceneObjects(engine, view->getScene(), app);
+                createSceneObjects(engine, view->getScene(), *app);
             } else {
-                if (app.desiredObjectCount > app.currentObjectCount) {
-                    const int toAdd = app.desiredObjectCount - app.currentObjectCount;
-                    addObjects(engine, view->getScene(), app, toAdd);
+                if (app->desiredObjectCount > app->currentObjectCount) {
+                    const int toAdd = app->desiredObjectCount - app->currentObjectCount;
+                    addObjects(engine, view->getScene(), *app, toAdd);
                 } else {
-                    const int toRemove = app.currentObjectCount - app.desiredObjectCount;
-                    removeObjects(engine, view->getScene(), app, toRemove);
+                    const int toRemove = app->currentObjectCount - app->desiredObjectCount;
+                    removeObjects(engine, view->getScene(), *app, toRemove);
                 }
             }
-            app.ui.objectCountSlider = app.currentObjectCount;
+            app->ui.objectCountSlider = app->currentObjectCount;
         }
 
-        if (!app.ui.animate || app.currentObjectCount == 0) {
+        if (!app->ui.animate || app->currentObjectCount == 0) {
             return;
         }
 
-        const int updateCount = static_cast<int>(app.currentObjectCount * app.ui.updateRatio);
-        const uint32_t frame = app.frameCounter++;
+        const int updateCount = static_cast<int>(app->currentObjectCount * app->ui.updateRatio);
+        const uint32_t frame = app->frameCounter++;
         for (int i = 0; i < updateCount; ++i) {
-            const int instanceIndex = (frame * i) % app.currentObjectCount;
-            MaterialInstance* mi = app.materialInstances[instanceIndex];
+            const int instanceIndex = (frame * i) % app->currentObjectCount;
+            MaterialInstance* mi = app->materialInstances[instanceIndex];
 
-            const float x = static_cast<float>(instanceIndex % app.gridDim);
-            const float y = static_cast<float>(instanceIndex / app.gridDim);
+            const float x = static_cast<float>(instanceIndex % app->gridDim);
+            const float y = static_cast<float>(instanceIndex / app->gridDim);
 
             const float r = 0.5f + 0.5f * sin(now + (x + y) * 0.2f);
             const float g = 0.5f + 0.5f * cos(now + (x - y) * 0.2f);
@@ -300,8 +260,31 @@ int main(int argc, char** argv) {
         }
     };
 
-    FilamentApp::get().animate(animate);
-    FilamentApp::get().run(config, setup, cleanup, gui);
 
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .animation(animate)
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Material Instances Stress Test";
+    config.iblDirectory = utils::CString(
+            (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
     return 0;
 }
+#endif

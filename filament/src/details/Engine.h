@@ -189,7 +189,7 @@ public:
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
     // we'll simply have to use separate Areas (for instance).
-    LinearAllocatorArena& getPerRenderPassArena() noexcept { return mPerRenderPassArena; }
+    auto& getPerRenderPassArena() noexcept { return mPerRenderPassArena; }
 
     // Material IDs...
     uint32_t getMaterialId() const noexcept { return mMaterialId++; }
@@ -712,13 +712,13 @@ private:
 
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;
-    std::aligned_storage<sizeof(DriverApi), alignof(DriverApi)>::type mDriverApiStorage;
+    std::aligned_storage_t<sizeof(DriverApi), alignof(DriverApi)> mDriverApiStorage;
     static_assert( sizeof(mDriverApiStorage) >= sizeof(DriverApi) );
 
     uint32_t mFlushCounter = 0;
 
     UboManager* mUboManager = nullptr;
-    RootArenaScope::Arena mPerRenderPassArena;
+    LinearAllocatorArena mPerRenderPassArena;
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
@@ -804,6 +804,13 @@ public:
         struct {
             bool combine_multiview_images = false;
         } stereo;
+        struct {
+            // When enabled (d.vulkan.debug_utils_names), the Vulkan backend explicitly requests the
+            // VK_EXT_debug_utils extension at startup and tracks group markers in the command
+            // buffer. It will also name the render passes with the top group marker so they show up
+            // in RenderDoc and other GPU debugging tools.
+            std::atomic<bool> enable_debug_utils_names{ false };
+        } vulkan;
         matdbg::DebugServer* server = nullptr;
         FgviewerManager* fgviewer = nullptr;
     } debug;

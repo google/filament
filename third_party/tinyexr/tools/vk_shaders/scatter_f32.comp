@@ -1,0 +1,11 @@
+#version 450
+layout(local_size_x=64) in;
+layout(std430,binding=0) buffer D { uint dst[]; };
+layout(std430,binding=1) readonly buffer I { float inb[]; };
+layout(push_constant) uniform PC { uint n,inCh,csrc,dtype; } p;
+void main(){
+  uint i=gl_GlobalInvocationID.x; if(i>=p.n) return; float v=inb[i*p.inCh+p.csrc];
+  if(p.dtype==2u){ dst[i]=floatBitsToUint(v); }
+  else if(p.dtype==1u){ if((i&1u)==0u){ float v2=((i+1u)<p.n)?inb[(i+1u)*p.inCh+p.csrc]:0.0; dst[i>>1]=packHalf2x16(vec2(v,v2)); } }
+  else { double d=double(v); if(d<0.0)d=0.0; if(d>4294967295.0)d=4294967295.0; dst[i]=uint(d+0.5); }
+}

@@ -27,13 +27,13 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
+#include <utils/ImmutableCString.h>
 #include <utils/PrivateImplementation.h>
 
 #include <cstddef>
 #include <cstring>
 #include <functional>
 #include <tuple>
-#include <unordered_set>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -54,7 +54,8 @@ struct VulkanCmdFence;
 /**
  * A Platform interface that creates a Vulkan backend.
  */
-class UTILS_SHARED_LINKING VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
+class UTILS_SHARED_LINKING VulkanPlatform : public Platform,
+                                            utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
     /**
      * Encapsulates information required to instantiate a known external format,
@@ -67,20 +68,8 @@ public:
         VkSamplerYcbcrRange ycbcrRange;
     };
 
-    struct ExtensionHashFn {
-        std::size_t operator()(utils::CString const& s) const noexcept {
-            return std::hash<utils::CString>{}(s.data());
-        }
-    };
-    // Note: utils::CString::operator== has an edge case that breaks for the extension set.
-    // Instead, we'll provide our own comparator.
-    struct ExtensionEqualFn {
-        bool operator()(utils::CString const& a, utils::CString const& b) const noexcept {
-            return strcmp(a.c_str(), b.c_str()) == 0;
-        }
-    };
     // Utility for managing device or instance extensions during initialization.
-    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn, ExtensionEqualFn>;
+    using ExtensionSet = utils::FixedCapacityVector<utils::ImmutableCString>;
 
     /**
      * A collection of handles to objects and metadata that comprises a Vulkan context. The client
@@ -98,7 +87,7 @@ public:
         // where the gpu only has one graphics queue. Then the client needs to ensure that no
         // concurrent access can occur.
         uint32_t graphicsQueueIndex = 0xFFFFFFFF;
-        bool debugUtilsSupported = false;
+        bool debugUtilsEnabled = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
     };
@@ -483,6 +472,15 @@ public:
             uint32_t logicalWidth, uint32_t logicalHeight) const {
         return {};
     }
+
+    /**
+     * On certain platforms, it is possible to set the time that the committed buffers should be
+     * presented at. This affects all of the commited buffers across all swapchains provided to the
+     * backend. Set to 0 if this behavior is not desired.
+     *
+     * @param intended present time
+     */
+    virtual void setPresentationTime(int64_t presentTime) noexcept;
 
 protected:
     struct VulkanSync : public Sync {

@@ -721,18 +721,19 @@ void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const 
     FEngine& engine = mEngine;
 
     FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
-                                engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))
+            engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))
                     << "post-processing is not supported at FEATURE_LEVEL_0";
 
     // per-renderpass data
-    RootArenaScope rootArenaScope(engine.getPerRenderPassArena());
+    auto& arena = engine.getPerRenderPassArena();
+    ArenaScope const scope(arena);
 
     // create a root job so no other job can escape
     JobSystem& js = engine.getJobSystem();
     auto *rootJob = js.setRootJob(js.createJob());
 
     // execute the render pass
-    renderJob(driver, rootArenaScope, const_cast<FView&>(*view));
+    renderJob(driver, arena, const_cast<FView&>(*view));
 
     if (flush) {
         driver.flush();
@@ -745,7 +746,7 @@ void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const 
     js.runAndWait(rootJob);
 }
 
-void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FView& view) {
+void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView& view) {
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     PostProcessManager& ppm = engine.getPostProcessManager();
@@ -947,7 +948,8 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     /*
      * Frame graph
      */
-    FrameGraph fg(*mResourceAllocator,
+    FrameGraph fg(arena, FRAMEGRAPH_ARENA_SIZE,
+        *mResourceAllocator,
         isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
 
 #if FILAMENT_ENABLE_FGVIEWER
@@ -969,7 +971,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
      */
 
     auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
-    view.prepare(engine, driver, rootArenaScope, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel);
+    view.prepare(engine, driver, arena, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel);
     view.prepareLodBias(bias, derivativeScale);
     view.prepareSSAO(aoOptions);
     view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
@@ -1010,7 +1012,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
-    void* const arenaBegin = rootArenaScope.allocate(perFrameCommandsSize, CACHELINE_SIZE);
+    void* const arenaBegin = arena.alloc(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
 
     // This arena *must* stay valid until all commands have been processed
@@ -1025,11 +1027,11 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     DynamicSpecConstKey specKey{0};
     specKey.setDynamicLighting(view.hasDynamicLighting());
+    specKey.setExtraDirectionalLights(view.hasExtraDirectionalLights());
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
     variant.setDirectionalLighting(view.hasDirectionalLighting());
-    variant.setDynamicLighting(view.hasDynamicLighting());
     variant.setFog(view.hasFog());
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
@@ -1230,7 +1232,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
                 // FIXME: use a dummy resource instead
                 builder.sideEffect();
             },
-            [=, &js, &view, &ppm](auto&, auto&, DriverApi& driver) {
+            [=, &arena, &js, &view, &ppm](auto&, auto&, DriverApi& driver) {
                 // prepare color grading as subpass material
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
@@ -1250,7 +1252,7 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
                 // in parallel with .compile()
                 if (auto sync = view.getFroxelizerSync()) {
                     js.waitAndRelease(sync);
-                    view.commitFroxels(driver);
+                    view.commitFroxels(driver, arena);
                 }
             });
 
@@ -1636,8 +1638,12 @@ void FRenderer::renderJob(DriverApi& driver, RootArenaScope& rootArenaScope, FVi
 
     // save the current history entry and destroy the oldest entry
     view.commitFrameHistory(engine);
+    view.finish(arena);
 
     recordHighWatermark(commandArena.getListener().getHighWatermark());
+
+    // return the memory used for commandArena to the main arena
+    arena.free(arenaBegin, perFrameCommandsSize);
 }
 
 } // namespace filament

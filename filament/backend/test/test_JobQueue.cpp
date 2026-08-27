@@ -19,6 +19,10 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <chrono>
+#include <future>
+#include <memory>
+#include <string>
 #include <thread>
 
 using namespace filament::backend;
@@ -97,6 +101,42 @@ TEST(JobQueue, Cancel) {
 TEST(JobQueue, CancelInvalid) {
     JobQueue::Ptr queue = JobQueue::create();
     EXPECT_FALSE(queue->cancel(123));
+}
+
+TEST(JobQueue, CancelDestroysJobWithoutHoldingLock) {
+    JobQueue::Ptr queue = JobQueue::create();
+
+    // Mimics what a canceled job captures in practice: something whose destructor runs user code
+    // that calls back into the queue (e.g. a BufferDescriptor whose release callback chains the
+    // next asynchronous call). Destroying the job while the queue's lock is held deadlocks.
+    struct ReentrantOnDestroy {
+        JobQueue::Ptr queue;
+        std::atomic<JobQueue::JobId>* reentrantJobId;
+        ~ReentrantOnDestroy() { reentrantJobId->store(queue->issueJobId()); }
+    };
+
+    std::atomic<JobQueue::JobId> reentrantJobId = { JobQueue::InvalidJobId };
+    JobQueue::JobId const idToCancel = queue->push(
+            [guard = std::make_unique<ReentrantOnDestroy>(
+                     ReentrantOnDestroy{ queue, &reentrantJobId })]() {});
+
+    // Cancel from another thread so that a regression fails the test instead of hanging it.
+    auto canceled = std::make_shared<std::promise<bool>>();
+    std::future<bool> future = canceled->get_future();
+    std::thread canceller([queue, idToCancel, canceled]() {
+        canceled->set_value(queue->cancel(idToCancel));
+    });
+
+    if (future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+        canceller.detach(); // the thread is stuck holding the queue's lock, it can't be joined
+        FAIL() << "cancel() deadlocked: the job was destroyed while holding the queue's lock";
+    }
+
+    EXPECT_TRUE(future.get());
+    canceller.join();
+
+    // The job's destructor must have been able to use the queue.
+    EXPECT_NE(JobQueue::InvalidJobId, reentrantJobId.load());
 }
 
 TEST(JobQueue, Stop) {
@@ -286,3 +326,49 @@ TEST(ThreadWorker, Callbacks) {
     EXPECT_TRUE(beginCalled);
     EXPECT_TRUE(endCalled);
 }
+
+TEST(ThreadWorker, DestroyAfterTerminate) {
+    JobQueue::Ptr queue = JobQueue::create();
+    bool endCalled = false;
+
+    {
+        ThreadWorker::Config config = {
+            .name = "TestThread",
+            .priority = ThreadWorker::Priority::NORMAL,
+            .onEnd = [&endCalled]() { endCalled = true; }
+        };
+        JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
+        worker->terminate();
+        // `worker` goes out of scope here. The thread has already been joined, so the destructor
+        // must not abort.
+    }
+
+    EXPECT_TRUE(endCalled);
+}
+
+// Destroying a worker without calling `terminate()` first is a programming error, and the process
+// must die on it. In debug builds `~ThreadWorker()` asserts, in release builds the assert is
+// compiled out but `std::thread`'s destructor still calls `std::terminate()` on a joinable thread.
+// Death tests are unavailable on iOS-family platforms.
+#if defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
+TEST(ThreadWorkerDeathTest, DestroyWithoutTerminateAborts) {
+#ifdef NDEBUG
+    // `std::terminate()`'s message is toolchain-specific, so only the death itself is checked.
+    constexpr char const* expected = "";
+#else
+    constexpr char const* expected = "failed assertion";
+#endif
+    // This binary is multi-threaded, and the default "fast" style forks without exec, which is
+    // unsafe there. "threadsafe" re-executes the binary instead. The previous value is restored so
+    // that the other death tests linked into this binary keep their default style.
+    std::string const previousStyle = GTEST_FLAG_GET(death_test_style);
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+    EXPECT_DEATH({
+        JobQueue::Ptr queue = JobQueue::create();
+        JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+    }, expected);
+
+    GTEST_FLAG_SET(death_test_style, previousStyle);
+}
+#endif

@@ -338,6 +338,8 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType const 
         FILAMENT_CHECK_POSTCONDITION(type == ConstantType::BOOL)
                 << "Constant " << name << " was declared with type " << toString(type)
                 << " but given a bool default value.";
+        // Zero-initialize the union to prevent garbage values.
+        constant.defaultValue.i = 0;
         constant.defaultValue.b = defaultValue;
     } else {
         assert_invariant(false);
@@ -948,9 +950,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 // skip all variants that can't be used with ESSL1
                 if (filament::Variant::isValidStandardVariant(v.variant)) {
                     if (v.variant.hasDirectionalLighting()) {
-                        continue;
-                    }
-                    if (v.variant.hasDynamicLighting()) {
                         continue;
                     }
                 }

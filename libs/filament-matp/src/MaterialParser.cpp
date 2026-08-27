@@ -14,8 +14,6 @@
 * limitations under the License.
 */
 
-#include <filament-matp/MaterialParser.h>
-
 #include "DirIncluder.h"
 #include "Includes.h"
 #include "JsonishLexer.h"
@@ -24,13 +22,15 @@
 #include "MaterialLexer.h"
 #include "ParametersProcessor.h"
 
+#include <filament-matp/Config.h>
+#include <filament-matp/MaterialParser.h>
+
 #include <filamat/Enums.h>
 #include <filamat/MaterialBuilder.h>
-#include <filament-matp/Config.h>
 
+#include <utils/JobSystem.h>
 #include <utils/sstream.h>
 #include <utils/Status.h>
-#include <utils/JobSystem.h>
 
 #include <memory>
 #include <utility>
@@ -535,6 +535,11 @@ utils::Status MaterialParser::parse(filamat::MaterialBuilder& builder,
     if (utils::Status processedStatus = processMaterialParameters(builder, config);
             !processedStatus.isOk()) {
         return processedStatus;
+    }
+
+    // If the apiLevel is supplied from the commandline, override any apiLevel defined in the .mat file.
+    if (uint32_t apiLevelOverride = config.getApiLevelOverride(); apiLevelOverride > 0) {
+        builder.setApiLevel(apiLevelOverride);
     }
 
     return utils::Status::ok();
