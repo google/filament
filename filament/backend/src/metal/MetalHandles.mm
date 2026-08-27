@@ -1520,7 +1520,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                 MTLArgumentDescriptor* bufferArgument = [MTLArgumentDescriptor argumentDescriptor];
                 bufferArgument.index = binding.binding * 2;
                 bufferArgument.dataType = MTLDataTypePointer;
-                bufferArgument.access = MTLArgumentAccessReadOnly;
+                bufferArgument.access = MTLBindingAccessReadOnly;
                 [arguments addObject:bufferArgument];
                 break;
             }
@@ -1558,13 +1558,13 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                     textureType = textureTypes[textureIndex++];
                 }
                 textureArgument.textureType = textureType;
-                textureArgument.access = MTLArgumentAccessReadOnly;
+                textureArgument.access = MTLBindingAccessReadOnly;
                 [arguments addObject:textureArgument];
 
                 MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
                 samplerArgument.index = binding.binding * 2 + 1;
                 samplerArgument.dataType = MTLDataTypeSampler;
-                samplerArgument.access = MTLArgumentAccessReadOnly;
+                samplerArgument.access = MTLBindingAccessReadOnly;
                 [arguments addObject:samplerArgument];
                 break;
             }
@@ -1584,6 +1584,25 @@ MetalDescriptorSet::MetalDescriptorSet(MetalDescriptorSetLayout* layout) noexcep
     : layout(layout) {}
 
 void MetalDescriptorSet::finalize(MetalDriver* driver) {
+#if defined(FILAMENT_APPLETV)
+    // The tvOS floor (17.0) predates none of the stages: variants, and the stage-less
+    // useResource(s) variants are deprecated there (-Werror); always use stages:.
+    [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
+                                                      usage:MTLResourceUsageRead
+                                                     stages:MTLRenderStageVertex | MTLRenderStageFragment];
+    [driver->mContext->currentRenderPassEncoder
+            useResource:getOrCreateEmptyTexture(driver->mContext)
+                  usage:MTLResourceUsageRead
+                 stages:MTLRenderStageVertex | MTLRenderStageFragment];
+    [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                       count:vertexResources.size()
+                                                       usage:MTLResourceUsageRead
+                                                      stages:MTLRenderStageVertex];
+    [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                       count:fragmentResources.size()
+                                                       usage:MTLResourceUsageRead
+                                                      stages:MTLRenderStageFragment];
+#else
     [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
                                                       usage:MTLResourceUsageRead];
     [driver->mContext->currentRenderPassEncoder
@@ -1607,6 +1626,7 @@ void MetalDescriptorSet::finalize(MetalDriver* driver) {
                                                            count:fragmentResources.size()
                                                            usage:MTLResourceUsageRead];
     }
+#endif
 }
 
 id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, ShaderStage stage) {

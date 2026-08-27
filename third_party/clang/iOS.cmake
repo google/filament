@@ -25,6 +25,27 @@ if(PLATFORM_NAME STREQUAL "iphonesimulator")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${IOS_ARCH}-apple-ios${IOS_MIN_TARGET}-simulator")
 endif()
 
+# tvOS builds reuse the iOS toolchain path: pass -DPLATFORM_NAME=appletvos or
+# -DPLATFORM_NAME=appletvsimulator. tvOS is API-wise a sibling of iOS
+# (TARGET_OS_IPHONE is 1 on both), so FILAMENT_IOS stays defined; the target
+# triple selects the tvOS SDK/availability rules.
+if(PLATFORM_NAME STREQUAL "appletvos" OR PLATFORM_NAME STREQUAL "appletvsimulator")
+    set(APPLETV TRUE)
+    add_definitions(-DFILAMENT_APPLETV)
+    # tvOS is Metal-only: OpenGL ES is deprecated on Apple platforms and the
+    # CocoaTouchGL platform layer is not ported.
+    set(FILAMENT_SUPPORTS_OPENGL OFF CACHE BOOL "tvOS builds are Metal-only" FORCE)
+    set(IOS_MIN_TARGET "17.0")
+    if(PLATFORM_NAME STREQUAL "appletvsimulator")
+        add_definitions(-DFILAMENT_IOS_SIMULATOR)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target ${IOS_ARCH}-apple-tvos${IOS_MIN_TARGET}-simulator")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${IOS_ARCH}-apple-tvos${IOS_MIN_TARGET}-simulator")
+    else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target ${IOS_ARCH}-apple-tvos${IOS_MIN_TARGET}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${IOS_ARCH}-apple-tvos${IOS_MIN_TARGET}")
+    endif()
+endif()
+
 SET(CMAKE_SYSTEM_NAME Darwin)
 SET(CMAKE_SYSTEM_VERSION 13)
 SET(CMAKE_CXX_COMPILER_WORKS True)

@@ -184,6 +184,26 @@ The easiest way to build Filament for iOS is to use `build.sh` and the
 
 See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
+## tvOS
+
+tvOS builds use the same toolchain path as iOS and are Metal-only (the OpenGL
+backend is automatically disabled). To build for Apple TV devices and the
+tvOS simulator, and bundle the results as XCFrameworks:
+
+```shell
+./build.sh -i -s -p tvos release
+```
+
+Omit `-s` to skip the simulator slice. Add `-a` to generate a
+`filament-<type>-tvos.tgz` archive. Output is installed under
+`out/tvos-<type>/filament` with one XCFramework per library
+(`tvos-arm64` and `tvos-arm64-simulator` slices).
+
+The deployment floor is tvOS 17.0. Note that the tvOS simulator advertises
+`MTLGPUFamilyApple2` (the Apple TV HD GPU), so features requiring comparison
+samplers (e.g. PCF shadows) are unavailable in the simulator while remaining
+available on all Apple TV 4K devices (`MTLGPUFamilyApple3`+).
+
 ## Windows
 
 ### Building on Windows with Visual Studio 2019 or later
