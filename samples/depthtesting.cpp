@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -43,8 +44,10 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
+    FilamentApp2* filamentApp;
     VertexBuffer* vb;
     IndexBuffer* ib;
     Material* mat;
@@ -61,118 +64,130 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
+const Vertex TRIANGLE_VERTICES[3] = {
     {{1, 0}, 0xffff0000u},
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+} // namespace
 
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "depthtesting";
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+        scene->setSkybox(app->skybox);
 
-    App app;
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-        scene->setSkybox(app.skybox);
-
-        app.camera = utils::EntityManager::get().create();
-        app.cam = engine->createCamera(app.camera);
-        view->setCamera(app.cam);
+        app->camera = utils::EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
+        view->setCamera(app->cam);
         view->setPostProcessingEnabled(false);
-        app.vb = VertexBuffer::Builder()
-                .vertexCount(3)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
-                .build(*engine);
-        app.vb->setBufferAt(*engine, 0,
+        app->vb = VertexBuffer::Builder()
+                          .vertexCount(3)
+                          .bufferCount(1)
+                          .attribute(VertexAttribute::POSITION, 0,
+                                  VertexBuffer::AttributeType::FLOAT2, 0, 12)
+                          .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
+                                  8, 12)
+                          .normalized(VertexAttribute::COLOR)
+                          .build(*engine);
+        app->vb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-        app.ib = IndexBuffer::Builder()
-                .indexCount(3)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+        app->ib = IndexBuffer::Builder()
+                          .indexCount(3)
+                          .bufferType(IndexBuffer::IndexType::USHORT)
+                          .build(*engine);
+        app->ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
 
         // Create the white triangle with default material.
-        app.whiteTriangle = EntityManager::get().create();
+        app->whiteTriangle = EntityManager::get().create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .build(*engine, app.whiteTriangle);
-        scene->addEntity(app.whiteTriangle);
+                .build(*engine, app->whiteTriangle);
+        scene->addEntity(app->whiteTriangle);
 
         // Create the color triangle with custom material.
-        app.colorTriangle = EntityManager::get().create();
-        app.mat = Material::Builder()
-                .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
-                .build(*engine);
+        app->colorTriangle = EntityManager::get().create();
+        app->mat = Material::Builder()
+                           .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+                           .build(*engine);
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .priority(5)  // draw after whiteTriangle.
-                .build(*engine, app.colorTriangle);
-        scene->addEntity(app.colorTriangle);
+                .priority(5) // draw after whiteTriangle.
+                .build(*engine, app->colorTriangle);
+        scene->addEntity(app->colorTriangle);
 
-        app.depthFunc = MaterialInstance::DepthFunc::GE;
+        app->depthFunc = MaterialInstance::DepthFunc::GE;
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.skybox);
-        engine->destroy(app.whiteTriangle);
-        engine->destroy(app.colorTriangle);
-        engine->destroy(app.mat);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->whiteTriangle);
+        engine->destroy(app->colorTriangle);
+        engine->destroy(app->mat);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
 
-        engine->destroyCameraComponent(app.camera);
-        utils::EntityManager::get().destroy(app.camera);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
     };
 
-    auto gui = [&app](Engine* engine, View* view) {
-        int depthFuncSelection = (int) app.depthFunc;
+    auto gui = [app](Engine* engine, View* view) {
+        int depthFuncSelection = (int) app->depthFunc;
         ImGui::Combo("Depth Function", &depthFuncSelection,
                 "Less or equal\0Greater or equal\0Strictly less than\0"
                 "Strictly greater than\0Equal\0Not equal\0Always\0Never\0\0");
-        if (depthFuncSelection != (int) app.depthFunc) {
-            app.depthFunc = (MaterialInstance::DepthFunc) depthFuncSelection;
-            app.mat->getDefaultInstance()->setDepthFunc(app.depthFunc);
+        if (depthFuncSelection != (int) app->depthFunc) {
+            app->depthFunc = (MaterialInstance::DepthFunc) depthFuncSelection;
+            app->mat->getDefaultInstance()->setDepthFunc(app->depthFunc);
         }
     };
 
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(config.title)
-                              .backend(config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .imgui(gui)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  constexpr float ZOOM = 1.5f;
-                                  const uint32_t w = view->getViewport().width;
-                                  const uint32_t h = view->getViewport().height;
-                                  const float aspect = (float) w / h;
-                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
-                                          aspect * ZOOM, -ZOOM, ZOOM, -5, 5);
-                                  auto& tcm = engine->getTransformManager();
-                                  tcm.setTransform(tcm.getInstance(app.colorTriangle),
-                                          filament::math::mat4f::rotation(now,
-                                                  filament::math::float3{ 0, 1, 0 }));
-                              })
-                              .build();
-    app.filamentApp->run();
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            constexpr float ZOOM = 1.5f;
+                            const uint32_t w = view->getViewport().width;
+                            const uint32_t h = view->getViewport().height;
+                            const float aspect = (float) w / h;
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                    aspect * ZOOM, -ZOOM, ZOOM, -5, 5);
+                            auto& tcm = engine->getTransformManager();
+                            tcm.setTransform(tcm.getInstance(app->colorTriangle),
+                                    filament::math::mat4f::rotation(now,
+                                            filament::math::float3{ 0, 1, 0 }));
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
 
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "depthtesting";
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    fApp->run();
     return 0;
 }
+#endif

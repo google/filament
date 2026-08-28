@@ -30,7 +30,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 75;
+static constexpr size_t MATERIAL_VERSION = 76;
 
 // Those are the api levels that are used in the source material file (.mat)
 //
@@ -251,7 +251,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 32;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 34;
 enum class Property : uint8_t {
     BASE_COLOR,               //!< float4, all shading models
     ROUGHNESS,                //!< float,  lit shading models only
@@ -273,18 +273,20 @@ enum class Property : uint8_t {
     EMISSIVE,                 //!< float4, all shading models
     NORMAL,                   //!< float3, all shading models only, except unlit
     POST_LIGHTING_COLOR,      //!< float4, all shading models
-    POST_LIGHTING_MIX_FACTOR, //!< float, all shading models
+    POST_LIGHTING_MIX_FACTOR, //!< float,  all shading models
     CLIP_SPACE_TRANSFORM,     //!< mat4,   vertex shader only
     ABSORPTION,               //!< float3, how much light is absorbed by the material
     TRANSMISSION,             //!< float,  how much light is refracted through the material
     IOR,                      //!< float,  material's index of refraction
     DISPERSION,               //!< float,  material's dispersion
-    MICRO_THICKNESS,          //!< float, thickness of the thin layer
+    MICRO_THICKNESS,          //!< float,  thickness of the thin layer
     BENT_NORMAL,              //!< float3, all shading models only, except unlit
-    SPECULAR_FACTOR,          //!< float, lit shading models only, except subsurface and cloth
+    SPECULAR_FACTOR,          //!< float,  lit shading models only, except subsurface and cloth
     SPECULAR_COLOR_FACTOR,    //!< float3, lit shading models only, except subsurface and cloth
-    SHADOW_STRENGTH,          //!< float, [0, 1] strength of shadows received by this material
+    SHADOW_STRENGTH,          //!< float,  strength of shadows received by this material [0, 1]
     CLIP_SPACE_POSITION,      //!< float4, vertex shader only
+    SECOND_ROUGHNESS,         //!< float,  lit shading models only, except subsurface and cloth
+    SECOND_ROUGHNESS_WEIGHT,  //!< float,  lit shading models only, except subsurface and cloth
 
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
@@ -293,7 +295,12 @@ using UserVariantFilterMask = uint32_t;
 
 enum class UserVariantFilterBit : UserVariantFilterMask {
     DIRECTIONAL_LIGHTING = 0x01, //!< Directional lighting
-    DYNAMIC_LIGHTING = 0x02,     //!< Dynamic lighting
+
+    //!< \note Since dynamic lighting was migrated to specialization constants, filtering this bit
+    //!< no longer affects the size of offline compiled materials (.filamat). However, we keep it
+    //!< for pruning unnecessary pipeline compilations at runtime.
+    DYNAMIC_LIGHTING = 0x02, //!< Dynamic lighting
+
     SHADOW_RECEIVER = 0x04,      //!< Shadow receiver
     SKINNING = 0x08,             //!< Skinning
     FOG = 0x10,                  //!< Fog

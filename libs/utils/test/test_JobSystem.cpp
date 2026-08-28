@@ -14,17 +14,25 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
+#include <utils/Allocator.h>
 #include <utils/JobSystem.h>
+#include <utils/Panic.h>
 #include <utils/WorkStealingDequeue.h>
 
-#include <math/vec3.h>
 #include <math/mat3.h>
+#include <math/vec3.h>
+
+#include <gtest/gtest.h>
 
 #include <array>
 #include <thread>
-#include <utils/Allocator.h>
+#include <vector>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 using namespace utils;
 using namespace jobs;
@@ -284,6 +292,244 @@ TEST(JobSystem, JobSystemParallelFor) {
     js.emancipate();
 }
 
+TEST(JobSystem, JobSystemParallelForLargeChunkSize) {
+    JobSystem js;
+    js.adopt();
+
+    constexpr size_t COUNT = 131072;
+    std::vector<uint32_t> data(COUNT, 0);
+
+    // Test with chunkSize = 65536 (exact multiple of 2^16, which would truncate to 0 in uint16_t)
+    JobSystem::Job* job1 = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 1;
+                }
+            }, CountSplitter<65536>());
+    js.runAndWait(job1);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 1u);
+    }
+
+    // Test with chunkSize = 70000 (> 2^16)
+    JobSystem::Job* job2 = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 2;
+                }
+            }, CountSplitter<70000>());
+    js.runAndWait(job2);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 3u);
+    }
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForConstInvocability) {
+    // 1. Regular/const lambdas are const-invocable
+    auto constLambda = [](uint32_t, uint32_t) {};
+    static_assert(std::is_invocable_v<decltype(constLambda) const&, uint32_t, uint32_t>);
+
+    // 2. Mutable lambdas are NOT const-invocable
+    auto mutableLambda = [x = 0](uint32_t, uint32_t) mutable { (void)x; };
+    static_assert(!std::is_invocable_v<decltype(mutableLambda) const&, uint32_t, uint32_t>);
+
+    // 3. std::ref allows explicit thread-safe mutable state sharing
+    struct MutableState {
+        std::atomic<uint32_t> total{0};
+        void operator()(uint32_t, uint32_t count) {
+            total.fetch_add(count, std::memory_order_relaxed);
+        }
+    } state;
+    static_assert(std::is_invocable_v<decltype(std::ref(state)) const&, uint32_t, uint32_t>);
+
+    JobSystem js;
+    js.adopt();
+    JobSystem::Job* job = parallel_for(js, nullptr, 0, 1000, std::ref(state));
+    js.runAndWait(job);
+    EXPECT_EQ(1000u, state.total.load());
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForLargeStartOffset) {
+    JobSystem js;
+    js.adopt();
+
+    std::atomic<uint32_t> itemsProcessed{0};
+    std::atomic<bool> allIndicesValid{true};
+    // Maximum valid 32-bit range ending exactly at 2^32 (index 0xFFFFFFFF)
+    uint32_t const start = 0xFFFFFFE0u;
+    uint32_t const count = 32;
+
+    JobSystem::Job* job = parallel_for(js, nullptr, start, count,
+            [&itemsProcessed, &allIndicesValid, start, count](uint32_t s, uint32_t c) {
+                if (s < start || uint64_t(s) + c > uint64_t(start) + count) {
+                    allIndicesValid.store(false, std::memory_order_relaxed);
+                }
+                itemsProcessed.fetch_add(c, std::memory_order_relaxed);
+            }, CountSplitter<4>());
+    ASSERT_NE(nullptr, job);
+    js.runAndWait(job);
+
+    EXPECT_TRUE(allIndicesValid.load());
+    EXPECT_EQ(32u, itemsProcessed.load());
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForRangeOverflowReturnsNullptr) {
+    JobSystem js;
+    js.adopt();
+
+    // 1. count exceeds 2^31 - 1
+    JobSystem::Job* job1 = parallel_for(js, nullptr, 0, 0x80000000u, [](uint32_t, uint32_t) {});
+    EXPECT_EQ(nullptr, job1);
+
+    // 2. start + count exceeds 2^32 (32-bit range overflow / wrap)
+    JobSystem::Job* job2 = parallel_for(js, nullptr, 0xFFFFFFF0u, 32, [](uint32_t, uint32_t) {});
+    EXPECT_EQ(nullptr, job2);
+
+    // 3. start = UINT32_MAX, count = 2
+    JobSystem::Job* job3 = parallel_for(js, nullptr, 0xFFFFFFFFu, 2, [](uint32_t, uint32_t) {});
+    EXPECT_EQ(nullptr, job3);
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForEmptyCount) {
+    JobSystem js;
+    js.adopt();
+
+    bool called = false;
+    JobSystem::Job* job = parallel_for(js, nullptr, 0, 0,
+            [&called](uint32_t, uint32_t) {
+                called = true;
+            });
+    ASSERT_NE(job, nullptr);
+    js.runAndWait(job);
+
+    EXPECT_FALSE(called);
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForCancel) {
+    JobSystem js;
+    js.adopt();
+
+    std::atomic<bool> called{false};
+    JobSystem::Job* job = parallel_for(js, nullptr, 0, 100,
+            [&called](uint32_t, uint32_t) {
+                called.store(true, std::memory_order_relaxed);
+            });
+    ASSERT_NE(job, nullptr);
+    js.cancel(job);
+    EXPECT_EQ(job, nullptr);
+    EXPECT_FALSE(called.load());
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemParallelForAdoptedThreads) {
+    JobSystem js(1, 3);
+    js.adopt();
+
+    std::atomic<bool> bgRunning{true};
+    std::atomic<int> bgAdoptedCount{0};
+    std::vector<std::thread> bgThreads;
+    for (int i = 0; i < 2; ++i) {
+        bgThreads.emplace_back([&js, &bgRunning, &bgAdoptedCount]() {
+            js.adopt();
+            bgAdoptedCount.fetch_add(1, std::memory_order_release);
+            while (bgRunning.load(std::memory_order_relaxed)) {
+                std::this_thread::yield();
+            }
+            js.emancipate();
+        });
+    }
+
+    while (bgAdoptedCount.load(std::memory_order_acquire) < 2) {
+        std::this_thread::yield();
+    }
+
+    EXPECT_GE(js.getActiveThreadCount(), 3u);
+
+    constexpr size_t COUNT = 1000;
+    std::vector<uint32_t> data(COUNT, 0);
+    JobSystem::Job* job = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    ptr[i] += 1;
+                }
+            }, CountSplitter<10>());
+    js.runAndWait(job);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data[i], 1u);
+    }
+
+    bgRunning.store(false, std::memory_order_release);
+    for (auto& t : bgThreads) {
+        t.join();
+    }
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemCustomSplitters) {
+    JobSystem js;
+    js.adopt();
+
+    struct CustomFixedSplitter {
+        size_t getChunkSize() const noexcept { return 8; }
+    };
+
+    struct CustomDynamicSplitter {
+        size_t getChunkSize(uint32_t count, uint32_t threadCount) const noexcept {
+            return std::max<uint32_t>(1, count / (threadCount * 2));
+        }
+    };
+
+    constexpr size_t COUNT = 128;
+    std::vector<uint32_t> data1(COUNT, 0);
+    std::vector<uint32_t> data2(COUNT, 0);
+
+    JobSystem::Job* job1 = parallel_for(js, nullptr, data1.data(), data1.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) ptr[i] += 1;
+            }, CustomFixedSplitter{});
+    js.runAndWait(job1);
+
+    JobSystem::Job* job2 = parallel_for(js, nullptr, data2.data(), data2.size(),
+            [](uint32_t* ptr, size_t count) {
+                for (size_t i = 0; i < count; ++i) ptr[i] += 2;
+            }, CustomDynamicSplitter{});
+    js.runAndWait(job2);
+
+    for (size_t i = 0; i < COUNT; ++i) {
+        EXPECT_EQ(data1[i], 1u);
+        EXPECT_EQ(data2[i], 2u);
+    }
+
+    // Test CountSplitter with 1 and 2 template parameters and max chunk capping
+    CountSplitter<1, 12> defaultSplitter;
+    EXPECT_EQ(1u, defaultSplitter.getChunkSize(1024, 4));
+    // For 1,000,000 items with MAX_SPLITS = 12 (4096 chunks max), chunk size is ceil(1000000 / 4096) = 245
+    EXPECT_EQ(245u, defaultSplitter.getChunkSize(1000000, 4));
+
+    CountSplitter<64, 8> customCappedSplitter;
+    // MAX_SPLITS = 8 (256 chunks max)
+    // For 1,000 items, 1000 / 256 = 4 < 64 (COUNT floor takes precedence)
+    EXPECT_EQ(64u, customCappedSplitter.getChunkSize(1000, 4));
+    // For 100,000 items, ceil(100000 / 256) = 391 >= 64
+    EXPECT_EQ(391u, customCappedSplitter.getChunkSize(100000, 4));
+
+    js.emancipate();
+}
+
 TEST(JobSystem, JobSystemDelegates) {
     JobSystem js;
     js.adopt();
@@ -343,4 +589,701 @@ TEST(JobSystem, JobSystemDelegates) {
 
 
     js.emancipate();
+}
+
+TEST(JobSystem, JobSystemConcurrentStress) {
+    // 8 worker threads + 16 adoptable user threads
+    JobSystem js(8, 16);
+
+    constexpr size_t THREAD_COUNT = 16;
+    constexpr size_t ITERATIONS = 20;
+    constexpr size_t ARRAY_SIZE = 1024;
+
+    std::atomic<bool> start{false};
+    std::vector<std::thread> threads;
+    threads.reserve(THREAD_COUNT);
+
+    std::atomic<uint64_t> totalSum{0};
+
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        threads.emplace_back([&, t]() {
+            while (!start.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+
+            for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+                js.adopt();
+
+                std::vector<uint32_t> data(ARRAY_SIZE, uint32_t(t + 1));
+                auto* job = parallel_for(js, nullptr, data.data(), data.size(),
+                        [](uint32_t* slice, size_t count) {
+                            for (size_t i = 0; i < count; ++i) {
+                                slice[i] *= 2;
+                            }
+                        }, CountSplitter<4>());
+                js.runAndWait(job);
+
+                uint64_t localSum = 0;
+                for (uint32_t val : data) {
+                    localSum += val;
+                }
+                totalSum.fetch_add(localSum, std::memory_order_relaxed);
+
+                js.emancipate();
+            }
+        });
+    }
+
+    start.store(true, std::memory_order_release);
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    uint64_t expectedTotal = 0;
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        expectedTotal += uint64_t(t + 1) * 2 * ARRAY_SIZE * ITERATIONS;
+    }
+
+    EXPECT_EQ(totalSum.load(), expectedTotal);
+}
+
+TEST(JobSystem, JobSystemBurstyWake) {
+    JobSystem js(4, 1);
+    js.adopt();
+
+    std::atomic<uint32_t> completedJobs{0};
+
+    // Part 1: Submit 1 job, wait for completion, sleep to ensure workers go to sleep, repeat
+    for (size_t i = 0; i < 30; ++i) {
+        JobSystem::Job* job = js.createJob(nullptr, [&completedJobs](JobSystem&, JobSystem::Job*) {
+            completedJobs.fetch_add(1, std::memory_order_relaxed);
+        });
+        js.runAndWait(job);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+
+    EXPECT_EQ(30u, completedJobs.load());
+
+    // Part 2: Sudden burst of 100 jobs after idle period
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+    for (size_t i = 0; i < 100; ++i) {
+        JobSystem::Job* child = js.createJob(root, [&completedJobs](JobSystem&, JobSystem::Job*) {
+            completedJobs.fetch_add(1, std::memory_order_relaxed);
+        });
+        js.run(child);
+    }
+    js.runAndWait(root);
+
+    EXPECT_EQ(130u, completedJobs.load());
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemDeepTreeMultiWait) {
+    JobSystem js(8, 8);
+    js.adopt();
+
+    std::atomic<uint32_t> leafCount{0};
+
+    auto buildTree = [&](auto& self, JobSystem::Job* parent, int depth) -> void {
+        if (depth == 0) {
+            JobSystem::Job* leaf = js.createJob(parent, [&leafCount](JobSystem&, JobSystem::Job*) {
+                leafCount.fetch_add(1, std::memory_order_relaxed);
+            });
+            js.run(leaf);
+            return;
+        }
+        for (int i = 0; i < 4; ++i) {
+            JobSystem::Job* node = js.createJob(parent, [](JobSystem&, JobSystem::Job*) {});
+            self(self, node, depth - 1);
+            js.run(node);
+        }
+    };
+
+    JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+    buildTree(buildTree, root, 4); // 4^4 = 256 leaves
+
+    // Retain root so we can wait on it from multiple threads
+    js.retain(root);
+    js.retain(root);
+    js.retain(root);
+
+    std::atomic<bool> start{false};
+    std::vector<std::thread> waitingThreads;
+    for (int t = 0; t < 3; ++t) {
+        waitingThreads.emplace_back([&, root]() {
+            js.adopt();
+            while (!start.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            JobSystem::Job* r = root;
+            js.waitAndRelease(r);
+            js.emancipate();
+        });
+    }
+
+    start.store(true, std::memory_order_release);
+    js.runAndWait(root);
+
+    for (auto& t : waitingThreads) {
+        t.join();
+    }
+
+    EXPECT_EQ(256u, leafCount.load());
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemPoolExhaustionAndChurn) {
+    JobSystem js(8, 8);
+
+    constexpr size_t THREAD_COUNT = 8;
+    constexpr size_t BATCH_SIZE = 1200; // 8 * 1200 = 9600 active jobs simultaneously
+    std::atomic<uint32_t> jobsExecuted{0};
+
+    std::vector<std::thread> threads;
+    threads.reserve(THREAD_COUNT);
+
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        threads.emplace_back([&]() {
+            js.adopt();
+            for (size_t iter = 0; iter < 3; ++iter) {
+                JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+                for (size_t i = 0; i < BATCH_SIZE; ++i) {
+                    JobSystem::Job* child = js.createJob(root, [&jobsExecuted](JobSystem&, JobSystem::Job*) {
+                        jobsExecuted.fetch_add(1, std::memory_order_relaxed);
+                    });
+                    js.run(child);
+                }
+                js.runAndWait(root);
+            }
+            js.emancipate();
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    EXPECT_EQ(THREAD_COUNT * BATCH_SIZE * 3, jobsExecuted.load());
+}
+
+TEST(JobSystem, JobSystemSingleThreaded) {
+    JobSystem js(JobSystem::SINGLE_THREADED);
+    js.adopt();
+
+    std::vector<uint32_t> data(512, 10);
+    auto* job = parallel_for(js, nullptr, data.data(), data.size(),
+            [](uint32_t* slice, size_t count) {
+                for (size_t i = 0; i < count; ++i) {
+                    slice[i] += 5;
+                }
+            }, CountSplitter<4>());
+    js.runAndWait(job);
+
+    for (uint32_t val : data) {
+        EXPECT_EQ(15u, val);
+    }
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemMultipleInstances) {
+    JobSystem js1(4, 4);
+    JobSystem js2(4, 4);
+
+    std::atomic<uint32_t> count1{0};
+    std::atomic<uint32_t> count2{0};
+
+    std::thread t1([&]() {
+        js1.adopt();
+        for (int i = 0; i < 100; ++i) {
+            JobSystem::Job* job = js1.createJob(nullptr, [&count1](JobSystem&, JobSystem::Job*) {
+                count1.fetch_add(1, std::memory_order_relaxed);
+            });
+            js1.runAndWait(job);
+        }
+        js1.emancipate();
+    });
+
+    std::thread t2([&]() {
+        js2.adopt();
+        for (int i = 0; i < 100; ++i) {
+            JobSystem::Job* job = js2.createJob(nullptr, [&count2](JobSystem&, JobSystem::Job*) {
+                count2.fetch_add(1, std::memory_order_relaxed);
+            });
+            js2.runAndWait(job);
+        }
+        js2.emancipate();
+    });
+
+    t1.join();
+    t2.join();
+
+    EXPECT_EQ(100u, count1.load());
+    EXPECT_EQ(100u, count2.load());
+}
+
+TEST(JobSystem, JobSystemRapidAdoptEmancipate) {
+    JobSystem js(4, 16);
+
+    constexpr size_t THREAD_COUNT = 16;
+    constexpr size_t ITERATIONS = 100;
+
+    std::atomic<uint32_t> jobsCompleted{0};
+    std::vector<std::thread> threads;
+    threads.reserve(THREAD_COUNT);
+
+    for (size_t t = 0; t < THREAD_COUNT; ++t) {
+        threads.emplace_back([&]() {
+            for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+                js.adopt();
+                JobSystem::Job* job = js.createJob(nullptr, [&jobsCompleted](JobSystem&, JobSystem::Job*) {
+                    jobsCompleted.fetch_add(1, std::memory_order_relaxed);
+                });
+                js.runAndWait(job);
+                js.emancipate();
+            }
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    EXPECT_EQ(THREAD_COUNT * ITERATIONS, jobsCompleted.load());
+}
+
+template<typename F>
+static bool runWithTimeout(F&& fn, std::chrono::milliseconds timeout) {
+    struct SharedState {
+        std::atomic<bool> completed{false};
+        std::decay_t<F> func;
+        explicit SharedState(F&& f) : func(std::forward<F>(f)) {}
+    };
+
+    auto state = std::make_shared<SharedState>(std::forward<F>(fn));
+    std::thread t([state]() {
+        state->func();
+        state->completed.store(true, std::memory_order_release);
+    });
+    auto const start = std::chrono::steady_clock::now();
+    while (!state->completed.load(std::memory_order_acquire)) {
+        if (std::chrono::steady_clock::now() - start > timeout) {
+            t.detach();
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    t.join();
+    return true;
+}
+
+TEST(JobSystem, JobSystemWorkerWakeOnSubsequentPut) {
+    bool const finished = runWithTimeout([]() {
+        // 3 worker threads in the pool, 1 adoptable
+        JobSystem js(3, 1);
+        js.adopt();
+
+        // Ensure all 3 workers are idle and sleeping
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+
+        JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+
+        std::atomic<int> concurrentWorkers{0};
+        std::atomic<int> maxConcurrent{0};
+
+        auto jobFunc = [&](JobSystem&, JobSystem::Job*) {
+            int const cur = concurrentWorkers.fetch_add(1, std::memory_order_relaxed) + 1;
+            int prevMax = maxConcurrent.load(std::memory_order_relaxed);
+            while (cur > prevMax && !maxConcurrent.compare_exchange_weak(prevMax, cur,
+                    std::memory_order_relaxed, std::memory_order_relaxed)) {}
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            concurrentWorkers.fetch_sub(1, std::memory_order_relaxed);
+        };
+
+        // Push 10 jobs in rapid succession
+        for (int i = 0; i < 10; ++i) {
+            JobSystem::Job* j = js.createJob(root, jobFunc);
+            js.run(j);
+        }
+
+        // Wait for all 10 jobs to complete via root
+        js.runAndWait(root);
+
+        // With 3 pool workers and 1 caller thread in runAndWait, all 3 pool workers should be woken
+        EXPECT_GE(maxConcurrent.load(), 3)
+                << "Not all sleeping workers were woken! maxConcurrent: " << maxConcurrent.load();
+
+        js.emancipate();
+    }, std::chrono::seconds(2));
+
+    EXPECT_TRUE(finished);
+}
+
+TEST(JobSystem, JobSystemStealFromEmancipatedQueue) {
+    bool const finished = runWithTimeout([]() {
+        JobSystem js(4, 2);
+        js.adopt();
+
+        JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        JobSystem::Job* child = js.createJob(root, [](JobSystem&, JobSystem::Job*) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        });
+
+        std::thread runner([&]() {
+            js.adopt();
+            js.run(child);
+            js.emancipate();
+        });
+        runner.join();
+
+        js.runAndWait(root);
+        js.emancipate();
+    }, std::chrono::seconds(2));
+
+    EXPECT_TRUE(finished);
+}
+
+namespace {
+
+static double getThreadCpuTimeMs() noexcept {
+#if defined(_WIN32)
+    FILETIME creationTime, exitTime, kernelTime, userTime;
+    if (GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime, &userTime)) {
+        ULARGE_INTEGER kernel, user;
+        kernel.LowPart = kernelTime.dwLowDateTime;
+        kernel.HighPart = kernelTime.dwHighDateTime;
+        user.LowPart = userTime.dwLowDateTime;
+        user.HighPart = userTime.dwHighDateTime;
+        return double(kernel.QuadPart + user.QuadPart) / 10000.0;
+    }
+    return 0.0;
+#elif defined(CLOCK_THREAD_CPUTIME_ID)
+    struct timespec ts {};
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) {
+        return (double(ts.tv_sec) * 1000.0) + (double(ts.tv_nsec) / 1000000.0);
+    }
+    return 0.0;
+#else
+    return 0.0;
+#endif
+}
+
+} // namespace
+
+TEST(JobSystem, JobSystemWaitAndReleaseDoesNotBusySpin) {
+    JobSystem js(4, 28);
+    js.adopt();
+
+    // 4 worker threads run 100ms tasks
+    std::atomic<int> runningWorkers{0};
+    JobSystem::Job* targetJob = nullptr;
+    for (int i = 0; i < 4; ++i) {
+        JobSystem::Job* w = js.createJob(nullptr, [&](JobSystem&, JobSystem::Job*) {
+            runningWorkers.fetch_add(1, std::memory_order_relaxed);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        });
+        if (i == 0) {
+            targetJob = js.runAndRetain(w);
+        } else {
+            js.run(w);
+        }
+    }
+
+    while (runningWorkers.load(std::memory_order_relaxed) < 4) {
+        std::this_thread::yield();
+    }
+
+    // Push 1 job into a separate adopted thread's queue
+    std::atomic<bool> bgDone{false};
+    std::thread bgThread([&]() {
+        js.adopt();
+        JobSystem::Job* extra = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        js.run(extra);
+        while (!bgDone.load(std::memory_order_relaxed)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        js.emancipate();
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    double const startCpuTime = getThreadCpuTimeMs();
+
+    js.waitAndRelease(targetJob);
+
+    double const endCpuTime = getThreadCpuTimeMs();
+
+    bgDone.store(true, std::memory_order_release);
+    bgThread.join();
+
+    double const cpuTimeMs = endCpuTime - startCpuTime;
+
+    EXPECT_LT(cpuTimeMs, 30.0)
+            << "waitAndRelease() busy-spun at 100% CPU! Consumed " << cpuTimeMs
+            << "ms CPU time while waiting for 100ms child job.";
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobSystemStealingWithManyAdoptableSlots) {
+    bool const finished = runWithTimeout([]() {
+        // 4 pool threads, 28 adoptable slots (32 total)
+        JobSystem js(4, 28);
+        js.adopt();
+
+        std::atomic<uint32_t> completed{0};
+        constexpr size_t JOB_COUNT = 2000;
+
+        JobSystem::Job* root = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+        for (size_t i = 0; i < JOB_COUNT; ++i) {
+            JobSystem::Job* child = js.createJob(root, [&completed](JobSystem&, JobSystem::Job*) {
+                completed.fetch_add(1, std::memory_order_relaxed);
+            });
+            js.run(child);
+        }
+        js.runAndWait(root);
+
+        EXPECT_EQ(JOB_COUNT, completed.load());
+
+        js.emancipate();
+    }, std::chrono::seconds(2));
+
+    EXPECT_TRUE(finished);
+}
+
+TEST(JobSystem, JobSystemLostWakeupRace) {
+    bool const finished = runWithTimeout([]() {
+        constexpr size_t WORKER_COUNT = 1;
+        constexpr size_t PRODUCER_COUNT = 4;
+        constexpr size_t ITERATIONS = 5000;
+
+        JobSystem js(WORKER_COUNT, PRODUCER_COUNT);
+
+        std::atomic<uint32_t> completed{0};
+        for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+            std::atomic<bool> startFlag{false};
+            std::vector<std::thread> producers;
+            producers.reserve(PRODUCER_COUNT);
+
+            for (size_t p = 0; p < PRODUCER_COUNT; ++p) {
+                producers.emplace_back([&js, &completed, &startFlag]() {
+                    js.adopt();
+                    while (!startFlag.load(std::memory_order_acquire)) {
+                        std::this_thread::yield();
+                    }
+                    JobSystem::Job* job = js.createJob(nullptr, [&completed](JobSystem&, JobSystem::Job*) {
+                        completed.fetch_add(1, std::memory_order_release);
+                    });
+                    js.run(job);
+                    js.emancipate();
+                });
+            }
+
+            // Let worker enter sleep state
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+            // Release all producers simultaneously to race with worker sleep
+            startFlag.store(true, std::memory_order_release);
+
+            for (auto& t : producers) {
+                t.join();
+            }
+
+            uint32_t const expected = uint32_t((iter + 1) * PRODUCER_COUNT);
+            auto const start = std::chrono::steady_clock::now();
+            while (completed.load(std::memory_order_acquire) < expected) {
+                if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(200)) {
+                    FAIL() << "Lost wakeup at iteration " << iter << ": completed "
+                           << completed.load() << " / " << expected << " jobs!";
+                    return;
+                }
+                std::this_thread::yield();
+            }
+        }
+    }, std::chrono::seconds(10));
+
+    EXPECT_TRUE(finished);
+}
+
+TEST(JobSystem, JobSystemThreadBudgetClamping) {
+    // 1. Requesting adoptableThreadsCount >= MAX_THREADS (32) must still ensure at least 1 pool worker.
+    JobSystem js1(0, 32);
+    EXPECT_GE(js1.getThreadCount(), 1u);
+
+    // 2. Requesting large userThreadCount and large adoptableThreadsCount must clamp total to MAX_THREADS (32).
+    JobSystem js2(32, 16);
+    EXPECT_EQ(js2.getThreadCount(), 16u);
+
+    // 3. SINGLE_THREADED mode must have 0 pool workers.
+    JobSystem jsSingle(JobSystem::SINGLE_THREADED, 1);
+    EXPECT_EQ(jsSingle.getThreadCount(), 0u);
+}
+
+TEST(JobSystem, StealMissLostWakeupHang) {
+    bool const finished = runWithTimeout([]() {
+        constexpr size_t WORKER_COUNT = 4;
+        constexpr size_t ITERATIONS = 2000;
+
+        JobSystem js(WORKER_COUNT, 1);
+        js.adopt();
+
+        for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+            std::atomic<bool> childExecuted{false};
+
+            JobSystem::Job* parent = js.createJob();
+            JobSystem::Job* trigger = js.createJob(parent, [&js, parent, &childExecuted](JobSystem&, JobSystem::Job*) {
+                // Spawn a child from a worker thread so it is queued in this worker's workQueue
+                JobSystem::Job* child = js.createJob(parent, [&childExecuted](JobSystem&, JobSystem::Job*) {
+                    childExecuted.store(true, std::memory_order_release);
+                });
+                js.run(child);
+            });
+
+            js.run(trigger);
+            js.runAndWait(parent);
+
+            EXPECT_TRUE(childExecuted.load(std::memory_order_acquire));
+        }
+
+        js.emancipate();
+    }, std::chrono::seconds(10));
+
+    EXPECT_TRUE(finished) << "JobSystem hung in runAndWait due to lost wakeup on steal miss!";
+}
+
+TEST(JobSystem, StealEarlyExitLostWakeupRace) {
+    bool const finished = runWithTimeout([]() {
+        constexpr size_t WORKER_COUNT = 1;
+        constexpr size_t ITERATIONS = 2000;
+
+        JobSystem js(WORKER_COUNT, 2);
+
+        for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+            std::atomic<bool> job1Done{false};
+            std::atomic<bool> job2Done{false};
+
+            std::thread stealer([&js]() {
+                js.adopt();
+                // Execute repeatedly to race with worker and producer on active count
+                for (int i = 0; i < 10; ++i) {
+                    JobSystem::Job* dummy = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
+                    js.run(dummy);
+                }
+                js.emancipate();
+            });
+
+            std::thread producer([&js, &job1Done, &job2Done]() {
+                js.adopt();
+                JobSystem::Job* j1 = js.createJob(nullptr, [&job1Done](JobSystem&, JobSystem::Job*) {
+                    job1Done.store(true, std::memory_order_release);
+                });
+                JobSystem::Job* j2 = js.createJob(nullptr, [&job2Done](JobSystem&, JobSystem::Job*) {
+                    job2Done.store(true, std::memory_order_release);
+                });
+                js.run(j1);
+                std::this_thread::yield();
+                js.run(j2);
+                js.emancipate();
+            });
+
+            stealer.join();
+            producer.join();
+
+            auto const start = std::chrono::steady_clock::now();
+            while (!job1Done.load(std::memory_order_acquire) || !job2Done.load(std::memory_order_acquire)) {
+                if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(100)) {
+                    FAIL() << "Lost wakeup at iteration " << iter << " on early-exit restore race!";
+                    return;
+                }
+                std::this_thread::yield();
+            }
+        }
+    }, std::chrono::seconds(10));
+
+    EXPECT_TRUE(finished) << "JobSystem hung due to lost wakeup in steal early-exit path!";
+}
+
+TEST(JobSystem, NestedWaiterLostWakeupRace) {
+    bool const finished = runWithTimeout([]() {
+        constexpr size_t WORKER_COUNT = 1;
+        constexpr size_t ITERATIONS = 2000;
+
+        JobSystem js(WORKER_COUNT, 2);
+        js.adopt();
+
+        for (size_t iter = 0; iter < ITERATIONS; ++iter) {
+            std::atomic<bool> childDone{false};
+            std::atomic<bool> workerReady{false};
+
+            JobSystem::Job* child = JobSystem::retain(js.createJob(nullptr, [&childDone](JobSystem&, JobSystem::Job*) {
+                childDone.store(true, std::memory_order_release);
+            }));
+
+            // Run a job on the worker that enters waitAndRelease() waiting on child
+            JobSystem::Job* workerJob = js.createJob(nullptr, [&js, child, &workerReady](JobSystem&, JobSystem::Job*) {
+                workerReady.store(true, std::memory_order_release);
+                JobSystem::Job* c = child;
+                js.waitAndRelease(c);
+            });
+            js.run(workerJob);
+
+            // Wait for worker to enter waitAndRelease()
+            while (!workerReady.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+
+            // An adopted producer publishes child to its own queue and emancipates
+            std::thread producer([&js, child]() {
+                js.adopt();
+                JobSystem::Job* c = child;
+                js.run(c);
+                js.emancipate();
+            });
+
+            producer.join();
+
+            // Wait for child to execute and finish
+            auto const start = std::chrono::steady_clock::now();
+            while (!childDone.load(std::memory_order_acquire)) {
+                if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(100)) {
+                    FAIL() << "Lost wakeup at iteration " << iter << " on nested waiter path!";
+                    return;
+                }
+                std::this_thread::yield();
+            }
+        }
+
+        js.emancipate();
+    }, std::chrono::seconds(10));
+
+    EXPECT_TRUE(finished) << "JobSystem hung due to lost wakeup in nested waiter path!";
+}
+
+TEST(JobSystem, EmancipatePoolWorkerThrowsPreconditionPanic) {
+#ifndef UTILS_EXCEPTIONS
+    GTEST_SKIP() << "Test requires exception support (UTILS_EXCEPTIONS)";
+#else
+    JobSystem js(1, 1);
+    js.adopt();
+    std::atomic<bool> caught{false};
+    std::string reason;
+    JobSystem::Job* job = js.createJob(nullptr, [&js, &caught, &reason](JobSystem&, JobSystem::Job*) {
+        try {
+            js.emancipate();
+        } catch (PreconditionPanic const& e) {
+            reason = e.what();
+            caught.store(true, std::memory_order_release);
+        }
+    });
+    js.run(job);
+    while (!caught.load(std::memory_order_acquire)) {
+        std::this_thread::yield();
+    }
+    EXPECT_TRUE(caught.load());
+    EXPECT_NE(reason.find("cannot emancipate a pool worker thread"), std::string::npos);
+    js.emancipate();
+#endif
 }

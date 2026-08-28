@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Camera.h>
@@ -38,14 +39,14 @@
 
 #include <cmath>
 #include <iostream>
-#include <string>// for printing usage/help
 
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     SampleConfig config;
     VertexBuffer* vb;
     IndexBuffer* ib;
@@ -61,135 +62,103 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
+const Vertex TRIANGLE_VERTICES[3] = {
     {{1, 0}, 0xffff0000u},
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+} // namespace
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-            "HELLOTRIANGLE renders a spinning colored triangle\n"
-            "Usage:\n"
-            "    HELLOTRIANGLE [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
-    const std::string from("HELLOTRIANGLE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help", utils::getopt::no_argument,       nullptr, 'h' },
-            { "api",  utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0,                nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-int main(int argc, char** argv) {
-    App app{};
-    app.config.title = "hellotriangle";
-    app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
-    handleCommandLineArguments(argc, argv, &app);
-
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-        scene->setSkybox(app.skybox);
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+        scene->setSkybox(app->skybox);
         view->setPostProcessingEnabled(false);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
-        app.vb = VertexBuffer::Builder()
-                .vertexCount(3)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
-                .build(*engine);
-        app.vb->setBufferAt(*engine, 0,
+        app->vb = VertexBuffer::Builder()
+                          .vertexCount(3)
+                          .bufferCount(1)
+                          .attribute(VertexAttribute::POSITION, 0,
+                                  VertexBuffer::AttributeType::FLOAT2, 0, 12)
+                          .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
+                                  8, 12)
+                          .normalized(VertexAttribute::COLOR)
+                          .build(*engine);
+        app->vb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-        app.ib = IndexBuffer::Builder()
-                .indexCount(3)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.mat = Material::Builder()
-                .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
-                .build(*engine);
-        app.renderable = EntityManager::get().create();
+        app->ib = IndexBuffer::Builder()
+                          .indexCount(3)
+                          .bufferType(IndexBuffer::IndexType::USHORT)
+                          .build(*engine);
+        app->ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+        app->mat = Material::Builder()
+                           .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+                           .build(*engine);
+        app->renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.mat->getDefaultInstance())
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->mat->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0, 3)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .build(*engine, app.renderable);
-        scene->addEntity(app.renderable);
-        app.camera = utils::EntityManager::get().create();
-        app.cam = engine->createCamera(app.camera);
-        view->setCamera(app.cam);
+                .build(*engine, app->renderable);
+        scene->addEntity(app->renderable);
+        app->camera = utils::EntityManager::get().create();
+        app->cam = engine->createCamera(app->camera);
+        view->setCamera(app->cam);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.skybox);
-        engine->destroy(app.renderable);
-        engine->destroy(app.mat);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
-        engine->destroyCameraComponent(app.camera);
-        utils::EntityManager::get().destroy(app.camera);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->renderable);
+        engine->destroy(app->mat);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
+        engine->destroyCameraComponent(app->camera);
+        utils::EntityManager::get().destroy(app->camera);
     };
 
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(app.config.title)
-                              .backend(app.config.backend)
-                              .featureLevel(app.config.featureLevel)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  constexpr float ZOOM = 1.5f;
-                                  const uint32_t w = view->getViewport().width;
-                                  const uint32_t h = view->getViewport().height;
-                                  const float aspect = (float) w / h;
-                                  app.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
-                                          aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
-                                  auto& tcm = engine->getTransformManager();
-                                  tcm.setTransform(tcm.getInstance(app.renderable),
-                                          filament::math::mat4f::rotation(now,
-                                                  filament::math::float3{ 0, 0, 1 }));
-                              })
-                              .build();
-    app.filamentApp->run();
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            constexpr float ZOOM = 1.5f;
+                            const uint32_t w = view->getViewport().width;
+                            const uint32_t h = view->getViewport().height;
+                            const float aspect = (float) w / h;
+                            app->cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM,
+                                    aspect * ZOOM, -ZOOM, ZOOM, 0, 1);
+                            auto& tcm = engine->getTransformManager();
+                            tcm.setTransform(tcm.getInstance(app->renderable),
+                                    filament::math::mat4f::rotation(now,
+                                            filament::math::float3{ 0, 0, 1 }));
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
 
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "hellotriangle";
+    config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif

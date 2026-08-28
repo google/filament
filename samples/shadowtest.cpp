@@ -19,6 +19,7 @@
 
 #include "generated/resources/resources.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/MeshAssimp.h>
 
@@ -40,6 +41,8 @@ using namespace filament;
 using namespace filament::math;
 using Backend = Engine::Backend;
 
+namespace {
+
 struct GroundPlane {
     VertexBuffer* vb;
     IndexBuffer* ib;
@@ -48,142 +51,69 @@ struct GroundPlane {
 };
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     Skybox* skybox;
     utils::Entity light;
-    std::map<std::string, MaterialInstance*> materials;
+    std::map<utils::CString, MaterialInstance*> materials;
     MeshAssimp* meshes;
     mat4f transform;
     GroundPlane plane;
+    SampleConfig config;
 };
 
-static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+constexpr const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
 
-static constexpr bool ENABLE_SHADOWS = true;
+constexpr bool ENABLE_SHADOWS = true;
 
-static GroundPlane createGroundPlane(Engine* engine);
-
-static const SampleConfig config{ .title = "shadowtest",
-    .iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER,
-    .scale = 1,
-    .splitView = false };
-
-int main(int argc, char** argv) {
-    App app;
-    config.backend = samples::parseArgumentsForBackend(argc, argv);
-
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-        auto& tcm = engine->getTransformManager();
-        auto& rcm = engine->getRenderableManager();
-        auto& em = utils::EntityManager::get();
-
-        // Add geometry into the scene.
-        app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app.materials);
-        auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
-        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        for (auto renderable : app.meshes->getRenderables()) {
-            auto instance = rcm.getInstance(renderable);
-            if (rcm.hasComponent(renderable)) {
-                rcm.setCastShadows(instance, ENABLE_SHADOWS);
-                rcm.setReceiveShadows(instance, false);
-                scene->addEntity(renderable);
-            }
-        }
-
-        // Add light sources into the scene.
-        app.light = em.create();
-        LightManager::Builder(LightManager::Type::SUN)
-            .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
-            .intensity(110000)
-            .direction({ 0.7, -1, -0.8 })
-            .sunAngularRadius(1.9f)
-            .castShadows(ENABLE_SHADOWS)
-            .build(*engine, app.light);
-        scene->addEntity(app.light);
-
-        // Hide skybox and add ground plane.
-        app.skybox = Skybox::Builder().color({0.5f,0.75f,1.0f,1.0f}).build(*engine);
-        scene->setSkybox(app.skybox);
-        app.plane = createGroundPlane(engine);
-        scene->addEntity(app.plane.renderable);
-    };
-
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.plane.renderable);
-        engine->destroy(app.plane.mat);
-        engine->destroy(app.plane.vb);
-        engine->destroy(app.plane.ib);
-        engine->destroy(app.light);
-        engine->destroy(app.skybox);
-        for (auto& item : app.materials) {
-            engine->destroy(item.second);
-        }
-        delete app.meshes;
-    };
-
-
-    app.filamentApp = FilamentApp2::Builder()
-                              .backend(config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  auto& tcm = engine->getTransformManager();
-                                  auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
-                                  tcm.setTransform(ti,
-                                          app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
-                              })
-                              .build();
-    app.filamentApp->run();
-
-    return 0;
-}
-
-static GroundPlane createGroundPlane(Engine* engine) {
-    Material* shadowMaterial = Material::Builder()
-        .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
-        .build(*engine);
+GroundPlane createGroundPlane(Engine* engine) {
+    Material* shadowMaterial =
+            Material::Builder()
+                    .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
+                    .build(*engine);
     shadowMaterial->setDefaultParameter("strength", 0.7f);
 
-    const static uint32_t indices[] {
-        0, 1, 2, 2, 3, 0
-    };
-    const static float3 vertices[] {
+    static constexpr uint32_t indices[]{ 0, 1, 2, 2, 3, 0 };
+    static constexpr float3 vertices[]{
         { -10, 0, -10 },
         { -10, 0,  10 },
         {  10, 0,  10 },
         {  10, 0, -10 },
     };
-    short4 tbn = packSnorm16(normalize(positive(mat3f{
-        float3{1.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 1.0f}, float3{0.0f, 1.0f, 0.0f}
-    }.toQuaternion())).xyzw);
-    const static short4 normals[] { tbn, tbn, tbn, tbn };
-    VertexBuffer* vertexBuffer = VertexBuffer::Builder()
-        .vertexCount(4)
-        .bufferCount(2)
-        .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
-        .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
-        .normalized(VertexAttribute::TANGENTS)
-        .build(*engine);
-    vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
-            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
-    vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
-            normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
+    short4 const tbn = packSnorm16(
+            normalize(positive(mat3f{ float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                          float3{ 0.0f, 1.0f,
+                              0.0f } }.toQuaternion()))
+                    .xyzw);
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
+    VertexBuffer* vertexBuffer =
+            VertexBuffer::Builder()
+                    .vertexCount(4)
+                    .bufferCount(2)
+                    .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                    .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                    .normalized(VertexAttribute::TANGENTS)
+                    .build(*engine);
+    vertexBuffer->setBufferAt(*engine, 0,
+            VertexBuffer::BufferDescriptor(vertices,
+                    vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+    vertexBuffer->setBufferAt(*engine, 1,
+            VertexBuffer::BufferDescriptor(normals,
+                    vertexBuffer->getVertexCount() * sizeof(normals[0])));
     IndexBuffer* indexBuffer = IndexBuffer::Builder().indexCount(6).build(*engine);
-    indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
-            indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
+    indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(indices,
+                                            indexBuffer->getIndexCount() * sizeof(uint32_t)));
 
     auto& em = utils::EntityManager::get();
     utils::Entity renderable = em.create();
     RenderableManager::Builder(1)
-        .boundingBox({{ 0, 0, 0 }, { 10, 1e-4f, 10 }})
-        .material(0, shadowMaterial->getDefaultInstance())
-        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 6)
-        .culling(false)
-        .receiveShadows(ENABLE_SHADOWS)
-        .castShadows(false)
-        .build(*engine, renderable);
+            .boundingBox({ { 0, 0, 0 }, { 10, 1e-4f, 10 } })
+            .material(0, shadowMaterial->getDefaultInstance())
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0,
+                    6)
+            .culling(false)
+            .receiveShadows(ENABLE_SHADOWS)
+            .castShadows(false)
+            .build(*engine, renderable);
 
     auto& tcm = engine->getTransformManager();
     tcm.setTransform(tcm.getInstance(renderable), mat4f::translation(float3{ 0, -1, -4 }));
@@ -194,3 +124,92 @@ static GroundPlane createGroundPlane(Engine* engine) {
         .renderable = renderable,
     };
 }
+
+} // namespace
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        auto& tcm = engine->getTransformManager();
+        auto& rcm = engine->getRenderableManager();
+        auto& em = utils::EntityManager::get();
+
+        // Add geometry into the scene.
+        app->meshes = new MeshAssimp(*engine);
+        app->meshes->addFromFile(FilamentApp2::getRootAssetsPath() + MODEL_FILE, app->materials);
+        auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+        for (auto renderable: app->meshes->getRenderables()) {
+            auto instance = rcm.getInstance(renderable);
+            if (rcm.hasComponent(renderable)) {
+                rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                rcm.setReceiveShadows(instance, false);
+                scene->addEntity(renderable);
+            }
+        }
+
+        // Add light sources into the scene.
+        app->light = em.create();
+        LightManager::Builder(LightManager::Type::SUN)
+                .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+                .intensity(110000)
+                .direction({ 0.7, -1, -0.8 })
+                .sunAngularRadius(1.9f)
+                .castShadows(ENABLE_SHADOWS)
+                .build(*engine, app->light);
+        scene->addEntity(app->light);
+
+        // Hide skybox and add ground plane.
+        app->skybox = Skybox::Builder().color({ 0.5f, 0.75f, 1.0f, 1.0f }).build(*engine);
+        scene->setSkybox(app->skybox);
+        app->plane = createGroundPlane(engine);
+        scene->addEntity(app->plane.renderable);
+    };
+
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->plane.renderable);
+        engine->destroy(app->plane.mat);
+        engine->destroy(app->plane.vb);
+        engine->destroy(app->plane.ib);
+        engine->destroy(app->light);
+        engine->destroy(app->skybox);
+        for (auto& item: app->materials) {
+            engine->destroy(item.second);
+        }
+        delete app->meshes;
+    };
+
+
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            auto& tcm = engine->getTransformManager();
+                            auto ti = tcm.getInstance(app->meshes->getRenderables()[0]);
+                            tcm.setTransform(ti,
+                                    app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                        })
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config{
+        .title = "shadowtest",
+        .splitView = false,
+    };
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
+    return 0;
+}
+#endif

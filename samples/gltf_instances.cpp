@@ -48,7 +48,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
 
 using namespace filament;
 using namespace filament::math;
@@ -57,18 +56,19 @@ using namespace filament::viewer;
 using namespace filament::gltfio;
 using namespace utils;
 
+namespace {
+
 enum MaterialSource {
     JITSHADER,
     UBERSHADER,
 };
 
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp = nullptr;
     Engine* engine;
     ViewerGui* viewer;
     SampleConfig config;
-    filament::app::AssetLoader* rawAssetLoader = nullptr;
-    AssetLoader* loader;
+    AssetLoader* assetLoader;
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
     MaterialProvider* materials;
@@ -81,149 +81,82 @@ struct App {
     std::vector<FilamentInstance*> instances;
 };
 
-static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
+const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
-    std::string usage(
-        "SHOWCASE renders the specified glTF file with instancing\n"
-        "Usage:\n"
-        "    SHOWCASE [options] <gltf path>\n"
-        "Options:\n"
-        "   --help, -h\n"
-        "       Prints this message\n\n"
-        "API_USAGE"
-        "   --ibl=<path to cmgen IBL>, -i <path>\n"
-        "       Override the built-in IBL\n\n"
-        "   --num=<number of initial instances>, -n <num>\n"
-        "       Number of instances to start with (defaults to 0)\n\n"
-        "   --animate=<instance index>, -m <num>\n"
-        "       Instance to animate (defaults to all instances)\n\n"
-        "   --ubershader, -u\n"
-        "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
-    );
-    const std::string from("SHOWCASE");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:un:m:";
-    static const utils::getopt::option OPTIONS[] = {
-        { "help",         utils::getopt::no_argument,       nullptr, 'h' },
-        { "api",          utils::getopt::required_argument, nullptr, 'a' },
-        { "ibl",          utils::getopt::required_argument, nullptr, 'i' },
-        { "num",          utils::getopt::required_argument, nullptr, 'n' },
-        { "animate",      utils::getopt::required_argument, nullptr, 'm' },
-        { "ubershader",   utils::getopt::no_argument,       nullptr, 'u' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-            case 'm':
-                app->instanceToAnimate = atoi(arg.c_str());
-                break;
-            case 'n':
-                app->instances.resize(atoi(arg.c_str()));
-                break;
-            case 'i':
-                app->config.iblDirectory = arg;
-                break;
-            case 'u':
-                app->materialSource = UBERSHADER;
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-static std::ifstream::pos_type getFileSize(const char* filename) {
+std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 
-int main(int argc, char** argv) {
-    App app;
+} // namespace
 
-    app.config.title = "glTF Instancing";
-    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + DEFAULT_IBL;
-
-    int optionIndex = handleCommandLineArguments(argc, argv, &app);
-    utils::Path filename;
-    int num_args = argc - optionIndex;
-    if (num_args >= 1) {
-        filename = argv[optionIndex];
-        if (!filename.exists()) {
-            std::cerr << "file " << filename << " not found!" << std::endl;
-            return 1;
-        }
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    }
+    auto app = std::make_shared<App>();
+    app->config = config;
+    app->instanceToAnimate = config.getInt("animate", -1);
+    app->instances.resize(config.getInt("num", 1));
+    if (config.getBool("ubershader")) {
+        app->materialSource = UBERSHADER;
     }
 
-    auto loadAsset = [&app](utils::Path filename) {
-        std::vector<uint8_t> buffer = app.rawAssetLoader->load(filename);
+    auto loadAsset = [app, appLoader]() {
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
+        std::vector<uint8_t> buffer = appLoader->load(filename);
         if (buffer.empty()) {
             std::cerr << "Unable to open " << filename << std::endl;
             exit(1);
         }
 
         // Parse the glTF file and create Filament entities.
-        app.asset = app.loader->createInstancedAsset(buffer.data(), buffer.size(),
-                app.instances.data(), app.instances.size());
+        app->asset = app->assetLoader->createInstancedAsset(buffer.data(), buffer.size(),
+                app->instances.data(), app->instances.size());
         buffer.clear();
         buffer.shrink_to_fit();
 
-        if (!app.asset) {
+        if (!app->asset) {
             std::cerr << "Unable to parse " << filename << std::endl;
             exit(1);
         }
     };
 
-    auto loadResources = [&app] (utils::Path filename) {
+    auto loadResources = [app, appLoader]() {
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
         // Load external textures and buffers.
-        std::string gltfPath = filename.getAbsolutePath();
+        utils::CString gltfPath = utils::CString(filename.getAbsolutePath().c_str());
         ResourceConfiguration configuration;
-        configuration.engine = app.engine;
+        configuration.engine = app->engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.normalizeSkinningWeights = true;
-        if (!app.resourceLoader) {
-            app.resourceLoader = new gltfio::ResourceLoader(configuration);
-            app.stbDecoder = createStbProvider(app.engine);
-            app.ktxDecoder = createKtx2Provider(app.engine);
-            app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
-            app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
-            app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
+        if (!app->resourceLoader) {
+            app->resourceLoader = new gltfio::ResourceLoader(configuration);
+            app->stbDecoder = createStbProvider(app->engine);
+            app->ktxDecoder = createKtx2Provider(app->engine);
+            app->resourceLoader->addTextureProvider("image/png", app->stbDecoder);
+            app->resourceLoader->addTextureProvider("image/jpeg", app->stbDecoder);
+            app->resourceLoader->addTextureProvider("image/ktx2", app->ktxDecoder);
             if (isWebpSupported()) {
-                app.webpDecoder = createWebpProvider(app.engine);                
-                app.resourceLoader->addTextureProvider("image/webp", app.webpDecoder);
+                app->webpDecoder = createWebpProvider(app->engine);
+                app->resourceLoader->addTextureProvider("image/webp", app->webpDecoder);
             }
             else {
-                app.webpDecoder = nullptr;
+                app->webpDecoder = nullptr;
             }
         }
 
         // We explicitly fetch the raw bytes and push them into ResourceLoader via addResourceData.
         // This pre-populates the cache and completely bypasses ResourceLoader's internal disk I/O,
         // which is required for Android compatibility (where assets are packed in the APK).
-        for (size_t i = 0, c = app.asset->getResourceUriCount(); i < c; i++) {
-            const char* uri = app.asset->getResourceUris()[i];
+        for (size_t i = 0, c = app->asset->getResourceUriCount(); i < c; i++) {
+            const char* uri = app->asset->getResourceUris()[i];
             utils::Path uriPath = filename.getParent() + uri;
-            std::vector<uint8_t> buffer = app.rawAssetLoader->load(uriPath);
+            std::vector<uint8_t> buffer = appLoader->load(uriPath);
             if (!buffer.empty()) {
                 auto* b = new std::vector<uint8_t>(std::move(buffer));
                 gltfio::ResourceLoader::BufferDescriptor desc(
@@ -233,128 +166,163 @@ int main(int argc, char** argv) {
                     },
                     b
                 );
-                app.resourceLoader->addResourceData(uri, std::move(desc));
+                app->resourceLoader->addResourceData(uri, std::move(desc));
             }
         }
 
-        if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
+        if (!app->resourceLoader->asyncBeginLoad(app->asset)) {
             std::cerr << "Unable to start loading resources for " << filename << std::endl;
             exit(1);
         }
 
-        auto ibl = app.filamentApp->getIBL();
+        auto ibl = app->filamentApp->getIBL();
         if (ibl) {
-            app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+            app->viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
         }
     };
 
-    auto arrangeIntoCircle = [&app]() {
-        auto& tcm = app.engine->getTransformManager();
-        auto extent = app.asset->getBoundingBox().extent();
+    auto arrangeIntoCircle = [app]() {
+        auto& tcm = app->engine->getTransformManager();
+        auto extent = app->asset->getBoundingBox().extent();
         float max_extent = std::max(std::max(extent.x,  extent.y), extent.z);
         auto translation = mat4f::translation(float3(max_extent, 0, 0));
-        for (size_t inst = 0; inst < app.instances.size(); ++inst) {
-            FilamentInstance* instance = app.instances[inst];
+        for (size_t inst = 0; inst < app->instances.size(); ++inst) {
+            FilamentInstance* instance = app->instances[inst];
             auto transformRoot = tcm.getInstance(instance->getRoot());
-            float theta = inst * 2.0 * M_PI / app.instances.size();
+            float theta = inst * 2.0 * M_PI / app->instances.size();
             auto rotation = mat4f::rotation(theta, float3(0, 0, 1));
             tcm.setTransform(transformRoot, rotation * translation);
         }
     };
 
-    auto setup = [&](Engine* engine, View* view, Scene* scene) {
-        app.rawAssetLoader = new filament::app::DesktopAssetLoader();
-        app.engine = engine;
-        app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new ViewerGui(engine, scene, view);
+    auto setup = [app, loadAsset, loadResources, arrangeIntoCircle, appLoader](Engine* engine,
+                         View* view, Scene* scene) {
+        app->engine = engine;
+        app->names = new NameComponentManager(EntityManager::get());
+        app->viewer = new ViewerGui(engine, scene, view);
 
-        app.materials = (app.materialSource == JITSHADER)
-                                ? createJitShaderProvider(engine, false /* optimize */, {})
-                                : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
-                                          UBERARCHIVE_DEFAULT_SIZE);
+        app->materials = (app->materialSource == JITSHADER)
+                                 ? createJitShaderProvider(engine, false /* optimize */, {})
+                                 : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                                           UBERARCHIVE_DEFAULT_SIZE);
 
-        app.loader = AssetLoader::create({engine, app.materials, app.names });
+        app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
         if (filename.isEmpty()) {
-            app.asset = app.loader->createInstancedAsset(
-                    GLTF_DEMO_DAMAGEDHELMET_DATA, GLTF_DEMO_DAMAGEDHELMET_SIZE,
-                    app.instances.data(), app.instances.size());
+            app->asset = app->assetLoader->createInstancedAsset(GLTF_DEMO_DAMAGEDHELMET_DATA,
+                    GLTF_DEMO_DAMAGEDHELMET_SIZE, app->instances.data(), app->instances.size());
         } else {
-            loadAsset(filename);
+            loadAsset();
         }
 
         FilamentInstance* instance = nullptr;
-        if (app.instanceToAnimate > -1 && app.instanceToAnimate < app.instances.size()) {
-            instance = app.instances[app.instanceToAnimate];
+        if (app->instanceToAnimate > -1 && app->instanceToAnimate < app->instances.size()) {
+            instance = app->instances[app->instanceToAnimate];
         }
 
         arrangeIntoCircle();
-        loadResources(filename);
-        app.viewer->setAsset(app.asset, instance);
+        loadResources();
+        app->viewer->setAsset(app->asset, instance);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        app.loader->destroyAsset(app.asset);
-        app.materials->destroyMaterials();
+    auto cleanup = [app, appLoader](Engine* engine, View*, Scene*) {
+        app->assetLoader->destroyAsset(app->asset);
+        app->materials->destroyMaterials();
 
-        delete app.viewer;
-        delete app.materials;
-        delete app.names;
-        delete app.resourceLoader;
-        delete app.stbDecoder;
-        delete app.ktxDecoder;
-        delete app.webpDecoder;
-        delete app.rawAssetLoader;
-
-        AssetLoader::destroy(&app.loader);
+        delete app->viewer;
+        delete app->materials;
+        delete app->names;
+        delete app->resourceLoader;
+        delete app->stbDecoder;
+        delete app->ktxDecoder;
+        delete app->webpDecoder;
+        AssetLoader::destroy(&app->assetLoader);
     };
 
-    auto animate = [&app, arrangeIntoCircle](Engine* engine, View* view, double now) {
-        app.resourceLoader->asyncUpdateLoad();
-        app.viewer->updateRootTransform();
-        app.viewer->populateScene();
+    auto animate = [app, arrangeIntoCircle](Engine* engine, View* view, double now) {
+        app->resourceLoader->asyncUpdateLoad();
+        app->viewer->updateRootTransform();
+        app->viewer->populateScene();
 
-        app.names->gc();
-        app.loader->gc();
+        app->names->gc();
+        app->assetLoader->gc();
 
-        if (app.instanceToAnimate == -1) {
-            for (FilamentInstance* instance : app.instances) {
-                app.viewer->applyAnimation(now, instance);
+        if (app->instanceToAnimate == -1) {
+            for (FilamentInstance* instance: app->instances) {
+                app->viewer->applyAnimation(now, instance);
             }
         } else {
-            app.viewer->applyAnimation(now);
+            app->viewer->applyAnimation(now);
         }
 
         // Add a new instance every second until reaching 100 instances.
         static double previous = 0.0;
-        if (now - previous > 1.0 && app.asset->getAssetInstanceCount() < 100) {
-            FilamentInstance* instance = app.loader->createInstance(app.asset);
+        if (now - previous > 1.0 && app->asset->getAssetInstanceCount() < 100) {
+            FilamentInstance* instance = app->assetLoader->createInstance(app->asset);
 
             // If the asset has variants, rotate through each variant.
             const size_t variantCount = instance->getMaterialVariantCount();
             if (variantCount > 1) {
-                instance->applyMaterialVariant(app.instances.size() % variantCount);
+                instance->applyMaterialVariant(app->instances.size() % variantCount);
             }
 
-            app.instances.push_back(instance);
+            app->instances.push_back(instance);
             arrangeIntoCircle();
             previous = now;
         }
     };
 
-    auto gui = [&app](Engine* engine, View* view) { };
+    auto gui = [app](Engine* engine, View* view) {};
 
-    auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { };
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(app.config.title)
-                              .iblDirectory(app.config.iblDirectory)
-                              .backend(app.config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .imgui(gui)
-                              .preRender(preRender)
-                              .animation(animate)
-                              .build();
-    app.filamentApp->run();
+    auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {};
+
+    auto fApp = samples::getBuilder(config, dm, appLoader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .preRender(preRender)
+                        .animation(animate)
+                        .build();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeInt("num", 'n', "Number of instances to create", 1, 1),
+        samples::Parameter::makeInt("animate", 'm', "Index of instance to animate (-1 for all)",
+                -1, -1),
+        samples::Parameter::makeBool("ubershader", 'u', "Enable ubershader", false),
+    };
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "glTF Instancing";
+    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
+    };
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
+    if (!config.positionalArgs.empty()) {
+        utils::Path filename(config.positionalArgs[0].c_str_safe());
+        if (!filename.exists()) {
+            std::cerr << "file " << filename << " not found!" << std::endl;
+            return 1;
+        }
+    }
+
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto fApp = createSampleApp(config, dm.get(), loader);
+    if (fApp) {
+        fApp->run();
+    }
+    delete loader;
 
     return 0;
 }
+#endif

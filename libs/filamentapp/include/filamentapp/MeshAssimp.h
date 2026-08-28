@@ -61,7 +61,7 @@ public:
     // This function takes over the ownership of `materials` to prevent crashes due to the
     // incorrect order of resource destruction.
     void addFromFile(const utils::Path& path,
-            std::map<std::string, filament::MaterialInstance*>& materials,
+            std::map<utils::CString, filament::MaterialInstance*>& materials,
             bool overrideMaterial = false);
 
     const std::vector<utils::Entity> getRenderables() const noexcept {
@@ -107,22 +107,18 @@ private:
         std::vector<int> parents;
     };
 
-    bool setFromFile(Asset& asset, std::map<std::string, filament::MaterialInstance*>& outMaterials);
+    bool setFromFile(Asset& asset,
+            std::map<utils::CString, filament::MaterialInstance*>& outMaterials);
 
     void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
             const std::string& materialName, const std::string& dirName,
-            std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
+            std::map<utils::CString, filament::MaterialInstance*>& outMaterials) const;
 
     template<bool SNORMUV0S, bool SNORMUV1S>
     void processNode(Asset& asset,
-                     std::map<std::string, filament::MaterialInstance*>& outMaterials,
-                     const aiScene *scene,
-                     bool isGLTF,
-                     size_t deep,
-                     size_t matCount,
-                     const aiNode *node,
-                     int parentIndex,
-                     size_t &depth) const;
+            std::map<utils::CString, filament::MaterialInstance*>& outMaterials,
+            const aiScene* scene, bool isGLTF, size_t deep, size_t matCount, const aiNode* node,
+            int parentIndex, size_t& depth) const;
 
     filament::Texture* createOneByOneTexture(uint32_t textureData);
     filament::Engine& mEngine;
@@ -132,7 +128,7 @@ private:
     filament::Material* mDefaultColorMaterial = nullptr;
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
     mutable std::unordered_map<uint64_t, filament::Material*> mGltfMaterialCache;
-    std::map<std::string, filament::MaterialInstance*> mMaterialInstances;
+    std::map<utils::CString, filament::MaterialInstance*> mMaterialInstances;
 
     filament::Texture* mDefaultMap = nullptr;
     filament::Texture* mDefaultNormalMap = nullptr;

@@ -36,6 +36,7 @@ PassNode::PassNode(FrameGraph& fg) noexcept
           mFrameGraph(fg),
           devirtualize(fg.getArena()),
           destroy(fg.getArena()) {
+    // We don't reserve devirtualize/destroy here because we could have a lot of PassNode (allocations are cheap)
 }
 
 PassNode::PassNode(PassNode&& rhs) noexcept = default;
@@ -55,9 +56,16 @@ void PassNode::registerResource(FrameGraphHandle const resourceHandle) noexcept 
 // ------------------------------------------------------------------------------------------------
 
 RenderPassNode::RenderPassNode(FrameGraph& fg, const char* name, FrameGraphPassBase* base) noexcept
-        : PassNode(fg), mName(name), mPassBase(base, fg.getArena()) {
+    : PassNode(fg),
+        mName(name),
+        mPassBase(base, fg.getArena()),
+        mRenderTargetData(fg.getArena()) {
+    // We don't reserve mRenderTargetData here because we could have a lot of RenderPassNode (allocations are cheap)
+    // and RenderPassData is 160 bytes.
 }
+
 RenderPassNode::RenderPassNode(RenderPassNode&& rhs) noexcept = default;
+
 RenderPassNode::~RenderPassNode() noexcept = default;
 
 void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& driver) noexcept {
@@ -78,48 +86,16 @@ void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& dr
     }
 }
 
-uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder&,
+uint32_t RenderPassNode::declareRenderTarget(FrameGraph&, FrameGraph::Builder&,
         utils::StaticString name, FrameGraphRenderPass::Descriptor const& descriptor) {
-
     RenderPassData data;
     data.name = name;
-    data.descriptor = descriptor;
-
-    // retrieve the ResourceNode of the attachments coming to us -- this will be used later
-    // to compute the discard flags.
-
-    DependencyGraph const& dependencyGraph = fg.getGraph();
-    auto incomingEdges = dependencyGraph.getIncomingEdges(this);
-
-    for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
-        FrameGraphId<FrameGraphTexture> const& handle =
-                data.descriptor.attachments[i];
-        if (handle) {
-            data.attachmentInfo[i] = handle;
-
-            // TODO: this is not very efficient
-            auto incomingPos = std::find_if(incomingEdges.begin(), incomingEdges.end(),
-                    [&dependencyGraph, handle]
-                            (DependencyGraph::Edge const* edge) {
-                        ResourceNode const* node = static_cast<ResourceNode const*>(
-                                dependencyGraph.getNode(edge->from));
-                        return node->resourceHandle == handle;
-                    });
-
-            if (incomingPos != incomingEdges.end()) {
-                data.incoming[i] = const_cast<ResourceNode*>(
-                        static_cast<ResourceNode const*>(
-                                dependencyGraph.getNode((*incomingPos)->from)));
-            }
-
-            // this could be either outgoing or incoming (if there are no outgoing)
-            data.outgoing[i] = fg.getActiveResourceNode(handle);
-            if (data.outgoing[i] == data.incoming[i]) {
-                data.outgoing[i] = nullptr;
-            }
-        }
-    }
-
+    data.attachments = descriptor.attachments;
+    data.samples = descriptor.samples;
+    data.layerCount = descriptor.layerCount;
+    data.clearFlags = descriptor.clearFlags;
+    data.backend.params.viewport = descriptor.viewport;
+    data.backend.params.clearColor = descriptor.clearColor;
     uint32_t const id = mRenderTargetData.size();
     mRenderTargetData.push_back(data);
     return id;
@@ -127,6 +103,8 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
 
 void RenderPassNode::resolve() noexcept {
     using namespace backend;
+
+    DependencyGraph const& dependencyGraph = mFrameGraph.getGraph();
 
     for (auto& rt : mRenderTargetData) {
 
@@ -148,7 +126,27 @@ void RenderPassNode::resolve() noexcept {
         constexpr size_t STENCIL_INDEX = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1;
 
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
-            if (rt.descriptor.attachments[i]) {
+            if (rt.attachments[i]) {
+                FrameGraphId<FrameGraphTexture> const handle = rt.attachments[i];
+
+                DependencyGraph::Edge const* const incomingEdge = dependencyGraph.findIncomingEdge(this,
+                        [&dependencyGraph, handle](DependencyGraph::Edge const* edge) {
+                            auto const* node = static_cast<ResourceNode const*>(
+                                    dependencyGraph.getNode(edge->from));
+                            return node->resourceHandle == handle;
+                        });
+                ResourceNode const* const incomingNode = incomingEdge ?
+                        static_cast<ResourceNode const*>(dependencyGraph.getNode(incomingEdge->from)) : nullptr;
+
+                DependencyGraph::Edge const* const outgoingEdge = dependencyGraph.findOutgoingEdge(this,
+                        [&dependencyGraph, handle](DependencyGraph::Edge const* edge) {
+                            auto const* node = static_cast<ResourceNode const*>(
+                                    dependencyGraph.getNode(edge->to));
+                            return node->resourceHandle == handle;
+                        });
+                ResourceNode const* const outgoingNode = outgoingEdge ?
+                        static_cast<ResourceNode const*>(dependencyGraph.getNode(outgoingEdge->to)) : nullptr;
+
                 const TargetBufferFlags target = getTargetBufferFlagsAt(i);
 
                 rt.targetBufferFlags |= target;
@@ -158,10 +156,10 @@ void RenderPassNode::resolve() noexcept {
                 // attachment might have other readers after us).
                 // TODO: we could set the discard flag if we are the last reader, i.e.
                 //       if rt->incoming[i] last reader is us.
-                if (rt.outgoing[i] && !rt.outgoing[i]->hasActiveReaders()) {
+                if (outgoingNode && !outgoingNode->hasActiveReaders()) {
                     rt.backend.params.flags.discardEnd |= target;
                 }
-                if (!rt.outgoing[i] || !rt.outgoing[i]->hasWriterPass()) {
+                if (!outgoingNode || !outgoingNode->hasWriterPass()) {
                     if (i == DEPTH_INDEX) {
                         rt.backend.params.readOnlyDepthStencil |= RenderPassParams::READONLY_DEPTH;
                     } else if (i == STENCIL_INDEX) {
@@ -169,20 +167,25 @@ void RenderPassNode::resolve() noexcept {
                     }
                 }
                 // Discard at the start if this attachment has no prior writer
-                if (!rt.incoming[i] || !rt.incoming[i]->hasActiveWriters()) {
+                if (!incomingNode || !incomingNode->hasActiveWriters()) {
                     rt.backend.params.flags.discardStart |= target;
                 }
-                VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments[i]);
-                Resource<FrameGraphTexture>* pTextureResource =
-                        static_cast<Resource<FrameGraphTexture>*>(pResource);
+                VirtualResource* pResource = mFrameGraph.getResource(rt.attachments[i]);
+                Resource<FrameGraphTexture>* pTextureResource = static_cast<Resource<FrameGraphTexture>*>(pResource);
 
                 pImportedRenderTarget = pImportedRenderTarget ?
                         pImportedRenderTarget : pResource->asImportedRenderTarget();
 
+                // FIXME: the code below appears to either a NO-OP, or forcing the sample count to zero.
+                //        Originally the code was
+                //              if (!rt.descriptor.samples && none(...)) {
+                //                  pTextureResource->descriptor.samples = rt.descriptor.samples;
+                //              }
+                //        which has a similar behavior. I don't recall what was the original intent of:
+                //              "update attachment sample count if not specified and usage permits it"
                 // update attachment sample count if not specified and usage permits it
-                if (!rt.descriptor.samples &&
-                    none(pTextureResource->usage & TextureUsage::SAMPLEABLE)) {
-                    pTextureResource->descriptor.samples = rt.descriptor.samples;
+                if (!rt.samples && none(pTextureResource->usage & TextureUsage::SAMPLEABLE)) {
+                    pTextureResource->descriptor.samples = rt.samples;
                 }
 
                 // figure out the min/max dimensions across all attachments
@@ -196,7 +199,7 @@ void RenderPassNode::resolve() noexcept {
         }
         // additionally, clear implies discardStart
         rt.backend.params.flags.discardStart |= (
-                rt.descriptor.clearFlags & rt.targetBufferFlags);
+                rt.clearFlags & rt.targetBufferFlags);
 
         assert_invariant(minWidth == maxWidth);
         assert_invariant(minHeight == maxHeight);
@@ -207,12 +210,12 @@ void RenderPassNode::resolve() noexcept {
         uint32_t const width = maxWidth;
         uint32_t const height = maxHeight;
 
-        // Update the descriptor if no size was specified (auto mode)
-        if (!rt.descriptor.viewport.width) {
-            rt.descriptor.viewport.width = width;
+        // Update the viewport if no size was specified (auto mode)
+        if (!rt.backend.params.viewport.width) {
+            rt.backend.params.viewport.width = width;
         }
-        if (!rt.descriptor.viewport.height) {
-            rt.descriptor.viewport.height = height;
+        if (!rt.backend.params.viewport.height) {
+            rt.backend.params.viewport.height = height;
         }
 
         /*
@@ -225,12 +228,12 @@ void RenderPassNode::resolve() noexcept {
             rt.imported = true;
 
             // override the values we just calculated with the actual values from the imported target
-            rt.targetBufferFlags     = pImportedRenderTarget->importedDesc.attachments;
-            rt.descriptor.viewport   = pImportedRenderTarget->importedDesc.viewport;
-            rt.descriptor.clearColor = pImportedRenderTarget->importedDesc.clearColor;
-            rt.descriptor.clearFlags = pImportedRenderTarget->importedDesc.clearFlags;
-            rt.descriptor.samples    = pImportedRenderTarget->importedDesc.samples;
-            rt.backend.target        = pImportedRenderTarget->target;
+            rt.targetBufferFlags         = pImportedRenderTarget->importedDesc.attachments;
+            rt.backend.params.viewport   = pImportedRenderTarget->importedDesc.viewport;
+            rt.backend.params.clearColor = pImportedRenderTarget->importedDesc.clearColor;
+            rt.clearFlags                = pImportedRenderTarget->importedDesc.clearFlags;
+            rt.samples                   = pImportedRenderTarget->importedDesc.samples;
+            rt.backend.target            = pImportedRenderTarget->target;
 
             // We could end-up here more than once, for instance if the rendertarget is used
             // by multiple passes (this would imply a read-back, btw). In this case, we don't want
@@ -242,9 +245,7 @@ void RenderPassNode::resolve() noexcept {
             rt.backend.params.flags.discardEnd   &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
         }
 
-        rt.backend.params.viewport = rt.descriptor.viewport;
-        rt.backend.params.clearColor = rt.descriptor.clearColor;
-        rt.backend.params.flags.clear = rt.descriptor.clearFlags & rt.targetBufferFlags;
+        rt.backend.params.flags.clear = rt.clearFlags & rt.targetBufferFlags;
     }
 }
 
@@ -255,9 +256,9 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
 
         MRT colorInfo{};
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-            if (attachmentInfo[i]) {
+            if (attachments[i]) {
                 auto const* pResource = static_cast<Resource<FrameGraphTexture> const*>(
-                        fg.getResource(attachmentInfo[i]));
+                        fg.getResource(attachments[i]));
                 colorInfo[i].handle = pResource->resource.handle;
                 colorInfo[i].level = pResource->subResourceDescriptor.level;
                 colorInfo[i].layer = pResource->subResourceDescriptor.layer;
@@ -266,9 +267,10 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
 
         TargetBufferInfo info[2] = {};
         for (size_t i = 0; i < 2; i++) {
-            if (attachmentInfo[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + i]) {
+            size_t const index = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + i;
+            if (attachments[index]) {
                 auto const* pResource = static_cast<Resource<FrameGraphTexture> const*>(
-                        fg.getResource(attachmentInfo[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + i]));
+                        fg.getResource(attachments[index]));
                 info[i].handle = pResource->resource.handle;
                 info[i].level = pResource->subResourceDescriptor.level;
                 info[i].layer = pResource->subResourceDescriptor.layer;
@@ -279,7 +281,7 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
                 name, targetBufferFlags,
                 backend.params.viewport.width,
                 backend.params.viewport.height,
-                descriptor.samples, descriptor.layerCount,
+                samples, layerCount,
                 colorInfo, info[0], info[1]);
     }
 }
@@ -347,7 +349,7 @@ std::vector<RenderTargetInfo> RenderPassNode::getRenderTargetInfo() const noexce
             for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; ++i) {
                 TargetBufferFlags mask = getTargetBufferFlagsAt(i);
                 if (any(flags & mask)) {
-                    FrameGraphHandle handle = rt.descriptor.attachments[i];
+                    FrameGraphHandle handle = rt.attachments[i];
                     if (handle) {
                         const char* name = nullptr;
                         if (i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) name = "color";

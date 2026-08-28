@@ -78,10 +78,10 @@ FScene::~FScene() noexcept = default;
 
 
 void FScene::prepare(JobSystem& js,
-        RootArenaScope& rootArenaScope,
+        LinearAllocatorArena& arena,
         mat4 const& worldTransform,
         bool shadowReceiversAreCasters,
-        FScene::SceneCacheData& cache) noexcept {
+        SceneCacheData& cache) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
@@ -90,7 +90,7 @@ void FScene::prepare(JobSystem& js,
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // This will reset the allocator upon exiting
-    ArenaScope localArenaScope(rootArenaScope.getArena());
+    ArenaScope const scope(arena);
 
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
@@ -111,35 +111,31 @@ void FScene::prepare(JobSystem& js,
             STLAllocator< LightContainerData, LinearAllocatorArena >, false>;
 
     RenderableInstanceContainer renderableInstances{
-            RenderableInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
+            RenderableInstanceContainer::with_capacity(entities.size(), arena) };
 
     LightInstanceContainer lightInstances{
-            LightInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
+            LightInstanceContainer::with_capacity(entities.size(), arena) };
 
     FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "InstanceLoop");
 
-    // find the max intensity directional light index in our local array
-    float maxIntensity = 0.0f;
-    std::pair<LightManager::Instance, TransformManager::Instance> directionalLightInstances{};
+    // directional lights are handled separately from the punctual lights
+    LightInstanceContainer directionalInstances{
+            LightInstanceContainer::with_capacity(entities.size(), arena) };
 
     /*
      * First compute the exact number of renderables and lights in the scene.
-     * Also find the main directional light.
+     * Also collect the directional lights.
      */
-    entities.forEachSetBit([&](uint32_t id) {
+    entities.forEachSetBit([&](uint32_t const id) {
         Entity const e = Entity::import(int32_t(id));
         if (UTILS_LIKELY(em.isAlive(e))) {
             auto ti = tcm.getInstance(e);
             auto li = lcm.getInstance(e);
             auto ri = rcm.getInstance(e);
             if (li) {
-                // we handle the directional light here because it'd prevent multithreading below
+                // we handle the directional lights here because it'd prevent multithreading below
                 if (UTILS_UNLIKELY(lcm.isDirectionalLight(li))) {
-                    // we don't store the directional lights, because we only have a single one
-                    if (lcm.getIntensity(li) >= maxIntensity) {
-                        maxIntensity = lcm.getIntensity(li);
-                        directionalLightInstances = { li, ti };
-                    }
+                    directionalInstances.emplace_back(li, ti);
                 } else {
                     lightInstances.emplace_back(li, ti);
                 }
@@ -149,6 +145,24 @@ void FScene::prepare(JobSystem& js,
             }
         }
     });
+
+    // Sort the directional lights by decreasing intensity. The most intense one is the
+    // dominant directional light (stored at index 0 of the LightSoa); it is the only one
+    // that casts shadows and can be a sun. Up to CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS
+    // additional directional lights are evaluated without shadows; the rest are ignored.
+    if (UTILS_UNLIKELY(directionalInstances.size() > 1)) {
+        size_t const keep = std::min<size_t>(directionalInstances.size(),
+                DIRECTIONAL_LIGHTS_COUNT + CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
+        std::partial_sort(directionalInstances.begin(),
+                directionalInstances.begin() + keep, directionalInstances.end(),
+                [&lcm](auto const& lhs, auto const& rhs) {
+                    return lcm.getIntensity(lhs.first) > lcm.getIntensity(rhs.first);
+                });
+    }
+    std::pair<LightManager::Instance, TransformManager::Instance> const directionalLightInstances =
+            directionalInstances.empty() ?
+                    std::pair<LightManager::Instance, TransformManager::Instance>{} :
+                    directionalInstances[0];
 
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -237,6 +251,12 @@ void FScene::prepare(JobSystem& js,
             sceneData.elementAt<CHANNELS>(index)            = rcm.getLightChannels(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
+            sceneData.elementAt<WORLD_AABB_CENTER_X>(index) = worldAABB.center.x;
+            sceneData.elementAt<WORLD_AABB_CENTER_Y>(index) = worldAABB.center.y;
+            sceneData.elementAt<WORLD_AABB_CENTER_Z>(index) = worldAABB.center.z;
+            sceneData.elementAt<WORLD_AABB_EXTENT_X>(index) = worldAABB.halfExtent.x;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Y>(index) = worldAABB.halfExtent.y;
+            sceneData.elementAt<WORLD_AABB_EXTENT_Z>(index) = worldAABB.halfExtent.z;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
             sceneData.elementAt<SUMMED_PRIMITIVE_COUNT>(index) = 0;
             //sceneData.elementAt<UBO>(index)                 = {}; // not needed here
@@ -263,10 +283,15 @@ void FScene::prepare(JobSystem& js,
             }
             size_t const index = DIRECTIONAL_LIGHTS_COUNT + std::distance(first, p) + i;
             assert_invariant(index < lightData.size());
-            lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, lcm.getRadius(li) };
+            float const r = lcm.getRadius(li);
+            lightData.elementAt<POSITION_RADIUS>(index) = float4{ position.xyz, r };
+            lightData.elementAt<POSITION_X>(index) = position.x;
+            lightData.elementAt<POSITION_Y>(index) = position.y;
+            lightData.elementAt<POSITION_Z>(index) = position.z;
+            lightData.elementAt<RADIUS>(index)     = r;
             lightData.elementAt<DIRECTION>(index) = d;
             lightData.elementAt<SPOT_PARAMS>(index) = float2{lcm.getCosOuterSquared(li), lcm.getSinInverse(li)};
-            lightData.elementAt<LIGHT_ENTITY>(index) = li ? lcm.getEntity(li) : utils::Entity{};
+            lightData.elementAt<LIGHT_ENTITY>(index) = li ? lcm.getEntity(li) : Entity{};
         }
     };
 
@@ -281,7 +306,7 @@ void FScene::prepare(JobSystem& js,
 
     auto* lightJob = parallel_for(js, rootJob,
             lightInstances.data(), lightInstances.size(),
-            std::cref(lightWork), jobs::CountSplitter<32, 5>());
+            std::cref(lightWork), jobs::CountSplitter<32>());
 
     js.run(renderableJob);
     js.run(lightJob);
@@ -325,12 +350,39 @@ void FScene::prepare(JobSystem& js,
 
         constexpr float inf = std::numeric_limits<float>::infinity();
         lightData.elementAt<POSITION_RADIUS>(0) = float4{ 0, 0, 0, inf };
+        lightData.elementAt<POSITION_X>(0) = 0;
+        lightData.elementAt<POSITION_Y>(0) = 0;
+        lightData.elementAt<POSITION_Z>(0) = 0;
+        lightData.elementAt<RADIUS>(0)     = inf;
         lightData.elementAt<DIRECTION>(0) = normalize(d);
         lightData.elementAt<SHADOW_DIRECTION>(0) = normalize(s);
         lightData.elementAt<SHADOW_REF>(0) = lsReferencePoint;
-        lightData.elementAt<LIGHT_ENTITY>(0) = li ? lcm.getEntity(li) : utils::Entity{};
+        lightData.elementAt<LIGHT_ENTITY>(0) = li ? lcm.getEntity(li) : Entity{};
     } else {
-        lightData.elementAt<LIGHT_ENTITY>(0) = utils::Entity{};
+        lightData.elementAt<LIGHT_ENTITY>(0) = Entity{};
+    }
+
+    /*
+     * Handle the extra directional lights (evaluated without shadows)
+     */
+
+    cache.extraDirectionalLightCount = 0;
+    if (UTILS_UNLIKELY(mEngine.getConfig().enableMultipleDirectionalLights &&
+                directionalInstances.size() > DIRECTIONAL_LIGHTS_COUNT)) {
+        mat3 const worldTransformNormals = mat3::getTransformForNormals(worldTransform.upperLeft());
+        size_t const extraCount = std::min(directionalInstances.size() - DIRECTIONAL_LIGHTS_COUNT,
+                CONFIG_MAX_EXTRA_DIRECTIONAL_LIGHTS);
+        for (size_t i = 0; i < extraCount; i++) {
+            auto const [li, ti] = directionalInstances[DIRECTIONAL_LIGHTS_COUNT + i];
+            // using mat3::getTransformForNormals handles non-uniform scaling
+            mat3 const worldDirectionTransform =
+                    mat3::getTransformForNormals(tcm.getWorldTransformAccurate(ti).upperLeft());
+            double3 const d = worldTransformNormals *
+                    (worldDirectionTransform * lcm.getLocalDirection(li));
+            cache.extraDirectionalLightDirections[i] = float3(normalize(d));
+            cache.extraDirectionalLightInstances[i] = li;
+        }
+        cache.extraDirectionalLightCount = uint8_t(extraCount);
     }
 
     // some elements past the end of the array will be accessed by SIMD code, we need to make
@@ -338,6 +390,10 @@ void FScene::prepare(JobSystem& js,
     // (e.g. in computeLightRanges())
     for (size_t i = lightData.size(), e = lightData.capacity(); i < e; i++) {
         new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
+        lightData.data<POSITION_X>()[i] = 0;
+        lightData.data<POSITION_Y>()[i] = 0;
+        lightData.data<POSITION_Z>()[i] = 0;
+        lightData.data<RADIUS>()[i]     = 1;
     }
 
     // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
@@ -348,6 +404,12 @@ void FScene::prepare(JobSystem& js,
             sceneData.data<VISIBLE_MASK>()[i] = 0;
             sceneData.data<VISIBILITY_STATE>()[i] = {};
             sceneData.data<SKINNING_STATE>()[i] = {};
+            sceneData.data<WORLD_AABB_CENTER_X>()[i] = 0;
+            sceneData.data<WORLD_AABB_CENTER_Y>()[i] = 0;
+            sceneData.data<WORLD_AABB_CENTER_Z>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_X>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_Y>()[i] = 0;
+            sceneData.data<WORLD_AABB_EXTENT_Z>()[i] = 0;
         }
     }
 
@@ -356,7 +418,7 @@ void FScene::prepare(JobSystem& js,
     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 }
 
-void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, FScene::SceneCacheData& cache) const noexcept {
+void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, SceneCacheData& cache) const noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     RenderableSoa& sceneData = cache.renderableData;
     
@@ -420,7 +482,7 @@ void FScene::terminate(FEngine&) {
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera,
-        Handle<HwBufferObject> lightUbh, FScene::SceneCacheData& cache) noexcept {
+        Handle<HwBufferObject> lightUbh, SceneCacheData& cache) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager const& lcm = mEngine.getLightManager();
     LightSoa& lightData = cache.lightData;
@@ -475,7 +537,7 @@ bool FScene::hasContactShadows(SceneCacheData const& cache) const noexcept {
 
     // find out if at least one light has contact-shadow enabled
     auto const& lcm = mEngine.getLightManager();
-    auto const* pLightEntities = cache.lightData.data<FScene::LIGHT_ENTITY>();
+    auto const* pLightEntities = cache.lightData.data<LIGHT_ENTITY>();
     for (size_t i = 0, c = cache.lightData.size(); i < c; i++) {
         Entity const entity = pLightEntities[i];
         if (!entity.isNull()) {

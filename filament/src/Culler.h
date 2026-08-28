@@ -45,21 +45,22 @@ public:
     using result_type = uint8_t;
 
     /*
-     * returns whether each AABB in an array intersects with the frustum
+     * returns whether each AABB in a planar array intersects with the frustum
      */
     static void intersects(result_type* results,
             Frustum const& frustum,
-            math::float3 const* center,
-            math::float3 const* extent,
-            size_t count, size_t bit) noexcept;
+            float const* cx, float const* cy, float const* cz,
+            float const* ex, float const* ey, float const* ez,
+            size_t count, size_t bit = 0) noexcept;
 
     /*
-     * returns whether each sphere in an array intersects with the frustum
+     * returns whether each sphere in a planar array intersects with the frustum
      */
     static void intersects(
             result_type* results,
             Frustum const& frustum,
-            math::float4 const* b,
+            float const* cx, float const* cy, float const* cz,
+            float const* r,
             size_t count) noexcept;
 
     /*
@@ -80,13 +81,14 @@ public:
     struct UTILS_PUBLIC Test {
         static void intersects(result_type* results,
                 Frustum const& frustum,
-                math::float3 const* c,
-                math::float3 const* e,
+                float const* cx, float const* cy, float const* cz,
+                float const* ex, float const* ey, float const* ez,
                 size_t count) noexcept;
 
         static void intersects(result_type* results,
                 Frustum const& frustum,
-                math::float4 const* b,
+                float const* cx, float const* cy, float const* cz,
+                float const* r,
                 size_t count) noexcept;
     };
 };

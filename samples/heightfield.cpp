@@ -36,6 +36,7 @@
 
 #include <utils/getopt.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #define STB_PERLIN_IMPLEMENTATION
@@ -61,8 +62,11 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
+namespace {
+
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    SampleConfig config;
+    FilamentApp2* filamentApp = nullptr;
     Skybox* skybox = nullptr;
     VertexBuffer* vb = nullptr;
     IndexBuffer* ib = nullptr;
@@ -74,6 +78,7 @@ struct App {
     Texture* rgbTex = nullptr;
 
     Entity renderable;
+    size_t textureSize = 512;
 };
 
 struct Vertex {
@@ -99,54 +104,7 @@ struct Params {
     int currentTextureType = -1;
     bool addPadding = false;
 };
-static Params g_params;
-
-static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
-    std::string usage(
-            "HEIGHTFIELD is a command-line tool for testing Filament texture updates.\n"
-            "Usage:\n"
-            "    HEIGHTFIELD [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
-    const std::string from("HEIGHTFIELD");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
-
-static int handleCommandLineArgments(int argc, char* argv[], SampleConfig* config) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help",         utils::getopt::no_argument,       nullptr, 'h' },
-            { "api",          utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0, nullptr, 0 }  // termination of the utils::getopt::option list
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg != nullptr ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                config->backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-
-    return utils::getopt::optind;
-}
+Params g_params;
 
 template<typename T>
 T packFloat(float f);
@@ -212,7 +170,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     };
 
     auto job = jobs::parallel_for(*js, nullptr, 0, dimension * dimension, std::cref(work),
-            jobs::CountSplitter<64, 32>());
+            jobs::CountSplitter<64>());
     js->runAndWait(job);
 
     Texture::PixelBufferDescriptor::PixelDataFormat format {};
@@ -237,7 +195,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     texture->setImage(engine, 0, xoffset, yoffset, dimension, dimension, std::move(pixelBuffer));
 }
 
-static void gui(Engine*, View*) {
+void gui(Engine*, View*) {
     auto& params = g_params;
     ImGui::Begin("Parameters");
     {
@@ -259,45 +217,42 @@ static void gui(Engine*, View*) {
     ImGui::End();
 }
 
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "Heightfield";
+} // namespace
 
-    handleCommandLineArgments(argc, argv, &config);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-    const size_t textureSize = 512;
-
-    App app;
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         // Create heightfield textures for each format.
-        app.r8Tex = Texture::Builder()
-                .width(uint32_t(textureSize))
-                .height(uint32_t(textureSize))
-                .levels(1)
-                .sampler(Texture::Sampler::SAMPLER_2D)
-                .format(Texture::InternalFormat::R8)
-                .build(*engine);
-        app.floatTex = Texture::Builder()
-                .width(uint32_t(textureSize))
-                .height(uint32_t(textureSize))
-                .levels(1)
-                .sampler(Texture::Sampler::SAMPLER_2D)
-                .format(Texture::InternalFormat::R32F)
-                .build(*engine);
-        app.rgbTex = Texture::Builder()
-                .width(uint32_t(textureSize))
-                .height(uint32_t(textureSize))
-                .levels(1)
-                .sampler(Texture::Sampler::SAMPLER_2D)
-                .format(Texture::InternalFormat::RGB8)
-                .build(*engine);
+        app->r8Tex = Texture::Builder()
+                             .width(uint32_t(app->textureSize))
+                             .height(uint32_t(app->textureSize))
+                             .levels(1)
+                             .sampler(Texture::Sampler::SAMPLER_2D)
+                             .format(Texture::InternalFormat::R8)
+                             .build(*engine);
+        app->floatTex = Texture::Builder()
+                                .width(uint32_t(app->textureSize))
+                                .height(uint32_t(app->textureSize))
+                                .levels(1)
+                                .sampler(Texture::Sampler::SAMPLER_2D)
+                                .format(Texture::InternalFormat::R32F)
+                                .build(*engine);
+        app->rgbTex = Texture::Builder()
+                              .width(uint32_t(app->textureSize))
+                              .height(uint32_t(app->textureSize))
+                              .levels(1)
+                              .sampler(Texture::Sampler::SAMPLER_2D)
+                              .format(Texture::InternalFormat::RGB8)
+                              .build(*engine);
 
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
         // Set up view
-        app.skybox = Skybox::Builder().color({0.03f, 0.04f, 0.36f, 1.0f}).build(*engine);
-        scene->setSkybox(app.skybox);
+        app->skybox = Skybox::Builder().color({ 0.03f, 0.04f, 0.36f, 1.0f }).build(*engine);
+        scene->setSkybox(app->skybox);
         view->setPostProcessingEnabled(false);
 
         // Generate heightfield vertices.
@@ -341,108 +296,119 @@ int main(int argc, char** argv) {
 
         // Create heightfield renderable.
         static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
-        app.vb = VertexBuffer::Builder()
-                .vertexCount(vertexCount)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0,
-                        sizeof(Vertex))
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 12,
-                        sizeof(Vertex))
-                .build(*engine);
-        app.vb->setBufferAt(*engine, 0,
+        app->vb = VertexBuffer::Builder()
+                          .vertexCount(vertexCount)
+                          .bufferCount(1)
+                          .attribute(VertexAttribute::POSITION, 0,
+                                  VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
+                          .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2,
+                                  12, sizeof(Vertex))
+                          .build(*engine);
+        app->vb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(vertices, sizeof(Vertex) * vertexCount, nullptr));
 
-        app.ib = IndexBuffer::Builder()
-                .indexCount(indexCount)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*engine);
-        app.ib->setBuffer(*engine,
+        app->ib = IndexBuffer::Builder()
+                          .indexCount(indexCount)
+                          .bufferType(IndexBuffer::IndexType::USHORT)
+                          .build(*engine);
+        app->ib->setBuffer(*engine,
                 IndexBuffer::BufferDescriptor(indices, sizeof(uint16_t) * indexCount, nullptr));
-        app.mat = Material::Builder()
-                .package(RESOURCES_HEIGHTFIELD_DATA, RESOURCES_HEIGHTFIELD_SIZE)
-                .build(*engine);
-        app.matInstance = app.mat->createInstance();
-        app.matInstance->setParameter("height", app.r8Tex, sampler);
-        app.renderable = EntityManager::get().create();
+        app->mat = Material::Builder()
+                           .package(RESOURCES_HEIGHTFIELD_DATA, RESOURCES_HEIGHTFIELD_SIZE)
+                           .build(*engine);
+        app->matInstance = app->mat->createInstance();
+        app->matInstance->setParameter("height", app->r8Tex, sampler);
+        app->renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
-                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-                .material(0, app.matInstance)
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0,
+                .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
+                .material(0, app->matInstance)
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app->vb, app->ib, 0,
                         indexCount)
                 .culling(false)
                 .receiveShadows(true)
                 .castShadows(true)
-                .build(*engine, app.renderable);
-        scene->addEntity(app.renderable);
+                .build(*engine, app->renderable);
+        scene->addEntity(app->renderable);
 
         auto& tcm = engine->getTransformManager();
-        auto ti = tcm.getInstance(app.renderable);
+        auto ti = tcm.getInstance(app->renderable);
         tcm.setTransform(ti, mat4f{ mat3f(1.0f), float3(0.0f, 0.0f, -4.0f) });
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.skybox);
-        engine->destroy(app.renderable);
-        engine->destroy(app.matInstance);
-        engine->destroy(app.mat);
-        engine->destroy(app.r8Tex);
-        engine->destroy(app.floatTex);
-        engine->destroy(app.rgbTex);
-        engine->destroy(app.vb);
-        engine->destroy(app.ib);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->skybox);
+        engine->destroy(app->renderable);
+        engine->destroy(app->matInstance);
+        engine->destroy(app->mat);
+        engine->destroy(app->r8Tex);
+        engine->destroy(app->floatTex);
+        engine->destroy(app->rgbTex);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
     };
 
 
-    app.filamentApp =
-            FilamentApp2::Builder()
-                    .title(config.title)
-                    .configDisplayManager(
-                            static_cast<FilamentApp2::DisplayManager>(config.displayManager))
-                    .setup(setup)
-                    .cleanup(cleanup)
-                    .imgui(gui)
-                    .animation([&app](Engine* engine, View* view, double now) {
-                        const size_t offset = g_params.updateSubRegion ? 64 : 0;
-                        const size_t dimension =
-                                g_params.updateSubRegion ? textureSize / 2 : textureSize;
-                        const size_t padding = g_params.addPadding ? 32 : 0;
-                        TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(gui)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            const size_t offset = g_params.updateSubRegion ? 64 : 0;
+                            const size_t dimension = g_params.updateSubRegion ? app->textureSize / 2
+                                                                              : app->textureSize;
+                            const size_t padding = g_params.addPadding ? 32 : 0;
+                            TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
 
-                        Texture* textureUpdate = nullptr;
+                            Texture* textureUpdate = nullptr;
 
-                        if (g_params.textureType != g_params.currentTextureType) {
-                            if (g_params.textureType == 0) {
-                                textureUpdate = app.r8Tex;
-                            } else if (g_params.textureType == 1) {
-                                textureUpdate = app.floatTex;
-                            } else if (g_params.textureType == 2) {
-                                textureUpdate = app.rgbTex;
+                            if (g_params.textureType != g_params.currentTextureType) {
+                                if (g_params.textureType == 0) {
+                                    textureUpdate = app->r8Tex;
+                                } else if (g_params.textureType == 1) {
+                                    textureUpdate = app->floatTex;
+                                } else if (g_params.textureType == 2) {
+                                    textureUpdate = app->rgbTex;
+                                }
+
+                                g_params.currentTextureType = g_params.textureType;
                             }
 
-                            g_params.currentTextureType = g_params.textureType;
-                        }
+                            if (textureUpdate) {
+                                app->matInstance->setParameter("height", textureUpdate, sampler);
+                            }
 
-                        if (textureUpdate) {
-                            app.matInstance->setParameter("height", textureUpdate, sampler);
-                        }
+                            const auto n = static_cast<float>(now);
+                            if (g_params.textureType == 0) {
+                                populateTextureWithPerlin<uint8_t>(app->r8Tex, *engine,
+                                        n * g_params.speed, g_params, offset, offset, dimension,
+                                        padding);
+                            } else if (g_params.textureType == 1) {
+                                populateTextureWithPerlin<float>(app->floatTex, *engine,
+                                        n * g_params.speed, g_params, offset, offset, dimension,
+                                        padding);
+                            } else if (g_params.textureType == 2) {
+                                populateTextureWithPerlin<filament::math::byte3>(app->rgbTex,
+                                        *engine, n * g_params.speed, g_params, offset, offset,
+                                        dimension, padding);
+                            }
+                        })
+                        .build();
 
-                        const auto n = static_cast<float>(now);
-                        if (g_params.textureType == 0) {
-                            populateTextureWithPerlin<uint8_t>(app.r8Tex, *engine,
-                                    n * g_params.speed, g_params, offset, offset, dimension,
-                                    padding);
-                        } else if (g_params.textureType == 1) {
-                            populateTextureWithPerlin<float>(app.floatTex, *engine,
-                                    n * g_params.speed, g_params, offset, offset, dimension,
-                                    padding);
-                        } else if (g_params.textureType == 2) {
-                            populateTextureWithPerlin<filament::math::byte3>(app.rgbTex, *engine,
-                                    n * g_params.speed, g_params, offset, offset, dimension,
-                                    padding);
-                        }
-                    })
-                    .build();
-    app.filamentApp->run();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
 
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Heightfield";
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
     return 0;
 }
+#endif

@@ -34,15 +34,17 @@ namespace filament {
 
 ResourceNode::ResourceNode(FrameGraph& fg, FrameGraphHandle const h, FrameGraphHandle const parent) noexcept
         : Node(fg.getGraph()),
-          resourceHandle(h), mFrameGraph(fg), mReaderPasses(fg.getArena()), mParentHandle(parent) {
+          resourceHandle(h), mFrameGraph(fg), mParentHandle(parent) {
 }
 
 ResourceNode::~ResourceNode() noexcept {
     VirtualResource* resource = mFrameGraph.getResource(resourceHandle);
     assert_invariant(resource);
     resource->destroyEdge(mWriterPass);
-    for (auto* pEdge : mReaderPasses) {
+    for (ResourceEdgeBase* pEdge = mReaderPassesHead; pEdge; ) {
+        ResourceEdgeBase* const next = pEdge->next;
         resource->destroyEdge(pEdge);
+        pEdge = next;
     }
     delete mParentReadEdge;
     delete mParentWriteEdge;
@@ -69,8 +71,9 @@ char const* ResourceNode::getName() const noexcept {
     return mFrameGraph.getResource(resourceHandle)->name.c_str();
 }
 
-void ResourceNode::addOutgoingEdge(ResourceEdgeBase* edge) noexcept {
-    mReaderPasses.push_back(edge);
+void ResourceNode::addOutgoingEdge(ResourceEdgeBase* const edge) noexcept {
+    edge->next = mReaderPassesHead;
+    mReaderPassesHead = edge;
 }
 
 void ResourceNode::setIncomingEdge(ResourceEdgeBase* edge) noexcept {
@@ -80,30 +83,29 @@ void ResourceNode::setIncomingEdge(ResourceEdgeBase* edge) noexcept {
 
 bool ResourceNode::hasActiveReaders() const noexcept {
     // here we don't use mReaderPasses because this wouldn't account for subresources
-    DependencyGraph& dependencyGraph = mFrameGraph.getGraph();
-    auto const& readers = dependencyGraph.getOutgoingEdges(this);
-    for (auto const& reader : readers) {
-        if (!dependencyGraph.getNode(reader->to)->isCulled()) {
-            return true;
-        }
-    }
-    return false;
+    DependencyGraph const& dependencyGraph = mFrameGraph.getGraph();
+    return dependencyGraph.findOutgoingEdge(this, [&dependencyGraph](DependencyGraph::Edge const* reader) {
+        return !dependencyGraph.getNode(reader->to)->isCulled();
+    }) != nullptr;
 }
 
 bool ResourceNode::hasActiveWriters() const noexcept {
     // here we don't use mReaderPasses because this wouldn't account for subresources
     DependencyGraph const& dependencyGraph = mFrameGraph.getGraph();
-    auto const& writers = dependencyGraph.getIncomingEdges(this);
     // writers are not culled by definition if we're not culled ourselves
-    return !writers.empty();
+    return dependencyGraph.findIncomingEdge(this, [](DependencyGraph::Edge const*) {
+        return true;
+    }) != nullptr;
 }
 
 ResourceEdgeBase* ResourceNode::getReaderEdgeForPass(PassNode const* node) const noexcept {
-    auto pos = std::find_if(mReaderPasses.begin(), mReaderPasses.end(),
-            [node](ResourceEdgeBase const* edge) {
-                return edge->to == node->getId();
-            });
-    return pos != mReaderPasses.end() ? *pos : nullptr;
+    DependencyGraph::NodeID const targetId = node->getId();
+    for (ResourceEdgeBase* edge = mReaderPassesHead; edge; edge = edge->next) {
+        if (edge->to == targetId) {
+            return edge;
+        }
+    }
+    return nullptr;
 }
 
 ResourceEdgeBase* ResourceNode::getWriterEdgeForPass(PassNode const* node) const noexcept {
@@ -138,7 +140,7 @@ void ResourceNode::resolveResourceUsage(DependencyGraph& graph) noexcept {
     VirtualResource* pResource = mFrameGraph.getResource(resourceHandle);
     assert_invariant(pResource);
     if (pResource->refcount) {
-        pResource->resolveUsage(graph, mReaderPasses.data(), mReaderPasses.size(), mWriterPass);
+        pResource->resolveUsage(graph, mReaderPassesHead, mWriterPass);
     }
 }
 

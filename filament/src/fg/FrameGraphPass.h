@@ -53,6 +53,7 @@ class FrameGraphPassBase : protected FrameGraphPassExecutor {
 public:
     using FrameGraphPassExecutor::FrameGraphPassExecutor;
     ~FrameGraphPassBase() noexcept override;
+    virtual size_t getSize() const = 0;
 };
 
 template<typename Data, typename Execute>
@@ -83,6 +84,7 @@ class FrameGraphPass final : public FrameGraphPassBase {
 public:
     Data const& getData() const noexcept { return mData; }
     Data const* operator->() const { return &mData; }
+    size_t getSize() const override { return sizeof(FrameGraphPass); }
 };
 
 } // namespace filament

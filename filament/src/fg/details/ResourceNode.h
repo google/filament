@@ -30,7 +30,7 @@ namespace filament {
 class FrameGraph;
 class ResourceEdgeBase;
 
-class ResourceNode : public DependencyGraph::Node {
+class ResourceNode final : public DependencyGraph::Node {
 public:
     ResourceNode(FrameGraph& fg, FrameGraphHandle h, FrameGraphHandle parent) noexcept;
     ~ResourceNode() noexcept override;
@@ -60,7 +60,7 @@ public:
 
     // is at least one PassNode reading from this ResourceNode
     bool hasReaders() const noexcept {
-        return !mReaderPasses.empty();
+        return mReaderPassesHead != nullptr;
     }
 
     // is any non culled Node (of any type) reading from this ResourceNode
@@ -88,7 +88,7 @@ public:
     void setParentReadDependency(ResourceNode* parent) noexcept;
 
     // this is the parent resource we're writing to, as a propagating effect of
-    // us being writen to.
+    // us being written to.
     void setParentWriteDependency(ResourceNode* parent) noexcept;
 
     void setForwardResourceDependency(ResourceNode* source) noexcept;
@@ -100,18 +100,18 @@ public:
         return node ? node->resourceHandle : FrameGraphHandle{};
     }
 
+    // virtuals from DependencyGraph::Node
+    utils::CString graphvizify() const noexcept override;
+    utils::CString graphvizifyEdgeColor() const noexcept override;
+
 private:
     FrameGraph& mFrameGraph;
-    Vector<ResourceEdgeBase *> mReaderPasses;
+    ResourceEdgeBase* mReaderPassesHead = nullptr;
     ResourceEdgeBase* mWriterPass = nullptr;
     FrameGraphHandle mParentHandle;
     DependencyGraph::Edge* mParentReadEdge = nullptr;
     DependencyGraph::Edge* mParentWriteEdge = nullptr;
     DependencyGraph::Edge* mForwardedEdge = nullptr;
-
-    // virtuals from DependencyGraph::Node
-    utils::CString graphvizify() const noexcept override;
-    utils::CString graphvizifyEdgeColor() const noexcept override;
 };
 
 } // namespace filament

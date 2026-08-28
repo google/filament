@@ -17,6 +17,8 @@
 #ifndef FILAMENT_BACKEND_ANDROIDNDK_H
 #define FILAMENT_BACKEND_ANDROIDNDK_H
 
+#include <utils/api_level.h>
+
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
@@ -24,11 +26,9 @@
 
 #define FILAMENT_REQUIRES_API(x) __attribute__((__availability__(android,introduced=x)))
 
-#define FILAMENT_USE_DLSYM(api) (__ANDROID_API__ < (api))
+#define FILAMENT_USE_DLSYM(api) (FILAMENT_ANDROID_PLATFORM_API_LEVEL < (api))
 
-namespace filament::backend {
-
-#if __ANDROID__ && __ANDROID_API__ < 37
+#if __ANDROID__ && (FILAMENT_ANDROID_PLATFORM_API_LEVEL < 37)
 extern "C" {
 int32_t ANativeWindow_setProducerThrottlingEnabled(ANativeWindow* window,
         bool enabled);
@@ -36,6 +36,8 @@ int32_t ANativeWindow_isProducerThrottlingEnabled(ANativeWindow* window,
         bool* outEnabled);
 }
 #endif
+
+namespace filament::backend {
 
 class AndroidNdk {
 public:
@@ -161,6 +163,6 @@ private:
 #endif
 };
 
-} // filament::backend
+} // namespace filament::backend
 
 #endif //FILAMENT_BACKEND_ANDROIDNDK_H

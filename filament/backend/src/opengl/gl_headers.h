@@ -93,6 +93,30 @@
 #endif
 
 /*
+ * Calling convention of the GL entry points.
+ *
+ * On 32-bit Windows GL entry points are __stdcall while the default is __cdecl, so pointers to
+ * GL functions must be declared with the right convention (on 64-bit there is only one convention
+ * and the distinction disappears). GLES headers spell it GL_APIENTRYP, desktop GL headers spell
+ * it APIENTRYP.
+ *
+ * Windows is the only platform here with more than one convention, so anywhere else a plain *
+ * is correct no matter what the headers happen to spell. On Windows both paths always define
+ * one of the two (glcorearb.h and the GLES headers do so unconditionally), so getting
+ * this far there means the convention is unknown, and guessing it would silently reintroduce
+ * the mismatch.
+ */
+#if defined(GL_APIENTRYP)
+#   define FILAMENT_GL_APIENTRYP GL_APIENTRYP
+#elif defined(APIENTRYP)
+#   define FILAMENT_GL_APIENTRYP APIENTRYP
+#elif defined(_WIN32)
+#   error "GL headers define neither GL_APIENTRYP nor APIENTRYP"
+#else
+#   define FILAMENT_GL_APIENTRYP *
+#endif
+
+/*
  * GLES extensions
  */
 
@@ -115,6 +139,14 @@ void importGLESExtensionsEntryPoints();
 #ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
+// GL_EXT_EGL_image_storage (added to the Khronos registry in 2018) is required to import an
+// AHB's full mipmap chain. A recent NDK <GLES2/gl2ext.h> defines this typedef, but the build
+// cannot rely on that, so declare it behind a guard if it isn't already present.
+#ifndef GL_EXT_EGL_image_storage
+#define GL_EXT_EGL_image_storage 1
+typedef void (GL_APIENTRYP PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC) (GLenum target, GLeglImageOES image, const GLint* attrib_list);
+#endif
+extern PFNGLEGLIMAGETARGETTEXSTORAGEEXTPROC glEGLImageTargetTexStorageEXT;
 #endif
 #ifdef GL_EXT_debug_marker
 extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;

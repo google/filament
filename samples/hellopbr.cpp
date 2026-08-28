@@ -22,6 +22,7 @@
 
 #include <filameshio/MeshReader.h>
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 
 #include <filament/Engine.h>
@@ -36,7 +37,6 @@
 #include <utils/getopt.h>
 
 #include <iostream>
-#include <string>// for printing usage/help
 
 using namespace filament;
 using namespace filamesh;
@@ -44,8 +44,9 @@ using namespace filament::math;
 
 using Backend = Engine::Backend;
 
+namespace {
 struct App {
-    std::unique_ptr<FilamentApp2> filamentApp;
+    FilamentApp2* filamentApp;
     SampleConfig config;
     utils::Entity light;
     Material* material;
@@ -54,115 +55,91 @@ struct App {
     mat4f transform;
 };
 
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+} // namespace
 
-static void printUsage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
-            "EXEC renders a simple PBR example\n"
-            "Usage:\n"
-            "    EXEC [options]\n"
-            "Options:\n"
-            "   --help, -h\n"
-            "       Prints this message\n\n"
-            "API_USAGE"
-    );
-    const std::string from("EXEC");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
-        usage.replace(pos, from.length(), exec_name);
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
     }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
-    }
-    std::cout << usage;
-}
+    auto app = std::make_shared<App>();
+    app->config = config;
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:";
-    static const utils::getopt::option OPTIONS[] = {
-            { "help", utils::getopt::no_argument,       nullptr, 'h' },
-            { "api",  utils::getopt::required_argument, nullptr, 'a' },
-            { nullptr, 0,                nullptr, 0 }
-    };
-    int opt;
-    int option_index = 0;
-    while ((opt = utils::getopt::getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(utils::getopt::optarg ? utils::getopt::optarg : "");
-        switch (opt) {
-            default:
-            case 'h':
-                printUsage(argv[0]);
-                exit(0);
-            case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
-                break;
-        }
-    }
-    return utils::getopt::optind;
-}
-
-int main(int argc, char** argv) {
-    App app;
-    app.config.title = "hellopbr";
-    app.config.iblDirectory = FilamentApp2::getRootAssetsPath() + IBL_FOLDER;
-    handleCommandLineArguments(argc, argv, &app);
-
-    auto setup = [config=app.config, &app](Engine* engine, View* view, Scene* scene) {
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
 
         // Instantiate material.
-        app.material = Material::Builder()
-            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE).build(*engine);
-        auto mi = app.materialInstance = app.material->createInstance();
+        app->material = Material::Builder()
+                                .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                                .build(*engine);
+        auto mi = app->materialInstance = app->material->createInstance();
         mi->setParameter("baseColor", RgbType::LINEAR, float3{0.8});
         mi->setParameter("metallic", 1.0f);
         mi->setParameter("roughness", 0.4f);
         mi->setParameter("reflectance", 0.5f);
 
         // Add geometry into the scene.
-        app.mesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE, nullptr, nullptr, mi);
-        auto ti = tcm.getInstance(app.mesh.renderable);
-        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
-        rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);
-        scene->addEntity(app.mesh.renderable);
+        app->mesh = MeshReader::loadMeshFromBuffer(engine, MONKEY_SUZANNE_DATA, MONKEY_SUZANNE_SIZE,
+                nullptr, nullptr, mi);
+        auto ti = tcm.getInstance(app->mesh.renderable);
+        app->transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
+        rcm.setCastShadows(rcm.getInstance(app->mesh.renderable), false);
+        scene->addEntity(app->mesh.renderable);
 
         // Add light sources into the scene.
-        app.light = em.create();
+        app->light = em.create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(110000)
                 .direction({ 0.7, -1, -0.8 })
                 .sunAngularRadius(1.9f)
                 .castShadows(false)
-                .build(*engine, app.light);
-        scene->addEntity(app.light);
+                .build(*engine, app->light);
+        scene->addEntity(app->light);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-        engine->destroy(app.light);
-        engine->destroy(app.mesh.renderable);
-        engine->destroy(app.materialInstance);
-        engine->destroy(app.material);
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        engine->destroy(app->light);
+        engine->destroy(app->mesh.renderable);
+        engine->destroy(app->mesh.vertexBuffer);
+        engine->destroy(app->mesh.indexBuffer);
+        engine->destroy(app->materialInstance);
+        engine->destroy(app->material);
     };
 
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .animation([app](Engine* engine, View* view, double now) {
+                            auto& tcm = engine->getTransformManager();
+                            auto ti = tcm.getInstance(app->mesh.renderable);
+                            tcm.setTransform(ti,
+                                    app->transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
+                        })
+                        .build();
 
-    app.filamentApp = FilamentApp2::Builder()
-                              .title(app.config.title)
-                              .iblDirectory(app.config.iblDirectory)
-                              .backend(app.config.backend)
-                              .setup(setup)
-                              .cleanup(cleanup)
-                              .animation([&app](Engine* engine, View* view, double now) {
-                                  auto& tcm = engine->getTransformManager();
-                                  auto ti = tcm.getInstance(app.mesh.renderable);
-                                  tcm.setTransform(ti,
-                                          app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
-                              })
-                              .build();
-    app.filamentApp->run();
+    app->filamentApp = fApp.get();
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() { return {}; }
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "hellopbr";
+    config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
+    auto dm = samples::getDisplayManager(config);
+
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
 
     return 0;
 }
+#endif

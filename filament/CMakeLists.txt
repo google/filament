@@ -170,7 +170,6 @@ set(SRCS
         src/fg/ResourceCreationContext.cpp
         src/fsr.cpp
         src/ZstdHelper.cpp
-        src/DynamicSpecConstKey.cpp
 )
 
 set(PRIVATE_HDRS
@@ -218,6 +217,7 @@ set(PRIVATE_HDRS
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
+        src/details/CreationStatus.h
         src/details/DebugRegistry.h
         src/details/Engine.h
         src/details/Fence.h

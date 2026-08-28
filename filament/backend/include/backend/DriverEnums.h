@@ -155,6 +155,20 @@ enum class FeatureLevel : uint8_t {
     FEATURE_LEVEL_3       //!< OpenGL ES 3.1 features + 31 textures units + cubemap arrays
 };
 
+constexpr std::string_view to_string(FeatureLevel level) noexcept {
+    switch (level) {
+        case FeatureLevel::FEATURE_LEVEL_0:
+            return "FEATURE_LEVEL_0";
+        case FeatureLevel::FEATURE_LEVEL_1:
+            return "FEATURE_LEVEL_1";
+        case FeatureLevel::FEATURE_LEVEL_2:
+            return "FEATURE_LEVEL_2";
+        case FeatureLevel::FEATURE_LEVEL_3:
+            return "FEATURE_LEVEL_3";
+    }
+    return "UNKNOWN";
+}
+
 /**
  * Selects which driver a particular Engine should use.
  */
@@ -206,7 +220,7 @@ enum class ShaderLanguage {
     WGSL = 5,
 };
 
-constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noexcept {
+constexpr std::string_view to_string(ShaderLanguage shaderLanguage) noexcept {
     switch (shaderLanguage) {
         case ShaderLanguage::ESSL1:
             return "ESSL 1.0";
@@ -224,6 +238,11 @@ constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noex
             return "Unspecified";
     }
     return "UNKNOWN";
+}
+
+// DEPRECATED: use to_string(ShaderLanguage)
+constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noexcept {
+    return to_string(shaderLanguage).data();
 }
 
 enum class ShaderStage : uint8_t {
@@ -1775,6 +1794,33 @@ using AsynchronousMode = Platform::AsynchronousMode;
 using AsyncCallId = uint32_t;
 
 static constexpr AsyncCallId InvalidAsyncCallId = std::numeric_limits<AsyncCallId>::max();
+
+/**
+ * Outcome of an asynchronous operation, reported to its completion callback.
+ *
+ * A completion callback that cannot say why it fired is ambiguous: chaining another operation from
+ * a callback that fired because the operation was canceled would proceed on a resource that was
+ * never populated. The caller cannot reconstruct the answer out of band either, because an
+ * operation can be canceled without anyone asking for it (the driver dropping queued work while
+ * shutting down).
+ *
+ * @see AsyncCallback, cancelAsyncJob
+ */
+enum class AsyncCallStatus : uint8_t {
+    COMPLETED,  //!< The operation ran to completion.
+    CANCELED,   //!< The operation never ran: it was canceled, or dropped because the driver is
+                //!< shutting down.
+};
+
+/**
+ * Completion callback of an asynchronous operation.
+ *
+ * This is deliberately not a CallbackHandler::Callback: that one is shared with readPixels(),
+ * fences, buffer release and others, none of which has a cancellation concept.
+ *
+ * @see AsyncCallStatus
+ */
+using AsyncCallback = void(*)(void* user, AsyncCallStatus status);
 
 using AsynchronousMode = Platform::AsynchronousMode;
 

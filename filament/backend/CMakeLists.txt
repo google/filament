@@ -43,6 +43,7 @@ set(SRCS
         src/Platform.cpp
         src/PlatformFactory.cpp
         src/Program.cpp
+        src/ThreadPriorityOverride.cpp
 )
 
 set(PRIVATE_HDRS
@@ -61,6 +62,7 @@ set(PRIVATE_HDRS
         src/DataReshaper.h
         src/DriverBase.h
         src/JobQueue.h
+        src/ThreadPriorityOverride.h
 )
 
 # ==================================================================================================
@@ -600,6 +602,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ReadPixels.cpp
             test/test_ReadTexture.cpp
             test/test_BufferUpdates.cpp
+            test/test_AsyncCompletion.cpp
             test/test_Callbacks.cpp
             test/test_JobQueue.cpp
             test/test_MemoryMappedBuffer.cpp
@@ -615,6 +618,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_CircularBuffer.cpp
             test/test_CommandBufferQueue.cpp
             test/test_Template.cpp
+            test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
         )
@@ -707,6 +711,15 @@ if (FILAMENT_BUILD_TESTING)
         if (FILAMENT_SUPPORTS_WEBGPU)
             target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
         endif()
+    endif()
+
+    if (ANDROID)
+        add_executable(test_ThreadPriorityOverride
+                test/test_ThreadPriorityOverride.cpp
+                ${LIBRARIES}/utils/test/test_utils_main.cpp)
+        target_link_libraries(test_ThreadPriorityOverride PRIVATE backend gtest utils android log)
+        target_include_directories(test_ThreadPriorityOverride PRIVATE ${FILAMENT}/filament/backend/src)
+        set_target_properties(test_ThreadPriorityOverride PROPERTIES FOLDER Tests)
     endif()
 
     # ==================================================================================================

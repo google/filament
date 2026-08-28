@@ -16,20 +16,22 @@
 
 #include "ParametersProcessor.h"
 
-#include <filamat/Enums.h>
-#include <utils/Status.h>
-#include <utils/sstream.h>
-
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/Variant.h>
 
+#include <filamat/Enums.h>
+
 #include <backend/DriverEnums.h>
+
+#include <utils/sstream.h>
+#include <utils/Status.h>
 
 #include <math/vec3.h>
 
 #include <algorithm>
 #include <iostream>
 #include <string_view>
+
 #include <ctype.h>
 
 using namespace filamat;
@@ -76,7 +78,13 @@ static Status processName(MaterialBuilder& builder, const JsonishValue& value) {
 }
 
 static Status processApiLevel(MaterialBuilder& builder, const JsonishValue& value) {
-    builder.setApiLevel(value.toJsonNumber()->getFloat());
+    const int apiLevel = value.toJsonNumber()->getFloat();
+    if (apiLevel < 1 || apiLevel > filament::UNSTABLE_MATERIAL_API_LEVEL) {
+        io::sstream errorMessage;
+        errorMessage << "parameters: api level must be between 1 and " << filament::UNSTABLE_MATERIAL_API_LEVEL;
+        return Status::invalidArgument(errorMessage.c_str());
+    }
+    builder.setApiLevel(apiLevel);
     return Status::ok();
 }
 
@@ -1317,7 +1325,6 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
     static const std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum  = [] {
         std::unordered_map<std::string_view, filament::UserVariantFilterBit> strToEnum;
         strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
-        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
         strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
         strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
@@ -1342,6 +1349,11 @@ static Status processVariantFilter(MaterialBuilder& builder, const JsonishValue&
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
+        // TODO: dynamicLighting bit is removed 26/07/2. Remove by 26/8/31
+        if (s == "dynamicLighting") {
+            std::cerr << "Warning: dynamicLighting variant filter is deprecated and ignored." << std::endl;
+            continue;
+        }
         if (!isStringValidEnum(strToEnum, s)) {
             io::sstream errorMessage;
             errorMessage << "variant_filter: variant " << s << " is not a valid variant";
@@ -1438,7 +1450,8 @@ Status ParametersProcessor::process(MaterialBuilder& builder, const JsonishObjec
 
         auto fPointer = mParameters[key].callback;
         if (Status status = fPointer(builder, *field); !status.isOk()) {
-            std::cerr << "Error while processing material json, key:\"" << key << "\"" << std::endl;
+            std::cerr << "Error while processing material json, key:\"" << key << "\"\n" << "Error message: "
+                    << status.getMessage() << std::endl;
             return status;
         }
     }

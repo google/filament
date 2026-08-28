@@ -47,8 +47,6 @@
 #include <array>
 #include <atomic>
 #include <cctype>
-#include <cstdio>
-#include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -286,7 +284,6 @@ void ShaderCompilerService::init() noexcept {
         }
 
         mShaderCompilerThreadCount = poolSize;
-        mCompilerThreadPriority = priority;
         mCompilerThreadPool.init(mShaderCompilerThreadCount,
                 [&platform = mDriver.mPlatform, priority] {
                     // give the thread a name
@@ -418,7 +415,7 @@ void ShaderCompilerService::compileProgram(
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
                         token->signal();
-                        token->priorityOverride.restoreDefaultPriority(mCompilerThreadPriority);
+                        token->priorityOverride.restorePriority();
                         // Updates the token's state. If the token is canceled while this function
                         // executes, this update notifies `tick` that GL resource loading is
                         // complete, allowing `tick` to proceed with resource destruction.
@@ -831,39 +828,6 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
             // replace the value of layout(num_views = X) for multiview extension
             if (multiview && stage == ShaderStage::VERTEX) {
                 process_OVR_multiview2(context, numViews, shader_src, shader_len);
-            }
-
-            // Workaround for drivers (e.g. ANGLE-on-D3D11) that don't fold a spec-constant-
-            // initialized `const int CONFIG_MAX_INSTANCES = SPIRV_CROSS_CONSTANT_ID_1` into the
-            // uniform-block array size `PerRenderableData data[CONFIG_MAX_INSTANCES]`. They lay
-            // the block out with the matc-baked default (CONFIG_MAX_INSTANCES is 64 in matc),
-            // while the engine binds the runtime size (8 on web), so every instanced draw trips
-            // "uniform buffer too small" and the draw is dropped, leaving lit materials black.
-            // Rewrite the symbolic array length to the literal the engine actually binds
-            // (preserving byte count with trailing spaces) so the GLSL compiler can't get it
-            // wrong. Spec-constant-aware revival of the 2022 hack at commit fe3790cb9 (#5859),
-            // removed when spec constants were assumed portable.
-            if (context.bugs.spec_constant_array_size_not_folded) {
-                // Matches ReservedSpecializationConstants::CONFIG_MAX_INSTANCES; we can't include
-                // EngineEnums.h here (layering), same precedent as CONFIG_STEREO_EYE_COUNT above.
-                constexpr size_t CONFIG_MAX_INSTANCES_ID = 1;
-                if (specializationConstants.size() > CONFIG_MAX_INSTANCES_ID) {
-                    int32_t const maxInstances = std::get<int32_t>(
-                            specializationConstants[CONFIG_MAX_INSTANCES_ID]);
-                    constexpr std::string_view symbolic = "[CONFIG_MAX_INSTANCES]";
-                    char replacement[symbolic.size() + 1];
-                    int const n = std::snprintf(
-                            replacement, sizeof(replacement), "[%d", maxInstances);
-                    if (n > 0 && size_t(n) < symbolic.size()) {
-                        std::memset(replacement + n, ' ', symbolic.size() - n - 1);
-                        replacement[symbolic.size() - 1] = ']';
-                        std::string_view const view{ shader_src, shader_len };
-                        for (size_t p = view.find(symbolic); p != std::string_view::npos;
-                                p = view.find(symbolic, p + symbolic.size())) {
-                            std::memcpy(shader_src + p, replacement, symbolic.size());
-                        }
-                    }
-                }
             }
 
             // add support for ARB_shading_language_packing if needed

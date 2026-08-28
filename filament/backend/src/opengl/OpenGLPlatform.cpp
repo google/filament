@@ -216,6 +216,11 @@ bool OpenGLPlatform::setExternalImage(
     return false;
 }
 
+uint8_t OpenGLPlatform::getExternalImageMipLevels(
+        UTILS_UNUSED ExternalImageHandleRef externalImage) const noexcept {
+    return 1;
+}
+
 AcquiredImage OpenGLPlatform::transformAcquiredImage(AcquiredImage source) noexcept {
     return source;
 }

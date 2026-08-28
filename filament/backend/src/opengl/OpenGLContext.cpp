@@ -229,7 +229,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     // only for our own debugging, in case we need it some day.
 #if false && !defined(NDEBUG) && defined(GL_KHR_debug)
     if (ext.KHR_debug) {
-        auto cb = +[](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
+        auto cb = [](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
                 const GLchar* message, const void *) {
             auto logSeverity = utils::LogSeverity::kInfo;
             switch (severity) {
@@ -305,7 +305,9 @@ void OpenGLContext::initProcs(Procs* procs,
 #endif // BACKEND_OPENGL_LEVEL_GLES30
 
     // no-op if not supported
-    procs->maxShaderCompilerThreadsKHR = +[](GLuint) {};
+    // note: the unary + trick can't be used here, the lambda must convert to the entry point's
+    // calling convention, which is only known from the type of the member being assigned to.
+    procs->maxShaderCompilerThreadsKHR = [](GLuint) {};
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
 #   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
@@ -320,9 +322,10 @@ void OpenGLContext::initProcs(Procs* procs,
             // if we don't have OES_vertex_array_object, just don't do anything with real VAOs,
             // we'll just rebind everything each time. Most Mali-400 support this extension, but
             // a few don't.
-            procs->genVertexArrays = +[](GLsizei, GLuint*) {};
-            procs->bindVertexArray = +[](GLuint) {};
-            procs->deleteVertexArrays = +[](GLsizei, GLuint const*) {};
+            // note: no unary + on these lambdas either, see the note above.
+            procs->genVertexArrays = [](GLsizei, GLuint*) {};
+            procs->bindVertexArray = [](GLuint) {};
+            procs->deleteVertexArrays = [](GLsizei, GLuint const*) {};
         }
 
         // EXT_disjoint_timer_query is optional -- pointers will be null if not available
@@ -359,15 +362,6 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     (void)shader;
 
     const bool isAngle = strstr(renderer, "ANGLE");
-
-    // ANGLE's D3D11 path doesn't fold a spec-constant-initialized `const int` into a
-    // uniform-block array length, so instanced draws bind a range smaller than the block the
-    // shader declares ("uniform buffer too small" -> dropped draw -> black materials). Renderer
-    // string looks like "ANGLE (NVIDIA, NVIDIA GeForce ... Direct3D11 vs_5_0 ps_5_0)". This is
-    // observed on Chromium/Firefox-on-Windows, including through WebGL. (b/...)
-    if (isAngle && strstr(renderer, "Direct3D11")) {
-        bugs->spec_constant_array_size_not_folded = true;
-    }
 
     if (!isAngle) {
         if (strstr(renderer, "Adreno")) {
