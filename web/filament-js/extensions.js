@@ -90,9 +90,18 @@ Filament.loadClassExtensions = function() {
 
     Filament.Engine.SINGLE_THREADED = 0xFFFFFFFF;
 
+    Filament.Engine$Builder.prototype.build = function() {
+        const result = this._build();
+        this.delete();
+        return result;
+    };
+
     /// create ::static method:: Creates an Engine instance for the given canvas.
     /// canvas ::argument:: the canvas DOM element
-    /// options ::argument:: optional WebGL 2.0 context configuration
+    /// options ::argument:: optional WebGL 2.0 context configuration. Also accepts the
+    /// [Engine$Builder] settings `backend`, `featureLevel`, `features` (an object of engine
+    /// feature name -> boolean) and `colorGrading` (a [ColorGrading$Builder]).
+    /// config ::argument:: optional [Engine$Config]
     /// ::retval:: an instance of [Engine]
     Filament.Engine.create = function (canvas, options, config) {
         if (!canvas.id) {
@@ -103,7 +112,12 @@ Filament.loadClassExtensions = function() {
         const backend = (options && options.backend !== undefined) ?
               options.backend : Filament.Backend.DEFAULT;
 
-        if (backend !== Filament.Backend.WEBGPU) {
+        // Only the GL backends consume the emscripten-registered context; leaving the transient
+        // globals unset is what tells Engine$Builder._build to skip registration.
+        const usesGl = backend === Filament.Backend.DEFAULT ||
+              backend === Filament.Backend.OPENGL;
+
+        if (usesGl) {
             const defaults = {
                 majorVersion: 2,
                 minorVersion: 0,
@@ -127,22 +141,35 @@ Filament.loadClassExtensions = function() {
             window.filament_glContext = ctx;
         }
 
-        // Register the GL context with emscripten and create the Engine.
-        const defaultConfig = Filament.Engine.createDefaultConfig();
-        const finalConfig = Object.assign(defaultConfig, config);
-        const engine = Filament.Engine._create(backend, finalConfig);
+        const builder = new Filament.Engine$Builder();
+        builder.backend(backend);
+        builder.config(Object.assign(Filament.Engine.createDefaultConfig(), config));
+        if (options) {
+            if (options.featureLevel !== undefined) {
+                builder.featureLevel(options.featureLevel);
+            }
+            for (const name in options.features || {}) {
+                builder.feature(name, options.features[name]);
+            }
+            if (options.colorGrading) {
+                builder.colorGrading(options.colorGrading);
+            }
+        }
+        // Registers the GL context with emscripten, then builds.
+        const engine = builder.build();
 
-        // Annotate the engine with the GL context to support multiple canvases.
-        if (backend !== Filament.Backend.WEBGPU) {
+        // Annotate the engine with the GL context to support multiple canvases. Only the GL
+        // backends set the transient globals, so only they have any to read back or clean up.
+        if (usesGl) {
             engine.context = window.filament_glContext;
             engine.handle = window.filament_contextHandle;
+
+            // Ensure that we do not pollute the global namespace.
+            delete window.filament_glOptions;
+            delete window.filament_glContext;
+            delete window.filament_contextHandle;
         }
         engine.canvasId = canvasId;
-
-        // Ensure that we do not pollute the global namespace.
-        delete window.filament_glOptions;
-        delete window.filament_glContext;
-        delete window.filament_contextHandle;
 
         return engine;
     };
@@ -324,6 +351,18 @@ Filament.loadClassExtensions = function() {
         this._setClearOptions(options);
     };
 
+    /// setDynamicResolutionOptions ::method::
+    Filament.View.prototype.setDynamicResolutionOptions = function(overrides) {
+        const options = this.setDynamicResolutionOptionsDefaults(overrides);
+        this._setDynamicResolutionOptions(options);
+    };
+
+    /// setRenderQuality ::method::
+    Filament.View.prototype.setRenderQuality = function(overrides) {
+        const options = this.setRenderQualityDefaults(overrides);
+        this._setRenderQuality(options);
+    };
+
     /// setAmbientOcclusionOptions ::method::
     Filament.View.prototype.setAmbientOcclusionOptions = function(overrides) {
         const options = this.setAmbientOcclusionOptionsDefaults(overrides);
@@ -476,6 +515,7 @@ Filament.loadClassExtensions = function() {
     Filament.RenderTarget$Builder.prototype.build =
     Filament.VertexBuffer$Builder.prototype.build =
     Filament.IndexBuffer$Builder.prototype.build =
+    Filament.BufferObject$Builder.prototype.build =
     Filament.Texture$Builder.prototype.build =
     Filament.IndirectLight$Builder.prototype.build =
     Filament.Skybox$Builder.prototype.build =
@@ -501,9 +541,9 @@ Filament.loadClassExtensions = function() {
         return result;
     }
 
-    Filament.Texture.prototype.setImage = function(engine, level, pbd) {
-        this._setImage(engine, level, pbd);
-        pbd.delete();
+    Filament.Texture.prototype.setImage = function(engine, level, ...args) {
+        this._setImage(engine, level, ...args);
+        args[args.length - 1].delete();
     }
 
     Filament.Texture.prototype.getWidth = function(engine, level = 0) {
@@ -522,11 +562,14 @@ Filament.loadClassExtensions = function() {
         return this._getLevels(engine);
     }
 
+    // These copy their argument into the heap, so they cannot be bound directly. Each returns the
+    // builder, like every other builder setter and like filament.d.ts declares.
     Filament.SurfaceOrientation$Builder.prototype.normals = function(buffer, stride = 0) {
         buffer = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         this.norPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.norPointer);
         this._normals(this.norPointer, stride);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.tangents = function(buffer, stride = 0) {
@@ -534,6 +577,7 @@ Filament.loadClassExtensions = function() {
         this.tanPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.tanPointer);
         this._tangents(this.tanPointer, stride);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.uvs = function(buffer, stride = 0) {
@@ -541,6 +585,7 @@ Filament.loadClassExtensions = function() {
         this.uvsPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.uvsPointer);
         this._uvs(this.uvsPointer, stride);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.positions = function(buffer, stride = 0) {
@@ -548,6 +593,7 @@ Filament.loadClassExtensions = function() {
         this.posPointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.posPointer);
         this._positions(this.posPointer, stride);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.triangles16 = function(buffer) {
@@ -555,6 +601,7 @@ Filament.loadClassExtensions = function() {
         this.t16Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t16Pointer);
         this._triangles16(this.t16Pointer);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.triangles32 = function(buffer) {
@@ -562,6 +609,7 @@ Filament.loadClassExtensions = function() {
         this.t32Pointer = Filament._malloc(buffer.byteLength);
         Filament.HEAPU8.set(buffer, this.t32Pointer);
         this._triangles32(this.t32Pointer);
+        return this;
     };
 
     Filament.SurfaceOrientation$Builder.prototype.build = function() {
@@ -674,12 +722,12 @@ Filament.loadClassExtensions = function() {
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine,
                 config.normalizeSkinningWeights);
 
-        const stbProvider = new Filament.gltfio$StbProvider(engine);
-        const ktx2Provider = new Filament.gltfio$Ktx2Provider(engine);
+        const stbProvider = Filament.gltfio$TextureProvider.createStbProvider(engine);
+        const ktx2Provider = Filament.gltfio$TextureProvider.createKtx2Provider(engine);
 
-        resourceLoader.addStbProvider("image/jpeg", stbProvider);
-        resourceLoader.addStbProvider("image/png", stbProvider);
-        resourceLoader.addKtx2Provider("image/ktx2", ktx2Provider);
+        resourceLoader.addTextureProvider("image/jpeg", stbProvider);
+        resourceLoader.addTextureProvider("image/png", stbProvider);
+        resourceLoader.addTextureProvider("image/ktx2", ktx2Provider);
 
         const onComplete = () => {
             resourceLoader.asyncBeginLoad(asset);

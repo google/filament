@@ -358,9 +358,16 @@ Filament._createTextureFromImageFile = function(fileContents, engine, options) {
         .sampler(Sampler.SAMPLER_2D)
         .format(texformat);
 
-    if (options['usage'] !== undefined) {
-        tex.usage(options['usage']);
+    // generateMipmaps rejects a texture whose usage lacks GEN_MIPMAPPABLE, so ask for it whenever
+    // a mip chain is wanted. Engine.debug.assert_texture_can_generate_mipmap used to be off, which
+    // let the engine infer the flag; it now defaults to on.
+    const Usage = Filament.Texture$Usage;
+    let usage = options['usage'] !== undefined ? options['usage'] :
+            (Usage.UPLOADABLE.value | Usage.SAMPLEABLE.value);
+    if (!nomips) {
+        usage |= Usage.GEN_MIPMAPPABLE.value;
     }
+    tex.usage(usage);
 
     tex = tex.build(engine);
 

@@ -430,7 +430,13 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     mSettings.view.bloom.enabled = true;
 
     DebugRegistry& debug = mEngine->getDebugRegistry();
-    *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images") = true;
+    // Registered by the first Renderer the engine creates, which may not exist yet: a viewer can
+    // be constructed before anything has been rendered. Writing through the null this returns
+    // corrupts the bottom of the heap, which surfaces much later and somewhere else entirely.
+    if (bool* combineMultiviewImages =
+            debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")) {
+        *combineMultiviewImages = true;
+    }
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
@@ -1127,7 +1133,7 @@ void ViewerGui::updateUserInterface() {
             ImGui::SliderFloat("Strength", &mSettings.viewer.groundShadowStrength, 0.0f, 1.0f);
             ImGui::Unindent();
 
-            if (mAsset->getSceneCount() > 1) {
+            if (mAsset && mAsset->getSceneCount() > 1) {
                 ImGui::Separator();
                 sceneSelectionUI();
             }
@@ -1180,7 +1186,7 @@ void ViewerGui::updateUserInterface() {
 
         // We do not yet support camera selection in the remote UI. To support this feature, we
         // would need to send a message from DebugServer to the WebSockets client.
-        if (!isRemoteMode()) {
+        if (!isRemoteMode() && mAsset) {
 
             const utils::Entity* cameras = mAsset->getCameraEntities();
             const size_t cameraCount = mAsset->getCameraEntityCount();
@@ -1257,7 +1263,10 @@ void ViewerGui::updateUserInterface() {
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to
     // the WebSockets client.
-    if (!isRemoteMode()) {
+    //
+    // Everything below reads the asset and its instance, which are only set once setAsset has
+    // been called; a viewer that draws its UI before loading anything has neither.
+    if (!isRemoteMode() && mAsset && mInstance) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
             ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
