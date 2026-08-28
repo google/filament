@@ -39,12 +39,12 @@
 
 #include <cmath>
 #include <iostream>
-#include <string>// for printing usage/help
 
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -62,13 +62,14 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
+const Vertex TRIANGLE_VERTICES[3] = {
     {{1, 0}, 0xffff0000u},
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -125,11 +126,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .featureLevel(app->config.featureLevel)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
@@ -149,12 +146,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "hellotriangle";
     config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

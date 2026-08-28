@@ -51,6 +51,7 @@ using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
 
+namespace {
 struct Vertex {
     float3 position;
     float2 uv;
@@ -79,6 +80,7 @@ struct App {
     std::vector<utils::Entity> quadEntities;
     std::vector<MaterialInstance*> quadMatInstances;
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -86,10 +88,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->config = config;
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
-        uint8_t sampleCount = 1;
-        if (app->config.customArgs.find("msaa") != app->config.customArgs.end()) {
-            sampleCount = std::stoi(app->config.customArgs.at("msaa").c_str());
-        }
+        uint8_t sampleCount = uint8_t(app->config.getInt("samples", 1));
 
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
@@ -297,11 +296,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -319,6 +314,12 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeInt("samples", 'm', "MSAA sample count (1, 2, 4, 8)", 1, 1, 8),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
 
@@ -329,24 +330,10 @@ int main(int argc, char** argv) {
 
     SampleConfig config;
     config.title = "stereoscopic rendering";
-    static constexpr const char* CUSTOM_OPTSTR = "m:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "samples", utils::getopt::required_argument, nullptr, 'm' }, { nullptr, 0, nullptr, 0 }
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
     };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'm':
-                config.customArgs["msaa"] = utils::CString(arg.c_str());
-                return true;
-        }
-        return false;
-    };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config,
-            {
-                .customHandler = customHandler,
-                .customOptStr = CUSTOM_OPTSTR,
-                .customOptions = CUSTOM_OPTIONS,
-            });
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

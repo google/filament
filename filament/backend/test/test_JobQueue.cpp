@@ -22,6 +22,7 @@
 #include <chrono>
 #include <future>
 #include <memory>
+#include <string>
 #include <thread>
 
 using namespace filament::backend;
@@ -325,3 +326,49 @@ TEST(ThreadWorker, Callbacks) {
     EXPECT_TRUE(beginCalled);
     EXPECT_TRUE(endCalled);
 }
+
+TEST(ThreadWorker, DestroyAfterTerminate) {
+    JobQueue::Ptr queue = JobQueue::create();
+    bool endCalled = false;
+
+    {
+        ThreadWorker::Config config = {
+            .name = "TestThread",
+            .priority = ThreadWorker::Priority::NORMAL,
+            .onEnd = [&endCalled]() { endCalled = true; }
+        };
+        JobWorker::Ptr worker = ThreadWorker::create(queue, std::move(config));
+        worker->terminate();
+        // `worker` goes out of scope here. The thread has already been joined, so the destructor
+        // must not abort.
+    }
+
+    EXPECT_TRUE(endCalled);
+}
+
+// Destroying a worker without calling `terminate()` first is a programming error, and the process
+// must die on it. In debug builds `~ThreadWorker()` asserts, in release builds the assert is
+// compiled out but `std::thread`'s destructor still calls `std::terminate()` on a joinable thread.
+// Death tests are unavailable on iOS-family platforms.
+#if defined(GTEST_HAS_DEATH_TEST) && GTEST_HAS_DEATH_TEST
+TEST(ThreadWorkerDeathTest, DestroyWithoutTerminateAborts) {
+#ifdef NDEBUG
+    // `std::terminate()`'s message is toolchain-specific, so only the death itself is checked.
+    constexpr char const* expected = "";
+#else
+    constexpr char const* expected = "failed assertion";
+#endif
+    // This binary is multi-threaded, and the default "fast" style forks without exec, which is
+    // unsafe there. "threadsafe" re-executes the binary instead. The previous value is restored so
+    // that the other death tests linked into this binary keep their default style.
+    std::string const previousStyle = GTEST_FLAG_GET(death_test_style);
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+    EXPECT_DEATH({
+        JobQueue::Ptr queue = JobQueue::create();
+        JobWorker::Ptr worker = ThreadWorker::create(queue, {});
+    }, expected);
+
+    GTEST_FLAG_SET(death_test_style, previousStyle);
+}
+#endif

@@ -44,7 +44,6 @@
 
 #include <iostream> // for cerr
 #include <memory>
-#include <string>   // for printing usage/help
 
 using namespace filament;
 using utils::Entity;
@@ -52,20 +51,23 @@ using utils::EntityManager;
 using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
+using AsyncCallStatus = backend::AsyncCallStatus;
+
+namespace {
 
 struct Vertex {
     filament::math::float2 position;
     filament::math::float2 uv;
 };
 
-static const Vertex QUAD_VERTICES[4] = {
+const Vertex QUAD_VERTICES[4] = {
     {{-1, -1}, {0, 0}},
     {{ 1, -1}, {1, 0}},
     {{-1,  1}, {0, 1}},
     {{ 1,  1}, {1, 1}},
 };
 
-static constexpr uint16_t QUAD_INDICES[6] = {
+constexpr uint16_t QUAD_INDICES[6] = {
     0, 1, 2,
     3, 2, 1,
 };
@@ -386,6 +388,7 @@ struct App {
         scene->addEntity(data->renderable);
     }
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -430,7 +433,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         if (engine->isAsynchronousModeEnabled()) {
             // Build a pipeline for asynchronous operations.
-            app->onLoadImageComplete = [app](void* user) {
+            // Every completion callback receives an AsyncCallStatus. CANCELED means the operation
+            // never ran, so the resource it was meant to populate is not usable: the chain has to
+            // stop there instead of moving on to a stage that would read an empty resource.
+            app->onLoadImageComplete = [app](void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 // Load this once as it's universal across all objects
                 app->createMaterial();
                 // Initiate loading multiple renderables at the same time.
@@ -440,23 +449,45 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 app->startLoadingOneRenderable();
                 app->startLoadingOneRenderable();
             };
-            app->onCreateTextureComplete = [app](Texture* tex, void* user) {
+            app->onCreateTextureComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateTexture(user, app->onTextureUpdateComplete);
             };
-            app->onTextureUpdateComplete = [app](Texture* tex, void* user) {
+            app->onTextureUpdateComplete = [app](Texture* tex, void* user, AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->createMaterialInstance(user);
                 app->textureReady(user);
             };
-            app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user) {
+            app->onCreateVertexBufferComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateVertexBuffer(user, app->onVertexBufferUpdateComplete);
             };
-            app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user) {
+            app->onVertexBufferUpdateComplete = [app](VertexBuffer* vb, void* user,
+                                                        AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->vertexBufferReady(user);
             };
-            app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user) {
+            app->onCreateIndexBufferComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->updateIndexBuffer(user, app->onIndexBufferUpdateComplete);
             };
-            app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user) {
+            app->onIndexBufferUpdateComplete = [app](IndexBuffer* ib, void* user,
+                                                       AsyncCallStatus status) {
+                if (status == AsyncCallStatus::CANCELED) {
+                    return;
+                }
                 app->indexBufferReady(user);
             };
 
@@ -517,11 +548,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .asynchronousMode(app->config.asynchronousMode)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
@@ -543,12 +570,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "helloasync";
     config.asynchronousMode = backend::AsynchronousMode::THREAD_PREFERRED;
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();

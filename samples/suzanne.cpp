@@ -51,6 +51,8 @@ using namespace filament;
 using namespace ktxreader;
 using namespace filament::math;
 
+namespace {
+
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -65,9 +67,9 @@ struct App {
     Texture* ao;
 };
 
-static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
+constexpr const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
-static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
+Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
     int w, h, n;
     unsigned char* data = stbi_load_from_memory(normals, nbytes, &w, &h, &n, 3);
     Texture* normalMap = Texture::Builder()
@@ -85,8 +87,14 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
     return normalMap;
 }
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
+    }
     auto app = std::make_shared<App>();
     app->config = config;
 
@@ -151,6 +159,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
         engine->destroy(app->mesh.renderable);
+        engine->destroy(app->mesh.vertexBuffer);
+        engine->destroy(app->mesh.indexBuffer);
         engine->destroy(app->materialInstance);
         engine->destroy(app->material);
         engine->destroy(app->albedo);
@@ -160,10 +170,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         engine->destroy(app->ao);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .build();
@@ -172,13 +179,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "suzanne";
     config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + IBL_FOLDER).c_str());
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto fApp = createSampleApp(config, dm.get(), nullptr);

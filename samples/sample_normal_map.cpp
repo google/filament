@@ -47,7 +47,6 @@
 
 #include <iostream>
 #include <map>
-#include <string>
 #include <vector>
 
 using namespace filament::math;
@@ -55,14 +54,15 @@ using namespace filament;
 using namespace filamesh;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
 
-static std::vector<Path> g_filenames;
+namespace {
 
-static struct NormalConfig {
-    std::string normalMap;
-    std::string clearCoatNormalMap;
-    std::string baseColorMap;
+float g_meshScale = 1.0f;
+
+struct NormalConfig {
+    utils::CString normalMap;
+    utils::CString clearCoatNormalMap;
+    utils::CString baseColorMap;
 } g_normalConfig;
 
 struct App {
@@ -77,14 +77,38 @@ struct App {
     SampleConfig config;
 };
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
+    utils::CString nm = config.getString("normal-map");
+    if (!nm.empty()) g_normalConfig.normalMap = nm;
+    utils::CString cnm = config.getString("clearcoat-normal-map");
+    if (!cnm.empty()) g_normalConfig.clearCoatNormalMap = cnm;
+    utils::CString bm = config.getString("basecolor-map");
+    if (!bm.empty()) g_normalConfig.baseColorMap = bm;
+    g_meshScale = config.getFloat("scale", 1.0f);
 
     auto cleanup = [app](Engine* engine, View*, Scene*) {
-        engine->destroy(app->normalMap);
-        engine->destroy(app->clearCoatNormalMap);
+        if (app->baseColorMap) {
+            engine->destroy(app->baseColorMap);
+        }
+        if (app->normalMap) {
+            engine->destroy(app->normalMap);
+        }
+        if (app->clearCoatNormalMap) {
+            engine->destroy(app->clearCoatNormalMap);
+        }
+        EntityManager& em = EntityManager::get();
+        for (auto mesh: app->meshes) {
+            engine->destroy(mesh.vertexBuffer);
+            engine->destroy(mesh.indexBuffer);
+            engine->destroy(mesh.renderable);
+            em.destroy(mesh.renderable);
+        }
+
         std::vector<filament::MaterialInstance*> materialList(
                 app->materialInstances.numRegistered());
         app->materialInstances.getRegisteredMaterials(materialList.data());
@@ -93,21 +117,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         }
         app->materialInstances.unregisterAll();
         engine->destroy(app->material);
-        EntityManager& em = EntityManager::get();
-        for (auto mesh: app->meshes) {
-            engine->destroy(mesh.vertexBuffer);
-            engine->destroy(mesh.indexBuffer);
-            engine->destroy(mesh.renderable);
-            em.destroy(mesh.renderable);
-        }
+
         engine->destroy(app->light);
         em.destroy(app->light);
     };
 
     auto setup = [app](Engine* engine, View*, Scene* scene) {
-        auto loadNormalMap = [](Engine* engine, Texture** normalMap, const std::string& path) {
+        auto loadNormalMap = [](Engine* engine, Texture** normalMap, const utils::CString& path) {
             if (!path.empty()) {
-                Path p(path);
+                Path p(path.c_str());
                 if (p.exists()) {
                     int w, h, n;
                     unsigned char* data = stbi_load(p.getAbsolutePath().c_str(), &w, &h, &n, 3);
@@ -169,11 +187,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         loadNormalMap(engine, &app->clearCoatNormalMap, g_normalConfig.clearCoatNormalMap);
         loadBaseColorMap(engine);
 
-        bool hasNormalMap = app->normalMap != nullptr;
-        bool hasClearCoatNormalMap = app->clearCoatNormalMap != nullptr;
-        bool hasBaseColorMap = app->baseColorMap != nullptr;
+        bool const hasNormalMap = app->normalMap != nullptr;
+        bool const hasClearCoatNormalMap = app->clearCoatNormalMap != nullptr;
+        bool const hasBaseColorMap = app->baseColorMap != nullptr;
 
-        std::string shader = R"SHADER(
+        utils::CString shader = R"SHADER(
             void material(inout MaterialInputs material) {
         )SHADER";
 
@@ -264,8 +282,17 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                     ->setParameter("baseColorMap", app->baseColorMap, sampler);
         }
 
+        std::vector<utils::Path> filenames;
+        for (const auto& fname : app->config.positionalArgs) {
+            filenames.push_back(utils::Path(fname.c_str_safe()));
+        }
+        if (filenames.empty()) {
+            filenames.push_back(utils::Path(
+                    (FilamentApp2::getRootAssetsPath() + "assets/models/monkey/monkey.obj")
+                            .c_str()));
+        }
         auto& tcm = engine->getTransformManager();
-        for (const auto& filename: g_filenames) {
+        for (const auto& filename: filenames) {
             MeshReader::Mesh mesh =
                     MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
             if (mesh.renderable) {
@@ -286,9 +313,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         scene->addEntity(app->light);
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(nullptr)
@@ -297,59 +322,34 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeString("normal-map", 'n', "Path to normal map texture", ""),
+        samples::Parameter::makeString("clearcoat-normal-map", 'C',
+                "Path to clearcoat normal map texture", ""),
+        samples::Parameter::makeString("basecolor-map", 'b', "Path to base color texture", ""),
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "n:c:b:s:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "normal-map", utils::getopt::required_argument, nullptr, 'n' },
-        { "clearcoat-normal-map", utils::getopt::required_argument, nullptr, 'c' },
-        { "basecolor-map", utils::getopt::required_argument, nullptr, 'b' },
-        { "scale", utils::getopt::required_argument, nullptr, 's' },
-        { nullptr, 0, nullptr, 0 },
-    };
-    auto customHandler = [](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'n':
-                g_normalConfig.normalMap = arg.c_str();
-                return true;
-            case 'c':
-                g_normalConfig.clearCoatNormalMap = arg.c_str();
-                return true;
-            case 'b':
-                g_normalConfig.baseColorMap = arg.c_str();
-                return true;
-            case 's':
-                g_meshScale = std::stof(arg.c_str());
-                return true;
-        }
-        return false;
-    };
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_NORMAL_MAP tests normal mapping and clearcoat normal mapping.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
-        .requiredPositionalArgCount = 1,
-        .customOptionsHelp = "   --normal-map=<path>, -n <path>\n"
-                             "       Path to normal map texture\n\n"
-                             "   --clearcoat-normal-map=<path>, -c <path>\n"
-                             "       Path to clearcoat normal map texture\n\n"
-                             "   --basecolor-map=<path>, -b <path>\n"
-                             "       Path to base color texture\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .parameters = createAppParameters(),
     };
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
-    for (int i = optind; i < argc; i++) {
-        utils::Path filename = argv[i];
+    for (const auto& fname : config.positionalArgs) {
+        utils::Path filename(fname.c_str_safe());
         if (!filename.exists()) {
-            std::cerr << "file " << argv[i] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
-        g_filenames.push_back(filename);
     }
 
     config.title = "Normal Mapping";

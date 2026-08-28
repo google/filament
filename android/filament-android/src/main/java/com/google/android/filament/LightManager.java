@@ -22,7 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 /**
- * LightManager allows you to create a light source in the scene, such as a sun or street lights.
+ * LightManager allows you to create a light source in the scene, such as a sun or streetlights.
  * <p>
  * At least one light must be added to a scene in order to see anything
  * (unless the {@link Material.Shading#UNLIT} is used).
@@ -50,22 +50,22 @@ import androidx.annotation.Size;
  * <ul>
  * <li>directional lights</li>
  * <li>point lights</li>
- * <li>spot lights</li>
+ * <li>spotlights</li>
  * </ul>
  *
  *
  * <h2><u>Directional lights</u></h2>
  * <p>
  * Directional lights have a direction, but don't have a position. All light rays are
- * parallel and come from infinitely far away and from everywhere. Typically a directional light
+ * parallel and come from infinitely far away and from everywhere. Typically, a directional light
  * is used to simulate the sun.
  * </p>
  * <p>
- * Directional lights and spot lights are able to cast shadows.
+ * Directional lights and spotlights are able to cast shadows.
  * </p>
  * <p>
  * To create a directional light use {@link Type#DIRECTIONAL} or {@link Type#SUN}, both are similar,
- * but the later also draws a sun's disk in the sky and its reflection on glossy objects.
+ * but the latter also draws a sun's disk in the sky and its reflection on glossy objects.
  * </p>
  * <p>
  * By default, only the dominant directional light (the one with the highest intensity) of a
@@ -85,20 +85,20 @@ import androidx.annotation.Size;
  * A scene can have multiple point lights.
  * </p>
  *
- * <h2><u>Spot lights</u></h2>
+ * <h2><u>spotlights</u></h2>
  * <p>
- * Spot lights are similar to point lights but the light they emit is limited to a cone defined by
+ * spotlights are similar to point lights but the light they emit is limited to a cone defined by
  * {@link Builder#spotLightCone} and the light's direction.
  * </p>
  * <p>
- * A spot light is therefore defined by a position, a direction and inner and outer cones. The
- * spot light's influence is limited to inside the outer cone. The inner cone defines the light's
+ * A spotlight is therefore defined by a position, a direction and inner and outer cones. The
+ * spotlight's influence is limited to inside the outer cone. The inner cone defines the light's
  * falloff attenuation.
  * </p>
- * A physically correct spot light is a little difficult to use because changing the outer angle
+ * A physically correct spotlight is a little difficult to use because changing the outer angle
  * of the cone changes the illumination levels, as the same amount of light is spread over a
  * changing volume. The coupling of illumination and the outer cone means that an artist cannot
- * tweak the influence cone of a spot light without also changing the perceived illumination.
+ * tweak the influence cone of a spotlight without also changing the perceived illumination.
  * It therefore makes sense to provide artists with a parameter to disable this coupling. This
  * is the difference between {@link Type#FOCUSED_SPOT} (physically correct) and {@link Type#SPOT}
  * (decoupled).
@@ -111,10 +111,10 @@ import androidx.annotation.Size;
  * to keep good performance.
  * </p>
  * <ul>
- * <li> Prefer spot lights to point lights and use the smallest outer cone angle possible.</li>
- * <li> Use the smallest possible falloff distance for point and spot lights.
+ * <li> Prefer spotlights to point lights and use the smallest outer cone angle possible.</li>
+ * <li> Use the smallest possible falloff distance for point and spotlights.
  *    Performance is very sensitive to overlapping lights. The falloff distance essentially
- *    defines a sphere of influence for the light, so try to position point and spot lights
+ *    defines a sphere of influence for the light, so try to position point and spotlights
  *    such that they don't overlap too much.</li>
  *    On the other hand, a scene can contain hundreds of non overlapping lights without
  *    incurring a significant overhead.
@@ -123,7 +123,7 @@ import androidx.annotation.Size;
 public class LightManager {
     private static final Type[] sTypeValues = Type.values();
 
-    private long mNativeObject;
+    private final long mNativeObject;
 
     LightManager(long nativeLightManager) {
         mNativeObject = nativeLightManager;
@@ -151,8 +151,8 @@ public class LightManager {
     /**
      * Gets an Instance representing the Light component associated with the given Entity.
      * @param entity An Entity.
-     * @return An Instance object, which represents the Light component associated with the Entity entity.
-     *         The instance is 0 if the component doesn't exist.
+     * @return An Instance object, which represents the Light component associated with the
+     *         Entity entity. The instance is 0 if the component doesn't exist.
      * @see #hasComponent
      */
     @EntityInstance
@@ -181,14 +181,13 @@ public class LightManager {
         /** Point light, emits light from a position, in all directions. */
         POINT,
 
-        /** Physically correct spot light. */
+        /** Physically correct spotlight. */
         FOCUSED_SPOT,
 
-        /** Spot light with coupling of outer cone and illumination disabled. */
+        /** Spotlight with coupling of outer cone and illumination disabled. */
         SPOT
 
     }
-
 
     /**
      * Control the quality / performance of the shadow map associated to this light
@@ -310,7 +309,7 @@ public class LightManager {
          * Generally this value shouldn't be changed or at least be small and positive.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        float polygonOffsetConstant = 0.5f;
+        public float polygonOffsetConstant = 0.5f;
 
         /**
          * Bias based on the change in depth in depth-resolution units by which shadows are moved
@@ -319,7 +318,7 @@ public class LightManager {
          * Setting this value correctly is essential for LISPSM shadow-maps.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        float polygonOffsetSlope = 2.0f;
+        public float polygonOffsetSlope = 2.0f;
 
         /**
          * Whether screen-space contact shadows are used. This applies regardless of whether a
@@ -332,8 +331,8 @@ public class LightManager {
         /**
          * Number of ray-marching steps for screen-space contact shadows (8 by default).
          *<p>
-         * <b>CAUTION:</b> this parameter is ignored for all lights except the directional/sun light,
-         *                 all other lights use the same value set for the directional/sun light.
+         * <b>CAUTION:</b> this parameter is ignored for all lights except the directional/sunlight,
+         *                 all other lights use the same value set for the directional/sunlight.
          *</p>
          */
         public int stepCount = 8;
@@ -342,8 +341,8 @@ public class LightManager {
          * Maximum shadow-occluder distance for screen-space contact shadows (world units).
          * (30 cm by default)
          *<p>
-         * <b>CAUTION:</b> this parameter is ignored for all lights except the directional/sun light,
-         *                 all other lights use the same value set for the directional/sun light.
+         * <b>CAUTION:</b> this parameter is ignored for all lights except the directional/sunlight,
+         *                 all other lights use the same value set for the directional/sunlight.
          *</p>
          */
         public float maxShadowDistance = 0.3f;
@@ -480,7 +479,7 @@ public class LightManager {
                 @IntRange(from = 1, to = 4) int cascades) {
             if (splitPositions.length < cascades - 1) {
                 throw new ArrayIndexOutOfBoundsException(
-                        String.format("splitPositions array length must be at least %d", cascades - 1));
+                        "splitPositions array length must be at least " + (cascades - 1));
             }
             nComputeUniformSplits(splitPositions, cascades);
         }
@@ -499,7 +498,7 @@ public class LightManager {
                 @IntRange(from = 1, to = 4) int cascades, float near, float far) {
             if (splitPositions.length < cascades - 1) {
                 throw new ArrayIndexOutOfBoundsException(
-                        String.format("splitPositions array length must be at least %d", cascades - 1));
+                        "splitPositions array length must be at least " + (cascades - 1));
             }
             nComputeLogSplits(splitPositions, cascades, near, far);
         }
@@ -509,11 +508,11 @@ public class LightManager {
          * practical split scheme.
          *
          * <p>
-         * The practical split scheme uses uses a lambda value to interpolate between the logrithmic
+         * The practical split scheme uses a lambda value to interpolate between the logrithmic
          * and uniform split schemes. Start with a lambda value of 0.5f and adjust for your scene.
          * </p>
          *
-         * See: Zhang et al 2006, "Parallel-split shadow maps for large-scale virtual environments"
+         * See: Zhang et al. 2006, "Parallel-split shadow maps for large-scale virtual environments"
          *
          * @param splitPositions    a float array of at least size (cascades - 1) to write the split
          *                          positions into
@@ -527,7 +526,7 @@ public class LightManager {
               @IntRange(from = 1, to = 4) int cascades, float near, float far, float lambda) {
             if (splitPositions.length < cascades - 1) {
                 throw new ArrayIndexOutOfBoundsException(
-                        String.format("splitPositions array length must be at least %d", cascades - 1));
+                        "splitPositions array length must be at least " + (cascades - 1));
             }
             nComputePracticalSplits(splitPositions, cascades, near, far, lambda);
         }
@@ -536,7 +535,7 @@ public class LightManager {
     /** Typical efficiency of an incandescent light bulb (2.2%) */
     public static final float EFFICIENCY_INCANDESCENT = 0.0220f;
 
-    /** Typical efficiency of an halogen light bulb (7.0%) */
+    /** Typical efficiency of a halogen light bulb (7.0%) */
     public static final float EFFICIENCY_HALOGEN      = 0.0707f;
 
     /** Typical efficiency of a fluorescent light bulb (8.7%) */
@@ -692,7 +691,7 @@ public class LightManager {
          *
          * @param intensity This parameter depends on the {@link Type}, for directional lights,
          *                  it specifies the illuminance in <i>lux</i> (or <i>lumen/m^2</i>).
-         *                  For point lights and spot lights, it specifies the luminous power
+         *                  For point lights and spotlights, it specifies the luminous power
          *                  in <i>lumen</i>. For example, the sun's illuminance is about 100,000
          *                  lux.
          *
@@ -760,7 +759,7 @@ public class LightManager {
         }
 
         /**
-         * Set the falloff distance for point lights and spot lights.
+         * Set the falloff distance for point lights and spotlights.
          *<p>
          * At the falloff distance, the light has no more effect on objects.
          *</p>
@@ -789,15 +788,15 @@ public class LightManager {
         }
 
         /**
-         * Defines a spot light's angular falloff attenuation.
+         * Defines a spotlight's angular falloff attenuation.
          * <p>
-         * A spot light is defined by a position, a direction and two cones, inner and outer.
-         * These two cones are used to define the angular falloff attenuation of the spot light
+         * A spotlight is defined by a position, a direction and two cones, inner and outer.
+         * These two cones are used to define the angular falloff attenuation of the spotlight
          * and are defined by the angle from the center axis to where the falloff begins (i.e.
          * cones are defined by their half-angle).
          * </p>
          * <p>
-         * <b>note:</b> The spot light cone is ignored for directional and point lights.
+         * <b>note:</b> The spotlight cone is ignored for directional and point lights.
          * </p>
          *
          * @param inner inner cone angle in <i>radian</i> between 0 and pi/2
@@ -868,7 +867,8 @@ public class LightManager {
          *
          * @param engine Reference to the {@link Engine} to associate this light with.
          * @param entity Entity to add the light component to.
-         * @throws RuntimeException if a runtime error occurred, such as running out of memory or other resources, or if a parameter to a builder function was invalid.
+         * @throws RuntimeException if a runtime error occurred, such as running out of memory
+         *         or other resources, or if a parameter to a builder function was invalid.
          */
         public void build(@NonNull Engine engine, @Entity int entity) {
             if (!nBuilderBuild(mNativeBuilder, engine.getNativeObject(), entity)) {
@@ -879,9 +879,11 @@ public class LightManager {
 
         private static class BuilderFinalizer {
             private final long mNativeObject;
+
             BuilderFinalizer(long nativeObject) { mNativeObject = nativeObject; }
+
             @Override
-            public void finalize() {
+            protected void finalize() {
                 try {
                     super.finalize();
                 } catch (Throwable t) { // Ignore
@@ -920,10 +922,10 @@ public class LightManager {
     }
 
     /**
-     * Helper function that returns if a light is a spot light
+     * Helper function that returns if a light is a spotlight
      *
      * @param i     Instance of the component obtained from getInstance().
-     * @return      true is this light is a type of spot light
+     * @return      true is this light is a type of spotlight
      */
     boolean isSpotLight(@EntityInstance int i) {
         Type type = getType(i);
@@ -1053,7 +1055,7 @@ public class LightManager {
      * @param i         Instance of the component obtained from getInstance().
      * @param intensity This parameter depends on the {@link Type}, for directional lights,
      *                  it specifies the illuminance in <i>lux</i> (or <i>lumen/m^2</i>).
-     *                  For point lights and spot lights, it specifies the luminous power
+     *                  For point lights and spotlights, it specifies the luminous power
      *                  in <i>lumen</i>. For example, the sun's illuminance is about 100,000
      *                  lux.
      *
@@ -1124,7 +1126,7 @@ public class LightManager {
     }
 
     /**
-     * Set the falloff distance for point lights and spot lights.
+     * Set the falloff distance for point lights and spotlights.
      *
      * @param i       Instance of the component obtained from getInstance().
      * @param falloff falloff distance in world units. Default is 1 meter.
@@ -1145,7 +1147,7 @@ public class LightManager {
     }
 
     /**
-     * Dynamically updates a spot light's cone as angles
+     * Dynamically updates a spotlight's cone as angles
      *
      * @param i     Instance of the component obtained from getInstance().
      * @param inner inner cone angle in *radians* between 0 and pi/2
@@ -1158,7 +1160,7 @@ public class LightManager {
     }
 
     /**
-     * Dynamically updates the angular radius of a Type.SUN light
+     * Dynamically updates the angular radius of a Type.SUN light.
      *
      * The Sun as seen from Earth has an angular size of 0.526° to 0.545°
      *
@@ -1179,7 +1181,7 @@ public class LightManager {
     }
 
     /**
-     * Dynamically updates the halo radius of a Type.SUN light. The radius
+     * Dynamically updates the halo radius of a Type.sunlight. The radius
      * of the halo is defined as a multiplier of the sun angular radius.
      *
      * @param i     Instance of the component obtained from getInstance().
@@ -1200,7 +1202,7 @@ public class LightManager {
     }
 
     /**
-     * Dynamically updates the halo falloff of a Type.SUN light. The falloff
+     * Dynamically updates the halo falloff of a Type.sunlight. The falloff
      * is a dimensionless number used as an exponent.
      *
      * @param i     Instance of the component obtained from getInstance().

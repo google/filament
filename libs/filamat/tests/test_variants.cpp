@@ -96,10 +96,10 @@ TEST(Variant, PunctualShadowReceiversDoNotAliasSsr) {
             for (V::type_t const skinning : SKINNING_STATES) {
                 for (V::type_t const stereo : STEREO_STATES) {
                     for (V::type_t const directional : DIRECTIONAL_STATES) {
-                        V const requested(V::DYN | V::SRE | sampler | fog | skinning | stereo |
+                        V const requested(V::SRE | sampler | fog | skinning | stereo |
                                 directional);
                         V const filtered = V::filterVariant(requested, true);
-                        V const expected(requested.key & ~V::DYN);
+                        V const expected(requested.key);
 
                         EXPECT_EQ(filtered, expected);
                         EXPECT_TRUE(V::isValidStandardVariant(filtered));
@@ -125,7 +125,7 @@ TEST(Variant, SpecialSsrVariantIsDistinctAndFilterable) {
 
     // Keep the SSR sentinel independent of lighting bits that can migrate to spec constants.
     EXPECT_EQ(V::SPECIAL_SSR_VARIANT, V::type_t(V::MNT | V::PCK | V::DEP));
-    EXPECT_EQ(V::SPECIAL_SSR_VARIANT & (V::DIR | V::DYN | V::SRE), 0u);
+    EXPECT_EQ(V::SPECIAL_SSR_VARIANT & (V::DIR| V::SRE), 0u);
 
     V const ssr(V::SPECIAL_SSR_VARIANT);
     EXPECT_TRUE(V::isSSRVariant(ssr));

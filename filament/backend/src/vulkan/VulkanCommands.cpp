@@ -217,7 +217,7 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
     }
     FVK_LOGI << ") "
              << " signal=" << submissionSemaphore
-             << " fence=" << mFence;
+             << " fence=" << getVkFence();
 #endif
 
     UTILS_UNUSED_IN_RELEASE VkResult result =

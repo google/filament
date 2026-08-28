@@ -51,6 +51,7 @@ using utils::Entity;
 using utils::EntityManager;
 using utils::Path;
 
+namespace {
 struct Vertex {
     float3 position;
     float2 uv;
@@ -78,16 +79,15 @@ struct App {
     bool posMorphing = false;
 };
 
-static constexpr int GRID_SIZE = 20;
-static constexpr float GRID_SCALE = 2.0f;
+constexpr int GRID_SIZE = 20;
+constexpr float GRID_SCALE = 2.0f;
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
-    if (config.customArgs.find("positions") != config.customArgs.end()) {
-        app->posMorphing = true;
-    }
+    app->posMorphing = config.getBool("positions");
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
         app->skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
@@ -271,10 +271,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
@@ -295,28 +292,20 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("positions", 'p', "Morph positions", false),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "hellouvmorphing";
-    static constexpr const char* CUSTOM_OPTSTR = "p";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "positions", utils::getopt::no_argument, nullptr, 'p' }, { nullptr, 0, nullptr, 0 }
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
     };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'p':
-                config.customArgs["positions"] = utils::CString("true");
-                return true;
-        }
-        return false;
-    };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config,
-            {
-                .customHandler = customHandler,
-                .customOptStr = CUSTOM_OPTSTR,
-                .customOptions = CUSTOM_OPTIONS,
-            });
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();

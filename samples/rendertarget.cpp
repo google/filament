@@ -48,6 +48,8 @@ using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
 
+namespace {
+
 struct Vertex {
     float3 position;
     float2 uv;
@@ -87,7 +89,7 @@ struct App {
     float3 quadNormal;
 };
 
-static mat4f reflectionMatrix(float4 plane) {
+mat4f reflectionMatrix(float4 plane) {
     mat4f m;
     m[0][0] = -2 * plane.x * plane.x + 1;
     m[0][1] = -2 * plane.x * plane.y;
@@ -108,7 +110,7 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
-static void setReflectionMode(App& app, App::ReflectionMode mode) {
+void setReflectionMode(App& app, App::ReflectionMode mode) {
     switch (mode) {
     case App::ReflectionMode::RENDERABLES:
         app.offscreenScene->addEntity(app.reflectedMonkey);
@@ -124,15 +126,15 @@ static void setReflectionMode(App& app, App::ReflectionMode mode) {
     app.mode = mode;
 }
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
 
-    if (config.customArgs.find("mode") != config.customArgs.end()) {
-        if (config.customArgs.at("mode") == "renderables") {
-            app->mode = App::ReflectionMode::RENDERABLES;
-        }
+    if (config.getString("mode") == "renderables") {
+        app->mode = App::ReflectionMode::RENDERABLES;
     }
 
     auto setup = [app](Engine* engine, View* view, Scene* scene) {
@@ -301,10 +303,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 
     auto fApp =
-            FilamentApp2::Builder()
-                    .title(app->config.title)
-                    .backend(app->config.backend)
-                    .displayManager(dm)
+            samples::getBuilder(config, dm, loader)
                     .setup(setup)
                     .cleanup(cleanup)
                     .preRender(preRender)
@@ -348,30 +347,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeEnum("mode", 'm', "Set reflection mode", "camera",
+                { "camera", "renderables" }),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "rendertarget";
-    static constexpr const char* CUSTOM_OPTSTR = "m:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "mode", utils::getopt::required_argument, nullptr, 'm' }, { nullptr, 0, nullptr, 0 }
-    };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'm':
-                config.customArgs["mode"] = arg;
-                return true;
-        }
-        return false;
-    };
     samples::CommandLineSpecification spec = {
-        .customOptionsHelp = "   --mode=<camera|renderables>, -m <camera|renderables>\n"
-                             "       Set reflection mode\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .parameters = createAppParameters(),
     };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

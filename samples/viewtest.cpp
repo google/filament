@@ -32,9 +32,10 @@
 #include <utils/getopt.h>
 
 #include <iostream>
-#include <string>
 
 using namespace filament;
+
+namespace {
 
 struct App {
     FilamentApp2* filamentApp;
@@ -47,8 +48,10 @@ struct App {
     utils::Entity renderable;
 };
 
-static const filament::math::float2 TRIANGLE_VERTICES[3] = { {1, 0}, {-0.5, 0.866}, {-0.5, -0.866} };
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+const filament::math::float2 TRIANGLE_VERTICES[3] = { { 1, 0 }, { -0.5, 0.866 }, { -0.5, -0.866 } };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -97,10 +100,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         renderer->setClearOptions({ .clear = true });
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -110,12 +110,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "viewtest";
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

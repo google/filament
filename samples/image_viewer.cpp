@@ -54,7 +54,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
+#include <string_view>
 
 using namespace filament;
 using namespace filament::math;
@@ -63,6 +63,7 @@ using namespace filament::viewer;
 using namespace image;
 using namespace utils;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     Engine* engine;
@@ -88,15 +89,15 @@ struct App {
     ColorGrading* colorGrading = nullptr;
 };
 
-static constexpr float4 sFullScreenTriangleVertices[3] = {
+constexpr float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },
         {  3.0f, -1.0f, 1.0f, 1.0f },
         { -1.0f,  3.0f, 1.0f, 1.0f }
 };
 
-static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
+void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     auto& em = EntityManager::get();
     Material* material = Material::Builder()
             .package(RESOURCES_IMAGE_DATA, RESOURCES_IMAGE_SIZE)
@@ -150,7 +151,7 @@ static void createImageRenderable(Engine* engine, Scene* scene, App& app) {
     app.scene.defaultTexture = texture;
 }
 
-static void loadImage(App& app, Engine* engine, const Path& filename) {
+void loadImage(App& app, Engine* engine, const Path& filename) {
     if (app.scene.imageTexture) {
         engine->destroy(app.scene.imageTexture);
         app.scene.imageTexture = nullptr;
@@ -212,14 +213,16 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
     app.showImage = true;
 }
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
 
     Path filename;
-    if (config.customArgs.find("filename") != config.customArgs.end()) {
-        filename = Path(config.customArgs["filename"].c_str());
+    if (!config.positionalArgs.empty()) {
+        filename = Path(config.positionalArgs[0].c_str());
     }
 
     auto setup = [app, filename](Engine* engine, View* view, Scene* scene) {
@@ -326,11 +329,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->scene.imageMaterial->setDefaultParameter("backgroundColor", RgbType::sRGB,
                 app->backgroundColor);
     };
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .cameraMode(app->config.cameraMode)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
@@ -344,16 +343,18 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
-    config.title = "Filament Image Viewer";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "Filament Image Viewer",
+        .positionalArgsDescription = { "image file" },
+        .parameters = createAppParameters(),
+    };
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    int num_args = argc - optind;
-    if (num_args >= 1) {
-        config.customArgs["filename"] = utils::CString(argv[optind]);
-    }
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();
     return 0;

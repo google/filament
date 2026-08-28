@@ -144,6 +144,12 @@ vec3 specularDFG(const PixelParams pixel) {
 #endif
 }
 
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+vec3 secondSpecularDFG(const PixelParams pixel) {
+    return mix(pixel.secondDfg.xxx, pixel.secondDfg.yyy, pixel.f0);
+}
+#endif
+
 vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
@@ -669,14 +675,16 @@ vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, vec3 E) {
 
     // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
     // of 1.5 has full microfacet refraction
-    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0, saturate(pixel.etaIR * 3.0 - 2.0));
+    float perceptualRoughness =
+            mix(pixel.perceptualRoughnessUnclamped, 0.0, saturate(pixel.etaIR * 3.0 - 2.0));
 
 #if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
     float lod = perceptualRoughnessToLod(perceptualRoughness);
 #else
     // distance to camera plane
     const float invLog2sqrt5 = 0.8614;
-    float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
+    float lod = max(0.0,
+            (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
 #endif
 
 #if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
@@ -684,7 +692,6 @@ vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, vec3 E) {
 #else
     Ft = evaluateRefraction(pixel, n0, lod, pixel.etaIR, pixel.etaRI);
 #endif
-
 
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
     // For thin surfaces, the light will bounce off at the second interface in the direction of
@@ -706,7 +713,6 @@ vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, vec3 E) {
     return Ft;
 }
 #endif
-
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
@@ -750,11 +756,23 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     if (ssrFr.a < 1.0) { // prevent reading the IBL if possible
         vec3 r = getReflectedVector(pixel, shading_normal);
         Fr = E * prefilteredRadiance(r, perceptualRoughnessToLod(pixel.perceptualRoughness));
+        Fr *= pixel.energyCompensation;
+
+#if defined(MATERIAL_HAS_SECOND_SPECULAR_LOBE)
+        // The second specular lobe is always isotropic
+        r = shading_reflected;
+        vec3 secondFr = secondSpecularDFG(pixel) *
+                prefilteredRadiance(r, perceptualRoughnessToLod(pixel.secondPerceptualRoughness));
+        secondFr *= pixel.secondEnergyCompensation;
+
+        Fr = mix(Fr, secondFr, pixel.secondRoughnessWeight);
+#endif
     }
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
     if (ssrFr.a < 1.0) { // prevent evaluating the IBL if possible
         Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
+        # TODO: Second roughness
     }
 #endif
 
@@ -763,7 +781,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = specularAO(shading_NoV, diffuseAO, pixel.roughness, interpolationCache);
 
-    vec3 specularSingleBounceAO = singleBounceAO(specularAO) * pixel.energyCompensation;
+    float specularSingleBounceAO = singleBounceAO(specularAO);
     Fr *= specularSingleBounceAO;
 #if defined(MATERIAL_HAS_REFLECTIONS)
     ssrFr.rgb *= specularSingleBounceAO;

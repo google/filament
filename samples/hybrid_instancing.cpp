@@ -79,7 +79,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <random>
-#include <string>
 #include <vector>
 
 #include <math.h>
@@ -89,52 +88,54 @@ using namespace filament::math;
 using utils::Entity;
 using utils::EntityManager;
 
+namespace {
+
 // ------------------------------------------------------------------------------------------------
 // App Constants
 // ------------------------------------------------------------------------------------------------
 
 // The number of particles in each emitter.
-static constexpr uint32_t PARTICLE_COUNT = 64;
+constexpr uint32_t PARTICLE_COUNT = 64;
 
 // Particle properties
-static constexpr float PARTICLE_LIFETIME_MIN = 1.0f;
-static constexpr float PARTICLE_LIFETIME_MAX = 3.0f;
-static constexpr float PARTICLE_VELOCITY_SCALE = 2.0f;
-static constexpr float PARTICLE_ROTATION_SPEED_MIN = M_PI;
-static constexpr float PARTICLE_ROTATION_SPEED_MAX = 2.0f * M_PI;
+constexpr float PARTICLE_LIFETIME_MIN = 1.0f;
+constexpr float PARTICLE_LIFETIME_MAX = 3.0f;
+constexpr float PARTICLE_VELOCITY_SCALE = 2.0f;
+constexpr float PARTICLE_ROTATION_SPEED_MIN = M_PI;
+constexpr float PARTICLE_ROTATION_SPEED_MAX = 2.0f * M_PI;
 
 // Emitter properties
-static constexpr float EMITTER_FREQUENCY_MIN = 0.5f;
-static constexpr float EMITTER_FREQUENCY_MAX = 1.0f;
-static constexpr float EMITTER_X_RADIUS_MIN = 2.0f;
-static constexpr float EMITTER_X_RADIUS_MAX = 15.0f;
-static constexpr float EMITTER_Y_RADIUS_MIN = 2.0f;
-static constexpr float EMITTER_Y_RADIUS_MAX = 15.0f;
-static constexpr float EMITTER_Z_RADIUS_MIN = 2.0f;
-static constexpr float EMITTER_Z_RADIUS_MAX = 10.0f;
-static constexpr float EMITTER_PHASE_MAX = 2.0f * M_PI;
+constexpr float EMITTER_FREQUENCY_MIN = 0.5f;
+constexpr float EMITTER_FREQUENCY_MAX = 1.0f;
+constexpr float EMITTER_X_RADIUS_MIN = 2.0f;
+constexpr float EMITTER_X_RADIUS_MAX = 15.0f;
+constexpr float EMITTER_Y_RADIUS_MIN = 2.0f;
+constexpr float EMITTER_Y_RADIUS_MAX = 15.0f;
+constexpr float EMITTER_Z_RADIUS_MIN = 2.0f;
+constexpr float EMITTER_Z_RADIUS_MAX = 10.0f;
+constexpr float EMITTER_PHASE_MAX = 2.0f * M_PI;
 
 // Lighting and Material properties
-static constexpr float CONTINUOUS_LIGHT_INTENSITY = 10000.0f;
-static constexpr float LIGHT_FALLOFF = 20.0f;
-static constexpr float EMISSIVE_FACTOR = 200.0f;
-static constexpr float MOONLIGHT_INTENSITY = 100.0f;
+constexpr float CONTINUOUS_LIGHT_INTENSITY = 10000.0f;
+constexpr float LIGHT_FALLOFF = 20.0f;
+constexpr float EMISSIVE_FACTOR = 200.0f;
+constexpr float MOONLIGHT_INTENSITY = 100.0f;
 
 // Ground plane properties
-static constexpr float GROUND_PLANE_EXTENT = 20.0f;
-static constexpr float GROUND_PLANE_Y = -10.0f;
+constexpr float GROUND_PLANE_EXTENT = 20.0f;
+constexpr float GROUND_PLANE_Y = -10.0f;
 
 // Camera properties
-static constexpr float CAMERA_EXPOSURE_APERTURE = 2.8f;
-static constexpr float CAMERA_EXPOSURE_SHUTTER_SPEED = 1.0f / 125.0f;
-static constexpr float CAMERA_EXPOSURE_SENSITIVITY = 400.0f;
+constexpr float CAMERA_EXPOSURE_APERTURE = 2.8f;
+constexpr float CAMERA_EXPOSURE_SHUTTER_SPEED = 1.0f / 125.0f;
+constexpr float CAMERA_EXPOSURE_SENSITIVITY = 400.0f;
 
 // UI properties
-static constexpr float GRAVITY_STRENGTH_MAX = 2.0f;
-static constexpr float FIREWORKS_DELAY_MIN = 0.1f;
-static constexpr float FIREWORKS_DELAY_MAX = 10.0f;
-static constexpr int EMITTER_COUNT_MIN = 1;
-static constexpr int EMITTER_COUNT_MAX = 100;
+constexpr float GRAVITY_STRENGTH_MAX = 2.0f;
+constexpr float FIREWORKS_DELAY_MIN = 0.1f;
+constexpr float FIREWORKS_DELAY_MAX = 10.0f;
+constexpr int EMITTER_COUNT_MIN = 1;
+constexpr int EMITTER_COUNT_MAX = 100;
 
 // ------------------------------------------------------------------------------------------------
 // App Data Structures
@@ -146,13 +147,13 @@ struct Vertex {
 };
 
 // The mesh for a single particle (a triangle).
-static constexpr float PARTICLE_TRIANGLE_SIDE = 0.05f;
-static constexpr Vertex TRIANGLE_VERTICES[3] = {
+constexpr float PARTICLE_TRIANGLE_SIDE = 0.05f;
+constexpr Vertex TRIANGLE_VERTICES[3] = {
     { { -PARTICLE_TRIANGLE_SIDE, -PARTICLE_TRIANGLE_SIDE / 1.732f } },
     { { PARTICLE_TRIANGLE_SIDE, -PARTICLE_TRIANGLE_SIDE / 1.732f } },
     { { 0.0f, PARTICLE_TRIANGLE_SIDE * 2.0f / 1.732f } },
 };
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
 // Holds the state of a single particle.
 struct Particle {
@@ -181,7 +182,6 @@ struct Emitter {
     float timeToBurst = 0.0f;
 };
 
-// Holds all the state for this application.
 struct App {
     FilamentApp2* filamentApp;
     enum class EmitterMode { CONTINUOUS, FIREWORKS };
@@ -219,171 +219,6 @@ struct App {
 };
 
 // ------------------------------------------------------------------------------------------------
-// Function Declarations
-// ------------------------------------------------------------------------------------------------
-
-
-static void doUserInterface(App& app);
-static void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition);
-static void setupSkybox(Engine& engine, Scene& scene, App& app);
-static void setupGroundPlane(Engine& engine, Scene& scene, App& app);
-static void setupMoonlight(Engine& engine, Scene& scene, App& app);
-static void createEmitterResources(Engine& engine, App& app);
-static void createEmitterInstances(Engine& engine, Scene& scene, App& app);
-static void setupFireworks(App& app);
-static void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, double now,
-        double dt, std::mt19937& gen, const App& app);
-
-// ------------------------------------------------------------------------------------------------
-// Main
-// ------------------------------------------------------------------------------------------------
-
-std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
-        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
-    auto app = std::make_shared<App>();
-    app->config = config;
-    if (config.customArgs.find("emitters") != config.customArgs.end()) {
-        app->ui.emitterCount = atoi(config.customArgs["emitters"].c_str());
-    }
-
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
-        app->scene = scene;
-        setupSkybox(*engine, *scene, *app);
-        setupGroundPlane(*engine, *scene, *app);
-        setupMoonlight(*engine, *scene, *app);
-        createEmitterResources(*engine, *app);
-        createEmitterInstances(*engine, *scene, *app);
-        app->currentEmitterCount = app->ui.emitterCount;
-
-        view->getCamera().setExposure(CAMERA_EXPOSURE_APERTURE, CAMERA_EXPOSURE_SHUTTER_SPEED,
-                CAMERA_EXPOSURE_SENSITIVITY);
-
-        view->setPostProcessingEnabled(true);
-        view->setBloomOptions({ .enabled = true });
-    };
-
-    auto cleanup = [app](Engine* engine, View*, Scene*) {
-        // Destroy all the Filament objects that we created.
-        for (auto const& emitter: app->emitters) {
-            engine->destroy(emitter.renderable);
-            engine->destroy(emitter.instanceBuffer);
-            engine->destroy(emitter.materialInstance);
-        }
-        engine->destroy(app->moonlight);
-        engine->destroy(app->groundPlane);
-        engine->destroy(app->groundMi);
-        engine->destroy(app->groundMaterial);
-        engine->destroy(app->groundVb);
-        engine->destroy(app->groundIb);
-        engine->destroy(app->skybox);
-        engine->destroy(app->material);
-        engine->destroy(app->vb);
-        engine->destroy(app->ib);
-    };
-
-    auto animate = [app](Engine* engine, View*, double const now) {
-        auto& lm = engine->getLightManager();
-
-        // Toggle moonlight
-        auto const moonlightInstance = lm.getInstance(app->moonlight);
-        lm.setIntensity(moonlightInstance, app->ui.moonlightEnabled ? MOONLIGHT_INTENSITY : 0.0f);
-
-        // Handle emitter count changes from the UI.
-        if (app->ui.emitterCount != app->currentEmitterCount) {
-            for (auto const& emitter: app->emitters) {
-                engine->destroy(emitter.renderable);
-                engine->destroy(emitter.instanceBuffer);
-                engine->destroy(emitter.materialInstance);
-            }
-            app->emitters.clear();
-            createEmitterInstances(*engine, *app->scene, *app);
-            app->currentEmitterCount = app->ui.emitterCount;
-            if (app->ui.emitterMode == App::EmitterMode::FIREWORKS) {
-                setupFireworks(*app);
-            }
-        }
-
-        // If fireworks mode has just been enabled, set up the emitters for it.
-        if (app->ui.emitterMode == App::EmitterMode::FIREWORKS &&
-                app->previousFireworksMode == false) {
-            setupFireworks(*app);
-        }
-        app->previousFireworksMode = (app->ui.emitterMode == App::EmitterMode::FIREWORKS);
-
-        // Calculate the time delta since the last frame.
-        double dt = now - app->lastTime;
-        if (app->lastTime == 0.0) {
-            dt = 1.0 / 60.0; // First frame
-        }
-        app->lastTime = now;
-
-        auto& tcm = engine->getTransformManager();
-        std::mt19937 gen(static_cast<unsigned int>(now * 1000));
-
-        // Animate each emitter and its particles.
-        for (auto& emitter: app->emitters) {
-            animateEmitter(emitter, tcm, lm, now, dt, gen, *app);
-        }
-    };
-
-    auto imgui = [app](Engine*, View*) { doUserInterface(*app); };
-
-
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .displayManager(dm)
-                        .backend(app->config.backend)
-                        .cameraMode(app->config.cameraMode)
-                        .setup(setup)
-                        .cleanup(cleanup)
-                        .imgui(imgui)
-                        .animation(animate)
-                        .build();
-    app->filamentApp = fApp.get();
-
-    return fApp;
-}
-
-#ifndef __ANDROID__
-int main(int argc, char** argv) {
-    SampleConfig config;
-    config.title = "Hybrid Instancing";
-    static constexpr const char* CUSTOM_OPTSTR = "e:c:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "emitters", utils::getopt::required_argument, nullptr, 'e' },
-        { "camera", utils::getopt::required_argument, nullptr, 'c' }, { nullptr, 0, nullptr, 0 }
-    };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'e':
-                config.customArgs["emitters"] = utils::CString(arg.c_str());
-                return true;
-            case 'c':
-                if (arg == "flight") {
-                    config.cameraMode = filament::camutils::Mode::FREE_FLIGHT;
-                } else if (arg == "orbit") {
-                    config.cameraMode = filament::camutils::Mode::ORBIT;
-                } else {
-                    std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
-                }
-                return true;
-        }
-        return false;
-    };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config,
-            {
-                .customHandler = customHandler,
-                .customOptStr = CUSTOM_OPTSTR,
-                .customOptions = CUSTOM_OPTIONS,
-            });
-    auto dm = samples::getDisplayManager(config);
-    auto app = createSampleApp(config, dm.get(), nullptr);
-    app->run();
-    return 0;
-}
-#endif
-
-// ------------------------------------------------------------------------------------------------
 // Helper functions
 // ------------------------------------------------------------------------------------------------
 
@@ -411,10 +246,8 @@ void doUserInterface(App& app) {
     ImGui::End();
 }
 
-// Prints command-line usage information.
-// Parses command-line arguments.
 // Resets a particle to a new random state.
-static void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition) {
+void resetParticle(Particle& particle, std::mt19937& gen, const float3& emitterPosition) {
     std::uniform_real_distribution vel_dist(-1.0f, 1.0f);
     std::uniform_real_distribution life_dist(PARTICLE_LIFETIME_MIN, PARTICLE_LIFETIME_MAX);
     std::uniform_real_distribution rot_speed_dist(PARTICLE_ROTATION_SPEED_MIN,
@@ -444,7 +277,7 @@ void setupGroundPlane(Engine& engine, Scene& scene, App& app) {
     app.groundMi->setParameter("metallic", 0.0f);
     app.groundMi->setParameter("roughness", 0.8f);
 
-    const static float3 GROUND_VERTICES[4] = {
+    constexpr float3 GROUND_VERTICES[4] = {
         { -GROUND_PLANE_EXTENT, 0, -GROUND_PLANE_EXTENT },
         { -GROUND_PLANE_EXTENT, 0,  GROUND_PLANE_EXTENT },
         {  GROUND_PLANE_EXTENT, 0,  GROUND_PLANE_EXTENT },
@@ -460,7 +293,7 @@ void setupGroundPlane(Engine& engine, Scene& scene, App& app) {
                     }
                     ).xyzw);
 
-    const static short4 GROUND_TANGENTS[]{ tbn, tbn, tbn, tbn };
+    const short4 GROUND_TANGENTS[]{ tbn, tbn, tbn, tbn };
 
     app.groundVb = VertexBuffer::Builder()
                    .vertexCount(4)
@@ -472,7 +305,7 @@ void setupGroundPlane(Engine& engine, Scene& scene, App& app) {
     app.groundVb->setBufferAt(engine, 0, { GROUND_VERTICES, sizeof(GROUND_VERTICES) });
     app.groundVb->setBufferAt(engine, 1, { GROUND_TANGENTS, sizeof(GROUND_TANGENTS) });
 
-    static constexpr uint16_t GROUND_INDICES[6] = { 0, 1, 2, 2, 3, 0 };
+    constexpr uint16_t GROUND_INDICES[6] = { 0, 1, 2, 2, 3, 0 };
     app.groundIb = IndexBuffer::Builder()
                    .indexCount(6)
                    .bufferType(IndexBuffer::IndexType::USHORT)
@@ -676,3 +509,132 @@ void animateEmitter(Emitter& emitter, TransformManager& tcm, LightManager& lm, d
 
     emitter.instanceBuffer->setLocalTransforms(emitter.localTransforms.data(), PARTICLE_COUNT);
 }
+
+} // namespace
+
+// ------------------------------------------------------------------------------------------------
+// Main
+// ------------------------------------------------------------------------------------------------
+
+std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
+        filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    auto app = std::make_shared<App>();
+    app->config = config;
+    if (config.getInt("emitters", 0) > 0) {
+        app->ui.emitterCount = config.getInt("emitters");
+    }
+
+    auto setup = [app](Engine* engine, View* view, Scene* scene) {
+        app->scene = scene;
+        setupSkybox(*engine, *scene, *app);
+        setupGroundPlane(*engine, *scene, *app);
+        setupMoonlight(*engine, *scene, *app);
+        createEmitterResources(*engine, *app);
+        createEmitterInstances(*engine, *scene, *app);
+        app->currentEmitterCount = app->ui.emitterCount;
+
+        view->getCamera().setExposure(CAMERA_EXPOSURE_APERTURE, CAMERA_EXPOSURE_SHUTTER_SPEED,
+                CAMERA_EXPOSURE_SENSITIVITY);
+
+        view->setPostProcessingEnabled(true);
+        view->setBloomOptions({ .enabled = true });
+    };
+
+    auto cleanup = [app](Engine* engine, View*, Scene*) {
+        // Destroy all the Filament objects that we created.
+        for (auto const& emitter: app->emitters) {
+            engine->destroy(emitter.renderable);
+            engine->destroy(emitter.instanceBuffer);
+            engine->destroy(emitter.materialInstance);
+        }
+        engine->destroy(app->moonlight);
+        engine->destroy(app->groundPlane);
+        engine->destroy(app->groundMi);
+        engine->destroy(app->groundMaterial);
+        engine->destroy(app->groundVb);
+        engine->destroy(app->groundIb);
+        engine->destroy(app->skybox);
+        engine->destroy(app->material);
+        engine->destroy(app->vb);
+        engine->destroy(app->ib);
+    };
+
+    auto animate = [app](Engine* engine, View*, double const now) {
+        auto& lm = engine->getLightManager();
+
+        // Toggle moonlight
+        auto const moonlightInstance = lm.getInstance(app->moonlight);
+        lm.setIntensity(moonlightInstance, app->ui.moonlightEnabled ? MOONLIGHT_INTENSITY : 0.0f);
+
+        // Handle emitter count changes from the UI.
+        if (app->ui.emitterCount != app->currentEmitterCount) {
+            for (auto const& emitter: app->emitters) {
+                engine->destroy(emitter.renderable);
+                engine->destroy(emitter.instanceBuffer);
+                engine->destroy(emitter.materialInstance);
+            }
+            app->emitters.clear();
+            createEmitterInstances(*engine, *app->scene, *app);
+            app->currentEmitterCount = app->ui.emitterCount;
+            if (app->ui.emitterMode == App::EmitterMode::FIREWORKS) {
+                setupFireworks(*app);
+            }
+        }
+
+        // If fireworks mode has just been enabled, set up the emitters for it.
+        if (app->ui.emitterMode == App::EmitterMode::FIREWORKS &&
+                app->previousFireworksMode == false) {
+            setupFireworks(*app);
+        }
+        app->previousFireworksMode = (app->ui.emitterMode == App::EmitterMode::FIREWORKS);
+
+        // Calculate the time delta since the last frame.
+        double dt = now - app->lastTime;
+        if (app->lastTime == 0.0) {
+            dt = 1.0 / 60.0; // First frame
+        }
+        app->lastTime = now;
+
+        auto& tcm = engine->getTransformManager();
+        std::mt19937 gen(static_cast<unsigned int>(now * 1000));
+
+        // Animate each emitter and its particles.
+        for (auto& emitter: app->emitters) {
+            animateEmitter(emitter, tcm, lm, now, dt, gen, *app);
+        }
+    };
+
+    auto imgui = [app](Engine*, View*) { doUserInterface(*app); };
+
+
+    auto fApp = samples::getBuilder(config, dm, loader)
+                        .setup(setup)
+                        .cleanup(cleanup)
+                        .imgui(imgui)
+                        .animation(animate)
+                        .build();
+    app->filamentApp = fApp.get();
+
+    return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeInt("emitters", 'E', "Number of particle emitters", 1, 1),
+    };
+}
+
+#ifndef __ANDROID__
+int main(int argc, char** argv) {
+    SampleConfig config;
+    config.title = "Hybrid Instancing";
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
+    };
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
+    auto dm = samples::getDisplayManager(config);
+    auto app = createSampleApp(config, dm.get(), nullptr);
+    app->run();
+    return 0;
+}
+#endif

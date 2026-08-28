@@ -42,7 +42,6 @@
 #include <stb_image.h>
 
 #include <iostream> // for cerr
-#include <string>   // for printing usage/help
 
 using namespace filament;
 using utils::Entity;
@@ -50,6 +49,8 @@ using utils::EntityManager;
 using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
+
+namespace {
 
 struct App {
     FilamentApp2* filamentApp;
@@ -70,17 +71,19 @@ struct Vertex {
     filament::math::float2 uv;
 };
 
-static const Vertex QUAD_VERTICES[4] = {
+const Vertex QUAD_VERTICES[4] = {
     {{-1, -1}, {0, 0}},
     {{ 1, -1}, {1, 0}},
     {{-1,  1}, {0, 1}},
     {{ 1,  1}, {1, 1}},
 };
 
-static constexpr uint16_t QUAD_INDICES[6] = {
+constexpr uint16_t QUAD_INDICES[6] = {
     0, 1, 2,
     3, 2, 1,
 };
+
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -171,10 +174,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
@@ -192,11 +192,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "texturedquad";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto fApp = createSampleApp(config, dm.get(), nullptr);

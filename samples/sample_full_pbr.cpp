@@ -47,14 +47,16 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
-static float g_meshScale = 1.0f;
+
+namespace {
+
+float g_meshScale = 1.0f;
 
 constexpr int MAP_COUNT       = 7;
 constexpr int MAP_COLOR       = 0;
@@ -89,43 +91,38 @@ struct App {
     };
     SampleConfig config;
     struct PbrConfig {
-        std::string materialDir;
+        utils::CString materialDir;
         bool clearCoat = false;
         bool anisotropy = false;
     } pbrConfig;
     FilamentApp2* filamentApp = nullptr;
 };
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
 
-    if (config.customArgs.find("materialDir") != config.customArgs.end()) {
-        app->pbrConfig.materialDir = config.customArgs.at("materialDir").c_str();
+    utils::CString matDir = config.getString("material-dir");
+    if (!matDir.empty()) {
+        app->pbrConfig.materialDir = matDir;
     }
-    if (config.customArgs.find("clearCoat") != config.customArgs.end()) {
+    if (config.getBool("clear-coat")) {
         app->pbrConfig.clearCoat = true;
     }
-    if (config.customArgs.find("anisotropy") != config.customArgs.end()) {
+    if (config.getBool("anisotropy")) {
         app->pbrConfig.anisotropy = true;
     }
-    if (config.customArgs.find("filenames") != config.customArgs.end()) {
-        std::string_view filenamesStr = config.customArgs.at("filenames").c_str();
-        size_t pos = 0;
-        while ((pos = std::string_view(filenamesStr).find('|')) != std::string_view::npos) {
-            app->filenames.push_back(utils::Path(filenamesStr.substr(0, pos)));
-            filenamesStr.remove_prefix(pos + 1);
-        }
-        if (!filenamesStr.empty()) {
-            app->filenames.push_back(utils::Path(filenamesStr));
-        }
+    g_meshScale = config.getFloat("scale", 1.0f);
+    for (const auto& filename: config.positionalArgs) {
+        app->filenames.push_back(utils::Path(filename.c_str()));
     }
 
-    auto loadTexture = [](Engine* engine, const std::string& filePath, Texture** map,
+    auto loadTexture = [](Engine* engine, const utils::Path& path, Texture** map,
                                bool sRGB = true) -> bool {
-        if (!filePath.empty()) {
-            Path const path(filePath);
+        if (!path.isEmpty()) {
             if (path.exists()) {
                 int w, h, n;
                 unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
@@ -154,8 +151,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto setup = [app, loadTexture](Engine* engine, View* view, Scene* scene) {
-        Path const path(app->pbrConfig.materialDir);
-        std::string const name(path.getName());
+        Path const path(app->pbrConfig.materialDir.c_str());
+        utils::CString const name(path.getName().c_str());
 
         view->setAmbientOcclusionOptions({ .radius = 0.01f,
             .bilateralThreshold = 0.005f,
@@ -166,9 +163,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
         bool hasUV = false;
         for (auto& map: app->maps) {
-            if (!loadTexture(engine, path.concat(name + "_" + map.suffix + ".png"), &map.texture,
-                        map.sRGB)) {
-                if (!loadTexture(engine, path.concat(std::string(map.suffix) + ".png"),
+            if (!loadTexture(engine, path.concat((name + "_" + map.suffix + ".png").c_str()),
+                        &map.texture, map.sRGB)) {
+                if (!loadTexture(engine, path.concat((utils::CString(map.suffix) + ".png").c_str()),
                             &map.texture, map.sRGB)) {
                     std::cout << "The texture " << map.suffix << " does not exist" << std::endl;
                 }
@@ -184,7 +181,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         bool const hasBentNormalMap = app->maps[MAP_BENT_NORMAL].texture != nullptr;
         bool const hasHeightMap = app->maps[MAP_HEIGHT].texture != nullptr;
 
-        std::string shader = R"SHADER(
+        utils::CString shader = R"SHADER(
             void material(inout MaterialInputs material) {
         )SHADER";
 
@@ -341,6 +338,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialInstances, true);
         }
+        if (app->filenames.empty()) {
+            app->meshSet->addFromFile(FilamentApp2::getRootAssetsPath() +
+                                              "assets/models/material_sphere/material_sphere.obj",
+                    app->materialInstances, true);
+        }
 
         auto& rcm = engine->getRenderableManager();
         auto& tcm = engine->getTransformManager();
@@ -387,10 +389,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 { .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f }, .clear = !app->filamentApp->getIBL() });
     };
 
-    auto fApp = FilamentApp2::Builder()
-                        .title(app->config.title)
-                        .backend(app->config.backend)
-                        .displayManager(dm)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .preRender(preRender)
@@ -399,63 +398,35 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeString("material-dir", 'm', "Directory containing custom materials",
+                ""),
+        samples::Parameter::makeBool("clear-coat", 'C', "Enable clear coat", false),
+        samples::Parameter::makeBool("anisotropy", 'A', "Enable anisotropy", false),
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "m:cAs:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "material-dir", utils::getopt::required_argument, nullptr, 'm' },
-        { "clear-coat", utils::getopt::no_argument, nullptr, 'c' },
-        { "anisotropy", utils::getopt::no_argument, nullptr, 'A' },
-        { "scale", utils::getopt::required_argument, nullptr, 's' },
-        { nullptr, 0, nullptr, 0 },
-    };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'm':
-                config.customArgs["materialDir"] = arg;
-                return true;
-            case 'c':
-                config.customArgs["clearCoat"] = utils::CString("true");
-                return true;
-            case 'A':
-                config.customArgs["anisotropy"] = utils::CString("true");
-                return true;
-            case 's':
-                g_meshScale = std::stof(arg.c_str());
-                return true;
-        }
-        return false;
-    };
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_FULL_PBR demonstrates physically based rendering in Filament.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
-        .requiredPositionalArgCount = 1,
-        .customOptionsHelp = "   --material-dir=<path>, -m <path>\n"
-                             "       Directory containing custom materials\n\n"
-                             "   --clear-coat, -c\n"
-                             "       Enable clear coat\n\n"
-                             "   --anisotropy, -A\n"
-                             "       Enable anisotropy\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .parameters = createAppParameters(),
     };
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
-    utils::CString filenames;
-    for (int i = optind; i < argc; i++) {
-        utils::Path const filename = argv[i];
+    for (const auto& fname : config.positionalArgs) {
+        utils::Path const filename(fname.c_str_safe());
         if (!filename.exists()) {
-            std::cerr << "file " << argv[i] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
-        if (i > optind) filenames += "|";
-        filenames += argv[i];
     }
-    config.customArgs["filenames"] = utils::CString(filenames.c_str());
 
     config.title = "PBR";
 

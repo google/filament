@@ -1,6 +1,8 @@
 #ifndef SAMPLE_CONFIG_H
 #define SAMPLE_CONFIG_H
 
+#include "Parameter.h"
+
 #include <filament/Engine.h>
 
 #include <camutils/Manipulator.h>
@@ -30,7 +32,40 @@ struct SampleConfig {
     DisplayManager displayManager = DisplayManager::SDL;
     filament::backend::AsynchronousMode asynchronousMode =
             filament::backend::AsynchronousMode::NONE;
-    utils::CString fileName;
-    std::unordered_map<utils::CString, utils::CString> customArgs;
+    utils::FixedCapacityVector<utils::CString> positionalArgs;
+    std::unordered_map<utils::CString, samples::Parameter> parameters;
+
+    bool getBool(const utils::CString& name, bool fallback = false) const {
+        auto it = parameters.find(name);
+        if (it != parameters.end() && std::holds_alternative<bool>(it->second.value)) {
+            return std::get<bool>(it->second.value);
+        }
+        return fallback;
+    }
+
+    int getInt(const utils::CString& name, int fallback = 0) const {
+        auto it = parameters.find(name);
+        if (it != parameters.end() && std::holds_alternative<int>(it->second.value)) {
+            return std::get<int>(it->second.value);
+        }
+        return fallback;
+    }
+
+    float getFloat(const utils::CString& name, float fallback = 0.0f) const {
+        auto it = parameters.find(name);
+        if (it != parameters.end() && std::holds_alternative<float>(it->second.value)) {
+            return std::get<float>(it->second.value);
+        }
+        return fallback;
+    }
+
+    utils::CString getString(const utils::CString& name,
+            const utils::CString& fallback = "") const {
+        auto it = parameters.find(name);
+        if (it != parameters.end() && std::holds_alternative<utils::CString>(it->second.value)) {
+            return std::get<utils::CString>(it->second.value);
+        }
+        return fallback;
+    }
 };
 #endif

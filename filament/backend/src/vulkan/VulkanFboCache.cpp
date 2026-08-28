@@ -105,7 +105,7 @@ fvkmemory::resource_ptr<VulkanFramebuffer> VulkanFboCache::getFramebuffer(FboKey
     FVK_LOGD << "Creating framebuffer " << config.width << "x" << config.height << " "
         << "for render pass " << config.renderPass << ", "
         << "samples = " << int(config.samples) << ", "
-        << "depth = " << (config.depth ? 1 : 0) << ", "
+        << "depth = " << (config.depthStencil ? 1 : 0) << ", "
         << "attachmentCount = " << attachmentCount;
     #endif
 
@@ -354,8 +354,8 @@ fvkmemory::resource_ptr<VulkanRenderPass> VulkanFboCache::getRenderPass(
         FVK_LOGD << (int) config.colorFormat[i] << " ";
     }
     FVK_LOGD << ", "
-             << "depth = " << config.depthFormat << ", "
-             << "initialDepthLayout = " << (int) config.initialDepthLayout << ", "
+             << "depth = " << config.depthStencilFormat << ", "
+             << "initialDepthLayout = " << (int) config.initialDepthStencilLayout << ", "
              << "samples = " << int(config.samples) << ", "
              << "needsResolveMask = " << int(config.needsResolveMask) << ", "
              << "usesLazilyAllocatedMemory = " << int(config.usesLazilyAllocatedMemory) << ", "

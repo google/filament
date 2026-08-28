@@ -47,6 +47,7 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
+namespace {
 struct App {
     SampleConfig config;
     FilamentApp2* filamentApp = nullptr;
@@ -65,31 +66,32 @@ struct Vertex {
     uint32_t color;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
+const Vertex TRIANGLE_VERTICES[3] = {
     {{1, 0}, 0xffff0000u}, // blue one (ABGR)
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u}, // green one
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu}, // red one
 };
 
-static const float3 targets_pos1[9] = {
+const float3 targets_pos1[9] = {
     {-2, 0, 0},{0, 2, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the first primitive
     {1, 1, 0},{-1, 0, 0},{-1, 0, 0}, // 2nd ...
     {0, 0, 0},{0, 0, 0},{0, 0, 0} // no position change
 };
 
-static const float3 targets_pos2[9] = {
+const float3 targets_pos2[9] = {
     {0, 2, 0},{-2, 0, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the second primitive
     {-1, 0, 0},{1, 1, 0},{-1, 0, 0}, // position of th 3rd point is same for both morph targets
     {0, 0, 0},{0, 0, 0}, {0, 0, 0}
 };
 
-static const short4 targets_tan[9] = {
+const short4 targets_tan[9] = {
   {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0},
   {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0},
   {0, 0, 0, 0},{0, 0, 0, 0},{0, 0, 0, 0}
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -177,9 +179,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine* engine, View* view, double now) {
@@ -203,11 +203,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "helloMorphing";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();

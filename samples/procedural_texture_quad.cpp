@@ -41,7 +41,6 @@
 #include <stb_image.h>
 
 #include <iostream>
-#include <string>
 
 using namespace filament;
 using utils::Entity;
@@ -50,6 +49,7 @@ using utils::Path;
 using MinFilter = TextureSampler::MinFilter;
 using MagFilter = TextureSampler::MagFilter;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -62,6 +62,7 @@ struct App {
     Entity camera;
     Camera* cam = nullptr;
 };
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -138,10 +139,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(config.title)
-                        .backend(config.backend)
+    auto fApp = samples::getBuilder(config, dm, loader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .animation([app](Engine*, View* view, double) {
@@ -156,11 +154,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "procedural_texture_quad";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

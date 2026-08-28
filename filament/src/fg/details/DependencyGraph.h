@@ -157,6 +157,48 @@ public:
      */
     EdgeContainer getOutgoingEdges(Node const* node, FrameGraphAllocator& arena) const noexcept;
 
+    template <typename F>
+    void forEachIncomingEdge(Node const* node, F&& fn) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->to == nodeId) {
+                fn(edge);
+            }
+        }
+    }
+
+    template <typename F>
+    void forEachOutgoingEdge(Node const* node, F&& fn) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->from == nodeId) {
+                fn(edge);
+            }
+        }
+    }
+
+    template <typename F>
+    Edge const* findIncomingEdge(Node const* node, F&& predicate) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->to == nodeId && predicate(edge)) {
+                return edge;
+            }
+        }
+        return nullptr;
+    }
+
+    template <typename F>
+    Edge const* findOutgoingEdge(Node const* node, F&& predicate) const noexcept {
+        NodeID const nodeId = node->getId();
+        for (Edge const* edge : mEdges) {
+            if (edge->from == nodeId && predicate(edge)) {
+                return edge;
+            }
+        }
+        return nullptr;
+    }
+
     Node const* getNode(NodeID id) const noexcept;
 
     Node* getNode(NodeID id) noexcept;

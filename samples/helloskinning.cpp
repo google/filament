@@ -47,6 +47,7 @@ using utils::EntityManager;
 using utils::Path;
 using namespace filament::math;
 
+namespace {
 struct App {
     FilamentApp2* filamentApp;
     SampleConfig config;
@@ -67,7 +68,7 @@ struct VertexWithBones {
     filament::math::float4 weighs;
 };
 
-static const VertexWithBones TRIANGLE_VERTICES_WITHBONES[6] = {
+const VertexWithBones TRIANGLE_VERTICES_WITHBONES[6] = {
     {{1, 0}, 0xffff0000u, {0,1,0,0}, {1.0f,0.f,0.f,0.f}},
     {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u, {0,1,0,0}, {0.f,1.f,0.f,0.f}},
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu,{0,1,0,0}, {0.5f,0.5f,0.f,0.f}},
@@ -76,12 +77,13 @@ static const VertexWithBones TRIANGLE_VERTICES_WITHBONES[6] = {
     {{-cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xffff00ffu,{0,1,0,0}, {0.f,0.f,0.5f,0.5f}},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[6] = { 0, 1, 2, 3};
+constexpr uint16_t TRIANGLE_INDICES[6] = { 0, 1, 2, 3 };
 
 mat4f transforms[] = {mat4f(1),
                       mat4f::translation(float3(1, 0, 0)),
                       mat4f::translation(float3(1, 1, 0)),
                       mat4f::translation(float3(0, 1, 0))};
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
@@ -168,9 +170,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 
     auto fApp =
-            FilamentApp2::Builder()
-                    .title(app->config.title)
-                    .displayManager(dm)
+            samples::getBuilder(config, dm, loader)
                     .setup(setup)
                     .cleanup(cleanup)
                     .animation([app](Engine* engine, View* view, double now) {
@@ -197,12 +197,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "hello skinning";
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto app = createSampleApp(config, dm.get(), nullptr);

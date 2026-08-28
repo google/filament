@@ -28,3 +28,7 @@ AI agents **must** consult and strictly follow the corresponding skill files for
 
 ### 5. Cross-Platform Language Bindings
 *   [skills/bindings_synchronization/SKILL.md](skills/bindings_synchronization/SKILL.md): Synchronization guidelines for Java/JNI (Android) and JavaScript/TypeScript (Web/WASM) when public C++ APIs change.
+
+### 6. Code Review & Invariant Auditing
+*   [skills/code_review/SKILL.md](skills/code_review/SKILL.md): Adversarial systems, concurrency, memory-model, and architecture code review protocol.
+

@@ -52,6 +52,9 @@ void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
     std::swap(mBegin, rhs.mBegin);
     std::swap(mSize, rhs.mSize);
     std::swap(mCur, rhs.mCur);
+    std::swap(mHead, rhs.mHead);
+    std::swap(mCount, rhs.mCount);
+    std::swap(mStack, rhs.mStack);
 }
 
 
@@ -153,9 +156,12 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
 
 // ------------------------------------------------------------------------------------------------
 
-void TrackingPolicy::HighWatermark::onAlloc(void* p, size_t const size, size_t, size_t) noexcept {
+void TrackingPolicy::HighWatermark::onAlloc(void*, size_t const size, size_t, size_t) noexcept {
     mCurrent += uint32_t(size);
-    mHighWaterMark = std::max(mCurrent, mHighWaterMark);
+    if (mCurrent > mHighWaterMark) {
+        mHighWaterMark = mCurrent;
+        mWastedAtWaterMark = mWasted;
+    }
 }
 
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
@@ -164,10 +170,18 @@ TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
     if (mSize > 0) {
         size_t usageRatio = (watermark * 100) / mSize;
         if (usageRatio > 80) {
-            LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes (" << usageRatio << "%)";
+            if (mWastedAtWaterMark > 0) {
+                LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes (" << usageRatio << "%), wasted " << mWastedAtWaterMark << " bytes";
+            } else {
+                LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes (" << usageRatio << "%)";
+            }
         }
     } else {
-        LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes";
+        if (mWastedAtWaterMark > 0) {
+            LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes, wasted " << mWastedAtWaterMark << " bytes";
+        } else {
+            LOG(INFO) << mName << " arena: High watermark " << watermark << " bytes";
+        }
     }
 }
 
@@ -176,11 +190,17 @@ void TrackingPolicy::HighWatermark::onFree(void*, size_t const size) noexcept {
     mCurrent -= uint32_t(size);
 }
 
+void TrackingPolicy::HighWatermark::onLogicalFree(void const*, size_t const size) noexcept {
+    mWasted += uint32_t(size);
+}
+
 void TrackingPolicy::HighWatermark::onReset() noexcept {
     // we should never be here if mBase is nullptr because we can't be here if the
     // underlying allocator doesn't have reset().
     assert_invariant(mBase);
     mCurrent = 0;
+    mWasted = 0;
+    mWastedAtWaterMark = 0;
 }
 
 void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
@@ -197,12 +217,14 @@ void TrackingPolicy::HighWatermark::onRewind(void const* addr) noexcept {
 
 void TrackingPolicy::Debug::onAlloc(void* p, size_t const size, size_t, size_t) noexcept {
     if (p) {
+        UTILS_UNPOISON_MEMORY_REGION(p, size);
         memset(p, 0xeb, size);
     }
 }
 
 void TrackingPolicy::Debug::onFree(void* p, size_t const size) noexcept {
     if (p) {
+        UTILS_UNPOISON_MEMORY_REGION(p, size);
         memset(p, 0xef, size);
     }
 }
@@ -215,16 +237,19 @@ void TrackingPolicy::Debug::onReset() noexcept {
     // we should never be here if mBase is nullptr because we can't be here if the
     // underlying allocator doesn't have reset().
     assert_invariant(mBase);
+    UTILS_UNPOISON_MEMORY_REGION(mBase, mSize);
     memset(mBase, 0xec, mSize);
 }
 
-void TrackingPolicy::Debug::onRewind(void* addr) noexcept {
+void TrackingPolicy::Debug::onRewind(void const* addr) noexcept {
     // we should never be here if mBase is nullptr because we can't be here if the
     // underlying allocator doesn't have rewind().
     assert(mBase);
     // for LinearAllocatorWithFallback we could get pointers outside the range
     if (addr >= mBase && addr < pointermath::add(mBase, mSize)) {
-        memset(addr, 0xed, uintptr_t(mBase) + mSize - uintptr_t(addr));
+        size_t const count = uintptr_t(mBase) + mSize - uintptr_t(addr);
+        UTILS_UNPOISON_MEMORY_REGION(addr, count);
+        memset(const_cast<void*>(addr), 0xed, count);
     }
 }
 

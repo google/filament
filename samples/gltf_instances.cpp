@@ -48,7 +48,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
 
 using namespace filament;
 using namespace filament::math;
@@ -56,6 +55,8 @@ using namespace filament::viewer;
 
 using namespace filament::gltfio;
 using namespace utils;
+
+namespace {
 
 enum MaterialSource {
     JITSHADER,
@@ -80,30 +81,32 @@ struct App {
     std::vector<FilamentInstance*> instances;
 };
 
-static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
+const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-static std::ifstream::pos_type getFileSize(const char* filename) {
+std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 
+} // namespace
+
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    }
     auto app = std::make_shared<App>();
     app->config = config;
-
-    if (config.customArgs.find("instanceToAnimate") != config.customArgs.end()) {
-        app->instanceToAnimate = std::stoi(config.customArgs.at("instanceToAnimate").c_str());
-    }
-    if (config.customArgs.find("instancesCount") != config.customArgs.end()) {
-        app->instances.resize(std::stoi(config.customArgs.at("instancesCount").c_str()));
-    }
-    if (config.customArgs.find("ubershader") != config.customArgs.end()) {
+    app->instanceToAnimate = config.getInt("animate", -1);
+    app->instances.resize(config.getInt("num", 1));
+    if (config.getBool("ubershader")) {
         app->materialSource = UBERSHADER;
     }
 
     auto loadAsset = [app, appLoader]() {
-        utils::Path filename(app->config.fileName.c_str_safe());
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
         std::vector<uint8_t> buffer = appLoader->load(filename);
         if (buffer.empty()) {
             std::cerr << "Unable to open " << filename << std::endl;
@@ -123,7 +126,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto loadResources = [app, appLoader]() {
-        utils::Path filename(app->config.fileName.c_str_safe());
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
         // Load external textures and buffers.
         utils::CString gltfPath = utils::CString(filename.getAbsolutePath().c_str());
         ResourceConfiguration configuration;
@@ -203,7 +207,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                                            UBERARCHIVE_DEFAULT_SIZE);
 
         app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
-        utils::Path filename(app->config.fileName.c_str_safe());
+        utils::Path filename(!app->config.positionalArgs.empty() ?
+                app->config.positionalArgs[0].c_str_safe() : "");
         if (filename.isEmpty()) {
             app->asset = app->assetLoader->createInstancedAsset(GLTF_DEMO_DAMAGEDHELMET_DATA,
                     GLTF_DEMO_DAMAGEDHELMET_SIZE, app->instances.data(), app->instances.size());
@@ -272,11 +277,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {};
 
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
-                        .backend(app->config.backend)
+    auto fApp = samples::getBuilder(config, dm, appLoader)
                         .setup(setup)
                         .cleanup(cleanup)
                         .imgui(gui)
@@ -287,49 +288,40 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeInt("num", 'n', "Number of instances to create", 1, 1),
+        samples::Parameter::makeInt("animate", 'm', "Index of instance to animate (-1 for all)",
+                -1, -1),
+        samples::Parameter::makeBool("ubershader", 'u', "Enable ubershader", false),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "glTF Instancing";
     config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
 
-    static constexpr const char* CUSTOM_OPTSTR = "n:m:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "num", utils::getopt::required_argument, nullptr, 'n' },
-        { "animate", utils::getopt::required_argument, nullptr, 'm' }, { nullptr, 0, nullptr, 0 }
+    samples::CommandLineSpecification spec = {
+        .parameters = createAppParameters(),
     };
-    auto customHandler = [&config](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 'm':
-                config.customArgs["instanceToAnimate"] = utils::CString(arg.c_str());
-                return true;
-            case 'n':
-                config.customArgs["instancesCount"] = utils::CString(arg.c_str());
-                return true;
-        }
-        return false;
-    };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config,
-            {
-                .customHandler = customHandler,
-                .customOptStr = CUSTOM_OPTSTR,
-                .customOptions = CUSTOM_OPTIONS,
-            });
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    int num_args = argc - optind;
-    if (num_args >= 1) {
-        config.fileName = utils::CString(argv[optind]);
-        utils::Path filename(config.fileName.c_str_safe());
+    if (!config.positionalArgs.empty()) {
+        utils::Path filename(config.positionalArgs[0].c_str_safe());
         if (!filename.exists()) {
             std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
     }
 
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto fApp = createSampleApp(config, dm.get(), loader);
     if (fApp) {
         fApp->run();
     }
+    delete loader;
 
     return 0;
 }

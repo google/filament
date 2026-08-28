@@ -247,7 +247,10 @@ ThreadWorker::ThreadWorker(JobQueue::Ptr queue, Config config, PassKey)
     });
 }
 
-ThreadWorker::~ThreadWorker() = default;
+ThreadWorker::~ThreadWorker() {
+    // Destroying a worker without calling `terminate()` first is a programming error.
+    assert_invariant(!mThread.joinable());
+}
 
 void ThreadWorker::terminate() {
     JobWorker::terminate();

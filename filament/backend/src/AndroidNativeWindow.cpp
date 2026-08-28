@@ -18,6 +18,7 @@
 
 #include <backend/platforms/AndroidNdk.h>
 
+#include <utils/api_level.h>
 #include <utils/compiler.h>
 #include <utils/Logger.h>
 
@@ -46,7 +47,7 @@ bool NativeWindow::queuesToWindowComposer(ANativeWindow* const anw) noexcept {
 }
 
 std::pair<int, bool> NativeWindow::isValid(ANativeWindow* const anw) noexcept {
-#if __ANDROID_API__ >= 26
+#if FILAMENT_ANDROID_PLATFORM_API_LEVEL >= 26
     // libnativewindow.so is not available before API level 26, this means we can't call
     // any method above 25 (even protected by __builtin_available()).
     if (__builtin_available(android 28, *)) {

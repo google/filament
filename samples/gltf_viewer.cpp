@@ -73,7 +73,7 @@
 #include <iostream>
 #include <set>
 #include <sstream>
-#include <string>
+#include <string_view>
 
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
@@ -87,6 +87,8 @@ using namespace filament::viewer;
 
 using namespace filament::gltfio;
 using namespace utils;
+
+namespace {
 
 enum MaterialSource {
     JITSHADER,
@@ -152,14 +154,14 @@ struct App {
     bool screenshotAsPPM = false;
 };
 
-static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
+const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
-static std::ifstream::pos_type getFileSize(const char* filename) {
+std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 
-static bool loadSettings(const char* filename, Settings* out) {
+bool loadSettings(const char* filename, Settings* out) {
     auto contentSize = getFileSize(filename);
     if (contentSize <= 0) {
         return false;
@@ -173,7 +175,7 @@ static bool loadSettings(const char* filename, Settings* out) {
     return serializer.readJson(json.data(), contentSize, out);
 }
 
-static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
+void createGroundPlane(Engine* engine, Scene* scene, App* app) {
     auto& em = EntityManager::get();
     Material* shadowMaterial = Material::Builder()
             .package(GLTF_DEMO_GROUNDSHADOW_DATA, GLTF_DEMO_GROUNDSHADOW_SIZE)
@@ -181,9 +183,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
     auto& viewerOptions = app->viewer->getSettings().viewer;
     shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
 
-    const static uint32_t indices[] = {
-            0, 1, 2, 2, 3, 0
-    };
+    static constexpr uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
 
     Aabb aabb = app->asset->getBoundingBox();
     if (!app->actualSize) {
@@ -193,11 +193,11 @@ static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
 
     float3 planeExtent{10.0f * aabb.extent().x, 0.0f, 10.0f * aabb.extent().z};
 
-    const static float3 vertices[] = {
-            { -planeExtent.x, 0, -planeExtent.z },
-            { -planeExtent.x, 0,  planeExtent.z },
-            {  planeExtent.x, 0,  planeExtent.z },
-            {  planeExtent.x, 0, -planeExtent.z },
+    float3* const vertices = new float3[4]{
+        { -planeExtent.x, 0, -planeExtent.z },
+        { -planeExtent.x, 0, planeExtent.z },
+        { planeExtent.x, 0, planeExtent.z },
+        { planeExtent.x, 0, -planeExtent.z },
     };
 
     short4 const tbn = packSnorm16(
@@ -209,7 +209,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
                     }
             ).xyzw);
 
-    const static short4 normals[] { tbn, tbn, tbn, tbn };
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
 
     VertexBuffer* vertexBuffer = VertexBuffer::Builder()
             .vertexCount(4)
@@ -222,7 +222,8 @@ static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
             .build(*engine);
 
     vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
-            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0]),
+            [](void* buffer, size_t, void*) { delete[] static_cast<float3*>(buffer); }));
     vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
             normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
 
@@ -262,15 +263,15 @@ static void createGroundPlane(Engine* engine, Scene* scene, App* app) {
     app->scene.groundMaterial = shadowMaterial;
 }
 
-static constexpr float4 sFullScreenTriangleVertices[3] = {
+constexpr float4 sFullScreenTriangleVertices[3] = {
         { -1.0f, -1.0f, 1.0f, 1.0f },
         {  3.0f, -1.0f, 1.0f, 1.0f },
         { -1.0f,  3.0f, 1.0f, 1.0f }
 };
 
-static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* app) {
+void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* app) {
     Material* material = Material::Builder()
             .package(GLTF_DEMO_OVERDRAW_DATA, GLTF_DEMO_OVERDRAW_SIZE)
             .build(*engine);
@@ -338,7 +339,7 @@ static void createOverdrawVisualizerEntities(Engine* engine, Scene* scene, App* 
     app->scene.fullScreenTriangleIndexBuffer = indexBuffer;
 }
 
-static void onClick(std::shared_ptr<App> app, View* view, ImVec2 pos) {
+void onClick(std::shared_ptr<App> app, View* view, ImVec2 pos) {
     view->pick(pos.x, pos.y, [app](View::PickingQueryResult const& result) {
         if (const char* name = app->asset->getName(result.renderable); name) {
             app->notificationText = utils::CString(name);
@@ -348,7 +349,7 @@ static void onClick(std::shared_ptr<App> app, View* view, ImVec2 pos) {
     });
 }
 
-static utils::Path getPathForIBLAsset(std::string_view string) {
+utils::Path getPathForIBLAsset(std::string_view string) {
     auto isIBL = [] (utils::Path file) -> bool {
         return file.getExtension() == "ktx" || file.getExtension() == "hdr" ||
             file.getExtension() == "exr";
@@ -373,7 +374,7 @@ static utils::Path getPathForIBLAsset(std::string_view string) {
     return filename;
 }
 
-static utils::Path getPathForGLTFAsset(std::string_view string) {
+utils::Path getPathForGLTFAsset(std::string_view string) {
     auto isGLTF = [] (utils::Path file) -> bool {
         return file.getExtension() == "gltf" || file.getExtension() == "glb";
     };
@@ -398,7 +399,7 @@ static utils::Path getPathForGLTFAsset(std::string_view string) {
     return filename;
 }
 
-static bool checkGLTFAsset(const utils::Path& filename) {
+bool checkGLTFAsset(const utils::Path& filename) {
     // Peek at the file size to allow pre-allocation.
     long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
     if (contentSize <= 0) {
@@ -424,28 +425,29 @@ static bool checkGLTFAsset(const utils::Path& filename) {
         return false;
     }
     return true;
-};
+}
 
+} // namespace
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    }
     auto app = std::make_shared<App>();
     app->config = config;
 
-    app->materialSource = config.customArgs.find("ubershader") != config.customArgs.end()
-                                  ? UBERSHADER
-                                  : JITSHADER;
-    app->actualSize = config.customArgs.find("actualSize") != config.customArgs.end();
-    app->recomputeAabb = config.customArgs.find("recomputeAabb") != config.customArgs.end();
-    if (config.customArgs.find("settings") != config.customArgs.end())
-        app->settingsFile = utils::CString(config.customArgs["settings"].c_str());
-    if (config.customArgs.find("batch") != config.customArgs.end())
-        app->batchFile = utils::CString(config.customArgs["batch"].c_str());
-    app->screenshotAsPPM = config.customArgs.find("screenshotAsPPM") != config.customArgs.end();
+    app->materialSource = config.getBool("ubershader") ? UBERSHADER : JITSHADER;
+    app->actualSize = config.getBool("actual-size");
+    app->recomputeAabb = config.getBool("recompute-aabb");
+    app->settingsFile = config.getString("settings");
+    app->batchFile = config.getString("batch");
+    app->screenshotAsPPM = config.getBool("screenshot-as-ppm");
 
     utils::Path filename;
-    if (!config.fileName.empty()) {
-        filename = getPathForGLTFAsset(config.fileName.c_str_safe());
+    if (!config.positionalArgs.empty()) {
+        filename = getPathForGLTFAsset(config.positionalArgs[0].c_str_safe());
         if (filename.isEmpty()) {
             std::cerr << "no glTF file found in " << filename << std::endl;
             exit(1);
@@ -488,7 +490,6 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             // First compile high priority variants
             ma->compile(Material::CompilerPriorityQueue::HIGH,
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
-                    UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
 
             // and then, everything else at low priority, except STE, which is very uncommon.
@@ -1084,11 +1085,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto postRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         if (app->screenshot) {
-            std::ostringstream stringStream;
-            stringStream << "screenshot" << std::setfill('0') << std::setw(2)
-                         << +app->screenshotSeq;
-            std::string const ext = app->screenshotAsPPM ? ".ppm" : ".tif";
-            AutomationEngine::exportScreenshot(view, renderer, stringStream.str() + ext, false,
+            char filenameBuf[64];
+            const char* const ext = app->screenshotAsPPM ? ".ppm" : ".tif";
+            snprintf(filenameBuf, sizeof(filenameBuf), "screenshot%02u%s", +app->screenshotSeq,
+                    ext);
+            AutomationEngine::exportScreenshot(view, renderer, filenameBuf, false,
                     app->automationEngine);
             ++app->screenshotSeq;
             app->screenshot = false;
@@ -1111,49 +1112,51 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         };
         app->automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
-    auto fApp = FilamentApp2::Builder()
-                        .displayManager(dm)
-                        .title(app->config.title)
-                        .iblDirectory(app->config.iblDirectory)
-                        .splitView(app->config.splitView)
-                        .backend(app->config.backend)
-                        .featureLevel(app->config.featureLevel)
-                        .cameraMode(app->config.cameraMode)
-                        .headless(app->config.headless)
-                        .stereoscopicEyeCount(app->config.stereoscopicEyeCount)
-                        .vulkanGPUHint(app->config.vulkanGPUHint)
-                        .forcedWebGPUBackend(app->config.forcedWebGPUBackend)
-                        .setup(setup)
-                        .cleanup(cleanup)
-                        .imgui(gui)
-                        .preRender(preRender)
-                        .postRender(postRender)
-                        .animation(animate)
-                        .resize(resize)
-                        .dropHandler([app, loadAsset, loadResources, setupIBL](std::string_view path) {
-                            utils::Path filename = getPathForGLTFAsset(path);
-                            if (!filename.isEmpty()) {
-                                if (checkGLTFAsset(filename)) {
-                                    app->resourceLoader->asyncCancelLoad();
-                                    app->resourceLoader->evictResourceData();
-                                    app->viewer->removeAsset();
-                                    app->assetLoader->destroyAsset(app->asset);
-                                    loadAsset(filename);
-                                    loadResources(filename);
-                                    app->viewer->setAsset(app->asset, app->instance);
-                                }
-                                return;
+    auto fApp =
+            samples::getBuilder(config, dm, appLoader)
+                    .setup(setup)
+                    .cleanup(cleanup)
+                    .imgui(gui)
+                    .preRender(preRender)
+                    .postRender(postRender)
+                    .animation(animate)
+                    .resize(resize)
+                    .dropHandler([app, loadAsset, loadResources, setupIBL](std::string_view path) {
+                        utils::Path filename = getPathForGLTFAsset(path);
+                        if (!filename.isEmpty()) {
+                            if (checkGLTFAsset(filename)) {
+                                app->resourceLoader->asyncCancelLoad();
+                                app->resourceLoader->evictResourceData();
+                                app->viewer->removeAsset();
+                                app->assetLoader->destroyAsset(app->asset);
+                                loadAsset(filename);
+                                loadResources(filename);
+                                app->viewer->setAsset(app->asset, app->instance);
                             }
+                            return;
+                        }
 
-                            filename = getPathForIBLAsset(path);
-                            if (!filename.isEmpty()) {
-                                app->filamentApp->loadIBL(path);
-                                setupIBL();
-                            }
-                        })
-                        .build();
+                        filename = getPathForIBLAsset(path);
+                        if (!filename.isEmpty()) {
+                            app->filamentApp->loadIBL(path);
+                            setupIBL();
+                        }
+                    })
+                    .build();
     app->filamentApp = fApp.get();
     return fApp;
+}
+
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("ubershader", 'u', "Enable ubershader", false),
+        samples::Parameter::makeBool("actual-size", 's', "Set window size to actual asset size",
+                false),
+        samples::Parameter::makeBool("recompute-aabb", 'r', "Recompute bounding box", false),
+        samples::Parameter::makeString("settings", 't', "Path to settings JSON file", ""),
+        samples::Parameter::makeString("batch", 'b', "Path to batch file", ""),
+        samples::Parameter::makeBool("screenshot-as-ppm", 'd', "Save screenshot as PPM", false),
+    };
 }
 
 #ifndef __ANDROID__
@@ -1161,13 +1164,14 @@ int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Filament";
     config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "GLTF_VIEWER is a tool for viewing glTF models with Filament.",
+        .positionalArgsDescription = { "gltf/glb file" },
+        .parameters = createAppParameters(),
+    };
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    int const num_args = argc - optind;
-    if (num_args >= 1) {
-        config.fileName = utils::CString(argv[optind]);
-    }
 
     auto loader = new filament::app::DesktopAssetLoader();
     auto app = createSampleApp(config, dm.get(), loader);
