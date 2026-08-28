@@ -175,7 +175,18 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
         .conversion = imageData.conversion,
     });
 
-    mSetBindings.push_back({ bindingPoint, imageData.image, set, sampler });
+    // Do a replace if a binding+set already exists (i.e. streaming texture)
+    auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
+            [set, bindingPoint](auto const& bindingInfo) {
+                return (bindingInfo.set == set && bindingInfo.binding == bindingPoint);
+            });
+
+    if (itr != mSetBindings.end()) {
+        itr->image = imageData.image;
+        itr->sampler = sampler;
+    } else {
+        mSetBindings.push_back({ bindingPoint, imageData.image, set, sampler });
+    }
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(
@@ -204,7 +215,7 @@ bool VulkanExternalImageManager::isExternallySampledTexture(
 
 void VulkanExternalImageManager::clearTextureBinding(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint) {
-    erasep<SetBindingInfo>(mSetBindings, [&](auto const& bindingInfo) {
+    erasep<SetBindingInfo>(mSetBindings, [set, bindingPoint](auto const& bindingInfo) {
         return (bindingInfo.set == set && bindingInfo.binding == bindingPoint);
     });
 }
