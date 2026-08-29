@@ -157,6 +157,138 @@ float F_Schlick(float f0, float f90, float VoH) {
 }
 
 //------------------------------------------------------------------------------
+// Iridescence
+//------------------------------------------------------------------------------
+
+#if defined(MATERIAL_HAS_IRIDESCENCE)
+
+// Belcour and Barla 2017, "A Practical Extension to Microfacet Theory for the Modeling of Varying
+// Iridescence", in the approximate form KHR_materials_iridescence specifies: Schlick replaces the
+// polarized Fresnel equations, and the spectral integral is evaluated in Fourier space against
+// Gaussians fitted to the XYZ color matching functions.
+//
+// The interference math is highp: the Gaussian fits are stated in inverse meters and their
+// amplitudes are around 1e-13, neither of which mediump can represent.
+
+// Schlick with a reflectance of one at grazing incidence, which is what an interface between two
+// dielectrics has; fresnel() below substitutes a shadowing term for that.
+float F_SchlickIridescence(float f0, float cosTheta) {
+    return f0 + (1.0 - f0) * pow5(saturate(1.0 - cosTheta));
+}
+
+vec3 F_SchlickIridescence(const vec3 f0, float cosTheta) {
+    return f0 + (1.0 - f0) * pow5(saturate(1.0 - cosTheta));
+}
+
+// Spectral counterparts of iorToF0() and f0ToIor(). The latter is exact for a dielectric and an
+// approximation for a metal, whose complex index it cannot recover.
+vec3 iorToF0(const vec3 transmittedIor, float incidentIor) {
+    vec3 t = (transmittedIor - incidentIor) / (transmittedIor + incidentIor);
+    return t * t;
+}
+
+vec3 f0ToIor(const vec3 f0) {
+    vec3 r = sqrt(f0);
+    return (1.0 + r) / (1.0 - r);
+}
+
+// The XYZ sensitivity curves in Fourier space at one optical path difference and phase: four
+// Gaussians, one per curve plus the second lobe of x.
+highp vec3 evaluateIridescenceSensitivity(highp float opd, const highp vec3 shift) {
+    // the path difference arrives in nanometers and the fits are in inverse meters
+    highp float phase = 2.0 * PI * opd * 1.0e-9;
+
+    highp vec3 value    = vec3(5.4856e-13, 4.4201e-13, 5.2481e-13);
+    highp vec3 position = vec3(1.6810e+06, 1.7953e+06, 2.2084e+06);
+    highp vec3 variance = vec3(4.3278e+09, 9.3046e+09, 6.6121e+09);
+
+    highp vec3 xyz = value * sqrt(2.0 * PI * variance) * cos(position * phase + shift) *
+            exp(-variance * phase * phase);
+    xyz.x += 9.7470e-14 * sqrt(2.0 * PI * 4.5282e+09) *
+            cos(2.2399e+06 * phase + shift.x) * exp(-4.5282e+09 * phase * phase);
+    xyz /= 1.0685e-7;
+
+    highp mat3 XYZ_TO_REC709 = mat3(
+         3.2404542, -0.9692660,  0.0556434,
+        -1.5371385,  1.8760108, -0.2040259,
+        -0.4985314,  0.0415560,  1.0572252);
+
+    return XYZ_TO_REC709 * xyz;
+}
+
+// Fresnel of a base surface under a film of the given IOR and thickness in nanometers. The stack is
+// air, the film and the base; the film absorbs nothing, so what leaves is the geometric series of
+// what bounces between its two interfaces, expanded to the second order as the specification does.
+vec3 F_Iridescence(float outsideIor, float filmIor, const vec3 baseF0,
+        highp float thicknessNm, float cosTheta1) {
+    // A film thin enough not to be there must behave as though it is not, or a thickness map whose
+    // minimum is zero shows an edge where the first interface appears.
+    float iridescenceIor = mix(outsideIor, filmIor, smoothstep(0.0, 0.03, thicknessNm));
+
+    // Snell's law through the film. Past the critical angle nothing enters it at all.
+    float cosTheta2Sq = 1.0 - sq(outsideIor / iridescenceIor) * (1.0 - sq(cosTheta1));
+    if (cosTheta2Sq < 0.0) {
+        return vec3(1.0);
+    }
+    float cosTheta2 = sqrt(cosTheta2Sq);
+
+    float R12 = F_SchlickIridescence(iorToF0(iridescenceIor, outsideIor), cosTheta1);
+    float T121 = 1.0 - R12;
+
+    // the clamp short of one is what keeps a white conductor's f0 from taking f0ToIor() to infinity
+    vec3 baseIor = f0ToIor(clamp(baseF0, 0.0, 0.9999));
+    vec3 R23 = F_SchlickIridescence(iorToF0(baseIor, iridescenceIor), cosTheta2);
+
+    highp float opd = 2.0 * iridescenceIor * thicknessNm * cosTheta2;
+
+    // the phase each reflection picks up, approximated as nothing entering a denser medium and half
+    // a turn entering a thinner one
+    float phi21 = PI - (iridescenceIor < outsideIor ? PI : 0.0);
+    highp vec3 phi = phi21 + vec3(
+            baseIor.x < iridescenceIor ? PI : 0.0,
+            baseIor.y < iridescenceIor ? PI : 0.0,
+            baseIor.z < iridescenceIor ? PI : 0.0);
+
+    vec3 R123 = clamp(R12 * R23, 1e-5, 0.9999);
+    vec3 r123 = sqrt(R123);
+    vec3 Rs = (T121 * T121) * R23 / (1.0 - R123);
+
+    vec3 I = R12 + Rs;
+    vec3 Cm = Rs - T121;
+
+    for (int m = 1; m <= 2; m++) {
+        Cm *= r123;
+        I += Cm * 2.0 * evaluateIridescenceSensitivity(float(m) * opd, float(m) * phi);
+    }
+
+    return max(I, vec3(0.0));
+}
+
+// Inverse of F_SchlickIridescence: the f0 whose Schlick curve passes through F at this angle.
+vec3 F_IridescenceToF0(const vec3 F, float cosTheta) {
+    // Schlick reaches one at grazing incidence whatever f0 was, so no f0 reproduces anything else
+    // there; the clamp keeps the division finite as that is approached
+    float weight = min(pow5(saturate(1.0 - cosTheta)), 0.9999);
+
+    return saturate((F - weight) / (1.0 - weight));
+}
+
+// Evaluate the film at the viewing angle and refit the result to a Schlick curve, so that what the
+// lobes below it read is an ordinary f0.
+//
+// The specification's rgb_mix() is deliberately absent: it weights the diffuse lobe by the inverse
+// of the film's strongest channel, and Filament does not take a Fresnel share out of the diffuse
+// lobe for an ordinary surface either.
+vec3 iridescentF0(const vec3 baseF0, float NoV, float iridescence, float iridescenceIor,
+        highp float thicknessNm) {
+    vec3 F = F_Iridescence(1.0, iridescenceIor, baseF0, thicknessNm, NoV);
+
+    return mix(baseF0, F_IridescenceToF0(F, NoV), iridescence);
+}
+
+#endif // MATERIAL_HAS_IRIDESCENCE
+
+//------------------------------------------------------------------------------
 // Specular BRDF dispatch
 //------------------------------------------------------------------------------
 

@@ -164,6 +164,15 @@ void getSheenPixelParams(const MaterialInputs material, inout PixelParams pixel)
 #endif
 }
 
+// Runs after getCommonPixelParams() has settled f0 and before the clear coat remaps it to its own
+// interface, which is the order the two glTF extensions stack in.
+void getIridescencePixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_IRIDESCENCE) && !defined(SHADING_MODEL_CLOTH) &&         !defined(SHADING_MODEL_SUBSURFACE)
+    pixel.f0 = iridescentF0(pixel.f0, shading_NoV, saturate(material.iridescence),
+            max(1.0, material.iridescenceIor), max(0.0, material.iridescenceThickness));
+#endif
+}
+
 void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     pixel.clearCoat = material.clearCoat;
@@ -285,6 +294,7 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
 void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getSpecularPixelParams(material, pixel);
     getCommonPixelParams(material, pixel);
+    getIridescencePixelParams(material, pixel);
     getSheenPixelParams(material, pixel);
     getClearCoatPixelParams(material, pixel);
     getRoughnessPixelParams(material, pixel);

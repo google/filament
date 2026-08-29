@@ -44,6 +44,10 @@ struct MaterialInputs {
 
     vec3 sheenColor;
     float sheenRoughness;
+
+    float iridescence;
+    float iridescenceIor;
+    float iridescenceThickness;
 #endif
 
     float clearCoat;
@@ -152,6 +156,11 @@ void initMaterial(out MaterialInputs material) {
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     material.sheenColor = vec3(0.0);
     material.sheenRoughness = 0.0;
+#endif
+#if defined(MATERIAL_HAS_IRIDESCENCE)
+    material.iridescence = 0.0;
+    material.iridescenceIor = 1.3;
+    material.iridescenceThickness = 400.0;
 #endif
 #endif
 
