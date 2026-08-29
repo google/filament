@@ -67,6 +67,11 @@ void MaterialKeyHelper::init(JNIEnv* env) {
     volumeThicknessUV = field("volumeThicknessUV", "I");
     hasSheen = field("hasSheen", "Z");
     hasIOR = field("hasIOR", "Z");
+    hasIridescence = field("hasIridescence", "Z");
+    hasIridescenceTexture = field("hasIridescenceTexture", "Z");
+    iridescenceUV = field("iridescenceUV", "I");
+    hasIridescenceThicknessTexture = field("hasIridescenceThicknessTexture", "Z");
+    iridescenceThicknessUV = field("iridescenceThicknessUV", "I");
 }
 
 void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
@@ -105,6 +110,12 @@ void MaterialKeyHelper::copy(JNIEnv* env, MaterialKey& dst, jobject src) {
     dst.volumeThicknessUV = env->GetIntField(src, volumeThicknessUV);
     dst.hasSheen = env->GetBooleanField(src, hasSheen);
     dst.hasIOR = env->GetBooleanField(src, hasIOR);
+    dst.hasIridescence = env->GetBooleanField(src, hasIridescence);
+    dst.hasIridescenceTexture = env->GetBooleanField(src, hasIridescenceTexture);
+    dst.iridescenceUV = env->GetIntField(src, iridescenceUV);
+    dst.hasIridescenceThicknessTexture =
+            env->GetBooleanField(src, hasIridescenceThicknessTexture);
+    dst.iridescenceThicknessUV = env->GetIntField(src, iridescenceThicknessUV);
 }
 
 void MaterialKeyHelper::copy(JNIEnv* env, jobject dst, const MaterialKey& src) {
@@ -143,6 +154,12 @@ void MaterialKeyHelper::copy(JNIEnv* env, jobject dst, const MaterialKey& src) {
     env->SetIntField(dst, volumeThicknessUV, src.volumeThicknessUV);
     env->SetBooleanField(dst, hasSheen, src.hasSheen);
     env->SetBooleanField(dst, hasIOR, src.hasIOR);
+    env->SetBooleanField(dst, hasIridescence, src.hasIridescence);
+    env->SetBooleanField(dst, hasIridescenceTexture, src.hasIridescenceTexture);
+    env->SetIntField(dst, iridescenceUV, src.iridescenceUV);
+    env->SetBooleanField(dst, hasIridescenceThicknessTexture,
+            src.hasIridescenceThicknessTexture);
+    env->SetIntField(dst, iridescenceThicknessUV, src.iridescenceThicknessUV);
 }
 
 extern "C" JNIEXPORT void JNICALL

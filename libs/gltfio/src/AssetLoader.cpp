@@ -1438,6 +1438,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
+    auto irConfig = inputMat->iridescence;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
@@ -1456,7 +1457,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         shConfig.sheen_roughness_texture.has_transform ||
         trConfig.transmission_texture.has_transform ||
         spConfig.specular_color_texture.has_transform ||
-        spConfig.specular_texture.has_transform;
+        spConfig.specular_texture.has_transform ||
+        irConfig.iridescence_texture.has_transform ||
+        irConfig.iridescence_thickness_texture.has_transform;
 
     MaterialKey matkey {
         .doubleSided = !!inputMat->double_sided,
@@ -1495,8 +1498,15 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasSpecular = !!inputMat->has_specular,
         .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
         .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
+        .hasIridescence = !!inputMat->has_iridescence,
         .specularTextureUV = static_cast<uint8_t>(spConfig.specular_texture.texcoord),
         .specularColorTextureUV = static_cast<uint8_t>(spConfig.specular_color_texture.texcoord),
+        .hasIridescenceTexture = irConfig.iridescence_texture.texture != nullptr,
+        .iridescenceUV = static_cast<uint8_t>(irConfig.iridescence_texture.texcoord),
+        .hasIridescenceThicknessTexture =
+                irConfig.iridescence_thickness_texture.texture != nullptr,
+        .iridescenceThicknessUV =
+                static_cast<uint8_t>(irConfig.iridescence_thickness_texture.texcoord),
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1585,6 +1595,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
+    auto irConfig = inputMat->iridescence;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1812,6 +1823,35 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasIridescence) {
+        mi->setParameter("iridescenceFactor", irConfig.iridescence_factor);
+        mi->setParameter("iridescenceIor", irConfig.iridescence_ior);
+        mi->setParameter("iridescenceThicknessMaximum",
+                irConfig.iridescence_thickness_max);
+
+        if (matkey.hasIridescenceTexture) {
+            fAsset->addTextureBinding(mi, "iridescenceMap",
+                    irConfig.iridescence_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt = irConfig.iridescence_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("iridescenceUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasIridescenceThicknessTexture) {
+            mi->setParameter("iridescenceThicknessMinimum",
+                    irConfig.iridescence_thickness_min);
+            fAsset->addTextureBinding(mi, "iridescenceThicknessMap",
+                    irConfig.iridescence_thickness_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt =
+                        irConfig.iridescence_thickness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("iridescenceThicknessUvMatrix", uvmat);
+            }
+        }
+    }
+
     *cacheEntry = { .instance = mi, .uvmap = *uvmap };
     return mi;
 }
@@ -1927,6 +1967,15 @@ FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
                 bool sameTexture = spConfig.specular_color_texture.texture ==
                                    spConfig.specular_texture.texture;
                 resolveTexture(spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+            }
+        }
+        if (matkey.hasIridescence) {
+            auto irConfig = inputMat->iridescence;
+            if (matkey.hasIridescenceTexture) {
+                resolveTexture(irConfig.iridescence_texture.texture, LINEAR);
+            }
+            if (matkey.hasIridescenceThicknessTexture) {
+                resolveTexture(irConfig.iridescence_thickness_texture.texture, LINEAR);
             }
         }
     }

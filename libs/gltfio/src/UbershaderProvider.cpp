@@ -51,6 +51,17 @@ static void prepareConfig(MaterialKey* config, const char* label) {
         config->hasSheen = false;
     }
 
+    // Due to sampler overload, iridescence cannot be combined with the other extensions.
+    const bool iridescenceConflict = config->hasVolume || config->hasTransmission ||
+            config->hasSheen || config->hasSpecular || config->hasClearCoat;
+
+    if (config->hasIridescence && iridescenceConflict) {
+        slog.w << "Volume, transmission, sheen, specular and clear coat are not supported together"
+                  " with iridescence in ubershader mode, removing iridescence ("
+               << label << ")." << io::endl;
+        config->hasIridescence = false;
+    }
+
     const bool clearCoatConflict = config->hasVolume || config->hasTransmission ||
             config->hasSheen || config->hasIOR;
 
@@ -195,6 +206,9 @@ Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     requirements.features["SpecularTexture"] = config.hasSpecularTexture;
     requirements.features["SpecularColorTexture"] = config.hasSpecularColorTexture;
     requirements.features["Dispersion"] = config.hasDispersion;
+    requirements.features["Iridescence"] = config.hasIridescence;
+    requirements.features["IridescenceTexture"] = config.hasIridescenceTexture;
+    requirements.features["IridescenceThicknessTexture"] = config.hasIridescenceThicknessTexture;
 
     if (Material* mat = mMaterials.getMaterial(requirements); mat != nullptr) {
         return mat;
@@ -272,6 +286,8 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
             "transmissionIndex",
             "specularIndex",
             "specularColorIndex",
+            "iridescenceIndex",
+            "iridescenceThicknessIndex",
     }) {
         if (material->hasParameter(param)) {
             mi->setParameter(param, -1);
@@ -315,6 +331,14 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
             mi->setParameter("specularColorUvMatrix", identity);
             mi->setParameter("specularColorIndex",
                     getUvIndex(config->specularColorTextureUV, config->hasSpecularColorTexture));
+        }
+        if (config->hasIridescence) {
+            mi->setParameter("iridescenceUvMatrix", identity);
+            mi->setParameter("iridescenceIndex",
+                    getUvIndex(config->iridescenceUV, config->hasIridescenceTexture));
+            mi->setParameter("iridescenceThicknessUvMatrix", identity);
+            mi->setParameter("iridescenceThicknessIndex", getUvIndex(
+                    config->iridescenceThicknessUV, config->hasIridescenceThicknessTexture));
         }
     }
 
@@ -372,6 +396,21 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
 
     if (needsTexture("SpecularColorTexture")) {
         mi->setParameter("specularColorMap", mDummyTexture, sampler);
+    }
+
+    if (needsTexture("IridescenceTexture")) {
+        mi->setParameter("iridescenceMap", mDummyTexture, sampler);
+    }
+
+    if (needsTexture("IridescenceThicknessTexture")) {
+        mi->setParameter("iridescenceThicknessMap", mDummyTexture, sampler);
+    }
+
+    if (material->hasParameter("iridescenceFactor")) {
+        mi->setParameter("iridescenceFactor", 0.0f);
+        mi->setParameter("iridescenceIor", 1.3f);
+        mi->setParameter("iridescenceThicknessMinimum", 100.0f);
+        mi->setParameter("iridescenceThicknessMaximum", 400.0f);
     }
 
     if (material->hasParameter("specularColorFactor")) {

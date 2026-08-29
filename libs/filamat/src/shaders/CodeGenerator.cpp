@@ -1210,6 +1210,9 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::CLIP_SPACE_POSITION:         return "CLIP_SPACE_POSITION";
         case Property::SECOND_ROUGHNESS:            return "SECOND_ROUGHNESS";
         case Property::SECOND_ROUGHNESS_WEIGHT:     return "SECOND_ROUGHNESS_WEIGHT";
+        case Property::IRIDESCENCE:                 return "IRIDESCENCE";
+        case Property::IRIDESCENCE_IOR:             return "IRIDESCENCE_IOR";
+        case Property::IRIDESCENCE_THICKNESS:       return "IRIDESCENCE_THICKNESS";
     }
 }
 

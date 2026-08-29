@@ -104,6 +104,16 @@ public interface MaterialProvider {
         public boolean hasSheen;
         @UsedByNative("MaterialKey.cpp")
         public boolean hasIOR;
+        @UsedByNative("MaterialKey.cpp")
+        public boolean hasIridescence;
+        @UsedByNative("MaterialKey.cpp")
+        public boolean hasIridescenceTexture;
+        @UsedByNative("MaterialKey.cpp")
+        public int iridescenceUV;
+        @UsedByNative("MaterialKey.cpp")
+        public boolean hasIridescenceThicknessTexture;
+        @UsedByNative("MaterialKey.cpp")
+        public int iridescenceThicknessUV;
 
         public MaterialKey() {}
         static {

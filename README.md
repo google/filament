@@ -162,6 +162,7 @@ pod 'Filament', '~> 1.76.0'
   - [x] KHR_materials_dispersion
   - [x] KHR_materials_emissive_strength
   - [x] KHR_materials_ior
+  - [x] KHR_materials_iridescence
   - [x] KHR_materials_pbrSpecularGlossiness
   - [x] KHR_materials_sheen
   - [x] KHR_materials_specular

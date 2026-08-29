@@ -67,4 +67,9 @@ private:
     jfieldID volumeThicknessUV;
     jfieldID hasSheen;
     jfieldID hasIOR;
+    jfieldID hasIridescence;
+    jfieldID hasIridescenceTexture;
+    jfieldID iridescenceUV;
+    jfieldID hasIridescenceThicknessTexture;
+    jfieldID iridescenceThicknessUV;
 };

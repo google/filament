@@ -375,6 +375,39 @@ std::string shaderFromKey(const MaterialKey& config) {
                 )SHADER";
             }
         }
+
+        if (config.hasIridescence) {
+            shader += R"SHADER(
+                material.iridescence = materialParams.iridescenceFactor;
+                material.iridescenceIor = materialParams.iridescenceIor;
+                material.iridescenceThickness = materialParams.iridescenceThicknessMaximum;
+            )SHADER";
+
+            if (config.hasIridescenceTexture) {
+                shader += "highp float2 iridescenceUV = ${iridescence};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "iridescenceUV = (vec3(iridescenceUV, 1.0) * "
+                              "materialParams.iridescenceUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.iridescence *= texture(materialParams_iridescenceMap, iridescenceUV).r;
+                )SHADER";
+            }
+
+            // the thickness texture's green channel selects a position in the min/max range
+            if (config.hasIridescenceThicknessTexture) {
+                shader += "highp float2 iridescenceThicknessUV = ${iridescenceThickness};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "iridescenceThicknessUV = (vec3(iridescenceThicknessUV, 1.0) * "
+                              "materialParams.iridescenceThicknessUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.iridescenceThickness = mix(materialParams.iridescenceThicknessMinimum,
+                            materialParams.iridescenceThicknessMaximum,
+                            texture(materialParams_iridescenceThicknessMap, iridescenceThicknessUV).g);
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -547,6 +580,29 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             if (config.hasTextureTransforms) {
                 builder.parameter("specularColorUvMatrix", MaterialBuilder::UniformType::MAT3,
                                   MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // IRIDESCENCE
+    if (config.hasIridescence) {
+        builder.parameter("iridescenceFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("iridescenceIor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("iridescenceThicknessMaximum", MaterialBuilder::UniformType::FLOAT);
+        if (config.hasIridescenceTexture) {
+            builder.parameter("iridescenceMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("iridescenceUvMatrix", MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+        if (config.hasIridescenceThicknessTexture) {
+            builder.parameter("iridescenceThicknessMinimum", MaterialBuilder::UniformType::FLOAT);
+            builder.parameter("iridescenceThicknessMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("iridescenceThicknessUvMatrix",
+                        MaterialBuilder::UniformType::MAT3,
+                        MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
     }
