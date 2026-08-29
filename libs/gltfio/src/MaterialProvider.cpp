@@ -61,7 +61,12 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.hasSpecularTexture == k2.hasSpecularTexture) &&
         (k1.hasSpecularColorTexture == k2.hasSpecularColorTexture) &&
         (k1.specularTextureUV == k2.specularTextureUV) &&
-        (k1.specularColorTextureUV == k2.specularColorTextureUV)
+        (k1.specularColorTextureUV == k2.specularColorTextureUV) &&
+        (k1.hasIridescence == k2.hasIridescence) &&
+        (k1.hasIridescenceTexture == k2.hasIridescenceTexture) &&
+        (k1.iridescenceUV == k2.iridescenceUV) &&
+        (k1.hasIridescenceThicknessTexture == k2.hasIridescenceThicknessTexture) &&
+        (k1.iridescenceThicknessUV == k2.iridescenceThicknessUV)
         ;
 }
 
@@ -163,6 +168,20 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->specularColorTextureUV] = (UvSet) index++;
         }
     }
+    if (key->hasIridescenceTexture && retval[key->iridescenceUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasIridescenceTexture = false;
+        } else {
+            retval[key->iridescenceUV] = (UvSet) index++;
+        }
+    }
+    if (key->hasIridescenceThicknessTexture && retval[key->iridescenceThicknessUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasIridescenceThicknessTexture = false;
+        } else {
+            retval[key->iridescenceThicknessUV] = (UvSet) index++;
+        }
+    }
 
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
@@ -190,6 +209,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& volumeThicknessUV = uvstrings[uvmap[config.volumeThicknessUV]];
     const auto& specularUV = uvstrings[uvmap[config.specularTextureUV]];
     const auto& specularColorUV = uvstrings[uvmap[config.specularColorTextureUV]];
+    const auto& iridescenceUV = uvstrings[uvmap[config.iridescenceUV]];
+    const auto& iridescenceThicknessUV = uvstrings[uvmap[config.iridescenceThicknessUV]];
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -205,6 +226,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${volumeThickness}", volumeThicknessUV);
     replaceAll("${specular}", specularUV);
     replaceAll("${specularColor}", specularColorUV);
+    replaceAll("${iridescenceThickness}", iridescenceThicknessUV);
+    replaceAll("${iridescence}", iridescenceUV);
 }
 
 } // namespace filament::gltfio

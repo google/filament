@@ -1,0 +1,45 @@
+ShadingModel=lit
+
+# Required Aspects
+BlendingMode = ${BLENDING}
+
+VertexColors = optional
+BaseColorTexture = optional
+NormalTexture = optional
+OcclusionTexture = optional
+EmissiveTexture = optional
+MetallicRoughnessTexture = optional
+TextureTransforms = optional
+
+# KHR_materials_iridescence Features
+Iridescence = optional
+IridescenceTexture = optional
+IridescenceThicknessTexture = optional
+
+# ClearCoat Features
+ClearCoat = unsupported
+ClearCoatTexture = unsupported
+ClearCoatRoughnessTexture = unsupported
+ClearCoatNormalTexture = unsupported
+
+# Sheen Features
+Sheen = unsupported
+SheenColorTexture = unsupported
+SheenRoughnessTexture = unsupported
+
+# Transmission and IOR Features
+Transmission = unsupported
+Ior = optional
+TransmissionTexture = unsupported
+
+# Volume Features
+Volume = unsupported
+VolumeThicknessTexture = unsupported
+
+# KHR_materials_specular Features
+Specular = unsupported
+SpecularTexture = unsupported
+SpecularColorTexture = unsupported
+
+# KHR_materials_dispersion Features
+Dispersion = unsupported
