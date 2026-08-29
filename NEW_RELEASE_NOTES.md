@@ -6,3 +6,4 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- materials: add `iridescence`, `iridescenceIor` and `iridescenceThickness` to the lit shading models
