@@ -42,6 +42,40 @@ namespace {
 
 using utils::JobSystem;
 
+enum DynamicStateBits : uint16_t {
+    DIRTY_NONE                 = 0,
+    DIRTY_DEPTH_BIAS           = 1 << 0,
+    // VK_EXT_extended_dynamic_state
+    DIRTY_CULL_MODE            = 1 << 1,
+    DIRTY_DEPTH_COMPARE_OP     = 1 << 2,
+    DIRTY_DEPTH_TEST_ENABLE    = 1 << 3,
+    DIRTY_DEPTH_WRITE_ENABLE   = 1 << 4,
+    DIRTY_FRONT_FACE           = 1 << 5,
+    DIRTY_PRIMITIVE_TOPOLOGY   = 1 << 6,
+    DIRTY_STENCIL_STATE        = 1 << 7,
+    DIRTY_STENCIL_TEST_ENABLE  = 1 << 8,
+    // VK_EXT_extended_dynamic_state2
+    DIRTY_DEPTH_BIAS_ENABLE    = 1 << 9,
+    // VK_EXT_vertex_input_dynamic_state
+    DIRTY_VERTEX_INPUT         = 1 << 10,
+};
+
+constexpr bool isDepthTestEnabled(VulkanPipelineCache::RasterState const& raster) noexcept {
+    return raster.depthCompareOp != SamplerCompareFunc::A || raster.depthWriteEnable;
+}
+
+constexpr bool isStencilTestEnabled(StencilState const& stencil) noexcept {
+    return stencil.front.stencilFunc != StencilState::StencilFunction::A ||
+           stencil.back.stencilFunc != StencilState::StencilFunction::A ||
+           stencil.front.stencilOpDepthFail != StencilOperation::KEEP ||
+           stencil.back.stencilOpDepthFail != StencilOperation::KEEP ||
+           stencil.front.stencilOpStencilFail != StencilOperation::KEEP ||
+           stencil.back.stencilOpStencilFail != StencilOperation::KEEP ||
+           stencil.front.stencilOpDepthStencilPass != StencilOperation::KEEP ||
+           stencil.back.stencilOpDepthStencilPass != StencilOperation::KEEP ||
+           stencil.stencilWrite;
+}
+
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
 void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedbackInfo) {
     VkPipelineCreationFeedback const& pipelineInfo = *feedbackInfo.pPipelineCreationFeedback;
@@ -75,6 +109,9 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, VulkanContext const& context)
         : mDevice(device),
           mCallbackManager(driver),
+          mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
+          mHasDynamicState(context.isExtendedDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
+          mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mContext(context) {
     VkPipelineCacheCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -92,15 +129,19 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VkDevice device, Vu
                 // No cleanup required.
             });
     }
+
+    FVK_LOGD << "Vertex input dynamic state supported: " << mHasVertexInputDynamicState;
+    FVK_LOGD << "Extended dynamic state supported: " << mHasDynamicState;
+    FVK_LOGD << "Extended dynamic state 2 supported: " << mHasDynamicState2;
 }
 
 void VulkanPipelineCache::bindLayout(VkPipelineLayout layout) noexcept {
-    mPipelineRequirements.layout = layout;
+    mStaticPipelineKey.layout = layout;
 }
 
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipeline() noexcept {
     // If a cached object exists, re-use it, otherwise create a new one.
-    if (PipelineMap::iterator pipelineIter = mPipelines.find(mPipelineRequirements);
+    if (PipelineMap::iterator pipelineIter = mPipelines.find(mStaticPipelineKey);
             pipelineIter != mPipelines.end()) {
         auto& pipeline = pipelineIter.value();
         pipeline.lastUsed = mCurrentTime;
@@ -111,26 +152,35 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
             "Pipeline(Miss)", "program", mBoundProgram.c_str_safe());
     PipelineCacheEntry cacheEntry {
-        .handle = createPipeline(mPipelineRequirements),
+        .handle = createPipeline(mStaticPipelineKey),
         .lastUsed = mCurrentTime,
     };
     assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
-    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
+    return &mPipelines.emplace(mStaticPipelineKey, cacheEntry).first.value();
 }
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     VkCommandBuffer const cmdbuffer = commands->buffer();
-    PipelineCacheEntry* cacheEntry = getOrCreatePipeline();
 
-    // If an error occurred, allow higher levels to handle it gracefully.
-    assert_invariant(cacheEntry != nullptr && "Failed to create/find pipeline");
-
-
+    // The frontend's PipelineState may trigger a backend bindPipeline call due to dynamic
+    // state changes (e.g. vertex buffer info, polygon offset, or raster state). However, when
+    // dynamic extensions are enabled, mStaticPipelineKey remains unchanged across these calls.
+    // By checking if mBoundPipeline matches mStaticPipelineKey first, we avoid expensive
+    // MurmurHash calculations and hash map lookups on consecutive draws sharing the same static pipeline.
     static PipelineEqual equal;
-    if (!equal(mBoundPipeline, mPipelineRequirements)) {
-        mBoundPipeline = mPipelineRequirements;
+    if (UTILS_UNLIKELY(!equal(mBoundPipeline, mStaticPipelineKey))) {
+        PipelineCacheEntry* cacheEntry = getOrCreatePipeline();
+        assert_invariant(cacheEntry != nullptr && "Failed to create/find pipeline");
+        mBoundPipeline = mStaticPipelineKey;
         vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
     }
+
+    uint16_t const dirtyMask = computeDirtyDynamicState();
+    if (dirtyMask == DIRTY_NONE) {
+        return;
+    }
+
+    bindDynamicState(cmdbuffer, dirtyMask);
 }
 
 void VulkanPipelineCache::asyncPrewarmCache(
@@ -238,10 +288,12 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .pAttachments = colorBlendAttachments,
     };
 
+    const bool hasVertexInputState = !dynamicOptions.useDynamicVertexInputState && !mHasVertexInputDynamicState;
+
     VkPipelineVertexInputStateCreateInfo vertexInputState;
     VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
     VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
-    if (!dynamicOptions.useDynamicVertexInputState) {
+    if (hasVertexInputState) {
         uint32_t numVertexAttribs = 0;
         uint32_t numVertexBuffers = 0;
 
@@ -264,7 +316,9 @@ VkPipeline VulkanPipelineCache::createPipeline(
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = (VkPrimitiveTopology) key.topology,
+        // For dynamic state avoid VUID-VkGraphicsPipelineCreateInfo-topology-08773
+        .topology = mHasDynamicState ?
+                VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST : (VkPrimitiveTopology) key.topology,
     };
     VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -272,15 +326,41 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .scissorCount = 1,
     };
 
-    constexpr size_t maxDynamicStates = 3;
+    constexpr size_t maxDynamicStates = 16;
     size_t numDynamicStates = 2;
     VkDynamicState enabledDynamicStates[maxDynamicStates] = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
     };
-    if (dynamicOptions.useDynamicVertexInputState) {
+    if (!hasVertexInputState) {
         enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_VERTEX_INPUT_EXT;
     }
+
+    if (mHasDynamicState) {
+        // VK_DYNAMIC_STATE_DEPTH_BIAS is always available but for now only use it with
+        // VK_EXT_extended_dynamic_state.
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_BIAS;
+
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_CULL_MODE_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_FRONT_FACE_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_COMPARE_OP_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_STENCIL_OP_EXT;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE_EXT;
+
+        // These dynamic states are always available but only used with
+        // VK_EXT_extended_dynamic_state because StencilState is tracked as a whole.
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_STENCIL_REFERENCE;
+    }
+
+    if (mHasDynamicState2) {
+        enabledDynamicStates[numDynamicStates++] = VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE_EXT;
+    }
+
     VkPipelineDynamicStateCreateInfo dynamicState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
         .dynamicStateCount = static_cast<uint32_t>(numDynamicStates),
@@ -308,21 +388,9 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .alphaToCoverageEnable = raster.alphaToCoverageEnable,
         .alphaToOneEnable = VK_FALSE,
     };
-    bool const enableDepthTest =
-        raster.depthCompareOp != SamplerCompareFunc::A ||
-        raster.depthWriteEnable;
-    // Stencil must be enabled if we're testing OR writing to the stencil buffer.
+    bool const enableDepthTest = isDepthTestEnabled(raster);
+    bool const enableStencilTest = isStencilTestEnabled(key.stencilState);
     auto const& stencil = key.stencilState;
-    bool const enableStencilTest =
-        stencil.front.stencilFunc != StencilState::StencilFunction::A ||
-        stencil.back.stencilFunc != StencilState::StencilFunction::A ||
-        stencil.front.stencilOpDepthFail != StencilOperation::KEEP ||
-        stencil.back.stencilOpDepthFail != StencilOperation::KEEP ||
-        stencil.front.stencilOpStencilFail != StencilOperation::KEEP ||
-        stencil.back.stencilOpStencilFail != StencilOperation::KEEP ||
-        stencil.front.stencilOpDepthStencilPass != StencilOperation::KEEP ||
-        stencil.back.stencilOpDepthStencilPass != StencilOperation::KEEP ||
-        stencil.stencilWrite;
     VkPipelineDepthStencilStateCreateInfo vkDs = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
         .depthTestEnable = enableDepthTest ? VK_TRUE : VK_FALSE,
@@ -356,7 +424,7 @@ VkPipeline VulkanPipelineCache::createPipeline(
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1,
         .pStages = shaderStages,
-        .pVertexInputState = dynamicOptions.useDynamicVertexInputState ? nullptr : &vertexInputState,
+        .pVertexInputState = hasVertexInputState ? &vertexInputState : nullptr,
         .pInputAssemblyState = &inputAssemblyState,
         .pViewportState = &viewportState,
         .pRasterizationState = &vkRaster,
@@ -452,49 +520,90 @@ VkPipeline VulkanPipelineCache::createPipeline(
 }
 
 void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept {
-    mPipelineRequirements.shaders[0] = program->getVertexShader();
-    mPipelineRequirements.shaders[1] = program->getFragmentShader();
+    mStaticPipelineKey.shaders[0] = program->getVertexShader();
+    mStaticPipelineKey.shaders[1] = program->getFragmentShader();
     mBoundProgram = program->programString;
 
     // If this is a debug build, validate the current shader.
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-    if (mPipelineRequirements.shaders[0] == VK_NULL_HANDLE ||
-            mPipelineRequirements.shaders[1] == VK_NULL_HANDLE) {
+    if (mStaticPipelineKey.shaders[0] == VK_NULL_HANDLE ||
+            mStaticPipelineKey.shaders[1] == VK_NULL_HANDLE) {
         FVK_LOGE << "Binding missing shader: " << program->name.c_str();
     }
 #endif
 }
 
 void VulkanPipelineCache::bindRasterState(RasterState const& rasterState) noexcept {
-    mPipelineRequirements.rasterState = rasterState;
+    RasterState& dsTarget = mHasDynamicState ?
+            mDynamicPipelineKey.rasterState : mStaticPipelineKey.rasterState;
+    dsTarget.cullMode = rasterState.cullMode;
+    dsTarget.frontFace = rasterState.frontFace;
+    dsTarget.depthWriteEnable = rasterState.depthWriteEnable;
+    dsTarget.depthCompareOp = rasterState.depthCompareOp;
+    dsTarget.depthBiasConstantFactor = rasterState.depthBiasConstantFactor;
+    dsTarget.depthBiasSlopeFactor = rasterState.depthBiasSlopeFactor;
+
+    RasterState& ds2Target = mHasDynamicState2 ?
+            mDynamicPipelineKey.rasterState : mStaticPipelineKey.rasterState;
+    ds2Target.depthBiasEnable = rasterState.depthBiasEnable;
+
+    mStaticPipelineKey.rasterState.blendEnable = rasterState.blendEnable;
+    mStaticPipelineKey.rasterState.alphaToCoverageEnable = rasterState.alphaToCoverageEnable;
+    mStaticPipelineKey.rasterState.srcColorBlendFactor = rasterState.srcColorBlendFactor;
+    mStaticPipelineKey.rasterState.dstColorBlendFactor = rasterState.dstColorBlendFactor;
+    mStaticPipelineKey.rasterState.srcAlphaBlendFactor = rasterState.srcAlphaBlendFactor;
+    mStaticPipelineKey.rasterState.dstAlphaBlendFactor = rasterState.dstAlphaBlendFactor;
+    mStaticPipelineKey.rasterState.colorWriteMask = rasterState.colorWriteMask;
+    mStaticPipelineKey.rasterState.rasterizationSamples = rasterState.rasterizationSamples;
+    mStaticPipelineKey.rasterState.depthClamp = rasterState.depthClamp;
+    mStaticPipelineKey.rasterState.colorTargetCount = rasterState.colorTargetCount;
+    mStaticPipelineKey.rasterState.colorBlendOp = rasterState.colorBlendOp;
+    mStaticPipelineKey.rasterState.alphaBlendOp = rasterState.alphaBlendOp;
 }
 
 void VulkanPipelineCache::bindStencilState(StencilState const& stencilState) noexcept {
-    mPipelineRequirements.stencilState = stencilState;
+    if (mHasDynamicState) {
+        mDynamicPipelineKey.stencilState = stencilState;
+    } else {
+        mStaticPipelineKey.stencilState = stencilState;
+    }
 }
 
 void VulkanPipelineCache::bindRenderPass(
         fvkmemory::resource_ptr<VulkanRenderPass> renderPass,
         int subpassIndex) noexcept {
-    mPipelineRequirements.renderPass = renderPass->getVkRenderPass();
-    mPipelineRequirements.subpassIndex = subpassIndex;
+    mStaticPipelineKey.renderPass = renderPass->getVkRenderPass();
+    mStaticPipelineKey.subpassIndex = subpassIndex;
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
-    assert_invariant(uint32_t(topology) <= 0xffffu);
-    mPipelineRequirements.topology = topology;
+    if (mHasDynamicState) {
+        mDynamicPipelineKey.topology = topology;
+    } else {
+        mStaticPipelineKey.topology = topology;
+    }
 }
 
 void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
         VkVertexInputBindingDescription const* bufferDesc, uint8_t count) {
+    PipelineKey& targetKey = mHasVertexInputDynamicState ?
+            mDynamicPipelineKey : mStaticPipelineKey;
     for (size_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         if (i < count) {
-            mPipelineRequirements.vertexAttributes[i] = attribDesc[i];
-            mPipelineRequirements.vertexBuffers[i] = bufferDesc[i];
+            targetKey.vertexAttributes[i] = attribDesc[i];
+            targetKey.vertexBuffers[i] = bufferDesc[i];
         } else {
-            mPipelineRequirements.vertexAttributes[i] = VertexInputAttributeDescription{};
-            mPipelineRequirements.vertexBuffers[i] = VertexInputBindingDescription{};
+            targetKey.vertexAttributes[i] = VertexInputAttributeDescription{};
+            targetKey.vertexBuffers[i] = VertexInputBindingDescription{};
         }
+    }
+
+    if (mHasVertexInputDynamicState) {
+        // TODO: Hash only once in VulkanVertexBufferInfo to avoid recomputing every bind call.
+        mDynamicVertexHash = utils::hash::murmur3(
+            reinterpret_cast<const uint32_t*>(targetKey.vertexAttributes),
+            (sizeof(targetKey.vertexAttributes) + sizeof(targetKey.vertexBuffers)) / 4,
+            0);
     }
 }
 
@@ -506,8 +615,15 @@ void VulkanPipelineCache::addCachePrewarmCallback(CallbackHandler* handler,
     }
 }
 
+void VulkanPipelineCache::resetBoundDynamicState() noexcept {
+    mForceDirtyDynamicState = true;
+}
+
 void VulkanPipelineCache::resetBoundPipeline() {
     mBoundPipeline = {};
+    mBoundDynamicState = {};
+    mForceDirtyDynamicState = true;
+    mBoundVertexHash = 0;
 }
 
 void VulkanPipelineCache::terminate() noexcept {
@@ -553,6 +669,170 @@ void VulkanPipelineCache::gc() noexcept {
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
         const PipelineKey& k2) const {
     return 0 == memcmp((const void*) &k1, (const void*) &k2, sizeof(k1));
+}
+
+uint16_t VulkanPipelineCache::computeDirtyDynamicState() noexcept {
+    if (UTILS_UNLIKELY(mForceDirtyDynamicState)) {
+       mForceDirtyDynamicState = false;
+        uint16_t mask = DIRTY_NONE;
+        if (mHasVertexInputDynamicState) {
+            mask |= DIRTY_VERTEX_INPUT;
+        }
+        if (mHasDynamicState) {
+            mask |= DIRTY_DEPTH_BIAS | DIRTY_CULL_MODE | DIRTY_FRONT_FACE | DIRTY_PRIMITIVE_TOPOLOGY |
+                    DIRTY_DEPTH_TEST_ENABLE | DIRTY_DEPTH_WRITE_ENABLE | DIRTY_DEPTH_COMPARE_OP |
+                    DIRTY_STENCIL_TEST_ENABLE | DIRTY_STENCIL_STATE;
+        }
+        if (mHasDynamicState2) {
+            mask |= DIRTY_DEPTH_BIAS_ENABLE;
+        }
+        return mask;
+    }
+
+    uint16_t dirty = DIRTY_NONE;
+
+    if (mHasVertexInputDynamicState) {
+        if (mDynamicVertexHash != mBoundVertexHash) {
+            dirty |= DIRTY_VERTEX_INPUT;
+        }
+    }
+
+    if (mHasDynamicState) {
+        RasterState const& dyn = mDynamicPipelineKey.rasterState;
+        RasterState const& bound = mBoundDynamicState.rasterState;
+        if (dyn.depthBiasConstantFactor != bound.depthBiasConstantFactor ||
+                dyn.depthBiasSlopeFactor != bound.depthBiasSlopeFactor) {
+            dirty |= DIRTY_DEPTH_BIAS;
+        }
+
+        if (dyn.cullMode != bound.cullMode) dirty |= DIRTY_CULL_MODE;
+        if (dyn.frontFace != bound.frontFace) dirty |= DIRTY_FRONT_FACE;
+        if (mDynamicPipelineKey.topology != mBoundDynamicState.topology) dirty |= DIRTY_PRIMITIVE_TOPOLOGY;
+
+        bool const enableDepth = isDepthTestEnabled(dyn);
+        bool const prevEnableDepth = isDepthTestEnabled(bound);
+        if (enableDepth != prevEnableDepth) dirty |= DIRTY_DEPTH_TEST_ENABLE;
+        if (dyn.depthWriteEnable != bound.depthWriteEnable) dirty |= DIRTY_DEPTH_WRITE_ENABLE;
+        if (dyn.depthCompareOp != bound.depthCompareOp) dirty |= DIRTY_DEPTH_COMPARE_OP;
+
+        bool const enableStencil = isStencilTestEnabled(mDynamicPipelineKey.stencilState);
+        bool const prevEnableStencil = isStencilTestEnabled(mBoundDynamicState.stencilState);
+        if (enableStencil != prevEnableStencil) dirty |= DIRTY_STENCIL_TEST_ENABLE;
+        if (memcmp(&mDynamicPipelineKey.stencilState, &mBoundDynamicState.stencilState,
+                   sizeof(mDynamicPipelineKey.stencilState)) != 0) {
+            dirty |= DIRTY_STENCIL_STATE;
+        }
+    }
+
+    if (mHasDynamicState2) {
+        if (mDynamicPipelineKey.rasterState.depthBiasEnable != mBoundDynamicState.rasterState.depthBiasEnable) {
+            dirty |= DIRTY_DEPTH_BIAS_ENABLE;
+        }
+    }
+
+    return dirty;
+}
+
+void VulkanPipelineCache::bindDynamicState(VkCommandBuffer cmdbuffer, uint16_t dirtyMask) {
+    if (dirtyMask & DIRTY_VERTEX_INPUT) {
+        uint32_t numVertexAttribs = 0;
+        uint32_t numVertexBuffers = 0;
+        VkVertexInputAttributeDescription2EXT vertexAttributes[VERTEX_ATTRIBUTE_COUNT];
+        VkVertexInputBindingDescription2EXT vertexBuffers[VERTEX_ATTRIBUTE_COUNT];
+        for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
+            if (mDynamicPipelineKey.vertexAttributes[i].format > 0) {
+                vertexAttributes[numVertexAttribs++] = VkVertexInputAttributeDescription2EXT{
+                    .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
+                    .location = mDynamicPipelineKey.vertexAttributes[i].location,
+                    .binding = mDynamicPipelineKey.vertexAttributes[i].binding,
+                    .format = (VkFormat) mDynamicPipelineKey.vertexAttributes[i].format,
+                    .offset = mDynamicPipelineKey.vertexAttributes[i].offset,
+                };
+            }
+            if (mDynamicPipelineKey.vertexBuffers[i].stride > 0) {
+                vertexBuffers[numVertexBuffers++] = VkVertexInputBindingDescription2EXT{
+                    .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_BINDING_DESCRIPTION_2_EXT,
+                    .binding = mDynamicPipelineKey.vertexBuffers[i].binding,
+                    .stride = mDynamicPipelineKey.vertexBuffers[i].stride,
+                    .inputRate = (VkVertexInputRate) mDynamicPipelineKey.vertexBuffers[i].inputRate,
+                    .divisor = 1,
+                };
+            }
+        }
+        mBoundVertexHash = mDynamicVertexHash;
+        vkCmdSetVertexInputEXT(cmdbuffer, numVertexBuffers, vertexBuffers, numVertexAttribs, vertexAttributes);
+    }
+
+    if (dirtyMask & DIRTY_DEPTH_BIAS) {
+        mBoundDynamicState.rasterState.depthBiasConstantFactor =
+                mDynamicPipelineKey.rasterState.depthBiasConstantFactor;
+        mBoundDynamicState.rasterState.depthBiasSlopeFactor =
+                mDynamicPipelineKey.rasterState.depthBiasSlopeFactor;
+        vkCmdSetDepthBias(cmdbuffer, mDynamicPipelineKey.rasterState.depthBiasConstantFactor,
+                /*depthBiasClamp=*/0.0, mDynamicPipelineKey.rasterState.depthBiasSlopeFactor);
+    }
+
+    if (dirtyMask & DIRTY_CULL_MODE) {
+        mBoundDynamicState.rasterState.cullMode = mDynamicPipelineKey.rasterState.cullMode;
+        vkCmdSetCullModeEXT(cmdbuffer, mDynamicPipelineKey.rasterState.cullMode);
+    }
+
+    if (dirtyMask & DIRTY_FRONT_FACE) {
+        mBoundDynamicState.rasterState.frontFace = mDynamicPipelineKey.rasterState.frontFace;
+        vkCmdSetFrontFaceEXT(cmdbuffer, mDynamicPipelineKey.rasterState.frontFace);
+    }
+
+    if (dirtyMask & DIRTY_PRIMITIVE_TOPOLOGY) {
+        mBoundDynamicState.topology = mDynamicPipelineKey.topology;
+        vkCmdSetPrimitiveTopologyEXT(cmdbuffer, (VkPrimitiveTopology) mDynamicPipelineKey.topology);
+    }
+
+    if (dirtyMask & DIRTY_DEPTH_TEST_ENABLE) {
+        bool const enableDepthTest = isDepthTestEnabled(mDynamicPipelineKey.rasterState);
+        vkCmdSetDepthTestEnableEXT(cmdbuffer, enableDepthTest ? VK_TRUE : VK_FALSE);
+    }
+
+    if (dirtyMask & DIRTY_DEPTH_WRITE_ENABLE) {
+        mBoundDynamicState.rasterState.depthWriteEnable = mDynamicPipelineKey.rasterState.depthWriteEnable;
+        vkCmdSetDepthWriteEnableEXT(cmdbuffer, mDynamicPipelineKey.rasterState.depthWriteEnable);
+    }
+
+    if (dirtyMask & DIRTY_DEPTH_COMPARE_OP) {
+        mBoundDynamicState.rasterState.depthCompareOp = mDynamicPipelineKey.rasterState.depthCompareOp;
+        vkCmdSetDepthCompareOpEXT(cmdbuffer, fvkutils::getCompareOp(mDynamicPipelineKey.rasterState.depthCompareOp));
+    }
+
+    if (dirtyMask & DIRTY_STENCIL_TEST_ENABLE) {
+        bool const enableStencilTest = isStencilTestEnabled(mDynamicPipelineKey.stencilState);
+        vkCmdSetStencilTestEnableEXT(cmdbuffer, enableStencilTest ? VK_TRUE : VK_FALSE);
+    }
+
+    if (dirtyMask & DIRTY_STENCIL_STATE) {
+        mBoundDynamicState.stencilState = mDynamicPipelineKey.stencilState;
+        StencilState const& stencil = mDynamicPipelineKey.stencilState;
+        vkCmdSetStencilOpEXT(cmdbuffer, VK_STENCIL_FACE_FRONT_BIT,
+                fvkutils::getStencilOp(stencil.front.stencilOpStencilFail),
+                fvkutils::getStencilOp(stencil.front.stencilOpDepthStencilPass),
+                fvkutils::getStencilOp(stencil.front.stencilOpDepthFail),
+                fvkutils::getCompareOp(stencil.front.stencilFunc));
+        vkCmdSetStencilCompareMask(cmdbuffer, VK_STENCIL_FACE_FRONT_BIT, stencil.front.readMask);
+        vkCmdSetStencilWriteMask(cmdbuffer, VK_STENCIL_FACE_FRONT_BIT, stencil.front.writeMask);
+        vkCmdSetStencilReference(cmdbuffer, VK_STENCIL_FACE_FRONT_BIT, stencil.front.ref);
+
+        vkCmdSetStencilOpEXT(cmdbuffer, VK_STENCIL_FACE_BACK_BIT,
+                fvkutils::getStencilOp(stencil.back.stencilOpStencilFail),
+                fvkutils::getStencilOp(stencil.back.stencilOpDepthStencilPass),
+                fvkutils::getStencilOp(stencil.back.stencilOpDepthFail),
+                fvkutils::getCompareOp(stencil.back.stencilFunc));
+        vkCmdSetStencilCompareMask(cmdbuffer, VK_STENCIL_FACE_BACK_BIT, stencil.back.readMask);
+        vkCmdSetStencilWriteMask(cmdbuffer, VK_STENCIL_FACE_BACK_BIT, stencil.back.writeMask);
+        vkCmdSetStencilReference(cmdbuffer, VK_STENCIL_FACE_BACK_BIT, stencil.back.ref);
+    }
+
+    if (dirtyMask & DIRTY_DEPTH_BIAS_ENABLE) {
+        mBoundDynamicState.rasterState.depthBiasEnable = mDynamicPipelineKey.rasterState.depthBiasEnable;
+        vkCmdSetDepthBiasEnableEXT(cmdbuffer, mDynamicPipelineKey.rasterState.depthBiasEnable);
+    }
 }
 
 } // namespace filament::backend
