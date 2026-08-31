@@ -17,6 +17,7 @@
 #include "VulkanContext.h"
 
 #include "VulkanCommands.h"
+#include "VulkanConstants.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
@@ -26,14 +27,83 @@
 #include <utils/Panic.h>
 
 #include <algorithm> // for std::max
+#include <cstring>
 
 using namespace bluevk;
 
 namespace {
 
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+        VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
+        void* pUserData) {
+    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        FVK_LOGE << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
+    } else {
+        // TODO: emit best practices warnings about aggressive pipeline barriers.
+        if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT") ||
+                strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
+            return VK_FALSE;
+        }
+        FVK_LOGW << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage;
+    }
+    FVK_LOGE << "";
+    return VK_FALSE;
+}
+#endif
+
 } // end anonymous namespace
 
 namespace filament::backend {
+
+void VulkanContext::DebugUtils::init(VkInstance instance, VkDevice device, bool enabled) {
+    if (!enabled) {
+        return;
+    }
+    mInstance = instance;
+    mDevice = device;
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+    VkDebugUtilsMessengerCreateInfoEXT const createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .flags = 0,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+        .pfnUserCallback = debugUtilsCallback,
+    };
+    VkResult result =
+            vkCreateDebugUtilsMessengerEXT(instance, &createInfo, VKALLOC, &mDebugMessenger);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create Vulkan debug messenger. error=" << static_cast<int32_t>(result);
+#endif
+}
+
+void VulkanContext::DebugUtils::terminate() {
+    if (mDebugMessenger != VK_NULL_HANDLE) {
+        vkDestroyDebugUtilsMessengerEXT(mInstance, mDebugMessenger, VKALLOC);
+        mDebugMessenger = VK_NULL_HANDLE;
+    }
+    mInstance = VK_NULL_HANDLE;
+    mDevice = VK_NULL_HANDLE;
+}
+
+void VulkanContext::DebugUtils::setName(VkObjectType type, uint64_t handle,
+        char const* name) const {
+    if (mDevice == VK_NULL_HANDLE) {
+        return;
+    }
+    VkDebugUtilsObjectNameInfoEXT const info = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        .pNext = nullptr,
+        .objectType = type,
+        .objectHandle = handle,
+        .pObjectName = name,
+    };
+    vkSetDebugUtilsObjectNameEXT(mDevice, &info);
+}
 
 VkImage VulkanAttachment::getImage() const {
     return texture ? texture->getVkImage() : VK_NULL_HANDLE;
