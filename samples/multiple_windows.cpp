@@ -144,6 +144,8 @@ void destroy_window(Window& w, Engine* engine) {
     delete w.ibl;
 
     engine->destroy(w.mesh.renderable);
+    engine->destroy(w.mesh.vertexBuffer);
+    engine->destroy(w.mesh.indexBuffer);
     engine->destroy(w.materialInstance);
     engine->destroy(w.material);
     w.view->setScene(nullptr);
@@ -277,8 +279,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     int n = 1;
     int x = 50, y = 50;
     for (auto& w: windows) {
-        auto title = std::string("Filament - Window ") + std::to_string(n);
-        w.sdl_window = SDL_CreateWindow(title.c_str(), x, y, kWidth, kHeight, windowFlags);
+        char title[64];
+        snprintf(title, sizeof(title), "Filament - Window %d", n);
+        w.sdl_window = SDL_CreateWindow(title, x, y, kWidth, kHeight, windowFlags);
         x += 50;
         y += 50;
         n += 1;
@@ -378,10 +381,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return nullptr;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto fApp = createSampleApp(config, dm.get(), nullptr);
     if (fApp) {

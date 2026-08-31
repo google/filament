@@ -42,7 +42,6 @@
 
 #include <iostream>
 #include <random>
-#include <string>
 #include <vector>
 
 using namespace filament;
@@ -157,6 +156,10 @@ void createSceneObjects(Engine* engine, Scene* scene, App& app) {
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory = utils::CString(
+                (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
+    }
     auto app = std::make_shared<App>();
     app->config = config;
 
@@ -268,13 +271,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Material Instances Stress Test";
     config.iblDirectory = utils::CString(
             (FilamentApp2::getRootAssetsPath() + "assets/ibl/lightroom_14b").c_str());
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
 
     auto fApp = createSampleApp(config, dm.get(), nullptr);

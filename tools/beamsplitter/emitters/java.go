@@ -146,25 +146,35 @@ func EditJava(definitions []db.TypeDefinition, classname string, folder string) 
 	}
 
 	getFieldAnnotation := func(field db.StructField, depth int) string {
-		if _, exists := field.EmitterFlags["java_float"]; exists {
+		var annotations []string
+		if strings.Contains(field.Description, "@deprecated") {
+			annotations = append(annotations, "@Deprecated")
+		}
+		if _, exists := field.EmitterFlags["java_float"]; !exists {
+			switch {
+			case field.DefaultValue == "nullptr":
+				annotations = append(annotations, "@Nullable")
+			case field.TypeString == "math::float2":
+				annotations = append(annotations, "@NonNull @Size(min = 2)")
+			case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
+				annotations = append(annotations, "@NonNull @Size(min = 3)")
+			case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
+				annotations = append(annotations, "@NonNull @Size(min = 4)")
+			case strings.Contains(field.DefaultValue, "::"):
+				annotations = append(annotations, "@NonNull")
+			}
+		}
+		if len(annotations) == 0 {
 			return ""
 		}
-		annotation := ""
-		switch {
-		case field.DefaultValue == "nullptr":
-			annotation = "@Nullable"
-		case field.TypeString == "math::float2":
-			annotation = "@NonNull @Size(min = 2)"
-		case field.TypeString == "math::float3" || field.TypeString == "LinearColor":
-			annotation = "@NonNull @Size(min = 3)"
-		case field.TypeString == "math::float4" || field.TypeString == "LinearColorA":
-			annotation = "@NonNull @Size(min = 4)"
-		case strings.Contains(field.DefaultValue, "::"):
-			annotation = "@NonNull"
-		default:
-			return ""
+		return strings.Join(annotations, "\n"+strings.Repeat("    ", depth)) + "\n" + strings.Repeat("    ", depth)
+	}
+
+	getEnumAnnotation := func(value db.EnumValue, depth int) string {
+		if strings.Contains(value.Description, "@deprecated") {
+			return "@Deprecated\n" + strings.Repeat("    ", depth)
 		}
-		return annotation + "\n" + strings.Repeat("    ", depth)
+		return ""
 	}
 
 	flattenStruct := func(defn *db.StructDefinition) string {
@@ -221,9 +231,10 @@ func EditJava(definitions []db.TypeDefinition, classname string, folder string) 
 			}
 			return indent(buf.String(), 1)
 		},
-		"annotation": getFieldAnnotation,
-		"java_type":  javifyType,
-		"java_value": javifyValue,
+		"annotation":      getFieldAnnotation,
+		"enum_annotation": getEnumAnnotation,
+		"java_type":       javifyType,
+		"java_value":      javifyValue,
 		"flatten": func(field *db.StructField) string {
 			if structDefn, isStruct := field.CustomType.(*db.StructDefinition); isStruct {
 				return strings.TrimLeft(flattener(structDefn), " ")

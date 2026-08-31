@@ -14,8 +14,8 @@ Denotes the type of the light being created.
 | [SUN](-s-u-n/index.md) | [main]<br>[SUN](-s-u-n/index.md)<br>Directional light that also draws a sun's disk in the sky. |
 | [DIRECTIONAL](-d-i-r-e-c-t-i-o-n-a-l/index.md) | [main]<br>[DIRECTIONAL](-d-i-r-e-c-t-i-o-n-a-l/index.md)<br>Directional light, emits light in a given direction. |
 | [POINT](-p-o-i-n-t/index.md) | [main]<br>[POINT](-p-o-i-n-t/index.md)<br>Point light, emits light from a position, in all directions. |
-| [FOCUSED_SPOT](-f-o-c-u-s-e-d_-s-p-o-t/index.md) | [main]<br>[FOCUSED_SPOT](-f-o-c-u-s-e-d_-s-p-o-t/index.md)<br>Physically correct spot light. |
-| [SPOT](-s-p-o-t/index.md) | [main]<br>[SPOT](-s-p-o-t/index.md)<br>Spot light with coupling of outer cone and illumination disabled. |
+| [FOCUSED_SPOT](-f-o-c-u-s-e-d_-s-p-o-t/index.md) | [main]<br>[FOCUSED_SPOT](-f-o-c-u-s-e-d_-s-p-o-t/index.md)<br>Physically correct spotlight. |
+| [SPOT](-s-p-o-t/index.md) | [main]<br>[SPOT](-s-p-o-t/index.md)<br>Spotlight with coupling of outer cone and illumination disabled. |
 
 ## Functions
 

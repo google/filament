@@ -17,6 +17,7 @@
 #ifndef TNT_SAMPLES_ARGUMENTS_H
 #define TNT_SAMPLES_ARGUMENTS_H
 
+#include "Parameter.h"
 #include "SampleConfig.h"
 
 #include <filamentapp/AssetLoader.h>
@@ -26,11 +27,9 @@
 #include <filament/Engine.h>
 
 #include <utils/CString.h>
-#include <utils/getopt.h>
+#include <utils/FixedCapacityVector.h>
 
-#include <functional>
 #include <memory>
-#include <vector>
 
 namespace samples {
 
@@ -39,17 +38,11 @@ FilamentApp2::Builder getBuilder(const SampleConfig& config,
 
 std::unique_ptr<filament::app::DisplayManager> getDisplayManager(const SampleConfig& config);
 
-using CustomArgumentHandler = std::function<bool(int opt, const utils::CString& arg)>;
-
 struct CommandLineSpecification {
     utils::CString sampleDescription;
-    utils::CString positionalArgsDescription;
+    utils::FixedCapacityVector<utils::CString> positionalArgsDescription;
     int requiredPositionalArgCount = 0;
-    std::vector<char> requiredFlags;
-    utils::CString customOptionsHelp;
-    CustomArgumentHandler customHandler = nullptr;
-    const char* customOptStr = "";
-    const utils::getopt::option* customOptions = nullptr;
+    SampleParameters parameters;
 };
 
 void printUsage(const char* execName, const CommandLineSpecification& spec = {});

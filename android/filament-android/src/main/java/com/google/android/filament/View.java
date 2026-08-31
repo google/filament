@@ -1129,7 +1129,7 @@ public class View {
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
         mDepthOfFieldOptions = options;
-        nSetDepthOfFieldOptions(getNativeObject(), options.cocScale,
+        nSetDepthOfFieldOptions(getNativeObject(), options.cocScale, options.cocAspectRatio,
                 options.maxApertureDiameter, options.enabled, options.filter.ordinal(),
                 options.nativeResolution, options.foregroundRingCount, options.backgroundRingCount,
                 options.fastGatherRingCount, options.maxForegroundCOC, options.maxBackgroundCOC);
@@ -1439,7 +1439,7 @@ public class View {
     private static native void nSetChannelDepthClearEnabled(long nativeView, int channel, boolean enabled);
     private static native boolean nIsChannelDepthClearEnabled(long nativeView, int channel);
     private static native void nSetBlendMode(long nativeView, int blendMode);
-    private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
+    private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float cocAspectRatio, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);

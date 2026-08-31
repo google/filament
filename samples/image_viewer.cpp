@@ -54,7 +54,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
+#include <string_view>
 
 using namespace filament;
 using namespace filament::math;
@@ -221,8 +221,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     app->config = config;
 
     Path filename;
-    if (config.customArgs.find("filename") != config.customArgs.end()) {
-        filename = Path(config.customArgs["filename"].c_str());
+    if (!config.positionalArgs.empty()) {
+        filename = Path(config.positionalArgs[0].c_str());
     }
 
     auto setup = [app, filename](Engine* engine, View* view, Scene* scene) {
@@ -343,16 +343,18 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
-    config.title = "Filament Image Viewer";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "Filament Image Viewer",
+        .positionalArgsDescription = { "image file" },
+        .parameters = createAppParameters(),
+    };
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    int num_args = argc - optind;
-    if (num_args >= 1) {
-        config.customArgs["filename"] = utils::CString(argv[optind]);
-    }
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();
     return 0;

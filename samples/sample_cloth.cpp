@@ -47,7 +47,6 @@
 
 #include <iostream>
 #include <map>
-#include <string>
 #include <vector>
 
 using namespace filament::math;
@@ -77,17 +76,10 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     app->config = config;
+    g_meshScale = config.getFloat("scale", 1.0f);
 
-    if (config.customArgs.find("filenames") != config.customArgs.end()) {
-        std::string_view filenamesStr = config.customArgs.at("filenames").c_str();
-        size_t pos = 0;
-        while ((pos = std::string_view(filenamesStr).find('|')) != std::string_view::npos) {
-            app->filenames.push_back(utils::Path(filenamesStr.substr(0, pos)));
-            filenamesStr.remove_prefix(pos + 1);
-        }
-        if (!filenamesStr.empty()) {
-            app->filenames.push_back(utils::Path(filenamesStr));
-        }
+    for (const auto& filename: config.positionalArgs) {
+        app->filenames.push_back(utils::Path(filename.c_str()));
     }
 
     auto loadMap = [app](Engine* engine, const char* name, bool sRGB = true) -> Texture* {
@@ -175,8 +167,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         app->materialInstances.getMaterialInstance(defaultMaterialName)
                 ->setParameter("roughnessMap", roughness, sampler);
 
+        auto filenames = app->filenames;
+        if (filenames.empty()) {
+            filenames.push_back(utils::Path(
+                    (FilamentApp2::getRootAssetsPath() + "assets/models/cloth/cloth.obj").c_str()));
+        }
         auto& tcm = engine->getTransformManager();
-        for (const auto& filename: app->filenames) {
+        for (const auto& filename: filenames) {
             MeshReader::Mesh mesh =
                     MeshReader::loadMeshFromFile(engine, filename, app->materialInstances);
             if (mesh.renderable) {
@@ -229,47 +226,30 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeFloat("scale", 's', "Applies uniform scale", 1.0f),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char* argv[]) {
     SampleConfig config;
-    static constexpr const char* CUSTOM_OPTSTR = "s:";
-    static const utils::getopt::option CUSTOM_OPTIONS[] = {
-        { "scale", utils::getopt::required_argument, nullptr, 's' },
-        { nullptr, 0, nullptr, 0 }
-    };
-    auto customHandler = [](int opt, const utils::CString& arg) -> bool {
-        switch (opt) {
-            case 's':
-                g_meshScale = std::stof(arg.c_str());
-                return true;
-        }
-        return false;
-    };
-
     samples::CommandLineSpecification spec = {
         .sampleDescription = "SAMPLE_CLOTH demonstrates cloth shading in Filament.",
-        .positionalArgsDescription = "<mesh files (.obj, .fbx)>",
-        .requiredPositionalArgCount = 1,
-        .customOptionsHelp = "   --scale=[number], -s [number]\n"
-                             "       Applies uniform scale\n",
-        .customHandler = customHandler,
-        .customOptStr = CUSTOM_OPTSTR,
-        .customOptions = CUSTOM_OPTIONS,
+        .positionalArgsDescription = { "mesh files (.obj, .fbx)" },
+        .parameters = createAppParameters(),
     };
-    int optind = samples::handleCommandLineArguments(argc, argv, &config, spec);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
 
-    utils::CString filenames;
-    for (int i = optind; i < argc; i++) {
-        utils::Path filename = argv[i];
+    for (const auto& fname : config.positionalArgs) {
+        utils::Path filename(fname.c_str_safe());
         if (!filename.exists()) {
-            std::cerr << "file " << argv[i] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
         }
-        if (i > optind) filenames += "|";
-        filenames += argv[i];
     }
-    config.customArgs["filenames"] = utils::CString(filenames.c_str());
 
     config.title = "Cloth shading";
 

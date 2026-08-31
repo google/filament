@@ -73,7 +73,7 @@
 #include <iostream>
 #include <set>
 #include <sstream>
-#include <string>
+#include <string_view>
 
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
@@ -121,6 +121,14 @@ struct App {
     bool actualSize = false;
     bool originIsFarAway = false;
     float originDistance = 1.0f;
+
+    // Frame stepping (see Settings::debug.frameStep). frameStepTime is a virtual animation clock
+    // that only advances when a step is requested, so a step always advances by the same amount
+    // no matter how long the frame stayed paused. frameStepRenderPending carries the request from
+    // the animation callback -- which consumes it and advances the clock -- over to preRender,
+    // which is what actually lets a frame through.
+    double frameStepTime = 0.0;
+    bool frameStepRenderPending = false;
 
     struct Scene {
         Entity groundPlane;
@@ -183,7 +191,7 @@ void createGroundPlane(Engine* engine, Scene* scene, App* app) {
     auto& viewerOptions = app->viewer->getSettings().viewer;
     shadowMaterial->setDefaultParameter("strength", viewerOptions.groundShadowStrength);
 
-    constexpr uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
+    static constexpr uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
 
     Aabb aabb = app->asset->getBoundingBox();
     if (!app->actualSize) {
@@ -193,7 +201,7 @@ void createGroundPlane(Engine* engine, Scene* scene, App* app) {
 
     float3 planeExtent{10.0f * aabb.extent().x, 0.0f, 10.0f * aabb.extent().z};
 
-    const float3 vertices[] = {
+    float3* const vertices = new float3[4]{
         { -planeExtent.x, 0, -planeExtent.z },
         { -planeExtent.x, 0, planeExtent.z },
         { planeExtent.x, 0, planeExtent.z },
@@ -209,7 +217,7 @@ void createGroundPlane(Engine* engine, Scene* scene, App* app) {
                     }
             ).xyzw);
 
-    const short4 normals[]{ tbn, tbn, tbn, tbn };
+    static const short4 normals[]{ tbn, tbn, tbn, tbn };
 
     VertexBuffer* vertexBuffer = VertexBuffer::Builder()
             .vertexCount(4)
@@ -222,7 +230,8 @@ void createGroundPlane(Engine* engine, Scene* scene, App* app) {
             .build(*engine);
 
     vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
-            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+            vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0]),
+            [](void* buffer, size_t, void*) { delete[] static_cast<float3*>(buffer); }));
     vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
             normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
 
@@ -430,23 +439,23 @@ bool checkGLTFAsset(const utils::Path& filename) {
 
 std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* appLoader) {
+    if (config.iblDirectory.empty()) {
+        config.iblDirectory =
+                utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    }
     auto app = std::make_shared<App>();
     app->config = config;
 
-    app->materialSource = config.customArgs.find("ubershader") != config.customArgs.end()
-                                  ? UBERSHADER
-                                  : JITSHADER;
-    app->actualSize = config.customArgs.find("actualSize") != config.customArgs.end();
-    app->recomputeAabb = config.customArgs.find("recomputeAabb") != config.customArgs.end();
-    if (config.customArgs.find("settings") != config.customArgs.end())
-        app->settingsFile = utils::CString(config.customArgs["settings"].c_str());
-    if (config.customArgs.find("batch") != config.customArgs.end())
-        app->batchFile = utils::CString(config.customArgs["batch"].c_str());
-    app->screenshotAsPPM = config.customArgs.find("screenshotAsPPM") != config.customArgs.end();
+    app->materialSource = config.getBool("ubershader") ? UBERSHADER : JITSHADER;
+    app->actualSize = config.getBool("actual-size");
+    app->recomputeAabb = config.getBool("recompute-aabb");
+    app->settingsFile = config.getString("settings");
+    app->batchFile = config.getString("batch");
+    app->screenshotAsPPM = config.getBool("screenshot-as-ppm");
 
     utils::Path filename;
-    if (!config.fileName.empty()) {
-        filename = getPathForGLTFAsset(config.fileName.c_str_safe());
+    if (!config.positionalArgs.empty()) {
+        filename = getPathForGLTFAsset(config.positionalArgs[0].c_str_safe());
         if (filename.isEmpty()) {
             std::cerr << "no glTF file found in " << filename << std::endl;
             exit(1);
@@ -951,6 +960,24 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         // Gradually add renderables to the scene as their textures become ready.
         app->viewer->populateScene();
 
+        auto& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            // Consume a pending step here rather than in preRender: animation has to be advanced
+            // before the frame that shows it is rendered, and this callback runs first.
+            if (debugSettings.frameStepRequested) {
+                debugSettings.frameStepRequested = false;
+                app->frameStepTime += debugSettings.frameStepDeltaSeconds;
+                app->frameStepRenderPending = true;
+            }
+            // Substitute the virtual clock for the wall clock, freezing animation between steps.
+            now = app->frameStepTime;
+        } else {
+            // Keep the virtual clock aligned with the wall clock while stepping is off, so
+            // enabling it doesn't jump the animation.
+            app->frameStepTime = now;
+            app->frameStepRenderPending = false;
+        }
+
         auto const& animSettings = app->viewer->getSettings().animation;
         if (animSettings.enabled) {
             double animTime = now;
@@ -982,6 +1009,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     };
 
     auto preRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        // Frame stepping: hold the frame by telling the renderer to skip it, which makes
+        // beginFrame() return false so nothing is rendered OR presented -- the window keeps
+        // showing the last stepped frame instead of cycling stale swap chain buffers. ImGui is
+        // still updated every iteration (it runs before this), so the UI stays interactive even
+        // while frozen; only its display is held. A step lets exactly one frame through, which
+        // is also what advances TAA's history by exactly one iteration.
+        auto const& debugSettings = app->viewer->getSettings().debug;
+        if (debugSettings.frameStep) {
+            if (app->frameStepRenderPending) {
+                app->frameStepRenderPending = false;
+            } else {
+                renderer->skipNextFrames(1);
+            }
+        }
+
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app->scene.groundPlane);
         const auto viewerOptions = app->automationEngine->getViewerOptions();
@@ -1084,11 +1126,11 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
     auto postRender = [app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
         if (app->screenshot) {
-            std::ostringstream stringStream;
-            stringStream << "screenshot" << std::setfill('0') << std::setw(2)
-                         << +app->screenshotSeq;
-            std::string const ext = app->screenshotAsPPM ? ".ppm" : ".tif";
-            AutomationEngine::exportScreenshot(view, renderer, stringStream.str() + ext, false,
+            char filenameBuf[64];
+            const char* const ext = app->screenshotAsPPM ? ".ppm" : ".tif";
+            snprintf(filenameBuf, sizeof(filenameBuf), "screenshot%02u%s", +app->screenshotSeq,
+                    ext);
+            AutomationEngine::exportScreenshot(view, renderer, filenameBuf, false,
                     app->automationEngine);
             ++app->screenshotSeq;
             app->screenshot = false;
@@ -1146,18 +1188,31 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() {
+    return {
+        samples::Parameter::makeBool("ubershader", 'u', "Enable ubershader", false),
+        samples::Parameter::makeBool("actual-size", 's', "Set window size to actual asset size",
+                false),
+        samples::Parameter::makeBool("recompute-aabb", 'r', "Recompute bounding box", false),
+        samples::Parameter::makeString("settings", 't', "Path to settings JSON file", ""),
+        samples::Parameter::makeString("batch", 'b', "Path to batch file", ""),
+        samples::Parameter::makeBool("screenshot-as-ppm", 'd', "Save screenshot as PPM", false),
+    };
+}
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Filament";
     config.iblDirectory = utils::CString((FilamentApp2::getRootAssetsPath() + DEFAULT_IBL).c_str());
+    samples::CommandLineSpecification spec = {
+        .sampleDescription = "GLTF_VIEWER is a tool for viewing glTF models with Filament.",
+        .positionalArgsDescription = { "gltf/glb file" },
+        .parameters = createAppParameters(),
+    };
 
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config, spec);
     auto dm = samples::getDisplayManager(config);
-    int const num_args = argc - optind;
-    if (num_args >= 1) {
-        config.fileName = utils::CString(argv[optind]);
-    }
 
     auto loader = new filament::app::DesktopAssetLoader();
     auto app = createSampleApp(config, dm.get(), loader);

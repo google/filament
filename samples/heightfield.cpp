@@ -170,7 +170,7 @@ void populateTextureWithPerlin(Texture* texture, Engine& engine, float time, Par
     };
 
     auto job = jobs::parallel_for(*js, nullptr, 0, dimension * dimension, std::cref(work),
-            jobs::CountSplitter<64, 32>());
+            jobs::CountSplitter<64>());
     js->runAndWait(job);
 
     Texture::PixelBufferDescriptor::PixelDataFormat format {};
@@ -398,11 +398,14 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     return fApp;
 }
 
+samples::SampleParameters createAppParameters() { return {}; }
+
 #ifndef __ANDROID__
 int main(int argc, char** argv) {
     SampleConfig config;
     config.title = "Heightfield";
-    int optind = samples::handleCommandLineArguments(argc, argv, &config);
+    samples::handleCommandLineArguments(argc, argv, &config,
+            { .parameters = createAppParameters() });
     auto dm = samples::getDisplayManager(config);
     auto app = createSampleApp(config, dm.get(), nullptr);
     app->run();
