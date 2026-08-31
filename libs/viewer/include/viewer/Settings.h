@@ -318,6 +318,16 @@ struct ViewerOptions {
 
 struct DebugOptions {
     uint16_t skipFrames = 0;
+    //! freeze the image and advance exactly one rendered frame per step request, so
+    //! frame-to-frame effects (TAA convergence, ghosting) can be inspected one frame at a time
+    bool frameStep = false;
+    //! set by the UI (space bar, or the Step button) to request the next frame; consumed by the
+    //! application, which is responsible for clearing it
+    bool frameStepRequested = false;
+    //! how much animation time (in seconds) a single step advances; the default matches one
+    //! frame at 60Hz. Animation time is otherwise frozen while frameStep is on, so that each
+    //! step is reproducible rather than depending on how long the wall clock was paused
+    float frameStepDeltaSeconds = 1.0f / 60.0f;
 };
 
 struct Settings {
