@@ -430,7 +430,12 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     mSettings.view.bloom.enabled = true;
 
     DebugRegistry& debug = mEngine->getDebugRegistry();
-    *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images") = true;
+    // The first Renderer the engine creates registers this property, and a ViewerGui can be
+    // built before any Renderer exists, in which case there is no address to write to.
+    if (bool* combineMultiviewImages =
+            debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")) {
+        *combineMultiviewImages = true;
+    }
 
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
@@ -1214,8 +1219,10 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
 #if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         ImGui::Indent();
-        ImGui::Checkbox("Combine Multiview Images",
-                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
+        if (bool* combineMultiviewImages =
+                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")) {
+            ImGui::Checkbox("Combine Multiview Images", combineMultiviewImages);
+        }
         ImGui::Unindent();
 #endif
         ImGui::SliderFloat("Ocular distance", &mSettings.camera.eyeOcularDistance, 0.0f, 1.0f);
@@ -1279,7 +1286,9 @@ void ViewerGui::updateUserInterface() {
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to
     // the WebSockets client.
-    if (!isRemoteMode()) {
+    //
+    // setAsset accepts a null instance, which the Animator deref below does not survive.
+    if (!isRemoteMode() && mInstance) {
         if (ImGui::CollapsingHeader("Hierarchy")) {
             ImGui::Indent();
             ImGui::Checkbox("Show bounds", &mEnableWireframe);
