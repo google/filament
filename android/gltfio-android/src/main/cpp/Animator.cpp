@@ -17,11 +17,26 @@
 #include <jni.h>
 
 #include <gltfio/Animator.h>
+#include <gltfio/FilamentInstance.h>
 
 using namespace filament;
 using namespace filament::math;
 using namespace filament::gltfio;
 using namespace utils;
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_Animator_nCreateAnimatorFromAssetAndInstance(JNIEnv*, jclass, jlong nativeAsset, jlong nativeInstance) {
+    FilamentAsset* asset = (FilamentAsset*) nativeAsset;
+    FilamentInstance* instance = (FilamentInstance*) nativeInstance;
+    Animator* animator = new Animator(asset, instance);
+    return (jlong)animator;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_gltfio_Animator_nDestroyAnimator(JNIEnv*, jclass, jlong nativeAnimator) {
+    Animator* animator = (Animator*) nativeAnimator;
+    delete animator;
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_Animator_nApplyAnimation(JNIEnv*, jclass, jlong nativeAnimator,
