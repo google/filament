@@ -550,26 +550,30 @@ Java_com_google_android_filament_RenderableManager_nGetMaterialInstanceAt(JNIEnv
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIEnv*,
+Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJJII(JNIEnv* env,
         jclass, jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType,
         jlong nativeVertexBuffer, jlong nativeIndexBuffer, jint offset, jint count) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
     IndexBuffer *indexBuffer = (IndexBuffer *) nativeIndexBuffer;
-    rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
-            (RenderableManager::PrimitiveType) primitiveType, vertexBuffer, indexBuffer,
-            (size_t) offset, (size_t) count);
+    wrapJni(env, [=]() {
+        rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
+                (RenderableManager::PrimitiveType) primitiveType, vertexBuffer, indexBuffer,
+                (size_t) offset, (size_t) count);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJII(JNIEnv*,
+Java_com_google_android_filament_RenderableManager_nSetGeometryAt__JIIIJII(JNIEnv* env,
         jclass, jlong nativeRenderableManager, jint i, jint primitiveIndex, jint primitiveType,
         jlong nativeVertexBuffer, jint offset, jint count) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     VertexBuffer *vertexBuffer = (VertexBuffer *) nativeVertexBuffer;
-    rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
-            (RenderableManager::PrimitiveType) primitiveType, vertexBuffer,
-            (size_t) offset, (size_t) count);
+    wrapJni(env, [=]() {
+        rm->setGeometryAt((RenderableManager::Instance) i, (size_t) primitiveIndex,
+                (RenderableManager::PrimitiveType) primitiveType, vertexBuffer,
+                (size_t) offset, (size_t) count);
+    });
 }
 
 extern "C" JNIEXPORT void JNICALL
