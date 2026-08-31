@@ -23,6 +23,7 @@ LIBFILAMENT {
     *filament*View*;
     *filament*Texture*;
     *filament*geometry*;
+    *filament*MorphTargetBuffer*;
 
   local: *;
 };
