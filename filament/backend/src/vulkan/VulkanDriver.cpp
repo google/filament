@@ -1673,9 +1673,11 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                                          image = stream->getAcquired().image]() {
                 auto texture = s->getTexture(image);
                 if (!texture) {
-                    auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
+                    auto externalImage =
+                            fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-                    auto imgData = mPlatform->createVkImageFromExternal(externalImage, texture->width, texture->height);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage,
+                            metadata.width, metadata.height);
 
                     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
