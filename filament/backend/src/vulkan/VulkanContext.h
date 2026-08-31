@@ -160,6 +160,8 @@ public:
 
     inline bool isDebugUtilsNamesEnabled() const noexcept { return mDebugUtilsNamesEnabled; }
 
+    inline bool isRenderDocCaptureEnabled() const noexcept { return mRenderDocCaptureEnabled; }
+
     inline bool isDynamicRenderingSupported() const noexcept {
         return mDynamicRenderingFeatures.dynamicRendering == VK_TRUE;
     }
@@ -257,6 +259,7 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsEnabled = false;
     bool mDebugUtilsNamesEnabled = false;
+    bool mRenderDocCaptureEnabled = false;
     bool mIsUnifiedMemoryArchitecture = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mPipelineCreationFeedbackSupported = false;
