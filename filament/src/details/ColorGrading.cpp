@@ -1103,7 +1103,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    bool const isLinear = (builder->outputColorSpace == Rec709-Linear-D65);
+    bool const isSrgb = (builder->outputColorSpace == Rec709-sRGB-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1112,7 +1112,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
 
     auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(builder->toneMapper);
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, toneMapper, &isLinear](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, toneMapper, &isSrgb](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
@@ -1161,7 +1161,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
                 cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                 cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                if (UTILS_LIKELY(!isLinear)) {
+                if (UTILS_LIKELY(isSrgb)) {
                     v_oetf_sRGB(cg_r, cg_g, cg_b);
                 }
 
@@ -1188,7 +1188,7 @@ UTILS_NOINLINE
 void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    bool const isLinear = (builder->outputColorSpace == Rec709-Linear-D65);
+    bool const isSrgb = (builder->outputColorSpace == Rec709-sRGB-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1196,7 +1196,7 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
     auto *slices = js.createJob();
 
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, &builder, &isLinear](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, &builder, &isSrgb](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
@@ -1308,7 +1308,7 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                     cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                     cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                    if (UTILS_LIKELY(!isLinear)) {
+                    if (UTILS_LIKELY(isSrgb)) {
                         v_oetf_sRGB(cg_r, cg_g, cg_b);
                     }
 
