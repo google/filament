@@ -31,6 +31,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   constants.h
   control_dependence.h
   convert_to_sampled_image_pass.h
+  convert_to_untyped.h
   convert_to_half_pass.h
   copy_prop_arrays.h
   dataflow.h
@@ -75,6 +76,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   ir_context.h
   ir_loader.h
   licm_pass.h
+  legalize_multidim_array_pass.h
   liveness.h
   local_access_chain_convert_pass.h
   local_redundancy_elimination.h
@@ -155,6 +157,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   constants.cpp
   control_dependence.cpp
   convert_to_sampled_image_pass.cpp
+  convert_to_untyped.cpp
   convert_to_half_pass.cpp
   copy_prop_arrays.cpp
   dataflow.cpp
@@ -197,6 +200,7 @@ set(SPIRV_TOOLS_OPT_SOURCES
   ir_context.cpp
   ir_loader.cpp
   licm_pass.cpp
+  legalize_multidim_array_pass.cpp
   liveness.cpp
   local_access_chain_convert_pass.cpp
   local_redundancy_elimination.cpp

@@ -159,6 +159,45 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
 
   const auto bit_width = AssumedBitWidth(type);
   switch (DeduceEncoding(type)) {
+    case SPV_FP_ENCODING_FLOAT4_E2M1: {
+      HexFloat<FloatProxy<Float4_E2M1>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E2M1 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint8_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 28 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_FLOAT6_E2M3: {
+      HexFloat<FloatProxy<Float6_E2M3>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E2M3 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint8_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 26 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_FLOAT6_E3M2: {
+      HexFloat<FloatProxy<Float6_E3M2>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E3M2 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint8_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 26 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
     case SPV_FP_ENCODING_FLOAT8_E4M3: {
       HexFloat<FloatProxy<Float8_E4M3>> hVal(0);
       if (!ParseNumber(text, &hVal)) {
@@ -183,6 +222,28 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
       // The encoding is therefore correct from the perspective of the SPIR-V
       // spec since the top 16 bits will be 0.
       emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_FLOAT8_UNSIGNED_E8M0: {
+      HexFloat<FloatProxy<Float8_E8M0>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E8M0 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint16_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 16 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_MXINT8: {
+      HexFixedPoint<MXInt8> hVal;
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid MXInt8 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      emit(static_cast<uint32_t>(hVal.value()));
       return EncodeNumberStatus::kSuccess;
     } break;
     case SPV_FP_ENCODING_BFLOAT16: {

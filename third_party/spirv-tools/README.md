@@ -402,7 +402,7 @@ option, like so:
 
 ```sh
 # In <spirv-dir> (the SPIRV-Tools repo root):
-git clone --depth=1 --branch v3.13.0.1 https://github.com/protocolbuffers/protobuf external/protobuf
+git clone --depth=1 --branch v35.1 https://github.com/protocolbuffers/protobuf external/protobuf
 
 # In your build directory:
 cmake [-G <platform-generator>] <spirv-dir> -DSPIRV_BUILD_FUZZER=ON
@@ -455,7 +455,7 @@ targets, you need to install CMake Version 2.8.12 or later.
 - [Python 3](http://www.python.org/): for utility scripts and running the test
 suite.
 - [Bazel](https://bazel.build/) (optional): if building the source with Bazel,
-you need to install Bazel Version 7.4.0 on your machine. Other versions may
+you need to install Bazel Version 8.7.0 on your machine. Other versions may
 also work, but are not verified.
 - [Emscripten SDK](https://emscripten.org) (optional): if building the
   WebAssembly module.
@@ -463,8 +463,8 @@ also work, but are not verified.
 SPIRV-Tools is regularly tested with the following compilers:
 
 On Linux
-- GCC version 9.4
-- Clang version 10.0
+- GCC version 15
+- Clang version 18
 
 On MacOS
 - AppleClang 15.0

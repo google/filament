@@ -45,6 +45,10 @@ struct Graph {
   // Appends an output to this graph.
   inline void AddOutput(std::unique_ptr<Instruction> inst);
 
+  // Add a non-semantic instruction that succeeds this graph in the module.
+  // These instructions are maintained in the order they are added.
+  inline void AddNonSemanticInstruction(std::unique_ptr<Instruction> inst);
+
   // Saves the given graph end instruction.
   void SetGraphEnd(std::unique_ptr<Instruction> end_inst);
 
@@ -78,7 +82,7 @@ struct Graph {
 
   // Runs the given function |f| on instructions in this graph, in order,
   // and optionally on debug line instructions that might precede them and
-  // non-semantic instructions that succceed the function.
+  // non-semantic instructions that succeed the graph.
   void ForEachInst(const std::function<void(Instruction*)>& f,
                    bool run_on_debug_line_insts = false,
                    bool run_on_non_semantic_insts = false);
@@ -97,6 +101,8 @@ struct Graph {
   std::vector<std::unique_ptr<Instruction>> outputs_;
   // The OpGraphEnd instruction.
   std::unique_ptr<Instruction> end_inst_;
+  // Non-semantic instructions that succeed this graph.
+  std::vector<std::unique_ptr<Instruction>> non_semantic_;
 };
 
 inline Graph::Graph(std::unique_ptr<Instruction> def_inst)
@@ -112,6 +118,11 @@ inline void Graph::AddInstruction(std::unique_ptr<Instruction> inst) {
 
 inline void Graph::AddOutput(std::unique_ptr<Instruction> inst) {
   outputs_.emplace_back(std::move(inst));
+}
+
+inline void Graph::AddNonSemanticInstruction(
+    std::unique_ptr<Instruction> inst) {
+  non_semantic_.emplace_back(std::move(inst));
 }
 
 inline void Graph::SetGraphEnd(std::unique_ptr<Instruction> end_inst) {

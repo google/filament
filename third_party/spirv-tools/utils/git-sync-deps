@@ -77,9 +77,9 @@ def git_executable():
       major=None
       minor=None
       try:
-        version_info = subprocess.check_output([git, '--version']).decode('utf-8')
+        version_info = subprocess.check_output([git, '--version']).decode('utf-8').strip('\r\n')
         match = re.search(r"^git version (\d+)\.(\d+)",version_info)
-        print("Using {}".format(version_info))
+        print("git-sync-deps: using {}".format(version_info))
         if match:
           major = int(match.group(1))
           minor = int(match.group(2))
@@ -217,11 +217,13 @@ def parse_file_to_dict(path):
   return dictionary
 
 
-def git_sync_deps(deps_file_path, command_line_os_requests, verbose, treeless):
+def git_sync_deps(deps_file_path, prefix, command_line_os_requests, verbose, treeless):
   """Grab dependencies, with optional platform support.
 
   Args:
     deps_file_path (string) Path to the DEPS file.
+
+    prefix (string) Only check out paths with this prefix.
 
     command_line_os_requests (list of strings) Can be empty list.
         List of strings that should each be a key in the deps_os
@@ -243,37 +245,61 @@ def git_sync_deps(deps_file_path, command_line_os_requests, verbose, treeless):
 
   deps_file_directory = os.path.dirname(deps_file_path)
   deps_file = parse_file_to_dict(deps_file_path)
-  dependencies = deps_file['deps'].copy()
+  all_deps = deps_file['deps'].copy()
   os_specific_dependencies = deps_file.get('deps_os', dict())
   if 'all' in command_line_os_requests:
     for value in list(os_specific_dependencies.values()):
-      dependencies.update(value)
+      all_deps.update(value)
   else:
     for os_name in command_line_os_requests:
       # Add OS-specific dependencies
       if os_name in os_specific_dependencies:
-        dependencies.update(os_specific_dependencies[os_name])
-  for directory in dependencies:
-    for other_dir in dependencies:
-      if directory.startswith(other_dir + '/'):
-        raise Exception('%r is parent of %r' % (other_dir, directory))
-  list_of_arg_lists = []
-  for directory in sorted(dependencies):
-    if '@' in dependencies[directory]:
-      repo, checkoutable = dependencies[directory].split('@', 1)
-    else:
-      raise Exception("please specify commit or tag")
+        all_deps.update(os_specific_dependencies[os_name])
+  dependencies = dict()
+  for k,v in all_deps.items():
+    if k.startswith(prefix):
+      dependencies[k] = v
 
-    relative_directory = os.path.join(deps_file_directory, directory)
+  # Schedule the checkouts in batches, where a parent is always in
+  # a batch before its descendants.
+  while len(dependencies) > 0:
+    # Find a batch of directories we can checkout in parallel.
+    list_of_arg_lists = []
+    pending_dirs = []
+    # Sort subdirs so parents appear before children
+    for subdir in sorted(dependencies):
+      if len([d for d in pending_dirs if subdir.startswith(d)]) == 0:
+        # Doesn't conflict with any pending work.
+        pending_dirs.append(f"{subdir}/")
 
-    list_of_arg_lists.append(
-      (git, repo, checkoutable, relative_directory, verbose, treeless))
+        value = dependencies[subdir]
+        del dependencies[subdir]
+        if isinstance(value, dict):
+          # Note: this code does not handle conditions.
+          if 'url' in value:
+            value = value['url']
+          elif 'dep_type' in value:
+            # typically a cipd package. Skip with warning
+            print(f"git-sync-deps: warning: skipping {value['dep_type']} dependency '{subdir}'")
+            continue
 
-  multithread(git_checkout_to_directory, list_of_arg_lists)
+        if '@' in value:
+          repo, checkoutable = value.split('@', 1)
+        else:
+          print(f"subdir {subdir} value {value}")
+          raise Exception("please specify commit or tag")
+
+        relative_directory = os.path.join(deps_file_directory, subdir)
+
+        list_of_arg_lists.append(
+          (git, repo, checkoutable, relative_directory, verbose, treeless))
+
+    multithread(git_checkout_to_directory, list_of_arg_lists)
 
   for directory in deps_file.get('recursedeps', []):
-    recursive_path = os.path.join(deps_file_directory, directory, 'DEPS')
-    git_sync_deps(recursive_path, command_line_os_requests, verbose)
+    if directory.startswith(prefix):
+      recursive_path = os.path.join(deps_file_directory, directory, 'DEPS')
+      git_sync_deps(recursive_path, prefix, command_line_os_requests, verbose, treeless)
 
 
 def multithread(function, list_of_arg_lists):
@@ -301,6 +327,9 @@ def main(argv):
   argparser.add_argument("--deps",
                          default = os.environ.get('GIT_SYNC_DEPS_PATH', DEFAULT_DEPS_PATH),
                          help="location of the the DEPS file")
+  argparser.add_argument("--prefix",
+                         default = '',
+                         help="only check out paths with this prefix")
   argparser.add_argument("--verbose",
                          default=not bool(os.environ.get('GIT_SYNC_DEPS_QUIET', False)),
                          action='store_true',
@@ -330,7 +359,7 @@ def main(argv):
     print(get_deps_os_str(args.deps))
     return 0
 
-  git_sync_deps(args.deps, args.os_requests, args.verbose, args.treeless)
+  git_sync_deps(args.deps, args.prefix, args.os_requests, args.verbose, args.treeless)
   return 0
 
 

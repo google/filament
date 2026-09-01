@@ -424,8 +424,8 @@ bool InlinePass::InlineEntryBlock(
   while (callee_inst_itr != callee_first_block->end()) {
     // Don't inline function definition links, the calling function is not a
     // definition.
-    if (callee_inst_itr->GetShader100DebugOpcode() ==
-        NonSemanticShaderDebugInfo100DebugFunctionDefinition) {
+    if (callee_inst_itr->GetShaderDebugOpcode() ==
+        NonSemanticShaderDebugInfoDebugFunctionDefinition) {
       ++callee_inst_itr;
       continue;
     }
@@ -462,8 +462,8 @@ std::unique_ptr<BasicBlock> InlinePass::InlineBasicBlocks(
          ++inst_itr) {
       // Don't inline function definition links, the calling function is not a
       // definition
-      if (inst_itr->GetShader100DebugOpcode() ==
-          NonSemanticShaderDebugInfo100DebugFunctionDefinition)
+      if (inst_itr->GetShaderDebugOpcode() ==
+          NonSemanticShaderDebugInfoDebugFunctionDefinition)
         continue;
       if (!InlineSingleInstruction(
               callee2caller, new_blk_ptr.get(), &*inst_itr,
@@ -897,6 +897,30 @@ void InlinePass::FixDebugDeclare(
     // invalid. it needs to be fixed up. The debug declare will be updated so
     // that its Var operand becomes the base of the access chain. The indexes of
     // the access chain are prepended before the indexes of the debug declare.
+
+    // DebugDeclare Indexes must be constant integers. If any access chain
+    // index is non-constant (e.g. the result of an OpLoad), we cannot
+    // produce a valid DebugDeclare. Kill it rather than emit invalid SPIR-V.
+    bool has_non_constant_index = false;
+    for (uint32_t i = kSpvAccessChainBaseInIdx + 1;
+         i < access_chain->NumInOperands(); ++i) {
+      uint32_t idx_id = access_chain->GetSingleWordInOperand(i);
+      bool found_constant = false;
+      for (auto& inst : context()->module()->types_values()) {
+        if (inst.result_id() == idx_id) {
+          found_constant = spvOpcodeIsConstant(inst.opcode());
+          break;
+        }
+      }
+      if (!found_constant) {
+        has_non_constant_index = true;
+        break;
+      }
+    }
+    if (has_non_constant_index) {
+      context()->KillInst(dbg_declare_inst);
+      return;
+    }
 
     std::vector<Operand> operands;
     for (int i = 0; i < kSpvDebugDeclareVarInIdx; i++) {
