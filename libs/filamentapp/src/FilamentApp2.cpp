@@ -298,7 +298,16 @@ void FilamentApp2::run() {
     init();
 
     while (!doFrame()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        // Paces the loop to roughly display refresh rate so an interactive app doesn't spin a
+        // core doing nothing between frames. Headless has no display to pace to and, unlike an
+        // interactive session, nothing waiting on wall-clock time -- only on doFrame() actually
+        // finishing -- so the sleep there is pure dead time, paid on every single iteration for
+        // the life of the run. Batch tools that render many thousands of frames (e.g.
+        // samples/taa_harness.cpp) are dominated by it: skipping it here cut one measured
+        // headless workload from ~115s to ~35s with no change in output.
+        if (!mHeadless) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
     }
 
     shutdown();

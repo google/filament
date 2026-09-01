@@ -271,6 +271,8 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
         return mState->mSoftwareYUVStaging.ahbuffer;
     }
 
+    bool isExternallySampled() const { return mState->mYcbcr.conversion != VK_NULL_HANDLE; }
+
     bool transitionLayout(VulkanCommandBuffer* commands, VkImageSubresourceRange const& range,
             VulkanLayout newLayout);
 
@@ -295,6 +297,8 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     // conversion per-frame. This implies that we need to invalidate the view cache when that
     // happens.
     void setYcbcrConversion(VkSamplerYcbcrConversion conversion);
+
+    VkSamplerYcbcrConversion getYcbcrConversion() const { return mState->mYcbcr.conversion; }
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;

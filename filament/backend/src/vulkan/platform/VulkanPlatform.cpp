@@ -642,6 +642,13 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         enableDebugUtils = enableDebugUtils || enableDebugUtilsNames;
     }
 
+    bool enableRenderDocCapture = false;
+    if (driverConfig.debugRegistry &&
+            driverConfig.debugRegistry->hasProperty("d.vulkan.renderdoc_capture")) {
+        driverConfig.debugRegistry->getProperty("d.vulkan.renderdoc_capture",
+                &enableRenderDocCapture);
+    }
+
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
@@ -669,7 +676,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         }
     }
     if (mImpl->mInstance == VK_NULL_HANDLE) {
-        createInstance(instExts);
+        createInstance(instExts, enableRenderDocCapture);
     }
     assert_invariant(mImpl->mInstance != VK_NULL_HANDLE);
 
@@ -703,6 +710,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     mImpl->mContext.mDebugUtilsNamesEnabled =
             mImpl->mContext.mDebugUtilsEnabled && enableDebugUtilsNames;
+    mImpl->mContext.mRenderDocCaptureEnabled = enableRenderDocCapture;
 
     VulkanContext const& context = mImpl->mContext;
 
@@ -919,6 +927,10 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
 }
 
+bool VulkanPlatform::isRenderDocCaptureEnabled() const noexcept {
+    return mImpl->mContext.isRenderDocCaptureEnabled();
+}
+
 VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const noexcept {
     // By default, fences should not be exportable.
     return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
@@ -954,7 +966,8 @@ VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) no
     return device;
 }
 
-void VulkanPlatform::createInstance(ExtensionSet const& requiredExts) noexcept {
+void VulkanPlatform::createInstance(ExtensionSet const& requiredExts,
+        bool enableRenderdoc) noexcept {
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -969,7 +982,6 @@ void VulkanPlatform::createInstance(ExtensionSet const& requiredExts) noexcept {
     };
     bool validationFeaturesSupported = false;
 
-    bool const enableRenderdoc = FVK_RENDERDOC_CAPTURE_MODE;
     auto const enabledLayers = getLayers(enableRenderdoc);
     auto const enabledLayersCStr = toCStrVector(enabledLayers);
 
@@ -1132,10 +1144,16 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
     }
 
+    if (driverConfig.debugRegistry &&
+            driverConfig.debugRegistry->hasProperty("d.vulkan.renderdoc_capture")) {
+        driverConfig.debugRegistry->getProperty("d.vulkan.renderdoc_capture",
+                &context.mRenderDocCaptureEnabled);
+    }
+
     // Check the availability of lazily allocated memory
     context.mLazilyAllocatedMemorySupported = false;
     // RenderDoc doesn't support lazy allocated memory
-    if constexpr (!FVK_RENDERDOC_CAPTURE_MODE) {
+    if (!context.mRenderDocCaptureEnabled) {
         for (uint32_t i = 0, typeCount = context.mMemoryProperties.memoryTypeCount; i < typeCount;
                 ++i) {
             VkMemoryType const type = context.mMemoryProperties.memoryTypes[i];

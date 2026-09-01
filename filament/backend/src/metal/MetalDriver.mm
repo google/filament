@@ -223,11 +223,7 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             new MetalBumpAllocator(mContext->device, driverConfig.metalUploadBufferSizeBytes);
     mContext->blitter = new MetalBlitter(*mContext);
 
-    if (@available(iOS 12, *)) {
-        mContext->timerQueryImpl = new MetalTimerQueryFence(*mContext);
-    } else {
-        mContext->timerQueryImpl = new TimerQueryNoop();
-    }
+    mContext->timerQueryImpl = new MetalTimerQueryImpl(*mContext);
 
     CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
             nullptr, &mContext->textureCache);
@@ -1420,11 +1416,7 @@ bool MetalDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool MetalDriver::isFrameTimeSupported() {
-    // Frame time is calculated via hard fences, which are only available on iOS 12 and above.
-    if (@available(iOS 12, *)) {
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool MetalDriver::isAutoDepthResolveSupported() {
