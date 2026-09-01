@@ -21,6 +21,7 @@
 
 #include <filamentapp/AssetLoader.h>
 #include <filamentapp/Cube.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IcoSphere.h>
 #include <filamentapp/MeshAssimp.h>
@@ -137,8 +138,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
                 { .clearColor = { 0.0f, 0.0f, 0.0f, 1.0f }, .clear = !app->filamentApp->getIBL() });
     };
 
-    auto setup = [app](Engine* engine, View* view, Scene* scene) {
-        app->meshSet.reset(new MeshAssimp(*engine));
+    auto setup = [app, loader](Engine* engine, View* view, Scene* scene) {
+        app->meshSet.reset(new MeshAssimp(*engine, loader));
         for (auto& filename: app->filenames) {
             app->meshSet->addFromFile(filename, app->materialLibrary);
         }
@@ -453,8 +454,10 @@ int main(int argc, char* argv[]) {
 
     config.title = "Lightbulb";
 
-    auto app = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto app = createSampleApp(config, dm.get(), loader);
     app->run();
+    delete loader;
 
     return 0;
 }
