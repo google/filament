@@ -1,0 +1,163 @@
+{
+  "_comment": [
+    "Deliberate divergence between the C++ API and its bindings is normal, so exclusions are",
+    "first-class. Every entry needs a reason; --explain prints them, which keeps this file a",
+    "record of decisions rather than a pile of silenced noise.",
+    "",
+    "  check    which check to silence; omit or use \"*\" for all of them",
+    "  key      the class or enum, e.g. \"Texture\" or \"Texture$Builder\"; \"*\" for any class,",
+    "           which is how a member inherited by many classes (Builder::name) is covered once;",
+    "           omit to disable a check",
+    "  members  the specific methods or enum values; omit to silence the whole class"
+  ],
+  "ignore": [
+    {
+      "check": "*",
+      "key": "*",
+      "members": [
+        "name"
+      ],
+      "reason": "Builder::name is a debug label, inherited by every Builder from BuilderBase in FilamentAPI.h. It takes a (const char*, size_t) pair, exists to make native captures readable, and is bound in no language."
+    },
+    {
+      "check": "undeclared-ts",
+      "key": "View",
+      "members": [
+        "setAmbientOcclusionOptionsDefaults",
+        "setBloomOptionsDefaults",
+        "setDepthOfFieldOptionsDefaults",
+        "setDynamicResolutionOptionsDefaults",
+        "setFogOptionsDefaults",
+        "setGtaoDefaults",
+        "setGuardBandOptionsDefaults",
+        "setMultiSampleAntiAliasingOptionsDefaults",
+        "setRenderQualityDefaults",
+        "setScreenSpaceReflectionsOptionsDefaults",
+        "setSoftShadowOptionsDefaults",
+        "setSsctDefaults",
+        "setStereoscopicOptionsDefaults",
+        "setTemporalAntiAliasingOptionsDefaults",
+        "setVignetteOptionsDefaults",
+        "setVsmShadowOptionsDefaults"
+      ],
+      "reason": "Generated into extensions_generated.js by beamsplitter as the defaults table for the matching public setXOptions() wrapper in extensions.js, which is what filament.d.ts declares. The Defaults helpers are an implementation detail of that wrapper and are deliberately not part of the typed surface."
+    },
+    {
+      "check": "undeclared-ts",
+      "key": [
+        "MaterialVector",
+        "MaterialInstanceVector",
+        "AssetInstanceVector"
+      ],
+      "reason": "An embind instantiation of std::vector, registered so the container crosses the boundary at all. filament.d.ts types every one of them through the single generic `Vector<T>` interface, so there is deliberately no per-instantiation class to declare."
+    },
+    {
+      "check": "unbound-class-java",
+      "key": [
+        "LinearToneMapper",
+        "ACESToneMapper",
+        "ACESLegacyToneMapper",
+        "FilmicToneMapper",
+        "PBRNeutralToneMapper",
+        "GT7ToneMapper",
+        "AgxToneMapper",
+        "GenericToneMapper",
+        "DisplayRangeToneMapper"
+      ],
+      "reason": "A naming convention, not a missing binding. C++ declares the tone mappers as siblings of ToneMapper in ToneMapper.h and JavaScript follows that; Java nests them instead, as ToneMapper.Linear, ToneMapper.ACES and so on, so the same classes land under ToneMapper$Linear rather than LinearToneMapper."
+    },
+    {
+      "check": "phantom-ts",
+      "key": "IndirectLight",
+      "members": [
+        "shfloats"
+      ],
+      "reason": "Not a phantom: utilities.js:327 sets shfloats on the instance that _createIblFromKtx1() returns, and test-runtime.js:332 asserts it. The JS extractor only sees `Filament.Class.prototype.member =` assignments, so a property attached to an instance inside a factory is invisible to it."
+    },
+    {
+      "check": "*",
+      "key": "Engine",
+      "members": [
+        "getDriver",
+        "getJobSystem",
+        "getPlatform",
+        "getFeatureFlagPtr",
+        "streamAlloc",
+        "getEngine"
+      ],
+      "reason": "Returns a native handle no binding can hold: a Driver, JobSystem or Platform pointer, the raw bool* behind a feature flag, or -- streamAlloc -- memory inside the command stream that is freed when the command buffer executes. getEngine is the static Engine::getEngine(void* token) accessor."
+    },
+    {
+      "check": "*",
+      "key": "Engine",
+      "members": [
+        "isValid",
+        "isValidExpensive"
+      ],
+      "reason": "A naming convention, not a missing binding. C++ overloads isValid() on the resource type; both bindings expand the overload set into type-suffixed names -- isValidRenderer, isValidView, isValidExpensiveMaterialInstance (jsbindings.cpp:842, Engine.java:1060) -- because neither language can dispatch on a pointer type."
+    },
+    {
+      "check": "unbound-java",
+      "key": "Engine",
+      "members": [
+        "execute"
+      ],
+      "reason": "Engine.h:1286 documents execute() as used only on single-threaded platforms, to be called whenever the windowing system needs to paint. Android runs Filament on its own thread, so it has nothing to drive. JavaScript, which is single-threaded, does bind it, as _execute."
+    },
+    {
+      "check": "*",
+      "key": "TransformManager",
+      "members": [
+        "getChildrenBegin",
+        "getChildrenEnd",
+        "getChildrenRange"
+      ],
+      "reason": "C++ iterators: children_iterator and children_range have no equivalent in either language. Both bindings wrap getChildren(Instance, Entity*, size_t) instead, which yields the same children as an array -- jsbindings.cpp:1825 returns an EntityVector, TransformManager.java:223 fills an int[]."
+    },
+    {
+      "check": "unbound-java",
+      "key": "Material$Builder",
+      "members": [
+        "package"
+      ],
+      "reason": "`package` is a Java reserved word and can never name a Java method. Material.java:432 binds it as payload(Buffer, int)."
+    },
+    {
+      "check": "unbound-java",
+      "key": "Texture$Builder",
+      "members": [
+        "import"
+      ],
+      "reason": "`import` is a Java reserved word and can never name a Java method. Texture.java:864 binds it as importTexture(long)."
+    },
+    {
+      "check": "*",
+      "key": "Box",
+      "reason": "Not a bound class in either language, by design. C++ Box is a header-only value type -- public center/halfExtent plus constexpr math -- and both bindings carry only the data: Java's Box is a plain holder of two float[3] with no native pointer, and filament.d.ts:131 declares Box as an interface, not an embind class. Callers build one from values and hand it to boundingBox() or setAxisAlignedBoundingBox(); the geometry stays in C++, so getMin, getMax, isEmpty, set, unionSelf, translateTo, getBoundingSphere and transform have no caller to serve on either side."
+    },
+    {
+      "check": "enum-values-java",
+      "key": "RenderTarget$AttachmentPoint",
+      "members": [
+        "COLOR0"
+      ],
+      "reason": "A naming choice, not a missing value. C++ declares COLOR0 = 0 and the alias COLOR = COLOR0; Java declares only COLOR, at ordinal 0. The value crosses JNI correctly -- enum-order-java confirms it -- only the spelling differs."
+    },
+    {
+      "check": "enum-order-java",
+      "key": "MaterialInstance$StencilFace",
+      "members": [
+        "FRONT"
+      ],
+      "reason": "Java never passes this ordinal across JNI: MaterialInstance.java translates it through sStencilFaceMapping = {0x1, 0x2, 0x3}, because the C++ side is a bit field rather than a sequence."
+    },
+    {
+      "check": "enum-order-java",
+      "key": "Fence$FenceStatus",
+      "members": [
+        "ERROR"
+      ],
+      "reason": "Java never passes this ordinal across JNI: Fence.java maps the native int through an explicit switch, so C++ ERROR = -1 does not need a matching ordinal."
+    }
+  ]
+}
