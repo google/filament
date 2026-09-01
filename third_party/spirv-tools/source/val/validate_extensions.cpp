@@ -14,23 +14,29 @@
 
 // Validates correctness of extension SPIR-V instructions.
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
 #include "source/common_debug_info.h"
 #include "source/extensions.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_opencl_std_header.h"
+#include "source/opcode.h"
+#include "source/operand.h"
 #include "source/spirv_constant.h"
 #include "source/table2.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
+#include "spirv-tools/libspirv.h"
+#include "spirv/unified1/ArmExperimentalMLOperations.h"
 #include "spirv/unified1/NonSemanticClspvReflection.h"
+#include "spirv/unified1/NonSemanticGraphDebugInfo.h"
+#include "spirv/unified1/NonSemanticShaderDebugInfo.h"
 
 namespace spvtools {
 namespace val {
@@ -80,6 +86,55 @@ bool IsUint32Constant(ValidationState_t& _, uint32_t id) {
   return IsIntScalar(_, inst->type_id(), true, true);
 }
 
+bool IsGraphDebugInfoDebugGraph(const Instruction* inst) {
+  return spvIsExtendedInstruction(inst->opcode()) &&
+         inst->ext_inst_type() ==
+             SPV_EXT_INST_TYPE_NONSEMANTIC_GRAPH_DEBUGINFO &&
+         inst->word(4) == NonSemanticGraphDebugInfoDebugGraph;
+}
+
+bool IsTopLevelCompositeOfTensors(ValidationState_t& _, uint32_t type_id) {
+  const auto* type = _.FindDef(type_id);
+  if (!type) return false;
+
+  if (type->opcode() == spv::Op::OpTypeArray ||
+      type->opcode() == spv::Op::OpTypeRuntimeArray) {
+    const auto* element_type = _.FindDef(type->word(2));
+    return element_type && element_type->opcode() == spv::Op::OpTypeTensorARM;
+  }
+
+  if (type->opcode() == spv::Op::OpTypeStruct) {
+    for (uint32_t word_index = 2; word_index < type->words().size();
+         ++word_index) {
+      const auto* member_type = _.FindDef(type->word(word_index));
+      if (!member_type || member_type->opcode() != spv::Op::OpTypeTensorARM) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool IsInstructionInGraph(ValidationState_t& _, uint32_t inst_id,
+                          uint32_t graph_id) {
+  bool in_graph = false;
+  for (const auto& module_inst : _.ordered_instructions()) {
+    if (module_inst.opcode() == spv::Op::OpGraphARM) {
+      in_graph = module_inst.id() == graph_id;
+    }
+
+    if (in_graph && module_inst.id() == inst_id) return true;
+
+    if (in_graph && module_inst.opcode() == spv::Op::OpGraphEndARM) {
+      in_graph = false;
+    }
+  }
+
+  return false;
+}
+
 uint32_t GetUint32Constant(ValidationState_t& _, uint32_t id) {
   auto inst = _.FindDef(id);
   return inst->word(3);
@@ -107,6 +162,50 @@ std::string GetExtInstName(const ValidationState_t& _,
   ss << desc->name().data();
 
   return ss.str();
+}
+
+// Rejects an instruction whose result or any operand uses a BFloat16 or FP8
+// (E4M3/E5M2) type, i.e. an OpTypeFloat that is not IEEE 754 encoded.
+spv_result_t ValidateExtInstFloatEncoding(ValidationState_t& _,
+                                          const Instruction* inst) {
+  auto check = [&](uint32_t type_id) -> spv_result_t {
+    if (_.IsBfloat16Type(type_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << GetExtInstName(_, inst) << ": doesn't support BFloat16 type.";
+    }
+    if (_.IsFP8Type(type_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << GetExtInstName(_, inst)
+             << ": doesn't support FP8 E4M3/E5M2 types.";
+    }
+    return SPV_SUCCESS;
+  };
+
+  if (spv_result_t result = check(inst->type_id())) return result;
+
+  const uint32_t num_operands = static_cast<uint32_t>(inst->operands().size());
+  for (uint32_t operand_index = 4; operand_index < num_operands;
+       ++operand_index) {
+    // Some ext instructions take literal operands (e.g. OpenCL.std vloadn's
+    // component count); only <id> operands have a meaningful result type.
+    if (!spvIsIdType(inst->operand(operand_index).type)) continue;
+    if (spv_result_t result = check(_.GetOperandTypeId(inst, operand_index)))
+      return result;
+  }
+
+  return SPV_SUCCESS;
+}
+
+// Returns the declared NSDI version from the OpExtInstImport referenced by
+// |inst|.  Returns 0 if not a NonSemantic.Shader.DebugInfo import.
+uint32_t GetNSDIVersion(const ValidationState_t& _, const Instruction* inst) {
+  const auto* import_inst = _.FindDef(inst->word(3));
+  if (!import_inst) return 0;
+  const std::string name = import_inst->GetOperandAs<std::string>(1);
+  const char kPrefix[] = "NonSemantic.Shader.DebugInfo.";
+  if (name.find(kPrefix) != 0) return 0;
+  return static_cast<uint32_t>(
+      std::strtoul(name.c_str() + sizeof(kPrefix) - 1, nullptr, 10));
 }
 
 // Check that the operand of a debug info instruction |inst| at |word_index|
@@ -140,11 +239,23 @@ spv_result_t ValidateOperandForDebugInfo(ValidationState_t& _,
 // word so cannot be validated.
 spv_result_t ValidateUint32ConstantOperandForDebugInfo(
     ValidationState_t& _, const std::string& operand_name,
-    const Instruction* inst, uint32_t word_index) {
-  if (!IsUint32Constant(_, inst->word(word_index))) {
+    const Instruction* inst, uint32_t word_index,
+    bool allow_spec_const = false) {
+  const uint32_t id = inst->word(word_index);
+  if (!IsUint32Constant(_, id)) {
+    if (allow_spec_const) {
+      auto* def = _.FindDef(id);
+      if (def && spvOpcodeIsSpecConstant(def->opcode()) &&
+          IsIntScalar(_, def->type_id(), true, true))
+        return SPV_SUCCESS;
+    }
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << GetExtInstName(_, inst) << ": expected operand " << operand_name
-           << " must be a result id of 32-bit unsigned OpConstant";
+           << " must be a result id of "
+           << (allow_spec_const
+                   ? "a 32-bit unsigned integer constant or specialization"
+                     " constant"
+                   : "32-bit unsigned OpConstant");
   }
   return SPV_SUCCESS;
 }
@@ -160,6 +271,26 @@ spv_result_t ValidateUint32ConstantOperandForDebugInfo(
     auto result =                                                        \
         ValidateUint32ConstantOperandForDebugInfo(_, NAME, inst, index); \
     if (result != SPV_SUCCESS) return result;                            \
+  }
+
+// Like CHECK_CONST_UINT_OPERAND but also allows spec-constants.  Used for
+// NonSemantic.Shader.DebugInfo.101 cooperative type instructions, where
+// dimension operands may be specialization constants.
+#define CHECK_CONST_OR_SPEC_UINT_OPERAND(NAME, index)                          \
+  if (vulkanDebugInfo) {                                                       \
+    auto result =                                                              \
+        ValidateUint32ConstantOperandForDebugInfo(_, NAME, inst, index, true); \
+    if (result != SPV_SUCCESS) return result;                                  \
+  }
+
+// Checks that the NSDI version for the current instruction is at least |v|.
+// Used to guard opcodes added after version 100.
+#define CHECK_NSDI_MIN_VERSION(v)                                       \
+  if (nsdi_version < (v)) {                                             \
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)                         \
+           << GetExtInstName(_, inst)                                   \
+           << ": requires NonSemantic.Shader.DebugInfo version " << (v) \
+           << " or later";                                              \
   }
 
 // True if the operand of a debug info instruction |inst| at |word_index|
@@ -181,10 +312,10 @@ bool DoesDebugInfoOperandMatchExpectation(
   return true;
 }
 
-// Overload for NonSemanticShaderDebugInfo100Instructions.
+// Overload for NonSemanticShaderDebugInfoInstructions.
 bool DoesDebugInfoOperandMatchExpectation(
     const ValidationState_t& _,
-    const std::function<bool(NonSemanticShaderDebugInfo100Instructions)>&
+    const std::function<bool(NonSemanticShaderDebugInfoInstructions)>&
         expectation,
     const Instruction* inst, uint32_t word_index) {
   if (inst->words().size() <= word_index) return false;
@@ -193,7 +324,7 @@ bool DoesDebugInfoOperandMatchExpectation(
       (debug_inst->ext_inst_type() !=
        SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) ||
       !expectation(
-          NonSemanticShaderDebugInfo100Instructions(debug_inst->word(4)))) {
+          NonSemanticShaderDebugInfoInstructions(debug_inst->word(4)))) {
     return false;
   }
   return true;
@@ -274,12 +405,22 @@ spv_result_t ValidateOperandDebugType(ValidationState_t& _,
                                       const Instruction* inst,
                                       uint32_t word_index,
                                       bool allow_template_param) {
-  // Check for NonSemanticShaderDebugInfo100 specific types.
+  // Check for NonSemanticShaderDebugInfo specific types.
   if (inst->ext_inst_type() ==
       SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
-    std::function<bool(NonSemanticShaderDebugInfo100Instructions)> expectation =
-        [](NonSemanticShaderDebugInfo100Instructions dbg_inst) {
-          return dbg_inst == NonSemanticShaderDebugInfo100DebugTypeMatrix;
+    const uint32_t nsdi_version = GetNSDIVersion(_, inst);
+    std::function<bool(NonSemanticShaderDebugInfoInstructions)> expectation =
+        [nsdi_version](NonSemanticShaderDebugInfoInstructions dbg_inst) {
+          if (dbg_inst == NonSemanticShaderDebugInfoDebugTypeMatrix)
+            return true;
+          // DebugTypeVectorIdEXT and DebugTypeCooperativeMatrixKHR were added
+          // in NonSemantic.Shader.DebugInfo version 101.
+          if (nsdi_version >= NonSemanticShaderDebugInfoVersion &&
+              (dbg_inst == NonSemanticShaderDebugInfoDebugTypeVectorIdEXT ||
+               dbg_inst ==
+                   NonSemanticShaderDebugInfoDebugTypeCooperativeMatrixKHR))
+            return true;
+          return false;
         };
     if (DoesDebugInfoOperandMatchExpectation(_, expectation, inst, word_index))
       return SPV_SUCCESS;
@@ -288,9 +429,13 @@ spv_result_t ValidateOperandDebugType(ValidationState_t& _,
   // Check for common types.
   std::function<bool(CommonDebugInfoInstructions)> expectation =
       [&allow_template_param](CommonDebugInfoInstructions dbg_inst) {
+        // TODO - Should DebugTypeTemplateParameterPack be allowed?
         if (allow_template_param &&
             (dbg_inst == CommonDebugInfoDebugTypeTemplateParameter ||
              dbg_inst == CommonDebugInfoDebugTypeTemplateTemplateParameter)) {
+          return true;
+        } else if (dbg_inst == CommonDebugInfoDebugInfoNone) {
+          // DebugInfoNone is a safe "null" type that can be used
           return true;
         }
         return CommonDebugInfoDebugTypeBasic <= dbg_inst &&
@@ -302,6 +447,51 @@ spv_result_t ValidateOperandDebugType(ValidationState_t& _,
   return _.diag(SPV_ERROR_INVALID_DATA, inst)
          << GetExtInstName(_, inst) << ": " << "expected operand "
          << debug_inst_name << " is not a valid debug type";
+}
+
+spv_result_t ValidateOperandDebugSource(ValidationState_t& _,
+                                        const Instruction* inst,
+                                        uint32_t source_index,
+                                        uint32_t line_index,
+                                        uint32_t column_index,
+                                        spv_ext_inst_type_t ext_inst_type) {
+  auto* debug_source_inst = _.FindDef(inst->word(source_index));
+  const std::vector<uint32_t>& line_lengths =
+      _.GetDebugSourceLineLength(debug_source_inst->id());
+  if (line_lengths.empty())
+    return SPV_SUCCESS;  // Text not provide in DebugSource
+
+  const bool vulkanDebugInfo =
+      ext_inst_type == SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100;
+  uint32_t line = 0;
+  uint32_t column = 0;
+  // NonSemantic uses OpConstant for all operands
+  if (vulkanDebugInfo) {
+    bool is_int32 = false, is_const_int32 = false;
+    std::tie(is_int32, is_const_int32, line) =
+        _.EvalInt32IfConst(inst->word(line_index));
+    std::tie(is_int32, is_const_int32, column) =
+        _.EvalInt32IfConst(inst->word(column_index));
+  } else {
+    line = inst->word(line_index);
+    column = inst->word(column_index);
+  }
+
+  if (line > line_lengths.size()) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << GetExtInstName(_, inst) << ": operand Line (" << line
+           << ") is larger then the " << line_lengths.size()
+           << " lines found in the DebugSource text";
+  } else if (line != 0) {
+    const uint32_t line_length = line_lengths[line - 1];
+    if (column > line_length) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << GetExtInstName(_, inst) << ": operand Column End (" << column
+             << ") is larger then Line " << line << " column length of "
+             << line_length << " found in the DebugSource text";
+    }
+  }
+  return SPV_SUCCESS;
 }
 
 spv_result_t ValidateClspvReflectionKernel(ValidationState_t& _,
@@ -1024,9 +1214,115 @@ spv_result_t ValidateClspvReflectionInstruction(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
+std::string GetDebugSourceText(ValidationState_t& _, const Instruction* inst,
+                               uint32_t ext_inst_opcode) {
+  assert(ext_inst_opcode == NonSemanticShaderDebugInfoDebugSource ||
+         ext_inst_opcode == NonSemanticShaderDebugInfoDebugSourceContinued);
+  const uint32_t string_operand =
+      (ext_inst_opcode == NonSemanticShaderDebugInfoDebugSource) ? 6 : 5;
+  auto* debug_source_text_insn = _.FindDef(inst->word(string_operand));
+  // Validated to be an OpString
+  assert(debug_source_text_insn->opcode() == spv::Op::OpString);
+  return debug_source_text_insn->GetOperandAs<std::string>(1);
+}
+
+// We build up a vector that is length of the DebugSource lines and get how long
+// they are to make sure anyone using a DebugSource provides valid Line/Columns
+// inside
+void BuildDebugSourceLineLength(ValidationState_t& _, const Instruction* inst,
+                                uint32_t ext_inst_index) {
+  if (ext_inst_index == NonSemanticShaderDebugInfoDebugSource &&
+      inst->words().size() < 7) {
+    return;  // The optional text was not provided
+  }
+
+  std::string debug_source_text = GetDebugSourceText(_, inst, ext_inst_index);
+
+  // walk back to get DebugSource to update it's line length list
+  uint32_t debug_source_id = inst->id();
+  uint32_t continue_count = 0;
+
+  // There might be
+  //   %a = OpString "line starts here"
+  //   %b = OpString " and still the same line"
+  //
+  //   %c = OpExtInst %void %1 DebugSource %_ %a
+  //   %d = OpExtInst %void %1 DebugSourceContinued %b
+  // So we want to find the previous line for checking if we need to append on
+  // to the length of the previous line
+  bool start_new_line = true;
+  if (ext_inst_index == NonSemanticShaderDebugInfoDebugSourceContinued) {
+    auto prev_index = inst - &_.ordered_instructions()[0] - 1;
+    auto prev_inst = &_.ordered_instructions()[prev_index];
+
+    std::string previous_line_text =
+        GetDebugSourceText(_, prev_inst, prev_inst->GetOperandAs<uint32_t>(3));
+    if (!previous_line_text.empty() && previous_line_text.back() != '\n') {
+      start_new_line = false;
+    }
+  }
+
+  while (ext_inst_index == NonSemanticShaderDebugInfoDebugSourceContinued) {
+    continue_count++;  // might have multiple Continues in a row
+    auto prev_index = inst - &_.ordered_instructions()[0] - continue_count;
+    auto prev_inst = &_.ordered_instructions()[prev_index];
+    debug_source_id = prev_inst->id();
+    ext_inst_index = prev_inst->GetOperandAs<uint32_t>(3);
+  }
+
+  std::vector<uint32_t>& line_lengths =
+      _.GetDebugSourceLineLength(debug_source_id);
+  uint32_t line_start = 0;
+  // If we have a line like "abc", it really column 1-to-4.
+  // Even an empty line should have a column of 1
+  // Add 1 to length to emulate this later
+  uint32_t length = 1;
+
+  // Continue from the previous line length
+  if (!start_new_line) {
+    length = line_lengths.back();
+    line_lengths.pop_back();
+  }
+
+  for (uint32_t i = 0; i < debug_source_text.size(); ++i) {
+    if (debug_source_text[i] == '\n') {
+      // Unix-style new line
+      line_lengths.push_back(length);
+      length = 1;
+      line_start = i + 1;
+    } else if (debug_source_text[i] == '\r') {
+      // Handle Windows-style \r\n
+      if (i + 1 < debug_source_text.size() &&
+          debug_source_text[i + 1] == '\n') {
+        line_lengths.push_back(length);
+        ++i;  // Skip '\n'
+      } else {
+        line_lengths.push_back(length);
+      }
+      length = 1;
+      line_start = i + 1;
+    } else {
+      ++length;
+    }
+  }
+
+  // Capture last line if the string does not end in a newline
+  if (line_start < debug_source_text.size()) {
+    line_lengths.push_back(length);
+  }
+}
+
 bool IsConstIntScalarTypeWith32Or64Bits(ValidationState_t& _,
                                         Instruction* instr) {
   if (instr->opcode() != spv::Op::OpConstant) return false;
+  if (!_.IsIntScalarType(instr->type_id())) return false;
+  uint32_t size_in_bits = _.GetBitWidth(instr->type_id());
+  return size_in_bits == 32 || size_in_bits == 64;
+}
+
+bool IsSpecConstIntScalarTypeWith32Or64Bits(ValidationState_t& _,
+                                            Instruction* instr) {
+  if (!spvOpcodeIsSpecConstant(instr->opcode())) return false;
   if (!_.IsIntScalarType(instr->type_id())) return false;
   uint32_t size_in_bits = _.GetBitWidth(instr->type_id());
   return size_in_bits == 32 || size_in_bits == 64;
@@ -1086,6 +1382,7 @@ spv_result_t ValidateExtension(ValidationState_t& _, const Instruction* inst) {
   if (_.version() < SPV_SPIRV_VERSION_WORD(1, 4)) {
     if (extension ==
             ExtensionToString(kSPV_KHR_workgroup_memory_explicit_layout) ||
+        extension == ExtensionToString(kSPV_KHR_opacity_micromap) ||
         extension == ExtensionToString(kSPV_EXT_mesh_shader) ||
         extension == ExtensionToString(kSPV_NV_shader_invocation_reorder) ||
         extension == ExtensionToString(kSPV_EXT_shader_invocation_reorder) ||
@@ -1105,15 +1402,92 @@ spv_result_t ValidateExtension(ValidationState_t& _, const Instruction* inst) {
 spv_result_t ValidateExtInstImport(ValidationState_t& _,
                                    const Instruction* inst) {
   const auto name_id = 1;
+  const std::string name = inst->GetOperandAs<std::string>(name_id);
   if (_.version() <= SPV_SPIRV_VERSION_WORD(1, 5) &&
       !_.HasExtension(kSPV_KHR_non_semantic_info)) {
-    const std::string name = inst->GetOperandAs<std::string>(name_id);
     if (name.find("NonSemantic.") == 0) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "NonSemantic extended instruction "
                 "sets cannot be declared "
                 "without SPV_KHR_non_semantic_info. (This can also be fixed "
                 "having SPIR-V 1.6 or later)";
+    }
+  }
+
+  // Validate the version suffix of a NonSemantic.Shader.DebugInfo import.
+  // Accept any version >= kNSDIMinVersion; no upper bound is imposed because
+  // later versions are backward-compatible supersets of earlier ones.
+  const std::string nsdi_prefix = "NonSemantic.Shader.DebugInfo.";
+  if (name.find(nsdi_prefix) == 0) {
+    static const uint32_t kNSDIMinVersion = 100;
+    auto version_string = name.substr(nsdi_prefix.size());
+    if (version_string.empty()) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Shader.DebugInfo import does not encode the "
+                "version correctly";
+    }
+    char* end_ptr;
+    uint32_t ver = static_cast<uint32_t>(
+        std::strtoul(version_string.c_str(), &end_ptr, 10));
+    if (end_ptr && *end_ptr != '\0') {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Shader.DebugInfo import does not encode the "
+                "version correctly";
+    }
+    if (ver < kNSDIMinVersion) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Shader.DebugInfo import version " << ver
+             << " is below the minimum supported version " << kNSDIMinVersion;
+    }
+
+    _.RegisterShaderDebugInfo(inst->id());
+  }
+
+  const std::string nsgdi_prefix = "NonSemantic.Graph.DebugInfo.";
+  if (name.find(nsgdi_prefix) == 0) {
+    auto version_string = name.substr(nsgdi_prefix.size());
+    if (version_string.empty()) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Graph.DebugInfo import does not encode the "
+                "version correctly";
+    }
+    char* end_ptr;
+    uint32_t ver = static_cast<uint32_t>(
+        std::strtoul(version_string.c_str(), &end_ptr, 10));
+    if (end_ptr && *end_ptr != '\0') {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Graph.DebugInfo import does not encode the "
+                "version correctly";
+    }
+    if (ver == 0 || ver > NonSemanticGraphDebugInfoRevision) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Graph.DebugInfo import version " << ver
+             << " is not supported";
+    }
+    if (!_.HasExtension(kSPV_ARM_graph)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "NonSemantic.Graph.DebugInfo requires SPV_ARM_graph";
+    }
+  }
+
+  const std::string arm_ml_ops_prefix = "Arm.ExperimentalMLOperations.";
+  if (name.find(arm_ml_ops_prefix) == 0) {
+    auto version_string = name.substr(arm_ml_ops_prefix.size());
+    if (version_string.empty()) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Missing Arm.ExperimentalMLOperations import version";
+    }
+    char* end_ptr;
+    uint32_t ver = static_cast<uint32_t>(
+        std::strtoul(version_string.c_str(), &end_ptr, 10));
+    if (end_ptr && *end_ptr != '\0') {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Arm.ExperimentalMLOperations import does not encode the "
+                "version correctly";
+    }
+    if (ver == 0 || ver > ArmExperimentalMLOperationsRevision) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Unknown Arm.ExperimentalMLOperations import version";
     }
   }
 
@@ -1761,11 +2135,16 @@ spv_result_t ValidateExtInstGlslStd450(ValidationState_t& _,
       }
 
       if (!_.IsFloatScalarOrVectorType(result_type) ||
-          _.GetBitWidth(result_type) != 32) {
+          (_.GetBitWidth(result_type) != 32 &&
+           (!_.HasExtension(kSPV_AMD_gpu_shader_half_float) ||
+            _.GetBitWidth(result_type) != 16))) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << GetExtInstName(_, inst) << ": "
-               << "expected Result Type to be a 32-bit float scalar "
-               << "or vector type";
+               << "expected Result Type to be a "
+               << (_.HasExtension(kSPV_AMD_gpu_shader_half_float)
+                       ? "16-bit or 32-bit "
+                       : "32-bit ")
+               << "float scalar or vector type";
       }
 
       // If HLSL legalization and first operand is an OpLoad, use load
@@ -1812,10 +2191,16 @@ spv_result_t ValidateExtInstGlslStd450(ValidationState_t& _,
         const uint32_t offset_type = _.GetOperandTypeId(inst, 5);
         if (!_.IsFloatVectorType(offset_type) ||
             _.GetDimension(offset_type) != 2 ||
-            _.GetBitWidth(offset_type) != 32) {
+            (_.GetBitWidth(offset_type) != 32 &&
+             (!_.HasExtension(kSPV_AMD_gpu_shader_half_float) ||
+              _.GetBitWidth(offset_type) != 16))) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << GetExtInstName(_, inst) << ": "
-                 << "expected Offset to be a vector of 2 32-bit floats";
+                 << "expected Offset to be a vector of 2 "
+                 << (_.HasExtension(kSPV_AMD_gpu_shader_half_float)
+                         ? "16-bit or 32-bit "
+                         : "32-bit ")
+                 << "floats";
         }
       }
 
@@ -3098,8 +3483,8 @@ spv_result_t ValidateExtInstOpenClStd(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
-spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
-                                         const Instruction* inst) {
+spv_result_t ValidateExtInstDebugInfo(ValidationState_t& _,
+                                      const Instruction* inst) {
   const uint32_t result_type = inst->type_id();
   const uint32_t ext_inst_index = inst->word(4);
   if (!_.IsVoidType(result_type)) {
@@ -3115,56 +3500,71 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
 
   auto num_words = inst->words().size();
 
+  // Parse the declared NSDI version so optional-operand checks are strict
+  // (num_words == n) for version kNSDIKnownVersion and lenient (num_words >= n)
+  // for future versions that may add trailing operands.
+  static const uint32_t kNSDIKnownVersion = NonSemanticShaderDebugInfoVersion;
+  const uint32_t nsdi_version = vulkanDebugInfo ? GetNSDIVersion(_, inst) : 0;
+  // True if the optional operand at word |n| is present and should be checked.
+  auto has_optional_at = [&](uint32_t n) -> bool {
+    return num_words >= n &&
+           (nsdi_version > kNSDIKnownVersion || num_words == n);
+  };
+
   // Handle any non-common NonSemanticShaderDebugInfo instructions.
   if (vulkanDebugInfo) {
-    const NonSemanticShaderDebugInfo100Instructions ext_inst_key =
-        NonSemanticShaderDebugInfo100Instructions(ext_inst_index);
+    const NonSemanticShaderDebugInfoInstructions ext_inst_key =
+        NonSemanticShaderDebugInfoInstructions(ext_inst_index);
     switch (ext_inst_key) {
       // The following block of instructions will be handled by the common
       // validation.
-      case NonSemanticShaderDebugInfo100DebugInfoNone:
-      case NonSemanticShaderDebugInfo100DebugCompilationUnit:
-      case NonSemanticShaderDebugInfo100DebugTypePointer:
-      case NonSemanticShaderDebugInfo100DebugTypeQualifier:
-      case NonSemanticShaderDebugInfo100DebugTypeArray:
-      case NonSemanticShaderDebugInfo100DebugTypeVector:
-      case NonSemanticShaderDebugInfo100DebugTypedef:
-      case NonSemanticShaderDebugInfo100DebugTypeFunction:
-      case NonSemanticShaderDebugInfo100DebugTypeEnum:
-      case NonSemanticShaderDebugInfo100DebugTypeComposite:
-      case NonSemanticShaderDebugInfo100DebugTypeMember:
-      case NonSemanticShaderDebugInfo100DebugTypeInheritance:
-      case NonSemanticShaderDebugInfo100DebugTypePtrToMember:
-      case NonSemanticShaderDebugInfo100DebugTypeTemplate:
-      case NonSemanticShaderDebugInfo100DebugTypeTemplateParameter:
-      case NonSemanticShaderDebugInfo100DebugTypeTemplateTemplateParameter:
-      case NonSemanticShaderDebugInfo100DebugTypeTemplateParameterPack:
-      case NonSemanticShaderDebugInfo100DebugGlobalVariable:
-      case NonSemanticShaderDebugInfo100DebugFunctionDeclaration:
-      case NonSemanticShaderDebugInfo100DebugFunction:
-      case NonSemanticShaderDebugInfo100DebugLexicalBlock:
-      case NonSemanticShaderDebugInfo100DebugLexicalBlockDiscriminator:
-      case NonSemanticShaderDebugInfo100DebugScope:
-      case NonSemanticShaderDebugInfo100DebugNoScope:
-      case NonSemanticShaderDebugInfo100DebugInlinedAt:
-      case NonSemanticShaderDebugInfo100DebugLocalVariable:
-      case NonSemanticShaderDebugInfo100DebugInlinedVariable:
-      case NonSemanticShaderDebugInfo100DebugValue:
-      case NonSemanticShaderDebugInfo100DebugOperation:
-      case NonSemanticShaderDebugInfo100DebugExpression:
-      case NonSemanticShaderDebugInfo100DebugMacroDef:
-      case NonSemanticShaderDebugInfo100DebugMacroUndef:
-      case NonSemanticShaderDebugInfo100DebugImportedEntity:
-      case NonSemanticShaderDebugInfo100DebugSource:
+      case NonSemanticShaderDebugInfoDebugInfoNone:
+      case NonSemanticShaderDebugInfoDebugCompilationUnit:
+      case NonSemanticShaderDebugInfoDebugTypePointer:
+      case NonSemanticShaderDebugInfoDebugTypeQualifier:
+      case NonSemanticShaderDebugInfoDebugTypeArray:
+      case NonSemanticShaderDebugInfoDebugTypeVector:
+      case NonSemanticShaderDebugInfoDebugTypedef:
+      case NonSemanticShaderDebugInfoDebugTypeFunction:
+      case NonSemanticShaderDebugInfoDebugTypeEnum:
+      case NonSemanticShaderDebugInfoDebugTypeComposite:
+      case NonSemanticShaderDebugInfoDebugTypeMember:
+      case NonSemanticShaderDebugInfoDebugTypeInheritance:
+      case NonSemanticShaderDebugInfoDebugTypePtrToMember:
+      case NonSemanticShaderDebugInfoDebugTypeTemplate:
+      case NonSemanticShaderDebugInfoDebugTypeTemplateParameter:
+      case NonSemanticShaderDebugInfoDebugTypeTemplateTemplateParameter:
+      case NonSemanticShaderDebugInfoDebugTypeTemplateParameterPack:
+      case NonSemanticShaderDebugInfoDebugGlobalVariable:
+      case NonSemanticShaderDebugInfoDebugFunctionDeclaration:
+      case NonSemanticShaderDebugInfoDebugFunction:
+      case NonSemanticShaderDebugInfoDebugLexicalBlock:
+      case NonSemanticShaderDebugInfoDebugLexicalBlockDiscriminator:
+      case NonSemanticShaderDebugInfoDebugScope:
+      case NonSemanticShaderDebugInfoDebugNoScope:
+      case NonSemanticShaderDebugInfoDebugInlinedAt:
+      case NonSemanticShaderDebugInfoDebugLocalVariable:
+      case NonSemanticShaderDebugInfoDebugInlinedVariable:
+      case NonSemanticShaderDebugInfoDebugValue:
+      case NonSemanticShaderDebugInfoDebugOperation:
+      case NonSemanticShaderDebugInfoDebugExpression:
+      case NonSemanticShaderDebugInfoDebugMacroDef:
+      case NonSemanticShaderDebugInfoDebugMacroUndef:
+      case NonSemanticShaderDebugInfoDebugImportedEntity:
+      case NonSemanticShaderDebugInfoDebugSource:
         break;
 
-      // These checks are for operands that are differnet in
-      // ShaderDebugInfo100
-      case NonSemanticShaderDebugInfo100DebugTypeBasic: {
+      // These checks are for operands that are different in
+      // NonSemantic.Shader.DebugInfo
+      case NonSemanticShaderDebugInfoDebugTypeBasic: {
         CHECK_CONST_UINT_OPERAND("Flags", 8);
+        // Optional FPEncoding parameter (5th operand, word index 9)
+        if (has_optional_at(10)) {
+          CHECK_CONST_UINT_OPERAND("FPEncoding", 9);
+        }
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugDeclare: {
+      case NonSemanticShaderDebugInfoDebugDeclare: {
         for (uint32_t word_index = 8; word_index < num_words; ++word_index) {
           auto index_inst = _.FindDef(inst->word(word_index));
           auto type_id = index_inst != nullptr ? index_inst->type_id() : 0;
@@ -3175,7 +3575,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         }
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugTypeMatrix: {
+      case NonSemanticShaderDebugInfoDebugTypeMatrix: {
         CHECK_DEBUG_OPERAND("Vector Type", CommonDebugInfoDebugTypeVector, 5);
 
         CHECK_CONST_UINT_OPERAND("Vector Count", 6);
@@ -3197,7 +3597,26 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         }
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugFunctionDefinition: {
+      case NonSemanticShaderDebugInfoDebugTypeVectorIdEXT: {
+        CHECK_NSDI_MIN_VERSION(NonSemanticShaderDebugInfoVersion);
+        CHECK_DEBUG_OPERAND("Component Type", CommonDebugInfoDebugTypeBasic, 5);
+        // Component Count may be OpSpecConstant when the cooperative vector
+        // type uses a specialization constant for its size.
+        CHECK_CONST_OR_SPEC_UINT_OPERAND("Component Count", 6);
+        break;
+      }
+      case NonSemanticShaderDebugInfoDebugTypeCooperativeMatrixKHR: {
+        CHECK_NSDI_MIN_VERSION(NonSemanticShaderDebugInfoVersion);
+        CHECK_DEBUG_OPERAND("Component Type", CommonDebugInfoDebugTypeBasic, 5);
+        // Scope, Rows, Columns, and Use may be OpSpecConstant when the
+        // cooperative matrix type uses specialization constants.
+        CHECK_CONST_OR_SPEC_UINT_OPERAND("Scope", 6);
+        CHECK_CONST_OR_SPEC_UINT_OPERAND("Rows", 7);
+        CHECK_CONST_OR_SPEC_UINT_OPERAND("Columns", 8);
+        CHECK_CONST_OR_SPEC_UINT_OPERAND("Use", 9);
+        break;
+      }
+      case NonSemanticShaderDebugInfoDebugFunctionDefinition: {
         CHECK_DEBUG_OPERAND("Function", CommonDebugInfoDebugFunction, 5);
         CHECK_OPERAND("Definition", spv::Op::OpFunction, 6);
         const auto* current_function = inst->function();
@@ -3216,7 +3635,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         }
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugLine: {
+      case NonSemanticShaderDebugInfoDebugLine: {
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 5);
         CHECK_CONST_UINT_OPERAND("Line Start", 6);
         CHECK_CONST_UINT_OPERAND("Line End", 7);
@@ -3239,7 +3658,12 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
             _.EvalInt32IfConst(inst->word(8));
         std::tie(is_int32, is_const_int32, column_end) =
             _.EvalInt32IfConst(inst->word(9));
-        if (line_end < line_start) {
+        if (line_start == 0) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << GetExtInstName(_, inst)
+                 << ": operand Line Start (0) is not allowed, source lines "
+                    "start at Line 1";
+        } else if (line_end < line_start) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << GetExtInstName(_, inst) << ": operand Line End ("
                  << line_end << ") is less than Line Start (" << line_start
@@ -3250,22 +3674,64 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
                  << column_end << ") is less than Column Start ("
                  << column_start << ") when Line Start equals Line End";
         }
+        // Make sure Line is found in the DebugSource
+        auto* debug_source_inst = _.FindDef(inst->word(5));
+        const std::vector<uint32_t>& line_lengths =
+            _.GetDebugSourceLineLength(debug_source_inst->id());
+        if (!line_lengths.empty()) {
+          if (line_end > line_lengths.size()) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << GetExtInstName(_, inst) << ": operand Line End ("
+                   << line_end << ") is larger then the " << line_lengths.size()
+                   << " lines found in the DebugSource text";
+          }
+          if (line_start == line_end) {
+            const uint32_t line_length = line_lengths[line_end - 1];
+            if (column_end > line_length) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << GetExtInstName(_, inst) << ": operand Column End ("
+                     << column_end << ") is larger then Line " << line_end
+                     << " column length of " << line_length
+                     << " found in the DebugSource text";
+            }
+          } else {
+            uint32_t line_length = line_lengths[line_start - 1];
+            if (column_start > line_length) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << GetExtInstName(_, inst) << ": operand Column Start ("
+                     << column_start << ") is larger then Line " << line_start
+                     << " column length of " << line_length
+                     << " found in the DebugSource text";
+            }
+            line_length = line_lengths[line_end - 1];
+            if (column_end > line_length) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << GetExtInstName(_, inst) << ": operand Column End ("
+                     << column_end << ") is larger then Line " << line_end
+                     << " column length of " << line_length
+                     << " found in the DebugSource text";
+            }
+          }
+        }
+
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugSourceContinued: {
+      case NonSemanticShaderDebugInfoDebugSourceContinued: {
         CHECK_OPERAND("Text", spv::Op::OpString, 5);
+        // OpenCL didn't have a Continued version
+        BuildDebugSourceLineLength(_, inst, ext_inst_index);
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugBuildIdentifier: {
+      case NonSemanticShaderDebugInfoDebugBuildIdentifier: {
         CHECK_OPERAND("Identifier", spv::Op::OpString, 5);
         CHECK_CONST_UINT_OPERAND("Flags", 6);
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugStoragePath: {
+      case NonSemanticShaderDebugInfoDebugStoragePath: {
         CHECK_OPERAND("Path", spv::Op::OpString, 5);
         break;
       }
-      case NonSemanticShaderDebugInfo100DebugEntryPoint: {
+      case NonSemanticShaderDebugInfoDebugEntryPoint: {
         CHECK_DEBUG_OPERAND("Entry Point", CommonDebugInfoDebugFunction, 5);
         CHECK_DEBUG_OPERAND("Compilation Unit",
                             CommonDebugInfoDebugCompilationUnit, 6);
@@ -3275,9 +3741,9 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
       }
 
         // Has no additional checks
-      case NonSemanticShaderDebugInfo100DebugNoLine:
+      case NonSemanticShaderDebugInfoDebugNoLine:
         break;
-      case NonSemanticShaderDebugInfo100InstructionsMax:
+      case NonSemanticShaderDebugInfoInstructionsMax:
         assert(0);
         break;
     }
@@ -3312,7 +3778,8 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
       }
       case CommonDebugInfoDebugSource: {
         CHECK_OPERAND("File", spv::Op::OpString, 5);
-        if (num_words == 7) CHECK_OPERAND("Text", spv::Op::OpString, 6);
+        if (has_optional_at(7)) CHECK_OPERAND("Text", spv::Op::OpString, 6);
+        BuildDebugSourceLineLength(_, inst, ext_inst_index);
         break;
       }
       case CommonDebugInfoDebugTypeBasic: {
@@ -3373,6 +3840,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
             if (!vulkanDebugInfo && !component_count->word(3)) {
               invalid = true;
             }
+          } else if (vulkanDebugInfo && IsSpecConstIntScalarTypeWith32Or64Bits(
+                                            _, component_count)) {
+            // Spec constants are valid component counts for
+            // NonSemantic.Shader.DebugInfo.
           } else if (component_count->words().size() > 6 &&
                      (CommonDebugInfoInstructions(component_count->word(4)) ==
                           CommonDebugInfoDebugLocalVariable ||
@@ -3410,8 +3881,9 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
           if (invalid) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << GetExtInstName(_, inst) << ": Component Count must be "
-                   << "OpConstant with a 32- or 64-bits integer scalar type "
-                      "or "
+                   << (vulkanDebugInfo ? "a constant instruction"
+                                       : "OpConstant")
+                   << " with a 32- or 64-bits integer scalar type or "
                    << "DebugGlobalVariable or DebugLocalVariable with a 32- "
                       "or "
                    << "64-bits unsigned integer scalar type";
@@ -3426,6 +3898,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
@@ -3464,6 +3940,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
@@ -3487,6 +3967,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
@@ -3527,18 +4011,23 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
         // NonSemantic.Shader.DebugInfo doesn't have the Parent operand
         if (vulkanDebugInfo) {
           CHECK_OPERAND("Offset", spv::Op::OpConstant, 10);
           CHECK_OPERAND("Size", spv::Op::OpConstant, 11);
           CHECK_CONST_UINT_OPERAND("Flags", 12);
-          if (num_words == 14) CHECK_OPERAND("Value", spv::Op::OpConstant, 13);
+          if (has_optional_at(14))
+            CHECK_OPERAND("Value", spv::Op::OpConstant, 13);
         } else {
           CHECK_DEBUG_OPERAND("Parent", CommonDebugInfoDebugTypeComposite, 10);
           CHECK_OPERAND("Offset", spv::Op::OpConstant, 11);
           CHECK_OPERAND("Size", spv::Op::OpConstant, 12);
           CHECK_CONST_UINT_OPERAND("Flags", 13);
-          if (num_words == 15) CHECK_OPERAND("Value", spv::Op::OpConstant, 14);
+          if (has_optional_at(15))
+            CHECK_OPERAND("Value", spv::Op::OpConstant, 14);
         }
         break;
       }
@@ -3576,6 +4065,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
@@ -3585,7 +4078,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         // NonSemantic.Shader.DebugInfo.100 doesn't include a reference to the
         // OpFunction
         if (vulkanDebugInfo) {
-          if (num_words == 15) {
+          if (has_optional_at(15)) {
             CHECK_DEBUG_OPERAND("Declaration",
                                 CommonDebugInfoDebugFunctionDeclaration, 14);
           }
@@ -3598,7 +4091,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
                   inst, 14)) {
             CHECK_OPERAND("Function", spv::Op::OpFunction, 14);
           }
-          if (num_words == 16) {
+          if (has_optional_at(16)) {
             CHECK_DEBUG_OPERAND("Declaration",
                                 CommonDebugInfoDebugFunctionDeclaration, 15);
           }
@@ -3611,6 +4104,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
@@ -3622,16 +4119,19 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 5);
         CHECK_CONST_UINT_OPERAND("Line", 6);
         CHECK_CONST_UINT_OPERAND("Column", 7);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 5, 6, 7, ext_inst_type))
+          return error;
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 8);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
-        if (num_words == 10) CHECK_OPERAND("Name", spv::Op::OpString, 9);
+        if (has_optional_at(10)) CHECK_OPERAND("Name", spv::Op::OpString, 9);
         break;
       }
       case CommonDebugInfoDebugScope: {
         auto validate_scope = ValidateOperandLexicalScope(_, "Scope", inst, 5);
         if (validate_scope != SPV_SUCCESS) return validate_scope;
-        if (num_words == 7) {
+        if (has_optional_at(7)) {
           CHECK_DEBUG_OPERAND("Inlined At", CommonDebugInfoDebugInlinedAt, 6);
         }
         break;
@@ -3645,11 +4145,15 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_parent =
             ValidateOperandLexicalScope(_, "Parent", inst, 10);
         if (validate_parent != SPV_SUCCESS) return validate_parent;
         CHECK_CONST_UINT_OPERAND("Flags", 11);
-        if (num_words == 13) {
+        if (has_optional_at(13)) {
           CHECK_CONST_UINT_OPERAND("ArgNumber", 12);
         }
         break;
@@ -3724,6 +4228,9 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 8);
         CHECK_CONST_UINT_OPERAND("Line", 9);
         CHECK_CONST_UINT_OPERAND("Column", 10);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 8, 9, 10, ext_inst_type))
+          return error;
         break;
       }
       case CommonDebugInfoDebugGlobalVariable: {
@@ -3734,6 +4241,10 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_DEBUG_OPERAND("Source", CommonDebugInfoDebugSource, 7);
         CHECK_CONST_UINT_OPERAND("Line", 8);
         CHECK_CONST_UINT_OPERAND("Column", 9);
+        if (auto error =
+                ValidateOperandDebugSource(_, inst, 7, 8, 9, ext_inst_type))
+          return error;
+
         auto validate_scope = ValidateOperandLexicalScope(_, "Scope", inst, 10);
         if (validate_scope != SPV_SUCCESS) return validate_scope;
         CHECK_OPERAND("Linkage Name", spv::Op::OpString, 11);
@@ -3766,7 +4277,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
                       "or DebugInfoNone";
           }
         }
-        if (num_words == 15) {
+        if (has_optional_at(15)) {
           CHECK_DEBUG_OPERAND("Static Member Declaration",
                               CommonDebugInfoDebugTypeMember, 14);
         }
@@ -3776,7 +4287,7 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
         CHECK_CONST_UINT_OPERAND("Line", 5);
         auto validate_scope = ValidateOperandLexicalScope(_, "Scope", inst, 6);
         if (validate_scope != SPV_SUCCESS) return validate_scope;
-        if (num_words == 8) {
+        if (has_optional_at(8)) {
           CHECK_DEBUG_OPERAND("Inlined", CommonDebugInfoDebugInlinedAt, 7);
         }
         break;
@@ -3822,6 +4333,96 @@ spv_result_t ValidateExtInstDebugInfo100(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
+spv_result_t ValidateExtInstGraphDebugInfo(ValidationState_t& _,
+                                           const Instruction* inst) {
+  if (!_.IsVoidType(inst->type_id())) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << GetExtInstName(_, inst) << ": "
+           << "expected result type must be a result id of OpTypeVoid";
+  }
+
+  const auto ext_inst_key =
+      NonSemanticGraphDebugInfoInstructions(inst->word(4));
+  switch (ext_inst_key) {
+    case NonSemanticGraphDebugInfoDebugGraph: {
+      CHECK_OPERAND("Graph", spv::Op::OpGraphARM, 5);
+      CHECK_OPERAND("Name", spv::Op::OpString, 6);
+      break;
+    }
+
+    case NonSemanticGraphDebugInfoDebugOperation: {
+      const auto* debug_graph = _.FindDef(inst->word(5));
+      if (!debug_graph || !IsGraphDebugInfoDebugGraph(debug_graph)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << GetExtInstName(_, inst) << ": expected operand DebugGraph "
+               << "must be a result id of NonSemantic.Graph.DebugInfo "
+               << "DebugGraph";
+      }
+      CHECK_OPERAND("Name", spv::Op::OpString, 6);
+      if (inst->words().size() < 8) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << GetExtInstName(_, inst) << ": expected operand "
+               << "Instructions must contain at least one instruction";
+      }
+
+      const uint32_t graph_id = debug_graph->word(5);
+      for (uint32_t word_index = 7; word_index < inst->words().size();
+           ++word_index) {
+        const uint32_t instruction_id = inst->word(word_index);
+        if (!IsInstructionInGraph(_, instruction_id, graph_id)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << GetExtInstName(_, inst) << ": expected operand "
+                 << "Instructions must be result ids of instructions within "
+                 << "the graph described by DebugGraph";
+        }
+      }
+      break;
+    }
+
+    case NonSemanticGraphDebugInfoDebugTensor: {
+      const auto* tensor = _.FindDef(inst->word(5));
+      const uint32_t tensor_type_id = tensor ? tensor->type_id() : 0;
+      const auto* tensor_type = _.FindDef(tensor_type_id);
+      const bool is_tensor =
+          tensor_type && tensor_type->opcode() == spv::Op::OpTypeTensorARM;
+      const bool is_composite_tensor =
+          IsTopLevelCompositeOfTensors(_, tensor_type_id);
+      if (!is_tensor && !is_composite_tensor) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << GetExtInstName(_, inst) << ": expected operand Tensor "
+               << "must be a value of OpTypeTensorARM or a composite type "
+               << "whose top-level constituents are OpTypeTensorARM";
+      }
+      CHECK_OPERAND("Name", spv::Op::OpString, 6);
+
+      const bool has_index = inst->words().size() > 7;
+      if (is_composite_tensor && !has_index) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << GetExtInstName(_, inst) << ": expected operand Index "
+               << "must be present when Tensor has composite type";
+      }
+      if (has_index) {
+        if (!is_composite_tensor) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << GetExtInstName(_, inst) << ": expected operand Tensor "
+                 << "must have composite type when Index is present";
+        }
+        if (!IsUint32Constant(_, inst->word(7))) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << GetExtInstName(_, inst) << ": expected operand Index "
+                 << "must be a result id of 32-bit unsigned OpConstant";
+        }
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  return SPV_SUCCESS;
+}
+
 spv_result_t ValidateExtInstNonsemanticClspvReflection(
     ValidationState_t& _, const Instruction* inst) {
   auto import_inst = _.FindDef(inst->GetOperandAs<uint32_t>(2));
@@ -3852,6 +4453,14 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
   const spv_ext_inst_type_t ext_inst_type =
       spv_ext_inst_type_t(inst->ext_inst_type());
 
+  // GLSL.std.450 and OpenCL.std define a floating-point type as an OpTypeFloat
+  // using the IEEE 754 encoding, so they don't support BFloat16 or FP8 types.
+  if (ext_inst_type == SPV_EXT_INST_TYPE_GLSL_STD_450 ||
+      ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_STD) {
+    if (spv_result_t result = ValidateExtInstFloatEncoding(_, inst))
+      return result;
+  }
+
   if (ext_inst_type == SPV_EXT_INST_TYPE_GLSL_STD_450) {
     return ValidateExtInstGlslStd450(_, inst);
   } else if (ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_STD) {
@@ -3859,9 +4468,11 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
   } else if (ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100 ||
              ext_inst_type ==
                  SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
-    return ValidateExtInstDebugInfo100(_, inst);
+    return ValidateExtInstDebugInfo(_, inst);
   } else if (ext_inst_type == SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION) {
     return ValidateExtInstNonsemanticClspvReflection(_, inst);
+  } else if (ext_inst_type == SPV_EXT_INST_TYPE_NONSEMANTIC_GRAPH_DEBUGINFO) {
+    return ValidateExtInstGraphDebugInfo(_, inst);
   }
 
   return SPV_SUCCESS;

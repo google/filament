@@ -194,7 +194,7 @@ spv_result_t ValidateMemorySemantics(ValidationState_t& _,
     }
     if (!spvOpcodeIsAtomicOp(inst->opcode())) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << _.VkErrorID(10874) << spvOpcodeString(opcode)
+             << _.VkErrorID(13551) << spvOpcodeString(opcode)
              << ": Memory Semantics with Volatile bit set must not be used "
                 "with barrier instructions";
     }
@@ -283,6 +283,36 @@ spv_result_t ValidateMemorySemantics(ValidationState_t& _,
              << _.VkErrorID(4641) << spvOpcodeString(opcode)
              << ": Vulkan specification requires Memory Semantics to be "
                 "Relaxed if used with Invocation Memory Scope";
+    }
+  }
+
+  if (is_vulkan && (opcode == spv::Op::OpControlBarrierArriveEXT ||
+                    opcode == spv::Op::OpControlBarrierWaitEXT)) {
+    auto aquire_release_mask = uint32_t(
+        spv::MemorySemanticsMask::Acquire | spv::MemorySemanticsMask::Release |
+        spv::MemorySemanticsMask::AcquireRelease);
+
+    if (opcode == spv::Op::OpControlBarrierArriveEXT) {
+      if ((value & aquire_release_mask) !=
+              uint32_t(spv::MemorySemanticsMask::Release) &&
+          ((value & aquire_release_mask) !=
+           uint32_t(spv::MemorySemanticsMask::MaskNone))) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(13556) << spvOpcodeString(opcode)
+               << " Memory Semantics must not have any non-relaxed memory "
+                  "order set other than Release";
+      }
+    }
+    if (opcode == spv::Op::OpControlBarrierWaitEXT) {
+      if ((value & aquire_release_mask) !=
+              uint32_t(spv::MemorySemanticsMask::Acquire) &&
+          ((value & aquire_release_mask) !=
+           uint32_t(spv::MemorySemanticsMask::MaskNone))) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(13557) << spvOpcodeString(opcode)
+               << " Memory Semantics must not have any non-relaxed memory "
+                  "order set other than Acquire";
+      }
     }
   }
 

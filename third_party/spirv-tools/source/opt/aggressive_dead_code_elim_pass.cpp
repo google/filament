@@ -128,6 +128,7 @@ void AggressiveDCEPass::AddStores(Function* func, uint32_t ptrId) {
     switch (user->opcode()) {
       case spv::Op::OpAccessChain:
       case spv::Op::OpInBoundsAccessChain:
+      case spv::Op::OpUntypedAccessChainKHR:
       case spv::Op::OpCopyObject:
         this->AddStores(func, user->result_id());
         break;
@@ -160,14 +161,16 @@ bool AggressiveDCEPass::AllExtensionsSupported() const {
     if (extensions_allowlist_.find(extName) == extensions_allowlist_.end())
       return false;
   }
-  // Only allow NonSemantic.Shader.DebugInfo.100, we cannot safely optimise
-  // around unknown extended instruction sets even if they are non-semantic
+  // Only allow NonSemantic.Shader.DebugInfo (any version) and
+  // NonSemantic.DebugPrintf; we cannot safely optimise around unknown extended
+  // instruction sets even if they are non-semantic.
   for (auto& inst : context()->module()->ext_inst_imports()) {
     assert(inst.opcode() == spv::Op::OpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
     const std::string extension_name = inst.GetInOperand(0).AsString();
     if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
-        (extension_name != "NonSemantic.Shader.DebugInfo.100") &&
+        !spvtools::utils::starts_with(extension_name,
+                                      "NonSemantic.Shader.DebugInfo.") &&
         (extension_name != "NonSemantic.DebugPrintf")) {
       return false;
     }
@@ -291,8 +294,8 @@ Pass::Status AggressiveDCEPass::ProcessDebugInformation(
     bool succeeded = (*bi)->WhileEachInst([this](Instruction* inst) {
       if (!inst->IsNonSemanticInstruction()) return true;
 
-      if (inst->GetShader100DebugOpcode() ==
-          NonSemanticShaderDebugInfo100DebugDeclare) {
+      if (inst->GetShaderDebugOpcode() ==
+          NonSemanticShaderDebugInfoDebugDeclare) {
         if (IsLive(inst)) return true;
 
         uint32_t var_id =
@@ -329,8 +332,8 @@ Pass::Status AggressiveDCEPass::ProcessDebugInformation(
           }
           return true;
         });
-      } else if (inst->GetShader100DebugOpcode() ==
-                 NonSemanticShaderDebugInfo100DebugValue) {
+      } else if (inst->GetShaderDebugOpcode() ==
+                 NonSemanticShaderDebugInfoDebugValue) {
         uint32_t var_operand_idx = kDebugValueValueInIdx;
         uint32_t id = inst->GetSingleWordInOperand(var_operand_idx);
         auto def = get_def_use_mgr()->GetDef(id);
@@ -758,14 +761,15 @@ Pass::Status AggressiveDCEPass::InitializeModuleScopeLiveInstructions() {
 
   // Add DebugInfo which should never be eliminated to worklist
   for (auto& dbg : get_module()->ext_inst_debuginfo()) {
-    auto op = dbg.GetShader100DebugOpcode();
-    if (op == NonSemanticShaderDebugInfo100DebugCompilationUnit ||
-        op == NonSemanticShaderDebugInfo100DebugEntryPoint ||
-        op == NonSemanticShaderDebugInfo100DebugSource ||
-        op == NonSemanticShaderDebugInfo100DebugSourceContinued ||
-        op == NonSemanticShaderDebugInfo100DebugLocalVariable ||
-        op == NonSemanticShaderDebugInfo100DebugExpression ||
-        op == NonSemanticShaderDebugInfo100DebugOperation) {
+    auto op = dbg.GetShaderDebugOpcode();
+    if (op == NonSemanticShaderDebugInfoDebugCompilationUnit ||
+        op == NonSemanticShaderDebugInfoDebugEntryPoint ||
+        op == NonSemanticShaderDebugInfoDebugSource ||
+        op == NonSemanticShaderDebugInfoDebugSourceContinued ||
+        op == NonSemanticShaderDebugInfoDebugLocalVariable ||
+        op == NonSemanticShaderDebugInfoDebugExpression ||
+        op == NonSemanticShaderDebugInfoDebugOperation ||
+        op == NonSemanticShaderDebugInfoDebugBuildIdentifier) {
       AddToWorklist(&dbg);
     }
   }
@@ -1014,8 +1018,8 @@ bool AggressiveDCEPass::ProcessGlobalValues() {
       continue;
     }
     // Save debug build identifier even if no other instructions refer to it.
-    if (dbg.GetShader100DebugOpcode() ==
-        NonSemanticShaderDebugInfo100DebugBuildIdentifier) {
+    if (dbg.GetShaderDebugOpcode() ==
+        NonSemanticShaderDebugInfoDebugBuildIdentifier) {
       // The debug build identifier refers to other instructions that
       // can potentially be removed, they also need to be kept alive.
       dbg.ForEachInId([this](const uint32_t* id) {
@@ -1121,6 +1125,7 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_EXT_demote_to_helper_invocation",
       "SPV_EXT_descriptor_indexing",
       "SPV_EXT_descriptor_heap",
+      "SPV_KHR_untyped_pointers",
       "SPV_NV_fragment_shader_barycentric",
       "SPV_NV_compute_shader_derivatives",
       "SPV_NV_shader_image_footprint",
@@ -1135,13 +1140,13 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_KHR_physical_storage_buffer",
       "SPV_KHR_terminate_invocation",
       "SPV_KHR_shader_clock",
-      "SPV_KHR_vulkan_memory_model",
       "SPV_KHR_subgroup_uniform_control_flow",
       "SPV_KHR_integer_dot_product",
       "SPV_EXT_shader_image_int64",
       "SPV_KHR_non_semantic_info",
       "SPV_KHR_uniform_group_instructions",
       "SPV_KHR_fragment_shader_barycentric",
+      "SPV_KHR_vulkan_memory_model",
       "SPV_NV_bindless_texture",
       "SPV_EXT_shader_atomic_float_add",
       "SPV_EXT_fragment_shader_interlock",
@@ -1155,6 +1160,13 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_NV_cluster_acceleration_structure",
       "SPV_NV_linear_swept_spheres",
       "SPV_KHR_maximal_reconvergence",
+      "SPV_NV_push_constant_bank",
+      "SPV_EXT_opacity_micromap",
+      "SPV_KHR_opacity_micromap",
+      "SPV_EXT_shader_invocation_reorder",
+      "SPV_EXT_shader_atomic_float16_add",
+      "SPV_KHR_abort",
+      "SPV_KHR_constant_data",
   });
 }
 

@@ -18,6 +18,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "source/binary.h"
@@ -225,6 +226,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
   bool has_mask_task_nv = false;
   bool has_mask_task_ext = false;
   std::vector<Instruction*> visited_entry_points;
+  std::unordered_set<std::string> graph_entry_point_names;
   for (auto& instruction : vstate->ordered_instructions()) {
     {
       // In order to do this work outside of Process Instruction we need to be
@@ -281,7 +283,12 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
                               execution_model == spv::ExecutionModel::MeshEXT);
       }
       if (inst->opcode() == spv::Op::OpGraphEntryPointARM) {
-        const auto graph = inst->GetOperandAs<uint32_t>(1);
+        const std::string name = inst->GetOperandAs<std::string>(1);
+        if (!graph_entry_point_names.insert(name).second) {
+          return vstate->diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "Graph entry points cannot share the same name.";
+        }
+        const auto graph = inst->GetOperandAs<uint32_t>(0);
         vstate->RegisterGraphEntryPoint(graph);
       }
       if (inst->opcode() == spv::Op::OpFunctionCall) {
@@ -390,9 +397,10 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     if (auto error = AtomicsPass(*vstate, &instruction)) return error;
     if (auto error = PrimitivesPass(*vstate, &instruction)) return error;
     if (auto error = BarriersPass(*vstate, &instruction)) return error;
-    // Group
+    if (auto error = DotProductPass(*vstate, &instruction)) return error;
+    if (auto error = GroupPass(*vstate, &instruction)) return error;
     // Device-Side Enqueue
-    // Pipe
+    if (auto error = PipePass(*vstate, &instruction)) return error;
     if (auto error = NonUniformPass(*vstate, &instruction)) return error;
 
     if (auto error = LiteralsPass(*vstate, &instruction)) return error;
@@ -419,6 +427,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
   if (auto error = PerformCfgChecks(*vstate)) return error;
   if (auto error = CheckIdDefinitionDominateUse(*vstate)) return error;
   if (auto error = ValidateDecorations(*vstate)) return error;
+  if (auto error = ValidateExplicitLayout(*vstate)) return error;
   if (auto error = ValidateInterfaces(*vstate)) return error;
   // TODO(dsinclair): Restructure ValidateBuiltins so we can move into the
   // for() above as it loops over all ordered_instructions internally.

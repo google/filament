@@ -24,13 +24,72 @@
 namespace spvtools {
 namespace val {
 
+namespace {
+
+bool IsBfloat16ScalarOrCompositeType(ValidationState_t& _, uint32_t type_id) {
+  const Instruction* inst = _.FindDef(type_id);
+  if (!inst) return false;
+
+  if (_.IsBfloat16Type(type_id)) return true;
+
+  switch (inst->opcode()) {
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeCooperativeMatrixNV:
+      return _.IsBfloat16ScalarType(_.GetComponentType(type_id));
+    default:
+      return false;
+  }
+}
+
+bool IsFP8ScalarOrCompositeType(ValidationState_t& _, uint32_t type_id) {
+  const Instruction* inst = _.FindDef(type_id);
+  if (!inst) return false;
+
+  if (_.IsFP8Type(type_id)) return true;
+
+  switch (inst->opcode()) {
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeCooperativeMatrixNV:
+      return _.IsFP8ScalarType(_.GetComponentType(type_id));
+    default:
+      return false;
+  }
+}
+
+bool IsOCPMicroscalingScalarOrCompositeType(ValidationState_t& _,
+                                            uint32_t type_id) {
+  return _.ContainsOCPMicroscalingType(type_id);
+}
+
+spv_result_t CheckInvalidScalarOrCompositeType(ValidationState_t& _,
+                                               const Instruction* inst,
+                                               uint32_t type_id) {
+  const spv::Op opcode = inst->opcode();
+  if (IsBfloat16ScalarOrCompositeType(_, type_id)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << spvOpcodeString(opcode) << " doesn't support BFloat16 type.";
+  }
+  if (IsFP8ScalarOrCompositeType(_, type_id)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << spvOpcodeString(opcode)
+           << " doesn't support FP8 E4M3/E5M2 types.";
+  }
+  if (IsOCPMicroscalingScalarOrCompositeType(_, type_id)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, inst)
+           << spvOpcodeString(opcode)
+           << " doesn't support OCP microscaling types.";
+  }
+
+  return SPV_SUCCESS;
+}
+
+}  // namespace
+
 // Validates correctness of certain special type instructions.
 spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
   const spv::Op opcode = inst->opcode();
 
   switch (opcode) {
-    // OpExtInst
-    case spv::Op::OpExtInst:
     // Arithmetic Instructions
     case spv::Op::OpFAdd:
     case spv::Op::OpFSub:
@@ -39,6 +98,13 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpFRem:
     case spv::Op::OpFMod:
     case spv::Op::OpFNegate:
+    case spv::Op::OpFmaKHR:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
     // Derivative Instructions
     case spv::Op::OpDPdx:
     case spv::Op::OpDPdy:
@@ -69,14 +135,39 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
     case spv::Op::OpGroupNonUniformFMul:
     case spv::Op::OpGroupNonUniformFMin: {
       const uint32_t result_type = inst->type_id();
-      if (_.IsBfloat16Type(result_type)) {
-        return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << spvOpcodeString(opcode) << " doesn't support BFloat16 type.";
+      if (spv_result_t result =
+              CheckInvalidScalarOrCompositeType(_, inst, result_type)) {
+        return result;
       }
+
+      break;
+    }
+
+    case spv::Op::OpCooperativeMatrixMulAddNV: {
+      if (spv_result_t result =
+              CheckInvalidScalarOrCompositeType(_, inst, inst->type_id())) {
+        return result;
+      }
+      for (uint32_t operand_index = 2; operand_index <= 4; ++operand_index) {
+        if (spv_result_t result = CheckInvalidScalarOrCompositeType(
+                _, inst, _.GetOperandTypeId(inst, operand_index))) {
+          return result;
+        }
+      }
+      break;
+    }
+
+    case spv::Op::OpDot: {
+      const uint32_t result_type = inst->type_id();
       if (_.IsFP8Type(result_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
+      }
+      if (_.ContainsOCPMicroscalingType(result_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << spvOpcodeString(opcode)
+               << " doesn't support OCP microscaling types.";
       }
       break;
     }
@@ -92,6 +183,11 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
+      }
+      if (_.ContainsOCPMicroscalingType(data_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << spvOpcodeString(opcode)
+               << " doesn't support OCP microscaling types.";
       }
       break;
     }
@@ -126,6 +222,11 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
       }
+      if (_.ContainsOCPMicroscalingType(operand_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << spvOpcodeString(opcode)
+               << " doesn't support OCP microscaling types.";
+      }
       break;
     }
 
@@ -140,32 +241,14 @@ spv_result_t InvalidTypePass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode)
                << " doesn't support FP8 E4M3/E5M2 types.";
       }
-
-      break;
-    }
-
-    case spv::Op::OpMatrixTimesMatrix: {
-      const uint32_t result_type = inst->type_id();
-      uint32_t res_num_rows = 0;
-      uint32_t res_num_cols = 0;
-      uint32_t res_col_type = 0;
-      uint32_t res_component_type = 0;
-      if (_.GetMatrixTypeInfo(result_type, &res_num_rows, &res_num_cols,
-                              &res_col_type, &res_component_type)) {
-        if (_.IsBfloat16Type(res_component_type)) {
-          return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << spvOpcodeString(opcode)
-                 << " doesn't support BFloat16 type.";
-        }
-        if (_.IsFP8Type(res_component_type)) {
-          return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                 << spvOpcodeString(opcode)
-                 << " doesn't support FP8 E4M3/E5M2 types.";
-        }
+      if (_.ContainsOCPMicroscalingType(value_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << spvOpcodeString(opcode)
+               << " doesn't support OCP microscaling types.";
       }
+
       break;
     }
-
     default:
       break;
   }

@@ -544,7 +544,7 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
+    if (UTILS_UNLIKELY(texture->isExternallySampled())) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
         set->isAnExternalSamplerBound = true;
@@ -567,8 +567,6 @@ void VulkanDriver::updateDescriptorSetTexture(
         };
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
-        mExternalImageManager.clearTextureBinding(set, binding);
-        mStreamedImageManager.unbindStreamedTexture(set, binding);
     }
 }
 
@@ -934,10 +932,6 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // texture into the read layout.
     texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
-    if (imgData.external.valid() || texture->isYUVStaging()) {
-        mExternalImageManager.addExternallySampledTexture(texture, conversion);
-    }
-
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
@@ -991,10 +985,6 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
-
-    // Must happen immediately on the backend thread. Removes from ExternalImageManager's tracking
-    // map. Only the dec() ref-release is deferred in the async path.
-    mExternalImageManager.removeExternallySampledTexture(texture);
 
     if (texture->asynchronous && getJobQueue()) {
         // Route the `dec()` through the queue to preserve FIFO ordering with any pending async
@@ -1597,9 +1587,11 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                                          image = stream->getAcquired().image]() {
                 auto texture = s->getTexture(image);
                 if (!texture) {
-                    auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
+                    auto externalImage =
+                            fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-                    auto imgData = mPlatform->createVkImageFromExternal(externalImage, texture->width, texture->height);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage,
+                            metadata.width, metadata.height);
 
                     assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
@@ -1634,8 +1626,6 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                             VulkanLayout::FRAG_READ);
 
                     if (imgData.external.valid()) {
-                        mExternalImageManager.addExternallySampledTexture(newTexture,
-                                conversion);
                         // Cache the AHB backed image. Acquires the image here.
                         s->pushImage(image, newTexture);
                     }
@@ -2285,7 +2275,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (depthStencil.texture->isTransientAttachment()) {
             discardEndVal |= TargetBufferFlags::DEPTH_AND_STENCIL;
         }
-        
+
         currentDepthStencilLayout = VulkanLayout::DEPTH_STENCIL_ATTACHMENT;
     }
 
@@ -2767,7 +2757,6 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         if (std::any_of(layoutHandles.begin(), layoutHandles.end(), haveExternalSamplers)) {
             BindInDrawBundle bundle = {
                 .pipelineState = pipelineState,
-                .dsLayoutHandles = layoutHandles,
                 .descriptorSetMask = descriptorSetMask,
             };
             mPipelineState.bindInDraw = { true, bundle };

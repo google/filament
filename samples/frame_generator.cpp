@@ -43,6 +43,7 @@
 #include <image/LinearImage.h>
 
 #include <filamentapp/AssetLoader.h>
+#include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/FilamentApp2.h>
 #include <filamentapp/IBL.h>
 #include <filamentapp/MeshAssimp.h>
@@ -123,6 +124,7 @@ uint32_t g_width = 512;
 uint32_t g_height = 512;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
+filament::app::AssetLoader* g_assetLoader = nullptr;
 std::map<utils::CString, MaterialInstance*> g_meshMaterialInstances;
 const Material* g_material = nullptr;
 MaterialInstance* g_materialInstance = nullptr;
@@ -154,6 +156,7 @@ void cleanup(Engine* engine, View*, Scene*) {
     engine->destroy(g_material);
 
     g_meshSet.reset(nullptr);
+    g_assetLoader = nullptr;
 
     engine->destroy(g_light);
     EntityManager& em = EntityManager::get();
@@ -268,7 +271,7 @@ void setParameter(MaterialInstance* mi, const utils::CString& name,
 
 // Sets up the scene: loads mesh, material, lights, and camera.
 void setup(Engine* engine, View*, Scene* scene) {
-    g_meshSet = std::make_unique<MeshAssimp>(*engine);
+    g_meshSet = std::make_unique<MeshAssimp>(*engine, g_assetLoader);
 
     readMaterial(engine);
     readParameters();
@@ -414,6 +417,7 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         filament::app::DisplayManager* dm, filament::app::AssetLoader* loader) {
     auto app = std::make_shared<App>();
     g_config = config;
+    g_assetLoader = loader;
     app->config = config;
     g_meshScale = config.getFloat("scale", 1.0f);
     utils::CString clearColorStr = config.getString("clear-color");
@@ -496,8 +500,10 @@ int main(int const argc, char* argv[]) {
 
     config.title = "Frame Generator";
     config.headless = true;
-    auto fApp = createSampleApp(config, dm.get(), nullptr);
+    auto loader = new filament::app::DesktopAssetLoader();
+    auto fApp = createSampleApp(config, dm.get(), loader);
     fApp->run();
+    delete loader;
 
     return 0;
 }

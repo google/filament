@@ -662,7 +662,7 @@ void DumpTransformationsBinary(
     const char* filename) {
   std::ofstream transformations_file;
   transformations_file.open(filename, std::ios::out | std::ios::binary);
-  transformations.SerializeToOstream(&transformations_file);
+  (void)transformations.SerializeToOstream(&transformations_file);
   transformations_file.close();
 }
 
@@ -672,9 +672,9 @@ void DumpTransformationsJson(
     const spvtools::fuzz::protobufs::TransformationSequence& transformations,
     const char* filename) {
   std::string json_string;
-  auto json_options = google::protobuf::util::JsonPrintOptions();
+  auto json_options = google::protobuf::json::PrintOptions();
   json_options.add_whitespace = true;
-  auto json_generation_status = google::protobuf::util::MessageToJsonString(
+  auto json_generation_status = google::protobuf::json::MessageToJsonString(
       transformations, &json_string, json_options);
   if (json_generation_status.ok()) {
     std::ofstream transformations_json_file(filename);
@@ -727,7 +727,7 @@ int main(int argc, const char** argv) {
     std::string facts_json_string((std::istreambuf_iterator<char>(facts_input)),
                                   std::istreambuf_iterator<char>());
     facts_input.close();
-    if (!google::protobuf::util::JsonStringToMessage(facts_json_string,
+    if (!google::protobuf::json::JsonStringToMessage(facts_json_string,
                                                      &initial_facts)
              .ok()) {
       spvtools::Error(FuzzDiagnostic, nullptr, {}, "Error reading facts data");
@@ -800,9 +800,9 @@ int main(int argc, const char** argv) {
     }
 
     std::string json_string;
-    auto json_options = google::protobuf::util::JsonPrintOptions();
+    auto json_options = google::protobuf::json::PrintOptions();
     json_options.add_whitespace = true;
-    auto json_generation_status = google::protobuf::util::MessageToJsonString(
+    auto json_generation_status = google::protobuf::json::MessageToJsonString(
         transformations_applied, &json_string, json_options);
     if (!json_generation_status.ok()) {
       spvtools::Error(FuzzDiagnostic, nullptr, {},

@@ -204,7 +204,9 @@ spv_result_t Disassembler::HandleInstruction(
       }
       case spv::Op::OpFunctionEnd:
         // Process the CFG and output the instructions
-        EmitCFG();
+        if (!current_function_cfg_.blocks.empty()) {
+          EmitCFG();
+        }
         // Output OpFunctionEnd itself too
         [[fallthrough]];
       default:
@@ -597,7 +599,7 @@ spv_result_t DisassembleTargetInstruction(
   return SPV_SUCCESS;
 }
 
-uint32_t GetLineLengthWithoutColor(const std::string line) {
+uint32_t GetLineLengthWithoutColor(const std::string& line) {
   // Currently, every added color is in the form \x1b...m, so instead of doing a
   // lot of string comparisons with spvtools::clr::* strings, we just ignore
   // those ranges.
@@ -637,6 +639,8 @@ InstructionDisassembler::InstructionDisassembler(std::ostream& stream,
       comment_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_COMMENT, options)),
       show_byte_offset_(
           spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_SHOW_BYTE_OFFSET, options)),
+      handle_unknown_opcodes_(spvIsInBitfield(
+          SPV_BINARY_TO_TEXT_OPTION_HANDLE_UNKNOWN_OPCODES, options)),
       name_mapper_(std::move(name_mapper)),
       last_instruction_comment_alignment_(0) {}
 
@@ -687,6 +691,47 @@ void InstructionDisassembler::EmitInstructionImpl(
   // To better align the comments (if any), write the instruction to a line
   // first so its length can be readily available.
   std::ostringstream line;
+
+  if (handle_unknown_opcodes_) {
+    const InstructionDesc* opcode_desc = nullptr;
+    bool needs_raw_emit = LookupOpcode(opcode, &opcode_desc) != SPV_SUCCESS;
+
+    // Also check for an unknown extended instruction number in a semantic
+    // extended instruction set. The ext_inst_type is set by the parser even
+    // when the instruction number itself is unknown.
+    if (!needs_raw_emit && opcode == spv::Op::OpExtInst &&
+        inst.ext_inst_type != SPV_EXT_INST_TYPE_NONE &&
+        !spvExtInstIsNonSemantic(inst.ext_inst_type) && inst.num_words >= 5) {
+      const ExtInstDesc* ext_desc = nullptr;
+      needs_raw_emit = LookupExtInst(inst.ext_inst_type, inst.words[4],
+                                     &ext_desc) != SPV_SUCCESS;
+    }
+
+    // Also check for a known opcode whose operands were not decoded because
+    // one of its enum operands had an unknown value. The parser signals this
+    // by setting num_operands = 0 while leaving num_words intact.
+    // Legitimately zero-operand instructions (OpNop, OpReturn, etc.) have an
+    // empty grammar operand list, so this check does not trigger for them.
+    if (!needs_raw_emit && opcode_desc != nullptr &&
+        !opcode_desc->operands().empty() && inst.num_operands == 0) {
+      needs_raw_emit = true;
+    }
+
+    if (needs_raw_emit) {
+      line << std::string(indent_, ' ');
+      line << "OpUnknown(" << inst.opcode << ", " << inst.num_words << ")";
+      for (uint16_t i = 1; i < inst.num_words; i++) {
+        line << " " << inst.words[i];
+      }
+      // Warn that the ID bound in the reassembled module may be incorrect
+      // if this instruction defines a result ID, because the assembler does
+      // not track integers inside OpUnknown as ID assignments.
+      line << "  ; note: ID bound may be incorrect after reassembly";
+      stream_ << line.str() << "\n";
+      last_instruction_comment_alignment_ = 0;
+      return;
+    }
+  }
 
   if (nested_indent_ && opcode == spv::Op::OpLabel) {
     // Separate the blocks by an empty line to make them easier to separate
@@ -759,11 +804,12 @@ void InstructionDisassembler::EmitInstructionImpl(
     comment_separator = ", ";
   }
 
-  stream_ << line.str();
+  const std::string line_str = line.str();
+  stream_ << line_str;
 
   if (!comments.str().empty()) {
     // Align the comments
-    const uint32_t line_length = GetLineLengthWithoutColor(line.str());
+    const uint32_t line_length = GetLineLengthWithoutColor(line_str);
     uint32_t align = std::max(
         {line_length + 2, last_instruction_comment_alignment_, kCommentColumn});
     // Round up the alignment to a multiple of 4 for more niceness.
@@ -1044,15 +1090,17 @@ std::string spvInstructionBinaryToText(const spv_target_env env,
   std::unique_ptr<FriendlyNameMapper> friendly_mapper;
   NameMapper name_mapper = GetTrivialNameMapper();
   if (options & SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES) {
-    friendly_mapper = MakeUnique<FriendlyNameMapper>(context, code, wordCount);
+    friendly_mapper =
+        MakeUnique<FriendlyNameMapper>(context, code, wordCount, options);
     name_mapper = friendly_mapper->GetNameMapper();
   }
 
   // Now disassemble!
   Disassembler disassembler(options, name_mapper);
   WrappedDisassembler wrapped(&disassembler, instCode, instWordCount);
-  spvBinaryParse(context, &wrapped, code, wordCount, DisassembleTargetHeader,
-                 DisassembleTargetInstruction, nullptr);
+  spvBinaryParseWithOptions(context, &wrapped, code, wordCount,
+                            DisassembleTargetHeader,
+                            DisassembleTargetInstruction, nullptr, options);
 
   spv_text text = nullptr;
   std::string output;
@@ -1083,16 +1131,16 @@ spv_result_t spvBinaryToText(const spv_const_context context,
   spvtools::NameMapper name_mapper = spvtools::GetTrivialNameMapper();
   if (options & SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES) {
     friendly_mapper = spvtools::MakeUnique<spvtools::FriendlyNameMapper>(
-        &hijack_context, code, wordCount);
+        &hijack_context, code, wordCount, options);
     name_mapper = friendly_mapper->GetNameMapper();
   }
 
   // Now disassemble!
   spvtools::Disassembler disassembler(options, name_mapper);
-  if (auto error =
-          spvBinaryParse(&hijack_context, &disassembler, code, wordCount,
-                         spvtools::DisassembleHeader,
-                         spvtools::DisassembleInstruction, pDiagnostic)) {
+  if (auto error = spvBinaryParseWithOptions(
+          &hijack_context, &disassembler, code, wordCount,
+          spvtools::DisassembleHeader, spvtools::DisassembleInstruction,
+          pDiagnostic, options)) {
     return error;
   }
 

@@ -3584,8 +3584,8 @@ TEST_F(InlineTest, DebugNested) {
 
 TEST_F(InlineTest, DebugSimpleHLSLPixelShader) {
   const std::string text = R"(
-; CHECK: [[dbg_main:%\d+]] = OpExtInst %void [[ext:%\d+]] DebugFunction {{%\d+}} {{%\d+}} {{%\d+}} 1 1 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 1 %src_main
-; CHECK: [[lex_blk:%\d+]] = OpExtInst %void [[ext]] DebugLexicalBlock {{%\d+}} 1 47 [[dbg_main]]
+; CHECK: [[dbg_main:%\d+]] = OpExtInst %void [[ext:%\d+]] DebugFunction {{%\d+}} {{%\d+}} {{%\d+}} 2 1 {{%\d+}} {{%\d+}} FlagIsProtected|FlagIsPrivate 1 %src_main
+; CHECK: [[lex_blk:%\d+]] = OpExtInst %void [[ext]] DebugLexicalBlock {{%\d+}} 2 47 [[dbg_main]]
 ; CHECK: %main = OpFunction %void None
 ; CHECK: {{%\d+}} = OpExtInst %void [[ext]] DebugScope [[dbg_main]]
 ; CHECK: {{%\d+}} = OpExtInst %void [[ext]] DebugDeclare {{%\d+}} %param_var_color
@@ -3637,9 +3637,9 @@ float4 main(float4 color : COLOR) : SV_TARGET {
          %18 = OpExtInst %void %1 DebugTypeBasic %17 %uint_32 Float
          %19 = OpExtInst %void %1 DebugTypeVector %18 4
          %20 = OpExtInst %void %1 DebugTypeFunction FlagIsProtected|FlagIsPrivate %19 %19
-         %22 = OpExtInst %void %1 DebugFunction %21 %20 %15 1 1 %16 %21 FlagIsProtected|FlagIsPrivate 1 %src_main
-         %25 = OpExtInst %void %1 DebugLocalVariable %24 %19 %15 1 20 %22 FlagIsLocal 0
-         %26 = OpExtInst %void %1 DebugLexicalBlock %15 1 47 %22
+         %22 = OpExtInst %void %1 DebugFunction %21 %20 %15 2 1 %16 %21 FlagIsProtected|FlagIsPrivate 1 %src_main
+         %25 = OpExtInst %void %1 DebugLocalVariable %24 %19 %15 2 20 %22 FlagIsLocal 0
+         %26 = OpExtInst %void %1 DebugLexicalBlock %15 2 47 %22
        %main = OpFunction %void None %27
          %28 = OpLabel
 %param_var_color = OpVariable %_ptr_Function_v4float Function
@@ -3670,8 +3670,8 @@ TEST_F(InlineTest, ShaderDebugSimpleHLSLPixelShader) {
   // Same as DebugSimpleHLSLPixelShader but for
   // NonSemantic.Shader.DebugInfo.100.
   const std::string text = R"(
-; CHECK: [[dbg_main:%\d+]] = OpExtInst %void [[ext:%\d+]] DebugFunction {{%\d+}} {{%\d+}} {{%\d+}} %uint_1 %uint_1 {{%\d+}} {{%\d+}} %uint_3 %uint_1
-; CHECK: [[lex_blk:%\d+]] = OpExtInst %void [[ext]] DebugLexicalBlock {{%\d+}} %uint_1 %uint_47 [[dbg_main]]
+; CHECK: [[dbg_main:%\d+]] = OpExtInst %void [[ext:%\d+]] DebugFunction {{%\d+}} {{%\d+}} {{%\d+}} %uint_2 %uint_1 {{%\d+}} {{%\d+}} %uint_3 %uint_1
+; CHECK: [[lex_blk:%\d+]] = OpExtInst %void [[ext]] DebugLexicalBlock {{%\d+}} %uint_2 %uint_47 [[dbg_main]]
 ; CHECK: %main = OpFunction %void None
 ; CHECK: {{%\d+}} = OpExtInst %void [[ext]] DebugScope [[dbg_main]]
 ; CHECK: {{%\d+}} = OpExtInst %void [[ext]] DebugDeclare {{%\d+}} %param_var_color
@@ -3733,9 +3733,9 @@ float4 main(float4 color : COLOR) : SV_TARGET {
          %18 = OpExtInst %void %1 DebugTypeBasic %17 %uint_32 %uint_3 %uint_0
          %19 = OpExtInst %void %1 DebugTypeVector %18 %uint_4
          %20 = OpExtInst %void %1 DebugTypeFunction %uint_3 %19 %19
-         %22 = OpExtInst %void %1 DebugFunction %21 %20 %15 %uint_1 %uint_1 %16 %21 %uint_3 %uint_1
-         %25 = OpExtInst %void %1 DebugLocalVariable %24 %19 %15 %uint_1 %uint_20 %22 %uint_4 %uint_0
-         %26 = OpExtInst %void %1 DebugLexicalBlock %15 %uint_1 %uint_47 %22
+         %22 = OpExtInst %void %1 DebugFunction %21 %20 %15 %uint_2 %uint_1 %16 %21 %uint_3 %uint_1
+         %25 = OpExtInst %void %1 DebugLocalVariable %24 %19 %15 %uint_2 %uint_20 %22 %uint_4 %uint_0
+         %26 = OpExtInst %void %1 DebugLexicalBlock %15 %uint_2 %uint_47 %22
        %main = OpFunction %void None %27
          %28 = OpLabel
 %param_var_color = OpVariable %_ptr_Function_v4float Function
@@ -4513,12 +4513,12 @@ TEST_F(InlineTest, DebugDeclareWithAccessChain) {
          %32 = OpExtInst %void %1 DebugTypeBasic %4 %uint_32 %uint_3 %uint_0
          %33 = OpExtInst %void %1 DebugSource %3 %5
          %34 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %33 %uint_5
-         %35 = OpExtInst %void %1 DebugTypeMember %6 %32 %33 %uint_3 %uint_11 %uint_0 %uint_32 %uint_3
-         %36 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeComposite %7 %uint_1 %33 %uint_1 %uint_8 %34 %7 %uint_32 %uint_3 %35 %37
+         %35 = OpExtInst %void %1 DebugTypeMember %6 %32 %33 %uint_1 %uint_0 %uint_0 %uint_32 %uint_3
+         %36 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeComposite %7 %uint_1 %33 %uint_1 %uint_0 %34 %7 %uint_32 %uint_3 %35 %37
          %38 = OpExtInst %void %1 DebugTypeFunction %uint_3 %32 %36
-         %37 = OpExtInst %void %1 DebugFunction %8 %38 %33 %uint_4 %uint_5 %36 %9 %uint_3 %uint_4
-         %39 = OpExtInst %void %1 DebugLocalVariable %10 %36 %33 %uint_4 %uint_5 %37 %uint_288 %uint_1
-         %52 = OpExtInst %void %1 DebugLocalVariable %10 %32 %33 %uint_4 %uint_5 %37 %uint_288 %uint_1
+         %37 = OpExtInst %void %1 DebugFunction %8 %38 %33 %uint_1 %uint_5 %36 %9 %uint_3 %uint_4
+         %39 = OpExtInst %void %1 DebugLocalVariable %10 %36 %33 %uint_1 %uint_5 %37 %uint_288 %uint_1
+         %52 = OpExtInst %void %1 DebugLocalVariable %10 %32 %33 %uint_1 %uint_5 %37 %uint_288 %uint_1
          %40 = OpExtInst %void %1 DebugExpression
 ; CHECK: OpFunction %void None
 ; CHECK: [[Var:%[\w]+]] = OpVariable [[PtrType]] Function
@@ -4540,6 +4540,75 @@ TEST_F(InlineTest, DebugDeclareWithAccessChain) {
          %48 = OpExtInst %void %1 DebugDeclare %39 %46 %40
          %51 = OpExtInst %void %1 DebugDeclare %52 %50 %40
                OpReturnValue %31
+               OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<InlineExhaustivePass>(text, true);
+}
+
+TEST_F(InlineTest, DebugDeclareWithDynamicAccessChainKilled) {
+  // Check that a DebugDeclare whose Variable operand is remapped to an
+  // OpAccessChain with a non-constant index is killed, because DebugDeclare
+  // Indexes operands must be constant integers.
+  const std::string text = R"(
+; CHECK: OpFunction %void None
+; CHECK-NOT: DebugDeclare
+; CHECK: OpReturn
+               OpCapability Shader
+               OpExtension "SPV_KHR_non_semantic_info"
+               OpExtension "SPV_KHR_relaxed_extended_instruction"
+          %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+          %3 = OpString "test.hlsl"
+          %4 = OpString "float"
+          %5 = OpString "source"
+          %6 = OpString "foo"
+          %7 = OpString ""
+          %8 = OpString "this"
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+     %uint_4 = OpConstant %uint 4
+     %uint_5 = OpConstant %uint 5
+    %uint_32 = OpConstant %uint 32
+      %float = OpTypeFloat 32
+       %void = OpTypeVoid
+         %20 = OpTypeFunction %void
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+%_ptr_Function_arr = OpTypePointer Function %_arr_float_uint_4
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Function_int = OpTypePointer Function %int
+         %25 = OpTypeFunction %float %_ptr_Function_float
+         %26 = OpUndef %float
+         %27 = OpExtInst %void %1 DebugTypeBasic %4 %uint_32 %uint_3 %uint_0
+         %28 = OpExtInst %void %1 DebugSource %3 %5
+         %29 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %28 %uint_5
+         %30 = OpExtInst %void %1 DebugTypeFunction %uint_3 %27 %27
+         %31 = OpExtInst %void %1 DebugFunction %6 %30 %28 %uint_1 %uint_5 %29 %7 %uint_3 %uint_4
+         %32 = OpExtInst %void %1 DebugLocalVariable %8 %27 %28 %uint_1 %uint_5 %31 %uint_4 %uint_1
+         %33 = OpExtInst %void %1 DebugExpression
+          %2 = OpFunction %void None %20
+         %34 = OpLabel
+         %35 = OpVariable %_ptr_Function_arr Function
+         %36 = OpVariable %_ptr_Function_int Function
+               OpStore %36 %int_0
+         %37 = OpLoad %int %36
+         %38 = OpAccessChain %_ptr_Function_float %35 %37
+         %39 = OpFunctionCall %float %40 %38
+               OpReturn
+               OpFunctionEnd
+; CHECK: OpFunction %float None
+         %40 = OpFunction %float None %25
+         %41 = OpFunctionParameter %_ptr_Function_float
+         %42 = OpLabel
+         %43 = OpExtInst %void %1 DebugDeclare %32 %41 %33
+               OpReturnValue %26
                OpFunctionEnd
 )";
 

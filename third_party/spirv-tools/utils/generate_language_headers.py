@@ -170,11 +170,20 @@ def main():
     with open(args.extinst_grammar) as json_file:
         grammar_json = json.loads(json_file.read())
         grammar_name = os.path.splitext(os.path.basename(args.extinst_output_path))[0]
+        if 'version' in grammar_json:
+          version = grammar_json['version']
+        else:
+          version = 0
+        if 'operand_kinds' in grammar_json:
+          operand_kinds = grammar_json['operand_kinds']
+        else:
+          operand_kinds = []
+
         grammar = ExtInstGrammar(name = grammar_name,
                                  copyright = grammar_json['copyright'],
                                  instructions = grammar_json['instructions'],
-                                 operand_kinds = grammar_json['operand_kinds'],
-                                 version = grammar_json['version'],
+                                 operand_kinds = operand_kinds,
+                                 version = version,
                                  revision = grammar_json['revision'])
         make_path_to_file(args.extinst_output_path)
         with open(args.extinst_output_path, 'w') as f:

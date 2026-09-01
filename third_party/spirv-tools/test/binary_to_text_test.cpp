@@ -167,6 +167,30 @@ TEST_F(BinaryToText, InvalidMagicNumber) {
   spvDiagnosticDestroy(diagnostic);
 }
 
+TEST_F(BinaryToText,
+       OpFunctionEndOnEmptyFunctionDoesNotCrashUnderDeferredCfgModes) {
+  CompileSuccessfully("");
+  std::vector<uint32_t> module(binary->code, binary->code + binary->wordCount);
+  const std::vector<uint32_t> end_only =
+      spvtest::MakeInstruction(spv::Op::OpFunctionEnd, {});
+  module.insert(module.end(), end_only.begin(), end_only.end());
+
+  for (const uint32_t cfg_option : {SPV_BINARY_TO_TEXT_OPTION_REORDER_BLOCKS,
+                                    SPV_BINARY_TO_TEXT_OPTION_NESTED_INDENT}) {
+    spv_text text = nullptr;
+    spv_diagnostic diagnostic = nullptr;
+    EXPECT_EQ(SPV_SUCCESS,
+              spvBinaryToText(context, module.data(), module.size(), cfg_option,
+                              &text, &diagnostic))
+        << "option=0x" << std::hex << cfg_option;
+    EXPECT_EQ(nullptr, diagnostic);
+    ASSERT_NE(nullptr, text);
+    EXPECT_THAT(std::string(text->str), HasSubstr("OpFunctionEnd"));
+    spvTextDestroy(text);
+    spvDiagnosticDestroy(diagnostic);
+  }
+}
+
 struct FailedDecodeCase {
   std::string source_text;
   std::vector<uint32_t> appended_instruction;
@@ -288,6 +312,44 @@ INSTANTIATE_TEST_SUITE_P(
                 "%1 = OpTypeFloat 64\n%2 = OpConstant %1 -0x1p+1024\n", // -Inf
             })));
 // clang-format on
+
+INSTANTIATE_TEST_SUITE_P(
+    OCPMicroscalingNumericLiterals, RoundTripInstructionsTest,
+    Combine(::testing::Values(SPV_ENV_UNIVERSAL_1_6),
+            ::testing::ValuesIn(std::vector<std::string>{
+                "OpCapability Float4EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 4 Float4E2M1EXT\n"
+                "%2 = OpConstant %1 0x1p+0\n",
+                "OpCapability Float4EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 4 Float4E2M1EXT\n"
+                "%2 = OpSpecConstant %1 -0x1.8p+0\n",
+                "OpCapability Float6EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 6 Float6E2M3EXT\n"
+                "%2 = OpConstant %1 0x1.6p+0\n",
+                "OpCapability Float6EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 6 Float6E3M2EXT\n"
+                "%2 = OpConstant %1 0x1.cp-2\n",
+                "OpCapability Float8UnsignedE8M0EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 8 Float8UnsignedE8M0EXT\n"
+                "%2 = OpConstant %1 0x1p+4\n",
+                "OpCapability Float8UnsignedE8M0EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 8 Float8UnsignedE8M0EXT\n"
+                "%2 = OpSpecConstant %1 0x1p-127\n",
+                "OpCapability MXInt8EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 8 MXInt8EXT\n"
+                "%2 = OpConstant %1 0x1p+0\n",
+                "OpCapability MXInt8EXT\n"
+                "OpExtension \"SPV_EXT_ocp_microscaling_types\"\n"
+                "%1 = OpTypeFloat 8 MXInt8EXT\n"
+                "%2 = OpSpecConstant %1 -0x1.2p-2\n",
+            })));
 
 INSTANTIATE_TEST_SUITE_P(
     MemoryAccessMasks, RoundTripInstructionsTest,

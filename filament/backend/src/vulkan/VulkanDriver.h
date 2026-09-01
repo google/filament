@@ -198,7 +198,6 @@ private:
 
     struct BindInDrawBundle {
         PipelineState pipelineState = {};
-        DescriptorSetLayoutHandleList dsLayoutHandles = {};
         fvkutils::DescriptorSetMask descriptorSetMask = {};
         resource_ptr<VulkanProgram> program = {};
     };
