@@ -23,6 +23,7 @@
 
 #include "generated/resources/filamentapp.h"
 
+#include <filamentapp/AssetLoader.h>
 #include <filamentapp/Config.h>
 #include <filamentapp/DesktopAssetLoader.h>
 #include <filamentapp/DisplayManager.h>
@@ -97,8 +98,9 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mForcedWebGPUBackend(builder.mForcedWebGPUBackend),
           mAsynchronousMode(builder.mAsynchronousMode),
           mDisplayManager(builder.mDisplayManager),
-          mDefaultAssetLoader(
-                  builder.mAssetLoader ? nullptr : std::make_unique<DesktopAssetLoader>()),
+          mDefaultAssetLoader(builder.mAssetLoader
+                                      ? nullptr
+                                      : std::make_unique<filament::app::DesktopAssetLoader>()),
           mAssetLoader(builder.mAssetLoader ? builder.mAssetLoader : mDefaultAssetLoader.get()),
           mSetupCallback(builder.mSetup),
           mCleanupCallback(builder.mCleanup),
@@ -155,10 +157,6 @@ void FilamentApp2::init() {
                       .platform(platform)
                       .config(&engineConfig)
                       .build();
-
-    assert_invariant(mEngine->getBackend() == backend);
-
-    mBackend = backend;
 
     mWidth = mInitialWindowWidth;
     mHeight = mInitialWindowHeight;
@@ -287,17 +285,17 @@ void FilamentApp2::init() {
                 getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
     }
 
+    mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth,
+            mInitialWindowHeight, mResizeable, mHeadless);
+
+    onSurfaceCreated();
+    onSurfaceChanged((int) mInitialWindowWidth, (int) mInitialWindowHeight);
+
     mInitialized = true;
 }
 
 void FilamentApp2::run() {
     init();
-
-    mWindow = mDisplayManager->createWindow(mWindowTitle.c_str(), mInitialWindowWidth, mInitialWindowHeight,
-            mResizeable, mHeadless);
-
-    onSurfaceCreated();
-    onSurfaceChanged((int) mInitialWindowWidth, (int) mInitialWindowHeight);
 
     while (!doFrame()) {
         // Paces the loop to roughly display refresh rate so an interactive app doesn't spin a
@@ -316,10 +314,6 @@ void FilamentApp2::run() {
 }
 
 void FilamentApp2::onSurfaceCreated() {
-    if (!mInitialized) {
-        init();
-    }
-
     void* nativeWindow = mDisplayManager ? mDisplayManager->getNativeWindow(mWindow) : nullptr;
 
     if (mSwapChain) {
@@ -715,24 +709,16 @@ const utils::Path& FilamentApp2::getRootAssetsPath() {
 
 void FilamentApp2::loadIBL(std::string_view path) {
     Path iblPath(path);
-    if (!iblPath.exists()) {
-        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
-        return;
-    }
 
     // Note that IBL holds a skybox, and Scene also holds a reference.  We cannot release IBL's
     // skybox until after new skybox has been set in the scene.
     std::unique_ptr<IBL> oldIBL = std::move(mIBL);
-    mIBL = std::make_unique<IBL>(*mEngine);
+    mIBL = std::make_unique<IBL>(*mEngine, mAssetLoader);
 
-    if (!iblPath.isDirectory()) {
+    // We can't use isDirectory() on Android assets since they don't map to filesystem
+    // Try directory first, then equirect
+    if (!mIBL->loadFromDirectory(iblPath)) {
         if (!mIBL->loadFromEquirect(iblPath)) {
-            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-            mIBL.reset(nullptr);
-            return;
-        }
-    } else {
-        if (!mIBL->loadFromDirectory(iblPath)) {
             std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
             mIBL.reset(nullptr);
             return;
@@ -757,19 +743,17 @@ void FilamentApp2::loadDirt() {
     if (!mDirtPath.empty()) {
         Path dirtPath(mDirtPath);
 
-        if (!dirtPath.exists()) {
-            std::cerr << "The specified dirt file does not exist: " << dirtPath << std::endl;
-            return;
-        }
-
-        if (!dirtPath.isFile()) {
-            std::cerr << "The specified dirt path is not a file: " << dirtPath << std::endl;
-            return;
-        }
-
         int w, h, n;
+        unsigned char* data = nullptr;
 
-        unsigned char* data = stbi_load(dirtPath.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        auto buf = mAssetLoader->load(dirtPath);
+        if (!buf.empty()) {
+            data = stbi_load_from_memory(buf.data(), buf.size(), &w, &h, &n, 3);
+        }
+
+        if (!data) {
+            return;
+        }
         assert(n == 3);
 
         mDirt = Texture::Builder()
