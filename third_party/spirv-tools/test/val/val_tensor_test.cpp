@@ -394,21 +394,6 @@ TEST_F(ValidateTensor, InvalidTensorConstantRank1TooManyConstituents) {
                     "along its outermost dimension, expected 4 but got 5.*"));
 }
 
-TEST_F(ValidateTensor,
-       InvalidTensorConstantRank1ConstituentNotConstantOrUndef) {
-  const std::string src = R"(
-   %uint_arr1_4 = OpConstantComposite %uint_arr1 %uint_4
-    %ts_uint_r1 = OpTypeTensorARM %uint %uint_1 %uint_arr1_4
-           %cst = OpConstantComposite %ts_uint_r1 %tensor_var %tensor_var %tensor_var %tensor_var
-)";
-  std::string spvasm = GenerateModule(src);
-  CompileSuccessfully(spvasm, SPVENV);
-  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPVENV));
-  EXPECT_THAT(getDiagnosticString(),
-              ContainsRegex("OpConstantComposite Constituent <id> "
-                            "'.*' is not a constant or undef.*"));
-}
-
 TEST_F(ValidateTensor, InvalidTensorConstantRank1WrongConstituentType) {
   const std::string src = R"(
    %uint_arr1_4 = OpConstantComposite %uint_arr1 %uint_4

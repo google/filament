@@ -1,0 +1,35 @@
+{
+  "copyright": [
+    "SPDX-FileCopyrightText: 2022-2026 Arm Ltd.",
+    "SPDX-License-Identifier: MIT"
+  ],
+  "revision" : 1,
+  "instructions" : [
+    {
+      "opname" : "DebugGraph",
+      "opcode" : 1,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "Graph" },
+        { "kind" : "IdRef", "name" : "Name" }
+      ]
+    },
+    {
+      "opname" : "DebugOperation",
+      "opcode" : 2,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "DebugGraph" },
+        { "kind" : "IdRef", "name" : "Name" },
+        { "kind" : "IdRef", "name" : "Instructions", "quantifier" : "*" }
+      ]
+    },
+    {
+      "opname" : "DebugTensor",
+      "opcode" : 3,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "Tensor" },
+        { "kind" : "IdRef", "name" : "Name" },
+        { "kind" : "IdRef", "name" : "Index", "quantifier" : "?" }
+      ]
+    }
+  ]
+}

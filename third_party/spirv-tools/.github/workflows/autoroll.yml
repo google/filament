@@ -9,6 +9,7 @@ on:
 
 jobs:
   update-dependencies:
+    if: github.repository == 'KhronosGroup/SPIRV-Tools'
     permissions:
       contents: write
       pull-requests: write
@@ -16,14 +17,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Checkout the depot tools they are needed by roll_deps.sh
       - name: Checkout depot tools
-        run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $GITHUB_WORKSPACE/../depot_tools
 
       - name: Update PATH
-        run: echo "$(pwd)/depot_tools" >> $GITHUB_PATH
+        run: echo "$GITHUB_WORKSPACE/../depot_tools" >> $GITHUB_PATH
 
       - name: Download dependencies
         run: python3 utils/git-sync-deps
@@ -46,11 +49,11 @@ jobs:
       - name: Push changes and create PR
         if: steps.update_dependencies.outputs.changed == 'true'
         run: |
-          git push --force --set-upstream origin roll_deps
+          git push --force https://x-access-token:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git roll_deps
           # Create a PR. If it aready exists, the command fails, so ignore the return code.
-          gh pr create --base main -f || true 
+          gh pr create --head roll_deps --base main -f || true 
           # Add the 'kokoro:run' label so that the kokoro tests will be run.
-          gh pr edit --add-label 'kokoro:run'
-          gh pr merge --auto --squash
+          gh pr edit roll_deps --add-label 'kokoro:run'
+          gh pr merge roll_deps --auto --squash
         env:
           GITHUB_TOKEN: ${{ github.token }}

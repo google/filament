@@ -169,6 +169,16 @@ template <typename T>
 struct IsHexFloat<HexFloat<T>> {
   static const bool value = true;
 };
+
+template <typename T>
+struct IsHexFixedPoint {
+  static const bool value = false;
+};
+template <typename T>
+struct IsHexFixedPoint<HexFixedPoint<T>> {
+  static const bool value = true;
+};
+
 // Parses a numeric value of a given type from the given text.  The number
 // should take up the entire string, and should be within bounds for the target
 // type. On success, returns true and populates the object referenced by
@@ -179,9 +189,10 @@ bool ParseNumber(const char* text, T* value_pointer) {
   // with a single-byte type leads to implementation-defined behaviour.
   // Similarly for uint8_t.
   // HexFloat<T> overloads the operator
-  static_assert(sizeof(T) > 1 || IsHexFloat<T>::value,
-                "Single-byte types other than HexFloat<> are not supported in "
-                "this parse method");
+  static_assert(
+      sizeof(T) > 1 || IsHexFloat<T>::value || IsHexFixedPoint<T>::value,
+      "Single-byte types other than HexFloat<> are not supported in "
+      "this parse method");
 
   if (!text) return false;
   std::istringstream text_stream(text);

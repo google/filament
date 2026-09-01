@@ -13,13 +13,15 @@ jobs:
   prepare-release-job:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Prepare CHANGELOG for version
         run: |
-          python utils/generate_changelog.py CHANGES "${{ github.ref_name }}" VERSION_CHANGELOG
+          python utils/generate_changelog.py CHANGES "${GITHUB_REF_NAME}" VERSION_CHANGELOG
       - name: Create release
         run: |
-          gh release create -t "Release ${{ github.ref_name }}" -F VERSION_CHANGELOG "${{ github.ref_name }}"
+          gh release create -t "Release ${GITHUB_REF_NAME}" -F VERSION_CHANGELOG "${GITHUB_REF_NAME}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
 

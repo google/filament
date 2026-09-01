@@ -14,14 +14,14 @@
 
 #include "source/opt/folding_rules.h"
 
-#include <limits>
-#include <memory>
 #include <optional>
 #include <utility>
 
 #include "ir_builder.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/opt/ir_context.h"
+#include "source/spirv_constant.h"
+#include "source/spirv_target_env.h"
 
 namespace spvtools {
 namespace opt {
@@ -1636,6 +1636,393 @@ FoldingRule FactorAddSubMuls() {
   };
 }
 
+// Reassociate integer instructions where both operands share the same opcode
+// and both source instructions contain a constant.
+// e.g:
+//   (a * C0) * (C1 * b) = (C0 * C1) * (a * b)
+//   (a ^ C0) ^ (b ^ C1) = (C0 ^ C1) ^ (a ^ b)
+//   (C0 | a) | (b | C1) = (C0 | C1) | (a | b)
+//   (a & C0) & (b & C1) = (C0 & C1) & (a & b)
+static const constexpr spv::Op ReassociateNestedGenericIntOps[] = {
+    spv::Op::OpIMul, spv::Op::OpBitwiseOr, spv::Op::OpBitwiseXor,
+    spv::Op::OpBitwiseAnd};
+
+FoldingRule ReassociateNestedGenericInt(spv::Op opcode) {
+  assert(std::find(std::begin(ReassociateNestedGenericIntOps),
+                   std::end(ReassociateNestedGenericIntOps),
+                   opcode) != std::end(ReassociateNestedGenericIntOps) &&
+         "Wrong opcode.");
+
+  return [opcode](IRContext* context, Instruction* inst,
+                  const std::vector<const analysis::Constant*>& constants) {
+    // Handled by other folding rules.
+    if (constants[0] || constants[1]) {
+      return false;
+    }
+
+    if (inst->opcode() != opcode) {
+      return false;
+    }
+
+    const analysis::Type* type =
+        context->get_type_mgr()->GetType(inst->type_id());
+
+    if (type->IsCooperativeMatrix()) {
+      return false;
+    }
+
+    uint32_t width = ElementWidth(type);
+    if (width != 32 && width != 64) return false;
+
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+    Instruction* lhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+    Instruction* rhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(1));
+
+    if (lhs->opcode() != opcode || rhs->opcode() != opcode) {
+      return false;
+    }
+
+    analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+    std::vector<const analysis::Constant*> lhs_constants =
+        const_mgr->GetOperandConstants(lhs);
+    const analysis::Constant* lhs_const = ConstInput(lhs_constants);
+    if (!lhs_const) {
+      return false;
+    }
+
+    std::vector<const analysis::Constant*> rhs_constants =
+        const_mgr->GetOperandConstants(rhs);
+    const analysis::Constant* rhs_const = ConstInput(rhs_constants);
+    if (!rhs_const) {
+      return false;
+    }
+
+    uint32_t merged_constant =
+        PerformOperation(const_mgr, opcode, lhs_const, rhs_const);
+    if (!merged_constant) {
+      return false;
+    }
+
+    InstructionBuilder ir_builder(
+        context, inst,
+        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+    Instruction* new_rhs = ir_builder.AddBinaryOp(
+        inst->type_id(), opcode,
+        NonConstInput(context, lhs_constants[0], lhs)->result_id(),
+        NonConstInput(context, rhs_constants[0], rhs)->result_id());
+
+    if (!new_rhs) {
+      return false;
+    }
+
+    inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {merged_constant}},
+                         {SPV_OPERAND_TYPE_ID, {new_rhs->result_id()}}});
+    return true;
+  };
+}
+
+// Reassociate floating point mul/div instructions, which have mul/div inputs,
+// both of which contain a constant.
+// e.g:
+//   (a * C0) / (C1 / b) =  (C0 / C1) * (a * b)
+//   (C0 / a) * (b / C1) =  (C0 / C1) * (b / a)
+//   (a / C0) / (b * C1) =  (1 / (C0 * C1)) * (a / b)
+FoldingRule ReassociateNestedMulDivFloat() {
+  return [](IRContext* context, Instruction* inst,
+            const std::vector<const analysis::Constant*>& constants) {
+    assert(inst->opcode() == spv::Op::OpFMul ||
+           inst->opcode() == spv::Op::OpFDiv);
+
+    // Handled by other folding rules.
+    if (constants[0] || constants[1]) {
+      return false;
+    }
+
+    const analysis::Type* type =
+        context->get_type_mgr()->GetType(inst->type_id());
+
+    if (type->IsCooperativeMatrix()) {
+      return false;
+    }
+
+    uint32_t width = ElementWidth(type);
+    if (width != 32 && width != 64) return false;
+
+    if (!inst->IsFloatingPointFoldingAllowed()) return false;
+
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+    Instruction* lhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+    Instruction* rhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(1));
+
+    bool lhs_is_mul = lhs->opcode() == spv::Op::OpFMul;
+    bool lhs_is_div = lhs->opcode() == spv::Op::OpFDiv;
+    bool rhs_is_mul = rhs->opcode() == spv::Op::OpFMul;
+    bool rhs_is_div = rhs->opcode() == spv::Op::OpFDiv;
+    if (!(lhs_is_mul || lhs_is_div) || !(rhs_is_mul || rhs_is_div)) {
+      return false;
+    }
+
+    if (!lhs->IsFloatingPointFoldingAllowed() ||
+        !rhs->IsFloatingPointFoldingAllowed()) {
+      return false;
+    }
+
+    analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+    std::vector<const analysis::Constant*> lhs_constants =
+        const_mgr->GetOperandConstants(lhs);
+    if (!lhs_constants[0] && !lhs_constants[1]) {
+      return false;
+    }
+
+    std::vector<const analysis::Constant*> rhs_constants =
+        const_mgr->GetOperandConstants(rhs);
+    if (!rhs_constants[0] && !rhs_constants[1]) {
+      return false;
+    }
+
+    const analysis::Constant* lhs_const =
+        lhs_constants[0] ? lhs_constants[0] : lhs_constants[1];
+    const analysis::Constant* rhs_const =
+        rhs_constants[0] ? rhs_constants[0] : rhs_constants[1];
+    if (!lhs_const || !rhs_const) return false;
+
+    bool const_lhs_rcp = lhs_constants[0] ? false : lhs_is_div;
+    bool const_rhs_rcp = rhs_constants[0] ? false : rhs_is_div;
+
+    uint32_t non_const_lhs = lhs_constants[0] ? lhs->GetSingleWordInOperand(1)
+                                              : lhs->GetSingleWordInOperand(0);
+    bool non_const_lhs_rcp = lhs_constants[0] ? lhs_is_div : false;
+
+    uint32_t non_const_rhs = rhs_constants[0] ? rhs->GetSingleWordInOperand(1)
+                                              : rhs->GetSingleWordInOperand(0);
+    bool non_const_rhs_rcp = rhs_constants[0] ? rhs_is_div : false;
+
+    // Rcp the rhs if we're actually dividing it.
+    if (inst->opcode() == spv::Op::OpFDiv) {
+      const_rhs_rcp = !const_rhs_rcp;
+      non_const_rhs_rcp = !non_const_rhs_rcp;
+    }
+
+    if (const_lhs_rcp) {
+      lhs_const =
+          const_mgr->FindDeclaredConstant(Reciprocal(const_mgr, lhs_const));
+      if (!lhs_const) {
+        return false;
+      }
+    }
+    if (const_rhs_rcp) {
+      rhs_const =
+          const_mgr->FindDeclaredConstant(Reciprocal(const_mgr, rhs_const));
+      if (!rhs_const) {
+        return false;
+      }
+    }
+
+    uint32_t merged_constant =
+        PerformOperation(const_mgr, spv::Op::OpFMul, lhs_const, rhs_const);
+
+    if (!merged_constant) {
+      return false;
+    }
+
+    spv::Op op = spv::Op::OpNop;
+    Instruction* new_rhs = nullptr;
+
+    InstructionBuilder ir_builder(
+        context, inst,
+        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+    //  a * b => C * (b * a)
+    if (!non_const_lhs_rcp && !non_const_rhs_rcp) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), spv::Op::OpFMul,
+                                       non_const_lhs, non_const_rhs);
+      op = spv::Op::OpFMul;
+    }
+    // 1/a * b => C * (b / a)
+    else if (non_const_lhs_rcp && !non_const_rhs_rcp) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), spv::Op::OpFDiv,
+                                       non_const_rhs, non_const_lhs);
+      op = spv::Op::OpFMul;
+    }
+    //  a * 1/b => C * (a / b)
+    else if (!non_const_lhs_rcp && non_const_rhs_rcp) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), spv::Op::OpFDiv,
+                                       non_const_lhs, non_const_rhs);
+      op = spv::Op::OpFMul;
+    }
+    // 1/a * 1/b => C / (a * b)
+    else {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), spv::Op::OpFMul,
+                                       non_const_lhs, non_const_rhs);
+      op = spv::Op::OpFDiv;
+    }
+
+    if (!new_rhs) {
+      return false;
+    }
+
+    inst->SetOpcode(op);
+    inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {merged_constant}},
+                         {SPV_OPERAND_TYPE_ID, {new_rhs->result_id()}}});
+    return true;
+  };
+}
+
+// Reassociate add/sub instructions, which have add/sub inputs,
+// both of which contain a constant.
+// e.g:
+//   (a + C0) - (C1 - b) =  (C0 - C1) + (a + b)
+//   (C0 - a) + (b - C1) =  (C0 - C1) + (b - a)
+//   (a - C0) - (b + C1) = (-C0 - C1) + (a - b)
+FoldingRule ReassociateNestedAddSub() {
+  return [](IRContext* context, Instruction* inst,
+            const std::vector<const analysis::Constant*>& constants) {
+    assert(inst->opcode() == spv::Op::OpFAdd ||
+           inst->opcode() == spv::Op::OpIAdd ||
+           inst->opcode() == spv::Op::OpFSub ||
+           inst->opcode() == spv::Op::OpISub);
+
+    // Handled by other folding rules.
+    if (constants[0] || constants[1]) {
+      return false;
+    }
+
+    const analysis::Type* type =
+        context->get_type_mgr()->GetType(inst->type_id());
+
+    if (type->IsCooperativeMatrix()) {
+      return false;
+    }
+
+    uint32_t width = ElementWidth(type);
+    if (width != 32 && width != 64) return false;
+
+    bool uses_float = HasFloatingPoint(type);
+    if (uses_float && !inst->IsFloatingPointFoldingAllowed()) return false;
+
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+    Instruction* lhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+    Instruction* rhs = def_use_mgr->GetDef(inst->GetSingleWordInOperand(1));
+
+    spv::Op add_op = uses_float ? spv::Op::OpFAdd : spv::Op::OpIAdd;
+    spv::Op sub_op = uses_float ? spv::Op::OpFSub : spv::Op::OpISub;
+
+    bool lhs_is_add = lhs->opcode() == add_op;
+    bool lhs_is_sub = lhs->opcode() == sub_op;
+    bool rhs_is_add = rhs->opcode() == add_op;
+    bool rhs_is_sub = rhs->opcode() == sub_op;
+    if (!(lhs_is_add || lhs_is_sub) || !(rhs_is_add || rhs_is_sub)) {
+      return false;
+    }
+
+    if (uses_float && (!lhs->IsFloatingPointFoldingAllowed() ||
+                       !rhs->IsFloatingPointFoldingAllowed())) {
+      return false;
+    }
+
+    analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+    std::vector<const analysis::Constant*> lhs_constants =
+        const_mgr->GetOperandConstants(lhs);
+    if (!lhs_constants[0] && !lhs_constants[1]) {
+      return false;
+    }
+
+    std::vector<const analysis::Constant*> rhs_constants =
+        const_mgr->GetOperandConstants(rhs);
+    if (!rhs_constants[0] && !rhs_constants[1]) {
+      return false;
+    }
+
+    const analysis::Constant* lhs_const =
+        lhs_constants[0] ? lhs_constants[0] : lhs_constants[1];
+    const analysis::Constant* rhs_const =
+        rhs_constants[0] ? rhs_constants[0] : rhs_constants[1];
+    if (!lhs_const || !rhs_const) return false;
+
+    bool const_lhs_neg = lhs_constants[0] ? false : lhs_is_sub;
+    bool const_rhs_neg = rhs_constants[0] ? false : rhs_is_sub;
+
+    uint32_t non_const_lhs = lhs_constants[0] ? lhs->GetSingleWordInOperand(1)
+                                              : lhs->GetSingleWordInOperand(0);
+    bool non_const_lhs_neg = lhs_constants[0] ? lhs_is_sub : false;
+
+    uint32_t non_const_rhs = rhs_constants[0] ? rhs->GetSingleWordInOperand(1)
+                                              : rhs->GetSingleWordInOperand(0);
+    bool non_const_rhs_neg = rhs_constants[0] ? rhs_is_sub : false;
+
+    // Negate the rhs if we're actually subtracting it.
+    if (inst->opcode() == spv::Op::OpFSub ||
+        inst->opcode() == spv::Op::OpISub) {
+      const_rhs_neg = !const_rhs_neg;
+      non_const_rhs_neg = !non_const_rhs_neg;
+    }
+
+    if (const_lhs_neg) {
+      lhs_const =
+          const_mgr->FindDeclaredConstant(NegateConstant(const_mgr, lhs_const));
+      if (!lhs_const) {
+        return false;
+      }
+    }
+    if (const_rhs_neg) {
+      rhs_const =
+          const_mgr->FindDeclaredConstant(NegateConstant(const_mgr, rhs_const));
+      if (!rhs_const) {
+        return false;
+      }
+    }
+
+    uint32_t merged_constant =
+        PerformOperation(const_mgr, add_op, lhs_const, rhs_const);
+
+    if (!merged_constant) {
+      return false;
+    }
+
+    spv::Op op = spv::Op::OpNop;
+    Instruction* new_rhs = nullptr;
+
+    InstructionBuilder ir_builder(
+        context, inst,
+        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+    //  a +  b => C + (b + a)
+    if (!non_const_lhs_neg && !non_const_rhs_neg) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), add_op, non_const_lhs,
+                                       non_const_rhs);
+      op = add_op;
+    }
+    // -a +  b => C + (b - a)
+    else if (non_const_lhs_neg && !non_const_rhs_neg) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), sub_op, non_const_rhs,
+                                       non_const_lhs);
+      op = add_op;
+    }
+    //  a + -b => C + (a - b)
+    else if (!non_const_lhs_neg && non_const_rhs_neg) {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), sub_op, non_const_lhs,
+                                       non_const_rhs);
+      op = add_op;
+    }
+    // -a + -b => C - (a + b)
+    else {
+      new_rhs = ir_builder.AddBinaryOp(inst->type_id(), add_op, non_const_lhs,
+                                       non_const_rhs);
+      op = sub_op;
+    }
+
+    if (!new_rhs) {
+      return false;
+    }
+
+    inst->SetOpcode(op);
+    inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {merged_constant}},
+                         {SPV_OPERAND_TYPE_ID, {new_rhs->result_id()}}});
+    return true;
+  };
+}
+
 FoldingRule IntMultipleBy1() {
   return [](IRContext*, Instruction* inst,
             const std::vector<const analysis::Constant*>& constants) {
@@ -1737,6 +2124,84 @@ std::vector<Operand> GetExtractOperandsForElementOfCompositeConstruct(
   return {};
 }
 
+// If the OpCompositeConstruct that feeds an OpCopyLogical can be retyped to
+// the OpCopyLogical's result type, the layout conversion can be expressed at
+// constituent granularity instead of at aggregate granularity. This rewrites
+// the OpCopyLogical as an OpCompositeConstruct of the result type, using the
+// same constituents where their types already match the corresponding
+// field/element of the result type, and inserting per-field OpCopyLogical
+// instructions only for the fields that genuinely require a layout
+// conversion.
+bool CompositeConstructFeedingCopyLogical(
+    IRContext* context, Instruction* inst,
+    const std::vector<const analysis::Constant*>&) {
+  assert(inst->opcode() == spv::Op::OpCopyLogical &&
+         "Wrong opcode.  Should be OpCopyLogical.");
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+
+  uint32_t src_id = inst->GetSingleWordInOperand(0);
+  Instruction* src_inst = def_use_mgr->GetDef(src_id);
+  if (src_inst->opcode() != spv::Op::OpCompositeConstruct) {
+    return false;
+  }
+
+  Instruction* dst_type_inst = def_use_mgr->GetDef(inst->type_id());
+  const uint32_t num_constituents = src_inst->NumInOperands();
+
+  // Determine the expected type id for each constituent of the destination
+  // type.
+  std::vector<uint32_t> expected_type_ids;
+  expected_type_ids.reserve(num_constituents);
+  if (dst_type_inst->opcode() == spv::Op::OpTypeStruct) {
+    if (dst_type_inst->NumInOperands() != num_constituents) {
+      return false;
+    }
+    for (uint32_t i = 0; i < num_constituents; ++i) {
+      expected_type_ids.push_back(dst_type_inst->GetSingleWordInOperand(i));
+    }
+  } else if (dst_type_inst->opcode() == spv::Op::OpTypeArray) {
+    const uint32_t elem_type_id = dst_type_inst->GetSingleWordInOperand(0);
+    for (uint32_t i = 0; i < num_constituents; ++i) {
+      expected_type_ids.push_back(elem_type_id);
+    }
+  } else {
+    return false;
+  }
+
+  // Build the new constituent list, inserting OpCopyLogical instructions for
+  // the fields whose types differ from the result type.
+  InstructionBuilder ir_builder(
+      context, inst,
+      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+  std::vector<Operand> operands;
+  operands.reserve(num_constituents);
+  for (uint32_t i = 0; i < num_constituents; ++i) {
+    const uint32_t cid = src_inst->GetSingleWordInOperand(i);
+    Instruction* cdef = def_use_mgr->GetDef(cid);
+    if (cdef->type_id() == expected_type_ids[i]) {
+      operands.push_back({SPV_OPERAND_TYPE_ID, {cid}});
+      continue;
+    }
+    if (def_use_mgr->GetDef(expected_type_ids[i])->opcode() ==
+        spv::Op::OpTypePointer) {
+      assert(def_use_mgr->GetDef(expected_type_ids[i])->opcode() !=
+                 spv::Op::OpTypePointer &&
+             "Unreachable for valid input");
+    }
+    Instruction* per_field_copy = ir_builder.AddUnaryOp(
+        expected_type_ids[i], spv::Op::OpCopyLogical, cid);
+    if (per_field_copy == nullptr) {
+      return false;
+    }
+    operands.push_back({SPV_OPERAND_TYPE_ID, {per_field_copy->result_id()}});
+  }
+
+  inst->SetOpcode(spv::Op::OpCompositeConstruct);
+  inst->SetInOperands(std::move(operands));
+  context->UpdateDefUse(inst);
+  return true;
+}
+
 bool CompositeConstructFeedingExtract(
     IRContext* context, Instruction* inst,
     const std::vector<const analysis::Constant*>&) {
@@ -1793,17 +2258,189 @@ uint32_t GetElementType(uint32_t type_id, Instruction::iterator start,
     const Instruction* type_inst = def_use_manager->GetDef(type_id);
     assert(index.type == SPV_OPERAND_TYPE_LITERAL_INTEGER &&
            index.words.size() == 1);
-    if (type_inst->opcode() == spv::Op::OpTypeArray) {
-      type_id = type_inst->GetSingleWordInOperand(0);
-    } else if (type_inst->opcode() == spv::Op::OpTypeMatrix) {
-      type_id = type_inst->GetSingleWordInOperand(0);
-    } else if (type_inst->opcode() == spv::Op::OpTypeStruct) {
-      type_id = type_inst->GetSingleWordInOperand(index.words[0]);
-    } else {
-      return 0;
+    switch (type_inst->opcode()) {
+      case spv::Op::OpTypeArray:
+      case spv::Op::OpTypeMatrix:
+      case spv::Op::OpTypeVector:
+      case spv::Op::OpTypeVectorIdEXT:
+        type_id = type_inst->GetSingleWordInOperand(0);
+        break;
+      case spv::Op::OpTypeStruct:
+        type_id = type_inst->GetSingleWordInOperand(index.words[0]);
+        break;
+      default:
+        return 0;
     }
   }
   return type_id;
+}
+
+// If the input to an OpCompositeExtract is an OpCopyLogical, then we can
+// hoist the extraction before the copy.
+bool CopyLogicalFeedingExtract(IRContext* context, Instruction* inst,
+                               const std::vector<const analysis::Constant*>&) {
+  assert(inst->opcode() == spv::Op::OpCompositeExtract &&
+         "Wrong opcode.  Should be OpCompositeExtract.");
+
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+  uint32_t cid = inst->GetSingleWordInOperand(kExtractCompositeIdInIdx);
+  Instruction* cinst = def_use_mgr->GetDef(cid);
+
+  if (cinst->opcode() != spv::Op::OpCopyLogical) {
+    return false;
+  }
+
+  uint32_t original_composite_id = cinst->GetSingleWordInOperand(0);
+  Instruction* original_composite_inst =
+      def_use_mgr->GetDef(original_composite_id);
+
+  std::vector<uint32_t> indices;
+  for (uint32_t i = 1; i < inst->NumInOperands(); ++i) {
+    indices.push_back(inst->GetSingleWordInOperand(i));
+  }
+
+  uint32_t original_element_type_id =
+      GetElementType(original_composite_inst->type_id(), inst->begin() + 3,
+                     inst->end(), def_use_mgr);
+  assert(original_element_type_id != 0 &&
+         "Could not find the element type.  Invalid SPIR-V.");
+
+  InstructionBuilder ir_builder(
+      context, inst,
+      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+  Instruction* new_extract = ir_builder.AddCompositeExtract(
+      original_element_type_id, original_composite_id, indices);
+
+  if (original_element_type_id == inst->type_id())
+    inst->SetOpcode(spv::Op::OpCopyObject);
+  else
+    inst->SetOpcode(spv::Op::OpCopyLogical);
+  inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {new_extract->result_id()}}});
+  return true;
+}
+
+// If the input to an OpCompositeExtract is an OpLoad, we can change the
+// load into a load of an OpAccessChain.
+bool LoadFeedingExtract(IRContext* context, Instruction* inst,
+                        const std::vector<const analysis::Constant*>&) {
+  assert(inst->opcode() == spv::Op::OpCompositeExtract &&
+         "Wrong opcode.  Should be OpCompositeExtract.");
+
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+  uint32_t cid = inst->GetSingleWordInOperand(kExtractCompositeIdInIdx);
+  Instruction* cinst = def_use_mgr->GetDef(cid);
+
+  if (cinst->opcode() != spv::Op::OpLoad) {
+    return false;
+  }
+
+  Instruction* composite_type_inst = def_use_mgr->GetDef(cinst->type_id());
+  if (composite_type_inst->opcode() != spv::Op::OpTypeStruct &&
+      composite_type_inst->opcode() != spv::Op::OpTypeArray) {
+    return false;
+  }
+
+  // Check the memory operands.
+  if (cinst->NumInOperands() > 1) {
+    uint32_t memory_access_mask = cinst->GetSingleWordInOperand(1);
+    if (memory_access_mask & uint32_t(spv::MemoryAccessMask::Volatile)) {
+      return false;
+    }
+  }
+
+  uint32_t ptr_id = cinst->GetSingleWordInOperand(0);
+  Instruction* ptr_inst = def_use_mgr->GetDef(ptr_id);
+  Instruction* ptr_type_inst = def_use_mgr->GetDef(ptr_inst->type_id());
+  assert(ptr_type_inst->opcode() == spv::Op::OpTypePointer);
+  spv::StorageClass storage_class =
+      static_cast<spv::StorageClass>(ptr_type_inst->GetSingleWordInOperand(0));
+
+  // If the storage class is Function or Private, we do not want to fold.
+  // These are the storage classes that the local-access-chain-convert pass
+  // works on.
+  if (storage_class == spv::StorageClass::Function ||
+      storage_class == spv::StorageClass::Private) {
+    return false;
+  }
+
+  analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+  analysis::TypeManager* type_mgr = context->get_type_mgr();
+  std::vector<uint32_t> index_ids;
+  for (uint32_t i = 1; i < inst->NumInOperands(); ++i) {
+    uint32_t index = inst->GetSingleWordInOperand(i);
+    const analysis::Constant* index_const =
+        const_mgr->GetConstant(type_mgr->GetUIntType(), {index});
+    index_ids.push_back(
+        const_mgr->GetDefiningInstruction(index_const)->result_id());
+  }
+
+  InstructionBuilder ir_builder(
+      context, cinst,
+      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+  uint32_t element_ptr_type_id =
+      type_mgr->FindPointerToType(inst->type_id(), storage_class);
+  if (element_ptr_type_id == 0) {
+    return false;
+  }
+
+  Instruction* access_chain =
+      ir_builder.AddAccessChain(element_ptr_type_id, ptr_id, index_ids);
+  std::vector<Operand> load_operands;
+  load_operands.push_back({SPV_OPERAND_TYPE_ID, {access_chain->result_id()}});
+
+  if (cinst->NumInOperands() > 1) {
+    uint32_t memory_access_mask = cinst->GetSingleWordInOperand(1);
+    load_operands.push_back(
+        {SPV_OPERAND_TYPE_MEMORY_ACCESS, {memory_access_mask}});
+
+    uint32_t current_operand_index = 2;
+    if (memory_access_mask & uint32_t(spv::MemoryAccessMask::Aligned)) {
+      uint32_t original_alignment =
+          cinst->GetSingleWordInOperand(current_operand_index);
+
+      std::vector<uint32_t> extract_indices;
+      for (uint32_t i = 1; i < inst->NumInOperands(); ++i) {
+        extract_indices.push_back(inst->GetSingleWordInOperand(i));
+      }
+
+      std::optional<uint32_t> offset =
+          type_mgr->GetType(cinst->type_id())->GetByteOffset(extract_indices);
+      if (!offset) {
+        return false;
+      }
+
+      uint32_t new_alignment = original_alignment;
+      if (*offset != 0) {
+        uint32_t offset_alignment = *offset & ~(*offset - 1);
+        new_alignment = std::min(original_alignment, offset_alignment);
+      }
+
+      load_operands.push_back(
+          {SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER, {new_alignment}});
+      current_operand_index++;
+    }
+
+    // Copy the remaining operands
+    for (; current_operand_index < cinst->NumInOperands();
+         ++current_operand_index) {
+      load_operands.push_back(cinst->GetInOperand(current_operand_index));
+    }
+  }
+
+  uint32_t load_result_id = context->TakeNextId();
+  if (load_result_id == 0) return false;
+
+  std::unique_ptr<Instruction> new_load_inst(
+      new Instruction(context, spv::Op::OpLoad, inst->type_id(), load_result_id,
+                      load_operands));
+  Instruction* new_load = ir_builder.AddInstruction(std::move(new_load_inst));
+
+  inst->SetOpcode(spv::Op::OpCopyObject);
+  inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {new_load->result_id()}}});
+
+  return true;
 }
 
 // Returns true of |inst_1| and |inst_2| have the same indexes that will be used
@@ -2603,6 +3240,157 @@ FoldingRule RedundantLogicalNot() {
   };
 }
 
+// Cases handled:
+//  ((a ? C0 : C1) == C2)  =  ((a ? (C0 == C2) : (C1 == C2))
+//  ((a ? C0 : C1) != C2)  =  ((a ? (C0 != C2) : (C1 != C2))
+//  ((a ? C0 : C1) <  C2)  =  ((a ? (C0 <  C2) : (C1 <  C2))
+//  ((a ? C0 : C1) <= C2)  =  ((a ? (C0 <= C2) : (C1 <= C2))
+//  ((a ? C0 : C1) >  C2)  =  ((a ? (C0 >  C2) : (C1 >  C2))
+//  ((a ? C0 : C1) >= C2)  =  ((a ? (C0 >= C2) : (C1 >= C2))
+//  ((a ? C0 : C1) || C2)  =  ((a ? (C0 || C2) : (C1 || C2))
+//  ((a ? C0 : C1) && C2)  =  ((a ? (C0 && C2) : (C1 && C2))
+//  ((a ? C0 : C1) +  C2)  =  ((a ? (C0 +  C2) : (C1 +  C2))
+//  ((a ? C0 : C1) -  C2)  =  ((a ? (C0 -  C2) : (C1 -  C2))
+//  ((a ? C0 : C1) *  C2)  =  ((a ? (C0 *  C2) : (C1 *  C2))
+//  ((a ? C0 : C1) /  C2)  =  ((a ? (C0 /  C2) : (C1 /  C2))
+//  ((a ? C0 : C1) >> C2)  =  ((a ? (C0 >> C2) : (C1 >> C2))
+//  ((a ? C0 : C1) << C2)  =  ((a ? (C0 << C2) : (C1 << C2))
+//  ((a ? C0 : C1) ^  C2)  =  ((a ? (C0 ^  C2) : (C1 ^  C2))
+//  ((a ? C0 : C1) |  C2)  =  ((a ? (C0 |  C2) : (C1 |  C2))
+//  ((a ? C0 : C1) &  C2)  =  ((a ? (C0 &  C2) : (C1 &  C2))
+static const constexpr spv::Op MergeBinaryOpSelectOps[] = {
+    spv::Op::OpLogicalEqual,
+    spv::Op::OpLogicalNotEqual,
+    spv::Op::OpLogicalAnd,
+    spv::Op::OpLogicalOr,
+    spv::Op::OpIEqual,
+    spv::Op::OpINotEqual,
+    spv::Op::OpUGreaterThan,
+    spv::Op::OpSGreaterThan,
+    spv::Op::OpUGreaterThanEqual,
+    spv::Op::OpSGreaterThanEqual,
+    spv::Op::OpULessThan,
+    spv::Op::OpSLessThan,
+    spv::Op::OpULessThanEqual,
+    spv::Op::OpSLessThanEqual,
+    spv::Op::OpFOrdEqual,
+    spv::Op::OpFUnordEqual,
+    spv::Op::OpFOrdNotEqual,
+    spv::Op::OpFUnordNotEqual,
+    spv::Op::OpFOrdLessThan,
+    spv::Op::OpFUnordLessThan,
+    spv::Op::OpFOrdGreaterThan,
+    spv::Op::OpFUnordGreaterThan,
+    spv::Op::OpFOrdLessThanEqual,
+    spv::Op::OpFUnordLessThanEqual,
+    spv::Op::OpFOrdGreaterThanEqual,
+    spv::Op::OpFUnordGreaterThanEqual,
+    spv::Op::OpIAdd,
+    spv::Op::OpFAdd,
+    spv::Op::OpISub,
+    spv::Op::OpFSub,
+    spv::Op::OpIMul,
+    spv::Op::OpFMul,
+    spv::Op::OpUDiv,
+    spv::Op::OpSDiv,
+    spv::Op::OpFDiv,
+    spv::Op::OpVectorTimesScalar,
+    spv::Op::OpShiftRightLogical,
+    spv::Op::OpShiftRightArithmetic,
+    spv::Op::OpShiftLeftLogical,
+    spv::Op::OpBitwiseXor,
+    spv::Op::OpBitwiseOr,
+    spv::Op::OpBitwiseAnd};
+
+FoldingRule MergeBinaryOpSelect(spv::Op opcode) {
+  assert(std::find(std::begin(MergeBinaryOpSelectOps),
+                   std::end(MergeBinaryOpSelectOps),
+                   opcode) != std::end(MergeBinaryOpSelectOps) &&
+         "Wrong opcode.");
+
+  return [opcode](IRContext* context, Instruction* inst,
+                  const std::vector<const analysis::Constant*>& constants) {
+    analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+    analysis::TypeManager* type_mgr = context->get_type_mgr();
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+
+    const analysis::Constant* const_input = ConstInput(constants);
+    if (!const_input) {
+      return false;
+    }
+    Instruction* non_const = NonConstInput(context, constants[0], inst);
+    if (non_const->opcode() != spv::Op::OpSelect) {
+      return false;
+    }
+    std::vector<const analysis::Constant*> select_constants =
+        const_mgr->GetOperandConstants(non_const);
+    if (!select_constants[1] || !select_constants[2]) {
+      return false;
+    }
+
+    // The OpSelect that will be created below will use the condition from
+    // `non_const` and a result type matching `inst`. Before SPIR-V 1.4,
+    // OpSelect could not have a scalar condition with a vector result.
+    // We must avoid generating the OpSelect if that would happen.
+    const analysis::Type* result_type = type_mgr->GetType(inst->type_id());
+    if (result_type && result_type->AsVector()) {
+      Instruction* cond_inst =
+          def_use_mgr->GetDef(non_const->GetSingleWordInOperand(0));
+      const analysis::Type* cond_type = type_mgr->GetType(cond_inst->type_id());
+      if (cond_type && !cond_type->AsVector()) {
+        if (spvVersionForTargetEnv(context->grammar().target_env()) <
+            SPV_SPIRV_VERSION_WORD(1, 4)) {
+          return false;
+        }
+      }
+    }
+
+    InstructionBuilder ir_builder(
+        context, inst,
+        IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+
+    Instruction *lhs, *rhs;
+    if (constants[0]) {
+      lhs = ir_builder.AddBinaryOp(inst->type_id(), opcode,
+                                   inst->GetSingleWordInOperand(0),
+                                   non_const->GetSingleWordInOperand(1));
+      rhs = ir_builder.AddBinaryOp(inst->type_id(), opcode,
+                                   inst->GetSingleWordInOperand(0),
+                                   non_const->GetSingleWordInOperand(2));
+    } else {
+      lhs = ir_builder.AddBinaryOp(inst->type_id(), opcode,
+                                   non_const->GetSingleWordInOperand(1),
+                                   inst->GetSingleWordInOperand(1));
+      rhs = ir_builder.AddBinaryOp(inst->type_id(), opcode,
+                                   non_const->GetSingleWordInOperand(2),
+                                   inst->GetSingleWordInOperand(1));
+    }
+
+    if (!lhs || !rhs) {
+      return false;
+    }
+
+    if (context->get_instruction_folder().FoldInstruction(lhs)) {
+      context->AnalyzeDefUse(lhs);
+      while (lhs->opcode() == spv::Op::OpCopyObject) {
+        lhs = def_use_mgr->GetDef(lhs->GetSingleWordInOperand(0));
+      }
+    }
+    if (context->get_instruction_folder().FoldInstruction(rhs)) {
+      context->AnalyzeDefUse(rhs);
+      while (rhs->opcode() == spv::Op::OpCopyObject) {
+        rhs = def_use_mgr->GetDef(rhs->GetSingleWordInOperand(0));
+      }
+    }
+    inst->SetOpcode(spv::Op::OpSelect);
+    inst->SetInOperands(
+        {{SPV_OPERAND_TYPE_ID, {non_const->GetSingleWordInOperand(0)}},
+         {SPV_OPERAND_TYPE_ID, {lhs->result_id()}},
+         {SPV_OPERAND_TYPE_ID, {rhs->result_id()}}});
+    return true;
+  };
+}
+
 // Fold OpLogicalNot instructions that follow a comparison,
 // if the comparison is only used by that instruction.
 //
@@ -2717,6 +3505,45 @@ FoldingRule FoldLogicalNotComparison() {
         {{SPV_OPERAND_TYPE_ID, {child->GetSingleWordInOperand(0)}},
          {SPV_OPERAND_TYPE_ID, {child->GetSingleWordInOperand(1)}}});
 
+    return true;
+  };
+}
+
+// (a == true)  =  a
+// (a == false) = !a
+// (a != true)  = !a
+// (a != false) =  a
+FoldingRule RedundantLogicalEqual() {
+  return [](IRContext* context, Instruction* inst,
+            const std::vector<const analysis::Constant*>& constants) {
+    assert(inst->opcode() == spv::Op::OpLogicalEqual ||
+           inst->opcode() == spv::Op::OpLogicalNotEqual);
+
+    const analysis::Constant* const_input = ConstInput(constants);
+    if (!const_input) {
+      return false;
+    }
+
+    analysis::DefUseManager* def_mgr = context->get_def_use_mgr();
+    if (inst->type_id() !=
+        def_mgr->GetDef(inst->GetSingleWordInOperand(0))->type_id()) {
+      return false;
+    }
+
+    std::optional<bool> uniform_const = GetBoolConstantKind(const_input);
+    if (!uniform_const) {
+      return false;
+    }
+
+    bool direct_copy = inst->opcode() == spv::Op::OpLogicalEqual
+                           ? uniform_const.value()
+                           : !uniform_const.value();
+
+    inst->SetOpcode(direct_copy ? spv::Op::OpCopyObject
+                                : spv::Op::OpLogicalNot);
+    inst->SetInOperands(
+        {{SPV_OPERAND_TYPE_ID,
+          {NonConstInput(context, constants[0], inst)->result_id()}}});
     return true;
   };
 }
@@ -3312,7 +4139,9 @@ FoldingRule RedundantAndShift() {
     const analysis::Type* type =
         context->get_type_mgr()->GetType(inst->type_id());
     uint32_t width = ElementWidth(type);
-    if ((width != 32) && (width != 64)) return false;
+    if (width != 8 && width != 16 && width != 32 && width != 64) return false;
+    const uint64_t width_mask =
+        (width == 64) ? ~0ull : ((1ull << width) - 1ull);
 
     analysis::ConstantManager* const_mgr = context->get_constant_mgr();
     const analysis::Constant* const_input1 = ConstInput(constants);
@@ -3320,37 +4149,65 @@ FoldingRule RedundantAndShift() {
     Instruction* other_inst = NonConstInput(context, constants[0], inst);
 
     spv::Op other_op = other_inst->opcode();
-    if (other_op == spv::Op::OpShiftLeftLogical ||
-        other_op == spv::Op::OpShiftRightLogical) {
-      std::vector<const analysis::Constant*> other_constants =
-          const_mgr->GetOperandConstants(other_inst);
+    if (other_op != spv::Op::OpShiftLeftLogical &&
+        other_op != spv::Op::OpShiftRightLogical) {
+      return false;
+    }
 
-      // Only valid  if const is on the right
-      if (other_constants[0]) {
+    std::vector<const analysis::Constant*> other_constants =
+        const_mgr->GetOperandConstants(other_inst);
+
+    // Only valid if const is on the right.
+    if (other_constants[0]) return false;
+    const analysis::Constant* const_input2 = other_constants[1];
+    if (!const_input2) return false;
+
+    auto get_value_u64 =
+        [](const analysis::Constant* c) -> std::optional<uint64_t> {
+      if (!c) return std::nullopt;
+      const analysis::Integer* int_t = c->type()->AsInteger();
+      if (!int_t) return std::nullopt;
+      return c->GetZeroExtendedValue();
+    };
+
+    auto can_fold_component =
+        [&](const analysis::Constant* mask_const,
+            const analysis::Constant* shift_const) -> std::optional<bool> {
+      auto lhs = get_value_u64(mask_const);
+      auto rhs = get_value_u64(shift_const);
+      if (!lhs || !rhs) return std::nullopt;
+      if (*rhs >= width) return false;
+      uint64_t lhs_masked = *lhs & width_mask;
+      if (other_op == spv::Op::OpShiftRightLogical) {
+        return ((lhs_masked << *rhs) & width_mask) == 0;
+      }
+      return ((lhs_masked >> *rhs) & width_mask) == 0;
+    };
+
+    if (const analysis::Vector* mask_vec = type->AsVector()) {
+      const analysis::Vector* shift_vec = const_input2->type()->AsVector();
+      if (!shift_vec ||
+          shift_vec->element_count() != mask_vec->element_count()) {
         return false;
       }
-      const analysis::Constant* const_input2 = other_constants[1];
-      if (!const_input2) return false;
-
-      bool can_convert_to_zero = true;
-      ForEachIntegerConstantPair(
-          const_mgr, const_input1, const_input2,
-          [&can_convert_to_zero, other_op](auto lhs, auto rhs) {
-            if (other_op == spv::Op::OpShiftRightLogical) {
-              can_convert_to_zero = can_convert_to_zero && (lhs << rhs) == 0;
-            } else {
-              can_convert_to_zero = can_convert_to_zero && (lhs >> rhs) == 0;
-            }
-          });
-
-      if (can_convert_to_zero) {
-        auto zero_id = context->get_constant_mgr()->GetNullConstId(type);
-        inst->SetOpcode(spv::Op::OpCopyObject);
-        inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {zero_id}}});
-        return true;
+      const auto mask_components = const_input1->GetVectorComponents(const_mgr);
+      const auto shift_components =
+          const_input2->GetVectorComponents(const_mgr);
+      for (uint32_t i = 0; i != mask_vec->element_count(); ++i) {
+        auto result =
+            can_fold_component(mask_components[i], shift_components[i]);
+        if (!result || !*result) return false;
       }
+    } else {
+      if (const_input2->type()->AsVector()) return false;
+      auto result = can_fold_component(const_input1, const_input2);
+      if (!result || !*result) return false;
     }
-    return false;
+
+    auto zero_id = context->get_constant_mgr()->GetNullConstId(type);
+    inst->SetOpcode(spv::Op::OpCopyObject);
+    inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {zero_id}}});
+    return true;
   };
 }
 
@@ -3699,6 +4556,10 @@ void FoldingRules::AddFoldingRules() {
     rules_[op].push_back(RedundantBinaryLhs0To0(op));
   for (auto op : ReassociateCommutiveBitwiseOps)
     rules_[op].push_back(ReassociateCommutiveBitwise(op));
+  for (auto op : ReassociateNestedGenericIntOps)
+    rules_[op].push_back(ReassociateNestedGenericInt(op));
+  for (auto op : MergeBinaryOpSelectOps)
+    rules_[op].push_back(MergeBinaryOpSelect(op));
   rules_[spv::Op::OpSDiv].push_back(RedundantSUDiv());
   rules_[spv::Op::OpUDiv].push_back(RedundantSUDiv());
   rules_[spv::Op::OpSMod].push_back(RedundantSUMod());
@@ -3712,11 +4573,16 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpCompositeConstruct].push_back(
       CompositeExtractFeedingConstruct);
 
+  rules_[spv::Op::OpCopyLogical].push_back(
+      CompositeConstructFeedingCopyLogical);
+
   rules_[spv::Op::OpCompositeExtract].push_back(InsertFeedingExtract());
   rules_[spv::Op::OpCompositeExtract].push_back(
       CompositeConstructFeedingExtract);
   rules_[spv::Op::OpCompositeExtract].push_back(VectorShuffleFeedingExtract());
   rules_[spv::Op::OpCompositeExtract].push_back(FMixFeedingExtract());
+  rules_[spv::Op::OpCompositeExtract].push_back(CopyLogicalFeedingExtract);
+  rules_[spv::Op::OpCompositeExtract].push_back(LoadFeedingExtract);
 
   rules_[spv::Op::OpCompositeInsert].push_back(
       CompositeInsertToCompositeConstruct);
@@ -3730,6 +4596,7 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpFAdd].push_back(MergeAddAddArithmetic());
   rules_[spv::Op::OpFAdd].push_back(MergeAddSubArithmetic());
   rules_[spv::Op::OpFAdd].push_back(MergeGenericAddSubArithmetic());
+  rules_[spv::Op::OpFAdd].push_back(ReassociateNestedAddSub());
   rules_[spv::Op::OpFAdd].push_back(FactorAddSubMuls());
 
   rules_[spv::Op::OpFDiv].push_back(RedundantFDiv());
@@ -3738,6 +4605,7 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpFDiv].push_back(MergeDivMulArithmetic());
   rules_[spv::Op::OpFDiv].push_back(MergeDivNegateArithmetic());
   rules_[spv::Op::OpFDiv].push_back(MergeDivMulDoubleNegative());
+  rules_[spv::Op::OpFDiv].push_back(ReassociateNestedMulDivFloat());
 
   rules_[spv::Op::OpFMod].push_back(RedundantFMod());
 
@@ -3746,6 +4614,7 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpFMul].push_back(MergeMulDivArithmetic());
   rules_[spv::Op::OpFMul].push_back(MergeMulNegateArithmetic());
   rules_[spv::Op::OpFMul].push_back(MergeDivMulDoubleNegative());
+  rules_[spv::Op::OpFMul].push_back(ReassociateNestedMulDivFloat());
 
   rules_[spv::Op::OpVectorTimesScalar].push_back(MergeDivMulDoubleNegative());
 
@@ -3757,12 +4626,14 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpFSub].push_back(MergeSubNegateArithmetic());
   rules_[spv::Op::OpFSub].push_back(MergeSubAddArithmetic());
   rules_[spv::Op::OpFSub].push_back(MergeSubSubArithmetic());
+  rules_[spv::Op::OpFSub].push_back(ReassociateNestedAddSub());
   rules_[spv::Op::OpFSub].push_back(FactorAddSubMuls());
 
   rules_[spv::Op::OpIAdd].push_back(MergeAddNegateArithmetic());
   rules_[spv::Op::OpIAdd].push_back(MergeAddAddArithmetic());
   rules_[spv::Op::OpIAdd].push_back(MergeAddSubArithmetic());
   rules_[spv::Op::OpIAdd].push_back(MergeGenericAddSubArithmetic());
+  rules_[spv::Op::OpIAdd].push_back(ReassociateNestedAddSub());
   rules_[spv::Op::OpIAdd].push_back(FactorAddSubMuls());
 
   rules_[spv::Op::OpSDiv].push_back(MergeDivMulDoubleNegative());
@@ -3775,6 +4646,7 @@ void FoldingRules::AddFoldingRules() {
   rules_[spv::Op::OpISub].push_back(MergeSubNegateArithmetic());
   rules_[spv::Op::OpISub].push_back(MergeSubAddArithmetic());
   rules_[spv::Op::OpISub].push_back(MergeSubSubArithmetic());
+  rules_[spv::Op::OpISub].push_back(ReassociateNestedAddSub());
   rules_[spv::Op::OpISub].push_back(FactorAddSubMuls());
 
   rules_[spv::Op::OpBitwiseAnd].push_back(RedundantAndOrXor());
@@ -3796,6 +4668,9 @@ void FoldingRules::AddFoldingRules() {
 
   rules_[spv::Op::OpLogicalNot].push_back(RedundantLogicalNot());
   rules_[spv::Op::OpLogicalNot].push_back(FoldLogicalNotComparison());
+
+  rules_[spv::Op::OpLogicalEqual].push_back(RedundantLogicalEqual());
+  rules_[spv::Op::OpLogicalNotEqual].push_back(RedundantLogicalEqual());
 
   rules_[spv::Op::OpStore].push_back(StoringUndef());
 

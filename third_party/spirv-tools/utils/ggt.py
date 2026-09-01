@@ -71,6 +71,10 @@ class ExtInst():
         if self.enum_name == "SPV_EXT_INST_TYPE_OPENCL_STD_100":
             # Live with an old decision, by adjusting this name.
             self.enum_name = "SPV_EXT_INST_TYPE_OPENCL_STD"
+        if self.enum_name == "SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO":
+            # The version-agnostic grammar file name omits "_100", but the
+            # public enum in libspirv.h retains the suffix for compatibility.
+            self.enum_name = "SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100"
 
         self.load()
 

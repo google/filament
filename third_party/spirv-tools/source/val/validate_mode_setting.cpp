@@ -1,6 +1,7 @@
 // Copyright (c) 2018 Google LLC.
 // Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
 // reserved.
+// Copyright (C) 2026 Qualcomm Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -355,17 +356,20 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
             (has_mode(spv::ExecutionMode::LocalSize) ||
              has_mode(spv::ExecutionMode::LocalSizeId))) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << _.VkErrorID(10692)
                  << "If the TileShadingRateQCOM execution mode is used, "
                  << "LocalSize and LocalSizeId must not be specified.";
         }
         if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << _.VkErrorID(10687)
                  << "The NonCoherentTileAttachmentQCOM execution mode must "
                     "not be used in any stage other than fragment.";
         }
       } else {
         if (has_mode(spv::ExecutionMode::TileShadingRateQCOM)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << _.VkErrorID(10691)
                  << "If the TileShadingRateQCOM execution mode is used, the "
                     "TileShadingQCOM capability must be enabled.";
         }
@@ -373,17 +377,20 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
     } else {
       if (has_mode(spv::ExecutionMode::TileShadingRateQCOM)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(10688)
                << "The TileShadingRateQCOM execution mode must not be used "
                   "in any stage other than compute.";
       }
       if (execution_model != spv::ExecutionModel::Fragment) {
         if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << _.VkErrorID(10687)
                  << "The NonCoherentTileAttachmentQCOM execution mode must "
                     "not be used in any stage other than fragment.";
         }
         if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
           return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+                 << _.VkErrorID(10686)
                  << "The TileShadingQCOM capability must not be enabled in "
                     "any stage other than compute or fragment.";
         }
@@ -391,6 +398,7 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
         if (has_mode(spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
           if (!_.HasCapability(spv::Capability::TileShadingQCOM)) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << _.VkErrorID(10690)
                    << "If the NonCoherentTileAttachmentReadQCOM execution "
                       "mode is used, the TileShadingQCOM capability must be "
                       "enabled.";
@@ -541,6 +549,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
       case spv::ExecutionMode::SubgroupsPerWorkgroupId:
       case spv::ExecutionMode::LocalSizeHintId:
       case spv::ExecutionMode::LocalSizeId:
+      case spv::ExecutionMode::OpacityMicromapIdKHR:
       case spv::ExecutionMode::FPFastMathDefault:
       case spv::ExecutionMode::MaximumRegistersIdINTEL:
       case spv::ExecutionMode::IsApiEntryAMDX:
@@ -627,6 +636,16 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
             }
           }
           break;
+        case spv::ExecutionMode::OpacityMicromapIdKHR: {
+          spv::Op operand_opcode = operand_inst->opcode();
+          if (!spvOpcodeIsConstant(operand_opcode) ||
+              !_.IsBoolScalarType(operand_inst->type_id())) {
+            return _.diag(SPV_ERROR_INVALID_DATA, operand_inst)
+                   << "OpacityMicromapIdKHR's operand must be an <id> "
+                      "of a constant instruction of OpTypeBool.";
+          }
+          break;
+        }
         default:
           break;
       }
@@ -810,6 +829,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
     case spv::ExecutionMode::DepthGreater:
     case spv::ExecutionMode::DepthLess:
     case spv::ExecutionMode::DepthUnchanged:
+    case spv::ExecutionMode::StencilRefReplacingEXT:
     case spv::ExecutionMode::NonCoherentColorAttachmentReadEXT:
     case spv::ExecutionMode::NonCoherentDepthAttachmentReadEXT:
     case spv::ExecutionMode::NonCoherentStencilAttachmentReadEXT:
@@ -819,6 +839,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
     case spv::ExecutionMode::SampleInterlockUnorderedEXT:
     case spv::ExecutionMode::ShadingRateInterlockOrderedEXT:
     case spv::ExecutionMode::ShadingRateInterlockUnorderedEXT:
+    case spv::ExecutionMode::PostDepthCoverage:
     case spv::ExecutionMode::EarlyAndLateFragmentTestsAMD:
     case spv::ExecutionMode::StencilRefUnchangedFrontAMD:
     case spv::ExecutionMode::StencilRefGreaterFrontAMD:

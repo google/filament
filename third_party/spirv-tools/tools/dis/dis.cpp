@@ -68,6 +68,13 @@ Options:
   --offsets         Show byte offsets for each instruction.
 
   --comment         Add comments to make reading easier
+
+  --handle-unknown-opcodes
+                    Emit unknown opcodes and unknown extended instruction
+                    numbers as OpUnknown with raw integer operands instead of
+                    failing. The output can be re-assembled with spirv-as.
+                    Note: the ID bound in the reassembled module may be
+                    incorrect if any unknown instruction defines a result ID.
 )";
 
 // clang-format off
@@ -84,6 +91,7 @@ FLAG_LONG_bool   (nested_indent,  /* default_value= */ false, /* required= */ fa
 FLAG_LONG_bool   (reorder_blocks, /* default_value= */ false, /* required= */ false);
 FLAG_LONG_bool   (offsets,        /* default_value= */ false, /* required= */ false);
 FLAG_LONG_bool   (comment,        /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (handle_unknown_opcodes, /* default_value= */ false, /* required= */ false);
 // clang-format on
 
 static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
@@ -140,6 +148,9 @@ int main(int, const char** argv) {
     options |= SPV_BINARY_TO_TEXT_OPTION_REORDER_BLOCKS;
 
   if (flags::comment.value()) options |= SPV_BINARY_TO_TEXT_OPTION_COMMENT;
+
+  if (flags::handle_unknown_opcodes.value())
+    options |= SPV_BINARY_TO_TEXT_OPTION_HANDLE_UNKNOWN_OPCODES;
 
   if (flags::o.value() == "-") {
     // Print to standard output.

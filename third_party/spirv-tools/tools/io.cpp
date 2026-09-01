@@ -96,7 +96,9 @@ enum class HexMode {
 
 // Whether a character should be skipped as whitespace / separator /
 // end-of-file.
-bool IsSpace(char c) { return isspace(c) || c == ',' || c == '\0'; }
+bool IsSpace(char c) {
+  return isspace(static_cast<unsigned char>(c)) || c == ',' || c == '\0';
+}
 
 bool IsHexStream(const std::vector<char>& stream) {
   for (char c : stream) {
@@ -115,7 +117,8 @@ bool IsHexStream(const std::vector<char>& stream) {
 
 bool MatchIgnoreCase(const char* token, const char* expect, size_t len) {
   for (size_t i = 0; i < len; ++i) {
-    if (tolower(token[i]) != tolower(expect[i])) {
+    if (tolower(static_cast<unsigned char>(token[i])) !=
+        tolower(static_cast<unsigned char>(expect[i]))) {
       return false;
     }
   }
@@ -258,7 +261,7 @@ class HexTokenizer {
       }
 
       token_chars[i] = c;
-      if (!isxdigit(c)) {
+      if (!isxdigit(static_cast<unsigned char>(c))) {
         ParseError("encountered non-hex character");
       }
     }
@@ -272,7 +275,7 @@ class HexTokenizer {
   // Consume one hex digit.
   char NextHexDigit() {
     char c = Next();
-    if (!isxdigit(c)) {
+    if (!isxdigit(static_cast<unsigned char>(c))) {
       ParseError("encountered non-hex character");
     }
     return c;

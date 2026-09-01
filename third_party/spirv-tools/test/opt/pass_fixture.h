@@ -220,14 +220,14 @@ class PassTest : public TestT {
   // messages.
   template <typename PassT, typename... Args>
   void SinglePassRunAndFail(const std::string& original, Args&&... args) {
-    context_ = BuildModule(env_, consumer_, original, assemble_options_);
-    EXPECT_NE(nullptr, context()) << "Assembling failed for shader:\n"
-                                  << original << std::endl;
     std::ostringstream errs;
     auto error_consumer = [&errs](spv_message_level_t, const char*,
                                   const spv_position_t&, const char* message) {
       errs << message << std::endl;
     };
+    context_ = BuildModule(env_, error_consumer, original, assemble_options_);
+    EXPECT_NE(nullptr, context()) << "Assembling failed for shader:\n"
+                                  << original << std::endl;
     auto pass = MakeUnique<PassT>(std::forward<Args>(args)...);
     pass->SetMessageConsumer(error_consumer);
     const auto status = pass->Run(context());

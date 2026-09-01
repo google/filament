@@ -47,6 +47,13 @@ inline size_t hash_combine(std::size_t hash, const T& val,
   return hash_combine(hash_combine(hash, val), args...);
 }
 
+template <typename T>
+struct VectorHash {
+  size_t operator()(const std::vector<T>& v) const {
+    return hash_combine(0, v);
+  }
+};
+
 }  // namespace utils
 }  // namespace spvtools
 
