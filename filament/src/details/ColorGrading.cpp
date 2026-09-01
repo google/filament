@@ -1196,7 +1196,7 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
     auto *slices = js.createJob();
 
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, &builder](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, &builder, &isLinear](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
