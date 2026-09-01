@@ -23,6 +23,7 @@
 namespace filament::backend {
 
 struct PlatformMetalImpl;
+class MetalDriver;
 
 // In order for this header to be compatible with Objective-C and C++, we use these wrappers around
 // id<MTL*> objects.
@@ -39,6 +40,19 @@ public:
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override;
     int getOSVersion() const noexcept override { return 0; }
     utils::CString getDeviceInfo(DeviceInfoType, Driver*) const override { return {}; }
+
+    /**
+     * Wraps a CVPixelBufferRef for use with Texture::setExternalImage.
+     *
+     * The returned handle does not retain the pixel buffer. The caller must keep the pixel buffer
+     * alive until Texture::setExternalImage returns. Filament synchronously retains its own
+     * reference during Texture::setExternalImage, so the caller may release its reference after
+     * the method returns.
+     *
+     * Supported pixel formats are kCVPixelFormatType_32BGRA and
+     * kCVPixelFormatType_420YpCbCr8BiPlanarFullRange.
+     */
+    ExternalImageHandle UTILS_PUBLIC createExternalImage(void* cvPixelBuffer) noexcept;
 
     /**
      * Optionally initializes the Metal platform by acquiring resources necessary for rendering.
@@ -111,6 +125,10 @@ public:
     DrawableFailureBehavior getDrawableFailureBehavior() const noexcept;
 
 private:
+    friend class MetalDriver;
+
+    void* getExternalImage(ExternalImageHandleRef externalImage) const noexcept;
+
     PlatformMetalImpl* pImpl = nullptr;
 };
 
