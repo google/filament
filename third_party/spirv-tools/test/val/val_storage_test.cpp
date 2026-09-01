@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2016 The Khronos Group Inc.
+// Copyright (C) 2026 Qualcomm Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -277,6 +278,8 @@ TEST_F(ValidateStorage, TileAttachmentQCOMBad1) {
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeImage-10693"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Any OpTypeImage variable in the TileAttachmentQCOM "
                         "Storage Class must have 2D as its dimension"));
 }
@@ -307,6 +310,8 @@ TEST_F(ValidateStorage, TileAttachmentQCOMBad2) {
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-TileAttachmentQCOM-10695"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
                         "must be decorated with DescriptorSet and Binding"));
 }
@@ -336,6 +341,8 @@ TEST_F(ValidateStorage, TileAttachmentQCOMBad3) {
   spv_target_env env = SPV_ENV_VULKAN_1_4;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-TileAttachmentQCOM-10695"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
                         "must be decorated with DescriptorSet and Binding"));
@@ -404,6 +411,8 @@ TEST_F(ValidateStorage, TileAttachmentQCOMBad5) {
   spv_target_env env = SPV_ENV_VULKAN_1_4;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-TileAttachmentQCOM-10697"));
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
@@ -435,6 +444,72 @@ TEST_F(ValidateStorage, TileAttachmentQCOMBad6) {
   EXPECT_THAT(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateStorage, WrongDimTileImageEXT) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability Sampled1D
+               OpCapability TileImageColorReadAccessEXT
+               OpExtension "SPV_EXT_shader_tile_image"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+        %img = OpTypeImage %int 1D 0 0 0 2 Rgba32i
+    %ptr_img = OpTypePointer TileImageEXT %img
+     %color1 = OpVariable %ptr_img TileImageEXT
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "The TileImageEXT Storage Class must only be used for declaring "
+          "tile image variables"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMDecoratedWithComponent) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %color1 Binding 0
+               OpDecorate %color1 Component 0
+               OpDecorate %color1 DescriptorSet 0
+        %void = OpTypeVoid 
+         %int = OpTypeInt 32 1
+          %44 = OpTypeImage %int 2D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Location-06672"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Component decoration must not be applied to "
+                        "this storage class"));
 }
 
 std::string GenerateExecutionModelCode(const std::string& execution_model,

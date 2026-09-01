@@ -1,6 +1,62 @@
 Revision history for SPIRV-Tools
 
-v2026.1 2026-02-03
+v2026.4 2026-07-09
+  - Start v2026.4-dev
+
+v2026.3 2026-07-08
+  - General
+    - Support SPV_QCOM_multiple_wait_queues, SPV_KHR_opacity_micromap, and SPV_EXT_ocp_microscaling_types (#6671, #6670, #6772)
+    - Add ArmExperimentalMLOperations and NonSemantic.Graph.DebugInfo instruction sets (#6692, #6666)
+    - Fix unbounded memory usage in FriendlyNameMapper (#6763)
+    - Improved hex-float compilation and float equality testing (#6778, #6783)
+    - Various build system and dependency updates (Bazel, GN, Protobuf, Abseil)
+  - Optimizer
+    - Stability fixes for DeadBranchElimPass, CodeSinkingPass, and OrderBlocks (#6764, #6703, #6676)
+    - Improved handling of tensor constants, non-semantic instructions, and loop decorations (#6684, #6721, #6719, #6690)
+    - Add folding rule for extract from copy logical and prevent word limit overflows (#6725, #6722)
+  - Validator
+    - Support SPV_EXT_ocp_microscaling_types, SPV_EXT_split_barrier, and SPV_ARM_graph (#6779, #6732, #6694)
+    - Support for SPV_NV_cooperative_matrix_decode_vector and Intel extensions (#6693, #6717, #6665)
+    - Enhanced error reporting with source line printing and Shader Debug Info (#6648, #6698, #6691, #6686, #6685, #6681)
+    - Correctness fixes for ray queries, descriptors, OpSpecConstantOp, and array validation (#6710, #6729, #6731, #6777, #6709)
+    - Disallow duplicate targets for OpGroupDecorate and multiple graph entry points (#6720, #6754)
+  - Assembler/Disassembler
+    - Support for SPV_QCOM_image_processing3 (#6776)
+    - Performance and correctness improvements in the disassembler and tools (#6757, #6650)
+
+v2026.2 2026-04-24
+  - General
+    - Fix build for NonSemanticShaderDebugInfo in GN (#6647)
+    - Support SPV_KHR_abort and SPV_KHR_constant_data (#6625)
+    - Support versioned NonSemanticShaderDebugInfo imports (#6555)
+    - Fix C++20 compilation issue with large integer literals (#6557)
+    - Remove SVA (Shader Validation Assistant) (#6550)
+    - Improved Kokoro build configuration and storage usage (#6573, #6551)
+    - Various dependency rolls and CI updates
+  - Optimizer
+    - Fold OpCompositeExtract feeding from OpCopyLogical or OpLoad (#6614)
+    - Fix DebugValue placements and initialization (#6599, #6626)
+    - Support OpConstantCompositeReplicateEXT in constant manager (#6616)
+    - Aggressive DCE support for untyped pointers and OpUntypedVariableKHR (#6602, #6607)
+    - Optimize SPV_EXT_opacity_micromap and SPV_EXT_shader_invocation_reorder (#6571)
+    - Add LegalizeMultidimArrayPass and improve access chain reordering (#6535, #6545)
+    - Added various folding and reassociation rules (#6453, #6504, #6454, #6456)
+    - Support for optimizing SPV_NV_push_constant_bank (#6547)
+  - Validator
+    - Add validation for 4-bit integer types (#6644)
+    - Support and validate SPV_KHR_constant_data (OpConstantDataKHR, OpSpecConstantDataKHR) (#6646, #6643, #6642)
+    - Validate NonSemanticShaderDebugInfo 101 and versioned imports (#6635, #6555)
+    - Improve validation for Intel SPIR-V extensions and various KHR/EXT extensions (#6232, #6589, #6583, etc.)
+    - Extensive validation coverage for OpSpecConstantOp (#6596, #6585, #6582, #6579, #6578, #6576)
+    - Check output location uniqueness for GeometryStreams (#6630)
+    - Improved validation for variables, constants, and types (#6634, #6598, #6595, #6568)
+    - Added validation for several new opcodes and capabilities (OpGroupAsyncCopy, OpLifetimeStart/Stop, etc.) (#6519, #6514, #6515)
+  - Assembler/Disassembler
+    - Add --handle-unknown-opcodes flag to spirv-dis (#6604)
+    - Handle leading + in hex float literals in assembler (#6565)
+    - Validate bit width of float types with explicit encodings in assembler (#6562)
+
+v2026.1 2026-01-22
   - General
     - spirv-tools: Fix infinite recursion in SmallVector::operator== on MSVC (#6470)
     - Add support for SPV_NV_push_constant_bank (#6507)

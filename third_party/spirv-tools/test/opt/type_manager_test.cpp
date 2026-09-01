@@ -342,6 +342,72 @@ TEST(TypeManager, TypeStrings) {
   }
 }
 
+TEST(TypeManager, OCPMicroscalingTypeStrings) {
+  const std::string text = R"(
+    OpCapability Float4EXT
+    OpCapability Float6EXT
+    OpCapability Float8UnsignedE8M0EXT
+    OpCapability MXInt8EXT
+    OpExtension "SPV_EXT_ocp_microscaling_types"
+    OpMemoryModel Logical GLSL450
+    %1 = OpTypeFloat 4 Float4E2M1EXT
+    %2 = OpTypeFloat 6 Float6E2M3EXT
+    %3 = OpTypeFloat 6 Float6E3M2EXT
+    %4 = OpTypeFloat 8 Float8UnsignedE8M0EXT
+    %5 = OpTypeFloat 8 MXInt8EXT
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(nullptr, context.get());
+  TypeManager manager(nullptr, context.get());
+
+  ASSERT_NE(nullptr, manager.GetType(1));
+  EXPECT_EQ("fp4e2m1", manager.GetType(1)->str());
+  ASSERT_NE(nullptr, manager.GetType(2));
+  EXPECT_EQ("fp6e2m3", manager.GetType(2)->str());
+  ASSERT_NE(nullptr, manager.GetType(3));
+  EXPECT_EQ("fp6e3m2", manager.GetType(3)->str());
+  ASSERT_NE(nullptr, manager.GetType(4));
+  EXPECT_EQ("fp8e8m0", manager.GetType(4)->str());
+  ASSERT_NE(nullptr, manager.GetType(5));
+  EXPECT_EQ("mxint8", manager.GetType(5)->str());
+}
+
+TEST(TypeManager, GetTypeInstructionEncodedFloats) {
+  const std::string text = R"(
+; CHECK: OpTypeFloat 4 Float4E2M1EXT
+; CHECK: OpTypeFloat 6 Float6E2M3EXT
+; CHECK: OpTypeFloat 6 Float6E3M2EXT
+; CHECK: OpTypeFloat 8 Float8UnsignedE8M0EXT
+; CHECK: OpTypeFloat 8 MXInt8EXT
+OpCapability Float4EXT
+OpCapability Float6EXT
+OpCapability Float8UnsignedE8M0EXT
+OpCapability MXInt8EXT
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text);
+  ASSERT_NE(nullptr, context.get());
+
+  Float fp4(4, spv::FPEncoding::Float4E2M1EXT);
+  Float fp6_e2m3(6, spv::FPEncoding::Float6E2M3EXT);
+  Float fp6_e3m2(6, spv::FPEncoding::Float6E3M2EXT);
+  Float e8m0(8, spv::FPEncoding::Float8UnsignedE8M0EXT);
+  Float mxint8(8, spv::FPEncoding::MXInt8EXT);
+  EXPECT_NE(0u, context->get_type_mgr()->GetTypeInstruction(&fp4));
+  EXPECT_NE(0u, context->get_type_mgr()->GetTypeInstruction(&fp6_e2m3));
+  EXPECT_NE(0u, context->get_type_mgr()->GetTypeInstruction(&fp6_e3m2));
+  EXPECT_NE(0u, context->get_type_mgr()->GetTypeInstruction(&e8m0));
+  EXPECT_NE(0u, context->get_type_mgr()->GetTypeInstruction(&mxint8));
+
+  Match(text, context.get(), /*do_validation=*/false);
+}
+
 TEST(TypeManager, StructWithFwdPtr) {
   const std::string text = R"(
                OpCapability Addresses

@@ -227,6 +227,62 @@ INSTANTIATE_TEST_SUITE_P(
     })));
 // clang-format on
 
+TEST_F(StripDebugInfoTest, NonSemanticShaderDebugInfoWithDebugScope) {
+  std::vector<const char*> input = {
+      // clang-format off
+      "OpCapability Shader",
+      "OpExtension \"SPV_KHR_non_semantic_info\"",
+      "%1 = OpExtInstImport \"NonSemantic.Shader.DebugInfo.100\"",
+      "OpMemoryModel Logical GLSL450",
+      "OpEntryPoint GLCompute %main \"main\"",
+      "OpExecutionMode %main LocalSize 1 1 1",
+      "%file_name = OpString \"dummy.slang\"",
+      "%source_text = OpString \"void main() {}\"",
+      "%void = OpTypeVoid",
+      "%4 = OpTypeFunction %void",
+      "%uint = OpTypeInt 32 0",
+      "%uint_100 = OpConstant %uint 100",
+      "%uint_5 = OpConstant %uint 5",
+      "%uint_11 = OpConstant %uint 11",
+      "%source = OpExtInst %void %1 DebugSource %file_name %source_text",
+      "%scope = OpExtInst %void %1 DebugCompilationUnit %uint_100 %uint_5 %source %uint_11",
+      "%main = OpFunction %void None %4",
+      "%5 = OpLabel",
+      "%dbg_scope_inst = OpExtInst %void %1 DebugScope %scope",
+      "OpReturn",
+      "OpFunctionEnd"
+      // clang-format on
+  };
+
+  std::vector<const char*> expected = {
+      // clang-format off
+      "OpCapability Shader",
+      "OpExtension \"SPV_KHR_non_semantic_info\"",
+      "%1 = OpExtInstImport \"NonSemantic.Shader.DebugInfo.100\"",
+      "OpMemoryModel Logical GLSL450",
+      "OpEntryPoint GLCompute %2 \"main\"",
+      "OpExecutionMode %2 LocalSize 1 1 1",
+      "%3 = OpString \"dummy.slang\"",
+      "%4 = OpString \"void main() {}\"",
+      "%void = OpTypeVoid",
+      "%6 = OpTypeFunction %void",
+      "%uint = OpTypeInt 32 0",
+      "%uint_100 = OpConstant %uint 100",
+      "%uint_5 = OpConstant %uint 5",
+      "%uint_11 = OpConstant %uint 11",
+      "%2 = OpFunction %void None %6",
+      "%13 = OpLabel",
+      "OpReturn",
+      "OpFunctionEnd"
+      // clang-format on
+  };
+
+  SinglePassRunAndCheck<StripDebugInfoPass>(JoinAllInsts(input),
+                                            JoinAllInsts(expected),
+                                            /* skip_nop = */ false,
+                                            /* do_validation */ true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -50,6 +50,7 @@ class StructConstant;
 class VectorConstant;
 class MatrixConstant;
 class ArrayConstant;
+class TensorConstant;
 class NullConstant;
 class ConstantManager;
 
@@ -73,6 +74,7 @@ class Constant {
   virtual VectorConstant* AsVectorConstant() { return nullptr; }
   virtual MatrixConstant* AsMatrixConstant() { return nullptr; }
   virtual ArrayConstant* AsArrayConstant() { return nullptr; }
+  virtual TensorConstant* AsTensorConstant() { return nullptr; }
   virtual NullConstant* AsNullConstant() { return nullptr; }
 
   virtual const ScalarConstant* AsScalarConstant() const { return nullptr; }
@@ -86,6 +88,7 @@ class Constant {
   virtual const VectorConstant* AsVectorConstant() const { return nullptr; }
   virtual const MatrixConstant* AsMatrixConstant() const { return nullptr; }
   virtual const ArrayConstant* AsArrayConstant() const { return nullptr; }
+  virtual const TensorConstant* AsTensorConstant() const { return nullptr; }
   virtual const NullConstant* AsNullConstant() const { return nullptr; }
 
   // Returns the float representation of the constant. Must be a 32 bit
@@ -423,6 +426,28 @@ class ArrayConstant : public CompositeConstant {
   }
   std::unique_ptr<Constant> Copy() const override {
     return std::unique_ptr<Constant>(CopyArrayConstant().release());
+  }
+};
+
+// Tensor type constant.
+class TensorConstant : public CompositeConstant {
+ public:
+  TensorConstant(const TensorARM* ty) : CompositeConstant(ty) {}
+  TensorConstant(const TensorARM* ty,
+                 const std::vector<const Constant*>& components)
+      : CompositeConstant(ty, components) {}
+  TensorConstant(const TensorARM* ty, std::vector<const Constant*>&& components)
+      : CompositeConstant(ty, std::move(components)) {}
+
+  TensorConstant* AsTensorConstant() override { return this; }
+  const TensorConstant* AsTensorConstant() const override { return this; }
+
+  // Make a copy of this TensorConstant instance.
+  std::unique_ptr<TensorConstant> CopyTensorConstant() const {
+    return MakeUnique<TensorConstant>(type_->AsTensorARM(), components_);
+  }
+  std::unique_ptr<Constant> Copy() const override {
+    return std::unique_ptr<Constant>(CopyTensorConstant().release());
   }
 };
 

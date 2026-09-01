@@ -15,7 +15,7 @@
 
 /+
  + Enumeration tokens for SPIR-V, in various styles:
- +   C, C++, C++11, JSON, Lua, Python, C#, D, Beef
+ +   C, C++, C++11, JSON, Lua, Python, C#, Java, D, Beef
  + 
  + - C will have tokens with a "Spv" prefix, e.g.: SpvSourceLanguageGLSL
  + - C++ will have tokens in the "spv" name space, e.g.: spv::SourceLanguageGLSL
@@ -24,6 +24,8 @@
  + - Python will use dictionaries, e.g.: spv['SourceLanguage']['GLSL']
  + - C# will use enum classes in the Specification class located in the "Spv" namespace,
  +     e.g.: Spv.Specification.SourceLanguage.GLSL
+ + - Java will use enum classes in the Spv class in the org.khronos.spv package,
+ +     e.g.: Spv.SourceLanguage.GLSL
  + - D will have tokens under the "spv" module, e.g: spv.SourceLanguage.GLSL
  + - Beef will use enum classes in the Specification class located in the "Spv" namespace,
  +     e.g.: Spv.Specification.SourceLanguage.GLSL
@@ -58,6 +60,8 @@ enum SourceLanguage : uint
     Slang = 11,
     Zig = 12,
     Rust = 13,
+    Pred = 14,
+    ApilaJai = 15,
     Max = 0x7fffffff,
 }
 
@@ -178,6 +182,7 @@ enum ExecutionMode : uint
     QuadDerivativesKHR = 5088,
     RequireFullQuadsKHR = 5089,
     SharesInputWithAMDX = 5102,
+    ArithmeticPoisonKHR = 5157,
     OutputLinesEXT = 5269,
     OutputLinesNV = 5269,
     OutputPrimitivesEXT = 5270,
@@ -207,6 +212,7 @@ enum ExecutionMode : uint
     SchedulerTargetFmaxMhzINTEL = 5903,
     MaximallyReconvergesKHR = 6023,
     FPFastMathDefault = 6028,
+    OpacityMicromapIdKHR = 6031,
     StreamingInterfaceINTEL = 6154,
     RegisterMapInterfaceINTEL = 6160,
     NamedBarrierCountINTEL = 6417,
@@ -486,6 +492,7 @@ enum LinkageType : uint
     Export = 0,
     Import = 1,
     LinkOnceODR = 2,
+    WeakAMD = 3,
     Max = 0x7fffffff,
 }
 
@@ -578,6 +585,7 @@ enum Decoration : uint
     PayloadDispatchIndirectAMDX = 5105,
     ArrayStrideIdEXT = 5124,
     OffsetIdEXT = 5125,
+    UTFEncodedKHR = 5145,
     OverrideCoverageNV = 5248,
     PassthroughNV = 5250,
     ViewportRelativeNV = 5252,
@@ -602,6 +610,7 @@ enum Decoration : uint
     BindlessImageNV = 5399,
     BoundSamplerNV = 5400,
     BoundImageNV = 5401,
+    CooperativeMatrixTransposeEXT = 5440,
     SIMTCallINTEL = 5599,
     ReferencedIndirectlyINTEL = 5602,
     ClobberINTEL = 5607,
@@ -711,6 +720,7 @@ enum Decoration : uint
     ConditionalINTEL = 6247,
     CacheControlLoadINTEL = 6442,
     CacheControlStoreINTEL = 6443,
+    IntrinsicSAMSUNG = 7040,
     Max = 0x7fffffff,
 }
 
@@ -914,6 +924,7 @@ enum LoopControlShift : uint
     LoopCountINTEL = 24,
     MaxReinvocationDelayALTERA = 25,
     MaxReinvocationDelayINTEL = 25,
+    MultipleWaitQueuesQCOM = 28,
     Max = 0x7fffffff,
 }
 
@@ -949,6 +960,7 @@ enum LoopControlMask : uint
     LoopCountINTEL = 0x01000000,
     MaxReinvocationDelayALTERA = 0x02000000,
     MaxReinvocationDelayINTEL = 0x02000000,
+    MultipleWaitQueuesQCOM = 0x10000000,
 }
 
 enum FunctionControlShift : uint
@@ -1180,6 +1192,11 @@ enum Capability : uint
     CooperativeMatrixLayoutsARM = 4201,
     Float8EXT = 4212,
     Float8CooperativeMatrixEXT = 4213,
+    Float6EXT = 4228,
+    Float4EXT = 4229,
+    Float8UnsignedE8M0EXT = 4230,
+    MXInt8EXT = 4231,
+    BitcastExtractEXT = 4232,
     FragmentShadingRateKHR = 4422,
     SubgroupBallotKHR = 4423,
     DrawParameters = 4427,
@@ -1218,6 +1235,9 @@ enum Capability : uint
     TileShadingQCOM = 4495,
     CooperativeMatrixConversionQCOM = 4496,
     TextureBlockMatch2QCOM = 4498,
+    MultipleWaitQueuesQCOM = 4539,
+    ImageGatherLinearQCOM = 4543,
+    ImageGatherExtendedModesQCOM = 4544,
     Float16ImageAMD = 5008,
     ImageGatherBiasLodAMD = 5009,
     FragmentMaskAMD = 5010,
@@ -1232,7 +1252,11 @@ enum Capability : uint
     BFloat16TypeKHR = 5116,
     BFloat16DotProductKHR = 5117,
     BFloat16CooperativeMatrixKHR = 5118,
+    AbortKHR = 5120,
     DescriptorHeapEXT = 5128,
+    ConstantDataKHR = 5146,
+    PoisonFreezeKHR = 5156,
+    WeakLinkageAMD = 5181,
     SampleMaskOverrideCoverageNV = 5249,
     GeometryShaderPassthroughNV = 5251,
     ShaderViewportIndexLayerEXT = 5254,
@@ -1297,6 +1321,7 @@ enum Capability : uint
     DemoteToHelperInvocationEXT = 5379,
     DisplacementMicromapNV = 5380,
     RayTracingOpacityMicromapEXT = 5381,
+    RayTracingOpacityMicromapKHR = 5381,
     ShaderInvocationReorderNV = 5383,
     ShaderInvocationReorderEXT = 5388,
     BindlessTextureNV = 5390,
@@ -1310,14 +1335,19 @@ enum Capability : uint
     PushConstantBanksNV = 5423,
     LongVectorEXT = 5425,
     Shader64BitIndexingEXT = 5426,
+    CooperativeMatrixConversionsEXT = 5429,
+    CooperativeMatrixReductionsEXT = 5430,
     CooperativeMatrixReductionsNV = 5430,
     CooperativeMatrixConversionsNV = 5431,
+    CooperativeMatrixPerElementOperationsEXT = 5432,
     CooperativeMatrixPerElementOperationsNV = 5432,
     CooperativeMatrixTensorAddressingNV = 5433,
     CooperativeMatrixBlockLoadsNV = 5434,
     CooperativeVectorTrainingNV = 5435,
     RayTracingClusterAccelerationStructureNV = 5437,
+    CooperativeMatrixGetCoordinateEXT = 5438,
     TensorAddressingNV = 5439,
+    CooperativeMatrixDecodeVectorNV = 5447,
     SubgroupShuffleINTEL = 5568,
     SubgroupBufferBlockIOINTEL = 5569,
     SubgroupImageBlockIOINTEL = 5570,
@@ -1391,6 +1421,7 @@ enum Capability : uint
     GroupNonUniformRotateKHR = 6026,
     FloatControls2 = 6029,
     FMAKHR = 6030,
+    RayTracingOpacityMicromapExecutionModeKHR = 6032,
     AtomicFloat32AddEXT = 6033,
     AtomicFloat64AddEXT = 6034,
     LongCompositesINTEL = 6089,
@@ -1399,6 +1430,7 @@ enum Capability : uint
     AtomicFloat16AddEXT = 6095,
     DebugInfoModuleINTEL = 6114,
     BFloat16ConversionINTEL = 6115,
+    SplitBarrierEXT = 6141,
     SplitBarrierINTEL = 6141,
     ArithmeticFenceEXT = 6144,
     FPGAClusterAttributesV2ALTERA = 6150,
@@ -1423,12 +1455,19 @@ enum Capability : uint
     UntypedVariableLengthArrayINTEL = 6243,
     SpecConditionalINTEL = 6245,
     FunctionVariantsINTEL = 6246,
+    PredicatedIOINTEL = 6257,
+    RoundedDivideSqrtINTEL = 6265,
     GroupUniformArithmeticKHR = 6400,
     TensorFloat32RoundingINTEL = 6425,
     MaskedGatherScatterINTEL = 6427,
     CacheControlsINTEL = 6441,
     RegisterLimitsINTEL = 6460,
     BindlessImagesINTEL = 6528,
+    DotProductFloat16AccFloat32VALVE = 6912,
+    DotProductFloat16AccFloat16VALVE = 6913,
+    DotProductBFloat16AccVALVE = 6914,
+    DotProductFloat8AccFloat32VALVE = 6915,
+    IntrinsicSAMSUNG = 7041,
     Max = 0x7fffffff,
 }
 
@@ -1446,6 +1485,7 @@ enum RayFlagsShift : uint
     SkipTrianglesKHR = 8,
     SkipAABBsKHR = 9,
     ForceOpacityMicromap2StateEXT = 10,
+    ForceOpacityMicromap2StateKHR = 10,
     Max = 0x7fffffff,
 }
 
@@ -1464,6 +1504,7 @@ enum RayFlagsMask : uint
     SkipTrianglesKHR = 0x00000100,
     SkipAABBsKHR = 0x00000200,
     ForceOpacityMicromap2StateEXT = 0x00000400,
+    ForceOpacityMicromap2StateKHR = 0x00000400,
 }
 
 enum RayQueryIntersection : uint
@@ -1616,6 +1657,7 @@ enum TensorAddressingOperandsShift : uint
 {
     TensorView = 0,
     DecodeFunc = 1,
+    DecodeVectorFunc = 2,
     Max = 0x7fffffff,
 }
 
@@ -1624,6 +1666,7 @@ enum TensorAddressingOperandsMask : uint
     MaskNone = 0,
     TensorView = 0x00000001,
     DecodeFunc = 0x00000002,
+    DecodeVectorFunc = 0x00000004,
 }
 
 enum TensorOperandsShift : uint
@@ -1746,6 +1789,11 @@ enum FPEncoding : uint
     BFloat16KHR = 0,
     Float8E4M3EXT = 4214,
     Float8E5M2EXT = 4215,
+    Float6E2M3EXT = 4223,
+    Float6E3M2EXT = 4224,
+    Float4E2M1EXT = 4225,
+    Float8UnsignedE8M0EXT = 4226,
+    MXInt8EXT = 4227,
     Max = 0x7fffffff,
 }
 
@@ -1775,6 +1823,15 @@ enum ComponentType : uint
     UnsignedInt8PackedNV = 1000491001,
     FloatE4M3NV = 1000491002,
     FloatE5M2NV = 1000491003,
+    Max = 0x7fffffff,
+}
+
+enum GatherModes : uint
+{
+    Gather4x1QCOM = 0,
+    GatherDQCOM = 1,
+    GatherH2QCOM = 2,
+    GatherV2QCOM = 3,
     Max = 0x7fffffff,
 }
 
@@ -2138,6 +2195,7 @@ enum Op : uint
     OpGraphSetOutputARM = 4185,
     OpGraphEndARM = 4186,
     OpTypeGraphARM = 4190,
+    OpBitcastExtractEXT = 4195,
     OpTerminateInvocation = 4416,
     OpTypeUntypedPointerKHR = 4417,
     OpUntypedVariableKHR = 4418,
@@ -2201,6 +2259,7 @@ enum Op : uint
     OpCompositeConstructCoopMatQCOM = 4540,
     OpCompositeExtractCoopMatQCOM = 4541,
     OpExtractSubArrayQCOM = 4542,
+    OpImageGatherQCOM = 4545,
     OpGroupIAddNonUniformAMD = 5000,
     OpGroupFAddNonUniformAMD = 5001,
     OpGroupFMinNonUniformAMD = 5002,
@@ -2224,9 +2283,14 @@ enum Op : uint
     OpGroupNonUniformQuadAnyKHR = 5111,
     OpTypeBufferEXT = 5115,
     OpBufferPointerEXT = 5119,
+    OpAbortKHR = 5121,
     OpUntypedImageTexelPointerEXT = 5126,
     OpMemberDecorateIdEXT = 5127,
     OpConstantSizeOfEXT = 5129,
+    OpConstantDataKHR = 5147,
+    OpSpecConstantDataKHR = 5148,
+    OpPoisonKHR = 5158,
+    OpFreezeKHR = 5159,
     OpHitObjectRecordHitMotionNV = 5249,
     OpHitObjectRecordHitWithIndexMotionNV = 5250,
     OpHitObjectRecordMissMotionNV = 5251,
@@ -2268,6 +2332,7 @@ enum Op : uint
     OpCooperativeVectorReduceSumAccumulateNV = 5291,
     OpCooperativeVectorMatrixMulAddNV = 5292,
     OpCooperativeMatrixConvertNV = 5293,
+    OpCooperativeMatrixConvertUseEXT = 5293,
     OpEmitMeshTasksEXT = 5294,
     OpSetMeshOutputsEXT = 5295,
     OpGroupNonUniformPartitionEXT = 5296,
@@ -2332,11 +2397,14 @@ enum Op : uint
     OpCooperativeMatrixStoreNV = 5360,
     OpCooperativeMatrixMulAddNV = 5361,
     OpCooperativeMatrixLengthNV = 5362,
+    OpCooperativeMatrixGetCoordinateEXT = 5363,
     OpBeginInvocationInterlockEXT = 5364,
     OpEndInvocationInterlockEXT = 5365,
+    OpCooperativeMatrixReduceEXT = 5366,
     OpCooperativeMatrixReduceNV = 5366,
     OpCooperativeMatrixLoadTensorNV = 5367,
     OpCooperativeMatrixStoreTensorNV = 5368,
+    OpCooperativeMatrixPerElementOpEXT = 5369,
     OpCooperativeMatrixPerElementOpNV = 5369,
     OpTypeTensorLayoutNV = 5370,
     OpTypeTensorViewNV = 5371,
@@ -2653,7 +2721,9 @@ enum Op : uint
     OpCompositeConstructContinuedINTEL = 6096,
     OpConvertFToBF16INTEL = 6116,
     OpConvertBF16ToFINTEL = 6117,
+    OpControlBarrierArriveEXT = 6142,
     OpControlBarrierArriveINTEL = 6142,
+    OpControlBarrierWaitEXT = 6143,
     OpControlBarrierWaitINTEL = 6143,
     OpArithmeticFenceEXT = 6145,
     OpTaskSequenceCreateALTERA = 6163,
@@ -2682,6 +2752,8 @@ enum Op : uint
     OpSpecConstantArchitectureINTEL = 6252,
     OpSpecConstantCapabilitiesINTEL = 6253,
     OpConditionalCopyObjectINTEL = 6254,
+    OpPredicatedLoadINTEL = 6258,
+    OpPredicatedStoreINTEL = 6259,
     OpGroupIMulKHR = 6401,
     OpGroupFMulKHR = 6402,
     OpGroupBitwiseAndKHR = 6403,
@@ -2696,6 +2768,9 @@ enum Op : uint
     OpConvertHandleToImageINTEL = 6529,
     OpConvertHandleToSamplerINTEL = 6530,
     OpConvertHandleToSampledImageINTEL = 6531,
+    OpFDot2MixAcc32VALVE = 6916,
+    OpFDot2MixAcc16VALVE = 6917,
+    OpFDot4MixAcc32VALVE = 6918,
     Max = 0x7fffffff,
 }
 

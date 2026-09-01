@@ -1110,8 +1110,9 @@ const analysis::Constant* GetConstantUniformValue(
     if (!uniform_inst) return nullptr;
 
     uint32_t uniform_id = uniform_inst->result_id();
+    uint32_t count = type->AsVector()->element_count();
     uniform =
-        const_mgr->GetConstant(type, std::vector<uint32_t>(4, uniform_id));
+        const_mgr->GetConstant(type, std::vector<uint32_t>(count, uniform_id));
   }
 
   return uniform;
@@ -1558,8 +1559,9 @@ ConstantFoldingRule FoldFMix() {
       Instruction* one_inst = const_mgr->GetDefiningInstruction(one);
       if (one_inst == nullptr) return nullptr;
       uint32_t one_id = one_inst->result_id();
-      one =
-          const_mgr->GetConstant(result_type, std::vector<uint32_t>(4, one_id));
+      uint32_t count = result_type->AsVector()->element_count();
+      one = const_mgr->GetConstant(result_type,
+                                   std::vector<uint32_t>(count, one_id));
     }
 
     const analysis::Constant* temp1 = FoldFPBinaryOp(

@@ -115,6 +115,10 @@ class StructuredCFGAnalysis {
   // Return true if |bb_id| is the merge block for a construct.
   bool IsMergeBlock(uint32_t bb_id);
 
+  // Returns true if this analysis has the same constructs and merge blocks as
+  // |other|.
+  bool operator==(const StructuredCFGAnalysis& other) const;
+
   // Returns the set of function ids that are called directly or indirectly from
   // a continue construct.
   std::unordered_set<uint32_t> FindFuncsCalledFromContinue();
@@ -141,6 +145,13 @@ class StructuredCFGAnalysis {
     uint32_t containing_loop;
     uint32_t containing_switch;
     bool in_continue;
+
+    bool operator==(const ConstructInfo& other) const {
+      return containing_construct == other.containing_construct &&
+             containing_loop == other.containing_loop &&
+             containing_switch == other.containing_switch &&
+             in_continue == other.in_continue;
+    }
   };
 
   // Populates |bb_to_construct_| with the innermost containing merge and loop

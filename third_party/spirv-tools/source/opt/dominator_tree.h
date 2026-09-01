@@ -202,6 +202,9 @@ class DominatorTree {
   // Returns true if this tree is a post dominator tree.
   bool IsPostDominator() const { return postdominator_; }
 
+  // Returns true if this tree has the same nodes and structure as |other|.
+  bool operator==(const DominatorTree& other) const;
+
   // Clean up the tree.
   void ClearTree() {
     nodes_.clear();

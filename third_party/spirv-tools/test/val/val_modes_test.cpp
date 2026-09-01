@@ -1,6 +1,7 @@
 // Copyright (c) 2018 Google LLC.
 // Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
 // reserved.
+// Copyright (C) 2026 Qualcomm Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,7 +169,7 @@ OpDecorate %int3_1 BuiltIn WorkgroupSize
 %int3 = OpTypeVector %int 3
 %int_0 = OpSpecConstant %int 0
 %int_1 = OpConstant %int 1
-%int3_1 = OpConstantComposite %int3 %int_1 %int_0 %int_0
+%int3_1 = OpSpecConstantComposite %int3 %int_1 %int_0 %int_0
 )" + kVoidFunction;
 
   CompileSuccessfully(spirv);
@@ -1831,6 +1832,24 @@ OpFunctionEnd
   EXPECT_THAT(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateMode, FragmentShaderPostDepthCoverageVertexBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability SampleMaskPostDepthCoverage
+OpExtension "SPV_KHR_post_depth_coverage"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+OpExecutionMode %main PostDepthCoverage
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Execution mode can only be used with the Fragment execution model"));
+}
+
 TEST_F(ValidateMode, FragmentShaderStencilRefFrontTooManyModesBad) {
   const std::string spirv = R"(
 OpCapability Shader
@@ -1877,6 +1896,24 @@ OpExecutionMode %main StencilRefGreaterBackAMD
                 "one of StencilRefUnchangedBackAMD, "
                 "StencilRefLessBackAMD or StencilRefGreaterBackAMD "
                 "execution modes."));
+}
+
+TEST_F(ValidateMode, FragmentShaderStencilRefReplacingVertexBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability StencilExportEXT
+OpExtension "SPV_EXT_shader_stencil_export"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+OpExecutionMode %main StencilRefReplacingEXT
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Execution mode can only be used with the Fragment execution model"));
 }
 
 TEST_F(ValidateMode, FragmentShaderStencilRefFrontGood) {
@@ -3004,6 +3041,8 @@ OpExecutionMode %main LocalSize 16 16 1
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-TileShadingRateQCOM-10692"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("If the TileShadingRateQCOM execution mode is used, "
                         "LocalSize and LocalSizeId must not be specified."));
 }
@@ -3024,6 +3063,8 @@ OpExecutionModeId %main LocalSizeId %int_1 %int_1 %int_1
   spv_target_env env = SPV_ENV_VULKAN_1_4;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-TileShadingRateQCOM-10692"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("If the TileShadingRateQCOM execution mode is used, "
                         "LocalSize and LocalSizeId must not be specified."));
@@ -3065,6 +3106,8 @@ OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
   EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Execution-10687"));
+  EXPECT_THAT(getDiagnosticString(),
               HasSubstr("The NonCoherentTileAttachmentQCOM execution mode must "
                         "not be used in any stage other than fragment"));
 }
@@ -3103,6 +3146,8 @@ OpExecutionMode %main OriginUpperLeft
   spv_target_env env = SPV_ENV_VULKAN_1_4;
   CompileSuccessfully(spirv, env);
   EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-Execution-10688"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("The TileShadingRateQCOM execution mode must not be "
                         "used in any stage other than compute"));
