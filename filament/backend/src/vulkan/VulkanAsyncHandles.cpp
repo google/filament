@@ -17,7 +17,6 @@
 #include "VulkanAsyncHandles.h"
 
 #include "VulkanConstants.h"
-#include "VulkanDriver.h"
 #include "VulkanFencePool.h"
 
 #include "vulkan/utils/Spirv.h"
@@ -163,7 +162,7 @@ VulkanProgram::VulkanProgram(VulkanContext const& context, VkDevice device,
                     PANIC_POSTCONDITION("Unexpected stage");
                     break;
             }
-            VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
+            context.getDebugUtils().setName(VK_OBJECT_TYPE_SHADER_MODULE,
                     reinterpret_cast<uint64_t>(module), name.c_str());
         }
     }
