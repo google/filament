@@ -868,6 +868,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
     bool const isSupportedType = type == PixelDataType::UINT_2_10_10_10_REV;
+    // Medium state supports linear or sRGB.
     bool const isSupportedColorSpace = builder->outputColorSpace == Rec709-sRGB-D65 ||
                                        builder->outputColorSpace == Rec709-Linear-D65;
 
@@ -880,7 +881,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                                 builder->fastMath &&
                                 engine.features.engine.color_grading.use_optimized_default_builder &&
                                 builder->toneMapping == ToneMapping::ACES_LEGACY && 
-                                isSupportedColorSpace &&
+                                builder->outputColorSpace == Rec709-sRGB-D65 &&
                                 isSupportedType &&
                                 (config.lutDimension & (config.lutDimension - 1)) == 0 &&
                                 (config.lutDimension * config.lutDimension * config.lutDimension) % 4 == 0;
@@ -1103,7 +1104,6 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    bool const isSrgb = (builder->outputColorSpace == Rec709-sRGB-D65);
     uint32_t const dim = config.lutDimension;
     assert_invariant((dim & (dim - 1)) == 0); // dim is power of 2
 
@@ -1112,7 +1112,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
 
     auto const toneMapper = static_cast<const ACESLegacyToneMapper*>(builder->toneMapper);
     for (uint32_t b = 0; b < dim; b++) {
-        auto work = [data, b, &config, toneMapper, &isSrgb](JobSystem&, JobSystem::Job*) {
+        auto work = [data, b, &config, toneMapper](JobSystem&, JobSystem::Job*) {
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
@@ -1161,9 +1161,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
                 cg_g = vmaxq_f32(vminq_f32(cg_g, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
                 cg_b = vmaxq_f32(vminq_f32(cg_b, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
 
-                if (UTILS_LIKELY(isSrgb)) {
-                    v_oetf_sRGB(cg_r, cg_g, cg_b);
-                }
+                v_oetf_sRGB(cg_r, cg_g, cg_b);
 
                 uint32x4_t const r_int = vcvtnq_u32_f32(vmulq_n_f32(cg_r, 1023.0f));
                 uint32x4_t const g_int = vcvtnq_u32_f32(vmulq_n_f32(cg_g, 1023.0f));
