@@ -46,10 +46,10 @@ bool IsLineInst(const spv_parsed_instruction_t* inst) {
   if (inst->ext_inst_type != SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100)
     return false;
   const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
-  const NonSemanticShaderDebugInfo100Instructions ext_inst_key =
-      NonSemanticShaderDebugInfo100Instructions(ext_inst_index);
-  return ext_inst_key == NonSemanticShaderDebugInfo100DebugLine ||
-         ext_inst_key == NonSemanticShaderDebugInfo100DebugNoLine;
+  const NonSemanticShaderDebugInfoInstructions ext_inst_key =
+      NonSemanticShaderDebugInfoInstructions(ext_inst_index);
+  return ext_inst_key == NonSemanticShaderDebugInfoDebugLine ||
+         ext_inst_key == NonSemanticShaderDebugInfoDebugNoLine;
 }
 
 bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
@@ -195,7 +195,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
     graph_ = nullptr;
   } else if (opcode == spv::Op::OpGraphConstantARM) {
     module_->AddGlobalValue(std::move(spv_inst));
-  } else if (graph_ != nullptr) {
+  } else if (graph_ != nullptr) {  // Inside graph definition
     if (opcode == spv::Op::OpGraphInputARM) {
       graph_->AddInput(std::move(spv_inst));
     } else if (opcode == spv::Op::OpGraphSetOutputARM) {
@@ -212,169 +212,175 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
           return false;
       }
     }
-  } else {
-    if (function_ == nullptr) {  // Outside function definition
-      SPIRV_ASSERT(consumer_, block_ == nullptr);
-      if (opcode == spv::Op::OpCapability ||
-          opcode == spv::Op::OpConditionalCapabilityINTEL) {
-        module_->AddCapability(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExtension ||
-                 opcode == spv::Op::OpConditionalExtensionINTEL) {
-        module_->AddExtension(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExtInstImport) {
-        module_->AddExtInstImport(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpMemoryModel) {
-        module_->SetMemoryModel(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpSamplerImageAddressingModeNV) {
-        module_->SetSampledImageAddressMode(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpEntryPoint) {
-        module_->AddEntryPoint(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpGraphEntryPointARM) {
-        module_->AddGraphEntryPoint(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExecutionMode ||
-                 opcode == spv::Op::OpExecutionModeId) {
-        module_->AddExecutionMode(std::move(spv_inst));
-      } else if (IsDebug1Inst(opcode)) {
-        module_->AddDebug1Inst(std::move(spv_inst));
-      } else if (IsDebug2Inst(opcode)) {
-        module_->AddDebug2Inst(std::move(spv_inst));
-      } else if (IsDebug3Inst(opcode)) {
-        module_->AddDebug3Inst(std::move(spv_inst));
-      } else if (IsAnnotationInst(opcode)) {
-        module_->AddAnnotationInst(std::move(spv_inst));
-      } else if (IsTypeInst(opcode)) {
-        module_->AddType(std::move(spv_inst));
-      } else if (IsConstantInst(opcode) || opcode == spv::Op::OpVariable ||
-                 opcode == spv::Op::OpUntypedVariableKHR ||
-                 opcode == spv::Op::OpUndef) {
-        module_->AddGlobalValue(std::move(spv_inst));
-      } else if (spvIsExtendedInstruction(opcode) &&
-                 spvExtInstIsDebugInfo(inst->ext_inst_type)) {
-        module_->AddExtInstDebugInfo(std::move(spv_inst));
-      } else if (spvIsExtendedInstruction(opcode) &&
-                 spvExtInstIsNonSemantic(inst->ext_inst_type)) {
-        // If there are no functions, add the non-semantic instructions to the
-        // global values. Otherwise append it to the list of the last function.
-        auto func_begin = module_->begin();
-        auto func_end = module_->end();
-        if (func_begin == func_end) {
-          module_->AddGlobalValue(std::move(spv_inst));
-        } else {
-          (--func_end)->AddNonSemanticInstruction(std::move(spv_inst));
-        }
-      } else {
-        Errorf(consumer_, src, loc,
-               "Unhandled inst type (opcode: %d) found outside function "
-               "definition.",
-               opcode);
-        return false;
-      }
-    } else {
-      if (opcode == spv::Op::OpLoopMerge || opcode == spv::Op::OpSelectionMerge)
-        last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
-      if (last_dbg_scope_.GetLexicalScope() != kNoDebugScope)
-        spv_inst->SetDebugScope(last_dbg_scope_);
-      if (spvIsExtendedInstruction(opcode) &&
-          spvExtInstIsDebugInfo(inst->ext_inst_type)) {
-        const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
-        if (inst->ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
-          const OpenCLDebugInfo100Instructions ext_inst_key =
-              OpenCLDebugInfo100Instructions(ext_inst_index);
-          switch (ext_inst_key) {
-            case OpenCLDebugInfo100DebugDeclare: {
-              if (block_ == nullptr)  // Inside function but outside blocks
-                function_->AddDebugInstructionInHeader(std::move(spv_inst));
-              else
-                block_->AddInstruction(std::move(spv_inst));
-              break;
-            }
-            case OpenCLDebugInfo100DebugValue: {
-              if (block_ == nullptr)  // Inside function but outside blocks
-                function_->AddDebugInstructionInHeader(std::move(spv_inst));
-              else
-                block_->AddInstruction(std::move(spv_inst));
-              break;
-            }
-            default: {
-              Errorf(consumer_, src, loc,
-                     "Debug info extension instruction other than DebugScope, "
-                     "DebugNoScope, DebugFunctionDefinition, DebugDeclare, and "
-                     "DebugValue found inside function",
-                     opcode);
-              return false;
-            }
+  } else if (function_ != nullptr) {  // Inside function definition
+    if (opcode == spv::Op::OpLoopMerge || opcode == spv::Op::OpSelectionMerge)
+      last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
+    if (last_dbg_scope_.GetLexicalScope() != kNoDebugScope)
+      spv_inst->SetDebugScope(last_dbg_scope_);
+    if (spvIsExtendedInstruction(opcode) &&
+        spvExtInstIsDebugInfo(inst->ext_inst_type)) {
+      const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
+      if (inst->ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {
+        const OpenCLDebugInfo100Instructions ext_inst_key =
+            OpenCLDebugInfo100Instructions(ext_inst_index);
+        switch (ext_inst_key) {
+          case OpenCLDebugInfo100DebugDeclare: {
+            if (block_ == nullptr)  // Inside function but outside blocks
+              function_->AddDebugInstructionInHeader(std::move(spv_inst));
+            else
+              block_->AddInstruction(std::move(spv_inst));
+            break;
           }
-        } else if (inst->ext_inst_type ==
-                   SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
-          const NonSemanticShaderDebugInfo100Instructions ext_inst_key =
-              NonSemanticShaderDebugInfo100Instructions(ext_inst_index);
-          switch (ext_inst_key) {
-            case NonSemanticShaderDebugInfo100DebugDeclare:
-            case NonSemanticShaderDebugInfo100DebugValue:
-            case NonSemanticShaderDebugInfo100DebugScope:
-            case NonSemanticShaderDebugInfo100DebugNoScope:
-            case NonSemanticShaderDebugInfo100DebugFunctionDefinition: {
-              if (block_ == nullptr) {  // Inside function but outside blocks
-                Errorf(consumer_, src, loc,
-                       "Debug info extension instruction found inside function "
-                       "but outside block",
-                       opcode);
-              } else {
-                block_->AddInstruction(std::move(spv_inst));
-              }
-              break;
-            }
-            default: {
-              Errorf(consumer_, src, loc,
-                     "Debug info extension instruction other than DebugScope, "
-                     "DebugNoScope, DebugDeclare, and DebugValue found inside "
-                     "function",
-                     opcode);
-              return false;
-            }
+          case OpenCLDebugInfo100DebugValue: {
+            if (block_ == nullptr)  // Inside function but outside blocks
+              function_->AddDebugInstructionInHeader(std::move(spv_inst));
+            else
+              block_->AddInstruction(std::move(spv_inst));
+            break;
           }
-        } else {
-          const DebugInfoInstructions ext_inst_key =
-              DebugInfoInstructions(ext_inst_index);
-          switch (ext_inst_key) {
-            case DebugInfoDebugDeclare: {
-              if (block_ == nullptr)  // Inside function but outside blocks
-                function_->AddDebugInstructionInHeader(std::move(spv_inst));
-              else
-                block_->AddInstruction(std::move(spv_inst));
-              break;
-            }
-            case DebugInfoDebugValue: {
-              if (block_ == nullptr)  // Inside function but outside blocks
-                function_->AddDebugInstructionInHeader(std::move(spv_inst));
-              else
-                block_->AddInstruction(std::move(spv_inst));
-              break;
-            }
-            default: {
-              Errorf(consumer_, src, loc,
-                     "Debug info extension instruction other than DebugScope, "
-                     "DebugNoScope, DebugDeclare, and DebugValue found inside "
-                     "function",
-                     opcode);
-              return false;
-            }
-          }
-        }
-      } else {
-        if (block_ == nullptr) {  // Inside function but outside blocks
-          if (opcode != spv::Op::OpFunctionParameter) {
+          default: {
             Errorf(consumer_, src, loc,
-                   "Non-OpFunctionParameter (opcode: %d) found inside "
-                   "function but outside basic block",
+                   "Debug info extension instruction other than DebugScope, "
+                   "DebugNoScope, DebugFunctionDefinition, DebugDeclare, and "
+                   "DebugValue found inside function",
                    opcode);
             return false;
           }
-          function_->AddParameter(std::move(spv_inst));
-        } else {
-          block_->AddInstruction(std::move(spv_inst));
+        }
+      } else if (inst->ext_inst_type ==
+                 SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
+        const NonSemanticShaderDebugInfoInstructions ext_inst_key =
+            NonSemanticShaderDebugInfoInstructions(ext_inst_index);
+        switch (ext_inst_key) {
+          case NonSemanticShaderDebugInfoDebugDeclare:
+          case NonSemanticShaderDebugInfoDebugValue:
+          case NonSemanticShaderDebugInfoDebugScope:
+          case NonSemanticShaderDebugInfoDebugNoScope:
+          case NonSemanticShaderDebugInfoDebugFunctionDefinition: {
+            if (block_ == nullptr) {  // Inside function but outside blocks
+              Errorf(consumer_, src, loc,
+                     "Debug info extension instruction found inside function "
+                     "but outside block",
+                     opcode);
+            } else {
+              block_->AddInstruction(std::move(spv_inst));
+            }
+            break;
+          }
+          default: {
+            Errorf(consumer_, src, loc,
+                   "Debug info extension instruction other than DebugScope, "
+                   "DebugNoScope, DebugDeclare, and DebugValue found inside "
+                   "function",
+                   opcode);
+            return false;
+          }
+        }
+      } else {
+        const DebugInfoInstructions ext_inst_key =
+            DebugInfoInstructions(ext_inst_index);
+        switch (ext_inst_key) {
+          case DebugInfoDebugDeclare: {
+            if (block_ == nullptr)  // Inside function but outside blocks
+              function_->AddDebugInstructionInHeader(std::move(spv_inst));
+            else
+              block_->AddInstruction(std::move(spv_inst));
+            break;
+          }
+          case DebugInfoDebugValue: {
+            if (block_ == nullptr)  // Inside function but outside blocks
+              function_->AddDebugInstructionInHeader(std::move(spv_inst));
+            else
+              block_->AddInstruction(std::move(spv_inst));
+            break;
+          }
+          default: {
+            Errorf(consumer_, src, loc,
+                   "Debug info extension instruction other than DebugScope, "
+                   "DebugNoScope, DebugDeclare, and DebugValue found inside "
+                   "function",
+                   opcode);
+            return false;
+          }
         }
       }
+    } else {
+      if (block_ == nullptr) {  // Inside function but outside blocks
+        if (opcode != spv::Op::OpFunctionParameter) {
+          Errorf(consumer_, src, loc,
+                 "Non-OpFunctionParameter (opcode: %d) found inside "
+                 "function but outside basic block",
+                 opcode);
+          return false;
+        }
+        function_->AddParameter(std::move(spv_inst));
+      } else {
+        block_->AddInstruction(std::move(spv_inst));
+      }
+    }
+  } else {  // Outside function or graph definition
+    SPIRV_ASSERT(consumer_, function_ == nullptr);
+    SPIRV_ASSERT(consumer_, block_ == nullptr);
+    SPIRV_ASSERT(consumer_, graph_ == nullptr);
+    if (opcode == spv::Op::OpCapability ||
+        opcode == spv::Op::OpConditionalCapabilityINTEL) {
+      module_->AddCapability(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpExtension ||
+               opcode == spv::Op::OpConditionalExtensionINTEL) {
+      module_->AddExtension(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpExtInstImport) {
+      module_->AddExtInstImport(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpMemoryModel) {
+      module_->SetMemoryModel(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpSamplerImageAddressingModeNV) {
+      module_->SetSampledImageAddressMode(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpEntryPoint) {
+      module_->AddEntryPoint(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpGraphEntryPointARM) {
+      module_->AddGraphEntryPoint(std::move(spv_inst));
+    } else if (opcode == spv::Op::OpExecutionMode ||
+               opcode == spv::Op::OpExecutionModeId) {
+      module_->AddExecutionMode(std::move(spv_inst));
+    } else if (IsDebug1Inst(opcode)) {
+      module_->AddDebug1Inst(std::move(spv_inst));
+    } else if (IsDebug2Inst(opcode)) {
+      module_->AddDebug2Inst(std::move(spv_inst));
+    } else if (IsDebug3Inst(opcode)) {
+      module_->AddDebug3Inst(std::move(spv_inst));
+    } else if (IsAnnotationInst(opcode)) {
+      module_->AddAnnotationInst(std::move(spv_inst));
+    } else if (IsTypeInst(opcode)) {
+      module_->AddType(std::move(spv_inst));
+    } else if (IsConstantInst(opcode) || opcode == spv::Op::OpVariable ||
+               opcode == spv::Op::OpUntypedVariableKHR ||
+               opcode == spv::Op::OpUndef) {
+      module_->AddGlobalValue(std::move(spv_inst));
+    } else if (spvIsExtendedInstruction(opcode) &&
+               spvExtInstIsDebugInfo(inst->ext_inst_type)) {
+      module_->AddExtInstDebugInfo(std::move(spv_inst));
+    } else if (spvIsExtendedInstruction(opcode) &&
+               spvExtInstIsNonSemantic(inst->ext_inst_type)) {
+      // If there are no functions or graphs, add the non-semantic instructions
+      // to the global values. Otherwise append it to the list of the last
+      // function or graph.
+      auto func_begin = module_->begin();
+      auto func_end = module_->end();
+      // graphs come last so we need to check first
+      if (module_->graphs().size() > 0) {
+        module_->graphs().back()->AddNonSemanticInstruction(
+            std::move(spv_inst));
+        // then check functions
+      } else if (func_begin != func_end) {
+        (--func_end)->AddNonSemanticInstruction(std::move(spv_inst));
+      } else {
+        module_->AddGlobalValue(std::move(spv_inst));
+      }
+    } else {
+      Errorf(consumer_, src, loc,
+             "Unhandled inst type (opcode: %d) found outside function "
+             "definition.",
+             opcode);
+      return false;
     }
   }
   return true;

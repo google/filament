@@ -33,27 +33,52 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
   const uint32_t result_type = inst->type_id();
 
   switch (opcode) {
-    case spv::Op::OpControlBarrier: {
-      if (_.version() < SPV_SPIRV_VERSION_WORD(1, 3)) {
-        _.function(inst->function()->id())
-            ->RegisterExecutionModelLimitation(
-                [](spv::ExecutionModel model, std::string* message) {
-                  if (model != spv::ExecutionModel::TessellationControl &&
-                      model != spv::ExecutionModel::GLCompute &&
-                      model != spv::ExecutionModel::Kernel &&
-                      model != spv::ExecutionModel::TaskNV &&
-                      model != spv::ExecutionModel::MeshNV) {
-                    if (message) {
-                      *message =
-                          "In SPIR-V 1.2 or earlier, OpControlBarrier requires "
-                          "one of the following "
-                          "Execution Models: TessellationControl, GLCompute, "
-                          "Kernel, MeshNV or TaskNV";
-                    }
-                    return false;
+    case spv::Op::OpControlBarrier:
+    case spv::Op::OpControlBarrierArriveEXT:
+    case spv::Op::OpControlBarrierWaitEXT: {
+      if (opcode == spv::Op::OpControlBarrier) {
+        if (_.version() < SPV_SPIRV_VERSION_WORD(1, 3)) {
+          _.function(inst->function()->id())
+              ->RegisterExecutionModelLimitation([](spv::ExecutionModel model,
+                                                    std::string* message) {
+                if (model != spv::ExecutionModel::TessellationControl &&
+                    model != spv::ExecutionModel::GLCompute &&
+                    model != spv::ExecutionModel::Kernel &&
+                    model != spv::ExecutionModel::TaskNV &&
+                    model != spv::ExecutionModel::MeshNV) {
+                  if (message) {
+                    *message =
+                        "In SPIR-V 1.2 or earlier, OpControlBarrier requires "
+                        "one of the following "
+                        "Execution Models: TessellationControl, GLCompute, "
+                        "Kernel, MeshNV or TaskNV";
                   }
-                  return true;
-                });
+                  return false;
+                }
+                return true;
+              });
+        }
+      }
+
+      if (opcode == spv::Op::OpControlBarrierArriveEXT ||
+          opcode == spv::Op::OpControlBarrierWaitEXT) {
+        _.function(inst->function()->id())
+            ->RegisterExecutionModelLimitation([&_](spv::ExecutionModel model,
+                                                    std::string* message) {
+              if (model != spv::ExecutionModel::GLCompute &&
+                  model != spv::ExecutionModel::Kernel) {
+                if (message) {
+                  *message = _.VkErrorID(13552)
+                                 .append(
+                                     "The SplitBarrierEXT capability must not "
+                                     "be enabled in any stage other than "
+                                     "GLCompute or Kernel.")
+                                 .c_str();
+                }
+                return false;
+              }
+              return true;
+            });
       }
 
       const uint32_t execution_scope = inst->word(1);

@@ -110,6 +110,9 @@ class InstructionDisassembler {
   const bool nested_indent_;     // Whether indentation should indicate nesting
   const int comment_;            // Should we comment the source
   const bool show_byte_offset_;  // Should we print byte offset, in hex?
+  // Whether to emit unknown opcodes and unknown extended instructions as
+  // OpUnknown with raw integer operands rather than failing.
+  const bool handle_unknown_opcodes_;
   spvtools::NameMapper name_mapper_;
 
   // Some comments are generated as instructions (such as OpDecorate) are

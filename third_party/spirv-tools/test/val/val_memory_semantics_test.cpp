@@ -385,7 +385,7 @@ INSTANTIATE_TEST_SUITE_P(
             Values(OpControlBarrier),
             Values(TestResult(
                 SPV_ERROR_INVALID_DATA,
-                "VUID-StandaloneSpirv-MemorySemantics-10874",
+                "VUID-StandaloneSpirv-MemorySemantics-13551",
                 "Memory Semantics with Volatile bit set must not be used with "
                 "barrier instructions"))));
 
@@ -401,7 +401,7 @@ INSTANTIATE_TEST_SUITE_P(
             Values(OpControlBarrier, OpMemoryBarrier),
             Values(TestResult(
                 SPV_ERROR_INVALID_DATA,
-                "VUID-StandaloneSpirv-MemorySemantics-10874",
+                "VUID-StandaloneSpirv-MemorySemantics-13551",
                 "Memory Semantics with Volatile bit set must not be used with "
                 "barrier instructions"))));
 

@@ -30,11 +30,12 @@ class DiagnosticStream {
  public:
   DiagnosticStream(spv_position_t position, const MessageConsumer& consumer,
                    const std::string& disassembled_instruction,
-                   spv_result_t error)
+                   spv_result_t error, std::string shader_debug_info = "")
       : position_(position),
         consumer_(consumer),
         disassembled_instruction_(disassembled_instruction),
-        error_(error) {}
+        error_(error),
+        shader_debug_info_(shader_debug_info) {}
 
   // Creates a DiagnosticStream from an expiring DiagnosticStream.
   // The new object takes the contents of the other, and prevents the
@@ -62,6 +63,8 @@ class DiagnosticStream {
   MessageConsumer consumer_;  // Message consumer callback.
   std::string disassembled_instruction_;
   spv_result_t error_;
+  // Provide way to pass optional information from ShaderDebugInfo
+  std::string shader_debug_info_;
 };
 
 // Changes the MessageConsumer in |context| to one that updates |diagnostic|

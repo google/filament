@@ -26,12 +26,13 @@ endif()
 # Add a SPIR-V Tools unit test. Signature:
 #   add_spvtools_unittest(
 #     TARGET target_name
+#     SKIP_EFFCEE ON # optional
 #     SRCS   src_file.h src_file.cpp
 #     LIBS   lib1 lib2
 #   )
 function(add_spvtools_unittest)
   if (NOT "${SPIRV_SKIP_TESTS}" AND TARGET gmock_main)
-    set(one_value_args TARGET PCH_FILE)
+    set(one_value_args TARGET PCH_FILE SKIP_EFFCEE)
     set(multi_value_args SRCS LIBS ENVIRONMENT DEFINES)
     cmake_parse_arguments(
       ARG "" "${one_value_args}" "${multi_value_args}" ${ARGN})
@@ -68,13 +69,14 @@ function(add_spvtools_unittest)
       ${gtest_SOURCE_DIR}/include
       ${gmock_SOURCE_DIR}/include
     )
-    if (TARGET effcee)
-      # If using Effcee for testing, then add its include directory.
-      target_include_directories(${target} PRIVATE ${effcee_SOURCE_DIR})
-    endif()
     target_link_libraries(${target} PRIVATE ${ARG_LIBS})
     if (TARGET effcee)
-      target_link_libraries(${target} PRIVATE effcee)
+      if ("${ARG_SKIP_EFFCEE}")
+      else()
+        # If using Effcee for testing, then add its include directory.
+        target_include_directories(${target} PRIVATE ${effcee_SOURCE_DIR})
+        target_link_libraries(${target} PRIVATE effcee)
+      endif()
     endif()
     target_link_libraries(${target} PRIVATE gmock_main)
     add_test(NAME spirv-tools-${target} COMMAND ${target})
@@ -103,16 +105,19 @@ set(TEST_SOURCES
   diagnostic_test.cpp
   enum_string_mapping_test.cpp
   enum_set_test.cpp
+  ext_inst.arm_experimental_ml_operations_test.cpp
   ext_inst.arm_motion_engine_test.cpp
   ext_inst.cldebug100_test.cpp
   ext_inst.debuginfo_test.cpp
   ext_inst.glsl_test.cpp
+  ext_inst.graph_debuginfo_test.cpp
   ext_inst.non_semantic_test.cpp
   ext_inst.opencl_test.cpp
   ext_inst.tosa_test.cpp
   ext_inst_lookup_test.cpp
   fix_word_test.cpp
   generator_magic_number_test.cpp
+  handle_unknown_opcodes_test.cpp
   hex_float_test.cpp
   hex_to_text_test.cpp
   immediate_int_test.cpp
@@ -173,11 +178,17 @@ add_spvtools_unittest(
 
 add_spvtools_unittest(
   TARGET c_interface
+  SKIP_EFFCEE ON
   SRCS c_interface_test.cpp
   LIBS ${SPIRV_TOOLS_FULL_VISIBILITY})
 
 add_spvtools_unittest(
   TARGET c_interface_shared
+  # Effcee pulls in Abseil. But if the executable is compiled
+  # with the shared C++ runtime, then Abseil also needs the shared
+  # C++ runtime. Skip linking effcee to avoid the problem in the
+  # first place.  The C interface test doesn't need it.
+  SKIP_EFFCEE ON
   SRCS c_interface_test.cpp
   LIBS ${SPIRV_TOOLS}-shared
   ENVIRONMENT PATH=$<TARGET_FILE_DIR:${SPIRV_TOOLS}-shared>)

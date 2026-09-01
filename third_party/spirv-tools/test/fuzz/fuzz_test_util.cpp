@@ -137,7 +137,7 @@ void DumpTransformationsBinary(
     const char* filename) {
   std::ofstream transformations_file;
   transformations_file.open(filename, std::ios::out | std::ios::binary);
-  transformations.SerializeToOstream(&transformations_file);
+  (void)transformations.SerializeToOstream(&transformations_file);
   transformations_file.close();
 }
 
@@ -145,9 +145,9 @@ void DumpTransformationsJson(
     const protobufs::TransformationSequence& transformations,
     const char* filename) {
   std::string json_string;
-  auto json_options = google::protobuf::util::JsonPrintOptions();
+  auto json_options = google::protobuf::json::PrintOptions();
   json_options.add_whitespace = true;
-  auto json_generation_status = google::protobuf::util::MessageToJsonString(
+  auto json_generation_status = google::protobuf::json::MessageToJsonString(
       transformations, &json_string, json_options);
   if (json_generation_status.ok()) {
     std::ofstream transformations_json_file(filename);

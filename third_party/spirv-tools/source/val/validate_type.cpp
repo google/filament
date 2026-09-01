@@ -17,6 +17,8 @@
 
 // Ensures type declarations are unique unless allowed by the specification.
 
+#include <optional>
+
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
@@ -58,7 +60,15 @@ spv_result_t ValidateTypeInt(ValidationState_t& _, const Instruction* inst) {
   // integers, respectively.
   auto num_bits = inst->GetOperandAs<const uint32_t>(1);
   if (num_bits != 32) {
-    if (num_bits == 8) {
+    if (num_bits == 4) {
+      if (_.HasCapability(spv::Capability::Int4TypeINTEL) ||
+          _.HasCapability(spv::Capability::ArbitraryPrecisionIntegersINTEL)) {
+        return SPV_SUCCESS;
+      }
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Using a 4-bit integer type requires the Int4TypeINTEL "
+                "or ArbitraryPrecisionIntegersINTEL capability.";
+    } else if (num_bits == 8) {
       if (_.features().declare_int8_type) {
         return SPV_SUCCESS;
       }
@@ -79,6 +89,15 @@ spv_result_t ValidateTypeInt(ValidationState_t& _, const Instruction* inst) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Using a 64-bit integer type requires the Int64 capability.";
     } else {
+      // Check for SPV_INTEL_arbitrary_precision_integers extension
+      if (_.HasCapability(spv::Capability::ArbitraryPrecisionIntegersINTEL)) {
+        if (num_bits == 0) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "OpTypeInt has 0 bits, which is not allowed even with "
+                    "ArbitraryPrecisionIntegersINTEL.";
+        }
+        return SPV_SUCCESS;
+      }
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Invalid number of bits (" << num_bits
              << ") used for OpTypeInt.";
@@ -107,61 +126,112 @@ spv_result_t ValidateTypeInt(ValidationState_t& _, const Instruction* inst) {
 }
 
 spv_result_t ValidateTypeFloat(ValidationState_t& _, const Instruction* inst) {
-  // Validates that the number of bits specified for an Int type is valid.
-  // Scalar integer types can be parameterized only with 32-bits.
-  // Int8, Int16, and Int64 capabilities allow using 8-bit, 16-bit, and 64-bit
-  // integers, respectively.
+  // Validates:
+  // - the number of bits specified for a float type is valid
+  // - the fp encoding is valid, and only used on matching bit widths
+  // - required capabilities are declared
   auto num_bits = inst->GetOperandAs<const uint32_t>(1);
-  const bool has_encoding = inst->operands().size() > 2;
+
+  std::optional<spv::FPEncoding> encoding;
+  if (inst->operands().size() > 2) {
+    encoding = inst->GetOperandAs<spv::FPEncoding>(2);
+  }
+  // The number of operands is already checked by the grammar structure.
+  // The fp encoding operand is an optional enum, and there are no further
+  // operands.
+
   if (num_bits == 32) {
+    if (encoding.has_value()) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "32-bit floating point type must not have encoding parameter.";
+    }
     return SPV_SUCCESS;
   }
-  auto operands = inst->words();
+
+  if (num_bits == 4) {
+    if (!encoding.has_value()) {
+      // we don't support fp4 without encoding
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "4-bit floating point type requires an encoding.";
+    }
+    if (encoding.value() != spv::FPEncoding::Float4E2M1EXT) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Unsupported 4-bit floating point encoding ("
+             << static_cast<uint32_t>(encoding.value()) << ").";
+    }
+
+    return SPV_SUCCESS;
+  }
+  if (num_bits == 6) {
+    if (!encoding.has_value()) {
+      // we don't support fp6 without encoding
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "6-bit floating point type requires an encoding.";
+    }
+    const auto enc = encoding.value();
+    if (enc != spv::FPEncoding::Float6E2M3EXT &&
+        enc != spv::FPEncoding::Float6E3M2EXT) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Unsupported 6-bit floating point encoding ("
+             << static_cast<uint32_t>(enc) << ").";
+    }
+
+    return SPV_SUCCESS;
+  }
 
   if (num_bits == 16) {
     // An absence of FP encoding implies IEEE 754. The Float16 and Float16Buffer
     // capabilities only enable IEEE 754 binary 16
-    if (has_encoding || _.features().declare_float16_type) {
-      return SPV_SUCCESS;
+    if (!encoding.has_value() && !_.features().declare_float16_type) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Using a 16-bit floating point "
+             << "type requires the Float16 or Float16Buffer capability,"
+                " or an extension that explicitly enables 16-bit floating "
+                "point.";
     }
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Using a 16-bit floating point "
-           << "type requires the Float16 or Float16Buffer capability,"
-              " or an extension that explicitly enables 16-bit floating point.";
+    if (encoding.has_value() &&
+        encoding.value() != spv::FPEncoding::BFloat16KHR) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Unsupported 16-bit floating point encoding ("
+             << static_cast<uint32_t>(encoding.value()) << ").";
+    }
+    return SPV_SUCCESS;
   }
   if (num_bits == 8) {
     if (!_.features().declare_float8_type) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Using a 8-bit floating point "
-             << "type requires the Float8EXT capability.";
+             << "type requires one of the following capabilities: Float8EXT, "
+                "Float8UnsignedE8M0EXT, MXInt8EXT.";
     }
-    if (!has_encoding) {
+    if (encoding.has_value()) {
+      const auto enc = encoding.value();
+      if (enc != spv::FPEncoding::Float8E4M3EXT &&
+          enc != spv::FPEncoding::Float8E5M2EXT &&
+          enc != spv::FPEncoding::Float8UnsignedE8M0EXT &&
+          enc != spv::FPEncoding::MXInt8EXT) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Unsupported 8-bit floating point encoding ("
+               << static_cast<uint32_t>(enc) << ").";
+      }
+    } else {
       // we don't support fp8 without encoding
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "8-bit floating point type requires an encoding.";
     }
-    const spvtools::OperandDesc* desc = nullptr;
-    const std::set<spv::FPEncoding> known_encodings{
-        spv::FPEncoding::Float8E4M3EXT, spv::FPEncoding::Float8E5M2EXT};
-    spv_result_t status = spvtools::LookupOperand(SPV_OPERAND_TYPE_FPENCODING,
-                                                  inst->words()[3], &desc);
-    if ((status != SPV_SUCCESS) ||
-        (known_encodings.find(static_cast<spv::FPEncoding>(desc->value)) ==
-         known_encodings.end())) {
-      return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << "Unsupported 8-bit floating point encoding ("
-             << desc->name().data() << ").";
-    }
-
     return SPV_SUCCESS;
   }
   if (num_bits == 64) {
-    if (_.HasCapability(spv::Capability::Float64)) {
-      return SPV_SUCCESS;
+    if (!_.HasCapability(spv::Capability::Float64)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "Using a 64-bit floating point "
+             << "type requires the Float64 capability.";
     }
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Using a 64-bit floating point "
-           << "type requires the Float64 capability.";
+    if (encoding.has_value()) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "64-bit floating point type must not have encoding parameter.";
+    }
+    return SPV_SUCCESS;
   }
   return _.diag(SPV_ERROR_INVALID_DATA, inst)
          << "Invalid number of bits (" << num_bits << ") used for OpTypeFloat.";
@@ -208,13 +278,13 @@ spv_result_t ValidateTypeVector(ValidationState_t& _, const Instruction* inst) {
       return SPV_SUCCESS;
     }
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Having " << num_components << " components for "
-           << spvOpcodeString(inst->opcode())
-           << " requires the Vector16 capability";
+           << _.VkErrorID(12295) << "Having " << num_components
+           << " components for " << spvOpcodeString(inst->opcode())
+           << " requires the Vector16 or LongVectorEXT capability";
   } else {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << "Illegal number of components (" << num_components << ") for "
-           << spvOpcodeString(inst->opcode());
+           << _.VkErrorID(12295) << "Illegal number of components ("
+           << num_components << ") for " << spvOpcodeString(inst->opcode());
   }
 
   return SPV_SUCCESS;
@@ -620,13 +690,20 @@ spv_result_t ValidateTypeFunction(ValidationState_t& _,
   }
 
   // The only valid uses of OpTypeFunction are in an OpFunction, debugging, or
-  // decoration instruction.
+  // decoration instruction, or in OpTypePointer when FunctionPointersINTEL
+  // capability is enabled.
   for (auto& pair : inst->uses()) {
     const auto* use = pair.first;
     if (use->opcode() != spv::Op::OpFunction &&
         use->opcode() != spv::Op::OpAsmINTEL &&
         !spvOpcodeIsDebug(use->opcode()) && !use->IsNonSemantic() &&
         !spvOpcodeIsDecoration(use->opcode())) {
+      // Check if this is OpTypePointer with FunctionPointersINTEL capability
+      if (use->opcode() == spv::Op::OpTypePointer &&
+          _.HasCapability(spv::Capability::FunctionPointersINTEL)) {
+        // Allow OpTypePointer to use function types with this capability
+        continue;
+      }
       return _.diag(SPV_ERROR_INVALID_ID, use)
              << "Invalid use of function type result id "
              << _.getIdName(inst->id()) << ".";

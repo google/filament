@@ -116,6 +116,11 @@ class DominatorAnalysisBase {
   // If there is no such basic block, nullptr is returned.
   BasicBlock* CommonDominator(BasicBlock* b1, BasicBlock* b2) const;
 
+  // Returns true if this analysis has the same tree as |other|.
+  inline bool operator==(const DominatorAnalysisBase& other) const {
+    return tree_ == other.tree_;
+  }
+
  protected:
   DominatorTree tree_;
 };

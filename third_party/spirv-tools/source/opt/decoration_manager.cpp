@@ -543,7 +543,8 @@ void DecorationManager::CloneDecorations(uint32_t from, uint32_t to) {
         const uint32_t num_operands = inst->NumOperands();
         for (uint32_t i = 1; i < num_operands; i += 2) {
           Operand op = inst->GetOperand(i);
-          if (op.words[0] == from) {  // add new pair of operands: (to, literal)
+          if (!op.words.empty() &&
+              op.words[0] == from) {  // add new pair of operands: (to, literal)
             inst->AddOperand(
                 Operand(spv_operand_type_t::SPV_OPERAND_TYPE_ID, {to}));
             op = inst->GetOperand(i + 1);

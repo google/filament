@@ -48,6 +48,10 @@ namespace filament {
 #include <unordered_map>
 #include <vector>
 
+namespace filament::app {
+class AssetLoader;
+}
+
 class MeshAssimp {
 public:
     using mat4f = filament::math::mat4f;
@@ -55,7 +59,7 @@ public:
     using short4 = filament::math::short4;
     using half2 = filament::math::half2;
     using ushort2 = filament::math::ushort2;
-    explicit MeshAssimp(filament::Engine& engine);
+    explicit MeshAssimp(filament::Engine& engine, filament::app::AssetLoader* loader = nullptr);
     ~MeshAssimp();
 
     // This function takes over the ownership of `materials` to prevent crashes due to the
@@ -107,8 +111,9 @@ private:
         std::vector<int> parents;
     };
 
-    bool setFromFile(Asset& asset,
-            std::map<utils::CString, filament::MaterialInstance*>& outMaterials);
+    bool setFromBuffer(Asset& asset,
+            std::map<utils::CString, filament::MaterialInstance*>& outMaterials,
+            const uint8_t* buffer, size_t length);
 
     void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
             const std::string& materialName, const std::string& dirName,
@@ -139,6 +144,9 @@ private:
     std::vector<utils::Entity> mRenderables;
 
     std::vector<filament::Texture*> mTextures;
+
+    filament::app::AssetLoader* mAssetLoader = nullptr;
+    bool mAllocatedAssetLoader = false;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_MESH_ASSIMP_H

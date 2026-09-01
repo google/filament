@@ -126,18 +126,20 @@ bool InstructionCanHaveTypeOperand(const Instruction* inst) {
       spv::Op::OpConstantSizeOfEXT,
       spv::Op::OpBufferPointerEXT,
       spv::Op::OpUntypedImageTexelPointerEXT,
+      spv::Op::OpAbortKHR,
   };
   const auto opcode = inst->opcode();
   bool type_instruction = spvOpcodeGeneratesType(opcode);
   bool debug_instruction = spvOpcodeIsDebug(opcode) || inst->IsDebugInfo();
-  bool coop_matrix_spec_constant_op_length =
+  bool spec_constant_op_with_type_operand =
       (opcode == spv::Op::OpSpecConstantOp) &&
       (spv::Op(inst->word(3)) == spv::Op::OpCooperativeMatrixLengthNV ||
-       spv::Op(inst->word(3)) == spv::Op::OpCooperativeMatrixLengthKHR);
+       spv::Op(inst->word(3)) == spv::Op::OpCooperativeMatrixLengthKHR ||
+       spvOpcodeGeneratesUntypedPointer(spv::Op(inst->word(3))));
   return type_instruction || debug_instruction || inst->IsNonSemantic() ||
          spvOpcodeIsDecoration(opcode) || instruction_allow_set.count(opcode) ||
          spvOpcodeGeneratesUntypedPointer(opcode) ||
-         coop_matrix_spec_constant_op_length;
+         spec_constant_op_with_type_operand;
 }
 
 bool InstructionRequiresTypeOperand(const Instruction* inst) {
@@ -154,6 +156,9 @@ bool InstructionRequiresTypeOperand(const Instruction* inst) {
       spv::Op::OpPhi,
       spv::Op::OpUntypedArrayLengthKHR,
       spv::Op::OpAsmINTEL,
+      spv::Op::OpAliasScopeDeclINTEL,
+      spv::Op::OpAliasScopeListDeclINTEL,
+      spv::Op::OpAbortKHR,
   };
   const auto opcode = inst->opcode();
   bool debug_instruction = spvOpcodeIsDebug(opcode) || inst->IsDebugInfo();
@@ -219,7 +224,8 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
                    << " cannot be a type";
           } else if (def->type_id() == 0 &&
                      !spvOpcodeGeneratesType(def->opcode()) &&
-                     InstructionRequiresTypeOperand(inst)) {
+                     InstructionRequiresTypeOperand(inst) &&
+                     InstructionRequiresTypeOperand(def)) {
             return _.diag(SPV_ERROR_INVALID_ID, inst)
                    << "Operand " << _.getIdName(operand_word)
                    << " requires a type";

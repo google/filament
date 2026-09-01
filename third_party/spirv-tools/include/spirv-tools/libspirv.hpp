@@ -138,6 +138,28 @@ class SPIRV_TOOLS_EXPORT ValidatorOptions {
     spvValidatorOptionsSetAllowVulkan32BitBitwise(options_, val);
   }
 
+  // Sets custom size and alignment for buffer and acceleration structure
+  // descriptor heap resources.
+  void SetBufferDescriptorLayout(uint32_t size, uint32_t alignment) {
+    spvValidatorOptionsSetBufferDescriptorLayout(options_, size, alignment);
+  }
+
+  // Sets custom size and alignment for image and sampled image descriptor heap
+  // resources.
+  void SetImageDescriptorLayout(uint32_t size, uint32_t alignment) {
+    spvValidatorOptionsSetImageDescriptorLayout(options_, size, alignment);
+  }
+
+  // Sets custom size and alignment for sampler descriptor heap resources.
+  void SetSamplerDescriptorLayout(uint32_t size, uint32_t alignment) {
+    spvValidatorOptionsSetSamplerDescriptorLayout(options_, size, alignment);
+  }
+
+  // Sets custom size and alignment for tensor descriptor heap resources.
+  void SetTensorDescriptorLayout(uint32_t size, uint32_t alignment) {
+    spvValidatorOptionsSetTensorDescriptorLayout(options_, size, alignment);
+  }
+
   // Records whether or not the validator should relax the rules on pointer
   // usage in logical addressing mode.
   //
