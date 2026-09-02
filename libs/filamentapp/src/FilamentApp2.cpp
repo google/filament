@@ -23,9 +23,14 @@
 
 #include "generated/resources/filamentapp.h"
 
-#include <filamentapp/AssetLoader.h>
+#include <imageio-lite/ImageEncoder.h>
+
+#include <image/ColorTransform.h>
+#include <image/LinearImage.h>
+
 #include <filamentapp/Config.h>
 #include <filamentapp/DesktopAssetLoader.h>
+#include <filamentapp/DesktopAssetWriter.h>
 #include <filamentapp/DisplayManager.h>
 #include <filamentapp/FilamentApp2.h>
 
@@ -42,6 +47,7 @@
 #include <filament/SwapChain.h>
 #include <filament/View.h>
 
+#include <backend/PixelBufferDescriptor.h>
 #include <backend/Platform.h>
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <backend/platforms/VulkanPlatform.h>
@@ -59,8 +65,10 @@
 #ifdef __EXCEPTIONS
 #include <exception>
 #endif
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -102,6 +110,9 @@ FilamentApp2::FilamentApp2(const Builder& builder)
                                       ? nullptr
                                       : std::make_unique<filament::app::DesktopAssetLoader>()),
           mAssetLoader(builder.mAssetLoader ? builder.mAssetLoader : mDefaultAssetLoader.get()),
+          mDefaultAssetWriter(
+                  builder.mAssetWriter ? nullptr : std::make_unique<DesktopAssetWriter>()),
+          mAssetWriter(builder.mAssetWriter ? builder.mAssetWriter : mDefaultAssetWriter.get()),
           mSetupCallback(builder.mSetup),
           mCleanupCallback(builder.mCleanup),
           mPreRender(builder.mPreRender),
@@ -112,6 +123,9 @@ FilamentApp2::FilamentApp2(const Builder& builder)
           mDropHandler(builder.mDropHandler),
           mSurfaceCreatedCallback(builder.mSurfaceCreatedCallback),
           mSurfaceDestroyedCallback(builder.mSurfaceDestroyedCallback),
+          mScreenshotPath(builder.mScreenshotPath),
+          mWarmupFrames(builder.mWarmupFrames),
+          mFixedTimeStep(builder.mFixedTimeStep),
           mWidth(builder.mWidth),
           mHeight(builder.mHeight) {}
 
@@ -365,6 +379,66 @@ void FilamentApp2::onSurfaceDestroyed() {
     }
 }
 
+void FilamentApp2::captureScreenshot(utils::CString const& filepath) {
+    if (mViews.empty() || !mViews[0] || !mRenderer) {
+        return;
+    }
+    View* view = mViews[0]->getView();
+    if (!view) {
+        return;
+    }
+    filament::Viewport const& vp = view->getViewport();
+    size_t const byteCount = size_t(vp.width) * size_t(vp.height) * 4;
+
+    struct ScreenshotState {
+        View* view = nullptr;
+        utils::CString filename;
+        FilamentApp2* app = nullptr;
+    };
+
+    backend::PixelBufferDescriptor buffer(
+            new uint8_t[byteCount], byteCount,
+            backend::PixelBufferDescriptor::PixelDataFormat::RGBA,
+            backend::PixelBufferDescriptor::PixelDataType::UBYTE,
+            [](void* buffer, size_t, void* user) {
+                std::unique_ptr<ScreenshotState> state(static_cast<ScreenshotState*>(user));
+                uint8_t* pixels = static_cast<uint8_t*>(buffer);
+                if (!state || !state->app) {
+                    delete[] pixels;
+                    return;
+                }
+
+                const filament::Viewport& vp = state->view->getViewport();
+                image::LinearImage image = image::toLinearWithAlpha<uint8_t>(
+                        vp.width, vp.height, vp.width * 4, pixels, [](uint8_t v) { return v; },
+                        image::sRGBToLinear<filament::math::float4>);
+
+                std::ostringstream ss(std::ios::binary);
+                bool const encoded = imageio_lite::ImageEncoder::encode(ss,
+                        imageio_lite::ImageEncoder::Format::TIFF, image, "", "");
+
+                if (encoded) {
+                    std::string const data = ss.str();
+                    utils::Path out(state->filename.c_str_safe());
+                    if (!state->app->getAssetWriter()->write(out,
+                                reinterpret_cast<const uint8_t*>(data.data()), data.size())) {
+                        utils::slog.e << "Failed to write screenshot output file: "
+                                      << state->filename.c_str_safe() << utils::io::endl;
+                    }
+                } else {
+                    utils::slog.e << "Failed to encode screenshot TIFF for: "
+                                  << state->filename.c_str_safe() << utils::io::endl;
+                }
+
+                delete[] pixels;
+                state->app->close();
+            },
+            new ScreenshotState{ view, filepath, this });
+
+    mRenderer->readPixels((uint32_t) vp.left, (uint32_t) vp.bottom, vp.width, vp.height,
+            std::move(buffer));
+}
+
 View* FilamentApp2::getGuiView() const noexcept { return mAppGui ? mAppGui->getView() : nullptr; }
 
 bool FilamentApp2::doFrame() {
@@ -384,10 +458,23 @@ bool FilamentApp2::doFrame() {
             mEngine->execute();
         }
 
+        float timeStep = 0.0f;
+        if (mFixedTimeStep > 0.0f) {
+            mVirtualTime += (double) mFixedTimeStep;
+            timeStep = mFixedTimeStep;
+        } else {
+            mVirtualTime = mDisplayManager ? mDisplayManager->getTime() : 0.0;
+            if (mLastVirtualTime == mVirtualTime) {
+                timeStep = 1.0f / 60.0f;
+            } else {
+                timeStep = mVirtualTime - mLastVirtualTime;
+            }
+            mLastVirtualTime = mVirtualTime;
+        }
+
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
-            double time = mDisplayManager ? mDisplayManager->getTime() : 0.0;
-            mAnimation(mEngine, mMainView->getView(), time);
+            mAnimation(mEngine, mMainView->getView(), mVirtualTime);
         }
 
         // Loop over fresh events twice: first stash them and let ImGui process them, then allow
@@ -469,12 +556,6 @@ bool FilamentApp2::doFrame() {
             shutdown();
             return true;
         }
-
-        // Calculate the time step.
-        static double lastTime = 0;
-        double now = mDisplayManager ? mDisplayManager->getTime() : 0.0;
-        const float timeStep = lastTime > 0 ? (float) (now - lastTime) : (float) (1.0f / 60.0f);
-        lastTime = now;
 
         // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
         // always let ImGui generate a command list; if it skips a frame it'll destroy its widgets.
@@ -610,7 +691,16 @@ bool FilamentApp2::doFrame() {
             if (mPostRender) {
                 mPostRender(mEngine, mViews[0]->getView(), mScene, mRenderer);
             }
+
+            if (!mScreenshotPath.empty() && mCurrentFrame >= mWarmupFrames) {
+                captureScreenshot(mScreenshotPath);
+
+                // Ensures we only take one screenshot.
+                mWarmupFrames = MAX_WARMUP_FRAMES;
+            }
+
             mRenderer->endFrame();
+            mCurrentFrame++;
         } else {
             ++mSkippedFrames;
         }
